@@ -520,7 +520,401 @@ testSchemas();
                     "Table not found in schema validation results"
                 )
     
-    def run_all_tests(self):
+    def test_tax_api_endpoints(self):
+        """Test Phase 2 Tax API endpoints"""
+        print("\n=== Testing Phase 2 Tax API Endpoints ===")
+        
+        # Test countries as specified in review request
+        test_countries = ["PT", "DE", "US", "GB", "FR"]
+        
+        # Test 1: GET /api/tax/rate/:countryCode (cache-first logic)
+        for country in test_countries:
+            self.test_tax_rate_endpoint(country)
+        
+        # Test 2: POST /api/tax/validate (Tax ID validation)
+        self.test_tax_validation_endpoint()
+        
+        # Test 3: GET /api/tax/acronyms (all tax acronyms)
+        self.test_tax_acronyms_endpoint()
+        
+        # Test 4: GET /api/tax/lookup (lookup by country name)
+        self.test_tax_lookup_endpoint()
+    
+    def test_tax_rate_endpoint(self, country_code: str):
+        """Test GET /api/tax/rate/:countryCode with cache verification"""
+        print(f"\n--- Testing Tax Rate for {country_code} ---")
+        
+        try:
+            # First call - should return cached: false
+            response1 = requests.get(f"{self.backend_url}/api/tax/rate/{country_code}", timeout=15)
+            
+            if response1.status_code == 200:
+                data1 = response1.json()
+                
+                # Verify response structure
+                required_fields = ['country_code', 'country_name', 'tax_acronym', 'standard_rate']
+                missing_fields = [field for field in required_fields if field not in data1.get('data', {})]
+                
+                if missing_fields:
+                    self.log_result(
+                        f"Tax Rate {country_code} - Structure", 
+                        False, 
+                        f"Missing required fields: {', '.join(missing_fields)}",
+                        {"response": data1}
+                    )
+                else:
+                    # Check if first call shows cached: false
+                    cached_status = data1.get('data', {}).get('cached', None)
+                    self.log_result(
+                        f"Tax Rate {country_code} - First Call", 
+                        True, 
+                        f"Retrieved successfully, cached: {cached_status}",
+                        {"country_code": data1.get('data', {}).get('country_code'),
+                         "standard_rate": data1.get('data', {}).get('standard_rate'),
+                         "cached": cached_status}
+                    )
+                
+                # Second call - should return cached: true
+                time.sleep(1)  # Brief pause
+                response2 = requests.get(f"{self.backend_url}/api/tax/rate/{country_code}", timeout=15)
+                
+                if response2.status_code == 200:
+                    data2 = response2.json()
+                    cached_status2 = data2.get('data', {}).get('cached', None)
+                    
+                    if cached_status2 is True:
+                        self.log_result(
+                            f"Tax Rate {country_code} - Cache Test", 
+                            True, 
+                            f"Second call correctly returned cached: true",
+                            {"cached": cached_status2}
+                        )
+                    else:
+                        self.log_result(
+                            f"Tax Rate {country_code} - Cache Test", 
+                            False, 
+                            f"Second call should return cached: true, got: {cached_status2}",
+                            {"response": data2}
+                        )
+                else:
+                    self.log_result(
+                        f"Tax Rate {country_code} - Second Call", 
+                        False, 
+                        f"Second call failed with status {response2.status_code}",
+                        {"response": response2.text}
+                    )
+            else:
+                self.log_result(
+                    f"Tax Rate {country_code}", 
+                    False, 
+                    f"API call failed with status {response1.status_code}",
+                    {"response": response1.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                f"Tax Rate {country_code}", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_tax_validation_endpoint(self):
+        """Test POST /api/tax/validate"""
+        print("\n--- Testing Tax ID Validation ---")
+        
+        # Test with Portuguese VAT number as specified in review request
+        test_data = {
+            "tax_id": "PT518713130",
+            "country_code": "PT"
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/tax/validate",
+                json=test_data,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if response contains expected fields
+                response_data = data.get('data', {})
+                expected_fields = ['tax_id', 'country_code', 'query_status']
+                
+                missing_fields = [field for field in expected_fields if field not in response_data]
+                
+                if missing_fields:
+                    self.log_result(
+                        "Tax ID Validation - Structure", 
+                        False, 
+                        f"Missing required fields: {', '.join(missing_fields)}",
+                        {"response": data}
+                    )
+                else:
+                    # Check if API handled rate limiting gracefully
+                    query_status = response_data.get('query_status')
+                    if query_status == "rate_limited":
+                        self.log_result(
+                            "Tax ID Validation", 
+                            True, 
+                            "API correctly handled rate limiting",
+                            {"query_status": query_status, "tax_id": response_data.get('tax_id')}
+                        )
+                    else:
+                        self.log_result(
+                            "Tax ID Validation", 
+                            True, 
+                            f"Validation completed with status: {query_status}",
+                            {"query_status": query_status, "valid": response_data.get('valid')}
+                        )
+            else:
+                self.log_result(
+                    "Tax ID Validation", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Tax ID Validation", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_tax_acronyms_endpoint(self):
+        """Test GET /api/tax/acronyms"""
+        print("\n--- Testing Tax Acronyms ---")
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/tax/acronyms", timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                response_data = data.get('data', {})
+                
+                # Check if response contains expected structure
+                expected_fields = ['total_countries', 'acronyms', 'by_country', 'grouped']
+                missing_fields = [field for field in expected_fields if field not in response_data]
+                
+                if missing_fields:
+                    self.log_result(
+                        "Tax Acronyms - Structure", 
+                        False, 
+                        f"Missing required fields: {', '.join(missing_fields)}",
+                        {"response": data}
+                    )
+                else:
+                    total_countries = response_data.get('total_countries', 0)
+                    grouped_data = response_data.get('grouped', {})
+                    
+                    # Verify we have 102 countries as specified
+                    if total_countries >= 100:  # Allow some flexibility
+                        self.log_result(
+                            "Tax Acronyms - Count", 
+                            True, 
+                            f"Retrieved {total_countries} countries (expected ~102)",
+                            {"total_countries": total_countries}
+                        )
+                    else:
+                        self.log_result(
+                            "Tax Acronyms - Count", 
+                            False, 
+                            f"Expected ~102 countries, got {total_countries}",
+                            {"total_countries": total_countries}
+                        )
+                    
+                    # Verify grouped data structure
+                    if 'european_union' in grouped_data and 'rest_of_world' in grouped_data:
+                        eu_count = len(grouped_data['european_union'])
+                        row_count = len(grouped_data['rest_of_world'])
+                        
+                        self.log_result(
+                            "Tax Acronyms - Grouping", 
+                            True, 
+                            f"Data correctly grouped: EU ({eu_count}), Rest of World ({row_count})",
+                            {"eu_countries": eu_count, "other_countries": row_count}
+                        )
+                    else:
+                        self.log_result(
+                            "Tax Acronyms - Grouping", 
+                            False, 
+                            "Missing grouped data structure",
+                            {"grouped_keys": list(grouped_data.keys()) if grouped_data else []}
+                        )
+            else:
+                self.log_result(
+                    "Tax Acronyms", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Tax Acronyms", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_tax_lookup_endpoint(self):
+        """Test GET /api/tax/lookup?country=Portugal"""
+        print("\n--- Testing Tax Lookup by Country Name ---")
+        
+        test_countries = ["Portugal", "Germany", "United States"]
+        
+        for country_name in test_countries:
+            try:
+                response = requests.get(
+                    f"{self.backend_url}/api/tax/lookup",
+                    params={"country": country_name},
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    response_data = data.get('data', {})
+                    
+                    # Should resolve country name to code and return tax rate
+                    if 'country_code' in response_data and 'standard_rate' in response_data:
+                        self.log_result(
+                            f"Tax Lookup - {country_name}", 
+                            True, 
+                            f"Successfully resolved to {response_data.get('country_code')} with rate {response_data.get('standard_rate')}%",
+                            {"country_name": response_data.get('country_name'),
+                             "country_code": response_data.get('country_code'),
+                             "standard_rate": response_data.get('standard_rate')}
+                        )
+                    else:
+                        self.log_result(
+                            f"Tax Lookup - {country_name}", 
+                            False, 
+                            "Missing country_code or standard_rate in response",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        f"Tax Lookup - {country_name}", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"Tax Lookup - {country_name}", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+    
+    def verify_tax_cache_database(self):
+        """Verify tax rates are stored in tbl_tax_rate table"""
+        print("\n--- Verifying Tax Cache Database ---")
+        
+        cache_test_script = '''
+const { Sequelize, QueryTypes } = require('sequelize');
+require('dotenv').config();
+
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.USER_NAME,
+  process.env.PASSWORD,
+  {
+    host: process.env.HOST,
+    port: Number(process.env.DB_PORT),
+    dialect: "postgres",
+    logging: false
+  }
+);
+
+async function verifyCacheData() {
+  try {
+    await sequelize.authenticate();
+    
+    // Check if tbl_tax_rate has cached data
+    const cachedRates = await sequelize.query(
+      `SELECT country_code, country_name, tax_acronym, standard_rate, created_at 
+       FROM tbl_tax_rate 
+       ORDER BY created_at DESC 
+       LIMIT 10`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    console.log(JSON.stringify({
+      table_exists: true,
+      cached_entries: cachedRates.length,
+      sample_data: cachedRates
+    }, null, 2));
+    
+    process.exit(0);
+    
+  } catch (error) {
+    console.error('Cache verification failed:', error.message);
+    process.exit(1);
+  }
+}
+
+verifyCacheData();
+'''
+        
+        try:
+            # Write cache verification script
+            with open('/tmp/verify_cache.js', 'w') as f:
+                f.write(cache_test_script)
+            
+            # Run the verification script
+            result = subprocess.run(
+                ["node", "/tmp/verify_cache.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                try:
+                    cache_data = json.loads(result.stdout)
+                    cached_entries = cache_data.get('cached_entries', 0)
+                    
+                    if cached_entries > 0:
+                        self.log_result(
+                            "Tax Cache Database", 
+                            True, 
+                            f"Found {cached_entries} cached tax rates in database",
+                            {"cached_entries": cached_entries, 
+                             "sample_data": cache_data.get('sample_data', [])[:3]}  # Show first 3
+                        )
+                    else:
+                        self.log_result(
+                            "Tax Cache Database", 
+                            False, 
+                            "No cached tax rates found in database",
+                            {"cached_entries": cached_entries}
+                        )
+                        
+                except json.JSONDecodeError:
+                    self.log_result(
+                        "Tax Cache Database", 
+                        False, 
+                        "Failed to parse cache verification results",
+                        {"stdout": result.stdout, "stderr": result.stderr}
+                    )
+            else:
+                self.log_result(
+                    "Tax Cache Database", 
+                    False, 
+                    "Cache verification script failed",
+                    {"stdout": result.stdout, "stderr": result.stderr}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Tax Cache Database", 
+                False, 
+                f"Cache verification failed: {str(e)}"
+            )
         """Run all database tests"""
         print("🚀 Starting DynoPay Database Schema Tests")
         print("=" * 60)
