@@ -29,6 +29,10 @@ const apiModel = sequelize.define(
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
     },
+    // Phase 1: API name field
+    api_name: {
+      type: DataTypes.STRING(100),
+    },
     base_currency: {
       type: DataTypes.STRING,
       defaultValue: "USD",
