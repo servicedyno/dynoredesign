@@ -669,7 +669,7 @@ backend:
     file: "/app/backend/controller/apiController.ts"
     stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -677,6 +677,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ FAILED: POST /api/userApi/addApi returns 500 error. Issue is 'User does not have any wallet address configured for this company!' - validation requires at least 1 wallet for company_id=1 but user has none. Need to create wallet addresses first or adjust validation logic."
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed validation logic in /app/backend/controller/apiController.ts. Changed from checking userWalletModel to userWalletAddressModel which is the correct table for wallet addresses. Now validation properly checks if user has any wallet addresses configured for the company."
 
   - task: "GET /api/userApi/getApi returns api_name field"
     implemented: true
