@@ -576,14 +576,17 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 4 Notifications System - COMPLETED"
+    - "Phase 5: Authentication Fixes"
+    - "POST /api/user/forgot-password"
+    - "POST /api/user/reset-password"
+    - "POST /api/user/google-signin"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Phase 4 Notifications System implemented. Endpoints: GET/PUT /api/notifications/preferences, GET /api/notifications (list with pagination), GET /api/notifications/unread-count, PUT /api/notifications/:id/read, PUT /api/notifications/read-all, DELETE /api/notifications/:id, GET /api/notifications/types, POST /api/notifications/trigger-weekly-summary. Weekly summary cron job scheduled for every Monday 9:00 AM UTC. All endpoints require JWT authentication."
+    message: "Phase 5 Authentication Fixes implemented. New endpoints: POST /api/user/forgot-password (sends reset email with token), POST /api/user/reset-password (validates token and updates password), POST /api/user/google-signin (authenticates with Google ID token or access token). Added columns to tbl_user: reset_token, reset_token_expiry, google_id. Emails sent via Brevo API."
   - agent: "testing"
     message: "✅ PHASE 1 DATABASE SCHEMA TESTING COMPLETE: All 9 backend tasks successfully verified. Database connectivity confirmed, migration executed successfully, all 5 new tables created with correct schemas (tbl_tax_rate, tbl_invoice, tbl_notification, tbl_notification_preferences, tbl_kyc), and all 4 existing tables properly extended with new columns (tbl_company, tbl_api, tbl_user_wallet, tbl_user_addresses). PostgreSQL database at yamanote.proxy.rlwy.net:42097 is fully operational with Phase 1 schema updates."
   - agent: "testing"
