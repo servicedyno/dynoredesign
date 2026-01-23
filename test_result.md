@@ -720,7 +720,7 @@ backend:
     file: "/app/backend/controller/walletController.ts"
     stuck_count: 1
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -728,6 +728,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ FAILED: PUT /api/wallet/address/:id returns 500 error. Same database column reference issue: 'column Wallet_Addresses.id does not exist' - should use 'user_address_id' instead of 'id' for tbl_user_addresses table."
+      - working: "NA"
+        agent: "main"
+        comment: "Code review shows endpoint already uses user_address_id correctly in lines 2726, 2779, 2789. The reported database column error may be outdated or from a different context. Endpoint implementation looks correct - needs retesting to verify."
 
   - task: "GET /api/docs Swagger UI accessibility"
     implemented: true
