@@ -2771,6 +2771,8 @@ export default {
   authStep,
   getCurrencyRates,
   getPaymentLinks,
+  getPaymentLinkById,
+  updatePaymentLink,
   deletePaymentLink,
   createPaymentLink,
   cryptoVerification,
