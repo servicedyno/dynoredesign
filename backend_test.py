@@ -3958,6 +3958,9 @@ testEmailSending();
         # Test 10: Phase 8 Payment Links CRUD (NEW - PRIORITY)
         self.test_phase8_payment_links_crud()
         
+        # Test 11: Phase 9 Email Notifications Service (NEW - PRIORITY)
+        self.test_phase9_email_service()
+        
         return True
     
     def test_phase6_wallet_apis(self):
