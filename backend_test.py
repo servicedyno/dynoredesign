@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Database Schema Testing
-Tests Phase 1 Database Schema Updates for PostgreSQL database
+DynoPay Backend Testing Suite
+Tests Phase 1 Database Schema Updates and Phase 2 Tax API Integration
 """
 
 import os
@@ -12,11 +12,25 @@ import time
 import requests
 from typing import Dict, List, Any
 
-class DynoPayDatabaseTester:
+class DynoPayBackendTester:
     def __init__(self):
-        self.backend_url = "http://localhost:8001"
+        # Get backend URL from frontend .env file
+        self.backend_url = self.get_backend_url()
         self.test_results = {}
         self.errors = []
+        
+    def get_backend_url(self):
+        """Get backend URL from frontend .env file"""
+        try:
+            with open('/app/frontend/.env', 'r') as f:
+                for line in f:
+                    if line.startswith('REACT_APP_BACKEND_URL='):
+                        return line.split('=', 1)[1].strip()
+        except Exception as e:
+            print(f"Warning: Could not read frontend .env file: {e}")
+        
+        # Fallback to localhost
+        return "http://localhost:8001"
         
     def log_result(self, test_name: str, success: bool, message: str, details: Dict = None):
         """Log test result"""
