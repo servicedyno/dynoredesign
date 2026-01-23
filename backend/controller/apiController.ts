@@ -33,17 +33,16 @@ const addApi = async (req: express.Request, res: express.Response) => {
       adm_id: userData.user_id,
     };
 
-    // Check for at least 1 wallet for this company
-    const wallets = await userWalletModel.findOne({
+    // Check for at least 1 wallet address for this company
+    const walletAddresses = await userWalletAddressModel.findOne({
       where: {
         user_id: userData.user_id,
-        wallet_address: { [Op.not]: null },
         ...(company_id && { company_id }),
       },
     });
 
 
-    if(!wallets){
+    if(!walletAddresses){
       return errorResponseHelper(
         res,
         500,
