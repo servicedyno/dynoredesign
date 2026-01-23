@@ -783,10 +783,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 6 Issues Resolution"
-    - "POST /api/wallet/addWalletAddress Google Cloud KMS authentication fix"
-    - "POST /api/userApi/addApi wallet validation logic adjustment"
-    - "Wallet edit OTP endpoints database column reference fix"
+    - "POST /api/wallet/addWalletAddress - Google Cloud KMS fix verification"
+    - "POST /api/userApi/addApi - validation logic fix verification"
+    - "POST /api/wallet/address/send-otp - verify code already correct"
+    - "PUT /api/wallet/address/:id - verify code already correct"
   stuck_tasks:
     - "POST /api/wallet/addWalletAddress with company_id and wallet_name"
     - "POST /api/userApi/addApi with api_name support"
