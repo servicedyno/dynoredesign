@@ -390,6 +390,171 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: JWT authentication working perfectly. User login via POST /api/user/login returns valid JWT token. All dashboard endpoints properly validate Authorization header and decode user information from token. Authentication flow: login → get token → use token for dashboard API calls."
 
+  - task: "GET /api/notifications/preferences endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/notificationController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Get user's notification settings with default values if no preferences saved"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Preferences endpoint working correctly. Returns default preferences with is_default: true when no preferences saved. All expected fields present: transaction_updates, payment_received, weekly_summary, security_alerts, email_notifications, sms_notifications, browser_notifications."
+
+  - task: "PUT /api/notifications/preferences endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/notificationController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Update notification settings - creates or updates preferences record"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Update preferences working correctly. Successfully creates new preferences record and updates existing ones. Changes persist correctly and is_default flag updates to false after first update."
+
+  - task: "GET /api/notifications endpoint with pagination"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/notificationController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "List all notifications with pagination support and filtering by company_id, type, is_read"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Notification list endpoint working perfectly. Returns notifications array with proper pagination structure (total, page, limit, total_pages). Supports query parameters for filtering. Handles empty result sets gracefully."
+
+  - task: "GET /api/notifications/unread-count endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/notificationController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Get unread badge count for authenticated user"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Unread count endpoint working correctly. Returns proper JSON structure with unread_count field. Accurately counts unread notifications for authenticated user."
+
+  - task: "GET /api/notifications/types endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/notificationController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Get all notification types available in the system"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Notification types endpoint returns 11 notification types correctly: transaction_confirmed, payment_received, weekly_summary, security_alert, kyc_required, kyc_approved, kyc_rejected, wallet_verified, wallet_added, api_key_created, company_created."
+
+  - task: "POST /api/notifications/trigger-weekly-summary endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/notificationRouter.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Manually trigger weekly summary notification creation for testing"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Weekly summary trigger working perfectly. Creates notification with proper structure including transaction statistics, period dates, and summary data. Returns results array with user_id, notification, and summary fields."
+
+  - task: "PUT /api/notifications/:id/read endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/notificationController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Mark single notification as read by notification ID"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Mark single notification as read working correctly. Returns notification_id and is_read: true. Properly validates user ownership of notification before updating."
+
+  - task: "PUT /api/notifications/read-all endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/notificationController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Mark all notifications as read for authenticated user"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Mark all as read endpoint working correctly. Returns updated_count showing number of notifications marked as read. Properly filters by user_id and optional company_id."
+
+  - task: "DELETE /api/notifications/:id endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/notificationController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Delete a notification by ID for authenticated user"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Delete notification endpoint working correctly. Returns notification_id and deleted: true. Properly validates user ownership before deletion and handles non-existent notifications gracefully."
+
+  - task: "Weekly summary cron job"
+    implemented: true
+    working: true
+    file: "/app/backend/utils/cronJobs.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Scheduled cron job for every Monday 9:00 AM UTC to generate weekly summaries"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Weekly summary cron job scheduled correctly. Manual trigger function working perfectly, creates notifications with transaction statistics for past 7 days. Cron job setup confirmed for Monday 9:00 AM UTC schedule."
+
+  - task: "JWT Authentication for Notification APIs"
+    implemented: true
+    working: true
+    file: "/app/backend/middleware/authMiddleware.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "All notification endpoints require JWT authentication via Authorization: Bearer <token> header"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: JWT authentication working perfectly for all notification endpoints. Same authentication flow as dashboard APIs: login → get token → use token for notification API calls. All endpoints properly validate Authorization header."
+
 frontend:
   - task: "No frontend changes for Phase 1"
     implemented: false
