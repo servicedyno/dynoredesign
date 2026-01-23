@@ -1411,6 +1411,192 @@ verifyCacheData();
         
         return True
     
+    def test_wallet_add_address_and_api_creation(self):
+        """Test the complete flow: Create wallet address then create API key (review request scenario)"""
+        print("\n=== Testing Wallet Address Creation + API Key Creation Flow ===")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Wallet + API Flow", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return False
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Step 1: Create wallet address for company_id=1 as specified in review request
+        wallet_data = {
+            "wallet_address": "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2",
+            "currency": "BTC",
+            "label": "Test Wallet",
+            "company_id": 1,
+            "wallet_name": "Test Wallet"
+        }
+        
+        print("\n--- Step 1: Creating Wallet Address ---")
+        try:
+            wallet_response = requests.post(
+                f"{self.backend_url}/api/wallet/addWalletAddress",
+                json=wallet_data,
+                headers=headers,
+                timeout=30
+            )
+            
+            print(f"Wallet Creation Response Status: {wallet_response.status_code}")
+            print(f"Wallet Creation Response: {wallet_response.text[:500]}...")
+            
+            if wallet_response.status_code == 200:
+                self.log_result(
+                    "Step 1 - Wallet Address Creation", 
+                    True, 
+                    "✅ Wallet address created successfully with local validation",
+                    {
+                        "wallet_address": wallet_data["wallet_address"],
+                        "currency": wallet_data["currency"],
+                        "company_id": wallet_data["company_id"],
+                        "validation_method": "local_library"
+                    }
+                )
+            else:
+                self.log_result(
+                    "Step 1 - Wallet Address Creation", 
+                    False, 
+                    f"❌ Wallet creation failed with status {wallet_response.status_code}",
+                    {"response": wallet_response.text}
+                )
+                return False
+                
+        except Exception as e:
+            self.log_result(
+                "Step 1 - Wallet Address Creation", 
+                False, 
+                f"❌ Wallet creation request failed: {str(e)}"
+            )
+            return False
+        
+        # Step 2: Now test API key creation (should work since user has wallet address for company_id=1)
+        api_data = {
+            "company_id": 1,
+            "base_currency": "BTC", 
+            "api_name": "Test API",
+            "withdrawal_whitelist": ""
+        }
+        
+        print("\n--- Step 2: Creating API Key ---")
+        try:
+            api_response = requests.post(
+                f"{self.backend_url}/api/userApi/addApi",
+                json=api_data,
+                headers=headers,
+                timeout=30
+            )
+            
+            print(f"API Creation Response Status: {api_response.status_code}")
+            print(f"API Creation Response: {api_response.text[:500]}...")
+            
+            if api_response.status_code == 200:
+                try:
+                    api_result = api_response.json()
+                    
+                    if 'data' in api_result:
+                        api_key_data = api_result['data']
+                        
+                        # Verify API key response structure
+                        expected_fields = ['api_key', 'api_secret', 'company_id', 'base_currency', 'api_name']
+                        missing_fields = [field for field in expected_fields if field not in api_key_data]
+                        
+                        if missing_fields:
+                            self.log_result(
+                                "Step 2 - API Key Creation Structure", 
+                                False, 
+                                f"❌ Missing fields in API response: {', '.join(missing_fields)}",
+                                {"response": api_result}
+                            )
+                        else:
+                            # Verify the data matches what was requested
+                            matches = (
+                                api_key_data.get('company_id') == api_data['company_id'] and
+                                api_key_data.get('base_currency') == api_data['base_currency'] and
+                                api_key_data.get('api_name') == api_data['api_name']
+                            )
+                            
+                            if matches:
+                                self.log_result(
+                                    "Step 2 - API Key Creation", 
+                                    True, 
+                                    "✅ API key created successfully! No more 'User does not have any wallet address configured for this company!' error",
+                                    {
+                                        "api_key": api_key_data.get('api_key', '')[:20] + "...",  # Show partial key for security
+                                        "company_id": api_key_data.get('company_id'),
+                                        "base_currency": api_key_data.get('base_currency'),
+                                        "api_name": api_key_data.get('api_name'),
+                                        "validation_passed": True
+                                    }
+                                )
+                                return True
+                            else:
+                                self.log_result(
+                                    "Step 2 - API Key Creation Data Mismatch", 
+                                    False, 
+                                    "❌ API response data doesn't match request data",
+                                    {"expected": api_data, "actual": api_key_data}
+                                )
+                    else:
+                        self.log_result(
+                            "Step 2 - API Key Creation", 
+                            False, 
+                            "❌ Invalid API response format - missing 'data' field",
+                            {"response": api_result}
+                        )
+                        
+                except json.JSONDecodeError:
+                    self.log_result(
+                        "Step 2 - API Key Creation", 
+                        False, 
+                        "❌ Failed to parse API response JSON",
+                        {"response": api_response.text}
+                    )
+            else:
+                # Check if it's still the wallet validation error
+                try:
+                    error_data = api_response.json()
+                    error_message = error_data.get('message', api_response.text)
+                    
+                    if "User does not have any wallet address configured for this company" in error_message:
+                        self.log_result(
+                            "Step 2 - API Key Creation", 
+                            False, 
+                            "❌ STILL FAILING: API validation still requires wallet addresses despite wallet being created",
+                            {"error_message": error_message, "status_code": api_response.status_code}
+                        )
+                    else:
+                        self.log_result(
+                            "Step 2 - API Key Creation", 
+                            False, 
+                            f"❌ API creation failed with status {api_response.status_code}: {error_message}",
+                            {"error_message": error_message, "status_code": api_response.status_code}
+                        )
+                except:
+                    self.log_result(
+                        "Step 2 - API Key Creation", 
+                        False, 
+                        f"❌ API creation failed with status {api_response.status_code}",
+                        {"response": api_response.text}
+                    )
+                    
+        except Exception as e:
+            self.log_result(
+                "Step 2 - API Key Creation", 
+                False, 
+                f"❌ API creation request failed: {str(e)}"
+            )
+        
+        return False
+
     def test_wallet_add_address_local_validation(self):
         """Test POST /api/wallet/addWalletAddress endpoint with new local validation (no Tatum API dependency)"""
         print("\n=== Testing POST /api/wallet/addWalletAddress - Local Validation Implementation ===")
