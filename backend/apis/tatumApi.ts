@@ -26,11 +26,16 @@ const encryptSymmetric = async (dataToEncrypt, keyId) => {
   const locationId = process.env.LOCATION_ID;
   const keyRingId = process.env.KEY_RING_ID;
 
+  // Properly format private key: ensure newlines are converted from \n to actual newlines
+  const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
+
   const client = new KeyManagementServiceClient({
     credentials: {
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n'),
+      private_key: privateKey,
+      type: "service_account",
     },
+    projectId: projectId,
   });
 
   const keyName = client.cryptoKeyPath(projectId, locationId, keyRingId, keyId);
