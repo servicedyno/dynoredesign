@@ -24,7 +24,7 @@ import flw from "../apis/flutterwaveApi";
 const addApi = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { company_id, base_currency, withdrawal_whitelist } = req.body;
+    const { company_id, base_currency, withdrawal_whitelist, api_name } = req.body;
 
     const keyData = {
       base_currency,
@@ -32,10 +32,12 @@ const addApi = async (req: express.Request, res: express.Response) => {
       adm_id: userData.user_id,
     };
 
+    // Check for at least 1 wallet for this company
     const wallets = await userWalletModel.findOne({
       where: {
         user_id: userData.user_id,
         wallet_address: { [Op.not]: null },
+        ...(company_id && { company_id }),
       },
     });
 
@@ -44,7 +46,7 @@ const addApi = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(
         res,
         500,
-        "User do not have any wallet address!"
+        "User does not have any wallet address configured for this company!"
       );
     }
 
@@ -66,7 +68,7 @@ const addApi = async (req: express.Request, res: express.Response) => {
       errorResponseHelper(
         res,
         400,
-        "API for this company and currency is already exists!"
+        "API for this company and currency already exists!"
       );
     } else {
       const isExists = await companyModel
@@ -79,7 +81,7 @@ const addApi = async (req: express.Request, res: express.Response) => {
         .then((isExists) => isExists);
 
       if (!isExists) {
-        errorResponseHelper(res, 500, "Company does not exists!");
+        errorResponseHelper(res, 500, "Company does not exist!");
       } else {
         const company_data = await companyModel.findOne({
           where: {
@@ -107,10 +109,11 @@ const addApi = async (req: express.Request, res: express.Response) => {
           apiKey,
           user_id: userData.user_id,
           adminToken: token.token,
-          withdrawal_whitelist: withdrawal_whitelist
+          withdrawal_whitelist: withdrawal_whitelist,
+          api_name: api_name || `${company_data.dataValues.company_name} API`,
         });
 
-        successResponseHelper(res, 200, "Api generated successfully!", {
+        successResponseHelper(res, 200, "API generated successfully!", {
           ...resData.dataValues,
           ...company_data.dataValues,
         });
