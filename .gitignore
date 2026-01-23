@@ -81,3 +81,4 @@ android-sdk/ services/frontend-checkout/node_modules/@next/swc-linux-arm64-gnu/n
 services/frontend-checkout/node_modules/@next/swc-linux-arm64-musl/next-swc.linux-arm64-musl.node
 services/frontend-dashboard/node_modules/@next/swc-linux-arm64-gnu/next-swc.linux-arm64-gnu.node
 services/frontend-dashboard/node_modules/@next/swc-linux-arm64-musl/next-swc.linux-arm64-musl.node
+services/frontend-checkout/node_modules/@next/swc-linux-arm64-gnu/next-swc.linux-arm64-gnu.node
