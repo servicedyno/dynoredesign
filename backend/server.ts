@@ -4,6 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import router from "./routes";
 import tatumApi from "./apis/tatumApi";
+import { setupSwagger } from "./swagger";
 
 import {
   deleteRedisItem,
