@@ -2016,6 +2016,180 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Get single payment link by ID
+ * GET /api/pay/links/:id
+ */
+const getPaymentLinkById = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as any;
+  const link_id = req.params.id;
+  
+  try {
+    const link = await paymentLinkModel.findOne({
+      where: {
+        user_id: userData.user_id,
+        link_id,
+      },
+    });
+
+    if (!link) {
+      return errorResponseHelper(res, 404, "Payment link not found!");
+    }
+
+    const linkData = link.dataValues;
+    const now = new Date();
+    
+    // Calculate status
+    let status = "Active";
+    if (linkData.expires_at && new Date(linkData.expires_at) <= now) {
+      status = "Expired";
+    }
+    if (linkData.status === "completed") {
+      status = "Completed";
+    }
+
+    // Format dates
+    const formatDate = (date) => {
+      if (!date) return null;
+      const d = new Date(date);
+      return d.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).replace(',', '');
+    };
+
+    const response = {
+      link_id: linkData.link_id,
+      transaction_id: linkData.transaction_id,
+      description: linkData.description,
+      base_amount: linkData.base_amount,
+      base_currency: linkData.base_currency,
+      paid_amount: linkData.paid_amount,
+      paid_currency: linkData.paid_currency,
+      created: formatDate(linkData.createdAt),
+      updated: formatDate(linkData.updatedAt),
+      expires_at: linkData.expires_at,
+      expires: formatDate(linkData.expires_at) || "Never",
+      status: status,
+      times_used: linkData.times_used || 0,
+      payment_link: linkData.payment_link,
+      email: linkData.email,
+      allowedModes: linkData.allowedModes,
+      payment_mode: linkData.payment_mode,
+      transaction_reference: linkData.transaction_reference,
+      callback_url: linkData.callback_url,
+      redirect_url: linkData.redirect_url,
+      webhook_url: linkData.webhook_url,
+    };
+
+    successResponseHelper(res, 200, "Link Fetched Successfully!", response);
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    apiLogger.error(
+      errorMessage,
+      { id: userData.id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
+ * Update payment link
+ * PUT /api/pay/links/:id
+ */
+const updatePaymentLink = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as any;
+  const link_id = req.params.id;
+  const { 
+    description, 
+    expire,
+    callback_url, 
+    redirect_url, 
+    webhook_url 
+  } = req.body;
+  
+  try {
+    // First check if link exists and belongs to user
+    const existingLink = await paymentLinkModel.findOne({
+      where: {
+        user_id: userData.user_id,
+        link_id,
+      },
+    });
+
+    if (!existingLink) {
+      return errorResponseHelper(res, 404, "Payment link not found!");
+    }
+
+    // Prepare update object
+    const updateData: any = {};
+    
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+    
+    if (expire !== undefined) {
+      // Calculate new expires_at
+      if (expire === "No" || !expire) {
+        updateData.expires_at = null;
+      } else {
+        const now = new Date();
+        if (expire === "24h") {
+          updateData.expires_at = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        } else if (expire === "7d") {
+          updateData.expires_at = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        } else if (expire === "30d") {
+          updateData.expires_at = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        }
+      }
+    }
+    
+    if (callback_url !== undefined) {
+      updateData.callback_url = callback_url;
+    }
+    
+    if (redirect_url !== undefined) {
+      updateData.redirect_url = redirect_url;
+    }
+    
+    if (webhook_url !== undefined) {
+      updateData.webhook_url = webhook_url;
+    }
+
+    // Update the link
+    await paymentLinkModel.update(updateData, {
+      where: {
+        user_id: userData.user_id,
+        link_id,
+      },
+    });
+
+    // Fetch updated link
+    const updatedLink = await paymentLinkModel.findOne({
+      where: {
+        user_id: userData.user_id,
+        link_id,
+      },
+    });
+
+    successResponseHelper(res, 200, "Link Updated Successfully!", updatedLink);
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    apiLogger.error(
+      errorMessage,
+      { id: userData.id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 const deletePaymentLink = async (
   req: express.Request,
   res: express.Response
