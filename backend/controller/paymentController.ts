@@ -1952,9 +1952,59 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
       where: {
         user_id: userData.user_id,
       },
+      order: [['createdAt', 'DESC']],
     });
 
-    successResponseHelper(res, 200, "Link Fetched Successfully!", links);
+    // Format for UI with computed status
+    const formattedLinks = links.map((link: any) => {
+      const linkData = link.dataValues;
+      const now = new Date();
+      
+      // Calculate status
+      let status = "Active";
+      if (linkData.expires_at && new Date(linkData.expires_at) <= now) {
+        status = "Expired";
+      }
+      if (linkData.status === "completed") {
+        status = "Completed";
+      }
+
+      // Format dates
+      const formatDate = (date) => {
+        if (!date) return "Never";
+        const d = new Date(date);
+        return d.toLocaleString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).replace(',', '');
+      };
+
+      return {
+        link_id: linkData.link_id,
+        transaction_id: linkData.transaction_id,
+        description: linkData.description || "No description",
+        usd_value: `$${linkData.base_amount}`,
+        base_amount: linkData.base_amount,
+        base_currency: linkData.base_currency,
+        created: formatDate(linkData.createdAt),
+        expires: formatDate(linkData.expires_at),
+        status: status,
+        times_used: linkData.times_used || 0,
+        payment_link: linkData.payment_link,
+        email: linkData.email,
+        allowedModes: linkData.allowedModes,
+        callback_url: linkData.callback_url,
+        redirect_url: linkData.redirect_url,
+        webhook_url: linkData.webhook_url,
+      };
+    });
+
+    successResponseHelper(res, 200, "Links Fetched Successfully!", formattedLinks);
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
