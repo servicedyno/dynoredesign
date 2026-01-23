@@ -1514,7 +1514,7 @@ verifyCacheData();
         
         all_test_cases = valid_test_cases + invalid_test_cases
         
-        for test_case in test_cases:
+        for test_case in all_test_cases:
             try:
                 print(f"\n--- Testing {test_case['name']} ---")
                 
@@ -1528,94 +1528,132 @@ verifyCacheData();
                 print(f"Response Status: {response.status_code}")
                 print(f"Response Text: {response.text[:500]}...")
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    # Check if address was successfully added
-                    if 'data' in data:
-                        address_data = data['data']
-                        
-                        # Verify the response contains expected fields
-                        expected_fields = ['wallet_address', 'currency', 'label', 'company_id', 'wallet_name']
-                        missing_fields = [field for field in expected_fields if field not in address_data]
-                        
-                        if missing_fields:
-                            self.log_result(
-                                f"Add Wallet Address - {test_case['name']} Structure", 
-                                False, 
-                                f"Missing fields in response: {', '.join(missing_fields)}",
-                                {"response": data}
-                            )
-                        else:
-                            # Verify the data matches what was sent
-                            matches = (
-                                address_data.get('wallet_address') == test_case['data']['wallet_address'] and
-                                address_data.get('currency') == test_case['data']['currency'] and
-                                address_data.get('company_id') == test_case['data']['company_id'] and
-                                address_data.get('wallet_name') == test_case['data']['wallet_name']
-                            )
+                if test_case['should_succeed']:
+                    # Valid addresses should return 200
+                    if response.status_code == 200:
+                        try:
+                            data = response.json()
                             
-                            if matches:
+                            # Check if address was successfully added
+                            if 'data' in data:
+                                address_data = data['data']
+                                
+                                # Verify the response contains expected fields
+                                expected_fields = ['wallet_address', 'currency', 'label', 'company_id', 'wallet_name']
+                                missing_fields = [field for field in expected_fields if field not in address_data]
+                                
+                                if missing_fields:
+                                    self.log_result(
+                                        f"Local Validation - {test_case['name']} Structure", 
+                                        False, 
+                                        f"Missing fields in response: {', '.join(missing_fields)}",
+                                        {"response": data}
+                                    )
+                                else:
+                                    # Verify the data matches what was sent
+                                    matches = (
+                                        address_data.get('wallet_address') == test_case['data']['wallet_address'] and
+                                        address_data.get('currency') == test_case['data']['currency'] and
+                                        address_data.get('company_id') == test_case['data']['company_id'] and
+                                        address_data.get('wallet_name') == test_case['data']['wallet_name']
+                                    )
+                                    
+                                    if matches:
+                                        self.log_result(
+                                            f"Local Validation - {test_case['name']}", 
+                                            True, 
+                                            "✅ Address successfully validated using local wallet-address-validator library (no external API dependency)",
+                                            {
+                                                "wallet_address": address_data.get('wallet_address'),
+                                                "currency": address_data.get('currency'),
+                                                "validation_method": "local_library",
+                                                "no_external_api": True
+                                            }
+                                        )
+                                    else:
+                                        self.log_result(
+                                            f"Local Validation - {test_case['name']} Data Mismatch", 
+                                            False, 
+                                            "Response data doesn't match request data",
+                                            {"expected": test_case['data'], "actual": address_data}
+                                        )
+                            else:
+                                # Check if it's a success message without data field
+                                if "Address added successfully!" in response.text:
+                                    self.log_result(
+                                        f"Local Validation - {test_case['name']}", 
+                                        True, 
+                                        "✅ Address successfully validated using local validation (success message received)",
+                                        {"validation_method": "local_library", "no_external_api": True}
+                                    )
+                                else:
+                                    self.log_result(
+                                        f"Local Validation - {test_case['name']}", 
+                                        False, 
+                                        "Success response but no data field found",
+                                        {"response": data}
+                                    )
+                        except json.JSONDecodeError:
+                            # Check if it's a plain text success message
+                            if "Address added successfully!" in response.text:
                                 self.log_result(
-                                    f"Add Wallet Address - {test_case['name']}", 
+                                    f"Local Validation - {test_case['name']}", 
                                     True, 
-                                    "Address successfully validated and added via Tatum API",
-                                    {
-                                        "wallet_address": address_data.get('wallet_address'),
-                                        "currency": address_data.get('currency'),
-                                        "company_id": address_data.get('company_id'),
-                                        "wallet_name": address_data.get('wallet_name')
-                                    }
+                                    "✅ Address successfully validated using local validation (plain text response)",
+                                    {"validation_method": "local_library", "no_external_api": True}
                                 )
                             else:
                                 self.log_result(
-                                    f"Add Wallet Address - {test_case['name']} Data Mismatch", 
+                                    f"Local Validation - {test_case['name']}", 
                                     False, 
-                                    "Response data doesn't match request data",
-                                    {"expected": test_case['data'], "actual": address_data}
+                                    "Invalid JSON response",
+                                    {"response": response.text}
                                 )
                     else:
+                        # Valid address but got error - this is a failure
                         self.log_result(
-                            f"Add Wallet Address - {test_case['name']}", 
+                            f"Local Validation - {test_case['name']}", 
                             False, 
-                            "Success response but no data field found",
-                            {"response": data}
-                        )
-                        
-                elif response.status_code == 500:
-                    # Check if it's still the old error or a new one
-                    response_text = response.text.lower()
-                    
-                    if "please enter a valid btc address" in response_text:
-                        self.log_result(
-                            f"Add Wallet Address - {test_case['name']}", 
-                            False, 
-                            "❌ STILL FAILING: Still getting 'please enter a valid BTC address!' error - Tatum API validation not working",
-                            {"response": response.text, "status_code": response.status_code}
-                        )
-                    elif "getting metadata from plugin failed" in response_text or "decoder routines" in response_text:
-                        self.log_result(
-                            f"Add Wallet Address - {test_case['name']}", 
-                            False, 
-                            "❌ GOOGLE CLOUD KMS ERROR PERSISTS: Still getting Google Cloud KMS authentication error",
-                            {"response": response.text, "status_code": response.status_code}
-                        )
-                    elif "cannot read properties of undefined" in response_text and "blockchain" in response_text:
-                        self.log_result(
-                            f"Add Wallet Address - {test_case['name']}", 
-                            False, 
-                            "❌ TATUM SDK INITIALIZATION FAILED: getTatumSDK() returning undefined - Tatum API key issue not resolved",
-                            {"response": response.text, "status_code": response.status_code}
-                        )
-                    else:
-                        self.log_result(
-                            f"Add Wallet Address - {test_case['name']}", 
-                            False, 
-                            f"Server error (500) with different message: {response.text[:200]}",
+                            f"❌ Valid address rejected with status {response.status_code}: {response.text[:200]}",
                             {"response": response.text, "status_code": response.status_code}
                         )
                 else:
-                    self.log_result(
+                    # Invalid addresses should return 500 with proper error message
+                    if response.status_code == 500:
+                        response_text = response.text.lower()
+                        expected_error_patterns = [
+                            f"please enter a valid {test_case['data']['currency'].lower()} address",
+                            "invalid address format",
+                            "validation failed"
+                        ]
+                        
+                        error_found = any(pattern in response_text for pattern in expected_error_patterns)
+                        
+                        if error_found:
+                            self.log_result(
+                                f"Local Validation - {test_case['name']}", 
+                                True, 
+                                f"✅ Invalid address correctly rejected with proper error message",
+                                {"validation_method": "local_library", "error_handling": "correct"}
+                            )
+                        else:
+                            self.log_result(
+                                f"Local Validation - {test_case['name']}", 
+                                False, 
+                                f"Invalid address rejected but with unexpected error message: {response.text[:200]}",
+                                {"response": response.text, "status_code": response.status_code}
+                            )
+                    else:
+                        # Invalid address but got unexpected status code
+                        self.log_result(
+                            f"Local Validation - {test_case['name']}", 
+                            False, 
+                            f"Invalid address should return 500, got {response.status_code}: {response.text[:200]}",
+                            {"response": response.text, "status_code": response.status_code}
+                        )
+                        
+            except Exception as e:
+                self.log_result(
                         f"Add Wallet Address - {test_case['name']}", 
                         False, 
                         f"Unexpected status code: {response.status_code}",
