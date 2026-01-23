@@ -27,6 +27,10 @@ walletRouter.post(
 walletRouter.post("/getAllTransactions", walletController.getAllTransactions);
 walletRouter.post("/addWalletAddress", walletController.addWalletAddress);
 
+// Edit wallet address endpoints (with OTP verification)
+walletRouter.post("/address/send-otp", walletController.sendEditWalletOTP);
+walletRouter.put("/address/:id", walletController.editWalletAddress);
+
 walletRouter.post("/addFunds", walletController.addFunds);
 walletRouter.post("/authStep", walletController.authStep);
 walletRouter.post("/verifyPayment", walletController.verifyPayment);
