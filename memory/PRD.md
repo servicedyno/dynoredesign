@@ -1,68 +1,72 @@
-# DynoBackend - Crypto Payment Gateway
+# DynoPay Backend - Product Requirements Document
 
-## Project Overview
-Backend services for a crypto payment gateway (DynoPay) integrated from:
-- https://github.com/Moxxcompany/DynoBackend (workakash branch) - Main backend
-- https://github.com/Moxxcompany/DynoBackendAPI - Customer API service
+## Original Problem Statement
+Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & DynoBackendAPI), merge them into a monorepo, and implement comprehensive feature additions including company profiles, tax integration, dashboard APIs, notifications, authentication fixes, and more.
 
 ## Architecture
 ```
 /app/backend/
-├── server.ts              # Main backend (Port 8001)
-├── api-service/           # Customer API service (Port 3301)
-│   └── server.ts
-├── controller/            # Main controllers
-├── routes/                # Main routes
-├── models/                # Sequelize models
-├── utils/                 # Utilities
-└── .env                   # Shared environment config
+├── api-service/          # Secondary API service (port 3301)
+├── controller/           # Business logic
+├── models/               # Sequelize models (PostgreSQL)
+├── routes/               # Express routes
+├── services/             # Shared services
+├── utils/                # Utilities
+├── jobs/                 # Cron jobs
+└── server.ts             # Main entry (port 8001)
 ```
 
-## Services
-| Service | Port | Purpose |
-|---------|------|---------|
-| Main Backend | 8001 | Core payment processing, admin, webhooks |
-| API Service | 3301 | Customer-facing API for merchant integration |
+**Tech Stack:** Node.js, TypeScript, Express, PostgreSQL, Redis, Sequelize ORM
 
-## Tech Stack
-- **Runtime**: Node.js with TypeScript
-- **Framework**: Express.js
-- **Database**: PostgreSQL (Sequelize ORM)
-- **Cache**: Redis
-- **APIs**: Tatum, Flutterwave, Blockchair
+## Implemented Features
 
-## What's Been Implemented
-- [x] DynoBackend cloned and set up (Jan 2026)
-- [x] DynoBackendAPI integrated into same repo
-- [x] PostgreSQL & Redis configured
-- [x] Database migrations completed (19 tables)
-- [x] Both services running (8001, 3301)
-- [x] Shared .env configuration
+### Phase 1: Database Schema Updates ✅ (January 2026)
+- **Modified Tables:**
+  - `tbl_company`: Added address_line1, address_line2, city, state, country, zip_code, vat_number, vat_type, vat_verified
+  - `tbl_api`: Added api_name
+  - `tbl_user_wallet`: Added company_id, wallet_name
+  - `tbl_user_addresses`: Added company_id, wallet_name
+  
+- **New Tables Created:**
+  - `tbl_tax_rate`: Cache VAT rates by country
+  - `tbl_invoice`: Transaction invoices
+  - `tbl_notification`: Individual notifications
+  - `tbl_notification_preferences`: User notification settings
+  - `tbl_kyc`: KYC verification records
 
-## API Endpoints
+## Prioritized Backlog
 
-### Main Backend (Port 8001)
-- `/api/user/*` - User auth & management
-- `/api/admin/*` - Admin operations
-- `/api/company/*` - Company management
-- `/api/wallet/*` - Wallet operations
-- `/api/pay/*` - Payment processing
-- `/webhook`, `/tatum-webhook` - Webhooks
+### P0 (Critical)
+- Phase 2: Company Profile & Tax Integration (APILayer)
+- Phase 3: Dashboard APIs
 
-### API Service (Port 3301)
-- `POST /api/user/createUser` - Create customer
-- `POST /api/user/createPayment` - Create payment link
-- `POST /api/user/cryptoPayment` - Crypto payment
-- `POST /api/user/addFunds` - Add funds
-- `POST /api/user/useWallet` - Use wallet balance
-- `GET /api/user/getTransactions` - Get transactions
-- `GET /api/user/getBalance` - Get balance
-- `GET /api/getSupportedCurrency` - List currencies
+### P1 (High Priority)
+- Phase 4: Notifications System
+- Phase 5: Authentication Fixes (Forgot Password, Google Sign-In)
+- Phase 6: API, Wallet & Company-Level Data Scoping
 
-## Environment Variables
-See `/app/backend/.env` for full configuration
+### P2 (Medium Priority)
+- Phase 7: Transactions (filters, CSV export)
+- Phase 8: Payment Links CRUD
+- Phase 9: Email Service (17 templates via Brevo)
+- Phase 10: Partial Wallet Configuration
+- Phase 11: KYC System
+- Phase 12: Invoice Generation
 
-## Next Steps
-- P0: Configure API keys (Tatum, Flutterwave)
-- P1: Set proper JWT/ACCESS_TOKEN secrets
-- P2: Configure webhook URLs for production
+## Known Issues
+1. **Fee Logic Defaults Bug** - BTC should be $7, USDT-TRC20 should be $10 (currently $5)
+2. **Missing userReceives < $5 Check** - Full amount should go to admin if user receives < $5
+3. **Google Sign-In** - Needs investigation/fix
+
+## Key Integrations
+- PostgreSQL (external database)
+- Redis (caching/queues)
+- APILayer (Tax Data API)
+- Brevo (Email)
+- Telnyx (SMS)
+- Tatum, BlockBee, Blockchair (Crypto APIs)
+- Flutterwave (Payments)
+
+## Configuration
+- Implementation Plan: `/app/backend/DYNOPAY_IMPLEMENTATION_TASKS.txt`
+- Environment: `/app/backend/.env`
