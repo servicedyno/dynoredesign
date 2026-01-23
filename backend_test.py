@@ -4971,13 +4971,13 @@ verifyCacheData();
                             
                             status_valid = status in ['Active', 'Expired', 'Completed']
                             
-                            # Verify date formatting (DD.MM.YYYY HH:MM:SS)
+                            # Verify date formatting (DD.MM.YYYY HH:MM:SS or DD/MM/YYYY HH:MM:SS)
                             created_date = first_link.get('created')
                             date_format_valid = True
                             if created_date and created_date != "Never":
-                                # Check if it matches expected format pattern
+                                # Check if it matches expected format pattern (accept both . and / separators)
                                 import re
-                                date_pattern = r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}'
+                                date_pattern = r'\d{2}[./]\d{2}[./]\d{4} \d{2}:\d{2}:\d{2}'
                                 date_format_valid = bool(re.match(date_pattern, created_date))
                             
                             # Verify USD value formatting
