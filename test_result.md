@@ -651,7 +651,7 @@ backend:
     file: "/app/backend/controller/walletController.ts"
     stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -659,6 +659,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ FAILED: POST /api/wallet/addWalletAddress returns 500 error. Issue appears to be Google Cloud KMS authentication problem ('Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported'). Endpoint structure correct but external service integration failing."
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed Google Cloud KMS authentication issue in /app/backend/apis/tatumApi.ts by adding .replace(/\\n/g, '\n') to properly convert escaped newlines in GOOGLE_CLIENT_KEY to actual newlines. This should resolve the DECODER routines error."
 
   - task: "POST /api/userApi/addApi with api_name support"
     implemented: true
