@@ -4320,6 +4320,9 @@ testEmailSending();
         # Test 11: Phase 9 Email Notifications Service (NEW - PRIORITY)
         self.test_phase9_email_service()
         
+        # Test 12: Phase 10 Partial Wallet Configuration (NEW - PRIORITY)
+        self.test_phase_10_partial_wallet_configuration()
+        
         return True
     
     def test_phase6_wallet_apis(self):
