@@ -65,6 +65,15 @@ winston.loggers.add("cronLogger", {
   defaultMeta: { service: "cronLogger" },
 });
 
+winston.loggers.add("taxLogger", {
+  format: combine(errors({ stack: true }), timestamp(), json(), prettyPrint()),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: "logs/taxLogs.log" }),
+  ],
+  defaultMeta: { service: "taxLogger" },
+});
+
 const userLogger = winston.loggers.get("userLogger");
 const walletLogger = winston.loggers.get("walletLogger");
 const companyLogger = winston.loggers.get("companyLogger");
@@ -72,6 +81,7 @@ const apiLogger = winston.loggers.get("apiLogger");
 const adminLogger = winston.loggers.get("adminLogger");
 const webhookLogs = winston.loggers.get("webhookLogs");
 const cronLogger = winston.loggers.get("cronLogger");
+const taxLogger = winston.loggers.get("taxLogger");
 
 export {
   userLogger,
@@ -81,4 +91,5 @@ export {
   adminLogger,
   webhookLogs,
   cronLogger,
+  taxLogger,
 };
