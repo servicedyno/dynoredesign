@@ -21,6 +21,13 @@ import {
   userExchangeModel,
 } from "./userModels";
 
+// Phase 1: New models
+import taxRateModel from "./taxRateModel";
+import invoiceModel from "./invoiceModel";
+import notificationModel from "./notificationModel";
+import notificationPreferencesModel from "./notificationPreferencesModel";
+import kycModel from "./kycModel";
+
 export {
   apiModel,
   adminFeeModel,
@@ -41,4 +48,10 @@ export {
   userTransactionModel,
   userTempAddressModel,
   userExchangeModel,
+  // Phase 1: New models
+  taxRateModel,
+  invoiceModel,
+  notificationModel,
+  notificationPreferencesModel,
+  kycModel,
 };
