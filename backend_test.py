@@ -1482,8 +1482,8 @@ verifyCacheData();
         api_data = {
             "company_id": 1,
             "base_currency": "BTC", 
-            "api_name": "Test API",
-            "withdrawal_whitelist": ""
+            "api_name": "Test API"
+            # Removed withdrawal_whitelist as it might be causing the boolean parsing issue
         }
         
         print("\n--- Step 2: Creating API Key ---")
