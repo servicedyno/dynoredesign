@@ -29,8 +29,8 @@ const mailTransporter = async ({ to, subject, body, name }: mailOptions) => {
     "https://api.brevo.com/v3/smtp/email",
     {
       sender: {
-        name: "Dynocash",
-        email: "notify@dynocash.com",
+        name: "DynoPay",
+        email: "notify@dynopay.com",
       },
       subject,
       to: [
@@ -47,7 +47,7 @@ const mailTransporter = async ({ to, subject, body, name }: mailOptions) => {
       },
     }
   );
-  console.log(data);
+  console.log("Email sent via Brevo:", data);
   return data;
 };
 
