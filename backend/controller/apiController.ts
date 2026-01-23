@@ -155,6 +155,7 @@ const getApi = async (req: express.Request, res: express.Response) => {
       `select a.*,c.company_id,c.company_name from tbl_api a
         join tbl_company c on a.company_id=c.company_id
         where a.user_id=${userData.user_id}
+        order by a."createdAt" DESC
         `,
       { type: QueryTypes.SELECT }
     );
