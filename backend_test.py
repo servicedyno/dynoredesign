@@ -1433,44 +1433,44 @@ verifyCacheData();
             {
                 "name": "Valid BTC Address - P2PKH",
                 "data": {
-                    "wallet_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+                    "wallet_address": "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2",
                     "currency": "BTC",
-                    "label": "Test Wallet",
+                    "label": "Test Wallet P2PKH",
                     "company_id": 1,
-                    "wallet_name": "My Wallet"
+                    "wallet_name": "My P2PKH Wallet"
                 },
                 "should_succeed": True
             },
             {
                 "name": "Valid BTC Address - P2SH", 
                 "data": {
-                    "wallet_address": "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy",
+                    "wallet_address": "3EktnHQD7RiAE6uzMj2ZifT9YgRrkSgzQX",
                     "currency": "BTC",
-                    "label": "Test Wallet",
+                    "label": "Test Wallet P2SH",
                     "company_id": 1,
-                    "wallet_name": "My Wallet"
+                    "wallet_name": "My P2SH Wallet"
                 },
                 "should_succeed": True
             },
             {
                 "name": "Valid BTC Address - Bech32",
                 "data": {
-                    "wallet_address": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+                    "wallet_address": "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
                     "currency": "BTC", 
-                    "label": "Test Wallet",
+                    "label": "Test Wallet Bech32",
                     "company_id": 1,
-                    "wallet_name": "My Wallet"
+                    "wallet_name": "My Bech32 Wallet"
                 },
                 "should_succeed": True
             },
             {
                 "name": "Valid ETH Address",
                 "data": {
-                    "wallet_address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+                    "wallet_address": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
                     "currency": "ETH",
-                    "label": "Test Wallet",
+                    "label": "Test ETH Wallet",
                     "company_id": 1,
-                    "wallet_name": "My Wallet"
+                    "wallet_name": "My ETH Wallet"
                 },
                 "should_succeed": True
             }
