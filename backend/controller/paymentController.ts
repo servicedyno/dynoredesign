@@ -1877,10 +1877,35 @@ const createPaymentLink = async (
   res: express.Response
 ) => {
   const userData = jwt.decode(res.locals.token) as any;
-  const { email, base_currency, modes, amount } = req.body;
+  const { 
+    email, 
+    base_currency, 
+    modes, 
+    amount,
+    description,
+    expire,
+    callback_url,
+    redirect_url,
+    webhook_url
+  } = req.body;
+  
   try {
     const uniqueRef = crypto.randomBytes(24).toString("hex");
     console.log("userData============>", userData);
+    
+    // Calculate expires_at based on expire option
+    let expires_at = null;
+    if (expire && expire !== "No") {
+      const now = new Date();
+      if (expire === "24h") {
+        expires_at = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      } else if (expire === "7d") {
+        expires_at = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      } else if (expire === "30d") {
+        expires_at = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      }
+    }
+    
     const payload = {
       transaction_id: crypto.randomUUID(),
       email,
@@ -1889,12 +1914,18 @@ const createPaymentLink = async (
       base_currency: base_currency,
       user_id: userData.user_id,
       payment_link: process.env.CHECKOUT_URL + "pay?d=" + uniqueRef,
+      description: description || null,
+      expires_at: expires_at,
+      callback_url: callback_url || null,
+      redirect_url: redirect_url || null,
+      webhook_url: webhook_url || null,
     };
 
     const links = await paymentLinkModel.create(payload);
     const redisPayload = {
       ...payload,
       pathType: "createLink",
+      link_id: links.dataValues.link_id,
     };
 
     console.log(redisPayload);
