@@ -29,7 +29,7 @@ const encryptSymmetric = async (dataToEncrypt, keyId) => {
   const client = new KeyManagementServiceClient({
     credentials: {
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_CLIENT_KEY,
+      private_key: process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n'),
     },
   });
 
@@ -66,7 +66,7 @@ async function decryptSymmetric(ciphertext, keyId) {
   const client = new KeyManagementServiceClient({
     credentials: {
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_CLIENT_KEY,
+      private_key: process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n'),
     },
   });
 
