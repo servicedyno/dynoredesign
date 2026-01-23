@@ -649,9 +649,9 @@ backend:
     implemented: true
     working: false
     file: "/app/backend/controller/walletController.ts"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -662,6 +662,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Fixed Google Cloud KMS authentication issue in /app/backend/apis/tatumApi.ts by adding .replace(/\\n/g, '\n') to properly convert escaped newlines in GOOGLE_CLIENT_KEY to actual newlines. This should resolve the DECODER routines error."
+      - working: false
+        agent: "testing"
+        comment: "❌ STILL FAILING: KMS authentication error persists. Backend logs show same 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported' error. API now returns 'please enter a valid BTC address!' but underlying KMS issue remains. Tested with multiple valid BTC address formats (P2PKH, P2SH, Bech32, Taproot) - all fail. The .replace() fix did not resolve the GOOGLE_CLIENT_KEY parsing issue."
 
   - task: "POST /api/userApi/addApi with api_name support"
     implemented: true
