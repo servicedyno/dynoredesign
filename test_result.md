@@ -792,6 +792,51 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: GET /api/docs.json returns valid OpenAPI specification. JSON contains proper openapi version, title, and paths structure. API documentation fully functional."
 
+  - task: "POST /api/wallet/getAllTransactions enhanced with filters"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 7: Enhanced getAllTransactions endpoint with comprehensive filtering support (date_from, date_to, status, currency, search, company_id) and pagination"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: POST /api/wallet/getAllTransactions working perfectly with all filter combinations. Tested 10 different filter scenarios: basic pagination, date filters, status filters (Done/Pending/failed), currency filters (BTC/USD), search filters, company filters, and combined filters. All return proper response structure with customers_transactions, self_transactions, and pagination fields. Pagination includes total, page, rowsPerPage, totalPages as expected."
+
+  - task: "GET /api/wallet/transaction/:id endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 7: New getTransactionDetails endpoint to retrieve detailed transaction information by ID"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/wallet/transaction/:id endpoint working correctly. Returns proper 404 for invalid transaction IDs as expected. Response structure matches specification with all required fields: status, transaction_id, date_time, cryptocurrency, amount, usd_value, fees, confirmations, incoming_transaction_id, outgoing_transaction_id, callback_url, webhook_response. Handles both existing and non-existing transaction IDs appropriately."
+
+  - task: "POST /api/wallet/transactions/export endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 7: New exportTransactions endpoint to export transaction data as CSV with same filtering options as getAllTransactions"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: POST /api/wallet/transactions/export working perfectly. Tested 7 different export scenarios with various filters. All return proper CSV format with correct Content-Type (text/csv) and Content-Disposition (attachment) headers. CSV contains all expected headers: Transaction ID, Date & Time, Crypto, Amount, Currency, USD Value, Status, Customer, Company, Payment Mode, Type, Reference. Supports same filtering options as getAllTransactions endpoint."
+
 frontend:
   - task: "No frontend changes for Phase 1"
     implemented: false
