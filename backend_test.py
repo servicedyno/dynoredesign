@@ -14,7 +14,7 @@ from typing import Dict, List, Any
 
 class DynoPayDatabaseTester:
     def __init__(self):
-        self.backend_url = "https://setup-config.preview.emergentagent.com"
+        self.backend_url = "http://localhost:8001"
         self.test_results = {}
         self.errors = []
         
