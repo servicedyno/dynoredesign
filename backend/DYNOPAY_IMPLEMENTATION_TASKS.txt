@@ -787,17 +787,17 @@ Endpoint:
 ================================================================================
 
 NEW TABLES (5):
-[ ] tbl_tax_rate
-[ ] tbl_invoice
-[ ] tbl_notification
-[ ] tbl_notification_preferences
-[ ] tbl_kyc
+[✅] tbl_tax_rate
+[✅] tbl_invoice
+[✅] tbl_notification
+[✅] tbl_notification_preferences
+[✅] tbl_kyc
 
 SCHEMA CHANGES (4):
-[ ] tbl_company - Add address fields, VAT fields
-[ ] tbl_api - Add api_name
-[ ] tbl_user_wallet - Add company_id, wallet_name
-[ ] tbl_user_addresses - Add company_id, wallet_name
+[✅] tbl_company - Add address fields, VAT fields
+[✅] tbl_api - Add api_name
+[✅] tbl_user_wallet - Add company_id, wallet_name
+[✅] tbl_user_addresses - Add company_id, wallet_name
 
 NEW CONTROLLERS/SERVICES (5):
 [ ] Dashboard Controller
