@@ -27,8 +27,8 @@ class DynoPayBackendTester:
                     if line.startswith('REACT_APP_BACKEND_URL='):
                         external_url = line.split('=', 1)[1].strip()
                         print(f"Found external URL: {external_url}")
-                        # For testing, use localhost since external URL routes to frontend
-                        return "http://localhost:8001"
+                        # Use the external URL for testing Phase 3 Dashboard APIs
+                        return external_url
         except Exception as e:
             print(f"Warning: Could not read frontend .env file: {e}")
         
