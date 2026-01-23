@@ -48,6 +48,17 @@ import { getAdminWalletAddress } from "../utils/adminUtils";
 const getWallet = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
+    const { company_id } = req.query;
+    
+    // Build where clause with optional company_id filter
+    const whereClause: any = {
+      user_id: userData.user_id,
+    };
+    
+    if (company_id) {
+      whereClause.company_id = company_id;
+    }
+
     const walletData = await userWalletModel.findAll({
       attributes: {
         exclude: [
@@ -59,9 +70,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
           "mnemonic",
         ],
       },
-      where: {
-        user_id: userData.user_id,
-      },
+      where: whereClause,
     });
 
     const currencyList = [];
