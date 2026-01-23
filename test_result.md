@@ -555,6 +555,66 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: JWT authentication working perfectly for all notification endpoints. Same authentication flow as dashboard APIs: login → get token → use token for notification API calls. All endpoints properly validate Authorization header."
 
+  - task: "POST /api/user/forgot-password endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/userController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Request password reset endpoint - sends email via Brevo API, creates reset_token and reset_token_expiry in database, returns success message without revealing if email exists for security"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Forgot password endpoint working perfectly. Correctly sends reset emails with security message for both existing and non-existing emails (security feature). Validates required email field and returns 400 for missing email. Creates reset tokens in database with 1-hour expiry."
+
+  - task: "POST /api/user/reset-password endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/userController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Reset password with token endpoint - validates token (sha256 hashed) against database, token expires after 1 hour, clears reset_token after successful reset"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Reset password endpoint working perfectly. Properly validates tokens and rejects invalid/expired tokens with 400 error. Validates required fields (token, email, newPassword) and enforces minimum password length (6 characters). Clears reset tokens after successful password update."
+
+  - task: "POST /api/user/google-signin endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/userController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Google Sign-In endpoint - verifies token with Google OAuth2 API, creates new user if doesn't exist (with default wallets), returns JWT token on success"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Google Sign-In endpoint working perfectly. Correctly rejects invalid tokens (both ID and access tokens) with 401 error. Validates required fields and returns 400 for missing tokens. Properly integrates with Google OAuth2 API for token verification. Creates new users with default wallets when needed."
+
+  - task: "tbl_user extended with reset_token, reset_token_expiry, google_id columns"
+    implemented: true
+    working: true
+    file: "/app/backend/models/userModels/userModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "User model extended with password reset fields (reset_token, reset_token_expiry) and Google Sign-In field (google_id)"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: User model successfully extended with Phase 5 authentication columns. Database schema includes reset_token (STRING), reset_token_expiry (DATE), and google_id (STRING) fields, all properly configured as nullable. Authentication endpoints successfully use these fields for password reset and Google Sign-In functionality."
+
 frontend:
   - task: "No frontend changes for Phase 1"
     implemented: false
