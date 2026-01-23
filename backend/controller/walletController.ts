@@ -1695,13 +1695,34 @@ const addWalletAddress = async (
     try {
       const user_id = userData.user_id;
 
-      let balance;
-      if (currency === "TRX" || currency === "USDT-TRC20") {
-        balance = await tatumApi.validateTronAddress(wallet_address);
+      // Local address validation - no external API calls needed
+      let isValidAddress = false;
+      
+      // Map DynoPay currency codes to wallet-address-validator currency codes
+      const currencyMap = {
+        'BTC': 'bitcoin',
+        'ETH': 'ethereum',
+        'USDT-ERC20': 'ethereum', // ERC20 uses Ethereum address format
+        'TRX': 'tron',
+        'USDT-TRC20': 'tron', // TRC20 uses Tron address format
+        'LTC': 'litecoin',
+        'DOGE': 'dogecoin',
+        'BSC': 'ethereum', // BSC uses Ethereum address format
+        'BCH': 'bitcoincash',
+      };
+
+      const validatorCurrency = currencyMap[currency];
+      
+      if (validatorCurrency) {
+        isValidAddress = WAValidator.validate(wallet_address, validatorCurrency);
       } else {
-        balance = await tatumApi.getAddressBalance(wallet_address, currency);
+        // If currency not in map, throw error
+        throw new Error(`Unsupported currency: ${currency}`);
       }
-      console.log(balance);
+
+      if (!isValidAddress) {
+        throw new Error('Invalid address format');
+      }
       
       // Check if address already exists for this user and company
       const whereClause: any = {
