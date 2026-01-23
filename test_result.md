@@ -948,7 +948,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 7 Transaction endpoints successfully implemented and tested"
+    - "Phase 8 Payment Links CRUD successfully implemented and tested"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
