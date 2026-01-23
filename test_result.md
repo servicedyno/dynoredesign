@@ -683,7 +683,7 @@ backend:
 
   - task: "POST /api/userApi/addApi with api_name support"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/controller/apiController.ts"
     stuck_count: 2
     priority: "high"
@@ -701,6 +701,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ STILL FAILING: Validation logic still requires wallet addresses. Error persists: 'User does not have any wallet address configured for this company!' Since addWalletAddress endpoint is also failing due to KMS issues, user cannot create wallet addresses, creating a dependency chain failure. The validation fix appears correct but cannot be verified until wallet creation works."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: POST /api/userApi/addApi now working successfully! After wallet addresses were created using local validation (no Tatum API dependency), API key creation works perfectly. Tested with company_id=1, base_currency='BTC', api_name='Test API' - returns 200 with complete API key details including apiKey, adminToken, company info. No more 'User does not have any wallet address configured for this company!' error. The validation fix by main agent was correct - it properly checks userWalletAddressModel for wallet addresses."
 
   - task: "GET /api/userApi/getApi returns api_name field"
     implemented: true
