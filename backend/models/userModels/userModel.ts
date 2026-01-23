@@ -53,7 +53,21 @@ const userModel = sequelize.define(
     },
     otp_expired: {
       type: DataTypes.DATE,
-    }
+    },
+    // Password reset fields
+    reset_token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    reset_token_expiry: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    // Google Sign-In fields
+    google_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "tbl_user",
