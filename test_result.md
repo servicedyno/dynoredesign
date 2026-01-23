@@ -107,111 +107,138 @@ user_problem_statement: "DynoPay crypto payment gateway - Phase 1 Database Schem
 backend:
   - task: "tbl_company extended with address and VAT fields"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/models/companyModels/companyModel.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Model includes address_line1, address_line2, city, state, country, zip_code, vat_number, vat_type, vat_verified fields"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: All expected columns present in tbl_company table. Database migration successful. Columns: address_line1, address_line2, city, state, country, zip_code, vat_number, vat_type, vat_verified"
 
   - task: "tbl_api extended with api_name field"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/models/apiModels/apiModel.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Model includes api_name field"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: api_name column successfully added to tbl_api table. Database migration successful."
 
   - task: "tbl_user_wallet extended with company_id and wallet_name"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/models/userModels/userWalletModel.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Model includes company_id reference and wallet_name fields"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: company_id and wallet_name columns successfully added to tbl_user_wallet table. Database migration successful."
 
   - task: "tbl_user_addresses extended with company_id and wallet_name"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/models/userModels/userWalletAddressModel.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Model includes company_id reference and wallet_name fields"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: company_id and wallet_name columns successfully added to tbl_user_addresses table. Database migration successful."
 
   - task: "tbl_tax_rate table created"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/models/taxRateModel.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "New model for caching VAT rates by country"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: tbl_tax_rate table created successfully with 8 columns: tax_id, country_code, country_name, tax_acronym, standard_rate, reduced_rates, created_at, updated_at"
 
   - task: "tbl_invoice table created"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/models/invoiceModel.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "New model for transaction invoices with provider/customer info"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: tbl_invoice table created successfully with 24 columns including invoice_number, transaction_id, company_id, provider_*, customer_*, vat_*, totals as specified"
 
   - task: "tbl_notification table created"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/models/notificationModel.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "New model for individual notifications"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: tbl_notification table created successfully with 9 columns: notification_id, user_id, company_id, type, title, message, data, is_read, created_at"
 
   - task: "tbl_notification_preferences table created"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/models/notificationPreferencesModel.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "New model for user notification settings"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: tbl_notification_preferences table created successfully with 12 columns including transaction_updates, payment_received, weekly_summary, email_notifications, etc."
 
   - task: "tbl_kyc table created"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/models/kycModel.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "New model for KYC verification records"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: tbl_kyc table created successfully with 10 columns: kyc_id, user_id, company_id, status, documents, rejection_reason, volume_threshold, submitted_at, reviewed_at, created_at"
 
 frontend:
   - task: "No frontend changes for Phase 1"
