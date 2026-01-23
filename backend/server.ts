@@ -29,6 +29,7 @@ import { getTransactionFee, getBlockchainFee, paymentController } from "./contro
 import { connectRedis } from "./utils/redisInstance";
 import sequelize from "./utils/dbInstance";
 import { QueryTypes } from "sequelize";
+import { setupWeeklySummaryCron } from "./utils/cronJobs";
 
 dotenv.config();
 const app = express();
