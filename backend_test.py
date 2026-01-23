@@ -2847,7 +2847,7 @@ verifyCacheData();
         self.verify_tax_cache_database()
         
         # Test 7: PRIORITY - Test Tatum API Key Fix for Wallet Address Endpoint
-        self.test_wallet_add_address_endpoint()
+        self.test_wallet_add_address_local_validation()
         
         # Test 8: Phase 6 Wallet APIs, API endpoints, OTP, and Swagger
         self.test_phase6_wallet_apis()
