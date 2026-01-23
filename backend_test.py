@@ -3044,6 +3044,9 @@ verifyCacheData();
         # Test 7: PRIORITY - Test Tatum API Key Fix for Wallet Address Endpoint
         self.test_wallet_add_address_local_validation()
         
+        # Test 7.5: PRIORITY - Test Wallet Address + API Key Creation Flow (Review Request)
+        self.test_wallet_add_address_and_api_creation()
+        
         # Test 8: Phase 6 Wallet APIs, API endpoints, OTP, and Swagger
         self.test_phase6_wallet_apis()
         self.test_phase6_api_endpoints()
