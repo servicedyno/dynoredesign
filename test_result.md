@@ -837,6 +837,96 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: POST /api/wallet/transactions/export working perfectly. Tested 7 different export scenarios with various filters. All return proper CSV format with correct Content-Type (text/csv) and Content-Disposition (attachment) headers. CSV contains all expected headers: Transaction ID, Date & Time, Crypto, Amount, Currency, USD Value, Status, Customer, Company, Payment Mode, Type, Reference. Supports same filtering options as getAllTransactions endpoint."
 
+  - task: "POST /api/pay/createPaymentLink enhanced with new fields"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 8: Enhanced createPaymentLink with 6 new database fields: description, expire (24h/7d/30d/No), callback_url, redirect_url, webhook_url, expires_at calculation"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: POST /api/pay/createPaymentLink working perfectly with all Phase 8 enhancements. Tested 4 different scenarios with various expiry options (24h, 7d, 30d, No). All new fields properly stored: description, expires_at calculated correctly based on expire option, callback_url, redirect_url, webhook_url. Database migration successful - all new columns added to tbl_payment_link table."
+
+  - task: "GET /api/pay/getPaymentLinks enhanced with status logic and UI formatting"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 8: Enhanced getPaymentLinks with computed status logic (Active/Expired/Completed) and UI formatting (DD/MM/YYYY HH:MM:SS dates, $USD values, times_used counter)"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/pay/getPaymentLinks working perfectly with enhanced UI formatting. Retrieved 8 payment links with proper status computation (Active/Expired based on expires_at), formatted dates (DD/MM/YYYY HH:MM:SS), USD values formatted as '$100', times_used counter, and 'Never' for non-expiring links. All enhanced fields present and correctly formatted."
+
+  - task: "GET /api/pay/links/:id endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 8: New getPaymentLinkById endpoint to retrieve detailed payment link information by ID with computed status and formatted dates"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/pay/links/:id working perfectly. Returns complete link details with all required fields (link_id, transaction_id, description, base_amount, base_currency, status, created, expires, payment_link). Correctly returns 404 for invalid link IDs. Status computation and date formatting working as expected."
+
+  - task: "PUT /api/pay/links/:id endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 8: New updatePaymentLink endpoint to update editable fields (description, expire, callback_url, redirect_url, webhook_url) while preventing modification of base_amount and base_currency"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: PUT /api/pay/links/:id working perfectly. Successfully updates editable fields (description, expire with expires_at recalculation, callback_url, redirect_url, webhook_url). Correctly returns 404 for invalid link IDs. Updates are properly applied and persisted in database."
+
+  - task: "DELETE /api/pay/deletePaymentLink/:id endpoint verification"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 8: Verified existing deletePaymentLink endpoint still works correctly with Phase 8 enhancements"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: DELETE /api/pay/deletePaymentLink/:id working correctly. Successfully deletes payment links and returns proper success message. Correctly returns 500 error with 'Link not found!' message for invalid link IDs. Existing functionality preserved with Phase 8 enhancements."
+
+  - task: "Payment processing enhanced to use stored URLs and increment times_used"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 8: Updated payment processing in confirmPayment to use stored redirect_url, callback_url, webhook_url from payment links and increment times_used counter"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Payment processing enhancements implemented correctly. Code review shows confirmPayment function properly increments times_used counter, uses stored URLs (redirect_url, callback_url, webhook_url) from payment link data, and includes webhook functionality with proper error handling. Integration with existing payment flow maintained."
+
 frontend:
   - task: "No frontend changes for Phase 1"
     implemented: false
