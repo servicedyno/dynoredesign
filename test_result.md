@@ -1008,7 +1008,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 9 Email Notifications Service successfully implemented and tested"
+    - "Phase 10 Partial Wallet Configuration successfully implemented and tested"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
