@@ -668,6 +668,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Updated KMS credentials object to include all required service account fields: type, project_id, private_key_id, private_key, client_email, auth_uri, token_uri, auth_provider_x509_cert_url. This matches the full service account JSON format as per Google Cloud documentation."
+      - working: false
+        agent: "testing"
+        comment: "❌ KMS AUTHENTICATION STILL FAILING: After adding all required service account credential fields, the Google Cloud KMS authentication error persists. Backend logs still show 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported'. However, API response has improved from raw KMS error to user-friendly 'please enter a valid BTC address!' message, indicating better error handling. Tested with multiple valid BTC address formats (P2PKH: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa, P2SH: 3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy, Bech32: bc1qw508d6qejxtdg4y5r3zarvary0c5xw7DivfNa) - all failed with same error. The KMS integration requires deeper investigation beyond credential configuration."
 
   - task: "POST /api/userApi/addApi with api_name support"
     implemented: true
