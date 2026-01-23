@@ -411,14 +411,20 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 3 Dashboard APIs - COMPLETED"
+    - "Phase 4: Notifications System"
+    - "GET/PUT /api/notifications/preferences"
+    - "GET /api/notifications - list with pagination"
+    - "GET /api/notifications/unread-count"
+    - "PUT /api/notifications/:id/read and read-all"
+    - "DELETE /api/notifications/:id"
+    - "Weekly summary cron job"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Phase 3 Dashboard APIs implemented. New endpoints: GET /api/dashboard (main stats with transactions, volume, wallets, fee tier), GET /api/dashboard/chart (volume chart with period options: 7d, 30d, 90d, 1y), GET /api/dashboard/fee-tiers (tier info), GET /api/dashboard/recent-transactions (recent tx list). All endpoints require authentication via JWT token in Authorization header."
+    message: "Phase 4 Notifications System implemented. Endpoints: GET/PUT /api/notifications/preferences, GET /api/notifications (list with pagination), GET /api/notifications/unread-count, PUT /api/notifications/:id/read, PUT /api/notifications/read-all, DELETE /api/notifications/:id, GET /api/notifications/types, POST /api/notifications/trigger-weekly-summary. Weekly summary cron job scheduled for every Monday 9:00 AM UTC. All endpoints require JWT authentication."
   - agent: "testing"
     message: "✅ PHASE 1 DATABASE SCHEMA TESTING COMPLETE: All 9 backend tasks successfully verified. Database connectivity confirmed, migration executed successfully, all 5 new tables created with correct schemas (tbl_tax_rate, tbl_invoice, tbl_notification, tbl_notification_preferences, tbl_kyc), and all 4 existing tables properly extended with new columns (tbl_company, tbl_api, tbl_user_wallet, tbl_user_addresses). PostgreSQL database at yamanote.proxy.rlwy.net:42097 is fully operational with Phase 1 schema updates."
   - agent: "testing"
