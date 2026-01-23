@@ -649,9 +649,9 @@ backend:
     implemented: true
     working: false
     file: "/app/backend/controller/walletController.ts"
-    stuck_count: 2
+    stuck_count: 3
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -671,6 +671,12 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ KMS AUTHENTICATION STILL FAILING: After adding all required service account credential fields, the Google Cloud KMS authentication error persists. Backend logs still show 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported'. However, API response has improved from raw KMS error to user-friendly 'please enter a valid BTC address!' message, indicating better error handling. Tested with multiple valid BTC address formats (P2PKH: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa, P2SH: 3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy, Bech32: bc1qw508d6qejxtdg4y5r3zarvary0c5xw7DivfNa) - all failed with same error. The KMS integration requires deeper investigation beyond credential configuration."
+      - working: "NA"
+        agent: "main"
+        comment: "ISSUE MISDIAGNOSED: The issue was NOT with Google Cloud KMS for wallet private key encryption. The real issue was that getTatumSDK() was trying to use Google Secret Manager to fetch TATUM_KEY when it didn't exist, but TATUM_SECRET_KEY was available in the environment all along. Fixed by changing the logic to use TATUM_SECRET_KEY as a fallback."
+      - working: false
+        agent: "testing"
+        comment: "❌ TATUM API SUBSCRIPTION SUSPENDED: Root cause identified! The issue is NOT with KMS or TATUM_SECRET_KEY fallback. getTatumSDK() now works correctly (logs show 'tatumKey exists: true length: 51' and 'TatumApi initialized: true'). However, actual Tatum API calls fail because the subscription is suspended/expired. Direct API test shows: 'statusCode: 402, errorCode: subscription.suspended, message: You have used all your credits or your account is expired.' The endpoint correctly catches this 402 error and returns 'please enter a valid BTC address!' All valid BTC addresses (1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa, 3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy, bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4) fail due to Tatum API subscription issue, not code problems."
 
   - task: "POST /api/userApi/addApi with api_name support"
     implemented: true
