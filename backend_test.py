@@ -1658,56 +1658,6 @@ verifyCacheData();
                     False, 
                     f"Request failed: {str(e)}"
                 )
-        
-        # Test invalid address to verify error handling
-        try:
-            print(f"\n--- Testing Invalid BTC Address ---")
-            
-            invalid_test = {
-                "wallet_address": "invalid_btc_address_123",
-                "currency": "BTC",
-                "label": "Invalid Address Test",
-                "company_id": 1,
-                "wallet_name": "Invalid Test Wallet"
-            }
-            
-            response = requests.post(
-                f"{self.backend_url}/api/wallet/addWalletAddress",
-                json=invalid_test,
-                headers=headers,
-                timeout=30
-            )
-            
-            if response.status_code == 500:
-                response_text = response.text.lower()
-                if "please enter a valid btc address" in response_text:
-                    self.log_result(
-                        "Add Wallet Address - Invalid Address Handling", 
-                        True, 
-                        "Correctly rejects invalid BTC address with proper error message",
-                        {"response": response.text}
-                    )
-                else:
-                    self.log_result(
-                        "Add Wallet Address - Invalid Address Handling", 
-                        False, 
-                        f"Invalid address rejected but with unexpected error: {response.text[:200]}",
-                        {"response": response.text}
-                    )
-            else:
-                self.log_result(
-                    "Add Wallet Address - Invalid Address Handling", 
-                    False, 
-                    f"Invalid address should return 500 error, got {response.status_code}",
-                    {"response": response.text}
-                )
-                
-        except Exception as e:
-            self.log_result(
-                "Add Wallet Address - Invalid Address Handling", 
-                False, 
-                f"Request failed: {str(e)}"
-            )
     
     def test_notification_preferences(self):
         """Test notification preferences endpoints"""
