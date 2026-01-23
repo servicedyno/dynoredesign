@@ -1,9 +1,9 @@
 import cron from "node-cron";
 import { QueryTypes } from "sequelize";
-import sequelize from "./utils/dbInstance";
-import { createNotification, NOTIFICATION_TYPES } from "./controller";
-import { notificationPreferencesModel, userTransactionModel } from "./models";
-import { cronLogger } from "./utils/loggers";
+import sequelize from "./dbInstance";
+import { createNotification, NOTIFICATION_TYPES } from "../controller";
+import { notificationPreferencesModel, userTransactionModel } from "../models";
+import { cronLogger } from "./loggers";
 
 /**
  * Weekly Summary Cron Job
