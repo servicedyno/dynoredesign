@@ -29,8 +29,8 @@ const mailTransporter = async ({ to, subject, body, name }: mailOptions) => {
     "https://api.brevo.com/v3/smtp/email",
     {
       sender: {
-        name: "DynoPay",
-        email: "notify@dynopay.com",
+        name: "Dynocash",
+        email: "notify@dynocash.com",
       },
       subject,
       to: [
