@@ -306,7 +306,18 @@ const getAllTransactions = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { rowsPerPage, page, filters } = req.body;
+    const { 
+      rowsPerPage, 
+      page, 
+      filters,
+      date_from,
+      date_to,
+      status,
+      currency,
+      search,
+      company_id
+    } = req.body;
+    
     let column, sortType, offset, limit;
     if (filters) {
       column = filters?.column ?? "createdAt";
@@ -315,38 +326,124 @@ const getAllTransactions = async (
       column = "createdAt";
       sortType = "desc";
     }
+    
+    // Pagination
     if (rowsPerPage && page) {
       offset = (page - 1) * rowsPerPage;
       limit = rowsPerPage;
     }
-    const selfData = await selfTransactionModel.findAll({
-      attributes: { exclude: ["wallet_id", "transaction_id"] },
-      where: {
-        user_id: userData.user_id,
-      },
-      ...(column && sortType && { order: [[column, sortType]] }),
-      ...(offset !== -1 && limit && { offset, limit }),
-    });
 
+    // Build WHERE conditions for user transactions
+    let whereConditions = `ut.user_id=${userData.user_id}`;
+    
+    if (date_from) {
+      whereConditions += ` AND ut."createdAt" >= '${date_from}'`;
+    }
+    if (date_to) {
+      whereConditions += ` AND ut."createdAt" <= '${date_to}'`;
+    }
+    if (status) {
+      whereConditions += ` AND ut.status = '${status}'`;
+    }
+    if (currency) {
+      whereConditions += ` AND ut.base_currency = '${currency}'`;
+    }
+    if (search) {
+      whereConditions += ` AND (ut.id ILIKE '%${search}%' OR ut.transaction_reference ILIKE '%${search}%')`;
+    }
+    if (company_id) {
+      whereConditions += ` AND cm.company_id = ${company_id}`;
+    }
+
+    // Get user transactions with filters
     const tempData = await sequelize.query(
       `
-      select ut.*,c.customer_name,c.email,cm.company_name,cm.company_id from tbl_user_transaction ut 
-      join tbl_customer c on c.customer_id=ut.customer_id
-      join tbl_company cm on cm.company_id=c.company_id where ut.user_id=${userData.user_id
-      }
-       ${column && sortType ? `order by "${column}" ${sortType}` : ``} 
-      ${offset !== -1 && limit ? `offset ${offset} limit ${limit}` : ``}
+      SELECT 
+        ut.*,
+        c.customer_name,
+        c.email,
+        cm.company_name,
+        cm.company_id,
+        uw.wallet_type as crypto_currency
+      FROM tbl_user_transaction ut 
+      LEFT JOIN tbl_customer c ON c.customer_id=ut.customer_id
+      LEFT JOIN tbl_company cm ON cm.company_id=c.company_id
+      LEFT JOIN tbl_user_wallet uw ON uw.wallet_id=ut.wallet_id
+      WHERE ${whereConditions}
+      ${column && sortType ? `ORDER BY ut."${column}" ${sortType}` : ``} 
+      ${offset !== undefined && limit ? `OFFSET ${offset} LIMIT ${limit}` : ``}
       `,
       { type: QueryTypes.SELECT }
     );
-    const customer_data = tempData.map((x) => {
-      const { wallet_id, transaction_id, ...rest }: any = x;
-      return rest;
+
+    // Get total count for pagination
+    const countData = await sequelize.query(
+      `
+      SELECT COUNT(*) as total
+      FROM tbl_user_transaction ut 
+      LEFT JOIN tbl_customer c ON c.customer_id=ut.customer_id
+      LEFT JOIN tbl_company cm ON cm.company_id=c.company_id
+      WHERE ${whereConditions}
+      `,
+      { type: QueryTypes.SELECT }
+    );
+
+    const customer_data = tempData.map((x: any) => {
+      const { wallet_id, ...rest } = x;
+      return {
+        ...rest,
+        // Format for UI
+        transaction_id_display: x.id || `TX${x.transaction_id}`,
+        crypto: x.crypto_currency || x.base_currency,
+        amount: x.base_amount,
+        usd_value: x.base_currency === 'USD' ? x.base_amount : null, // Could add conversion logic here
+        date_time: x.createdAt,
+        status: x.status
+      };
     });
+
+    // Get self transactions with same filters
+    let selfWhereClause: any = {
+      user_id: userData.user_id,
+    };
+    
+    if (date_from || date_to) {
+      selfWhereClause.createdAt = {};
+      if (date_from) selfWhereClause.createdAt[Op.gte] = new Date(date_from);
+      if (date_to) selfWhereClause.createdAt[Op.lte] = new Date(date_to);
+    }
+    if (status) {
+      selfWhereClause.status = status;
+    }
+    if (currency) {
+      selfWhereClause.base_currency = currency;
+    }
+    if (search) {
+      selfWhereClause[Op.or] = [
+        { id: { [Op.iLike]: `%${search}%` } },
+        { transaction_reference: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    const selfData = await selfTransactionModel.findAll({
+      attributes: { exclude: ["wallet_id", "transaction_id"] },
+      where: selfWhereClause,
+      ...(column && sortType && { order: [[column, sortType]] }),
+      ...(offset !== undefined && limit && { offset, limit }),
+    });
+
+    const total = countData[0]?.total || 0;
+    const totalPages = limit ? Math.ceil(total / limit) : 1;
 
     successResponseHelper(res, 200, "", {
       customers_transactions: customer_data,
       self_transactions: selfData,
+      pagination: {
+        total: parseInt(total),
+        page: page || 1,
+        rowsPerPage: limit || customer_data.length,
+        totalPages
+      }
     });
   } catch (e) {
     const message = getErrorMessage(e);
