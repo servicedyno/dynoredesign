@@ -46,6 +46,7 @@ import {
   userTempAddressModel,
   userTransactionModel,
   paymentLinkModel,
+  userWalletAddressModel,
 } from "../models";
 import QR_Code from "qrcode";
 import tatumApi from "../apis/tatumApi";
