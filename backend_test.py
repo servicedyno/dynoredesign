@@ -960,14 +960,14 @@ verifyCacheData();
 
 def main():
     """Main test execution"""
-    tester = DynoPayDatabaseTester()
+    tester = DynoPayBackendTester()
     
     try:
         success = tester.run_all_tests()
         overall_success = tester.print_summary()
         
         if overall_success:
-            print("\n🎉 All database schema tests passed!")
+            print("\n🎉 All backend tests passed!")
             sys.exit(0)
         else:
             print("\n⚠️  Some tests failed. Check the summary above.")
