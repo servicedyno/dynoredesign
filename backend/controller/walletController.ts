@@ -2621,6 +2621,189 @@ const deleteWalletAddress = async (
   }
 };
 
+/**
+ * Send OTP for wallet address edit
+ * POST /api/wallet/address/send-otp
+ */
+const sendEditWalletOTP = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { address_id } = req.body;
+    const user_id = userData.user_id;
+
+    if (!address_id) {
+      return errorResponseHelper(res, 400, "address_id is required");
+    }
+
+    // Verify the wallet address belongs to the user
+    const walletAddress = await userWalletAddressModel.findOne({
+      where: {
+        id: address_id,
+        user_id,
+      },
+    });
+
+    if (!walletAddress) {
+      return errorResponseHelper(res, 404, "Wallet address not found");
+    }
+
+    // Get user email
+    const user = await userModel.findOne({
+      where: { user_id },
+    });
+
+    if (!user || !user.dataValues.email) {
+      return errorResponseHelper(res, 400, "User email not found");
+    }
+
+    // Generate OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store OTP in Redis with address_id as key
+    await setRedisItem(`wallet_edit_otp_${address_id}`, JSON.stringify({
+      otp,
+      user_id,
+      expiry: otpExpiry.toISOString(),
+    }), 600); // 10 minutes TTL
+
+    // Send OTP email
+    const emailMessage = `You requested to edit your wallet address.
+
+Your verification code is: ${otp}
+
+This code will expire in 10 minutes.
+
+If you didn't request this, please ignore this email or contact support.`;
+
+    await sendEmail(
+      user.dataValues.email,
+      user.dataValues.name || "User",
+      "Wallet Edit Verification Code - Dynocash",
+      emailMessage
+    );
+
+    walletLogger.info(`Edit wallet OTP sent for address ${address_id} to user ${user_id}`);
+
+    return successResponseHelper(res, 200, "OTP sent to your email", {
+      address_id,
+      email: user.dataValues.email.replace(/(.{2})(.*)(@.*)/, "$1***$3"),
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    walletLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    return errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Edit wallet address with OTP verification
+ * PUT /api/wallet/address/:id
+ */
+const editWalletAddress = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { id } = req.params;
+    const { wallet_address, wallet_name, otp } = req.body;
+    const user_id = userData.user_id;
+
+    if (!otp) {
+      return errorResponseHelper(res, 400, "OTP is required");
+    }
+
+    if (!wallet_address && !wallet_name) {
+      return errorResponseHelper(res, 400, "wallet_address or wallet_name is required");
+    }
+
+    // Verify the wallet address belongs to the user
+    const existingAddress = await userWalletAddressModel.findOne({
+      where: {
+        id,
+        user_id,
+      },
+    });
+
+    if (!existingAddress) {
+      return errorResponseHelper(res, 404, "Wallet address not found");
+    }
+
+    // Verify OTP from Redis
+    const storedOTPData = await getRedisItem(`wallet_edit_otp_${id}`);
+    
+    if (!storedOTPData) {
+      return errorResponseHelper(res, 400, "OTP expired or not found. Please request a new one.");
+    }
+
+    const otpData = JSON.parse(storedOTPData);
+    
+    if (otpData.otp !== otp) {
+      return errorResponseHelper(res, 400, "Invalid OTP");
+    }
+
+    if (otpData.user_id !== user_id) {
+      return errorResponseHelper(res, 403, "Unauthorized");
+    }
+
+    if (new Date(otpData.expiry) < new Date()) {
+      await deleteRedisItem(`wallet_edit_otp_${id}`);
+      return errorResponseHelper(res, 400, "OTP expired. Please request a new one.");
+    }
+
+    // If changing wallet address, validate the new address
+    if (wallet_address && wallet_address !== existingAddress.dataValues.wallet_address) {
+      const currency = existingAddress.dataValues.currency;
+      try {
+        if (currency === "TRX" || currency === "USDT-TRC20") {
+          await tatumApi.validateTronAddress(wallet_address);
+        } else {
+          await tatumApi.getAddressBalance(wallet_address, currency);
+        }
+      } catch (e) {
+        return errorResponseHelper(res, 400, `Invalid ${currency} address`);
+      }
+    }
+
+    // Build update data
+    const updateData: any = {};
+    if (wallet_address) updateData.wallet_address = wallet_address;
+    if (wallet_name) updateData.wallet_name = wallet_name;
+
+    // Update the wallet address
+    await userWalletAddressModel.update(updateData, {
+      where: {
+        id,
+        user_id,
+      },
+    });
+
+    // Delete OTP from Redis
+    await deleteRedisItem(`wallet_edit_otp_${id}`);
+
+    // Fetch updated record
+    const updatedAddress = await userWalletAddressModel.findOne({
+      where: { id },
+    });
+
+    walletLogger.info(`Wallet address ${id} edited by user ${user_id}`);
+
+    return successResponseHelper(res, 200, "Wallet address updated successfully", updatedAddress);
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    walletLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    return errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   getWallet,
   addFunds,
@@ -2643,4 +2826,6 @@ export default {
   validateWallet,
   verifyOtp,
   deleteWalletAddress,
+  sendEditWalletOTP,
+  editWalletAddress,
 };
