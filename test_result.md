@@ -101,3 +101,146 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "DynoPay crypto payment gateway - Phase 1 Database Schema Updates verification"
+
+backend:
+  - task: "tbl_company extended with address and VAT fields"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/companyModels/companyModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Model includes address_line1, address_line2, city, state, country, zip_code, vat_number, vat_type, vat_verified fields"
+
+  - task: "tbl_api extended with api_name field"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/apiModels/apiModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Model includes api_name field"
+
+  - task: "tbl_user_wallet extended with company_id and wallet_name"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/userModels/userWalletModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Model includes company_id reference and wallet_name fields"
+
+  - task: "tbl_user_addresses extended with company_id and wallet_name"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/userModels/userWalletAddressModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Model includes company_id reference and wallet_name fields"
+
+  - task: "tbl_tax_rate table created"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/taxRateModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "New model for caching VAT rates by country"
+
+  - task: "tbl_invoice table created"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/invoiceModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "New model for transaction invoices with provider/customer info"
+
+  - task: "tbl_notification table created"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/notificationModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "New model for individual notifications"
+
+  - task: "tbl_notification_preferences table created"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/notificationPreferencesModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "New model for user notification settings"
+
+  - task: "tbl_kyc table created"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/kycModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "New model for KYC verification records"
+
+frontend:
+  - task: "No frontend changes for Phase 1"
+    implemented: false
+    working: "NA"
+    file: ""
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 1 is backend-only database schema updates"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Verify all 5 new tables exist in PostgreSQL database"
+    - "Verify 4 existing tables have new columns"
+    - "Test database connectivity and model sync"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Phase 1 Database Schema Updates need verification. All Sequelize models are created. Need to test: 1) Database connectivity 2) Run migration to sync models 3) Verify tables/columns exist in PostgreSQL. Backend is Node.js/TypeScript with Sequelize ORM connecting to external PostgreSQL on Railway."
