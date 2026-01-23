@@ -2407,6 +2407,171 @@ verifyCacheData();
                 f"Request failed: {str(e)}"
             )
     
+    def test_wallet_addWalletAddress_kms_fix(self):
+        """Test POST /api/wallet/addWalletAddress - KMS authentication fix verification"""
+        print("\n=== Testing POST /api/wallet/addWalletAddress - KMS Authentication Fix ===")
+        
+        if not self.jwt_token:
+            if not self.test_user_authentication():
+                self.log_result(
+                    "Wallet Add Address - KMS Fix", 
+                    False, 
+                    "No JWT token available for authentication"
+                )
+                return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test with valid BTC addresses (different formats)
+        test_addresses = [
+            {
+                "wallet_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",  # P2PKH (Genesis block address)
+                "currency": "BTC",
+                "label": "Test BTC P2PKH",
+                "company_id": 1,
+                "wallet_name": "Test BTC Wallet P2PKH"
+            },
+            {
+                "wallet_address": "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy",  # P2SH
+                "currency": "BTC", 
+                "label": "Test BTC P2SH",
+                "company_id": 1,
+                "wallet_name": "Test BTC Wallet P2SH"
+            },
+            {
+                "wallet_address": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",  # Bech32
+                "currency": "BTC",
+                "label": "Test BTC Bech32", 
+                "company_id": 1,
+                "wallet_name": "Test BTC Wallet Bech32"
+            }
+        ]
+        
+        kms_working = False
+        
+        for i, test_data in enumerate(test_addresses):
+            try:
+                print(f"\n--- Testing BTC Address Format {i+1}: {test_data['wallet_address'][:20]}... ---")
+                
+                response = requests.post(
+                    f"{self.backend_url}/api/wallet/addWalletAddress",
+                    json=test_data,
+                    headers=headers,
+                    timeout=30  # Longer timeout for KMS operations
+                )
+                
+                print(f"Response Status: {response.status_code}")
+                print(f"Response Text: {response.text[:500]}...")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    self.log_result(
+                        f"Add Wallet Address - BTC Format {i+1}", 
+                        True, 
+                        f"Successfully added BTC address ({test_data['wallet_address'][:20]}...)",
+                        {
+                            "address_format": f"Format {i+1}",
+                            "currency": test_data["currency"],
+                            "company_id": test_data["company_id"],
+                            "wallet_name": test_data["wallet_name"]
+                        }
+                    )
+                    kms_working = True
+                    break  # Exit on first success
+                    
+                elif response.status_code == 500:
+                    # Check if it's still the KMS error
+                    response_text = response.text.lower()
+                    if "decoder routines" in response_text or "getting metadata from plugin failed" in response_text:
+                        self.log_result(
+                            f"Add Wallet Address - BTC Format {i+1}", 
+                            False, 
+                            f"KMS authentication error still persists: {response.text[:200]}...",
+                            {
+                                "error_type": "KMS Authentication Error",
+                                "address_format": f"Format {i+1}",
+                                "status_code": response.status_code
+                            }
+                        )
+                    elif "valid btc address" in response_text:
+                        self.log_result(
+                            f"Add Wallet Address - BTC Format {i+1}", 
+                            False, 
+                            f"Address validation failed (but KMS may be working): {response.text[:200]}...",
+                            {
+                                "error_type": "Address Validation Error", 
+                                "address_format": f"Format {i+1}",
+                                "status_code": response.status_code
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            f"Add Wallet Address - BTC Format {i+1}", 
+                            False, 
+                            f"Unknown error: {response.text[:200]}...",
+                            {
+                                "error_type": "Unknown Error",
+                                "address_format": f"Format {i+1}", 
+                                "status_code": response.status_code
+                            }
+                        )
+                else:
+                    self.log_result(
+                        f"Add Wallet Address - BTC Format {i+1}", 
+                        False, 
+                        f"API call failed with status {response.status_code}: {response.text[:200]}...",
+                        {
+                            "status_code": response.status_code,
+                            "address_format": f"Format {i+1}"
+                        }
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"Add Wallet Address - BTC Format {i+1}", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+        
+        # Final KMS status assessment
+        if kms_working:
+            self.log_result(
+                "KMS Authentication Status", 
+                True, 
+                "Google Cloud KMS authentication is working correctly",
+                {"fix_status": "RESOLVED"}
+            )
+        else:
+            self.log_result(
+                "KMS Authentication Status", 
+                False, 
+                "Google Cloud KMS authentication issue persists - all BTC address formats failed",
+                {"tested_formats": len(test_addresses), "fix_status": "STILL_FAILING"}
+            )
+
+    def run_phase6_retesting_only(self):
+        """Run only Phase 6 retesting for specific endpoints"""
+        print("🔄 Running Phase 6 Retesting Only")
+        print("=" * 60)
+        
+        # Test database connectivity first
+        if not self.test_database_connectivity():
+            print("\n❌ Database connectivity failed. Stopping tests.")
+            return False
+        
+        # Test user authentication to get JWT token
+        if not self.test_user_authentication():
+            print("\n❌ Authentication failed. Cannot test wallet endpoints.")
+            return False
+        
+        # Test the specific KMS fix
+        self.test_wallet_addWalletAddress_kms_fix()
+        
+        return True
+
     def run_all_tests(self):
         """Run all backend tests"""
         print("🚀 Starting DynoPay Backend Tests")
