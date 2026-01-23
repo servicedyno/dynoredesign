@@ -6,6 +6,7 @@ import {
   errorResponseHelper,
   getErrorMessage,
   sendEmail,
+  sendPaymentReceivedEmail,
   successResponseHelper,
 } from "../helper";
 import { apiLogger, cronLogger, webhookLogs } from "../utils/loggers";
@@ -28,6 +29,7 @@ import {
   userModel,
   userWalletModel,
 } from "../models";
+import { createNotification, NOTIFICATION_TYPES } from "./notificationController";
 import {
   FW_API_Response,
   IFundData,
