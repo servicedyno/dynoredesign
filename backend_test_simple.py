@@ -128,13 +128,13 @@ verify();
 '''
     
     try:
-        # Write verification script
-        with open('/tmp/verify_schema.js', 'w') as f:
+        # Write verification script to backend directory
+        with open('/app/backend/verify_schema.js', 'w') as f:
             f.write(verification_script)
         
         # Run verification
         result = subprocess.run(
-            ["node", "/tmp/verify_schema.js"],
+            ["node", "verify_schema.js"],
             cwd="/app/backend",
             capture_output=True,
             text=True,
