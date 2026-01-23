@@ -942,6 +942,51 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: Phase 9 Email Notifications Service implementation complete. All 17 email functions found and properly exported: sendWelcomeEmail, sendCompanyProfileCreatedEmail, sendWalletOTPEmail, sendWalletVerifiedEmail, sendWalletUpdateOTPEmail, sendPaymentReceivedEmail, sendAddWalletReminderEmail, sendEmailVerificationOTPEmail, sendLoginOTPEmail, sendForgotPasswordOTPEmail, sendPasswordChangedEmail, sendPaymentLinkCreatedEmail, sendKYCRequiredEmail, sendKYCApprovedEmail, sendKYCRejectedEmail, sendWeeklySummaryEmail, sendSecurityAlertEmail. HTML templates include professional design with DynoPay branding, responsive layout, template variables (${name}, ${email}, etc.), and proper CSS styling. Brevo API integration configured correctly with mailTransporter.ts using api.brevo.com endpoint and BREVO_API_KEY environment variable. All functions are callable with correct parameter signatures. Email service compiles successfully and imports without errors."
 
+  - task: "Task 10.1: API Key Creation Logic (verified from Phase 6)"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/apiController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 10 Task 10.1: API key creation requires minimum 1 wallet address configured for the company"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: API key creation logic working correctly. Requires at least 1 wallet address configured for the company before allowing API key creation. Validation implemented in POST /api/userApi/addApi endpoint."
+
+  - task: "Task 10.2: GET /api/wallet/configured-currencies endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 10 Task 10.2: New endpoint to return user's configured wallet currencies filtered by company_id with skip_selection logic"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/wallet/configured-currencies endpoint working perfectly. Retrieved 9 wallets with 2 currencies (BTC, ETH). Returns proper response structure with configured_currencies array, wallet_count, wallets array with masked addresses, and skip_selection boolean. Address masking working correctly (shows first 6 and last 4 characters). Skip selection logic implemented (returns true when only 1 currency configured). Supports company_id filtering as expected."
+
+  - task: "Task 10.3: Currency validation in crypto payment creation"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 10 Task 10.3: Enhanced POST /api/pay/createCryptoPayment with currency validation to ensure user has configured wallet for requested currency"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Currency validation implemented correctly in createCryptoPayment endpoint. Code review confirms validation logic checks userWalletAddressModel for user_id + currency + company_id before allowing payment creation. Returns 400 error with message 'No wallet address configured for {currency}. Please add a {currency} wallet first.' when currency not configured. Implementation located in /app/backend/controller/paymentController.ts lines 314-330."
+
 frontend:
   - task: "No frontend changes for Phase 1"
     implemented: false
