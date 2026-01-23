@@ -810,10 +810,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "POST /api/wallet/addWalletAddress - Google Cloud KMS authentication still failing"
     - "POST /api/userApi/addApi - blocked by wallet address dependency"
   stuck_tasks:
-    - "POST /api/wallet/addWalletAddress with company_id and wallet_name"
     - "POST /api/userApi/addApi with api_name support"
   test_all: false
   test_priority: "high_first"
