@@ -795,15 +795,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "POST /api/wallet/addWalletAddress - Google Cloud KMS fix verification"
-    - "POST /api/userApi/addApi - validation logic fix verification"
-    - "POST /api/wallet/address/send-otp - verify code already correct"
-    - "PUT /api/wallet/address/:id - verify code already correct"
+    - "POST /api/wallet/addWalletAddress - Google Cloud KMS authentication still failing"
+    - "POST /api/userApi/addApi - blocked by wallet address dependency"
   stuck_tasks:
     - "POST /api/wallet/addWalletAddress with company_id and wallet_name"
     - "POST /api/userApi/addApi with api_name support"
-    - "POST /api/wallet/address/send-otp for wallet edit OTP"
-    - "PUT /api/wallet/address/:id for edit wallet with OTP verification"
   test_all: false
   test_priority: "high_first"
 
