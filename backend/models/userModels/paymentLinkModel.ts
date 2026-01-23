@@ -67,6 +67,30 @@ const paymentLinkModel = sequelize.define(
     payment_mode: {
       type: DataTypes.STRING,
     },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    times_used: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    callback_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    redirect_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    webhook_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "tbl_payment_link",
