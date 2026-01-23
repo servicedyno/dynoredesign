@@ -1966,7 +1966,8 @@ verifyCacheData();
                     data = response.json()
                     delete_data = data.get('data', {})
                     
-                    if (delete_data.get('notification_id') == notification_id and 
+                    # Convert both to string for comparison since API returns string
+                    if (str(delete_data.get('notification_id')) == str(notification_id) and 
                         delete_data.get('deleted') == True):
                         self.log_result(
                             "Delete Notification", 
