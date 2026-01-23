@@ -1324,7 +1324,7 @@ verifyCacheData();
                 if response.status_code == 200:
                     data = response.json()
                     
-                    if data.get('success') and 'data' in data:
+                    if 'data' in data:
                         tx_data = data['data']
                         transactions = tx_data.get('transactions', [])
                         count = tx_data.get('count', 0)
