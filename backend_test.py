@@ -1879,7 +1879,8 @@ verifyCacheData();
                     data = response.json()
                     read_data = data.get('data', {})
                     
-                    if (read_data.get('notification_id') == notification_id and 
+                    # Convert both to string for comparison since API returns string
+                    if (str(read_data.get('notification_id')) == str(notification_id) and 
                         read_data.get('is_read') == True):
                         self.log_result(
                             "Mark Single as Read", 
