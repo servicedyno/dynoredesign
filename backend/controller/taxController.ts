@@ -178,46 +178,62 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
     }
 
     // Call APILayer to validate
-    const response = await axios.get(`${TAX_DATA_API_URL}/validate`, {
-      headers: {
-        "apikey": TAX_DATA_API_KEY,
-      },
-      params: {
-        tax_number: tax_id,
+    try {
+      const response = await axios.get(`${TAX_DATA_API_URL}/validate`, {
+        headers: {
+          "apikey": TAX_DATA_API_KEY,
+        },
+        params: {
+          vat_number: tax_id,
+          country_code: upperCountryCode,
+        },
+        timeout: 10000,
+      });
+
+      const validationResult = response.data;
+
+      return successResponseHelper(res, 200, "Tax ID validation completed", {
+        tax_id,
         country_code: upperCountryCode,
-      },
-    });
+        valid: validationResult.valid || false,
+        company_name: validationResult.company_name || null,
+        company_address: validationResult.company_address || null,
+        format_valid: validationResult.format_valid || false,
+        query_status: validationResult.query || "completed",
+      });
+    } catch (apiError: any) {
+      // Handle rate limiting gracefully
+      if (apiError.response?.data?.message?.includes("exceeded")) {
+        return successResponseHelper(res, 200, "Tax ID validation - API rate limit exceeded, please try again later", {
+          tax_id,
+          country_code: upperCountryCode,
+          valid: null,
+          format_valid: null,
+          query_status: "rate_limited",
+          note: "API rate limit exceeded. Validation could not be performed at this time.",
+        });
+      }
 
-    const validationResult = response.data;
+      // Handle specific API errors
+      if (apiError.response?.status === 400) {
+        return successResponseHelper(res, 200, "Tax ID validation completed", {
+          tax_id,
+          country_code: upperCountryCode,
+          valid: false,
+          format_valid: false,
+          error: "Invalid tax ID format",
+        });
+      }
 
-    return successResponseHelper(res, 200, "Tax ID validation completed", {
-      tax_id,
-      country_code: upperCountryCode,
-      valid: validationResult.valid || false,
-      company_name: validationResult.company_name || null,
-      company_address: validationResult.company_address || null,
-      format_valid: validationResult.format_valid || false,
-      query_status: validationResult.query || "completed",
-    });
+      if (apiError.response?.status === 401) {
+        return errorResponseHelper(res, 500, "Tax Data API authentication failed");
+      }
+
+      throw apiError;
+    }
 
   } catch (e: any) {
     const message = getErrorMessage(e);
-
-    // Handle specific API errors
-    if (e.response?.status === 400) {
-      return successResponseHelper(res, 200, "Tax ID validation completed", {
-        tax_id: req.body.tax_id,
-        country_code: req.body.country_code?.toUpperCase(),
-        valid: false,
-        format_valid: false,
-        error: "Invalid tax ID format",
-      });
-    }
-
-    if (e.response?.status === 401) {
-      return errorResponseHelper(res, 500, "Tax Data API authentication failed");
-    }
-
     taxLogger?.error?.(message, {}, new Error(e)) || console.error("Tax validation error:", message);
     return errorResponseHelper(res, 500, message);
   }
