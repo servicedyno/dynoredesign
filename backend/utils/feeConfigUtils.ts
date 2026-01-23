@@ -15,27 +15,48 @@ export const getTransactionFeePercent = (): number => {
 };
 
 export const getFeeTiers = (): FeeTier[] => {
-    const tierString = process.env.BLOCKCHAIN_FEE_TIERS;
-    if (!tierString) {
-        return [
-            { min: 5, max: 100, fixed: 3, buffer: 1.0 },
-            { min: 101, max: 500, fixed: 2, buffer: 0.8 },
-            { min: 501, max: 1000, fixed: 1.5, buffer: 0.5 },
-            { min: 1001, max: null, fixed: 1, buffer: 0.3 }
-        ];
-    }
-
-    return tierString.split(',').map(tier => {
-        const [range, fee, bufferPart] = tier.split(':');
-        const fixed = parseFloat(fee);
-        const buffer = bufferPart ? parseFloat(bufferPart) : 0;
-
-        if (range.includes('+')) {
-            const min = parseFloat(range.replace('+', ''));
-            return { min, max: null, fixed, buffer };
+    // Check for new individual tier format first
+    if (process.env.FEE_TIER_1_MIN) {
+        const tiers: FeeTier[] = [];
+        let tierNum = 1;
+        
+        while (process.env[`FEE_TIER_${tierNum}_MIN`]) {
+            const min = Number(process.env[`FEE_TIER_${tierNum}_MIN`]);
+            const maxVal = Number(process.env[`FEE_TIER_${tierNum}_MAX`]);
+            const max = maxVal === 0 ? null : maxVal; // 0 means unlimited
+            const fixed = Number(process.env[`FEE_TIER_${tierNum}_FIXED`]);
+            const buffer = Number(process.env[`FEE_TIER_${tierNum}_BUFFER`]);
+            
+            tiers.push({ min, max, fixed, buffer });
+            tierNum++;
         }
+        
+        if (tiers.length > 0) return tiers;
+    }
+    
+    // Legacy format support: BLOCKCHAIN_FEE_TIERS
+    const tierString = process.env.BLOCKCHAIN_FEE_TIERS;
+    if (tierString) {
+        return tierString.split(',').map(tier => {
+            const [range, fee, bufferPart] = tier.split(':');
+            const fixed = parseFloat(fee);
+            const buffer = bufferPart ? parseFloat(bufferPart) : 0;
 
-        const [min, max] = range.split('-').map(Number);
-        return { min, max, fixed, buffer };
-    });
+            if (range.includes('+')) {
+                const min = parseFloat(range.replace('+', ''));
+                return { min, max: null, fixed, buffer };
+            }
+
+            const [min, max] = range.split('-').map(Number);
+            return { min, max, fixed, buffer };
+        });
+    }
+    
+    // Default tiers
+    return [
+        { min: 5, max: 100, fixed: 3, buffer: 1.0 },
+        { min: 101, max: 500, fixed: 2, buffer: 0.8 },
+        { min: 501, max: 1000, fixed: 1.5, buffer: 0.5 },
+        { min: 1001, max: null, fixed: 1, buffer: 0.3 }
+    ];
 };
