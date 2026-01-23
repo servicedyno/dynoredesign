@@ -915,26 +915,23 @@ verifyCacheData();
                 False, 
                 f"Cache verification failed: {str(e)}"
             )
-        """Run all database tests"""
-        print("🚀 Starting DynoPay Database Schema Tests")
+    
+    def run_all_tests(self):
+        """Run all backend tests"""
+        print("🚀 Starting DynoPay Backend Tests")
         print("=" * 60)
+        print(f"Backend URL: {self.backend_url}")
         
-        # Test 1: Database connectivity
+        # Test 1: Backend connectivity
         if not self.test_database_connectivity():
-            print("\n❌ Database connectivity failed. Stopping tests.")
+            print("\n❌ Backend connectivity failed. Stopping tests.")
             return False
         
-        # Test 2: Run migration
-        if not self.run_database_migration():
-            print("\n❌ Database migration failed. Continuing with verification...")
+        # Test 2: Phase 2 Tax API endpoints
+        self.test_tax_api_endpoints()
         
-        # Test 3: Verify tables exist
-        if not self.verify_database_tables():
-            print("\n❌ Table verification failed.")
-        
-        # Test 4: Test specific schemas
-        if not self.test_specific_table_schemas():
-            print("\n❌ Schema validation failed.")
+        # Test 3: Verify tax cache in database
+        self.verify_tax_cache_database()
         
         return True
     
