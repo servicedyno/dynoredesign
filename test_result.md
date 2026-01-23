@@ -411,11 +411,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 3: Dashboard API endpoints"
-    - "GET /api/dashboard - main statistics"
-    - "GET /api/dashboard/chart - volume chart data"
-    - "GET /api/dashboard/fee-tiers - fee tier info"
-    - "GET /api/dashboard/recent-transactions - recent transactions"
+    - "Phase 3 Dashboard APIs - COMPLETED"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
