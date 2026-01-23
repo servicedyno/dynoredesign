@@ -544,12 +544,41 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           }
         );
 
+        // Increment times_used counter
+        await paymentLinkModel.increment('times_used', {
+          by: 1,
+          where: {
+            transaction_id: tempData?.transaction_id,
+          },
+        });
+
         transaction.commit();
+        
+        // Use stored redirect_url or callback_url if available
         const returnData = {
           transaction_reference: data.flw_ref,
           status: data.status,
           redirect: false,
+          ...(linkData.redirect_url && { redirect_url: linkData.redirect_url }),
+          ...(linkData.callback_url && { callback_url: linkData.callback_url }),
         };
+        
+        // Call webhook if webhook_url is configured
+        if (linkData.webhook_url) {
+          try {
+            await axios.post(linkData.webhook_url, returnData, { timeout: 30000 });
+            webhookLogs.log("info", "Payment link webhook sent successfully!", {
+              webhook_url: linkData.webhook_url,
+              ...returnData,
+            });
+          } catch (webhookError) {
+            webhookLogs.error("Payment link webhook failed", { 
+              webhook_url: linkData.webhook_url,
+              error: webhookError.message 
+            });
+          }
+        }
+        
         await deleteRedisItem(uniqueRef);
         successResponseHelper(res, 200, "transaction successful!", returnData);
       } else {
