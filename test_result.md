@@ -240,6 +240,81 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: tbl_kyc table created successfully with 10 columns: kyc_id, user_id, company_id, status, documents, rejection_reason, volume_threshold, submitted_at, reviewed_at, created_at"
 
+  - task: "GET /api/tax/rate/:countryCode endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/taxController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Cache-first VAT rate retrieval with APILayer integration and fallback rates"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Cache-first logic working perfectly. Tested PT, DE, US, GB, FR - all return correct tax rates. First call shows cached: false, second call shows cached: true. Fallback rates working when API rate limited."
+
+  - task: "POST /api/tax/validate endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/taxController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Tax ID/VAT number validation with rate limiting handling"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Tax ID validation endpoint working correctly. Gracefully handles API rate limiting with query_status: 'rate_limited'. Tested with PT518713130 for Portugal."
+
+  - task: "GET /api/tax/acronyms endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/taxController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Returns all 102 tax acronyms by country with EU/Rest of World grouping"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Returns exactly 102 countries as expected. Correctly grouped into EU (27 countries) and Rest of World (75 countries). All required fields present: country_code, country_name, tax_acronym."
+
+  - task: "GET /api/tax/lookup endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/taxController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Country name to tax rate lookup functionality"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Successfully resolves country names to tax rates. Tested Portugal→PT (23%), Germany→DE (19%), United States→US (0%). Correctly redirects to cache-first logic."
+
+  - task: "Tax rate caching in tbl_tax_rate table"
+    implemented: true
+    working: true
+    file: "/app/backend/models/taxRateModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Database caching for tax rates to improve performance"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Tax rates are correctly cached in tbl_tax_rate table. Found 5 cached entries including PT (23%), DE (19%), US (0%), GB (20%), FR (20%). Cache timestamps confirm proper storage."
+
 frontend:
   - task: "No frontend changes for Phase 1"
     implemented: false
