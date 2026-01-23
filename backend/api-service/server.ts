@@ -7,10 +7,11 @@ import crypto from "crypto";
 import { decrypt } from "./helper";
 import { apiMiddleware } from "./middleware";
 import controller from "./controller";
+import { connectRedis } from "./utils/redisInstance";
 
 dotenv.config();
 const app = express();
-const port = process.env.PORT || 3300;
+const port = process.env.API_SERVICE_PORT || 3301;
 
 app.use(cors());
 app.use(express.json());
