@@ -2923,6 +2923,187 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
   }
 };
 
+/**
+ * Get transaction details by ID
+ * GET /api/wallet/transaction/:id
+ */
+const getTransactionDetails = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { id } = req.params;
+
+    // Try to find in user_transaction table
+    const transaction = await sequelize.query(
+      `
+      SELECT 
+        ut.*,
+        c.customer_name,
+        c.email as customer_email,
+        cm.company_name,
+        cm.company_id,
+        uw.wallet_type as crypto_currency,
+        uw.wallet_address as wallet_address
+      FROM tbl_user_transaction ut 
+      LEFT JOIN tbl_customer c ON c.customer_id=ut.customer_id
+      LEFT JOIN tbl_company cm ON cm.company_id=c.company_id
+      LEFT JOIN tbl_user_wallet uw ON uw.wallet_id=ut.wallet_id
+      WHERE ut.user_id=${userData.user_id} AND (ut.id='${id}' OR ut.transaction_id=${parseInt(id) || 0})
+      LIMIT 1
+      `,
+      { type: QueryTypes.SELECT }
+    );
+
+    if (transaction.length === 0) {
+      return errorResponseHelper(res, 404, "Transaction not found");
+    }
+
+    const txData: any = transaction[0];
+
+    // Format response according to Figma UI requirements
+    const response = {
+      // Header
+      status: txData.status,
+      transaction_id: txData.id || `TX${txData.transaction_id}`,
+      date_time: txData.createdAt,
+      
+      // Amount Details
+      cryptocurrency: txData.crypto_currency || txData.base_currency,
+      amount: txData.base_amount,
+      usd_value: txData.base_currency === 'USD' ? txData.base_amount : null,
+      fees: txData.transaction_fee || 0,
+      confirmations: txData.confirmations || 0,
+      
+      // Transaction Hashes
+      incoming_transaction_id: txData.transaction_reference,
+      outgoing_transaction_id: txData.outgoing_tx_hash || null,
+      
+      // Callback Information
+      callback_url: txData.callback_url || null,
+      webhook_response: txData.webhook_response ? JSON.parse(txData.webhook_response) : null,
+      
+      // Additional details
+      customer_name: txData.customer_name,
+      customer_email: txData.customer_email,
+      company_name: txData.company_name,
+      company_id: txData.company_id,
+      wallet_address: txData.wallet_address,
+      payment_mode: txData.payment_mode,
+      transaction_type: txData.transaction_type,
+      transaction_details: txData.transaction_details,
+    };
+
+    successResponseHelper(res, 200, "", response);
+  } catch (e) {
+    const message = getErrorMessage(e);
+    walletLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Export transactions to CSV
+ * POST /api/wallet/transactions/export
+ */
+const exportTransactions = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { 
+      date_from,
+      date_to,
+      status,
+      currency,
+      search,
+      company_id
+    } = req.body;
+
+    // Build WHERE conditions
+    let whereConditions = `ut.user_id=${userData.user_id}`;
+    
+    if (date_from) {
+      whereConditions += ` AND ut."createdAt" >= '${date_from}'`;
+    }
+    if (date_to) {
+      whereConditions += ` AND ut."createdAt" <= '${date_to}'`;
+    }
+    if (status) {
+      whereConditions += ` AND ut.status = '${status}'`;
+    }
+    if (currency) {
+      whereConditions += ` AND ut.base_currency = '${currency}'`;
+    }
+    if (search) {
+      whereConditions += ` AND (ut.id ILIKE '%${search}%' OR ut.transaction_reference ILIKE '%${search}%')`;
+    }
+    if (company_id) {
+      whereConditions += ` AND cm.company_id = ${company_id}`;
+    }
+
+    // Get all matching transactions (no pagination for export)
+    const transactions = await sequelize.query(
+      `
+      SELECT 
+        ut.id as transaction_id,
+        ut."createdAt" as date_time,
+        uw.wallet_type as crypto,
+        ut.base_amount as amount,
+        ut.base_currency,
+        ut.status,
+        c.customer_name,
+        cm.company_name,
+        ut.payment_mode,
+        ut.transaction_type,
+        ut.transaction_reference
+      FROM tbl_user_transaction ut 
+      LEFT JOIN tbl_customer c ON c.customer_id=ut.customer_id
+      LEFT JOIN tbl_company cm ON cm.company_id=c.company_id
+      LEFT JOIN tbl_user_wallet uw ON uw.wallet_id=ut.wallet_id
+      WHERE ${whereConditions}
+      ORDER BY ut."createdAt" DESC
+      `,
+      { type: QueryTypes.SELECT }
+    );
+
+    // Convert to CSV format
+    const csvHeaders = 'Transaction ID,Date & Time,Crypto,Amount,Currency,USD Value,Status,Customer,Company,Payment Mode,Type,Reference\n';
+    const csvRows = transactions.map((tx: any) => {
+      return [
+        tx.transaction_id || '',
+        tx.date_time || '',
+        tx.crypto || tx.base_currency || '',
+        tx.amount || 0,
+        tx.base_currency || '',
+        tx.base_currency === 'USD' ? tx.amount : '',
+        tx.status || '',
+        tx.customer_name || '',
+        tx.company_name || '',
+        tx.payment_mode || '',
+        tx.transaction_type || '',
+        tx.transaction_reference || ''
+      ].map(field => `"${field}"`).join(',');
+    }).join('\n');
+
+    const csvContent = csvHeaders + csvRows;
+
+    // Set headers for CSV download
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=transactions_${Date.now()}.csv`);
+    
+    res.send(csvContent);
+  } catch (e) {
+    const message = getErrorMessage(e);
+    walletLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   getWallet,
   addFunds,
@@ -2947,4 +3128,6 @@ export default {
   deleteWalletAddress,
   sendEditWalletOTP,
   editWalletAddress,
+  getTransactionDetails,
+  exportTransactions,
 };
