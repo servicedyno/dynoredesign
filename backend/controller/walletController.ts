@@ -1657,10 +1657,20 @@ const getWalletAddresses = async (
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
     const user_id = userData.user_id;
+    const { company_id } = req.query;
+    
+    // Build where clause with optional company_id filter
+    const whereClause: any = {
+      user_id,
+    };
+    
+    if (company_id) {
+      whereClause.company_id = company_id;
+    }
+
     const resData = await userWalletAddressModel.findAll({
-      where: {
-        user_id,
-      },
+      where: whereClause,
+      order: [['createdAt', 'DESC']],
     });
     successResponseHelper(res, 200, "", resData);
   } catch (e) {
