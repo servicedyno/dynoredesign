@@ -1690,7 +1690,7 @@ const addWalletAddress = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { wallet_address, currency, label } = req.body;
+    const { wallet_address, currency, label, company_id, wallet_name } = req.body;
     try {
       const user_id = userData.user_id;
 
@@ -1701,12 +1701,21 @@ const addWalletAddress = async (
         balance = await tatumApi.getAddressBalance(wallet_address, currency);
       }
       console.log(balance);
+      
+      // Check if address already exists for this user and company
+      const whereClause: any = {
+        wallet_address,
+        currency,
+        user_id,
+      };
+      
+      if (company_id) {
+        whereClause.company_id = company_id;
+      }
+
       const isExists = await userWalletAddressModel
         .findOne({
-          where: {
-            wallet_address,
-            currency,
-          },
+          where: whereClause,
         })
         .then((token) => token !== null)
         .then((isExists) => isExists);
@@ -1715,7 +1724,7 @@ const addWalletAddress = async (
         errorResponseHelper(
           res,
           500,
-          `This address with ${currency} currency is already exists!`
+          `This address with ${currency} currency already exists for this company!`
         );
       } else {
         const resData = await userWalletAddressModel.create({
@@ -1723,6 +1732,8 @@ const addWalletAddress = async (
           currency,
           label: label ?? currency,
           user_id,
+          company_id: company_id || null,
+          wallet_name: wallet_name || label || currency,
         });
         successResponseHelper(res, 200, "Address added successfully!", resData);
       }
