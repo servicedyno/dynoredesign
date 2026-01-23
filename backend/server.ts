@@ -81,6 +81,9 @@ cron.schedule("0 */24 * * *", function () {
   paymentController.removeUnwantedSubscriptions();
 });
 
+// Setup weekly summary cron job (every Monday at 9:00 AM UTC)
+setupWeeklySummaryCron();
+
 const startServer = async () => {
   await connectRedis();
   try {
