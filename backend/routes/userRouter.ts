@@ -10,6 +10,13 @@ userRouter.post("/generateOTP", userController.generateOTP);
 userRouter.post("/confirmOTP", userController.confirmOTP);
 userRouter.post("/connectSocial", userController.connectSocial);
 
+// Password reset endpoints
+userRouter.post("/forgot-password", userController.forgotPassword);
+userRouter.post("/reset-password", userController.resetPassword);
+
+// Google Sign-In endpoint
+userRouter.post("/google-signin", userController.googleSignIn);
+
 userRouter.put(
   "/updateUser",
   authMiddleware,
