@@ -4279,6 +4279,476 @@ verifyCacheData();
         
         return len(self.errors) == 0
 
+    def test_phase7_transaction_endpoints(self):
+        """Test Phase 7 Transaction endpoints implementation"""
+        print("\n=== Testing Phase 7 Transaction Endpoints ===")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Phase 7 Transaction Endpoints", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return False
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test 1: POST /api/wallet/getAllTransactions (Enhanced with filters)
+        self.test_get_all_transactions_with_filters(headers)
+        
+        # Test 2: GET /api/wallet/transaction/:id (New endpoint)
+        self.test_get_transaction_details(headers)
+        
+        # Test 3: POST /api/wallet/transactions/export (New endpoint)
+        self.test_export_transactions(headers)
+        
+        return True
+    
+    def test_get_all_transactions_with_filters(self, headers):
+        """Test POST /api/wallet/getAllTransactions with different filter combinations"""
+        print("\n--- Testing getAllTransactions with Filters ---")
+        
+        # Test cases as specified in review request
+        test_cases = [
+            {
+                "name": "Basic Pagination",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 10
+                }
+            },
+            {
+                "name": "Date Filter",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 10,
+                    "date_from": "2026-01-01",
+                    "date_to": "2026-01-31"
+                }
+            },
+            {
+                "name": "Status Filter - Done",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 10,
+                    "status": "Done"
+                }
+            },
+            {
+                "name": "Status Filter - Pending",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 10,
+                    "status": "Pending"
+                }
+            },
+            {
+                "name": "Status Filter - Failed",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 10,
+                    "status": "failed"
+                }
+            },
+            {
+                "name": "Currency Filter - BTC",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 10,
+                    "currency": "BTC"
+                }
+            },
+            {
+                "name": "Currency Filter - USD",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 10,
+                    "currency": "USD"
+                }
+            },
+            {
+                "name": "Search Filter",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 10,
+                    "search": "TX"
+                }
+            },
+            {
+                "name": "Company Filter",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 10,
+                    "company_id": 1
+                }
+            },
+            {
+                "name": "Combined Filters",
+                "data": {
+                    "page": 1,
+                    "rowsPerPage": 5,
+                    "status": "Done",
+                    "currency": "BTC",
+                    "company_id": 1
+                }
+            }
+        ]
+        
+        for test_case in test_cases:
+            try:
+                response = requests.post(
+                    f"{self.backend_url}/api/wallet/getAllTransactions",
+                    json=test_case["data"],
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if 'data' in data:
+                        tx_data = data['data']
+                        
+                        # Check expected response structure
+                        required_fields = ['customers_transactions', 'self_transactions', 'pagination']
+                        missing_fields = [field for field in required_fields if field not in tx_data]
+                        
+                        if missing_fields:
+                            self.log_result(
+                                f"getAllTransactions - {test_case['name']} Structure", 
+                                False, 
+                                f"Missing required fields: {', '.join(missing_fields)}",
+                                {"response": data}
+                            )
+                        else:
+                            # Verify pagination structure
+                            pagination = tx_data.get('pagination', {})
+                            pagination_fields = ['total', 'page', 'rowsPerPage', 'totalPages']
+                            missing_pagination = [field for field in pagination_fields if field not in pagination]
+                            
+                            if missing_pagination:
+                                self.log_result(
+                                    f"getAllTransactions - {test_case['name']} Pagination", 
+                                    False, 
+                                    f"Missing pagination fields: {', '.join(missing_pagination)}",
+                                    {"pagination": pagination}
+                                )
+                            else:
+                                customers_tx = tx_data.get('customers_transactions', [])
+                                self_tx = tx_data.get('self_transactions', [])
+                                
+                                self.log_result(
+                                    f"getAllTransactions - {test_case['name']}", 
+                                    True, 
+                                    f"Retrieved transactions successfully",
+                                    {
+                                        "customers_transactions": len(customers_tx),
+                                        "self_transactions": len(self_tx),
+                                        "total": pagination.get('total', 0),
+                                        "page": pagination.get('page', 1),
+                                        "rowsPerPage": pagination.get('rowsPerPage', 10),
+                                        "filters_applied": list(test_case["data"].keys())
+                                    }
+                                )
+                    else:
+                        self.log_result(
+                            f"getAllTransactions - {test_case['name']}", 
+                            False, 
+                            "Invalid response format - missing 'data' field",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        f"getAllTransactions - {test_case['name']}", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"getAllTransactions - {test_case['name']}", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+    
+    def test_get_transaction_details(self, headers):
+        """Test GET /api/wallet/transaction/:id endpoint"""
+        print("\n--- Testing getTransactionDetails ---")
+        
+        # First, get a transaction ID from getAllTransactions
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/wallet/getAllTransactions",
+                json={"page": 1, "rowsPerPage": 1},
+                headers=headers,
+                timeout=15
+            )
+            
+            transaction_id = None
+            if response.status_code == 200:
+                data = response.json()
+                tx_data = data.get('data', {})
+                customers_tx = tx_data.get('customers_transactions', [])
+                self_tx = tx_data.get('self_transactions', [])
+                
+                # Try to get a transaction ID from either list
+                if customers_tx:
+                    transaction_id = customers_tx[0].get('id') or customers_tx[0].get('transaction_id')
+                elif self_tx:
+                    transaction_id = self_tx[0].get('id') or self_tx[0].get('transaction_id')
+            
+            # Test with existing transaction ID
+            if transaction_id:
+                try:
+                    detail_response = requests.get(
+                        f"{self.backend_url}/api/wallet/transaction/{transaction_id}",
+                        headers=headers,
+                        timeout=15
+                    )
+                    
+                    if detail_response.status_code == 200:
+                        detail_data = detail_response.json()
+                        
+                        if 'data' in detail_data:
+                            tx_detail = detail_data['data']
+                            
+                            # Check expected response structure as per review request
+                            expected_fields = [
+                                'status', 'transaction_id', 'date_time', 'cryptocurrency',
+                                'amount', 'usd_value', 'fees', 'confirmations',
+                                'incoming_transaction_id', 'outgoing_transaction_id',
+                                'callback_url', 'webhook_response'
+                            ]
+                            
+                            missing_fields = [field for field in expected_fields if field not in tx_detail]
+                            
+                            if missing_fields:
+                                self.log_result(
+                                    "getTransactionDetails - Structure", 
+                                    False, 
+                                    f"Missing required fields: {', '.join(missing_fields)}",
+                                    {"response": detail_data}
+                                )
+                            else:
+                                self.log_result(
+                                    "getTransactionDetails - Valid ID", 
+                                    True, 
+                                    f"Transaction details retrieved successfully",
+                                    {
+                                        "transaction_id": tx_detail.get('transaction_id'),
+                                        "status": tx_detail.get('status'),
+                                        "cryptocurrency": tx_detail.get('cryptocurrency'),
+                                        "amount": tx_detail.get('amount'),
+                                        "confirmations": tx_detail.get('confirmations')
+                                    }
+                                )
+                        else:
+                            self.log_result(
+                                "getTransactionDetails - Valid ID", 
+                                False, 
+                                "Invalid response format - missing 'data' field",
+                                {"response": detail_data}
+                            )
+                    else:
+                        self.log_result(
+                            "getTransactionDetails - Valid ID", 
+                            False, 
+                            f"API call failed with status {detail_response.status_code}",
+                            {"response": detail_response.text}
+                        )
+                        
+                except Exception as e:
+                    self.log_result(
+                        "getTransactionDetails - Valid ID", 
+                        False, 
+                        f"Request failed: {str(e)}"
+                    )
+            else:
+                self.log_result(
+                    "getTransactionDetails - Valid ID", 
+                    True, 
+                    "No transactions found to test with (expected for new user)",
+                    {"note": "This is normal for a new user with no transactions"}
+                )
+            
+            # Test with invalid ID (should return 404)
+            try:
+                invalid_response = requests.get(
+                    f"{self.backend_url}/api/wallet/transaction/invalid_id_12345",
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if invalid_response.status_code == 404:
+                    self.log_result(
+                        "getTransactionDetails - Invalid ID", 
+                        True, 
+                        "Correctly returned 404 for invalid transaction ID",
+                        {"status_code": 404}
+                    )
+                else:
+                    self.log_result(
+                        "getTransactionDetails - Invalid ID", 
+                        False, 
+                        f"Expected 404 for invalid ID, got {invalid_response.status_code}",
+                        {"response": invalid_response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    "getTransactionDetails - Invalid ID", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "getTransactionDetails Setup", 
+                False, 
+                f"Failed to setup transaction details test: {str(e)}"
+            )
+    
+    def test_export_transactions(self, headers):
+        """Test POST /api/wallet/transactions/export endpoint"""
+        print("\n--- Testing exportTransactions ---")
+        
+        # Test cases with different filters (same as getAllTransactions)
+        test_cases = [
+            {
+                "name": "Basic Export",
+                "data": {}
+            },
+            {
+                "name": "Export with Date Filter",
+                "data": {
+                    "date_from": "2026-01-01",
+                    "date_to": "2026-01-31"
+                }
+            },
+            {
+                "name": "Export with Status Filter",
+                "data": {
+                    "status": "Done"
+                }
+            },
+            {
+                "name": "Export with Currency Filter",
+                "data": {
+                    "currency": "BTC"
+                }
+            },
+            {
+                "name": "Export with Search Filter",
+                "data": {
+                    "search": "TX"
+                }
+            },
+            {
+                "name": "Export with Company Filter",
+                "data": {
+                    "company_id": 1
+                }
+            },
+            {
+                "name": "Export with Combined Filters",
+                "data": {
+                    "status": "Done",
+                    "currency": "BTC",
+                    "company_id": 1
+                }
+            }
+        ]
+        
+        for test_case in test_cases:
+            try:
+                response = requests.post(
+                    f"{self.backend_url}/api/wallet/transactions/export",
+                    json=test_case["data"],
+                    headers=headers,
+                    timeout=30  # Longer timeout for export
+                )
+                
+                if response.status_code == 200:
+                    # Check if response is CSV
+                    content_type = response.headers.get('content-type', '')
+                    content_disposition = response.headers.get('content-disposition', '')
+                    
+                    if 'text/csv' in content_type and 'attachment' in content_disposition:
+                        # Verify CSV content structure
+                        csv_content = response.text
+                        lines = csv_content.split('\n')
+                        
+                        if lines and len(lines) > 0:
+                            # Check CSV headers as specified in review request
+                            expected_headers = [
+                                'Transaction ID', 'Date & Time', 'Crypto', 'Amount', 'Currency',
+                                'USD Value', 'Status', 'Customer', 'Company', 'Payment Mode', 'Type', 'Reference'
+                            ]
+                            
+                            header_line = lines[0]
+                            headers_match = all(header in header_line for header in expected_headers)
+                            
+                            if headers_match:
+                                self.log_result(
+                                    f"exportTransactions - {test_case['name']}", 
+                                    True, 
+                                    f"CSV export successful with correct headers",
+                                    {
+                                        "content_type": content_type,
+                                        "content_disposition": content_disposition,
+                                        "csv_lines": len(lines),
+                                        "headers_correct": True,
+                                        "filters_applied": list(test_case["data"].keys())
+                                    }
+                                )
+                            else:
+                                self.log_result(
+                                    f"exportTransactions - {test_case['name']} Headers", 
+                                    False, 
+                                    "CSV headers don't match expected format",
+                                    {"expected_headers": expected_headers, "actual_header": header_line}
+                                )
+                        else:
+                            self.log_result(
+                                f"exportTransactions - {test_case['name']}", 
+                                True, 
+                                "CSV export successful (empty result set)",
+                                {
+                                    "content_type": content_type,
+                                    "content_disposition": content_disposition,
+                                    "note": "Empty CSV is valid for users with no transactions"
+                                }
+                            )
+                    else:
+                        self.log_result(
+                            f"exportTransactions - {test_case['name']} Format", 
+                            False, 
+                            "Response is not in CSV format",
+                            {
+                                "content_type": content_type,
+                                "content_disposition": content_disposition,
+                                "response_preview": response.text[:200]
+                            }
+                        )
+                else:
+                    self.log_result(
+                        f"exportTransactions - {test_case['name']}", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"exportTransactions - {test_case['name']}", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+
     def print_summary(self):
         """Print test summary"""
         print("\n" + "=" * 60)
