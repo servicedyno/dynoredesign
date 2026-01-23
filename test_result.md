@@ -651,7 +651,7 @@ backend:
     file: "/app/backend/controller/walletController.ts"
     stuck_count: 2
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -665,6 +665,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ STILL FAILING: KMS authentication error persists. Backend logs show same 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported' error. API now returns 'please enter a valid BTC address!' but underlying KMS issue remains. Tested with multiple valid BTC address formats (P2PKH, P2SH, Bech32, Taproot) - all fail. The .replace() fix did not resolve the GOOGLE_CLIENT_KEY parsing issue."
+      - working: "NA"
+        agent: "main"
+        comment: "Updated KMS credentials object to include all required service account fields: type, project_id, private_key_id, private_key, client_email, auth_uri, token_uri, auth_provider_x509_cert_url. This matches the full service account JSON format as per Google Cloud documentation."
 
   - task: "POST /api/userApi/addApi with api_name support"
     implemented: true
