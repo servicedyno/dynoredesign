@@ -771,13 +771,15 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 6: API, Wallet Addresses & Company-Level Data"
-    - "Task 6.1: Company-level data scoping"
-    - "Task 6.2: Wallet address company separation"
-    - "Task 6.3: API key name support"
-    - "Task 6.4: Edit wallet address with OTP"
-    - "Task 6.5: Swagger API documentation"
-  stuck_tasks: []
+    - "Phase 6 Issues Resolution"
+    - "POST /api/wallet/addWalletAddress Google Cloud KMS authentication fix"
+    - "POST /api/userApi/addApi wallet validation logic adjustment"
+    - "Wallet edit OTP endpoints database column reference fix"
+  stuck_tasks:
+    - "POST /api/wallet/addWalletAddress with company_id and wallet_name"
+    - "POST /api/userApi/addApi with api_name support"
+    - "POST /api/wallet/address/send-otp for wallet edit OTP"
+    - "PUT /api/wallet/address/:id for edit wallet with OTP verification"
   test_all: false
   test_priority: "high_first"
 
