@@ -116,7 +116,9 @@ async function decryptSymmetric(ciphertext, keyId) {
 const getTatumSDK = async () => {
   try {
     let tatumKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
+    console.log('[getTatumSDK] tatumKey exists:', !!tatumKey, 'length:', tatumKey?.length);
     if (!tatumKey) {
+      console.log('[getTatumSDK] No Tatum key found, attempting Secret Manager...');
       const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
       const client = new SecretManagerServiceClient({
         credentials: {
@@ -137,9 +139,11 @@ const getTatumSDK = async () => {
       tatumKey = payload;
     }
     const tatumSdk = TatumApi(tatumKey);
+    console.log('[getTatumSDK] TatumApi initialized:', !!tatumSdk);
     return tatumSdk;
   } catch (e) {
-    console.log(e);
+    console.log('[getTatumSDK] ERROR:', e);
+    throw e;
   }
 };
 
