@@ -44,6 +44,7 @@ import blockchairApi from "../apis/blockchairApi";
 import { getTransactionFee, getBlockchainFee } from ".";
 import mailTransporter from "../utils/mailTransporter";
 import { getAdminWalletAddress } from "../utils/adminUtils";
+import WAValidator from "wallet-address-validator";
 
 const getWallet = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
