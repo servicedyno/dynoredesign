@@ -670,9 +670,9 @@ backend:
     implemented: true
     working: false
     file: "/app/backend/controller/apiController.ts"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -683,6 +683,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Fixed validation logic in /app/backend/controller/apiController.ts. Changed from checking userWalletModel to userWalletAddressModel which is the correct table for wallet addresses. Now validation properly checks if user has any wallet addresses configured for the company."
+      - working: false
+        agent: "testing"
+        comment: "❌ STILL FAILING: Validation logic still requires wallet addresses. Error persists: 'User does not have any wallet address configured for this company!' Since addWalletAddress endpoint is also failing due to KMS issues, user cannot create wallet addresses, creating a dependency chain failure. The validation fix appears correct but cannot be verified until wallet creation works."
 
   - task: "GET /api/userApi/getApi returns api_name field"
     implemented: true
