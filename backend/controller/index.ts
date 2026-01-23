@@ -119,4 +119,5 @@ export {
   walletController,
   apiController,
   taxController,
+  dashboardController,
 };
