@@ -1411,6 +1411,613 @@ verifyCacheData();
         
         return True
     
+    def test_notification_preferences(self):
+        """Test notification preferences endpoints"""
+        print("\n=== Testing Phase 4 Notification Preferences ===")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Notification Preferences", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test 1: GET /api/notifications/preferences (should return defaults)
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/notifications/preferences",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                prefs_data = data.get('data', {})
+                
+                # Check if defaults are returned
+                expected_defaults = [
+                    'transaction_updates', 'payment_received', 'weekly_summary',
+                    'security_alerts', 'email_notifications', 'sms_notifications', 
+                    'browser_notifications', 'is_default'
+                ]
+                
+                missing_fields = [field for field in expected_defaults if field not in prefs_data]
+                
+                if missing_fields:
+                    self.log_result(
+                        "Get Preferences - Structure", 
+                        False, 
+                        f"Missing fields: {', '.join(missing_fields)}",
+                        {"response": data}
+                    )
+                else:
+                    is_default = prefs_data.get('is_default', False)
+                    self.log_result(
+                        "Get Preferences - Defaults", 
+                        True, 
+                        f"Retrieved preferences (is_default: {is_default})",
+                        {
+                            "transaction_updates": prefs_data.get('transaction_updates'),
+                            "weekly_summary": prefs_data.get('weekly_summary'),
+                            "email_notifications": prefs_data.get('email_notifications'),
+                            "is_default": is_default
+                        }
+                    )
+            else:
+                self.log_result(
+                    "Get Preferences", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Get Preferences", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 2: PUT /api/notifications/preferences (update preferences)
+        try:
+            update_data = {
+                "transaction_updates": True,
+                "payment_received": False,
+                "weekly_summary": True,
+                "security_alerts": False,
+                "email_notifications": True,
+                "sms_notifications": False,
+                "browser_notifications": False
+            }
+            
+            response = requests.put(
+                f"{self.backend_url}/api/notifications/preferences",
+                json=update_data,
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                updated_prefs = data.get('data', {})
+                
+                # Verify the update worked
+                if (updated_prefs.get('transaction_updates') == True and
+                    updated_prefs.get('payment_received') == False and
+                    updated_prefs.get('weekly_summary') == True):
+                    
+                    self.log_result(
+                        "Update Preferences", 
+                        True, 
+                        "Preferences updated successfully",
+                        {
+                            "transaction_updates": updated_prefs.get('transaction_updates'),
+                            "payment_received": updated_prefs.get('payment_received'),
+                            "weekly_summary": updated_prefs.get('weekly_summary')
+                        }
+                    )
+                else:
+                    self.log_result(
+                        "Update Preferences - Validation", 
+                        False, 
+                        "Updated preferences don't match expected values",
+                        {"updated_prefs": updated_prefs, "expected": update_data}
+                    )
+            else:
+                self.log_result(
+                    "Update Preferences", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Update Preferences", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 3: GET /api/notifications/preferences (verify update persisted)
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/notifications/preferences",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                prefs_data = data.get('data', {})
+                
+                # Should now show is_default: false since we updated
+                is_default = prefs_data.get('is_default', True)
+                if is_default == False:
+                    self.log_result(
+                        "Get Updated Preferences", 
+                        True, 
+                        "Updated preferences persisted correctly",
+                        {"is_default": is_default}
+                    )
+                else:
+                    self.log_result(
+                        "Get Updated Preferences", 
+                        False, 
+                        "Preferences should show is_default: false after update",
+                        {"is_default": is_default}
+                    )
+            else:
+                self.log_result(
+                    "Get Updated Preferences", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Get Updated Preferences", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_notification_types(self):
+        """Test GET /api/notifications/types"""
+        print("\n--- Testing Notification Types ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Notification Types", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Expected notification types from the controller
+        expected_types = [
+            "transaction_confirmed", "payment_received", "weekly_summary", 
+            "security_alert", "kyc_required", "kyc_approved", "kyc_rejected",
+            "wallet_verified", "wallet_added", "api_key_created", "company_created"
+        ]
+        
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/notifications/types",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                types_data = data.get('data', {})
+                types_list = types_data.get('types', [])
+                
+                if len(types_list) >= 10:  # Should have at least 10 types
+                    # Check if expected types are present
+                    returned_values = [t.get('value') for t in types_list]
+                    missing_types = [t for t in expected_types if t not in returned_values]
+                    
+                    if not missing_types:
+                        self.log_result(
+                            "Notification Types", 
+                            True, 
+                            f"Retrieved {len(types_list)} notification types",
+                            {"types_count": len(types_list), "sample_types": returned_values[:5]}
+                        )
+                    else:
+                        self.log_result(
+                            "Notification Types - Validation", 
+                            False, 
+                            f"Missing expected types: {', '.join(missing_types)}",
+                            {"returned_types": returned_values, "missing": missing_types}
+                        )
+                else:
+                    self.log_result(
+                        "Notification Types - Count", 
+                        False, 
+                        f"Expected at least 10 types, got {len(types_list)}",
+                        {"types_count": len(types_list)}
+                    )
+            else:
+                self.log_result(
+                    "Notification Types", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Notification Types", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_weekly_summary_trigger(self):
+        """Test POST /api/notifications/trigger-weekly-summary"""
+        print("\n--- Testing Weekly Summary Trigger ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Weekly Summary Trigger", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            # Trigger weekly summary for current user
+            response = requests.post(
+                f"{self.backend_url}/api/notifications/trigger-weekly-summary",
+                json={},  # Empty body - will use authenticated user
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                results = data.get('data', {}).get('results', [])
+                
+                if isinstance(results, list):
+                    self.log_result(
+                        "Weekly Summary Trigger", 
+                        True, 
+                        f"Weekly summary triggered successfully for {len(results)} user(s)",
+                        {"results_count": len(results)}
+                    )
+                    
+                    # If we got results, check the structure
+                    if results and len(results) > 0:
+                        first_result = results[0]
+                        if 'user_id' in first_result and 'summary' in first_result:
+                            summary = first_result.get('summary', {})
+                            self.log_result(
+                                "Weekly Summary - Structure", 
+                                True, 
+                                "Weekly summary data structure is correct",
+                                {
+                                    "user_id": first_result.get('user_id'),
+                                    "transaction_count": summary.get('transaction_count', 0),
+                                    "total_volume": summary.get('total_volume', 0),
+                                    "period_start": summary.get('period_start'),
+                                    "period_end": summary.get('period_end')
+                                }
+                            )
+                        else:
+                            self.log_result(
+                                "Weekly Summary - Structure", 
+                                False, 
+                                "Weekly summary result missing expected fields",
+                                {"first_result": first_result}
+                            )
+                else:
+                    self.log_result(
+                        "Weekly Summary Trigger", 
+                        False, 
+                        "Invalid response format - results should be array",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Weekly Summary Trigger", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Weekly Summary Trigger", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_notification_list_and_operations(self):
+        """Test notification list, unread count, mark as read, and delete operations"""
+        print("\n--- Testing Notification List and Operations ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Notification Operations", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        notification_id = None
+        
+        # Test 1: GET /api/notifications (list notifications)
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/notifications",
+                params={"page": 1, "limit": 10},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                notifications_data = data.get('data', {})
+                notifications = notifications_data.get('notifications', [])
+                pagination = notifications_data.get('pagination', {})
+                
+                # Check pagination structure
+                required_pagination_fields = ['total', 'page', 'limit', 'total_pages']
+                missing_pagination = [field for field in required_pagination_fields if field not in pagination]
+                
+                if missing_pagination:
+                    self.log_result(
+                        "Notification List - Pagination", 
+                        False, 
+                        f"Missing pagination fields: {', '.join(missing_pagination)}",
+                        {"pagination": pagination}
+                    )
+                else:
+                    self.log_result(
+                        "Notification List", 
+                        True, 
+                        f"Retrieved {len(notifications)} notifications (total: {pagination.get('total', 0)})",
+                        {
+                            "notifications_count": len(notifications),
+                            "total": pagination.get('total', 0),
+                            "page": pagination.get('page', 1),
+                            "limit": pagination.get('limit', 10)
+                        }
+                    )
+                    
+                    # Store first notification ID for later tests
+                    if notifications and len(notifications) > 0:
+                        notification_id = notifications[0].get('notification_id')
+            else:
+                self.log_result(
+                    "Notification List", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Notification List", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 2: GET /api/notifications/unread-count
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/notifications/unread-count",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                unread_data = data.get('data', {})
+                
+                if 'unread_count' in unread_data:
+                    unread_count = unread_data.get('unread_count', 0)
+                    self.log_result(
+                        "Unread Count", 
+                        True, 
+                        f"Retrieved unread count: {unread_count}",
+                        {"unread_count": unread_count}
+                    )
+                else:
+                    self.log_result(
+                        "Unread Count - Structure", 
+                        False, 
+                        "Missing unread_count field in response",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Unread Count", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Unread Count", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 3: PUT /api/notifications/:id/read (if we have a notification ID)
+        if notification_id:
+            try:
+                response = requests.put(
+                    f"{self.backend_url}/api/notifications/{notification_id}/read",
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    read_data = data.get('data', {})
+                    
+                    if (read_data.get('notification_id') == notification_id and 
+                        read_data.get('is_read') == True):
+                        self.log_result(
+                            "Mark Single as Read", 
+                            True, 
+                            f"Notification {notification_id} marked as read",
+                            {"notification_id": notification_id, "is_read": True}
+                        )
+                    else:
+                        self.log_result(
+                            "Mark Single as Read - Validation", 
+                            False, 
+                            "Response doesn't match expected format",
+                            {"response": data, "expected_id": notification_id}
+                        )
+                else:
+                    self.log_result(
+                        "Mark Single as Read", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    "Mark Single as Read", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+        
+        # Test 4: PUT /api/notifications/read-all
+        try:
+            response = requests.put(
+                f"{self.backend_url}/api/notifications/read-all",
+                json={},  # Empty body
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                read_all_data = data.get('data', {})
+                
+                if 'updated_count' in read_all_data:
+                    updated_count = read_all_data.get('updated_count', 0)
+                    self.log_result(
+                        "Mark All as Read", 
+                        True, 
+                        f"Marked {updated_count} notifications as read",
+                        {"updated_count": updated_count}
+                    )
+                else:
+                    self.log_result(
+                        "Mark All as Read - Structure", 
+                        False, 
+                        "Missing updated_count field in response",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Mark All as Read", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Mark All as Read", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 5: DELETE /api/notifications/:id (if we have a notification ID)
+        if notification_id:
+            try:
+                response = requests.delete(
+                    f"{self.backend_url}/api/notifications/{notification_id}",
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    delete_data = data.get('data', {})
+                    
+                    if (delete_data.get('notification_id') == notification_id and 
+                        delete_data.get('deleted') == True):
+                        self.log_result(
+                            "Delete Notification", 
+                            True, 
+                            f"Notification {notification_id} deleted successfully",
+                            {"notification_id": notification_id, "deleted": True}
+                        )
+                    else:
+                        self.log_result(
+                            "Delete Notification - Validation", 
+                            False, 
+                            "Response doesn't match expected format",
+                            {"response": data, "expected_id": notification_id}
+                        )
+                else:
+                    self.log_result(
+                        "Delete Notification", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    "Delete Notification", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+    
+    def test_notification_apis(self):
+        """Test all Phase 4 Notification API endpoints"""
+        print("\n=== Testing Phase 4 Notification APIs ===")
+        
+        # Step 1: Authenticate user to get JWT token (reuse from dashboard tests)
+        if not self.jwt_token and not self.test_user_authentication():
+            print("\n❌ Authentication failed. Cannot test notification APIs.")
+            return False
+        
+        # Step 2: Test notification preferences
+        self.test_notification_preferences()
+        
+        # Step 3: Test notification types
+        self.test_notification_types()
+        
+        # Step 4: Test weekly summary trigger (creates notifications)
+        self.test_weekly_summary_trigger()
+        
+        # Step 5: Test notification list and operations
+        self.test_notification_list_and_operations()
+        
+        return True
+    
     def run_all_tests(self):
         """Run all backend tests"""
         print("🚀 Starting DynoPay Backend Tests")
