@@ -3560,7 +3560,12 @@ def main():
     tester = DynoPayBackendTester()
     
     try:
-        success = tester.run_all_tests()
+        # Check if we should run only Phase 6 retesting
+        if len(sys.argv) > 1 and sys.argv[1] == "--phase6-retest":
+            success = tester.run_phase6_retesting_only()
+        else:
+            success = tester.run_all_tests()
+            
         overall_success = tester.print_summary()
         
         if overall_success:
