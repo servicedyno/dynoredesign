@@ -2638,7 +2638,7 @@ const sendEditWalletOTP = async (req: express.Request, res: express.Response) =>
     // Verify the wallet address belongs to the user
     const walletAddress = await userWalletAddressModel.findOne({
       where: {
-        id: address_id,
+        user_address_id: address_id,
         user_id,
       },
     });
@@ -2723,7 +2723,7 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
     // Verify the wallet address belongs to the user
     const existingAddress = await userWalletAddressModel.findOne({
       where: {
-        id,
+        user_address_id: id,
         user_id,
       },
     });
@@ -2776,7 +2776,7 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
     // Update the wallet address
     await userWalletAddressModel.update(updateData, {
       where: {
-        id,
+        user_address_id: id,
         user_id,
       },
     });
@@ -2786,7 +2786,7 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
 
     // Fetch updated record
     const updatedAddress = await userWalletAddressModel.findOne({
-      where: { id },
+      where: { user_address_id: id },
     });
 
     walletLogger.info(`Wallet address ${id} edited by user ${user_id}`);
