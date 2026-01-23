@@ -4752,6 +4752,624 @@ verifyCacheData();
                     f"Request failed: {str(e)}"
                 )
 
+    def test_phase8_payment_links_crud(self):
+        """Test Phase 8 Payment Links CRUD implementation"""
+        print("\n=== Testing Phase 8 Payment Links CRUD ===")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Phase 8 Payment Links", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return False
+        
+        # Test all Phase 8 endpoints
+        self.test_create_payment_link_enhanced()
+        self.test_get_payment_links_enhanced()
+        
+        # Store created link ID for subsequent tests
+        if hasattr(self, 'created_link_id'):
+            self.test_get_payment_link_by_id()
+            self.test_update_payment_link()
+            self.test_delete_payment_link()
+        
+        return True
+    
+    def test_create_payment_link_enhanced(self):
+        """Test POST /api/pay/createPaymentLink with Phase 8 enhancements"""
+        print("\n--- Testing Enhanced Create Payment Link ---")
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test data as specified in review request
+        test_cases = [
+            {
+                "name": "Complete Payment Link with All Fields",
+                "data": {
+                    "email": "test@example.com",
+                    "base_currency": "USD",
+                    "modes": ["CARD", "CRYPTO"],
+                    "amount": 100,
+                    "description": "Premium Subscription - Annual Plan",
+                    "expire": "24h",
+                    "callback_url": "https://example.com/callback",
+                    "redirect_url": "https://example.com/success",
+                    "webhook_url": "https://example.com/webhook"
+                }
+            },
+            {
+                "name": "Payment Link with 7 Days Expiry",
+                "data": {
+                    "email": "test2@example.com",
+                    "base_currency": "USD",
+                    "modes": ["CARD"],
+                    "amount": 50,
+                    "description": "Monthly Subscription",
+                    "expire": "7d",
+                    "callback_url": "https://example.com/callback2"
+                }
+            },
+            {
+                "name": "Payment Link with 30 Days Expiry",
+                "data": {
+                    "email": "test3@example.com",
+                    "base_currency": "USD",
+                    "modes": ["CRYPTO"],
+                    "amount": 200,
+                    "description": "Enterprise Plan",
+                    "expire": "30d",
+                    "redirect_url": "https://example.com/enterprise-success"
+                }
+            },
+            {
+                "name": "Payment Link with No Expiry",
+                "data": {
+                    "email": "test4@example.com",
+                    "base_currency": "USD",
+                    "modes": ["CARD", "CRYPTO"],
+                    "amount": 25,
+                    "description": "Basic Plan",
+                    "expire": "No"
+                }
+            }
+        ]
+        
+        for test_case in test_cases:
+            try:
+                response = requests.post(
+                    f"{self.backend_url}/api/pay/createPaymentLink",
+                    json=test_case["data"],
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if 'data' in data:
+                        link_data = data['data']
+                        
+                        # Verify all new fields are present
+                        required_fields = [
+                            'transaction_id', 'email', 'base_amount', 'base_currency',
+                            'payment_link', 'description', 'expires_at', 'callback_url',
+                            'redirect_url', 'webhook_url'
+                        ]
+                        
+                        missing_fields = [field for field in required_fields if field not in link_data]
+                        
+                        if not missing_fields:
+                            # Store first created link ID for subsequent tests
+                            if not hasattr(self, 'created_link_id'):
+                                self.created_link_id = link_data.get('link_id')
+                            
+                            # Verify expiration calculation
+                            expires_at = link_data.get('expires_at')
+                            expire_option = test_case["data"].get('expire')
+                            
+                            expiry_correct = True
+                            if expire_option == "No":
+                                expiry_correct = expires_at is None
+                            elif expire_option in ["24h", "7d", "30d"]:
+                                expiry_correct = expires_at is not None
+                            
+                            if expiry_correct:
+                                self.log_result(
+                                    f"Create Payment Link - {test_case['name']}", 
+                                    True, 
+                                    "Payment link created successfully with all new fields",
+                                    {
+                                        "link_id": link_data.get('link_id'),
+                                        "transaction_id": link_data.get('transaction_id'),
+                                        "description": link_data.get('description'),
+                                        "expires_at": expires_at,
+                                        "callback_url": link_data.get('callback_url'),
+                                        "redirect_url": link_data.get('redirect_url'),
+                                        "webhook_url": link_data.get('webhook_url')
+                                    }
+                                )
+                            else:
+                                self.log_result(
+                                    f"Create Payment Link - {test_case['name']} Expiry", 
+                                    False, 
+                                    f"Expiration calculation incorrect for {expire_option}",
+                                    {"expected_expire": expire_option, "actual_expires_at": expires_at}
+                                )
+                        else:
+                            self.log_result(
+                                f"Create Payment Link - {test_case['name']} Structure", 
+                                False, 
+                                f"Missing required fields: {', '.join(missing_fields)}",
+                                {"response": data}
+                            )
+                    else:
+                        self.log_result(
+                            f"Create Payment Link - {test_case['name']}", 
+                            False, 
+                            "Invalid response format",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        f"Create Payment Link - {test_case['name']}", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"Create Payment Link - {test_case['name']}", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+    
+    def test_get_payment_links_enhanced(self):
+        """Test GET /api/pay/getPaymentLinks with Phase 8 enhancements"""
+        print("\n--- Testing Enhanced Get Payment Links ---")
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/pay/getPaymentLinks",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    links = data['data']
+                    
+                    if isinstance(links, list) and len(links) > 0:
+                        # Test first link for enhanced formatting
+                        first_link = links[0]
+                        
+                        # Check for enhanced UI formatting fields
+                        enhanced_fields = [
+                            'status', 'usd_value', 'created', 'expires', 'times_used'
+                        ]
+                        
+                        missing_enhanced = [field for field in enhanced_fields if field not in first_link]
+                        
+                        if not missing_enhanced:
+                            # Verify status computation
+                            status = first_link.get('status')
+                            expires_at = first_link.get('expires_at')
+                            
+                            status_valid = status in ['Active', 'Expired', 'Completed']
+                            
+                            # Verify date formatting (DD.MM.YYYY HH:MM:SS)
+                            created_date = first_link.get('created')
+                            date_format_valid = True
+                            if created_date and created_date != "Never":
+                                # Check if it matches expected format pattern
+                                import re
+                                date_pattern = r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}'
+                                date_format_valid = bool(re.match(date_pattern, created_date))
+                            
+                            # Verify USD value formatting
+                            usd_value = first_link.get('usd_value', '')
+                            usd_format_valid = usd_value.startswith('$')
+                            
+                            if status_valid and date_format_valid and usd_format_valid:
+                                self.log_result(
+                                    "Get Payment Links - Enhanced Formatting", 
+                                    True, 
+                                    f"Retrieved {len(links)} links with enhanced UI formatting",
+                                    {
+                                        "links_count": len(links),
+                                        "sample_status": status,
+                                        "sample_usd_value": usd_value,
+                                        "sample_created": created_date,
+                                        "sample_expires": first_link.get('expires'),
+                                        "times_used": first_link.get('times_used', 0)
+                                    }
+                                )
+                            else:
+                                issues = []
+                                if not status_valid:
+                                    issues.append(f"Invalid status: {status}")
+                                if not date_format_valid:
+                                    issues.append(f"Invalid date format: {created_date}")
+                                if not usd_format_valid:
+                                    issues.append(f"Invalid USD format: {usd_value}")
+                                
+                                self.log_result(
+                                    "Get Payment Links - Formatting Issues", 
+                                    False, 
+                                    f"Formatting issues: {'; '.join(issues)}",
+                                    {"first_link": first_link}
+                                )
+                        else:
+                            self.log_result(
+                                "Get Payment Links - Enhanced Fields", 
+                                False, 
+                                f"Missing enhanced fields: {', '.join(missing_enhanced)}",
+                                {"first_link": first_link}
+                            )
+                    else:
+                        self.log_result(
+                            "Get Payment Links", 
+                            True, 
+                            "No payment links found (empty result is valid)",
+                            {"links_count": 0}
+                        )
+                else:
+                    self.log_result(
+                        "Get Payment Links", 
+                        False, 
+                        "Invalid response format",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Get Payment Links", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Get Payment Links", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_get_payment_link_by_id(self):
+        """Test GET /api/pay/links/:id (New endpoint)"""
+        print("\n--- Testing Get Payment Link By ID ---")
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test with existing link ID
+        if hasattr(self, 'created_link_id') and self.created_link_id:
+            try:
+                response = requests.get(
+                    f"{self.backend_url}/api/pay/links/{self.created_link_id}",
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if 'data' in data:
+                        link_data = data['data']
+                        
+                        # Verify all required fields are present
+                        required_fields = [
+                            'link_id', 'transaction_id', 'description', 'base_amount',
+                            'base_currency', 'status', 'created', 'expires', 'payment_link'
+                        ]
+                        
+                        missing_fields = [field for field in required_fields if field not in link_data]
+                        
+                        if not missing_fields:
+                            self.log_result(
+                                "Get Payment Link By ID", 
+                                True, 
+                                "Payment link details retrieved successfully",
+                                {
+                                    "link_id": link_data.get('link_id'),
+                                    "status": link_data.get('status'),
+                                    "description": link_data.get('description'),
+                                    "base_amount": link_data.get('base_amount')
+                                }
+                            )
+                        else:
+                            self.log_result(
+                                "Get Payment Link By ID - Structure", 
+                                False, 
+                                f"Missing required fields: {', '.join(missing_fields)}",
+                                {"response": data}
+                            )
+                    else:
+                        self.log_result(
+                            "Get Payment Link By ID", 
+                            False, 
+                            "Invalid response format",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        "Get Payment Link By ID", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    "Get Payment Link By ID", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+        
+        # Test with invalid ID (should return 404)
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/pay/links/99999",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 404:
+                self.log_result(
+                    "Get Payment Link By ID - Invalid ID", 
+                    True, 
+                    "Correctly returned 404 for invalid link ID",
+                    {"status_code": response.status_code}
+                )
+            else:
+                self.log_result(
+                    "Get Payment Link By ID - Invalid ID", 
+                    False, 
+                    f"Expected 404 for invalid ID, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Get Payment Link By ID - Invalid ID", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_update_payment_link(self):
+        """Test PUT /api/pay/links/:id (New endpoint)"""
+        print("\n--- Testing Update Payment Link ---")
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        if hasattr(self, 'created_link_id') and self.created_link_id:
+            # Test updating editable fields
+            update_data = {
+                "description": "Updated description",
+                "expire": "7d",
+                "callback_url": "https://newcallback.com",
+                "redirect_url": "https://newredirect.com",
+                "webhook_url": "https://newwebhook.com"
+            }
+            
+            try:
+                response = requests.put(
+                    f"{self.backend_url}/api/pay/links/{self.created_link_id}",
+                    json=update_data,
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if 'data' in data:
+                        updated_link = data['data']
+                        
+                        # Verify updates were applied
+                        updates_correct = (
+                            updated_link.get('description') == update_data['description'] and
+                            updated_link.get('callback_url') == update_data['callback_url'] and
+                            updated_link.get('redirect_url') == update_data['redirect_url'] and
+                            updated_link.get('webhook_url') == update_data['webhook_url']
+                        )
+                        
+                        if updates_correct:
+                            self.log_result(
+                                "Update Payment Link", 
+                                True, 
+                                "Payment link updated successfully",
+                                {
+                                    "link_id": updated_link.get('link_id'),
+                                    "updated_description": updated_link.get('description'),
+                                    "updated_callback": updated_link.get('callback_url'),
+                                    "updated_redirect": updated_link.get('redirect_url'),
+                                    "updated_webhook": updated_link.get('webhook_url')
+                                }
+                            )
+                        else:
+                            self.log_result(
+                                "Update Payment Link - Verification", 
+                                False, 
+                                "Updates were not applied correctly",
+                                {"expected": update_data, "actual": updated_link}
+                            )
+                    else:
+                        self.log_result(
+                            "Update Payment Link", 
+                            False, 
+                            "Invalid response format",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        "Update Payment Link", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    "Update Payment Link", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+        
+        # Test updating with invalid ID (should return 404)
+        try:
+            response = requests.put(
+                f"{self.backend_url}/api/pay/links/99999",
+                json={"description": "Test"},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 404:
+                self.log_result(
+                    "Update Payment Link - Invalid ID", 
+                    True, 
+                    "Correctly returned 404 for invalid link ID",
+                    {"status_code": response.status_code}
+                )
+            else:
+                self.log_result(
+                    "Update Payment Link - Invalid ID", 
+                    False, 
+                    f"Expected 404 for invalid ID, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Update Payment Link - Invalid ID", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_delete_payment_link(self):
+        """Test DELETE /api/pay/deletePaymentLink/:id (Existing endpoint)"""
+        print("\n--- Testing Delete Payment Link ---")
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # First create a new link specifically for deletion testing
+        create_data = {
+            "email": "delete-test@example.com",
+            "base_currency": "USD",
+            "modes": ["CARD"],
+            "amount": 10,
+            "description": "Link for deletion test",
+            "expire": "No"
+        }
+        
+        try:
+            # Create link to delete
+            create_response = requests.post(
+                f"{self.backend_url}/api/pay/createPaymentLink",
+                json=create_data,
+                headers=headers,
+                timeout=15
+            )
+            
+            if create_response.status_code == 200:
+                create_data_response = create_response.json()
+                link_to_delete_id = create_data_response['data']['link_id']
+                
+                # Now delete it
+                delete_response = requests.delete(
+                    f"{self.backend_url}/api/pay/deletePaymentLink/{link_to_delete_id}",
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if delete_response.status_code == 200:
+                    self.log_result(
+                        "Delete Payment Link", 
+                        True, 
+                        "Payment link deleted successfully",
+                        {"deleted_link_id": link_to_delete_id}
+                    )
+                else:
+                    self.log_result(
+                        "Delete Payment Link", 
+                        False, 
+                        f"Delete failed with status {delete_response.status_code}",
+                        {"response": delete_response.text}
+                    )
+            else:
+                self.log_result(
+                    "Delete Payment Link - Setup", 
+                    False, 
+                    "Failed to create link for deletion test",
+                    {"response": create_response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Delete Payment Link", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test deleting with invalid ID (should return 500 with "Link not found!")
+        try:
+            response = requests.delete(
+                f"{self.backend_url}/api/pay/deletePaymentLink/99999",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 500:
+                response_data = response.json()
+                if "Link not found" in response_data.get('message', ''):
+                    self.log_result(
+                        "Delete Payment Link - Invalid ID", 
+                        True, 
+                        "Correctly returned error for invalid link ID",
+                        {"status_code": response.status_code, "message": response_data.get('message')}
+                    )
+                else:
+                    self.log_result(
+                        "Delete Payment Link - Invalid ID Message", 
+                        False, 
+                        "Error message doesn't match expected 'Link not found!'",
+                        {"response": response_data}
+                    )
+            else:
+                self.log_result(
+                    "Delete Payment Link - Invalid ID", 
+                    False, 
+                    f"Expected 500 for invalid ID, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Delete Payment Link - Invalid ID", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+
     def print_summary(self):
         """Print test summary"""
         print("\n" + "=" * 60)
