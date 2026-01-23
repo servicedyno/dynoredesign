@@ -965,8 +965,8 @@ verifyCacheData();
             
             if register_response.status_code == 200:
                 register_data = register_response.json()
-                if register_data.get('success') and 'data' in register_data:
-                    self.jwt_token = register_data['data'].get('accessToken')
+                if 'data' in register_data and 'accessToken' in register_data['data']:
+                    self.jwt_token = register_data['data']['accessToken']
                     self.log_result(
                         "User Registration", 
                         True, 
