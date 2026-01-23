@@ -19,6 +19,20 @@ const userWalletAddressModel = sequelize.define(
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
     },
+    // Phase 1: Company scoping
+    company_id: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: "tbl_company",
+        key: "company_id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    },
+    // Phase 1: Wallet name
+    wallet_name: {
+      type: DataTypes.STRING(100),
+    },
     label: {
       type: DataTypes.STRING,
     },
