@@ -1411,13 +1411,13 @@ verifyCacheData();
         
         return True
     
-    def test_wallet_add_address_endpoint(self):
-        """Test POST /api/wallet/addWalletAddress endpoint after Tatum API key fix"""
-        print("\n=== Testing POST /api/wallet/addWalletAddress - Tatum API Key Fix ===")
+    def test_wallet_add_address_local_validation(self):
+        """Test POST /api/wallet/addWalletAddress endpoint with new local validation (no Tatum API dependency)"""
+        print("\n=== Testing POST /api/wallet/addWalletAddress - Local Validation Implementation ===")
         
         if not self.jwt_token:
             self.log_result(
-                "Wallet Add Address", 
+                "Wallet Add Address - Local Validation", 
                 False, 
                 "No JWT token available for authentication"
             )
@@ -1428,39 +1428,91 @@ verifyCacheData();
             "Content-Type": "application/json"
         }
         
-        # Test data as specified in review request
-        test_cases = [
+        # Test cases as specified in review request
+        valid_test_cases = [
             {
                 "name": "Valid BTC Address - P2PKH",
                 "data": {
                     "wallet_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
                     "currency": "BTC",
-                    "label": "Genesis Block Address",
+                    "label": "Test Wallet",
                     "company_id": 1,
-                    "wallet_name": "Test BTC Wallet"
-                }
+                    "wallet_name": "My Wallet"
+                },
+                "should_succeed": True
             },
             {
                 "name": "Valid BTC Address - P2SH", 
                 "data": {
                     "wallet_address": "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy",
                     "currency": "BTC",
-                    "label": "P2SH Address",
+                    "label": "Test Wallet",
                     "company_id": 1,
-                    "wallet_name": "Test P2SH Wallet"
-                }
+                    "wallet_name": "My Wallet"
+                },
+                "should_succeed": True
             },
             {
                 "name": "Valid BTC Address - Bech32",
                 "data": {
                     "wallet_address": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
                     "currency": "BTC", 
-                    "label": "Bech32 Address",
+                    "label": "Test Wallet",
                     "company_id": 1,
-                    "wallet_name": "Test Bech32 Wallet"
-                }
+                    "wallet_name": "My Wallet"
+                },
+                "should_succeed": True
+            },
+            {
+                "name": "Valid ETH Address",
+                "data": {
+                    "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+                    "currency": "ETH",
+                    "label": "Test Wallet",
+                    "company_id": 1,
+                    "wallet_name": "My Wallet"
+                },
+                "should_succeed": True
             }
         ]
+        
+        invalid_test_cases = [
+            {
+                "name": "Invalid BTC Address - Random String",
+                "data": {
+                    "wallet_address": "invalid_address_123",
+                    "currency": "BTC",
+                    "label": "Test Wallet",
+                    "company_id": 1,
+                    "wallet_name": "My Wallet"
+                },
+                "should_succeed": False
+            },
+            {
+                "name": "Invalid BTC Address - Numbers Only",
+                "data": {
+                    "wallet_address": "1234567890",
+                    "currency": "BTC",
+                    "label": "Test Wallet",
+                    "company_id": 1,
+                    "wallet_name": "My Wallet"
+                },
+                "should_succeed": False
+            },
+            {
+                "name": "Invalid ETH Address - Random String",
+                "data": {
+                    "wallet_address": "invalid_address_123",
+                    "currency": "ETH",
+                    "label": "Test Wallet",
+                    "company_id": 1,
+                    "wallet_name": "My Wallet"
+                },
+                "should_succeed": False
+            }
+        ]
+        
+        all_test_cases = valid_test_cases + invalid_test_cases
         
         for test_case in test_cases:
             try:
