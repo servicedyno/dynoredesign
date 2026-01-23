@@ -121,4 +121,7 @@ export {
   apiController,
   taxController,
   dashboardController,
+  notificationController,
+  createNotification,
+  NOTIFICATION_TYPES,
 };
