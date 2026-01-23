@@ -63,6 +63,18 @@ paymentRouter.get(
   paymentController.getPaymentLinks
 );
 
+paymentRouter.get(
+  "/links/:id",
+  authMiddleware,
+  paymentController.getPaymentLinkById
+);
+
+paymentRouter.put(
+  "/links/:id",
+  authMiddleware,
+  paymentController.updatePaymentLink
+);
+
 paymentRouter.post(
   "/createPaymentLink",
   authMiddleware,
