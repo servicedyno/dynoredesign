@@ -3104,6 +3104,57 @@ const exportTransactions = async (req: express.Request, res: express.Response) =
   }
 };
 
+/**
+ * Phase 10 - Task 10.2: Get Configured Wallets for Checkout
+ * Returns only wallets configured for the user's company
+ * Used by checkout to filter available payment currencies
+ * GET /api/wallet/configured-currencies
+ */
+const getConfiguredCurrencies = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { company_id } = req.query;
+
+    // Get user's configured wallet addresses
+    const walletAddresses = await userWalletAddressModel.findAll({
+      where: {
+        user_id: userData.user_id,
+        ...(company_id && { company_id: parseInt(company_id as string) }),
+      },
+      attributes: ['currency', 'wallet_address', 'label', 'wallet_name'],
+    });
+
+    // Extract unique currencies
+    const currencies = [...new Set(walletAddresses.map((w: any) => w.currency))];
+    
+    const response = {
+      configured_currencies: currencies,
+      wallet_count: walletAddresses.length,
+      wallets: walletAddresses.map((w: any) => ({
+        currency: w.currency,
+        label: w.label || w.wallet_name,
+        address_masked: w.wallet_address ? 
+          `${w.wallet_address.substring(0, 6)}...${w.wallet_address.substring(w.wallet_address.length - 4)}` : 
+          null
+      })),
+      skip_selection: currencies.length === 1, // If only 1 currency, frontend can skip asset selection
+    };
+
+    successResponseHelper(res, 200, "Configured currencies retrieved successfully", response);
+  } catch (e) {
+    const message = getErrorMessage(e);
+    walletLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   getWallet,
   addFunds,
@@ -3130,4 +3181,5 @@ export default {
   editWalletAddress,
   getTransactionDetails,
   exportTransactions,
+  getConfiguredCurrencies,
 };
