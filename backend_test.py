@@ -1430,11 +1430,11 @@ verifyCacheData();
         
         # Step 1: Create wallet address for company_id=1 as specified in review request
         wallet_data = {
-            "wallet_address": "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2",
+            "wallet_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",  # Different valid BTC address
             "currency": "BTC",
-            "label": "Test Wallet",
+            "label": "Test Wallet Review",
             "company_id": 1,
-            "wallet_name": "Test Wallet"
+            "wallet_name": "Review Test Wallet"
         }
         
         print("\n--- Step 1: Creating Wallet Address ---")
