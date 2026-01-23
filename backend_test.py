@@ -920,6 +920,497 @@ verifyCacheData();
                 f"Cache verification failed: {str(e)}"
             )
     
+    def test_user_authentication(self):
+        """Test user registration/login to get JWT token for dashboard APIs"""
+        print("\n=== Testing User Authentication for Dashboard APIs ===")
+        
+        # Test data for authentication
+        test_user = {
+            "name": "Dashboard Test User",
+            "email": "dashboard.test@dynopay.com",
+            "password": "TestPassword123!"
+        }
+        
+        try:
+            # First try to login with existing user
+            login_response = requests.post(
+                f"{self.backend_url}/api/user/login",
+                json={
+                    "email": test_user["email"],
+                    "password": test_user["password"]
+                },
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if login_response.status_code == 200:
+                login_data = login_response.json()
+                if login_data.get('success') and 'data' in login_data:
+                    self.jwt_token = login_data['data'].get('accessToken')
+                    self.log_result(
+                        "User Login", 
+                        True, 
+                        "Successfully logged in existing user",
+                        {"email": test_user["email"], "has_token": bool(self.jwt_token)}
+                    )
+                    return True
+            
+            # If login fails, try to register new user
+            register_response = requests.post(
+                f"{self.backend_url}/api/user/registerUser",
+                json=test_user,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if register_response.status_code == 200:
+                register_data = register_response.json()
+                if register_data.get('success') and 'data' in register_data:
+                    self.jwt_token = register_data['data'].get('accessToken')
+                    self.log_result(
+                        "User Registration", 
+                        True, 
+                        "Successfully registered new user",
+                        {"email": test_user["email"], "has_token": bool(self.jwt_token)}
+                    )
+                    return True
+                else:
+                    self.log_result(
+                        "User Registration", 
+                        False, 
+                        "Registration succeeded but no token received",
+                        {"response": register_data}
+                    )
+            else:
+                self.log_result(
+                    "User Registration", 
+                    False, 
+                    f"Registration failed with status {register_response.status_code}",
+                    {"response": register_response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "User Authentication", 
+                False, 
+                f"Authentication failed: {str(e)}"
+            )
+        
+        return False
+    
+    def test_dashboard_main_stats(self):
+        """Test GET /api/dashboard - main dashboard statistics"""
+        print("\n--- Testing Dashboard Main Statistics ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Dashboard Main Stats", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/dashboard",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data.get('success') and 'data' in data:
+                    dashboard_data = data['data']
+                    
+                    # Check required fields
+                    required_fields = [
+                        'total_transactions', 'total_volume', 
+                        'pending_transactions', 'active_wallets', 'fee_tier'
+                    ]
+                    
+                    missing_fields = [field for field in required_fields if field not in dashboard_data]
+                    
+                    if missing_fields:
+                        self.log_result(
+                            "Dashboard Main Stats - Structure", 
+                            False, 
+                            f"Missing required fields: {', '.join(missing_fields)}",
+                            {"response": data}
+                        )
+                    else:
+                        # Verify nested structure
+                        total_tx = dashboard_data.get('total_transactions', {})
+                        total_vol = dashboard_data.get('total_volume', {})
+                        fee_tier = dashboard_data.get('fee_tier', {})
+                        
+                        structure_valid = (
+                            'count' in total_tx and 'change_percent' in total_tx and
+                            'amount' in total_vol and 'currency' in total_vol and
+                            'current_tier' in fee_tier
+                        )
+                        
+                        if structure_valid:
+                            self.log_result(
+                                "Dashboard Main Stats", 
+                                True, 
+                                "Dashboard statistics retrieved successfully",
+                                {
+                                    "total_transactions": total_tx.get('count', 0),
+                                    "total_volume": f"{total_vol.get('amount', 0)} {total_vol.get('currency', 'USD')}",
+                                    "current_tier": fee_tier.get('current_tier', 'Unknown'),
+                                    "active_wallets": dashboard_data.get('active_wallets', {}).get('count', 0)
+                                }
+                            )
+                        else:
+                            self.log_result(
+                                "Dashboard Main Stats - Structure", 
+                                False, 
+                                "Response structure is incomplete",
+                                {"dashboard_data": dashboard_data}
+                            )
+                else:
+                    self.log_result(
+                        "Dashboard Main Stats", 
+                        False, 
+                        "Invalid response format",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Dashboard Main Stats", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Dashboard Main Stats", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_dashboard_chart_data(self):
+        """Test GET /api/dashboard/chart with different period values"""
+        print("\n--- Testing Dashboard Chart Data ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Dashboard Chart Data", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        # Test different periods as specified in review request
+        test_periods = ['7d', '30d', '90d', '1y']
+        
+        for period in test_periods:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {self.jwt_token}",
+                    "Content-Type": "application/json"
+                }
+                
+                response = requests.get(
+                    f"{self.backend_url}/api/dashboard/chart",
+                    params={"period": period},
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if data.get('success') and 'data' in data:
+                        chart_data = data['data']
+                        
+                        # Check required fields
+                        required_fields = [
+                            'period', 'chart_data', 'currency_breakdown', 'status_breakdown'
+                        ]
+                        
+                        missing_fields = [field for field in required_fields if field not in chart_data]
+                        
+                        if missing_fields:
+                            self.log_result(
+                                f"Dashboard Chart - {period} Structure", 
+                                False, 
+                                f"Missing required fields: {', '.join(missing_fields)}",
+                                {"response": data}
+                            )
+                        else:
+                            chart_entries = chart_data.get('chart_data', [])
+                            currency_breakdown = chart_data.get('currency_breakdown', [])
+                            status_breakdown = chart_data.get('status_breakdown', [])
+                            
+                            self.log_result(
+                                f"Dashboard Chart - {period}", 
+                                True, 
+                                f"Chart data retrieved successfully for period {period}",
+                                {
+                                    "period": chart_data.get('period'),
+                                    "chart_entries": len(chart_entries),
+                                    "currencies": len(currency_breakdown),
+                                    "statuses": len(status_breakdown),
+                                    "group_by": chart_data.get('group_by')
+                                }
+                            )
+                    else:
+                        self.log_result(
+                            f"Dashboard Chart - {period}", 
+                            False, 
+                            "Invalid response format",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        f"Dashboard Chart - {period}", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"Dashboard Chart - {period}", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+    
+    def test_dashboard_fee_tiers(self):
+        """Test GET /api/dashboard/fee-tiers"""
+        print("\n--- Testing Dashboard Fee Tiers ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Dashboard Fee Tiers", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        # Expected fee tiers from review request
+        expected_tiers = [
+            {"name": "Starter", "min": 0, "max": 10000},
+            {"name": "Standard", "min": 10000, "max": 50000},
+            {"name": "Pro", "min": 50000, "max": 250000},
+            {"name": "Business", "min": 250000, "max": 1000000},
+            {"name": "Enterprise", "min": 1000000, "max": None}
+        ]
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/dashboard/fee-tiers",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data.get('success') and 'data' in data:
+                    fee_data = data['data']
+                    tiers = fee_data.get('tiers', [])
+                    
+                    if len(tiers) == 5:  # Should have 5 tiers
+                        # Verify each tier structure
+                        all_tiers_valid = True
+                        tier_details = []
+                        
+                        for i, tier in enumerate(tiers):
+                            expected = expected_tiers[i]
+                            
+                            if (tier.get('name') == expected['name'] and
+                                tier.get('min_volume') == expected['min'] and
+                                tier.get('max_volume') == expected['max']):
+                                tier_details.append({
+                                    "name": tier.get('name'),
+                                    "min": tier.get('min_volume'),
+                                    "max": tier.get('max_volume'),
+                                    "description": tier.get('description', '')[:50] + '...' if tier.get('description') else ''
+                                })
+                            else:
+                                all_tiers_valid = False
+                                break
+                        
+                        if all_tiers_valid:
+                            self.log_result(
+                                "Dashboard Fee Tiers", 
+                                True, 
+                                "All fee tiers match expected structure",
+                                {"tiers": tier_details}
+                            )
+                        else:
+                            self.log_result(
+                                "Dashboard Fee Tiers - Validation", 
+                                False, 
+                                f"Tier {i+1} ({tier.get('name')}) doesn't match expected values",
+                                {"expected": expected, "actual": tier}
+                            )
+                    else:
+                        self.log_result(
+                            "Dashboard Fee Tiers - Count", 
+                            False, 
+                            f"Expected 5 tiers, got {len(tiers)}",
+                            {"tiers_count": len(tiers)}
+                        )
+                else:
+                    self.log_result(
+                        "Dashboard Fee Tiers", 
+                        False, 
+                        "Invalid response format",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Dashboard Fee Tiers", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Dashboard Fee Tiers", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_dashboard_recent_transactions(self):
+        """Test GET /api/dashboard/recent-transactions"""
+        print("\n--- Testing Dashboard Recent Transactions ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Dashboard Recent Transactions", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        # Test with default limit and custom limit
+        test_limits = [None, 5, 15]  # None = default (10), 5 = custom small, 15 = custom large
+        
+        for limit in test_limits:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {self.jwt_token}",
+                    "Content-Type": "application/json"
+                }
+                
+                params = {}
+                if limit is not None:
+                    params['limit'] = limit
+                
+                response = requests.get(
+                    f"{self.backend_url}/api/dashboard/recent-transactions",
+                    params=params,
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if data.get('success') and 'data' in data:
+                        tx_data = data['data']
+                        transactions = tx_data.get('transactions', [])
+                        count = tx_data.get('count', 0)
+                        
+                        expected_limit = limit if limit is not None else 10
+                        
+                        # Verify transaction structure if any transactions exist
+                        if transactions:
+                            first_tx = transactions[0]
+                            required_tx_fields = [
+                                'transaction_id', 'base_amount', 'base_currency', 
+                                'status', 'transaction_type'
+                            ]
+                            
+                            missing_tx_fields = [field for field in required_tx_fields if field not in first_tx]
+                            
+                            if missing_tx_fields:
+                                self.log_result(
+                                    f"Recent Transactions - Limit {limit or 'default'} Structure", 
+                                    False, 
+                                    f"Transaction missing fields: {', '.join(missing_tx_fields)}",
+                                    {"first_transaction": first_tx}
+                                )
+                            else:
+                                self.log_result(
+                                    f"Recent Transactions - Limit {limit or 'default'}", 
+                                    True, 
+                                    f"Retrieved {count} transactions (limit: {expected_limit})",
+                                    {
+                                        "count": count,
+                                        "limit": expected_limit,
+                                        "sample_tx": {
+                                            "id": first_tx.get('transaction_id'),
+                                            "amount": first_tx.get('base_amount'),
+                                            "currency": first_tx.get('base_currency'),
+                                            "status": first_tx.get('status')
+                                        }
+                                    }
+                                )
+                        else:
+                            # No transactions is also valid (new user)
+                            self.log_result(
+                                f"Recent Transactions - Limit {limit or 'default'}", 
+                                True, 
+                                f"No transactions found (count: {count})",
+                                {"count": count, "limit": expected_limit}
+                            )
+                    else:
+                        self.log_result(
+                            f"Recent Transactions - Limit {limit or 'default'}", 
+                            False, 
+                            "Invalid response format",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        f"Recent Transactions - Limit {limit or 'default'}", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"Recent Transactions - Limit {limit or 'default'}", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+    
+    def test_dashboard_apis(self):
+        """Test all Phase 3 Dashboard API endpoints"""
+        print("\n=== Testing Phase 3 Dashboard APIs ===")
+        
+        # Step 1: Authenticate user to get JWT token
+        if not self.test_user_authentication():
+            print("\n❌ Authentication failed. Cannot test dashboard APIs.")
+            return False
+        
+        # Step 2: Test all dashboard endpoints
+        self.test_dashboard_main_stats()
+        self.test_dashboard_chart_data()
+        self.test_dashboard_fee_tiers()
+        self.test_dashboard_recent_transactions()
+        
+        return True
+    
     def run_all_tests(self):
         """Run all backend tests"""
         print("🚀 Starting DynoPay Backend Tests")
