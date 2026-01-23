@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import path from "path";
 import cors from "cors";
 import helmet from "helmet";
 import router from "./routes";
@@ -9,7 +10,8 @@ import { apiMiddleware } from "./middleware";
 import controller from "./controller";
 import { connectRedis } from "./utils/redisInstance";
 
-dotenv.config();
+// Load .env from parent directory (shared with main backend)
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const port = process.env.API_SERVICE_PORT || 3301;
 
