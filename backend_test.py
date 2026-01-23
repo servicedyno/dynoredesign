@@ -2433,6 +2433,12 @@ verifyCacheData();
         # Test 6: Verify tax cache in database
         self.verify_tax_cache_database()
         
+        # Test 7: Phase 6 Wallet APIs, API endpoints, OTP, and Swagger
+        self.test_phase6_wallet_apis()
+        self.test_phase6_api_endpoints()
+        self.test_phase6_wallet_edit_otp()
+        self.test_phase6_swagger_documentation()
+        
         return True
     
     def test_phase6_wallet_apis(self):
