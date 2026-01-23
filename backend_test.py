@@ -2996,73 +2996,206 @@ verifyCacheData();
             )
     
     def test_add_wallet_address_with_company_data(self):
-        """Test POST /api/wallet/addWalletAddress with company_id and wallet_name"""
-        print("\n--- Testing Add Wallet Address with Company Data ---")
+        """Test POST /api/wallet/addWalletAddress after Tatum API key fix"""
+        print("\n--- Testing Add Wallet Address - Tatum API Key Fix Verification ---")
         
         headers = {
             "Authorization": f"Bearer {self.jwt_token}",
             "Content-Type": "application/json"
         }
         
-        # Test data with company_id and wallet_name
-        test_data = {
-            "wallet_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",  # Genesis Bitcoin address
-            "currency": "BTC",
-            "company_id": 1,
-            "wallet_name": "Test BTC Wallet Phase 6"
-        }
+        # Test data as specified in review request
+        test_cases = [
+            {
+                "name": "Valid BTC Address - Genesis Block",
+                "data": {
+                    "wallet_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+                    "currency": "BTC",
+                    "label": "Genesis Block Address",
+                    "company_id": 1,
+                    "wallet_name": "Test BTC Wallet"
+                }
+            },
+            {
+                "name": "Valid BTC Address - P2SH", 
+                "data": {
+                    "wallet_address": "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy",
+                    "currency": "BTC",
+                    "label": "P2SH Address",
+                    "company_id": 1,
+                    "wallet_name": "Test P2SH Wallet"
+                }
+            }
+        ]
         
+        for test_case in test_cases:
+            try:
+                print(f"\n  Testing {test_case['name']}...")
+                
+                response = requests.post(
+                    f"{self.backend_url}/api/wallet/addWalletAddress",
+                    json=test_case['data'],
+                    headers=headers,
+                    timeout=30
+                )
+                
+                print(f"  Response Status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Check if address was successfully added
+                    if 'data' in data:
+                        address_data = data['data']
+                        
+                        # Verify the response contains expected fields
+                        expected_fields = ['wallet_address', 'currency', 'company_id', 'wallet_name']
+                        missing_fields = [field for field in expected_fields if field not in address_data]
+                        
+                        if missing_fields:
+                            self.log_result(
+                                f"Add Wallet Address - {test_case['name']} Structure", 
+                                False, 
+                                f"Missing fields in response: {', '.join(missing_fields)}",
+                                {"response": data}
+                            )
+                        else:
+                            # Verify the data matches what was sent
+                            matches = (
+                                address_data.get('wallet_address') == test_case['data']['wallet_address'] and
+                                address_data.get('currency') == test_case['data']['currency'] and
+                                address_data.get('company_id') == test_case['data']['company_id'] and
+                                address_data.get('wallet_name') == test_case['data']['wallet_name']
+                            )
+                            
+                            if matches:
+                                self.log_result(
+                                    f"Add Wallet Address - {test_case['name']}", 
+                                    True, 
+                                    "✅ SUCCESS: Address successfully validated via Tatum API and added to database",
+                                    {
+                                        "wallet_address": address_data.get('wallet_address'),
+                                        "currency": address_data.get('currency'),
+                                        "company_id": address_data.get('company_id'),
+                                        "wallet_name": address_data.get('wallet_name'),
+                                        "tatum_validation": "working"
+                                    }
+                                )
+                            else:
+                                self.log_result(
+                                    f"Add Wallet Address - {test_case['name']} Data Mismatch", 
+                                    False, 
+                                    "Response data doesn't match request data",
+                                    {"expected": test_case['data'], "actual": address_data}
+                                )
+                    else:
+                        self.log_result(
+                            f"Add Wallet Address - {test_case['name']}", 
+                            False, 
+                            "Success response but no data field found",
+                            {"response": data}
+                        )
+                        
+                elif response.status_code == 500:
+                    # Check if it's a duplicate address error (acceptable) or the original issue
+                    response_text = response.text.lower()
+                    
+                    if "already exists" in response_text:
+                        self.log_result(
+                            f"Add Wallet Address - {test_case['name']}", 
+                            True, 
+                            "✅ SUCCESS: Address validation working (duplicate address correctly handled)",
+                            {"status": "duplicate_handled", "tatum_validation": "working"}
+                        )
+                    elif "please enter a valid btc address" in response_text:
+                        self.log_result(
+                            f"Add Wallet Address - {test_case['name']}", 
+                            False, 
+                            "❌ TATUM API KEY ISSUE NOT FIXED: Still getting 'please enter a valid BTC address!' error",
+                            {"response": response.text, "status_code": response.status_code, "issue": "tatum_validation_failing"}
+                        )
+                    elif "getting metadata from plugin failed" in response_text or "decoder routines" in response_text:
+                        self.log_result(
+                            f"Add Wallet Address - {test_case['name']}", 
+                            False, 
+                            "❌ GOOGLE CLOUD KMS ERROR PERSISTS: Still getting Google Cloud KMS authentication error",
+                            {"response": response.text, "status_code": response.status_code, "issue": "kms_authentication"}
+                        )
+                    elif "cannot read properties of undefined" in response_text and "blockchain" in response_text:
+                        self.log_result(
+                            f"Add Wallet Address - {test_case['name']}", 
+                            False, 
+                            "❌ TATUM SDK INITIALIZATION FAILED: getTatumSDK() returning undefined - TATUM_SECRET_KEY fallback not working",
+                            {"response": response.text, "status_code": response.status_code, "issue": "tatum_sdk_undefined"}
+                        )
+                    else:
+                        self.log_result(
+                            f"Add Wallet Address - {test_case['name']}", 
+                            False, 
+                            f"Server error (500) with different message: {response.text[:200]}",
+                            {"response": response.text, "status_code": response.status_code}
+                        )
+                else:
+                    self.log_result(
+                        f"Add Wallet Address - {test_case['name']}", 
+                        False, 
+                        f"Unexpected status code: {response.status_code}",
+                        {"response": response.text, "status_code": response.status_code}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"Add Wallet Address - {test_case['name']}", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
+        
+        # Test invalid address to verify error handling works correctly
         try:
+            print(f"\n  Testing Invalid BTC Address...")
+            
+            invalid_test = {
+                "wallet_address": "invalid_btc_address_123",
+                "currency": "BTC",
+                "label": "Invalid Address Test",
+                "company_id": 1,
+                "wallet_name": "Invalid Test Wallet"
+            }
+            
             response = requests.post(
                 f"{self.backend_url}/api/wallet/addWalletAddress",
-                json=test_data,
+                json=invalid_test,
                 headers=headers,
-                timeout=15
+                timeout=30
             )
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Check if response contains the new fields
-                response_data = data.get('data', {})
-                if 'company_id' in response_data and 'wallet_name' in response_data:
+            if response.status_code == 500:
+                response_text = response.text.lower()
+                if "please enter a valid btc address" in response_text:
                     self.log_result(
-                        "Add Wallet Address - Company Data", 
+                        "Add Wallet Address - Invalid Address Handling", 
                         True, 
-                        "Successfully added wallet address with company_id and wallet_name",
-                        {
-                            "company_id": response_data.get('company_id'),
-                            "wallet_name": response_data.get('wallet_name'),
-                            "currency": response_data.get('currency')
-                        }
+                        "✅ SUCCESS: Correctly rejects invalid BTC address (Tatum validation working)",
+                        {"response": response.text, "tatum_validation": "working"}
                     )
                 else:
                     self.log_result(
-                        "Add Wallet Address - Company Data", 
+                        "Add Wallet Address - Invalid Address Handling", 
                         False, 
-                        "Response missing company_id or wallet_name fields",
-                        {"response": data}
-                    )
-            else:
-                # Check if it's a duplicate address error (which is acceptable)
-                if response.status_code == 500 and "already exists" in response.text:
-                    self.log_result(
-                        "Add Wallet Address - Company Data", 
-                        True, 
-                        "Correctly handled duplicate address for company",
-                        {"status": "duplicate_handled"}
-                    )
-                else:
-                    self.log_result(
-                        "Add Wallet Address - Company Data", 
-                        False, 
-                        f"API call failed with status {response.status_code}",
+                        f"Invalid address rejected but with unexpected error: {response.text[:200]}",
                         {"response": response.text}
                     )
+            else:
+                self.log_result(
+                    "Add Wallet Address - Invalid Address Handling", 
+                    False, 
+                    f"Invalid address should return 500 error, got {response.status_code}",
+                    {"response": response.text}
+                )
                 
         except Exception as e:
             self.log_result(
-                "Add Wallet Address - Company Data", 
+                "Add Wallet Address - Invalid Address Handling", 
                 False, 
                 f"Request failed: {str(e)}"
             )
