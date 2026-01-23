@@ -1,6 +1,8 @@
 import express from "express";
 import notificationController from "../controller/notificationController";
 import { authMiddleware } from "../middleware";
+import { triggerWeeklySummary } from "../utils/cronJobs";
+import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../helper";
 
 const notificationRouter = express.Router();
 
@@ -24,6 +26,17 @@ notificationRouter.get("/unread-count", notificationController.getUnreadCount);
 
 // GET /api/notifications/types - Get all notification types
 notificationRouter.get("/types", notificationController.getNotificationTypes);
+
+// POST /api/notifications/trigger-weekly-summary - Manually trigger weekly summary (for testing)
+notificationRouter.post("/trigger-weekly-summary", async (req, res) => {
+  try {
+    const results = await triggerWeeklySummary(req.body.user_id);
+    return successResponseHelper(res, 200, "Weekly summary triggered", { results });
+  } catch (e) {
+    const message = getErrorMessage(e);
+    return errorResponseHelper(res, 500, message);
+  }
+});
 
 // PUT /api/notifications/read-all - Mark all notifications as read
 notificationRouter.put("/read-all", notificationController.markAllAsRead);
