@@ -50,6 +50,15 @@ const COUNTRY_NAMES: Record<string, string> = {
 const TAX_DATA_API_URL = process.env.TAX_DATA_API_URL || "https://api.apilayer.com/tax_data";
 const TAX_DATA_API_KEY = process.env.TAX_DATA_API_KEY;
 
+// Fallback VAT rates for EU countries (standard rates as of 2024)
+const FALLBACK_VAT_RATES: Record<string, number> = {
+  AT: 20, BE: 21, BG: 20, CY: 19, CZ: 21, DE: 19, DK: 25, EE: 22, ES: 21,
+  FI: 24, FR: 20, GR: 24, HR: 25, HU: 27, IE: 23, IT: 22, LT: 21, LU: 17,
+  LV: 21, MT: 18, NL: 21, PL: 23, PT: 23, RO: 19, SE: 25, SI: 22, SK: 20,
+  GB: 20, CH: 8.1, NO: 25, IS: 24, LI: 8.1, // Non-EU European
+  US: 0, CA: 5, AU: 10, NZ: 15, JP: 10, SG: 9, IN: 18, // Other major countries
+};
+
 /**
  * Get VAT/Tax rate for a country (cache-first logic)
  * GET /api/tax/rate/:countryCode
@@ -81,55 +90,70 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
       });
     }
 
-    // Step 2: Fetch from APILayer
-    if (!TAX_DATA_API_KEY) {
-      return errorResponseHelper(res, 500, "Tax Data API key not configured");
+    // Step 2: Try to fetch from APILayer
+    let apiData: any = null;
+    let apiSuccess = false;
+
+    if (TAX_DATA_API_KEY) {
+      try {
+        const response = await axios.get(`${TAX_DATA_API_URL}/tax_rates`, {
+          headers: {
+            "apikey": TAX_DATA_API_KEY,
+          },
+          params: {
+            country: upperCountryCode,
+          },
+          timeout: 10000,
+        });
+
+        if (response.data && !response.data.message) {
+          apiData = response.data;
+          apiSuccess = true;
+        }
+      } catch (apiError: any) {
+        // Log API error but continue with fallback
+        console.log(`Tax API error for ${upperCountryCode}:`, apiError.response?.data?.message || apiError.message);
+      }
     }
 
-    const response = await axios.get(`${TAX_DATA_API_URL}/rate`, {
-      headers: {
-        "apikey": TAX_DATA_API_KEY,
-      },
-      params: {
-        country_code: upperCountryCode,
-      },
-    });
-
-    const apiData = response.data;
-
-    // Step 3: Save to cache
+    // Step 3: Use fallback data if API fails
     const taxAcronym = TAX_ACRONYMS[upperCountryCode] || "TAX";
-    const countryName = apiData.country_name || COUNTRY_NAMES[upperCountryCode] || upperCountryCode;
+    const countryName = COUNTRY_NAMES[upperCountryCode] || upperCountryCode;
+    
+    let standardRate = 0;
+    let reducedRates = null;
+    let source = "fallback";
 
+    if (apiSuccess && apiData) {
+      standardRate = apiData.standard_rate || apiData.rate || 0;
+      reducedRates = apiData.reduced_rates || null;
+      source = "api";
+    } else if (FALLBACK_VAT_RATES[upperCountryCode] !== undefined) {
+      standardRate = FALLBACK_VAT_RATES[upperCountryCode];
+      source = "fallback";
+    }
+
+    // Step 4: Save to cache
     const newTaxRate = await taxRateModel.create({
       country_code: upperCountryCode,
       country_name: countryName,
       tax_acronym: taxAcronym,
-      standard_rate: apiData.standard_rate || 0,
-      reduced_rates: apiData.reduced_rates || null,
+      standard_rate: standardRate,
+      reduced_rates: reducedRates,
     });
 
-    return successResponseHelper(res, 200, "Tax rate retrieved from API and cached", {
+    return successResponseHelper(res, 200, `Tax rate retrieved from ${source} and cached`, {
       country_code: newTaxRate.dataValues.country_code,
       country_name: newTaxRate.dataValues.country_name,
       tax_acronym: newTaxRate.dataValues.tax_acronym,
       standard_rate: newTaxRate.dataValues.standard_rate,
       reduced_rates: newTaxRate.dataValues.reduced_rates,
       cached: false,
+      source,
     });
 
   } catch (e: any) {
     const message = getErrorMessage(e);
-    
-    // Handle API errors
-    if (e.response?.status === 404) {
-      return errorResponseHelper(res, 404, "Tax rate not found for this country");
-    }
-    
-    if (e.response?.status === 401) {
-      return errorResponseHelper(res, 500, "Tax Data API authentication failed");
-    }
-
     taxLogger?.error?.(message, {}, new Error(e)) || console.error("Tax rate error:", message);
     return errorResponseHelper(res, 500, message);
   }
