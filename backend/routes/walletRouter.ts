@@ -46,5 +46,6 @@ walletRouter.post("/exchangeCreate", walletController.exchangeCreate);
 walletRouter.post("/confirmExchange", walletController.confirmExchange);
 walletRouter.post("/getUserAnalytics", walletController.getUserAnalytics);
 walletRouter.get("/getExchange", walletController.getExchange);
+walletRouter.get("/configured-currencies", walletController.getConfiguredCurrencies);
 
 export default walletRouter;
