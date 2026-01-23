@@ -1707,18 +1707,38 @@ const cryptoVerification = async (address, webhook = true) => {
           };
         }
 
-        const mailMessage = `Your company ${company_data?.company_name ?? ""} has received ${userAmountToSend} ${tempCurrency} from your customer.\n Here is the blockchain transaction reference for that transaction: ${transactionId}`;
-        const userData = await (
+        // Get user data for notifications
+        const userData = (
           await userModel.findOne({
             where: { user_id: customerData.adm_id },
           })
-        ).dataValues;
+        )?.dataValues;
 
-        await sendEmail(
+        // Always send email notification for payment received
+        const companyName = company_data?.company_name ?? "";
+        await sendPaymentReceivedEmail(
           userData?.email,
           userData?.name,
-          "Transaction Received",
-          mailMessage
+          companyName,
+          userAmountToSend,
+          tempCurrency,
+          transactionId
+        );
+
+        // Create in-app notification for payment received
+        await createNotification(
+          customerData.adm_id,
+          NOTIFICATION_TYPES.PAYMENT_RECEIVED,
+          "Payment Received",
+          `Your company ${companyName} received ${userAmountToSend} ${tempCurrency}`,
+          {
+            amount: userAmountToSend,
+            currency: tempCurrency,
+            transaction_id: transactionId,
+            company_name: companyName,
+            company_id: company_data?.company_id,
+          },
+          company_data?.company_id
         );
       }
     } else {
