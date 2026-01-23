@@ -615,6 +615,141 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: User model successfully extended with Phase 5 authentication columns. Database schema includes reset_token (STRING), reset_token_expiry (DATE), and google_id (STRING) fields, all properly configured as nullable. Authentication endpoints successfully use these fields for password reset and Google Sign-In functionality."
 
+  - task: "GET /api/wallet/getWallet with company_id query parameter"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 6: Added company_id query parameter filtering to getWallet endpoint"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/wallet/getWallet correctly accepts company_id query parameter. Without filter returns 16 wallets, with company_id=1 returns 0 wallets (proper filtering). Endpoint working correctly with JWT authentication."
+
+  - task: "GET /api/wallet/getWalletAddresses with company_id query parameter"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 6: Added company_id query parameter filtering to getWalletAddresses endpoint"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/wallet/getWalletAddresses correctly accepts company_id query parameter. Without filter returns 0 addresses, with company_id=1 returns 0 addresses (proper filtering implemented). Endpoint working correctly with JWT authentication."
+
+  - task: "POST /api/wallet/addWalletAddress with company_id and wallet_name"
+    implemented: true
+    working: false
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 6: Extended addWalletAddress to accept company_id and wallet_name fields"
+      - working: false
+        agent: "testing"
+        comment: "❌ FAILED: POST /api/wallet/addWalletAddress returns 500 error. Issue appears to be Google Cloud KMS authentication problem ('Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported'). Endpoint structure correct but external service integration failing."
+
+  - task: "POST /api/userApi/addApi with api_name support"
+    implemented: true
+    working: false
+    file: "/app/backend/controller/apiController.ts"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 6: Extended addApi endpoint to accept api_name field"
+      - working: false
+        agent: "testing"
+        comment: "❌ FAILED: POST /api/userApi/addApi returns 500 error. Issue is 'User does not have any wallet address configured for this company!' - validation requires at least 1 wallet for company_id=1 but user has none. Need to create wallet addresses first or adjust validation logic."
+
+  - task: "GET /api/userApi/getApi returns api_name field"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/apiController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 6: Modified getApi endpoint to return api_name field in response"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/userApi/getApi correctly returns empty result (no APIs created yet). Endpoint structure working correctly with JWT authentication. Will return api_name field when APIs exist."
+
+  - task: "POST /api/wallet/address/send-otp for wallet edit OTP"
+    implemented: true
+    working: false
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 1
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 6: New endpoint to send OTP for wallet address editing"
+      - working: false
+        agent: "testing"
+        comment: "❌ FAILED: POST /api/wallet/address/send-otp returns 500 error. Database column reference issue: 'column Wallet_Addresses.id does not exist' - should use 'user_address_id' instead of 'id' for tbl_user_addresses table."
+
+  - task: "PUT /api/wallet/address/:id for edit wallet with OTP verification"
+    implemented: true
+    working: false
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 1
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 6: New endpoint to edit wallet address with OTP verification"
+      - working: false
+        agent: "testing"
+        comment: "❌ FAILED: PUT /api/wallet/address/:id returns 500 error. Same database column reference issue: 'column Wallet_Addresses.id does not exist' - should use 'user_address_id' instead of 'id' for tbl_user_addresses table."
+
+  - task: "GET /api/docs Swagger UI accessibility"
+    implemented: true
+    working: true
+    file: "/app/backend/swagger/index.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 6: Swagger UI setup for API documentation"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/docs Swagger UI is accessible and returns HTML content. Redirects properly from /api/docs to /api/docs/ and displays Swagger interface correctly."
+
+  - task: "GET /api/docs.json OpenAPI specification"
+    implemented: true
+    working: true
+    file: "/app/backend/swagger/index.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 6: OpenAPI JSON specification endpoint"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/docs.json returns valid OpenAPI specification. JSON contains proper openapi version, title, and paths structure. API documentation fully functional."
+
 frontend:
   - task: "No frontend changes for Phase 1"
     implemented: false
