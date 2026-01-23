@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "DynoPay crypto payment gateway - Phase 1 Database Schema Updates verification"
+user_problem_statement: "DynoPay crypto payment gateway - Phase 4 Notifications System verification"
 
 backend:
   - task: "tbl_company extended with address and VAT fields"
