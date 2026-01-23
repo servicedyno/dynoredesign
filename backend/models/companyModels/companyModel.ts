@@ -37,6 +37,36 @@ const companyModel = sequelize.define(
     website: {
       type: DataTypes.TEXT,
     },
+    // Phase 1: Address fields
+    address_line1: {
+      type: DataTypes.STRING(255),
+    },
+    address_line2: {
+      type: DataTypes.STRING(255),
+    },
+    city: {
+      type: DataTypes.STRING(100),
+    },
+    state: {
+      type: DataTypes.STRING(100),
+    },
+    country: {
+      type: DataTypes.STRING(100),
+    },
+    zip_code: {
+      type: DataTypes.STRING(20),
+    },
+    // Phase 1: VAT fields
+    vat_number: {
+      type: DataTypes.STRING(50),
+    },
+    vat_type: {
+      type: DataTypes.STRING(10),
+    },
+    vat_verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     tableName: "tbl_company",
