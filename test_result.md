@@ -636,14 +636,19 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 5: Authentication Fixes - COMPLETED"
+    - "Phase 6: API, Wallet Addresses & Company-Level Data"
+    - "Task 6.1: Company-level data scoping"
+    - "Task 6.2: Wallet address company separation"
+    - "Task 6.3: API key name support"
+    - "Task 6.4: Edit wallet address with OTP"
+    - "Task 6.5: Swagger API documentation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Phase 5 Authentication Fixes implemented. New endpoints: POST /api/user/forgot-password (sends reset email with token), POST /api/user/reset-password (validates token and updates password), POST /api/user/google-signin (authenticates with Google ID token or access token). Added columns to tbl_user: reset_token, reset_token_expiry, google_id. Emails sent via Brevo API."
+    message: "Phase 6 implemented. Changes: getWallet/getWalletAddresses now filter by company_id, addWalletAddress accepts company_id and wallet_name, addApi accepts api_name, new endpoints POST /api/wallet/address/send-otp and PUT /api/wallet/address/:id for edit with OTP, Swagger docs at /api/docs. All endpoints require JWT auth except tax endpoints."
   - agent: "testing"
     message: "✅ PHASE 1 DATABASE SCHEMA TESTING COMPLETE: All 9 backend tasks successfully verified. Database connectivity confirmed, migration executed successfully, all 5 new tables created with correct schemas (tbl_tax_rate, tbl_invoice, tbl_notification, tbl_notification_preferences, tbl_kyc), and all 4 existing tables properly extended with new columns (tbl_company, tbl_api, tbl_user_wallet, tbl_user_addresses). PostgreSQL database at yamanote.proxy.rlwy.net:42097 is fully operational with Phase 1 schema updates."
   - agent: "testing"
