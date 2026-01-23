@@ -10,7 +10,15 @@ import axios from "axios";
 import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 import { KeyManagementServiceClient } from "@google-cloud/kms";
 import tronweb from "tronweb";
-import crc32c from "fast-crc32c";
+import CRC32 from "crc-32";
+
+// CRC32C helper using crc-32 library (JavaScript-only, no native dependencies)
+const crc32c = {
+  calculate: (data: Buffer | string): number => {
+    const buffer = typeof data === 'string' ? Buffer.from(data) : data;
+    return CRC32.buf(buffer) >>> 0; // Convert to unsigned
+  }
+};
 
 const encryptSymmetric = async (dataToEncrypt, keyId) => {
   const plaintextBuffer = Buffer.from(dataToEncrypt);
