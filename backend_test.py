@@ -945,8 +945,8 @@ verifyCacheData();
             
             if login_response.status_code == 200:
                 login_data = login_response.json()
-                if login_data.get('success') and 'data' in login_data:
-                    self.jwt_token = login_data['data'].get('accessToken')
+                if 'data' in login_data and 'accessToken' in login_data['data']:
+                    self.jwt_token = login_data['data']['accessToken']
                     self.log_result(
                         "User Login", 
                         True, 
