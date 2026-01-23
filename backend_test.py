@@ -3056,6 +3056,9 @@ verifyCacheData();
         # Test 9: Phase 7 Transaction Endpoints (NEW - PRIORITY)
         self.test_phase7_transaction_endpoints()
         
+        # Test 10: Phase 8 Payment Links CRUD (NEW - PRIORITY)
+        self.test_phase8_payment_links_crud()
+        
         return True
     
     def test_phase6_wallet_apis(self):
