@@ -2418,16 +2418,19 @@ verifyCacheData();
             print("\n❌ Backend connectivity failed. Stopping tests.")
             return False
         
-        # Test 2: Phase 4 Notification API endpoints (NEW - PRIORITY)
+        # Test 2: Phase 5 Authentication Fixes (NEW - PRIORITY)
+        self.test_phase5_authentication_endpoints()
+        
+        # Test 3: Phase 4 Notification API endpoints (keeping existing tests)
         self.test_notification_apis()
         
-        # Test 3: Phase 3 Dashboard API endpoints (keeping existing tests)
+        # Test 4: Phase 3 Dashboard API endpoints (keeping existing tests)
         self.test_dashboard_apis()
         
-        # Test 4: Phase 2 Tax API endpoints (keeping existing tests)
+        # Test 5: Phase 2 Tax API endpoints (keeping existing tests)
         self.test_tax_api_endpoints()
         
-        # Test 5: Verify tax cache in database
+        # Test 6: Verify tax cache in database
         self.verify_tax_cache_database()
         
         return True
