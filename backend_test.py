@@ -3053,6 +3053,9 @@ verifyCacheData();
         self.test_phase6_wallet_edit_otp()
         self.test_phase6_swagger_documentation()
         
+        # Test 9: Phase 7 Transaction Endpoints (NEW - PRIORITY)
+        self.test_phase7_transaction_endpoints()
+        
         return True
     
     def test_phase6_wallet_apis(self):
