@@ -310,6 +310,24 @@ const createCryptoPayment = async (
       let finalRes;
       const items = await getRedisItem("customer-" + data.uniqueRef);
 
+      // Phase 10 - Task 10.3: Validate currency is configured
+      const requestedCurrency = data.currency;
+      const walletAddress = await userWalletAddressModel.findOne({
+        where: {
+          user_id: items.adm_id,
+          currency: requestedCurrency,
+          ...(items.company_id && { company_id: items.company_id }),
+        },
+      });
+
+      if (!walletAddress) {
+        return errorResponseHelper(
+          res,
+          400,
+          `No wallet address configured for ${requestedCurrency}. Please add a ${requestedCurrency} wallet first.`
+        );
+      }
+
       const tokenData: any = {
         ref: data.uniqueRef,
         adm_id: items.adm_id,
