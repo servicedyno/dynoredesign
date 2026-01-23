@@ -315,6 +315,81 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: Tax rates are correctly cached in tbl_tax_rate table. Found 5 cached entries including PT (23%), DE (19%), US (0%), GB (20%), FR (20%). Cache timestamps confirm proper storage."
 
+  - task: "GET /api/dashboard - main dashboard statistics"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/dashboardController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Dashboard endpoint returns total_transactions, total_volume, pending_transactions, active_wallets, fee_tier with change percentages vs last month"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Dashboard main statistics endpoint working perfectly. Returns all required fields: total_transactions (count, change_percent), total_volume (amount, currency, change_percent), pending_transactions, active_wallets, fee_tier (current_tier: Starter, tier_description, monthly_volume, tier_threshold). JWT authentication working correctly."
+
+  - task: "GET /api/dashboard/chart - volume chart data"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/dashboardController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Chart endpoint with period query params (7d, 30d, 90d, 1y) returns chart_data, currency_breakdown, status_breakdown"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Chart data endpoint working for all periods (7d, 30d, 90d, 1y). Returns proper structure with chart_data (daily/weekly/monthly aggregated), currency_breakdown, status_breakdown. Grouping logic correct: 7d/30d=day, 90d=week, 1y=month. JWT authentication working correctly."
+
+  - task: "GET /api/dashboard/fee-tiers - fee tiers information"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/dashboardController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fee tiers endpoint returns array of fee tiers (Starter, Standard, Pro, Business, Enterprise) with min/max volumes"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Fee tiers endpoint returns exactly 5 tiers matching specification: Starter ($0-$10K), Standard ($10K-$50K), Pro ($50K-$250K), Business ($250K-$1M), Enterprise ($1M+). All tiers have correct min_volume, max_volume, name, description fields. JWT authentication working correctly."
+
+  - task: "GET /api/dashboard/recent-transactions - recent transactions"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/dashboardController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Recent transactions endpoint with limit query param (default 10) returns list of recent transactions with details"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Recent transactions endpoint working correctly with different limit values (default 10, custom 5, custom 15). Returns proper transaction structure with transaction_id, base_amount, base_currency, status, transaction_type fields. Handles empty result set gracefully for new users. JWT authentication working correctly."
+
+  - task: "JWT Authentication for Dashboard APIs"
+    implemented: true
+    working: true
+    file: "/app/backend/middleware/authMiddleware.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "All dashboard endpoints require JWT authentication via Authorization: Bearer <token> header"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: JWT authentication working perfectly. User login via POST /api/user/login returns valid JWT token. All dashboard endpoints properly validate Authorization header and decode user information from token. Authentication flow: login → get token → use token for dashboard API calls."
+
 frontend:
   - task: "No frontend changes for Phase 1"
     implemented: false
