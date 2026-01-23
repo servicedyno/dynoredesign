@@ -18,6 +18,7 @@ class DynoPayBackendTester:
         self.backend_url = self.get_backend_url()
         self.test_results = {}
         self.errors = []
+        self.jwt_token = None  # Store JWT token for authenticated requests
         
     def get_backend_url(self):
         """Get backend URL from frontend .env file"""
