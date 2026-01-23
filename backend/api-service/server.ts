@@ -23,7 +23,17 @@ app.use("/videos", express.static("/videos"));
 app.use("/api", apiMiddleware, router);
 
 app.get("/", async (req: express.Request, res: express.Response) => {
-  res.json({ message: "hello" });
+  res.json({ message: "DynoPay API Service", version: "1.0.0" });
 });
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+const startServer = async () => {
+  try {
+    await connectRedis();
+    app.listen(port, () => console.log(`API Service listening on port ${port}!`));
+  } catch (error) {
+    console.error("Failed to start API service:", error);
+    process.exit(1);
+  }
+};
+
+startServer();
