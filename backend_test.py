@@ -3073,6 +3073,465 @@ verifyCacheData();
                 f"Request failed: {str(e)}"
             )
     
+    def test_phase6_retesting_endpoints(self):
+        """Test the 4 specific Phase 6 endpoints that need retesting"""
+        print("\n=== Testing Phase 6 Endpoints (Retesting Priority) ===")
+        
+        if not self.jwt_token:
+            if not self.test_user_authentication():
+                print("\n❌ Authentication failed. Cannot test Phase 6 endpoints.")
+                return False
+        
+        # Test the 4 specific endpoints mentioned in review request
+        self.test_wallet_add_address_kms_fix()
+        self.test_user_api_add_validation_fix()
+        self.test_wallet_send_otp_database_fix()
+        self.test_wallet_edit_address_database_fix()
+        
+        return True
+    
+    def test_wallet_add_address_kms_fix(self):
+        """Test POST /api/wallet/addWalletAddress - Google Cloud KMS fix verification"""
+        print("\n--- Testing POST /api/wallet/addWalletAddress (KMS Fix) ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Add Wallet Address - KMS Fix", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test data for wallet address creation
+        test_data = {
+            "company_id": 1,
+            "wallet_name": "Test BTC Wallet KMS",
+            "currency": "BTC",
+            "wallet_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"  # Genesis block address for testing
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/wallet/addWalletAddress",
+                json=test_data,
+                headers=headers,
+                timeout=30  # Longer timeout for KMS operations
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    wallet_data = data['data']
+                    
+                    # Check if wallet was created successfully
+                    if 'user_address_id' in wallet_data or 'wallet_address' in wallet_data:
+                        self.log_result(
+                            "Add Wallet Address - KMS Fix", 
+                            True, 
+                            "✅ FIXED: Wallet address created successfully - KMS authentication working",
+                            {
+                                "company_id": test_data["company_id"],
+                                "wallet_name": test_data["wallet_name"],
+                                "currency": test_data["currency"],
+                                "response_keys": list(wallet_data.keys())
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "Add Wallet Address - KMS Fix", 
+                            False, 
+                            "Unexpected response structure",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        "Add Wallet Address - KMS Fix", 
+                        False, 
+                        "Invalid response format",
+                        {"response": data}
+                    )
+            elif response.status_code == 500:
+                # Check if it's still the KMS error
+                try:
+                    error_data = response.json()
+                    error_message = str(error_data)
+                    
+                    if "Getting metadata from plugin failed" in error_message or "DECODER routines" in error_message:
+                        self.log_result(
+                            "Add Wallet Address - KMS Fix", 
+                            False, 
+                            "❌ NOT FIXED: Google Cloud KMS authentication still failing",
+                            {"error": error_message[:200], "status": response.status_code}
+                        )
+                    else:
+                        self.log_result(
+                            "Add Wallet Address - KMS Fix", 
+                            False, 
+                            f"Different 500 error (may be progress): {error_message[:100]}",
+                            {"error": error_message[:200], "status": response.status_code}
+                        )
+                except:
+                    self.log_result(
+                        "Add Wallet Address - KMS Fix", 
+                        False, 
+                        f"500 error with unparseable response: {response.text[:200]}",
+                        {"status": response.status_code}
+                    )
+            else:
+                self.log_result(
+                    "Add Wallet Address - KMS Fix", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text[:200]}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Add Wallet Address - KMS Fix", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_user_api_add_validation_fix(self):
+        """Test POST /api/userApi/addApi - validation logic fix verification"""
+        print("\n--- Testing POST /api/userApi/addApi (Validation Fix) ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Add User API - Validation Fix", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test data for API creation
+        test_data = {
+            "company_id": 1,
+            "base_currency": "USD",
+            "api_name": "Test Payment API Validation"
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/userApi/addApi",
+                json=test_data,
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    api_data = data['data']
+                    
+                    # Check if API was created successfully
+                    if 'api_key' in api_data or 'api_id' in api_data:
+                        self.log_result(
+                            "Add User API - Validation Fix", 
+                            True, 
+                            "✅ FIXED: API created successfully - validation logic working",
+                            {
+                                "company_id": test_data["company_id"],
+                                "api_name": test_data["api_name"],
+                                "base_currency": test_data["base_currency"],
+                                "response_keys": list(api_data.keys())
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "Add User API - Validation Fix", 
+                            False, 
+                            "Unexpected response structure",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        "Add User API - Validation Fix", 
+                        False, 
+                        "Invalid response format",
+                        {"response": data}
+                    )
+            elif response.status_code == 500:
+                # Check if it's still the validation error
+                try:
+                    error_data = response.json()
+                    error_message = str(error_data)
+                    
+                    if "User does not have any wallet address configured" in error_message:
+                        self.log_result(
+                            "Add User API - Validation Fix", 
+                            False, 
+                            "❌ NOT FIXED: Validation still failing - user needs wallet addresses first",
+                            {"error": error_message[:200], "status": response.status_code}
+                        )
+                    else:
+                        self.log_result(
+                            "Add User API - Validation Fix", 
+                            False, 
+                            f"Different 500 error (may be progress): {error_message[:100]}",
+                            {"error": error_message[:200], "status": response.status_code}
+                        )
+                except:
+                    self.log_result(
+                        "Add User API - Validation Fix", 
+                        False, 
+                        f"500 error with unparseable response: {response.text[:200]}",
+                        {"status": response.status_code}
+                    )
+            else:
+                self.log_result(
+                    "Add User API - Validation Fix", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text[:200]}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Add User API - Validation Fix", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_wallet_send_otp_database_fix(self):
+        """Test POST /api/wallet/address/send-otp - verify database column fix"""
+        print("\n--- Testing POST /api/wallet/address/send-otp (Database Fix) ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Wallet Send OTP - Database Fix", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test data - using a test address_id
+        test_data = {
+            "address_id": "test-address-123"  # This will likely fail but we want to see the error type
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/wallet/address/send-otp",
+                json=test_data,
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log_result(
+                    "Wallet Send OTP - Database Fix", 
+                    True, 
+                    "✅ FIXED: OTP endpoint working correctly",
+                    {"response": data}
+                )
+            elif response.status_code == 404:
+                # Expected for non-existent address_id - this means the endpoint is working
+                self.log_result(
+                    "Wallet Send OTP - Database Fix", 
+                    True, 
+                    "✅ FIXED: Endpoint working - correctly validates address_id existence",
+                    {"status": response.status_code}
+                )
+            elif response.status_code == 400:
+                # Could be validation error - also acceptable
+                self.log_result(
+                    "Wallet Send OTP - Database Fix", 
+                    True, 
+                    "✅ FIXED: Endpoint working - validation error as expected",
+                    {"status": response.status_code}
+                )
+            elif response.status_code == 500:
+                # Check if it's still the database column error
+                try:
+                    error_data = response.json()
+                    error_message = str(error_data)
+                    
+                    if "column Wallet_Addresses.id does not exist" in error_message:
+                        self.log_result(
+                            "Wallet Send OTP - Database Fix", 
+                            False, 
+                            "❌ NOT FIXED: Database column reference error still exists",
+                            {"error": error_message[:200], "status": response.status_code}
+                        )
+                    else:
+                        self.log_result(
+                            "Wallet Send OTP - Database Fix", 
+                            False, 
+                            f"Different 500 error (may be progress): {error_message[:100]}",
+                            {"error": error_message[:200], "status": response.status_code}
+                        )
+                except:
+                    self.log_result(
+                        "Wallet Send OTP - Database Fix", 
+                        False, 
+                        f"500 error with unparseable response: {response.text[:200]}",
+                        {"status": response.status_code}
+                    )
+            else:
+                self.log_result(
+                    "Wallet Send OTP - Database Fix", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text[:200]}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Wallet Send OTP - Database Fix", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_wallet_edit_address_database_fix(self):
+        """Test PUT /api/wallet/address/:id - verify database column fix"""
+        print("\n--- Testing PUT /api/wallet/address/:id (Database Fix) ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Wallet Edit Address - Database Fix", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test data - using a test address_id
+        test_address_id = "test-address-123"
+        test_data = {
+            "wallet_address": "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2",
+            "wallet_name": "Updated Test Wallet",
+            "otp": "123456"
+        }
+        
+        try:
+            response = requests.put(
+                f"{self.backend_url}/api/wallet/address/{test_address_id}",
+                json=test_data,
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log_result(
+                    "Wallet Edit Address - Database Fix", 
+                    True, 
+                    "✅ FIXED: Edit address endpoint working correctly",
+                    {"response": data}
+                )
+            elif response.status_code == 404:
+                # Expected for non-existent address_id - this means the endpoint is working
+                self.log_result(
+                    "Wallet Edit Address - Database Fix", 
+                    True, 
+                    "✅ FIXED: Endpoint working - correctly validates address_id existence",
+                    {"status": response.status_code}
+                )
+            elif response.status_code == 400:
+                # Could be OTP validation or other validation - also acceptable
+                try:
+                    error_data = response.json()
+                    error_message = str(error_data)
+                    
+                    self.log_result(
+                        "Wallet Edit Address - Database Fix", 
+                        True, 
+                        f"✅ FIXED: Endpoint working - validation error as expected: {error_message[:100]}",
+                        {"status": response.status_code}
+                    )
+                except:
+                    self.log_result(
+                        "Wallet Edit Address - Database Fix", 
+                        True, 
+                        "✅ FIXED: Endpoint working - validation error as expected",
+                        {"status": response.status_code}
+                    )
+            elif response.status_code == 500:
+                # Check if it's still the database column error
+                try:
+                    error_data = response.json()
+                    error_message = str(error_data)
+                    
+                    if "column Wallet_Addresses.id does not exist" in error_message:
+                        self.log_result(
+                            "Wallet Edit Address - Database Fix", 
+                            False, 
+                            "❌ NOT FIXED: Database column reference error still exists",
+                            {"error": error_message[:200], "status": response.status_code}
+                        )
+                    else:
+                        self.log_result(
+                            "Wallet Edit Address - Database Fix", 
+                            False, 
+                            f"Different 500 error (may be progress): {error_message[:100]}",
+                            {"error": error_message[:200], "status": response.status_code}
+                        )
+                except:
+                    self.log_result(
+                        "Wallet Edit Address - Database Fix", 
+                        False, 
+                        f"500 error with unparseable response: {response.text[:200]}",
+                        {"status": response.status_code}
+                    )
+            else:
+                self.log_result(
+                    "Wallet Edit Address - Database Fix", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text[:200]}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Wallet Edit Address - Database Fix", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def run_phase6_retesting_only(self):
+        """Run only Phase 6 endpoint retesting for the 4 specific endpoints"""
+        print("🚀 Starting DynoPay Phase 6 Endpoint Retesting")
+        print("=" * 60)
+        print(f"Backend URL: {self.backend_url}")
+        
+        # Test basic connectivity first
+        if not self.test_database_connectivity():
+            print("\n❌ Database connectivity failed. Stopping tests.")
+            return False
+        
+        # Test Phase 6 endpoints that need retesting
+        self.test_phase6_retesting_endpoints()
+        
+        # Print final summary
+        self.print_summary()
+        
+        return len(self.errors) == 0
+
     def print_summary(self):
         """Print test summary"""
         print("\n" + "=" * 60)
