@@ -15,6 +15,7 @@ import {
   planModel,
   userWalletModel,
 } from "../models";
+import { userWalletAddressModel } from "../models/userModels";
 import { apiLogger } from "../utils/loggers";
 import crypto from "crypto";
 import sequelize from "../utils/dbInstance";
