@@ -576,13 +576,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 4: Notifications System"
-    - "GET/PUT /api/notifications/preferences"
-    - "GET /api/notifications - list with pagination"
-    - "GET /api/notifications/unread-count"
-    - "PUT /api/notifications/:id/read and read-all"
-    - "DELETE /api/notifications/:id"
-    - "Weekly summary cron job"
+    - "Phase 4 Notifications System - COMPLETED"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
