@@ -2020,6 +2020,393 @@ verifyCacheData();
         
         return True
     
+    def test_phase5_authentication_endpoints(self):
+        """Test Phase 5 Authentication Fixes endpoints"""
+        print("\n=== Testing Phase 5 Authentication Fixes ===")
+        
+        # Test 1: Forgot Password endpoint
+        self.test_forgot_password_endpoint()
+        
+        # Test 2: Reset Password endpoint
+        self.test_reset_password_endpoint()
+        
+        # Test 3: Google Sign-In endpoint
+        self.test_google_signin_endpoint()
+        
+        return True
+    
+    def test_forgot_password_endpoint(self):
+        """Test POST /api/user/forgot-password"""
+        print("\n--- Testing Forgot Password Endpoint ---")
+        
+        # Test 1: Valid email (existing user)
+        test_email = "dashboard.test@dynopay.com"  # Use existing test user
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/forgot-password",
+                json={"email": test_email},
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Should return success message regardless of email existence (security)
+                if data.get('message') and 'reset link has been sent' in data.get('message', '').lower():
+                    self.log_result(
+                        "Forgot Password - Valid Email", 
+                        True, 
+                        "Successfully sent reset email (or security message)",
+                        {"email": test_email, "message": data.get('message')}
+                    )
+                else:
+                    self.log_result(
+                        "Forgot Password - Valid Email", 
+                        False, 
+                        "Unexpected response message",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Forgot Password - Valid Email", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Forgot Password - Valid Email", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 2: Non-existing email (should return same message for security)
+        non_existing_email = "nonexistent.user@dynopay.com"
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/forgot-password",
+                json={"email": non_existing_email},
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Should return same success message for security
+                if data.get('message') and 'reset link has been sent' in data.get('message', '').lower():
+                    self.log_result(
+                        "Forgot Password - Non-existing Email", 
+                        True, 
+                        "Correctly returned security message for non-existing email",
+                        {"email": non_existing_email, "message": data.get('message')}
+                    )
+                else:
+                    self.log_result(
+                        "Forgot Password - Non-existing Email", 
+                        False, 
+                        "Should return same security message",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Forgot Password - Non-existing Email", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Forgot Password - Non-existing Email", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 3: Missing email (should return 400 error)
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/forgot-password",
+                json={},
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 400:
+                data = response.json()
+                self.log_result(
+                    "Forgot Password - Missing Email", 
+                    True, 
+                    "Correctly returned 400 error for missing email",
+                    {"status_code": response.status_code, "message": data.get('message')}
+                )
+            else:
+                self.log_result(
+                    "Forgot Password - Missing Email", 
+                    False, 
+                    f"Expected 400 error, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Forgot Password - Missing Email", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_reset_password_endpoint(self):
+        """Test POST /api/user/reset-password"""
+        print("\n--- Testing Reset Password Endpoint ---")
+        
+        # Test 1: Invalid token (should return error)
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/reset-password",
+                json={
+                    "token": "invalid_token_12345",
+                    "email": "dashboard.test@dynopay.com",
+                    "newPassword": "NewPassword123!"
+                },
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 400:
+                data = response.json()
+                if 'invalid' in data.get('message', '').lower() or 'expired' in data.get('message', '').lower():
+                    self.log_result(
+                        "Reset Password - Invalid Token", 
+                        True, 
+                        "Correctly rejected invalid token",
+                        {"status_code": response.status_code, "message": data.get('message')}
+                    )
+                else:
+                    self.log_result(
+                        "Reset Password - Invalid Token", 
+                        False, 
+                        "Error message should mention invalid/expired token",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Reset Password - Invalid Token", 
+                    False, 
+                    f"Expected 400 error, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Reset Password - Invalid Token", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 2: Missing fields (should return 400 error)
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/reset-password",
+                json={"email": "test@example.com"},  # Missing token and newPassword
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 400:
+                data = response.json()
+                self.log_result(
+                    "Reset Password - Missing Fields", 
+                    True, 
+                    "Correctly returned 400 error for missing fields",
+                    {"status_code": response.status_code, "message": data.get('message')}
+                )
+            else:
+                self.log_result(
+                    "Reset Password - Missing Fields", 
+                    False, 
+                    f"Expected 400 error, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Reset Password - Missing Fields", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 3: Short password (should return error)
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/reset-password",
+                json={
+                    "token": "some_token",
+                    "email": "test@example.com",
+                    "newPassword": "123"  # Too short
+                },
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 400:
+                data = response.json()
+                if 'characters' in data.get('message', '').lower():
+                    self.log_result(
+                        "Reset Password - Short Password", 
+                        True, 
+                        "Correctly rejected short password",
+                        {"status_code": response.status_code, "message": data.get('message')}
+                    )
+                else:
+                    self.log_result(
+                        "Reset Password - Short Password", 
+                        False, 
+                        "Error message should mention password length",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Reset Password - Short Password", 
+                    False, 
+                    f"Expected 400 error, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Reset Password - Short Password", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_google_signin_endpoint(self):
+        """Test POST /api/user/google-signin"""
+        print("\n--- Testing Google Sign-In Endpoint ---")
+        
+        # Test 1: Invalid ID token (should return 401 error)
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/google-signin",
+                json={"idToken": "invalid_google_token_12345"},
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 401:
+                data = response.json()
+                if 'invalid' in data.get('message', '').lower():
+                    self.log_result(
+                        "Google Sign-In - Invalid ID Token", 
+                        True, 
+                        "Correctly rejected invalid Google ID token",
+                        {"status_code": response.status_code, "message": data.get('message')}
+                    )
+                else:
+                    self.log_result(
+                        "Google Sign-In - Invalid ID Token", 
+                        False, 
+                        "Error message should mention invalid token",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Google Sign-In - Invalid ID Token", 
+                    False, 
+                    f"Expected 401 error, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Google Sign-In - Invalid ID Token", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 2: Invalid access token (should return 401 error)
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/google-signin",
+                json={"accessToken": "invalid_access_token_12345"},
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 401:
+                data = response.json()
+                if 'invalid' in data.get('message', '').lower():
+                    self.log_result(
+                        "Google Sign-In - Invalid Access Token", 
+                        True, 
+                        "Correctly rejected invalid Google access token",
+                        {"status_code": response.status_code, "message": data.get('message')}
+                    )
+                else:
+                    self.log_result(
+                        "Google Sign-In - Invalid Access Token", 
+                        False, 
+                        "Error message should mention invalid token",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Google Sign-In - Invalid Access Token", 
+                    False, 
+                    f"Expected 401 error, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Google Sign-In - Invalid Access Token", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+        
+        # Test 3: Missing token (should return 400 error)
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/google-signin",
+                json={},  # No token provided
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 400:
+                data = response.json()
+                if 'required' in data.get('message', '').lower():
+                    self.log_result(
+                        "Google Sign-In - Missing Token", 
+                        True, 
+                        "Correctly returned 400 error for missing token",
+                        {"status_code": response.status_code, "message": data.get('message')}
+                    )
+                else:
+                    self.log_result(
+                        "Google Sign-In - Missing Token", 
+                        False, 
+                        "Error message should mention required token",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Google Sign-In - Missing Token", 
+                    False, 
+                    f"Expected 400 error, got {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Google Sign-In - Missing Token", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
     def run_all_tests(self):
         """Run all backend tests"""
         print("🚀 Starting DynoPay Backend Tests")
