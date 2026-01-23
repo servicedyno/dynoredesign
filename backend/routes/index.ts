@@ -4,6 +4,7 @@ import companyRouter from "./companyRouter";
 import walletRouter from "./walletRouter";
 import taxRouter from "./taxRouter";
 import dashboardRouter from "./dashboardRouter";
+import notificationRouter from "./notificationRouter";
 
 import {
   authMiddleware,
@@ -33,6 +34,7 @@ router.use("/wallet", authMiddleware, walletMiddleware, walletRouter);
 router.use("/pay", paymentRouter);
 router.use("/tax", taxRouter);
 router.use("/dashboard", dashboardRouter);
+router.use("/notifications", notificationRouter);
 
 router.post("/webhook", flutterwaveWebHook);
 router.post("/failed_webhook", flutterwaveWebHook);
