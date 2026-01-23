@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 DynoPay Backend Testing Suite
-Tests Phase 1 Database Schema Updates and Phase 2 Tax API Integration
+Tests Phase 1 Database Schema Updates, Phase 2 Tax API Integration, and Phase 3 Dashboard APIs
 """
 
 import os
