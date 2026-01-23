@@ -1654,15 +1654,7 @@ verifyCacheData();
                         
             except Exception as e:
                 self.log_result(
-                        f"Add Wallet Address - {test_case['name']}", 
-                        False, 
-                        f"Unexpected status code: {response.status_code}",
-                        {"response": response.text, "status_code": response.status_code}
-                    )
-                    
-            except Exception as e:
-                self.log_result(
-                    f"Add Wallet Address - {test_case['name']}", 
+                    f"Local Validation - {test_case['name']}", 
                     False, 
                     f"Request failed: {str(e)}"
                 )
