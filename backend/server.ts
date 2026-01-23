@@ -38,12 +38,18 @@ const port = process.env.PORT || 3300;
 
 app.use(cors());
 app.use(express.json());
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Required for Swagger UI
+}));
 app.options("*", cors());
 
 app.use(express.static("public"));
 app.use("/images", express.static("/images"));
 app.use("/videos", express.static("/videos"));
+
+// Setup Swagger API documentation
+setupSwagger(app);
+
 app.use("/api", router);
 
 app.get("/", async (req: express.Request, res: express.Response) => {
