@@ -1414,7 +1414,589 @@ verifyCacheData();
                     f"Request failed: {str(e)}"
                 )
     
-    def run_quick_verification_tests(self):
+    def run_comprehensive_verification_tests(self):
+        """Run comprehensive verification tests as specified in review request"""
+        print("=" * 80)
+        print("DYNOPAY FINAL VERIFICATION TESTING - ALL PHASES")
+        print("=" * 80)
+        print(f"Backend URL: {self.backend_url}")
+        print("Valid Credentials: nomadly@moxx.co / Katiekendra123@")
+        print("=" * 80)
+        
+        # Phase 1: Database (Quick check)
+        print("\n" + "="*50)
+        print("PHASE 1: DATABASE CONNECTIVITY")
+        print("="*50)
+        if not self.test_database_connectivity():
+            print("\n❌ Backend connectivity failed. Cannot proceed with tests.")
+            return False
+        
+        # Phase 2: Tax API (4 endpoints)
+        print("\n" + "="*50)
+        print("PHASE 2: TAX API (4 ENDPOINTS)")
+        print("="*50)
+        self.test_tax_rate_pt()
+        self.test_tax_rate_de()
+        self.test_tax_acronyms_quick()
+        self.test_tax_lookup_portugal()
+        
+        # Phase 3: Dashboard API (Requires JWT)
+        print("\n" + "="*50)
+        print("PHASE 3: DASHBOARD API (REQUIRES JWT)")
+        print("="*50)
+        if self.test_user_login_quick():
+            self.test_dashboard_quick()
+            self.test_dashboard_chart_7d()
+            self.test_dashboard_chart_30d()
+            self.test_dashboard_fee_tiers_quick()
+        
+        # Phase 4: Notifications (Requires JWT)
+        print("\n" + "="*50)
+        print("PHASE 4: NOTIFICATIONS (REQUIRES JWT)")
+        print("="*50)
+        if self.jwt_token:
+            self.test_notifications_preferences()
+            self.test_notifications_types()
+            self.test_notifications_unread_count()
+            self.test_notifications_list()
+        
+        # Phase 5: Authentication
+        print("\n" + "="*50)
+        print("PHASE 5: AUTHENTICATION")
+        print("="*50)
+        self.test_user_login_valid()
+        self.test_forgot_password()
+        self.test_google_signin()
+        
+        # Phase 6: Wallet Management (Requires JWT)
+        print("\n" + "="*50)
+        print("PHASE 6: WALLET MANAGEMENT (REQUIRES JWT)")
+        print("="*50)
+        if self.jwt_token:
+            self.test_get_wallet()
+            self.test_get_wallet_addresses()
+            self.test_get_api_keys()
+        
+        # Phase 7: Transactions (Requires JWT)
+        print("\n" + "="*50)
+        print("PHASE 7: TRANSACTIONS (REQUIRES JWT)")
+        print("="*50)
+        if self.jwt_token:
+            self.test_get_all_transactions()
+        
+        # Phase 8: Payment Links (Requires JWT)
+        print("\n" + "="*50)
+        print("PHASE 8: PAYMENT LINKS (REQUIRES JWT)")
+        print("="*50)
+        if self.jwt_token:
+            self.test_get_payment_links()
+        
+        # Phase 10: Company (Requires JWT)
+        print("\n" + "="*50)
+        print("PHASE 10: COMPANY (REQUIRES JWT)")
+        print("="*50)
+        if self.jwt_token:
+            self.test_get_company()
+        
+        # Phase 12: Invoices (Requires JWT)
+        print("\n" + "="*50)
+        print("PHASE 12: INVOICES (REQUIRES JWT)")
+        print("="*50)
+        if self.jwt_token:
+            self.test_get_invoices()
+            self.test_get_invoices_paginated()
+        
+        # Phase Swagger
+        print("\n" + "="*50)
+        print("PHASE SWAGGER: API DOCUMENTATION")
+        print("="*50)
+        self.test_swagger_docs()
+        self.test_swagger_json()
+        
+        # Print summary
+        self.print_test_summary()
+        
+        return len(self.errors) == 0
+    
+    def test_tax_rate_de(self):
+        """Test GET /api/tax/rate/DE - Should return German tax rate (19%)"""
+        print("\n--- Testing Tax Rate DE ---")
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/tax/rate/DE", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and data['data'].get('country_code') == 'DE':
+                    standard_rate = data['data'].get('standard_rate')
+                    self.log_result(
+                        "Tax Rate DE", 
+                        True, 
+                        f"✅ German tax rate: {standard_rate}%",
+                        {"country_code": "DE", "standard_rate": standard_rate}
+                    )
+                else:
+                    self.log_result(
+                        "Tax Rate DE", 
+                        False, 
+                        "❌ Invalid response structure or country code",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Tax Rate DE", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Tax Rate DE", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_tax_lookup_portugal(self):
+        """Test GET /api/tax/lookup?country=Portugal"""
+        print("\n--- Testing Tax Lookup Portugal ---")
+        
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/tax/lookup",
+                params={"country": "Portugal"},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    response_data = data['data']
+                    country_code = response_data.get('country_code')
+                    standard_rate = response_data.get('standard_rate')
+                    
+                    if country_code == 'PT':
+                        self.log_result(
+                            "Tax Lookup Portugal", 
+                            True, 
+                            f"✅ Portugal resolved to {country_code} with rate {standard_rate}%",
+                            {"country_code": country_code, "standard_rate": standard_rate}
+                        )
+                    else:
+                        self.log_result(
+                            "Tax Lookup Portugal", 
+                            False, 
+                            f"❌ Expected PT, got {country_code}",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        "Tax Lookup Portugal", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Tax Lookup Portugal", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Tax Lookup Portugal", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_dashboard_chart_7d(self):
+        """Test GET /api/dashboard/chart?period=7d"""
+        print("\n--- Testing Dashboard Chart 7d ---")
+        
+        if not self.jwt_token:
+            self.log_result("Dashboard Chart 7d", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/dashboard/chart",
+                params={"period": "7d"},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    chart_data = data['data']
+                    self.log_result(
+                        "Dashboard Chart 7d", 
+                        True, 
+                        f"✅ Chart data retrieved for 7d period",
+                        {"period": chart_data.get('period'), "entries": len(chart_data.get('chart_data', []))}
+                    )
+                else:
+                    self.log_result("Dashboard Chart 7d", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Dashboard Chart 7d", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Dashboard Chart 7d", False, f"❌ Request failed: {str(e)}")
+    
+    def test_dashboard_chart_30d(self):
+        """Test GET /api/dashboard/chart?period=30d"""
+        print("\n--- Testing Dashboard Chart 30d ---")
+        
+        if not self.jwt_token:
+            self.log_result("Dashboard Chart 30d", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/dashboard/chart",
+                params={"period": "30d"},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    chart_data = data['data']
+                    self.log_result(
+                        "Dashboard Chart 30d", 
+                        True, 
+                        f"✅ Chart data retrieved for 30d period",
+                        {"period": chart_data.get('period'), "entries": len(chart_data.get('chart_data', []))}
+                    )
+                else:
+                    self.log_result("Dashboard Chart 30d", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Dashboard Chart 30d", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Dashboard Chart 30d", False, f"❌ Request failed: {str(e)}")
+    
+    def test_dashboard_fee_tiers_quick(self):
+        """Test GET /api/dashboard/fee-tiers - Should return 5 tiers"""
+        print("\n--- Testing Dashboard Fee Tiers ---")
+        
+        if not self.jwt_token:
+            self.log_result("Dashboard Fee Tiers", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/dashboard/fee-tiers",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    fee_data = data['data']
+                    tiers = fee_data.get('tiers', [])
+                    
+                    if len(tiers) == 5:
+                        self.log_result(
+                            "Dashboard Fee Tiers", 
+                            True, 
+                            f"✅ Retrieved {len(tiers)} fee tiers",
+                            {"tiers_count": len(tiers)}
+                        )
+                    else:
+                        self.log_result(
+                            "Dashboard Fee Tiers", 
+                            False, 
+                            f"❌ Expected 5 tiers, got {len(tiers)}",
+                            {"tiers_count": len(tiers)}
+                        )
+                else:
+                    self.log_result("Dashboard Fee Tiers", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Dashboard Fee Tiers", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Dashboard Fee Tiers", False, f"❌ Request failed: {str(e)}")
+    
+    def test_notifications_unread_count(self):
+        """Test GET /api/notifications/unread-count"""
+        print("\n--- Testing Notifications Unread Count ---")
+        
+        if not self.jwt_token:
+            self.log_result("Notifications Unread Count", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/notifications/unread-count",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and 'unread_count' in data['data']:
+                    unread_count = data['data']['unread_count']
+                    self.log_result(
+                        "Notifications Unread Count", 
+                        True, 
+                        f"✅ Unread count: {unread_count}",
+                        {"unread_count": unread_count}
+                    )
+                else:
+                    self.log_result("Notifications Unread Count", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Notifications Unread Count", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Notifications Unread Count", False, f"❌ Request failed: {str(e)}")
+    
+    def test_notifications_list(self):
+        """Test GET /api/notifications?page=1&limit=10"""
+        print("\n--- Testing Notifications List ---")
+        
+        if not self.jwt_token:
+            self.log_result("Notifications List", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/notifications",
+                params={"page": 1, "limit": 10},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    notifications_data = data['data']
+                    notifications = notifications_data.get('notifications', [])
+                    total = notifications_data.get('total', 0)
+                    
+                    self.log_result(
+                        "Notifications List", 
+                        True, 
+                        f"✅ Retrieved {len(notifications)} notifications (total: {total})",
+                        {"notifications_count": len(notifications), "total": total}
+                    )
+                else:
+                    self.log_result("Notifications List", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Notifications List", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Notifications List", False, f"❌ Request failed: {str(e)}")
+    
+    def test_user_login_valid(self):
+        """Test POST /api/user/login with valid credentials"""
+        print("\n--- Testing User Login with Valid Credentials ---")
+        
+        login_data = {
+            "email": "nomadly@moxx.co",
+            "password": "Katiekendra123@"
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/login",
+                json=login_data,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and 'accessToken' in data['data']:
+                    self.log_result(
+                        "User Login Valid", 
+                        True, 
+                        "✅ Login successful with valid credentials",
+                        {"email": login_data["email"]}
+                    )
+                else:
+                    self.log_result("User Login Valid", False, "❌ Login succeeded but no token received", {"response": data})
+            else:
+                self.log_result("User Login Valid", False, f"❌ Login failed with status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("User Login Valid", False, f"❌ Request failed: {str(e)}")
+    
+    def test_get_wallet_addresses(self):
+        """Test GET /api/wallet/getWalletAddresses"""
+        print("\n--- Testing Get Wallet Addresses ---")
+        
+        if not self.jwt_token:
+            self.log_result("Get Wallet Addresses", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/wallet/getWalletAddresses",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    addresses = data['data']
+                    self.log_result(
+                        "Get Wallet Addresses", 
+                        True, 
+                        f"✅ Retrieved {len(addresses)} wallet addresses",
+                        {"addresses_count": len(addresses)}
+                    )
+                else:
+                    self.log_result("Get Wallet Addresses", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Get Wallet Addresses", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Get Wallet Addresses", False, f"❌ Request failed: {str(e)}")
+    
+    def test_get_api_keys(self):
+        """Test GET /api/userApi/getApi"""
+        print("\n--- Testing Get API Keys ---")
+        
+        if not self.jwt_token:
+            self.log_result("Get API Keys", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/userApi/getApi",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    api_keys = data['data']
+                    self.log_result(
+                        "Get API Keys", 
+                        True, 
+                        f"✅ Retrieved {len(api_keys)} API keys",
+                        {"api_keys_count": len(api_keys)}
+                    )
+                else:
+                    self.log_result("Get API Keys", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Get API Keys", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Get API Keys", False, f"❌ Request failed: {str(e)}")
+    
+    def test_get_company(self):
+        """Test GET /api/company/getCompany"""
+        print("\n--- Testing Get Company ---")
+        
+        if not self.jwt_token:
+            self.log_result("Get Company", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/company/getCompany",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    company_data = data['data']
+                    self.log_result(
+                        "Get Company", 
+                        True, 
+                        f"✅ Retrieved company details",
+                        {"companies_count": len(company_data) if isinstance(company_data, list) else 1}
+                    )
+                else:
+                    self.log_result("Get Company", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Get Company", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Get Company", False, f"❌ Request failed: {str(e)}")
+    
+    def test_get_invoices_paginated(self):
+        """Test GET /api/invoices?page=1&limit=5"""
+        print("\n--- Testing Get Invoices Paginated ---")
+        
+        if not self.jwt_token:
+            self.log_result("Get Invoices Paginated", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/invoices",
+                params={"page": 1, "limit": 5},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    invoices_data = data['data']
+                    invoices = invoices_data.get('invoices', [])
+                    total = invoices_data.get('total', 0)
+                    
+                    self.log_result(
+                        "Get Invoices Paginated", 
+                        True, 
+                        f"✅ Retrieved {len(invoices)} invoices (total: {total})",
+                        {"invoices_count": len(invoices), "total": total}
+                    )
+                else:
+                    self.log_result("Get Invoices Paginated", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Get Invoices Paginated", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Get Invoices Paginated", False, f"❌ Request failed: {str(e)}")
+    
+    def test_swagger_json(self):
+        """Test GET /api/docs.json - Should return OpenAPI spec"""
+        print("\n--- Testing Swagger JSON ---")
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/docs.json", timeout=10)
+            
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    if 'openapi' in data or 'swagger' in data:
+                        self.log_result(
+                            "Swagger JSON", 
+                            True, 
+                            "✅ OpenAPI specification retrieved",
+                            {"has_openapi": 'openapi' in data, "has_swagger": 'swagger' in data}
+                        )
+                    else:
+                        self.log_result("Swagger JSON", False, "❌ Invalid OpenAPI specification", {"response": data})
+                except json.JSONDecodeError:
+                    self.log_result("Swagger JSON", False, "❌ Response is not valid JSON", {"response": response.text[:200]})
+            else:
+                self.log_result("Swagger JSON", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Swagger JSON", False, f"❌ Request failed: {str(e)}")
         """Run quick verification tests as specified in review request"""
         print("=" * 80)
         print("DYNOPAY QUICK VERIFICATION TESTING AFTER TYPESCRIPT FIXES")
