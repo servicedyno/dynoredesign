@@ -351,9 +351,29 @@ export const triggerWalletReminder = async (userId?: number) => {
   }
 };
 
+/**
+ * Infrastructure Health Check Cron Job
+ * Schedule: Every 5 minutes
+ * Logic: Run health checks on all monitored services and store results
+ */
+export const setupHealthCheckCron = () => {
+  // Run every 5 minutes
+  cron.schedule("*/5 * * * *", async () => {
+    try {
+      const monitoringService = require("../services/monitoringService").default;
+      await monitoringService.runHealthChecks();
+    } catch (e) {
+      console.error("Health Check Cron Job Error:", e);
+    }
+  });
+
+  console.log("Health Check Cron Job scheduled for every 5 minutes");
+};
+
 export default {
   setupWeeklySummaryCron,
   triggerWeeklySummary,
   setupWalletReminderCron,
   triggerWalletReminder,
+  setupHealthCheckCron,
 };
