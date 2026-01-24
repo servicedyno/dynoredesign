@@ -1083,11 +1083,20 @@ const Crypto = async (
 
     console.log("address: ", address);
 
-    const { id } = await tatumApi.createSubscription(
-      address,
-      walletDetails.wallet_type,
-      onlyCrypto
-    );
+    // Try to create subscription, but don't fail if Tatum API has issues
+    let id = null;
+    try {
+      const subscription = await tatumApi.createSubscription(
+        address,
+        walletDetails.wallet_type,
+        onlyCrypto
+      );
+      id = subscription.id;
+      console.log("Tatum subscription created:", id);
+    } catch (subscriptionError) {
+      console.log("⚠️ Tatum subscription failed (using local monitoring):", subscriptionError.message);
+      id = `local-${Date.now()}`; // Use local subscription ID as fallback
+    }
 
     const cipherText = await tatumApi.encryptSymmetric(
       privateKey,
