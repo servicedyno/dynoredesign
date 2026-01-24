@@ -1629,6 +1629,7 @@ const cryptoVerification = async (address, webhook = true) => {
 
       if (isPartialPayment) {
         const pendingAmount = (Number(tempData?.amount) - Number(receivedAmount)).toFixed(8);
+        const expectedAmount = Number(tempData?.amount) + (tempData?.previousAmount ? Number(tempData.previousAmount) : 0);
 
         await userTempAddressModel.update(
           {
@@ -1638,6 +1639,17 @@ const cryptoVerification = async (address, webhook = true) => {
             partial_payment_timestamp: tempAddressData.partial_payment_timestamp ?? new Date(),
           },
           { where: { temp_id: tempAddressData.temp_id } }
+        );
+
+        // Send partial payment notification
+        await sendPartialPaymentNotification(
+          address,
+          transactionId,
+          Number(receivedAmount),
+          expectedAmount,
+          tempCurrency,
+          customerData,
+          30 // 30 minutes grace period
         );
 
         const { txId, ...rest } = tempData;
