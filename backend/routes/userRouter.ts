@@ -19,6 +19,9 @@ userRouter.post("/reset-password", userController.resetPassword);
 // Google Sign-In endpoint
 userRouter.post("/google-signin", userController.googleSignIn);
 
+// Facebook Sign-In endpoint
+userRouter.post("/facebook-signin", userController.facebookSignIn);
+
 // Profile endpoints (requires auth)
 userRouter.get("/profile", authMiddleware, userController.getProfile);
 userRouter.put("/profile", authMiddleware, userController.updateProfile);
