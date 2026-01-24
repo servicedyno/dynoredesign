@@ -280,9 +280,184 @@ export const getTransactionConfirmations = async (
   }
 };
 
+/**
+ * Send partial payment notification
+ * Called when a payment is detected but amount is less than expected
+ */
+export const sendPartialPaymentNotification = async (
+  address: string,
+  txId: string,
+  receivedAmount: number,
+  expectedAmount: number,
+  currency: string,
+  customerData: any,
+  gracePeriodMinutes: number = 30
+): Promise<boolean> => {
+  try {
+    // Check if we already sent a partial notification for this address
+    const partialKey = `partial-notif-${address}`;
+    const existingNotification = await getRedisItem(partialKey);
+    
+    if (existingNotification && existingNotification.sent) {
+      console.log(`Partial notification already sent for address: ${address}`);
+      return false;
+    }
+
+    // Get user and company details
+    const userResult = await sequelize.query(
+      `SELECT u.user_id, u.name, u.email, c.company_name, c.company_id
+       FROM tbl_user u
+       JOIN tbl_company c ON c.user_id = u.user_id
+       WHERE u.user_id = :userId`,
+      {
+        replacements: { userId: customerData.adm_id },
+        type: QueryTypes.SELECT,
+      }
+    ) as any[];
+
+    if (!userResult || userResult.length === 0) {
+      console.log("User not found for partial payment notification");
+      return false;
+    }
+
+    const user = userResult[0];
+    const remainingAmount = (expectedAmount - receivedAmount).toFixed(8);
+
+    // Create in-app notification
+    await createNotification(
+      user.user_id,
+      NOTIFICATION_TYPES.PAYMENT_PARTIAL,
+      "Partial Payment Received",
+      `A partial payment of ${receivedAmount} ${currency} has been received. Expected: ${expectedAmount} ${currency}. Please send the remaining ${remainingAmount} ${currency} within ${gracePeriodMinutes} minutes to complete this payment.`,
+      {
+        tx_id: txId,
+        received_amount: receivedAmount,
+        expected_amount: expectedAmount,
+        remaining_amount: remainingAmount,
+        currency: currency,
+        address: address,
+        grace_period_minutes: gracePeriodMinutes,
+        expires_at: new Date(Date.now() + gracePeriodMinutes * 60 * 1000).toISOString(),
+        status: "partial",
+      },
+      customerData.company_id
+    );
+
+    // Send email notification
+    await sendPaymentPartialEmail(
+      user.email,
+      user.name,
+      user.company_name,
+      receivedAmount.toString(),
+      expectedAmount.toString(),
+      remainingAmount,
+      currency,
+      txId,
+      address,
+      gracePeriodMinutes
+    );
+
+    // Mark notification as sent in Redis (expires in 2 hours)
+    await setRedisItem(partialKey, {
+      sent: true,
+      sentAt: new Date().toISOString(),
+      txId,
+      address,
+      userId: user.user_id,
+      receivedAmount,
+      expectedAmount,
+    }, 7200);
+
+    console.log(`Partial payment notification sent for address: ${address}`);
+    return true;
+
+  } catch (error) {
+    console.error("Error sending partial payment notification:", error);
+    return false;
+  }
+};
+
+/**
+ * Send partial payment expired notification
+ * Called when the grace period expires for a partial payment
+ */
+export const sendPartialPaymentExpiredNotification = async (
+  address: string,
+  txId: string,
+  receivedAmount: number,
+  expectedAmount: number,
+  currency: string,
+  userId: number,
+  companyId: number,
+  status: "completed_partial" | "incomplete_expired"
+): Promise<boolean> => {
+  try {
+    // Get user and company details
+    const userResult = await sequelize.query(
+      `SELECT u.user_id, u.name, u.email, c.company_name
+       FROM tbl_user u
+       JOIN tbl_company c ON c.user_id = u.user_id
+       WHERE u.user_id = :userId`,
+      {
+        replacements: { userId },
+        type: QueryTypes.SELECT,
+      }
+    ) as any[];
+
+    if (!userResult || userResult.length === 0) {
+      console.log("User not found for partial expired notification");
+      return false;
+    }
+
+    const user = userResult[0];
+    const isCompleted = status === "completed_partial";
+
+    // Create in-app notification
+    await createNotification(
+      user.user_id,
+      NOTIFICATION_TYPES.PAYMENT_PARTIAL_EXPIRED,
+      isCompleted ? "Partial Payment Processed" : "Partial Payment Expired",
+      isCompleted
+        ? `Your partial payment of ${receivedAmount} ${currency} has been processed. The funds have been forwarded with adjusted fees.`
+        : `The grace period for your partial payment has expired. Received ${receivedAmount} of ${expectedAmount} ${currency}. The partial amount has been processed.`,
+      {
+        tx_id: txId,
+        received_amount: receivedAmount,
+        expected_amount: expectedAmount,
+        currency: currency,
+        address: address,
+        status: status,
+        processed_at: new Date().toISOString(),
+      },
+      companyId
+    );
+
+    // Send email notification
+    await sendPaymentPartialExpiredEmail(
+      user.email,
+      user.name,
+      user.company_name,
+      receivedAmount.toString(),
+      expectedAmount.toString(),
+      currency,
+      txId,
+      status
+    );
+
+    console.log(`Partial payment expired notification sent for address: ${address}, status: ${status}`);
+    return true;
+
+  } catch (error) {
+    console.error("Error sending partial payment expired notification:", error);
+    return false;
+  }
+};
+
 export default {
   sendPendingPaymentNotification,
   sendConfirmationProgressNotification,
+  sendPartialPaymentNotification,
+  sendPartialPaymentExpiredNotification,
   getTransactionConfirmations,
   CONFIRMATION_REQUIREMENTS,
   ESTIMATED_CONFIRMATION_TIMES,
