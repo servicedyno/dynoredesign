@@ -1403,6 +1403,31 @@ verifyCacheData();
                     f"Request failed: {str(e)}"
                 )
     
+    def test_payment_partial_notification_system(self):
+        """Test the newly implemented PAYMENT_PARTIAL notification system"""
+        print("\n=== Testing PAYMENT_PARTIAL Notification System ===")
+        
+        # First authenticate with provided credentials
+        if not self.authenticate_with_provided_credentials():
+            self.log_result(
+                "PAYMENT_PARTIAL System - Authentication", 
+                False, 
+                "Failed to authenticate with provided credentials"
+            )
+            return
+        
+        # Test 1: Verify new notification types are available
+        self.test_notification_types_payment_partial()
+        
+        # Test 2: Test notification preferences
+        self.test_notification_preferences_payment_partial()
+        
+        # Test 3: Verify webhook endpoints still work
+        self.test_webhook_endpoints_still_work()
+        
+        # Test 4: Test notification retrieval by type
+        self.test_notification_retrieval_by_type()
+
     def test_tatum_webhook_end_to_end(self):
         """Test Tatum webhook end-to-end flow for pending payment notifications"""
         print("\n=== Testing Tatum Webhook End-to-End Flow ===")
