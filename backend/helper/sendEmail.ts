@@ -336,6 +336,90 @@ Your security is our priority.`;
   }
 };
 
+/**
+ * Send pending payment notification email
+ * Sent when an unconfirmed transaction is detected on the blockchain
+ */
+const sendPaymentPendingEmail = async (
+  recipientEmail: string,
+  name: string,
+  companyName: string,
+  amount: string,
+  currency: string,
+  transactionId: string,
+  confirmationsRequired: number = 1
+) => {
+  try {
+    const subject = "⏳ Payment Pending Confirmation - DynoPay";
+    const message = `A new payment has been detected for your company ${companyName}!
+
+💰 Amount: ${amount} ${currency}
+📝 Transaction ID: ${transactionId}
+⏳ Status: Awaiting Confirmation
+
+The transaction has been broadcast to the ${currency} network and is waiting for blockchain confirmation. This typically takes:
+• BTC: 10-60 minutes (${confirmationsRequired} confirmation${confirmationsRequired > 1 ? 's' : ''} required)
+• ETH/ERC20: 1-5 minutes
+• TRX/TRC20: 1-3 minutes
+• LTC: 2-30 minutes
+• DOGE: 1-10 minutes
+
+We'll notify you once the payment is fully confirmed and credited to your wallet.
+
+You can track the transaction status in your DynoPay dashboard.`;
+
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name,
+      subject,
+      body: message,
+    });
+    return info;
+  } catch (e) {
+    console.log("Payment pending email error:", e);
+  }
+};
+
+/**
+ * Send payment confirming notification email
+ * Sent when a transaction is being confirmed (for chains requiring multiple confirmations)
+ */
+const sendPaymentConfirmingEmail = async (
+  recipientEmail: string,
+  name: string,
+  companyName: string,
+  amount: string,
+  currency: string,
+  transactionId: string,
+  currentConfirmations: number,
+  requiredConfirmations: number
+) => {
+  try {
+    const subject = `🔄 Payment Confirming (${currentConfirmations}/${requiredConfirmations}) - DynoPay`;
+    const message = `Good news! Your payment for ${companyName} is being confirmed.
+
+💰 Amount: ${amount} ${currency}
+📝 Transaction ID: ${transactionId}
+✅ Confirmations: ${currentConfirmations} of ${requiredConfirmations}
+
+${currentConfirmations >= requiredConfirmations 
+  ? "The payment has reached the required confirmations and will be credited shortly!"
+  : `${requiredConfirmations - currentConfirmations} more confirmation${requiredConfirmations - currentConfirmations > 1 ? 's' : ''} needed before the payment is credited.`}
+
+You can track the full status in your DynoPay dashboard.`;
+
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name,
+      subject,
+      body: message,
+    });
+    return info;
+  } catch (e) {
+    console.log("Payment confirming email error:", e);
+  }
+};
+
 export default sendEmail;
 export {
   sendEmail,
