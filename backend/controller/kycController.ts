@@ -3,14 +3,19 @@
  * Handles identity verification using Veriff API
  */
 
-import { Request, Response } from "express";
-import { QueryTypes } from "sequelize";
+import express from "express";
 import jwt from "jsonwebtoken";
+import { QueryTypes } from "sequelize";
 import sequelize from "../utils/dbInstance";
 import kycModel from "../models/kycModel";
 import { getVeriffService } from "../services/veriffService";
 import { createNotification, NOTIFICATION_TYPES } from "./notificationController";
 import { IUserType } from "../utils/types";
+import {
+  errorResponseHelper,
+  getErrorMessage,
+  successResponseHelper,
+} from "../helper";
 import {
   sendKYCRequiredEmail,
   sendKYCApprovedEmail,
@@ -21,9 +26,10 @@ import {
  * Get KYC status for authenticated user
  * GET /api/kyc/status
  */
-const getKYCStatus = async (req: Request, res: Response) => {
+const getKYCStatus = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  
   try {
-    const userData = jwt.decode(res.locals.token) as IUserType;
     const userId = userData.user_id;
     const companyId = req.query.company_id ? parseInt(req.query.company_id as string) : null;
 
@@ -59,8 +65,7 @@ const getKYCStatus = async (req: Request, res: Response) => {
     const needsSubmission = requiresKYC && (!kycRecord || kycRecord.get("status") === "pending");
     const canProcess = !requiresKYC || (kycRecord && kycRecord.get("status") === "approved");
 
-    res.status(200).json({
-      success: true,
+    return successResponseHelper(res, 200, "KYC status retrieved successfully", {
       kyc_record: kycRecord || null,
       total_volume: totalVolume,
       volume_threshold: volumeThreshold,
@@ -72,11 +77,8 @@ const getKYCStatus = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error("Get KYC status error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to get KYC status",
-      error: error.message,
-    });
+    const message = getErrorMessage(error);
+    return errorResponseHelper(res, 500, message);
   }
 };
 
@@ -84,7 +86,7 @@ const getKYCStatus = async (req: Request, res: Response) => {
  * Get KYC requirements/documents needed
  * GET /api/kyc/requirements
  */
-const getKYCRequirements = async (req: Request, res: Response) => {
+const getKYCRequirements = async (req: express.Request, res: express.Response) => {
   try {
     const requirements = {
       volume_threshold: 5000,
@@ -120,18 +122,14 @@ const getKYCRequirements = async (req: Request, res: Response) => {
       verification_partner: "Veriff",
     };
 
-    res.status(200).json({
-      success: true,
+    return successResponseHelper(res, 200, "KYC requirements retrieved successfully", {
       requirements,
     });
 
   } catch (error: any) {
     console.error("Get KYC requirements error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to get KYC requirements",
-      error: error.message,
-    });
+    const message = getErrorMessage(error);
+    return errorResponseHelper(res, 500, message);
   }
 };
 
@@ -139,9 +137,10 @@ const getKYCRequirements = async (req: Request, res: Response) => {
  * Start KYC verification session
  * POST /api/kyc/submit
  */
-const startKYCVerification = async (req: Request, res: Response) => {
+const startKYCVerification = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  
   try {
-    const userData = jwt.decode(res.locals.token) as IUserType;
     const userId = userData.user_id;
     const { company_id, first_name, last_name } = req.body;
 
@@ -156,10 +155,7 @@ const startKYCVerification = async (req: Request, res: Response) => {
       );
 
       if (company.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid company_id or company does not belong to this user",
-        });
+        return errorResponseHelper(res, 400, "Invalid company_id or company does not belong to this user");
       }
     }
 
@@ -173,10 +169,7 @@ const startKYCVerification = async (req: Request, res: Response) => {
     });
 
     if (existingKYC) {
-      return res.status(400).json({
-        success: false,
-        message: "KYC already approved for this user/company",
-      });
+      return errorResponseHelper(res, 400, "KYC already approved for this user/company");
     }
 
     // Get user details
@@ -190,10 +183,7 @@ const startKYCVerification = async (req: Request, res: Response) => {
 
     const user = userResult[0];
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return errorResponseHelper(res, 404, "User not found");
     }
 
     // Calculate current volume
@@ -261,9 +251,7 @@ const startKYCVerification = async (req: Request, res: Response) => {
       company_id
     );
 
-    res.status(200).json({
-      success: true,
-      message: "KYC verification session created successfully",
+    return successResponseHelper(res, 200, "KYC verification session created successfully", {
       verification: {
         session_id: session.verification.id,
         verification_url: session.verification.url,
@@ -274,11 +262,8 @@ const startKYCVerification = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error("Start KYC verification error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to start KYC verification",
-      error: error.message,
-    });
+    const message = getErrorMessage(error);
+    return errorResponseHelper(res, 500, message);
   }
 };
 
@@ -287,7 +272,7 @@ const startKYCVerification = async (req: Request, res: Response) => {
  * POST /api/kyc/webhook
  * Receives verification decision from Veriff
  */
-const handleVeriffWebhook = async (req: Request, res: Response) => {
+const handleVeriffWebhook = async (req: express.Request, res: express.Response) => {
   try {
     const signature = req.headers["x-hmac-signature"] as string;
     const payload = req.body;
@@ -298,10 +283,7 @@ const handleVeriffWebhook = async (req: Request, res: Response) => {
 
     if (!isValid) {
       console.error("Invalid Veriff webhook signature");
-      return res.status(401).json({
-        success: false,
-        message: "Invalid webhook signature",
-      });
+      return errorResponseHelper(res, 401, "Invalid webhook signature");
     }
 
     // Parse webhook payload
@@ -319,10 +301,7 @@ const handleVeriffWebhook = async (req: Request, res: Response) => {
 
     if (!kycRecord) {
       console.error("KYC record not found for verification:", verificationId);
-      return res.status(404).json({
-        success: false,
-        message: "KYC record not found",
-      });
+      return errorResponseHelper(res, 404, "KYC record not found");
     }
 
     // Update KYC record with decision
@@ -398,18 +377,12 @@ const handleVeriffWebhook = async (req: Request, res: Response) => {
       );
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Webhook processed successfully",
-    });
+    return successResponseHelper(res, 200, "Webhook processed successfully", {});
 
   } catch (error: any) {
     console.error("Veriff webhook error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to process webhook",
-      error: error.message,
-    });
+    const message = getErrorMessage(error);
+    return errorResponseHelper(res, 500, message);
   }
 };
 
