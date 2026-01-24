@@ -8,12 +8,6 @@ import kycController from "../controller/kycController";
 
 const router = Router();
 
-// Debug log to see what's in kycController
-console.log("KYC Controller keys:", Object.keys(kycController));
-console.log("getKYCStatus type:", typeof kycController.getKYCStatus);
-console.log("authMiddleware type:", typeof authMiddleware);
-console.log("getKYCStatus value:", kycController.getKYCStatus);
-
 /**
  * @route   GET /api/kyc/status
  * @desc    Get KYC status for authenticated user
