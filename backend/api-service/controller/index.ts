@@ -228,7 +228,7 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
         data: { qr_code, address, transaction_id },
       },
     } = await axios.post(
-      process.env.SERVER_URL + "/api/pay/createCryptoPayment",
+      getBackendURL() + "/api/pay/createCryptoPayment",
       payload,
       {
         headers: {
