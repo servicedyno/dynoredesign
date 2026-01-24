@@ -113,8 +113,8 @@ class PaymentThresholdRedisTester:
                     "DOGE": 5
                 }
                 
-                if 'data' in data and 'thresholds' in data['data']:
-                    thresholds = data['data']['thresholds']
+                if 'data' in data:
+                    thresholds = data['data']
                     
                     # Verify each expected threshold
                     all_correct = True
