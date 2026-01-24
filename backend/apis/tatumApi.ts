@@ -39,10 +39,7 @@ const encryptSymmetric = async (dataToEncrypt, keyId) => {
       private_key_id: process.env.PRIVATE_KEY_ID,
       private_key: privateKey,
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      auth_uri: "https://accounts.google.com/o/oauth2/auth",
-      token_uri: "https://oauth2.googleapis.com/token",
-      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-    },
+    } as any,
   });
 
   const keyName = client.cryptoKeyPath(projectId, locationId, keyRingId, keyId);
@@ -86,10 +83,7 @@ async function decryptSymmetric(ciphertext, keyId) {
       private_key_id: process.env.PRIVATE_KEY_ID,
       private_key: privateKey,
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      auth_uri: "https://accounts.google.com/o/oauth2/auth",
-      token_uri: "https://oauth2.googleapis.com/token",
-      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-    },
+    } as any,
   });
 
   const buffer = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0));
