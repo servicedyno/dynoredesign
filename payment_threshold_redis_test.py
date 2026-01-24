@@ -862,7 +862,7 @@ class PaymentThresholdRedisTester:
                 passed_items.append("Redis data setup working")
             elif "Webhook" in test_name and result['success']:
                 passed_items.append("Webhooks trigger notifications")
-            elif ("Phase 4" in test_name or "Payment Flow" in test_name) and result['success']:
+            elif ("Phase 4" in test_name and result['success']) or ("Payment Flow" in test_name and result['success']):
                 passed_items.append("Payment flow works end-to-end")
         
         # Remove duplicates
