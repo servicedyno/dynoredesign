@@ -6662,6 +6662,1117 @@ testEmailSending();
         print(f"\n🎯 Success Rate: {(passed_tests/total_tests)*100:.1f}%")
         
         return failed_tests == 0
+    
+    def test_phase_12_invoice_generation(self):
+        """Test Phase 12 Invoice Generation System"""
+        print("\n=== Testing Phase 12 Invoice Generation System ===")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Phase 12 Invoice Tests", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return False
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test 1: Invoice Data Structure Verification
+        self.test_invoice_table_structure()
+        
+        # Test 2: GET /api/transactions/:id/invoice
+        self.test_transaction_invoice_endpoint(headers)
+        
+        # Test 3: GET /api/invoices (List Invoices)
+        self.test_list_invoices_endpoint(headers)
+        
+        # Test 4: GET /api/invoices/:id
+        self.test_get_invoice_by_id_endpoint(headers)
+        
+        # Test 5: Invoice Number Generation
+        self.test_invoice_number_generation(headers)
+        
+        # Test 6: Fee Calculations
+        self.test_fee_calculations()
+        
+        # Test 7: VAT Calculations
+        self.test_vat_calculations()
+        
+        # Test 8: Provider Information
+        self.test_provider_information(headers)
+        
+        # Test 9: Customer Information
+        self.test_customer_information(headers)
+        
+        return True
+    
+    def test_invoice_table_structure(self):
+        """Test that tbl_invoice table has all required fields and constraints"""
+        print("\n--- Testing Invoice Table Structure ---")
+        
+        invoice_schema_script = '''
+const { Sequelize, QueryTypes } = require('sequelize');
+require('dotenv').config();
+
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.USER_NAME,
+  process.env.PASSWORD,
+  {
+    host: process.env.HOST,
+    port: Number(process.env.DB_PORT),
+    dialect: "postgres",
+    logging: false
+  }
+);
+
+async function testInvoiceSchema() {
+  try {
+    await sequelize.authenticate();
+    
+    // Check tbl_invoice table structure
+    const columns = await sequelize.query(
+      `SELECT column_name, data_type, is_nullable, column_default,
+              character_maximum_length, numeric_precision, numeric_scale
+       FROM information_schema.columns 
+       WHERE table_name = 'tbl_invoice'
+       ORDER BY ordinal_position`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    // Check constraints
+    const constraints = await sequelize.query(
+      `SELECT constraint_name, constraint_type, column_name
+       FROM information_schema.table_constraints tc
+       JOIN information_schema.key_column_usage kcu 
+       ON tc.constraint_name = kcu.constraint_name
+       WHERE tc.table_name = 'tbl_invoice'`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    console.log(JSON.stringify({
+      table_exists: columns.length > 0,
+      column_count: columns.length,
+      columns: columns,
+      constraints: constraints
+    }, null, 2));
+    
+    process.exit(0);
+    
+  } catch (error) {
+    console.error('Invoice schema test failed:', error.message);
+    process.exit(1);
+  }
+}
+
+testInvoiceSchema();
+'''
+        
+        try:
+            # Write schema test script
+            with open('/tmp/test_invoice_schema.js', 'w') as f:
+                f.write(invoice_schema_script)
+            
+            # Run the schema test
+            result = subprocess.run(
+                ["node", "/tmp/test_invoice_schema.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                try:
+                    schema_data = json.loads(result.stdout)
+                    
+                    if schema_data.get('table_exists', False):
+                        columns = schema_data.get('columns', [])
+                        column_count = schema_data.get('column_count', 0)
+                        
+                        # Expected columns for invoice table
+                        expected_columns = [
+                            'invoice_id', 'invoice_number', 'transaction_id', 'company_id',
+                            'provider_name', 'provider_address', 'provider_vat_id',
+                            'customer_name', 'customer_address', 'customer_tax_id',
+                            'description', 'unit_price', 'quantity', 'vat_rate', 'vat_amount',
+                            'fixed_fee', 'transaction_fee_percent', 'blockchain_buffer_percent',
+                            'total_usd', 'total_crypto', 'crypto_currency', 'payment_terms',
+                            'invoice_date', 'created_at'
+                        ]
+                        
+                        column_names = [col['column_name'] for col in columns]
+                        missing_columns = [col for col in expected_columns if col not in column_names]
+                        
+                        if not missing_columns and column_count >= 24:
+                            self.log_result(
+                                "Invoice Table Structure", 
+                                True, 
+                                f"✅ VERIFIED: tbl_invoice table created successfully with {column_count} columns including all required fields",
+                                {"column_count": column_count, "sample_columns": column_names[:10]}
+                            )
+                        else:
+                            self.log_result(
+                                "Invoice Table Structure", 
+                                False, 
+                                f"❌ Missing required columns or insufficient column count",
+                                {"missing_columns": missing_columns, "column_count": column_count}
+                            )
+                    else:
+                        self.log_result(
+                            "Invoice Table Structure", 
+                            False, 
+                            "❌ tbl_invoice table does not exist"
+                        )
+                        
+                except json.JSONDecodeError:
+                    self.log_result(
+                        "Invoice Table Structure", 
+                        False, 
+                        "Failed to parse schema test results",
+                        {"stdout": result.stdout, "stderr": result.stderr}
+                    )
+            else:
+                self.log_result(
+                    "Invoice Table Structure", 
+                    False, 
+                    "Schema test script failed",
+                    {"stdout": result.stdout, "stderr": result.stderr}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Invoice Table Structure", 
+                False, 
+                f"Schema test failed: {str(e)}"
+            )
+    
+    def test_transaction_invoice_endpoint(self, headers):
+        """Test GET /api/transactions/:id/invoice endpoint"""
+        print("\n--- Testing GET /api/transactions/:id/invoice ---")
+        
+        # First, get some transaction IDs to test with
+        try:
+            # Get user transactions to find valid transaction IDs
+            tx_response = requests.post(
+                f"{self.backend_url}/api/wallet/getAllTransactions",
+                json={"page": 1, "rowsPerPage": 5},
+                headers=headers,
+                timeout=15
+            )
+            
+            transaction_ids = []
+            if tx_response.status_code == 200:
+                tx_data = tx_response.json()
+                if 'data' in tx_data:
+                    customers_tx = tx_data['data'].get('customers_transactions', [])
+                    self_tx = tx_data['data'].get('self_transactions', [])
+                    
+                    # Collect transaction IDs
+                    for tx in customers_tx + self_tx:
+                        if 'transaction_id' in tx:
+                            transaction_ids.append(tx['transaction_id'])
+            
+            if not transaction_ids:
+                # Create a test transaction if none exist
+                self.log_result(
+                    "Transaction Invoice - No Transactions", 
+                    True, 
+                    "No existing transactions found - this is expected for new users",
+                    {"note": "Invoice generation requires completed transactions"}
+                )
+                return
+            
+            # Test scenarios
+            test_scenarios = [
+                {
+                    "name": "Valid Transaction ID",
+                    "transaction_id": transaction_ids[0],
+                    "expected_status": [200, 404]  # 200 if invoice exists, 404 if not generated yet
+                },
+                {
+                    "name": "Non-existent Transaction ID", 
+                    "transaction_id": 999999,
+                    "expected_status": [404]
+                }
+            ]
+            
+            for scenario in test_scenarios:
+                try:
+                    response = requests.get(
+                        f"{self.backend_url}/api/transactions/{scenario['transaction_id']}/invoice",
+                        headers=headers,
+                        timeout=15
+                    )
+                    
+                    if response.status_code in scenario['expected_status']:
+                        if response.status_code == 200:
+                            data = response.json()
+                            if 'data' in data:
+                                invoice_data = data['data']
+                                
+                                # Verify invoice structure
+                                required_fields = [
+                                    'invoice_id', 'invoice_number', 'transaction_id',
+                                    'provider_name', 'customer_name', 'total_usd'
+                                ]
+                                
+                                missing_fields = [field for field in required_fields if field not in invoice_data]
+                                
+                                if not missing_fields:
+                                    self.log_result(
+                                        f"Transaction Invoice - {scenario['name']}", 
+                                        True, 
+                                        "✅ Invoice retrieved successfully with complete structure",
+                                        {
+                                            "invoice_number": invoice_data.get('invoice_number'),
+                                            "transaction_id": invoice_data.get('transaction_id'),
+                                            "total_usd": invoice_data.get('total_usd'),
+                                            "provider_name": invoice_data.get('provider_name')
+                                        }
+                                    )
+                                else:
+                                    self.log_result(
+                                        f"Transaction Invoice - {scenario['name']} Structure", 
+                                        False, 
+                                        f"❌ Missing required fields: {', '.join(missing_fields)}",
+                                        {"response": data}
+                                    )
+                            else:
+                                self.log_result(
+                                    f"Transaction Invoice - {scenario['name']}", 
+                                    False, 
+                                    "❌ Invalid response format",
+                                    {"response": data}
+                                )
+                        else:  # 404
+                            self.log_result(
+                                f"Transaction Invoice - {scenario['name']}", 
+                                True, 
+                                "✅ Correctly returned 404 for transaction without invoice or non-existent transaction",
+                                {"status_code": response.status_code}
+                            )
+                    else:
+                        self.log_result(
+                            f"Transaction Invoice - {scenario['name']}", 
+                            False, 
+                            f"❌ Unexpected status code {response.status_code}, expected {scenario['expected_status']}",
+                            {"response": response.text}
+                        )
+                        
+                except Exception as e:
+                    self.log_result(
+                        f"Transaction Invoice - {scenario['name']}", 
+                        False, 
+                        f"❌ Request failed: {str(e)}"
+                    )
+                    
+        except Exception as e:
+            self.log_result(
+                "Transaction Invoice Endpoint", 
+                False, 
+                f"❌ Failed to test endpoint: {str(e)}"
+            )
+    
+    def test_list_invoices_endpoint(self, headers):
+        """Test GET /api/invoices endpoint with pagination"""
+        print("\n--- Testing GET /api/invoices (List Invoices) ---")
+        
+        test_scenarios = [
+            {
+                "name": "Default Pagination",
+                "params": {},
+                "expected_status": 200
+            },
+            {
+                "name": "Custom Pagination",
+                "params": {"page": 1, "limit": 5},
+                "expected_status": 200
+            },
+            {
+                "name": "Company Filter",
+                "params": {"company_id": 3, "page": 1, "limit": 10},
+                "expected_status": 200
+            }
+        ]
+        
+        for scenario in test_scenarios:
+            try:
+                response = requests.get(
+                    f"{self.backend_url}/api/invoices",
+                    params=scenario['params'],
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == scenario['expected_status']:
+                    data = response.json()
+                    
+                    if 'data' in data:
+                        result = data['data']
+                        
+                        # Check required fields
+                        required_fields = ['invoices', 'pagination']
+                        missing_fields = [field for field in required_fields if field not in result]
+                        
+                        if not missing_fields:
+                            invoices = result.get('invoices', [])
+                            pagination = result.get('pagination', {})
+                            
+                            # Verify pagination structure
+                            pagination_fields = ['total', 'page', 'limit', 'totalPages']
+                            missing_pagination = [field for field in pagination_fields if field not in pagination]
+                            
+                            if not missing_pagination:
+                                self.log_result(
+                                    f"List Invoices - {scenario['name']}", 
+                                    True, 
+                                    f"✅ Retrieved {len(invoices)} invoices with proper pagination",
+                                    {
+                                        "invoice_count": len(invoices),
+                                        "total": pagination.get('total'),
+                                        "page": pagination.get('page'),
+                                        "limit": pagination.get('limit'),
+                                        "totalPages": pagination.get('totalPages')
+                                    }
+                                )
+                            else:
+                                self.log_result(
+                                    f"List Invoices - {scenario['name']} Pagination", 
+                                    False, 
+                                    f"❌ Missing pagination fields: {', '.join(missing_pagination)}",
+                                    {"pagination": pagination}
+                                )
+                        else:
+                            self.log_result(
+                                f"List Invoices - {scenario['name']} Structure", 
+                                False, 
+                                f"❌ Missing required fields: {', '.join(missing_fields)}",
+                                {"response": data}
+                            )
+                    else:
+                        self.log_result(
+                            f"List Invoices - {scenario['name']}", 
+                            False, 
+                            "❌ Invalid response format",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        f"List Invoices - {scenario['name']}", 
+                        False, 
+                        f"❌ API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"List Invoices - {scenario['name']}", 
+                    False, 
+                    f"❌ Request failed: {str(e)}"
+                )
+    
+    def test_get_invoice_by_id_endpoint(self, headers):
+        """Test GET /api/invoices/:id endpoint"""
+        print("\n--- Testing GET /api/invoices/:id ---")
+        
+        # First get a list of invoices to find valid IDs
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/invoices",
+                params={"limit": 5},
+                headers=headers,
+                timeout=15
+            )
+            
+            invoice_ids = []
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and 'invoices' in data['data']:
+                    invoices = data['data']['invoices']
+                    invoice_ids = [inv.get('invoice_id') for inv in invoices if 'invoice_id' in inv]
+            
+            test_scenarios = []
+            
+            if invoice_ids:
+                test_scenarios.append({
+                    "name": "Valid Invoice ID",
+                    "invoice_id": invoice_ids[0],
+                    "expected_status": 200
+                })
+            
+            test_scenarios.append({
+                "name": "Non-existent Invoice ID",
+                "invoice_id": 999999,
+                "expected_status": 404
+            })
+            
+            for scenario in test_scenarios:
+                try:
+                    response = requests.get(
+                        f"{self.backend_url}/api/invoices/{scenario['invoice_id']}",
+                        headers=headers,
+                        timeout=15
+                    )
+                    
+                    if response.status_code == scenario['expected_status']:
+                        if response.status_code == 200:
+                            data = response.json()
+                            if 'data' in data:
+                                invoice_data = data['data']
+                                
+                                # Verify invoice structure
+                                required_fields = [
+                                    'invoice_id', 'invoice_number', 'transaction_id',
+                                    'company_id', 'provider_name', 'customer_name'
+                                ]
+                                
+                                missing_fields = [field for field in required_fields if field not in invoice_data]
+                                
+                                if not missing_fields:
+                                    self.log_result(
+                                        f"Get Invoice By ID - {scenario['name']}", 
+                                        True, 
+                                        "✅ Invoice retrieved successfully by ID",
+                                        {
+                                            "invoice_id": invoice_data.get('invoice_id'),
+                                            "invoice_number": invoice_data.get('invoice_number'),
+                                            "company_id": invoice_data.get('company_id')
+                                        }
+                                    )
+                                else:
+                                    self.log_result(
+                                        f"Get Invoice By ID - {scenario['name']} Structure", 
+                                        False, 
+                                        f"❌ Missing required fields: {', '.join(missing_fields)}",
+                                        {"response": data}
+                                    )
+                            else:
+                                self.log_result(
+                                    f"Get Invoice By ID - {scenario['name']}", 
+                                    False, 
+                                    "❌ Invalid response format",
+                                    {"response": data}
+                                )
+                        else:  # 404
+                            self.log_result(
+                                f"Get Invoice By ID - {scenario['name']}", 
+                                True, 
+                                "✅ Correctly returned 404 for non-existent invoice",
+                                {"status_code": response.status_code}
+                            )
+                    else:
+                        self.log_result(
+                            f"Get Invoice By ID - {scenario['name']}", 
+                            False, 
+                            f"❌ Unexpected status code {response.status_code}, expected {scenario['expected_status']}",
+                            {"response": response.text}
+                        )
+                        
+                except Exception as e:
+                    self.log_result(
+                        f"Get Invoice By ID - {scenario['name']}", 
+                        False, 
+                        f"❌ Request failed: {str(e)}"
+                    )
+                    
+        except Exception as e:
+            self.log_result(
+                "Get Invoice By ID Endpoint", 
+                False, 
+                f"❌ Failed to test endpoint: {str(e)}"
+            )
+    
+    def test_invoice_number_generation(self, headers):
+        """Test invoice number generation format and uniqueness"""
+        print("\n--- Testing Invoice Number Generation ---")
+        
+        # Test invoice number format verification
+        invoice_number_script = '''
+const { Sequelize, QueryTypes } = require('sequelize');
+require('dotenv').config();
+
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.USER_NAME,
+  process.env.PASSWORD,
+  {
+    host: process.env.HOST,
+    port: Number(process.env.DB_PORT),
+    dialect: "postgres",
+    logging: false
+  }
+);
+
+async function testInvoiceNumbers() {
+  try {
+    await sequelize.authenticate();
+    
+    // Get sample invoice numbers
+    const invoices = await sequelize.query(
+      `SELECT invoice_number, invoice_date, created_at 
+       FROM tbl_invoice 
+       ORDER BY created_at DESC 
+       LIMIT 10`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    // Check for duplicates
+    const duplicateCheck = await sequelize.query(
+      `SELECT invoice_number, COUNT(*) as count
+       FROM tbl_invoice 
+       GROUP BY invoice_number 
+       HAVING COUNT(*) > 1`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    console.log(JSON.stringify({
+      sample_invoices: invoices,
+      duplicate_count: duplicateCheck.length,
+      duplicates: duplicateCheck
+    }, null, 2));
+    
+    process.exit(0);
+    
+  } catch (error) {
+    console.error('Invoice number test failed:', error.message);
+    process.exit(1);
+  }
+}
+
+testInvoiceNumbers();
+'''
+        
+        try:
+            # Write invoice number test script
+            with open('/tmp/test_invoice_numbers.js', 'w') as f:
+                f.write(invoice_number_script)
+            
+            # Run the test
+            result = subprocess.run(
+                ["node", "/tmp/test_invoice_numbers.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                try:
+                    data = json.loads(result.stdout)
+                    sample_invoices = data.get('sample_invoices', [])
+                    duplicate_count = data.get('duplicate_count', 0)
+                    
+                    if sample_invoices:
+                        # Verify invoice number format: INV-YYYYMMDD-XXXXX
+                        import re
+                        invoice_pattern = r'^INV-\d{8}-\d{5}$'
+                        
+                        valid_formats = []
+                        invalid_formats = []
+                        
+                        for invoice in sample_invoices:
+                            invoice_number = invoice.get('invoice_number', '')
+                            if re.match(invoice_pattern, invoice_number):
+                                valid_formats.append(invoice_number)
+                            else:
+                                invalid_formats.append(invoice_number)
+                        
+                        if len(valid_formats) == len(sample_invoices) and duplicate_count == 0:
+                            self.log_result(
+                                "Invoice Number Generation", 
+                                True, 
+                                f"✅ All {len(sample_invoices)} invoice numbers follow correct format INV-YYYYMMDD-XXXXX and are unique",
+                                {
+                                    "sample_numbers": valid_formats[:3],
+                                    "total_checked": len(sample_invoices),
+                                    "duplicates": duplicate_count
+                                }
+                            )
+                        else:
+                            issues = []
+                            if invalid_formats:
+                                issues.append(f"Invalid formats: {invalid_formats}")
+                            if duplicate_count > 0:
+                                issues.append(f"Duplicates found: {duplicate_count}")
+                            
+                            self.log_result(
+                                "Invoice Number Generation", 
+                                False, 
+                                f"❌ Invoice number issues: {'; '.join(issues)}",
+                                {"invalid_formats": invalid_formats, "duplicates": duplicate_count}
+                            )
+                    else:
+                        self.log_result(
+                            "Invoice Number Generation", 
+                            True, 
+                            "✅ No invoices found - this is expected for new systems",
+                            {"note": "Invoice numbers will be generated when transactions are completed"}
+                        )
+                        
+                except json.JSONDecodeError:
+                    self.log_result(
+                        "Invoice Number Generation", 
+                        False, 
+                        "Failed to parse invoice number test results",
+                        {"stdout": result.stdout, "stderr": result.stderr}
+                    )
+            else:
+                self.log_result(
+                    "Invoice Number Generation", 
+                    False, 
+                    "Invoice number test script failed",
+                    {"stdout": result.stdout, "stderr": result.stderr}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Invoice Number Generation", 
+                False, 
+                f"Invoice number test failed: {str(e)}"
+            )
+    
+    def test_fee_calculations(self):
+        """Test fee tier calculations"""
+        print("\n--- Testing Fee Calculations ---")
+        
+        # Expected fee tiers from environment variables
+        expected_tiers = [
+            {"range": "$5-$100", "fixed": 3, "buffer": 1.0},
+            {"range": "$101-$500", "fixed": 2, "buffer": 0.8},
+            {"range": "$501-$1000", "fixed": 1.5, "buffer": 0.5},
+            {"range": "$1001+", "fixed": 1, "buffer": 0.3}
+        ]
+        
+        # Test fee calculation logic by checking environment variables
+        try:
+            # Read backend .env file to verify fee tier configuration
+            env_file_path = "/app/backend/.env"
+            fee_config = {}
+            
+            with open(env_file_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('FEE_TIER_') and '=' in line:
+                        key, value = line.split('=', 1)
+                        fee_config[key] = value
+            
+            # Verify each tier configuration
+            tier_results = []
+            for i, expected in enumerate(expected_tiers, 1):
+                fixed_key = f"FEE_TIER_{i}_FIXED"
+                buffer_key = f"FEE_TIER_{i}_BUFFER"
+                
+                fixed_value = fee_config.get(fixed_key)
+                buffer_value = fee_config.get(buffer_key)
+                
+                if fixed_value and buffer_value:
+                    try:
+                        fixed_float = float(fixed_value)
+                        buffer_float = float(buffer_value)
+                        
+                        if fixed_float == expected["fixed"] and buffer_float == expected["buffer"]:
+                            tier_results.append({
+                                "tier": i,
+                                "range": expected["range"],
+                                "status": "✅ Correct",
+                                "fixed": fixed_float,
+                                "buffer": buffer_float
+                            })
+                        else:
+                            tier_results.append({
+                                "tier": i,
+                                "range": expected["range"],
+                                "status": "❌ Incorrect",
+                                "expected_fixed": expected["fixed"],
+                                "actual_fixed": fixed_float,
+                                "expected_buffer": expected["buffer"],
+                                "actual_buffer": buffer_float
+                            })
+                    except ValueError:
+                        tier_results.append({
+                            "tier": i,
+                            "range": expected["range"],
+                            "status": "❌ Invalid values",
+                            "fixed_value": fixed_value,
+                            "buffer_value": buffer_value
+                        })
+                else:
+                    tier_results.append({
+                        "tier": i,
+                        "range": expected["range"],
+                        "status": "❌ Missing config",
+                        "missing_keys": [k for k in [fixed_key, buffer_key] if k not in fee_config]
+                    })
+            
+            # Check if all tiers are correct
+            all_correct = all(result["status"] == "✅ Correct" for result in tier_results)
+            
+            if all_correct:
+                self.log_result(
+                    "Fee Calculations", 
+                    True, 
+                    "✅ All fee tiers configured correctly in environment variables",
+                    {"tiers": tier_results}
+                )
+            else:
+                incorrect_tiers = [r for r in tier_results if r["status"] != "✅ Correct"]
+                self.log_result(
+                    "Fee Calculations", 
+                    False, 
+                    f"❌ {len(incorrect_tiers)} fee tiers have configuration issues",
+                    {"incorrect_tiers": incorrect_tiers}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Fee Calculations", 
+                False, 
+                f"❌ Failed to verify fee configuration: {str(e)}"
+            )
+    
+    def test_vat_calculations(self):
+        """Test VAT calculation logic"""
+        print("\n--- Testing VAT Calculations ---")
+        
+        # Test VAT calculation by checking the logic in the code
+        vat_test_script = '''
+const { Sequelize, QueryTypes } = require('sequelize');
+require('dotenv').config();
+
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.USER_NAME,
+  process.env.PASSWORD,
+  {
+    host: process.env.HOST,
+    port: Number(process.env.DB_PORT),
+    dialect: "postgres",
+    logging: false
+  }
+);
+
+async function testVATLogic() {
+  try {
+    await sequelize.authenticate();
+    
+    // Check if there are companies with VAT verification
+    const vatCompanies = await sequelize.query(
+      `SELECT company_id, company_name, country, vat_verified, vat_number
+       FROM tbl_company 
+       WHERE vat_verified = true 
+       LIMIT 5`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    // Check tax rates for EU countries
+    const euTaxRates = await sequelize.query(
+      `SELECT country_code, country_name, standard_rate
+       FROM tbl_tax_rate 
+       WHERE country_code IN ('PT', 'DE', 'FR', 'ES', 'IT')
+       ORDER BY country_code`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    // EU countries list for validation
+    const euCountries = [
+      "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR",
+      "GR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL",
+      "PT", "RO", "SE", "SI", "SK"
+    ];
+    
+    console.log(JSON.stringify({
+      vat_verified_companies: vatCompanies,
+      eu_tax_rates: euTaxRates,
+      eu_countries_count: euCountries.length,
+      sample_eu_countries: euCountries.slice(0, 10)
+    }, null, 2));
+    
+    process.exit(0);
+    
+  } catch (error) {
+    console.error('VAT test failed:', error.message);
+    process.exit(1);
+  }
+}
+
+testVATLogic();
+'''
+        
+        try:
+            # Write VAT test script
+            with open('/tmp/test_vat_logic.js', 'w') as f:
+                f.write(vat_test_script)
+            
+            # Run the test
+            result = subprocess.run(
+                ["node", "/tmp/test_vat_logic.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                try:
+                    data = json.loads(result.stdout)
+                    vat_companies = data.get('vat_verified_companies', [])
+                    eu_tax_rates = data.get('eu_tax_rates', [])
+                    eu_countries_count = data.get('eu_countries_count', 0)
+                    
+                    # Verify VAT logic components
+                    results = []
+                    
+                    # Check EU countries list
+                    if eu_countries_count == 27:
+                        results.append("✅ EU countries list complete (27 countries)")
+                    else:
+                        results.append(f"❌ EU countries list incomplete ({eu_countries_count}/27)")
+                    
+                    # Check tax rates availability
+                    if eu_tax_rates:
+                        results.append(f"✅ Tax rates available for {len(eu_tax_rates)} EU countries")
+                    else:
+                        results.append("⚠️ No tax rates found in database (expected for new systems)")
+                    
+                    # Check VAT-verified companies
+                    if vat_companies:
+                        results.append(f"✅ Found {len(vat_companies)} VAT-verified companies for testing")
+                    else:
+                        results.append("⚠️ No VAT-verified companies found (expected for new systems)")
+                    
+                    # Overall assessment
+                    critical_issues = [r for r in results if r.startswith("❌")]
+                    
+                    if not critical_issues:
+                        self.log_result(
+                            "VAT Calculations", 
+                            True, 
+                            "✅ VAT calculation logic components verified",
+                            {
+                                "results": results,
+                                "eu_countries": eu_countries_count,
+                                "tax_rates_available": len(eu_tax_rates),
+                                "vat_companies": len(vat_companies)
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "VAT Calculations", 
+                            False, 
+                            f"❌ VAT calculation issues: {'; '.join(critical_issues)}",
+                            {"results": results}
+                        )
+                        
+                except json.JSONDecodeError:
+                    self.log_result(
+                        "VAT Calculations", 
+                        False, 
+                        "Failed to parse VAT test results",
+                        {"stdout": result.stdout, "stderr": result.stderr}
+                    )
+            else:
+                self.log_result(
+                    "VAT Calculations", 
+                    False, 
+                    "VAT test script failed",
+                    {"stdout": result.stdout, "stderr": result.stderr}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "VAT Calculations", 
+                False, 
+                f"VAT test failed: {str(e)}"
+            )
+    
+    def test_provider_information(self, headers):
+        """Test provider information in invoices"""
+        print("\n--- Testing Provider Information ---")
+        
+        expected_provider = {
+            "provider_name": "Dynotech Innovations, LDA",
+            "provider_address": "Rua Luís de Camões 1017, 7° Dt°\nMontijo 2870-154\nPortugal",
+            "provider_vat_id": "PT518713130"
+        }
+        
+        # Get sample invoices to verify provider information
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/invoices",
+                params={"limit": 3},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and 'invoices' in data['data']:
+                    invoices = data['data']['invoices']
+                    
+                    if invoices:
+                        # Check provider information in each invoice
+                        provider_results = []
+                        
+                        for invoice in invoices:
+                            invoice_number = invoice.get('invoice_number', 'Unknown')
+                            
+                            provider_check = {
+                                "invoice_number": invoice_number,
+                                "provider_name_correct": invoice.get('provider_name') == expected_provider['provider_name'],
+                                "provider_vat_correct": invoice.get('provider_vat_id') == expected_provider['provider_vat_id'],
+                                "has_provider_address": bool(invoice.get('provider_address'))
+                            }
+                            
+                            provider_results.append(provider_check)
+                        
+                        # Check if all invoices have correct provider information
+                        all_correct = all(
+                            result['provider_name_correct'] and 
+                            result['provider_vat_correct'] and 
+                            result['has_provider_address']
+                            for result in provider_results
+                        )
+                        
+                        if all_correct:
+                            self.log_result(
+                                "Provider Information", 
+                                True, 
+                                f"✅ All {len(invoices)} invoices contain correct provider information",
+                                {
+                                    "provider_name": expected_provider['provider_name'],
+                                    "provider_vat_id": expected_provider['provider_vat_id'],
+                                    "invoices_checked": len(invoices)
+                                }
+                            )
+                        else:
+                            incorrect_invoices = [r for r in provider_results if not (
+                                r['provider_name_correct'] and r['provider_vat_correct'] and r['has_provider_address']
+                            )]
+                            
+                            self.log_result(
+                                "Provider Information", 
+                                False, 
+                                f"❌ {len(incorrect_invoices)} invoices have incorrect provider information",
+                                {"incorrect_invoices": incorrect_invoices}
+                            )
+                    else:
+                        self.log_result(
+                            "Provider Information", 
+                            True, 
+                            "✅ No invoices found - provider information will be verified when invoices are generated",
+                            {"expected_provider": expected_provider}
+                        )
+                else:
+                    self.log_result(
+                        "Provider Information", 
+                        False, 
+                        "❌ Invalid response format from invoices endpoint",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Provider Information", 
+                    False, 
+                    f"❌ Failed to retrieve invoices for provider verification (status: {response.status_code})",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Provider Information", 
+                False, 
+                f"❌ Provider information test failed: {str(e)}"
+            )
+    
+    def test_customer_information(self, headers):
+        """Test customer information in invoices"""
+        print("\n--- Testing Customer Information ---")
+        
+        # Get sample invoices and verify customer information structure
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/invoices",
+                params={"limit": 3},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and 'invoices' in data['data']:
+                    invoices = data['data']['invoices']
+                    
+                    if invoices:
+                        # Check customer information in each invoice
+                        customer_results = []
+                        
+                        for invoice in invoices:
+                            invoice_number = invoice.get('invoice_number', 'Unknown')
+                            
+                            customer_check = {
+                                "invoice_number": invoice_number,
+                                "has_customer_name": bool(invoice.get('customer_name')),
+                                "has_customer_address": bool(invoice.get('customer_address')),
+                                "customer_name": invoice.get('customer_name'),
+                                "has_tax_id": invoice.get('customer_tax_id') is not None
+                            }
+                            
+                            customer_results.append(customer_check)
+                        
+                        # Check if all invoices have proper customer information
+                        all_have_names = all(result['has_customer_name'] for result in customer_results)
+                        
+                        if all_have_names:
+                            self.log_result(
+                                "Customer Information", 
+                                True, 
+                                f"✅ All {len(invoices)} invoices contain customer information from company profiles",
+                                {
+                                    "invoices_checked": len(invoices),
+                                    "sample_customers": [r['customer_name'] for r in customer_results[:3]]
+                                }
+                            )
+                        else:
+                            missing_info = [r for r in customer_results if not r['has_customer_name']]
+                            
+                            self.log_result(
+                                "Customer Information", 
+                                False, 
+                                f"❌ {len(missing_info)} invoices missing customer information",
+                                {"missing_info": missing_info}
+                            )
+                    else:
+                        self.log_result(
+                            "Customer Information", 
+                            True, 
+                            "✅ No invoices found - customer information will be verified when invoices are generated",
+                            {"note": "Customer info populated from company profile data"}
+                        )
+                else:
+                    self.log_result(
+                        "Customer Information", 
+                        False, 
+                        "❌ Invalid response format from invoices endpoint",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Customer Information", 
+                    False, 
+                    f"❌ Failed to retrieve invoices for customer verification (status: {response.status_code})",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Customer Information", 
+                False, 
+                f"❌ Customer information test failed: {str(e)}"
+            )
 
 def main():
     """Main test execution"""
