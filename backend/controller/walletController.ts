@@ -2991,13 +2991,19 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
       cryptocurrency: txData.crypto_currency || txData.wallet_type || txData.base_currency,
       amount: txData.crypto_amount || txData.base_amount,
       usd_value: txData.usd_value || txData.base_amount,
-      fees: {
+      
+      // Fees - both formats for backward compatibility
+      fees: totalFees,  // Backward compatible: single number
+      fees_breakdown: {  // New: detailed breakdown
         total: totalFees,
         transaction_fee: txData.transaction_fee || 0,
         fixed_fee: txData.fixed_fee || 0,
         blockchain_buffer: txData.blockchain_buffer_fee || 0,
       },
-      confirmations: {
+      
+      // Confirmations - both formats
+      confirmations: txData.confirmations || 0,  // Backward compatible: single number
+      confirmations_detail: {  // New: detailed
         current: txData.confirmations || 0,
         required: txData.required_confirmations || 6,
       },
@@ -3005,13 +3011,14 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
       // Transaction Hashes
       incoming_transaction_id: txData.incoming_tx_hash || txData.transaction_reference,
       outgoing_transaction_id: txData.outgoing_tx_hash || null,
+      transaction_reference: txData.transaction_reference,  // Backward compatible
       
       // Callback Information
       callback_url: txData.callback_url || null,
       webhook_url: txData.webhook_url || null,
       webhook_response: txData.webhook_response ? JSON.parse(txData.webhook_response) : null,
       
-      // Company & Customer Details
+      // Company & Customer Details - both formats
       company: {
         company_id: txData.tx_company_id || txData.company_id,
         company_name: txData.company_name,
@@ -3021,6 +3028,12 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
         customer_name: txData.customer_name,
         customer_email: txData.customer_email,
       },
+      // Backward compatible flat fields
+      company_id: txData.tx_company_id || txData.company_id,
+      company_name: txData.company_name,
+      customer_id: txData.customer_id,
+      customer_name: txData.customer_name,
+      customer_email: txData.customer_email,
       
       // Additional Details
       wallet_address: txData.wallet_address,
@@ -3028,6 +3041,7 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
       transaction_type: txData.transaction_type,
       transaction_details: txData.transaction_details,
       base_currency: txData.base_currency,
+      base_amount: txData.base_amount,  // Backward compatible
     };
 
     successResponseHelper(res, 200, "Transaction details retrieved", response);
