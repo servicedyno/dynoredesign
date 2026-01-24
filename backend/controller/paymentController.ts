@@ -1934,10 +1934,29 @@ const createPaymentLink = async (
     expire,
     callback_url,
     redirect_url,
-    webhook_url
+    webhook_url,
+    company_id  // Phase 10 Fix: Accept company_id for multi-tenant isolation
   } = req.body;
   
   try {
+    // Phase 10 Fix: Validate company_id if provided
+    if (company_id) {
+      const companyExists = await companyModel.findOne({
+        where: {
+          company_id,
+          user_id: userData.user_id,
+        },
+      });
+      
+      if (!companyExists) {
+        return errorResponseHelper(
+          res,
+          400,
+          "Invalid company_id or company does not belong to this user"
+        );
+      }
+    }
+    
     const uniqueRef = crypto.randomBytes(24).toString("hex");
     console.log("userData============>", userData);
     
@@ -1961,6 +1980,7 @@ const createPaymentLink = async (
       base_amount: amount,
       base_currency: base_currency,
       user_id: userData.user_id,
+      company_id: company_id || null,  // Phase 10 Fix: Include company_id
       payment_link: process.env.CHECKOUT_URL + "pay?d=" + uniqueRef,
       description: description || null,
       expires_at: expires_at,
