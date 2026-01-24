@@ -287,7 +287,7 @@ const startKYCVerification = async (req: Request, res: Response) => {
  * POST /api/kyc/webhook
  * Receives verification decision from Veriff
  */
-export const handleVeriffWebhook = async (req: Request, res: Response) => {
+const handleVeriffWebhook = async (req: Request, res: Response) => {
   try {
     const signature = req.headers["x-hmac-signature"] as string;
     const payload = req.body;
