@@ -1,142 +1,31 @@
+#!/usr/bin/env python3
 """
-FastAPI wrapper for Node.js TypeScript backend.
-This wrapper spawns the actual Node.js server on a different port
-and proxies requests to it.
+Minimal launcher for Node.js TypeScript backend.
+This replaces the Python process with Node.js using exec.
+Required because supervisor config is readonly and expects a Python entry point.
 """
 
-import subprocess
 import os
-import signal
 import sys
-import time
-import threading
-import atexit
-from fastapi import FastAPI, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
-import httpx
-from contextlib import asynccontextmanager
-from dotenv import load_dotenv
 
-# Load .env file so environment variables are available to Node.js subprocess
-load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+# Change to backend directory
+os.chdir('/app/backend')
 
-# Node.js server will run on this internal port
-NODE_PORT = 3300
-NODE_PROCESS = None
+# Set PORT to 8001 (what supervisor expects)
+os.environ['PORT'] = '8001'
 
+# Load .env file manually for Node.js
+from dotenv import dotenv_values
+env_path = '/app/backend/.env'
+if os.path.exists(env_path):
+    env_vars = dotenv_values(env_path)
+    for key, value in env_vars.items():
+        if value is not None:
+            os.environ[key] = value
 
-def start_node_server():
-    """Start the Node.js TypeScript server as a subprocess."""
-    global NODE_PROCESS
-    
-    env = os.environ.copy()
-    env['PORT'] = str(NODE_PORT)
-    
-    NODE_PROCESS = subprocess.Popen(
-        ['/app/backend/node_modules/.bin/ts-node', '--transpile-only', 'server.ts'],
-        cwd='/app/backend',
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        bufsize=1,
-        universal_newlines=True
-    )
-    
-    # Log output in a separate thread
-    def log_output():
-        for line in NODE_PROCESS.stdout:
-            print(f"[Node.js] {line.strip()}")
-    
-    log_thread = threading.Thread(target=log_output, daemon=True)
-    log_thread.start()
-    
-    # Wait for server to start
-    time.sleep(5)
-    print(f"Node.js server started on port {NODE_PORT}")
-
-
-def stop_node_server():
-    """Stop the Node.js server."""
-    global NODE_PROCESS
-    if NODE_PROCESS:
-        NODE_PROCESS.terminate()
-        NODE_PROCESS.wait()
-        print("Node.js server stopped")
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Startup and shutdown events."""
-    # Start Node.js server
-    start_node_server()
-    yield
-    # Cleanup
-    stop_node_server()
-
-
-# Register cleanup handler
-atexit.register(stop_node_server)
-
-app = FastAPI(lifespan=lifespan)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# Replace this process with Node.js ts-node
+# This completely replaces Python with Node.js - no proxy, no subprocess
+os.execvp(
+    '/app/backend/node_modules/.bin/ts-node',
+    ['ts-node', '--transpile-only', 'server.ts']
 )
-
-
-@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
-async def proxy(request: Request, path: str):
-    """Proxy all requests to the Node.js server."""
-    # Build the target URL
-    target_url = f"http://127.0.0.1:{NODE_PORT}/{path}"
-    
-    # Get query parameters
-    if request.query_params:
-        target_url += f"?{request.query_params}"
-    
-    # Get request body
-    body = await request.body()
-    
-    # Forward headers (excluding host)
-    headers = dict(request.headers)
-    headers.pop('host', None)
-    
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        try:
-            response = await client.request(
-                method=request.method,
-                url=target_url,
-                headers=headers,
-                content=body,
-            )
-            
-            # Return response with same status and headers
-            excluded_headers = {'content-encoding', 'content-length', 'transfer-encoding', 'connection'}
-            response_headers = {
-                k: v for k, v in response.headers.items()
-                if k.lower() not in excluded_headers
-            }
-            
-            return Response(
-                content=response.content,
-                status_code=response.status_code,
-                headers=response_headers,
-                media_type=response.headers.get('content-type')
-            )
-        except httpx.ConnectError:
-            return Response(
-                content='{"error": "Backend service unavailable"}',
-                status_code=503,
-                media_type='application/json'
-            )
-        except Exception as e:
-            return Response(
-                content=f'{{"error": "{str(e)}"}}',
-                status_code=500,
-                media_type='application/json'
-            )
