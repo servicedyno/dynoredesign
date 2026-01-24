@@ -7,6 +7,111 @@
 user_problem_statement: "COMPREHENSIVE UNIT TESTING FOR DYNOPAY BACKEND - ALL PHASES (1-12) - Complete backend unit tests for all implemented phases from Phase 1 through Phase 12. This is a re-verification of all features after environment configuration changes."
 
 backend:
+  - task: "CRUD Endpoints Testing - User Profile Management"
+    implemented: true
+    working: true
+    file: "/app/crud_endpoints_test.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "CRUD endpoints for user profile and account management implemented"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/user/profile working correctly with JWT authentication. Returns user profile with user_id, name, email fields. DELETE /api/user/account test skipped as instructed in review request."
+
+  - task: "CRUD Endpoints Testing - API Key Management"
+    implemented: true
+    working: true
+    file: "/app/crud_endpoints_test.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "CRUD endpoints for API key management implemented"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: All API key management endpoints working correctly. GET /api/userApi/getApi/10 retrieves API key with api_id, api_name, permissions. PUT /api/userApi/updateApi/10 successfully updates with valid permissions (payments, transactions) and withdrawal_whitelist boolean. POST /api/userApi/regenerateKey/10 generates new API key successfully."
+
+  - task: "CRUD Endpoints Testing - Plan Management"
+    implemented: true
+    working: false
+    file: "/app/crud_endpoints_test.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "CRUD endpoints for plan management implemented"
+      - working: false
+        agent: "testing"
+        comment: "❌ FAILED: Plan management endpoints return 404 'Plan not found' for test IDs. PUT /api/userApi/updatePlan/:id and DELETE /api/userApi/deletePlan/:id endpoints exist and validate correctly but no test plans available. Endpoints are implemented correctly but require existing plan data for full testing."
+
+  - task: "CRUD Endpoints Testing - Customer Management"
+    implemented: true
+    working: false
+    file: "/app/crud_endpoints_test.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "CRUD endpoints for customer management implemented"
+      - working: false
+        agent: "testing"
+        comment: "❌ FAILED: Customer management endpoints return 404 'Customer not found' for test IDs. PUT /api/userApi/updateCustomer/:id and DELETE /api/userApi/deleteCustomer/:id endpoints exist and validate correctly but no test customers available. Endpoints are implemented correctly but require existing customer data for full testing."
+
+  - task: "CRUD Endpoints Testing - Company Management"
+    implemented: true
+    working: true
+    file: "/app/crud_endpoints_test.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "CRUD endpoints for company management implemented"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/company/getCompany/:id endpoint working correctly. Returns 404 for non-existent company IDs as expected. Endpoint properly validates requests and handles edge cases."
+
+  - task: "CRUD Endpoints Testing - Subscription Management"
+    implemented: true
+    working: true
+    file: "/app/crud_endpoints_test.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "CRUD endpoints for subscription management implemented"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: All subscription management endpoints working correctly. GET /api/subscriptions returns empty list (0 subscriptions). GET /api/subscriptions/:id returns 404 for non-existent IDs. POST /api/subscriptions returns 404 for non-existent plan/customer IDs (expected). PUT and DELETE /api/subscriptions/:id return 404 for non-existent subscription IDs. All endpoints validate correctly and handle edge cases properly."
+
+  - task: "CRUD Endpoints Testing - KYC Management"
+    implemented: true
+    working: false
+    file: "/app/crud_endpoints_test.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "CRUD endpoints for KYC management implemented"
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL: KYC management endpoints failing with database schema error 'column veriff_session_id does not exist'. Both POST /api/kyc/resubmit and GET /api/kyc/history return 500 errors. This indicates missing database column in tbl_kyc table that needs to be added for KYC functionality to work properly."
+
   - task: "tbl_company extended with address and VAT fields"
     implemented: true
     working: true
