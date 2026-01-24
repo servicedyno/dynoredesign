@@ -11,7 +11,7 @@ import redis
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://f64baf90-751f-40ed-b9cd-9efa6e941a02.preview.emergentagent.com/api"
+BACKEND_URL = "http://localhost:3300/api"  # Local Node.js backend
 REDIS_URL = "redis://default:fgPwEPwoyHhbAeDhPJakxOByMoNyUSpw@crossover.proxy.rlwy.net:37463"
 
 def setup_redis_connection():
