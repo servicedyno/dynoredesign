@@ -86,7 +86,7 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 - **Complete API documentation** with 139 documented endpoints
 - **Path Definition Files** created in `/app/backend/swagger/paths/`:
   - `user.ts` - User Management (16 endpoints)
-  - `payment.ts` - Payment Processing (12 endpoints)
+  - `payment.ts` - Payment Processing (17 endpoints) **with realistic request/response examples**
   - `wallet.ts` - Wallet Management (20 endpoints)
   - `admin.ts` - Admin Operations (15 endpoints)
   - `subscription.ts` - Subscriptions (5 endpoints)
@@ -96,6 +96,7 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 - **Swagger UI**: Available at `/api/docs`
 - **OpenAPI Spec**: Available at `/api/docs.json`
 - **Coverage improved**: From 38% to 100%
+- **Payment Examples Added**: E-commerce checkout, invoice payment, crypto payment flows with multiple scenarios
 
 ---
 
