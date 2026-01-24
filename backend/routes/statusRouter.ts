@@ -11,6 +11,9 @@ statusRouter.get("/", statusController.getStatus);
 // GET /api/status/health - Simple health check
 statusRouter.get("/health", statusController.healthCheck);
 
+// POST /api/status/check - Manually trigger health checks
+statusRouter.post("/check", statusController.triggerHealthCheck);
+
 // GET /api/status/services - All services status
 statusRouter.get("/services", statusController.getServicesStatus);
 
