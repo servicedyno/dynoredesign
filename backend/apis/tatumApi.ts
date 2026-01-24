@@ -10,13 +10,15 @@ import axios from "axios";
 import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 import { KeyManagementServiceClient } from "@google-cloud/kms";
 import tronweb from "tronweb";
-import CRC32 from "crc-32";
+import { Crc32c } from "@aws-crypto/crc32c";
 
-// CRC32C helper using crc-32 library (JavaScript-only, no native dependencies)
+// CRC32C helper using AWS Crypto library (pure JavaScript, works on all platforms)
 const crc32c = {
   calculate: (data: Buffer | string): number => {
     const buffer = typeof data === 'string' ? Buffer.from(data) : data;
-    return CRC32.buf(buffer) >>> 0; // Convert to unsigned
+    const crc = new Crc32c();
+    crc.update(buffer);
+    return Number(crc.digest());
   }
 };
 
