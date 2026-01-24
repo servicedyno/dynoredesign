@@ -19,6 +19,8 @@ userRouter.post("/google-signin", userController.googleSignIn);
 
 // Profile endpoints (requires auth)
 userRouter.get("/profile", authMiddleware, userController.getProfile);
+userRouter.put("/profile", authMiddleware, userController.updateProfile);
+userRouter.put("/email", authMiddleware, userController.changeEmail);
 
 userRouter.put(
   "/updateUser",
