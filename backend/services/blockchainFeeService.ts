@@ -371,14 +371,18 @@ export const calculateCustomerPaymentAmount = async (
   // Convert base amount to crypto
   const baseAmountCrypto = baseAmountUSD / cryptoPrice;
   
+  // Ensure fee values are numbers (in case they come from Redis as strings)
+  const feeNative = parseFloat(String(fee.feeInNative)) || 0;
+  const feeUSD = parseFloat(String(fee.feeInUSD)) || 0;
+  
   // Add blockchain fee to total
-  const totalAmountCrypto = baseAmountCrypto + fee.feeInNative;
-  const totalAmountUSD = baseAmountUSD + fee.feeInUSD;
+  const totalAmountCrypto = baseAmountCrypto + feeNative;
+  const totalAmountUSD = baseAmountUSD + feeUSD;
 
   return {
     baseAmountCrypto,
-    blockchainFeeNative: fee.feeInNative,
-    blockchainFeeUSD: fee.feeInUSD,
+    blockchainFeeNative: feeNative,
+    blockchainFeeUSD: feeUSD,
     totalAmountCrypto,
     totalAmountUSD,
   };
