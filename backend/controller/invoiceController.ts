@@ -9,9 +9,10 @@ import {
 import { IUserType } from "../utils/types";
 import invoiceModel from "../models/invoiceModel";
 import taxRateModel from "../models/taxRateModel";
-import { userTransactionModel, companyModel } from "../models";
+import { userTransactionModel, companyModel, userModel } from "../models";
 import { apiLogger } from "../utils/loggers";
 import { generateInvoicePDF } from "../services/pdfService";
+import { sendInvoiceGeneratedEmail } from "../services/emailService";
 
 /**
  * Generate invoice number
