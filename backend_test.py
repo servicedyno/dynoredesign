@@ -3497,30 +3497,58 @@ try {
                 if response.status_code == 200:
                     data = response.json()
                     if 'data' in data:
-                        api_keys = data['data']
+                        api_data = data['data']
                         
-                        # Verify all returned keys are of the requested environment
-                        if isinstance(api_keys, list):
-                            correct_env_keys = [key for key in api_keys if key.get('environment') == environment]
-                            all_correct = len(correct_env_keys) == len(api_keys)
-                        else:
-                            # If grouped response, check if only requested environment is returned
-                            all_correct = environment in api_keys and len([k for k in api_keys.keys() if k != environment]) == 0
-                        
-                        if all_correct:
-                            key_count = len(api_keys) if isinstance(api_keys, list) else len(api_keys.get(environment, []))
-                            self.log_result(
-                                f"Filter API Keys - {environment}", 
-                                True, 
-                                f"✅ Successfully filtered {key_count} API keys for {environment} environment",
-                                {"environment": environment, "key_count": key_count}
-                            )
+                        # Check if the response structure is correct
+                        if 'all' in api_data and 'grouped' in api_data:
+                            all_apis = api_data.get('all', [])
+                            grouped = api_data.get('grouped', {})
+                            
+                            # When filtering by environment, all returned APIs should be of that environment
+                            correct_env_apis = [api for api in all_apis if api.get('environment') == environment]
+                            all_correct = len(correct_env_apis) == len(all_apis)
+                            
+                            # Also check that the grouped structure reflects the filter
+                            if environment == 'production':
+                                expected_count = len(grouped.get('production', []))
+                                other_count = len(grouped.get('development', []))
+                            else:
+                                expected_count = len(grouped.get('development', []))
+                                other_count = len(grouped.get('production', []))
+                            
+                            # When filtering, we should only get APIs of the requested environment
+                            filter_working = (len(all_apis) == expected_count) or (len(all_apis) == 0)
+                            
+                            if all_correct and filter_working:
+                                self.log_result(
+                                    f"Filter API Keys - {environment}", 
+                                    True, 
+                                    f"✅ Successfully filtered {len(all_apis)} API keys for {environment} environment",
+                                    {
+                                        "environment": environment, 
+                                        "filtered_count": len(all_apis),
+                                        "all_correct_env": all_correct
+                                    }
+                                )
+                            else:
+                                self.log_result(
+                                    f"Filter API Keys - {environment}", 
+                                    False, 
+                                    f"❌ Environment filter not working correctly for {environment}",
+                                    {
+                                        "environment": environment, 
+                                        "total_apis": len(all_apis),
+                                        "correct_env_apis": len(correct_env_apis),
+                                        "all_correct": all_correct,
+                                        "filter_working": filter_working
+                                    }
+                                )
                         else:
                             self.log_result(
                                 f"Filter API Keys - {environment}", 
                                 False, 
-                                f"❌ Environment filter not working correctly for {environment}",
-                                {"environment": environment, "response": api_keys}
+                                f"❌ Invalid response structure for {environment} filter",
+                                {"response": api_data}
                             )
                     else:
                         self.log_result(f"Filter API Keys - {environment}", False, "❌ Invalid response structure", {"response": data})
