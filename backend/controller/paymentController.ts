@@ -344,6 +344,41 @@ const createCryptoPayment = async (
       };
       const { paymentRes, uniqueRef } = await Crypto(data, tokenData, true);
       finalRes = { hash: uniqueRef, ...paymentRes };
+      
+      // Determine fee_payer mode
+      const fee_payer = items.fee_payer || 'company';
+      
+      // Calculate merchant's expected amount (base amount in crypto)
+      let merchant_amount_crypto = data.amount;
+      let total_fees_crypto = 0;
+      
+      if (fee_payer === 'customer') {
+        // Customer paid total including fees, calculate what merchant should receive
+        const baseAmountUSD = items.base_amount || 0;
+        const chain = requestedCurrency.replace('-', '_').toUpperCase();
+        
+        try {
+          // Get the base amount in crypto (what merchant should receive)
+          const baseRates = await currencyConvert({
+            sourceCurrency: items.base_currency || 'USD',
+            currency: [requestedCurrency],
+            amount: baseAmountUSD,
+            fixedDecimal: false,
+          });
+          merchant_amount_crypto = parseFloat(baseRates[0]?.amount || data.amount);
+          total_fees_crypto = data.amount - merchant_amount_crypto;
+          
+          console.log(`[createCryptoPayment] Customer pays fees mode:
+            - Total paid by customer: ${data.amount} ${requestedCurrency}
+            - Merchant receives: ${merchant_amount_crypto} ${requestedCurrency}
+            - Fees collected: ${total_fees_crypto} ${requestedCurrency}`);
+        } catch (calcError) {
+          console.error('[createCryptoPayment] Fee calc error:', calcError);
+          // Fallback to standard calculation
+          merchant_amount_crypto = data.amount;
+        }
+      }
+
       console.log("paymentRes=============>", paymentRes, uniqueRef, {
         mode: paymentTypes.CRYPTO,
         amount: data.amount,
@@ -351,11 +386,16 @@ const createCryptoPayment = async (
         ref: uniqueRef,
         currency: data.currency,
         walletType: "customer",
+        fee_payer,
       });
 
       await setRedisItem("crypto-" + paymentRes.address, {
         mode: paymentTypes.CRYPTO,
-        amount: data.amount,
+        amount: data.amount,                    // Total amount customer is paying
+        merchant_amount: merchant_amount_crypto, // Amount merchant should receive
+        total_fees: total_fees_crypto,          // Total fees (if customer pays)
+        fee_payer: fee_payer,                   // Who pays fees
+        base_amount_usd: items.base_amount,     // Original USD amount
         status: "pending",
         ref: uniqueRef,
         currency: data.currency,
