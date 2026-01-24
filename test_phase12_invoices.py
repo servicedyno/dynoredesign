@@ -41,9 +41,9 @@ class Phase12InvoiceTester:
         """Authenticate user to get JWT token"""
         print("\n=== Authenticating User ===")
         
-        # Use existing Nomadly account (user_id: 4, company_id: 3)
+        # Use existing test user credentials
         test_user = {
-            "email": "nomadly@dynopay.com",
+            "email": "dashboard.test@dynopay.com",
             "password": "TestPassword123!"
         }
         
