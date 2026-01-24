@@ -57,7 +57,9 @@ app.get("/", async (req: express.Request, res: express.Response) => {
   const blockchain_fee = await getBlockchainFee();
 
   res.json({
-    message: "Server Error!",
+    message: "DynoPay Backend API",
+    version: "1.0.0",
+    status: "running",
     transaction_fee,
     blockchain_fee,
   });
