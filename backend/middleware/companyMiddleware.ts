@@ -12,7 +12,7 @@ const companyMiddleware = (
     return next();
   }
   if (!req.body.data) {
-    return res.status(400).json({ message: "Data not found!" });
+    return res.status(400).json({ message: "Request body 'data' field is required. Please provide company details in JSON format." });
   } else {
     const { company_name, email, mobile }: ICompany = JSON.parse(req.body.data);
     let validateFields;
