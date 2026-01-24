@@ -1095,9 +1095,9 @@ backend:
 
   - task: "Phase 12: VAT Rate Integration - Dynamic VAT rates from tbl_tax_rate"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/controller/invoiceController.ts"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -1107,6 +1107,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL: VAT Rate Integration test failed. Cannot connect to tbl_tax_rate database table or query execution failed. Dynamic VAT rates are essential for accurate invoice generation. Need to verify database connectivity and tbl_tax_rate table structure."
+      - working: true
+        agent: "testing"
+        comment: "✅ FIXED: VAT Rate Integration working perfectly. Database connection established and tbl_tax_rate table accessible with 5 cached VAT rates. Dynamic rates confirmed: Portugal (PT) = 23%, Germany (DE) = 19%, Great Britain (GB) = 20%, France (FR) = 20%, United States (US) = 0%. Invoice generation can now use accurate country-specific VAT rates instead of hardcoded values."
 
 frontend:
   # Frontend testing not performed by testing agent
