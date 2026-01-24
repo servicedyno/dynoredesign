@@ -40,6 +40,8 @@ walletRouter.post("/confirmPayment", walletController.confirmPayment);
 walletRouter.post("/verifyCryptoPayment", walletController.verifyCryptoPayment);
 walletRouter.post("/getCurrencyRates", walletController.getCurrencyRates);
 walletRouter.post("/estimateFees", walletController.estimateFees);
+walletRouter.get("/network-fees", walletController.getNetworkFees);
+walletRouter.post("/calculate-payment", walletController.calculatePaymentAmount);
 walletRouter.post("/sendConfirmationOTP", walletController.sendConfirmationOTP);
 walletRouter.post("/withdrawAssets", walletController.withdrawAssets);
 walletRouter.post("/exchangeCreate", walletController.exchangeCreate);
