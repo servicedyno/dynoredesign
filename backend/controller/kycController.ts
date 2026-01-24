@@ -84,7 +84,7 @@ const getKYCStatus = async (req: Request, res: Response) => {
  * Get KYC requirements/documents needed
  * GET /api/kyc/requirements
  */
-export const getKYCRequirements = async (req: Request, res: Response) => {
+const getKYCRequirements = async (req: Request, res: Response) => {
   try {
     const requirements = {
       volume_threshold: 5000,
