@@ -135,10 +135,10 @@ const fetchTronFee = async (): Promise<any> => {
  */
 const getCryptoPrice = async (symbol: string): Promise<number> => {
   const cacheKey = `price_${symbol}`;
-  const cached = await getRedisItem(cacheKey);
+  const cached = await getRedisItem(cacheKey) as { price?: string; timestamp?: string } | null;
   
-  if (cached?.price && cached?.timestamp > Date.now() - 60000) {
-    return cached.price;
+  if (cached?.price && Number(cached?.timestamp) > Date.now() - 60000) {
+    return Number(cached.price);
   }
 
   try {
