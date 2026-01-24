@@ -5,6 +5,7 @@ import walletRouter from "./walletRouter";
 import taxRouter from "./taxRouter";
 import dashboardRouter from "./dashboardRouter";
 import notificationRouter from "./notificationRouter";
+import invoiceRouter from "./invoiceRouter";
 
 import {
   authMiddleware,
@@ -35,6 +36,7 @@ router.use("/pay", paymentRouter);
 router.use("/tax", taxRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/notifications", notificationRouter);
+router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
 router.post("/webhook", flutterwaveWebHook);
 router.post("/failed_webhook", flutterwaveWebHook);
