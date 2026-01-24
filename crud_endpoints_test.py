@@ -285,8 +285,8 @@ class DynoPayCRUDTester:
         
         update_data = {
             "api_name": "Updated Test API",
-            "permissions": ["read", "write"],
-            "withdrawal_whitelist": ["1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"]
+            "permissions": ["payments", "transactions"],  # Use valid permissions
+            "withdrawal_whitelist": True  # Boolean, not array
         }
         
         try:
