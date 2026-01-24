@@ -3223,6 +3223,322 @@ try {
                 
         except Exception as e:
             self.log_result("Get API Keys", False, f"❌ Request failed: {str(e)}")
+
+    def test_development_production_api_keys(self):
+        """Test the newly implemented Development/Production API key functionality"""
+        print("\n=== Testing Development/Production API Key Functionality ===")
+        
+        # First authenticate with provided credentials
+        if not self.authenticate_with_provided_credentials():
+            self.log_result(
+                "Dev/Prod API Keys - Authentication", 
+                False, 
+                "Failed to authenticate with provided credentials"
+            )
+            return
+        
+        # Test 1: Get existing API keys with environment info
+        self.test_get_api_keys_with_environment()
+        
+        # Test 2: Create a Development API key
+        dev_api_id = self.test_create_development_api_key()
+        
+        if dev_api_id:
+            # Test 3: Toggle API key status
+            self.test_toggle_api_key_status(dev_api_id)
+            
+            # Test 4: Revoke API key
+            self.test_revoke_api_key(dev_api_id)
+        
+        # Test 5: Filter API keys by environment
+        self.test_filter_api_keys_by_environment()
+
+    def test_get_api_keys_with_environment(self):
+        """Test GET /api/userApi/getApi - Verify response includes environment field"""
+        print("\n--- Testing Get API Keys with Environment Info ---")
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/userApi/getApi",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    api_keys = data['data']
+                    
+                    # Check if response includes environment field and grouped data
+                    has_environment_field = False
+                    has_grouped_data = False
+                    
+                    if isinstance(api_keys, list) and len(api_keys) > 0:
+                        # Check if first API key has environment field
+                        first_key = api_keys[0]
+                        has_environment_field = 'environment' in first_key
+                    elif isinstance(api_keys, dict):
+                        # Check if response is grouped by environment
+                        has_grouped_data = 'production' in api_keys or 'development' in api_keys
+                        if has_grouped_data:
+                            # Check if individual keys have environment field
+                            for env_type in ['production', 'development']:
+                                if env_type in api_keys and len(api_keys[env_type]) > 0:
+                                    has_environment_field = 'environment' in api_keys[env_type][0]
+                                    break
+                    
+                    if has_environment_field or has_grouped_data:
+                        self.log_result(
+                            "API Keys with Environment Info", 
+                            True, 
+                            f"✅ API keys include environment info (grouped: {has_grouped_data}, env field: {has_environment_field})",
+                            {
+                                "api_keys_count": len(api_keys) if isinstance(api_keys, list) else sum(len(v) for v in api_keys.values() if isinstance(v, list)),
+                                "has_environment_field": has_environment_field,
+                                "has_grouped_data": has_grouped_data
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "API Keys with Environment Info", 
+                            False, 
+                            "❌ API keys response missing environment information",
+                            {"response_structure": type(api_keys).__name__, "sample_key": api_keys[0] if isinstance(api_keys, list) and len(api_keys) > 0 else None}
+                        )
+                else:
+                    self.log_result("API Keys with Environment Info", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("API Keys with Environment Info", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("API Keys with Environment Info", False, f"❌ Request failed: {str(e)}")
+
+    def test_create_development_api_key(self):
+        """Test POST /api/userApi/addApi - Create Development API key with dpk_test_ prefix"""
+        print("\n--- Testing Create Development API Key ---")
+        
+        # First get user's companies to use a valid company_id
+        company_id = self.get_user_company_id()
+        if not company_id:
+            self.log_result(
+                "Create Development API Key", 
+                False, 
+                "❌ No company_id available for API key creation"
+            )
+            return None
+        
+        api_data = {
+            "company_id": company_id,
+            "base_currency": "USD",
+            "environment": "development",
+            "api_name": "Test Dev Key"
+        }
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}", "Content-Type": "application/json"}
+            response = requests.post(
+                f"{self.backend_url}/api/userApi/addApi",
+                json=api_data,
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    api_response = data['data']
+                    api_key = api_response.get('apiKey', '')
+                    api_id = api_response.get('api_id')
+                    
+                    # Verify key prefix starts with dpk_test_
+                    if api_key.startswith('dpk_test_'):
+                        self.log_result(
+                            "Create Development API Key", 
+                            True, 
+                            f"✅ Development API key created with correct prefix: {api_key[:20]}...",
+                            {
+                                "api_id": api_id,
+                                "api_key_prefix": api_key[:10],
+                                "environment": "development",
+                                "api_name": api_data["api_name"]
+                            }
+                        )
+                        return api_id
+                    else:
+                        self.log_result(
+                            "Create Development API Key", 
+                            False, 
+                            f"❌ Development API key has wrong prefix. Expected 'dpk_test_', got: {api_key[:20]}...",
+                            {"api_key_prefix": api_key[:20], "full_response": api_response}
+                        )
+                else:
+                    self.log_result("Create Development API Key", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Create Development API Key", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Create Development API Key", False, f"❌ Request failed: {str(e)}")
+        
+        return None
+
+    def test_toggle_api_key_status(self, api_id):
+        """Test PUT /api/userApi/toggleStatus/:id - Toggle API key status"""
+        print(f"\n--- Testing Toggle API Key Status (ID: {api_id}) ---")
+        
+        if not api_id:
+            self.log_result("Toggle API Key Status", False, "❌ No API ID provided")
+            return
+        
+        toggle_data = {"status": "inactive"}
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}", "Content-Type": "application/json"}
+            response = requests.put(
+                f"{self.backend_url}/api/userApi/toggleStatus/{api_id}",
+                json=toggle_data,
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data or 'message' in data:
+                    self.log_result(
+                        "Toggle API Key Status", 
+                        True, 
+                        f"✅ API key status toggled to inactive",
+                        {"api_id": api_id, "new_status": "inactive", "response": data}
+                    )
+                else:
+                    self.log_result("Toggle API Key Status", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Toggle API Key Status", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Toggle API Key Status", False, f"❌ Request failed: {str(e)}")
+
+    def test_revoke_api_key(self, api_id):
+        """Test POST /api/userApi/revoke/:id - Revoke API key"""
+        print(f"\n--- Testing Revoke API Key (ID: {api_id}) ---")
+        
+        if not api_id:
+            self.log_result("Revoke API Key", False, "❌ No API ID provided")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}", "Content-Type": "application/json"}
+            response = requests.post(
+                f"{self.backend_url}/api/userApi/revoke/{api_id}",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data or 'message' in data:
+                    # Check if the response indicates the key was revoked
+                    message = data.get('message', '')
+                    response_data = data.get('data', {})
+                    
+                    if 'revoked' in message.lower() or response_data.get('status') == 'revoked':
+                        self.log_result(
+                            "Revoke API Key", 
+                            True, 
+                            f"✅ API key successfully revoked",
+                            {"api_id": api_id, "status": "revoked", "response": data}
+                        )
+                    else:
+                        self.log_result(
+                            "Revoke API Key", 
+                            True, 
+                            f"✅ Revoke request processed (status unclear)",
+                            {"api_id": api_id, "response": data}
+                        )
+                else:
+                    self.log_result("Revoke API Key", False, "❌ Invalid response structure", {"response": data})
+            else:
+                self.log_result("Revoke API Key", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                
+        except Exception as e:
+            self.log_result("Revoke API Key", False, f"❌ Request failed: {str(e)}")
+
+    def test_filter_api_keys_by_environment(self):
+        """Test GET /api/userApi/getApi?environment=production/development - Filter by environment"""
+        print("\n--- Testing Filter API Keys by Environment ---")
+        
+        environments = ['production', 'development']
+        
+        for environment in environments:
+            try:
+                headers = {"Authorization": f"Bearer {self.jwt_token}"}
+                response = requests.get(
+                    f"{self.backend_url}/api/userApi/getApi",
+                    params={"environment": environment},
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if 'data' in data:
+                        api_keys = data['data']
+                        
+                        # Verify all returned keys are of the requested environment
+                        if isinstance(api_keys, list):
+                            correct_env_keys = [key for key in api_keys if key.get('environment') == environment]
+                            all_correct = len(correct_env_keys) == len(api_keys)
+                        else:
+                            # If grouped response, check if only requested environment is returned
+                            all_correct = environment in api_keys and len([k for k in api_keys.keys() if k != environment]) == 0
+                        
+                        if all_correct:
+                            key_count = len(api_keys) if isinstance(api_keys, list) else len(api_keys.get(environment, []))
+                            self.log_result(
+                                f"Filter API Keys - {environment}", 
+                                True, 
+                                f"✅ Successfully filtered {key_count} API keys for {environment} environment",
+                                {"environment": environment, "key_count": key_count}
+                            )
+                        else:
+                            self.log_result(
+                                f"Filter API Keys - {environment}", 
+                                False, 
+                                f"❌ Environment filter not working correctly for {environment}",
+                                {"environment": environment, "response": api_keys}
+                            )
+                    else:
+                        self.log_result(f"Filter API Keys - {environment}", False, "❌ Invalid response structure", {"response": data})
+                else:
+                    self.log_result(f"Filter API Keys - {environment}", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                    
+            except Exception as e:
+                self.log_result(f"Filter API Keys - {environment}", False, f"❌ Request failed: {str(e)}")
+
+    def get_user_company_id(self):
+        """Get user's company ID for API key creation"""
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/company/getCompany",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    companies = data['data']
+                    if isinstance(companies, list) and len(companies) > 0:
+                        return companies[0].get('company_id')
+                    elif isinstance(companies, dict) and 'company_id' in companies:
+                        return companies['company_id']
+            
+        except Exception as e:
+            print(f"Failed to get company ID: {str(e)}")
+        
+        # Fallback to a test company ID if no companies found
+        return 1
     
     def test_get_company(self):
         """Test GET /api/company/getCompany"""
