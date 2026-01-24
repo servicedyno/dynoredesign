@@ -1962,14 +1962,37 @@ try {
         """Test GET /api/notifications/types - Check for payment_pending and payment_confirming types"""
         print("\n--- Testing Notification Types for Pending Payments ---")
         
+        if not self.jwt_token:
+            # Try to get JWT token using provided credentials
+            self.authenticate_with_provided_credentials()
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Notification Types - Pending Payments", 
+                False, 
+                "❌ No JWT token available for authentication"
+            )
+            return
+        
         try:
-            response = requests.get(f"{self.backend_url}/api/notifications/types", timeout=15)
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/notifications/types", 
+                headers=headers,
+                timeout=15
+            )
             
             if response.status_code == 200:
                 data = response.json()
                 
                 if 'data' in data:
-                    notification_types = data['data'].get('types', [])
+                    notification_types_data = data['data'].get('types', [])
+                    # Extract just the values from the types array
+                    notification_types = [t.get('value') for t in notification_types_data if 'value' in t]
                     
                     # Check for required notification types
                     required_types = ['payment_pending', 'payment_confirming']
