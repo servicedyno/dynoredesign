@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://f64baf90-751f-40ed-b9cd-9efa6e941a02.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://payflow-unified-1.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {
