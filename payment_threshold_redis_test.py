@@ -203,7 +203,7 @@ class PaymentThresholdRedisTester:
                             "Correct fee distribution for below threshold payment",
                             {
                                 "blockchain": "BTC",
-                                "amount": 3,
+                                "amount": 5,
                                 "admin_receives": admin_receives,
                                 "merchant_receives": merchant_receives,
                                 "is_below_threshold": result.get('is_below_threshold', True)
