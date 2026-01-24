@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+const CryptoJS = require('crypto-js');
 require('dotenv').config();
 
 const API_SECRET = process.env.API_SECRET;
@@ -7,36 +7,11 @@ const CYPHER_KEY = process.env.CYPHER_KEY;
 // Nomadly API Key provided by user
 const encryptedApiKey = 'U2FsdGVkX18Y1r7820X9rwDR1ENhHV1PMQyOKXFi3x9mgJyh4TRNAkk3aTkA1gu6DThmC/ncmerkXaqFt640z1iSdC6i84p9+OLVrqL2ojp+7CJ5+d5bAy4jaulxC+UG';
 
-function decrypt(encryptedMessage, key) {
+function decrypt(ciphertext, secretKey) {
   try {
-    const keyBuffer = Buffer.from(key, 'utf-8');
-    const keyHash = crypto.createHash('sha256').update(keyBuffer).digest();
-    
-    const encrypted = Buffer.from(encryptedMessage, 'base64').toString('utf-8');
-    
-    if (!encrypted.startsWith('Salted__')) {
-      console.error('Invalid encrypted data format - missing Salted__ prefix');
-      return null;
-    }
-    
-    const encryptedBuffer = Buffer.from(encryptedMessage, 'base64');
-    const salt = encryptedBuffer.subarray(8, 16);
-    const ciphertext = encryptedBuffer.subarray(16);
-    
-    const rounds = 1;
-    let data = Buffer.concat([keyHash, salt]);
-    
-    for (let i = 0; i < rounds; i++) {
-      data = crypto.createHash('md5').update(data).digest();
-    }
-    
-    const key32 = data.subarray(0, 32);
-    const iv = data.subarray(32, 48);
-    
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key32, iv);
-    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-    
-    return decrypted.toString('utf-8');
+    const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
+    const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+    return decryptedText;
   } catch (error) {
     console.error('Decryption error:', error.message);
     return null;
