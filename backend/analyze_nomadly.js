@@ -75,10 +75,10 @@ async function analyzeNomadly() {
     
     // Get transactions for this user/company
     const transactions = await client.query(`
-      SELECT transaction_id, base_amount, base_currency, status, payment_mode, company_id, created_at
+      SELECT id as transaction_id, base_amount, base_currency, status, payment_mode, company_id, "createdAt" as created_at
       FROM tbl_user_transaction 
       WHERE user_id = 4 AND company_id = 3
-      ORDER BY created_at DESC
+      ORDER BY "createdAt" DESC
       LIMIT 5
     `);
     
