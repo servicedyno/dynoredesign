@@ -134,8 +134,8 @@ The DynoPay KYC (Know Your Customer) system provides identity verification for u
   "message": "KYC verification session created successfully",
   "data": {
     "verification": {
-      "session_id": "test_session_1737771900123",
-      "verification_url": "https://magic.veriff.me/test-session",
+      "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "verification_url": "https://magic.veriff.me/v/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
       "status": "submitted"
     },
     "kyc_id": 1
@@ -143,7 +143,7 @@ The DynoPay KYC (Know Your Customer) system provides identity verification for u
 }
 ```
 
-**⚠️ Current Behavior**: Returns mock verification URL. Once Veriff service is fixed, this will return actual Veriff session URLs.
+**✅ Live Integration**: Returns actual Veriff session URLs that users can use to complete their verification.
 
 ---
 
