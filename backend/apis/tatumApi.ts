@@ -11,6 +11,7 @@ import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 import { KeyManagementServiceClient } from "@google-cloud/kms";
 import tronweb from "tronweb";
 import { Crc32c } from "@aws-crypto/crc32c";
+import { buildUrl } from "../helper";
 
 // CRC32C helper using AWS Crypto library (pure JavaScript, works on all platforms)
 const crc32c = {
