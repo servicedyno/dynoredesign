@@ -278,7 +278,7 @@ testInvoiceSchema();
                 
                 # Test non-existent transaction
                 response = requests.get(
-                    f"{self.backend_url}/api/transactions/999999/invoice",
+                    f"{self.backend_url}/transactions/999999/invoice",
                     headers=headers,
                     timeout=15
                 )
