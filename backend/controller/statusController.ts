@@ -107,19 +107,53 @@ const INCIDENTS = [
  * In production, this would query actual monitoring data
  */
 const calculateUptime = (serviceId: string): number => {
-  // Simulated uptime percentages (in production, calculate from actual data)
-  const uptimeMap: Record<string, number> = {
-    api_gateway: 99.99,
-    payment_processing: 99.98,
-    wallet_services: 99.97,
-    webhook_delivery: 99.95,
-    dashboard: 99.99
-  };
-  return uptimeMap[serviceId] || 99.9;
+  const service = SERVICES.find(s => s.id === serviceId);
+  return service?.uptime_base || 99.9;
 };
 
 /**
- * Generate 90-day uptime data for chart
+ * Generate 90-day uptime data for a specific service
+ * Each service has slightly different patterns based on its reliability
+ */
+const generateServiceUptime = (serviceId: string, days: number = 90): Array<{ date: string; status: "operational" | "degraded" | "outage" }> => {
+  const data = [];
+  const today = new Date();
+  const service = SERVICES.find(s => s.id === serviceId);
+  const baseUptime = service?.uptime_base || 99.9;
+  
+  // Use service ID as seed for consistent results per service
+  const seed = serviceId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    
+    // Deterministic "random" based on date and service
+    const dayHash = (date.getDate() + date.getMonth() * 31 + seed) % 100;
+    
+    let status: "operational" | "degraded" | "outage" = "operational";
+    
+    // Higher uptime services have fewer issues
+    const degradedThreshold = 100 - (100 - baseUptime) * 50; // e.g., 99.99 -> 99.5
+    const outageThreshold = 100 - (100 - baseUptime) * 10;   // e.g., 99.99 -> 99.99
+    
+    if (dayHash > degradedThreshold && dayHash <= outageThreshold) {
+      status = "degraded";
+    } else if (dayHash > outageThreshold) {
+      status = "outage";
+    }
+    
+    data.push({
+      date: date.toISOString().split('T')[0],
+      status
+    });
+  }
+  
+  return data;
+};
+
+/**
+ * Generate 90-day uptime data for chart (overall system)
  */
 const generate90DayUptime = (): Array<{ date: string; status: "operational" | "degraded" | "outage" }> => {
   const data = [];
@@ -131,10 +165,10 @@ const generate90DayUptime = (): Array<{ date: string; status: "operational" | "d
     
     // Simulate mostly operational with occasional degraded performance
     let status: "operational" | "degraded" | "outage" = "operational";
-    const random = Math.random();
-    if (random > 0.98) {
+    const dayHash = (date.getDate() + date.getMonth() * 31) % 100;
+    if (dayHash > 97) {
       status = "degraded";
-    } else if (random > 0.995) {
+    } else if (dayHash > 99) {
       status = "outage";
     }
     
