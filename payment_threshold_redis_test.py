@@ -314,10 +314,10 @@ class PaymentThresholdRedisTester:
         print("--- Testing threshold test endpoint BELOW ---")
         
         try:
-            # Test ETH $2 (threshold is $5, but need to use minimum fee tier amount)
+            # Test BTC $5 (threshold is $7, so this is below threshold)
             test_data = {
-                "blockchain": "ETH",
-                "amount": 5  # Use $5 which is at threshold but still below for ETH
+                "blockchain": "BTC",
+                "amount": 5
             }
             
             response = requests.post(
