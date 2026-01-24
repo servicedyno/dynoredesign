@@ -9915,19 +9915,16 @@ def main():
     tester = DynoPayBackendTester()
     
     try:
-        # Check if we should run only Phase 6 retesting
-        if len(sys.argv) > 1 and sys.argv[1] == "--phase6-retest":
-            success = tester.run_phase6_retesting_only()
-        else:
-            success = tester.run_all_tests()
-            
-        overall_success = tester.print_summary()
+        # Run comprehensive verification tests as specified in review request
+        success = tester.run_comprehensive_verification_tests()
         
-        if overall_success:
-            print("\n🎉 All backend tests passed!")
+        if success:
+            print("\n🎉 ALL TESTS PASSED! Backend is working correctly.")
             sys.exit(0)
         else:
-            print("\n⚠️  Some tests failed. Check the summary above.")
+            print(f"\n❌ {len(tester.errors)} TESTS FAILED!")
+            for error in tester.errors:
+                print(f"  - {error}")
             sys.exit(1)
             
     except KeyboardInterrupt:
