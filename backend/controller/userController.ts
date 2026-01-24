@@ -1008,5 +1008,6 @@ export default {
   getProfile,
   updateProfile,
   changeEmail,
+  changePhone,
   deleteAccount,
 };
