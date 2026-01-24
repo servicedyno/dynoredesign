@@ -308,13 +308,19 @@ class PaymentFlowTester:
         """Get checkout session to see temp address and Redis data"""
         print(f"\n=== Getting Checkout Session ===")
         
-        if not self.payment_link_ref:
-            self.log_result("Get Checkout Session", False, "No payment link reference available")
+        if not self.transaction_id:
+            self.log_result("Get Checkout Session", False, "No transaction ID available")
             return False
         
         try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
             response = requests.get(
-                f"{self.backend_url}/api/pay/checkout/{self.payment_link_ref}",
+                f"{self.backend_url}/api/pay/links/{self.transaction_id}",
+                headers=headers,
                 timeout=15
             )
             
