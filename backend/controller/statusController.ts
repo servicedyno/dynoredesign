@@ -484,6 +484,8 @@ export default {
   getStatus,
   getServicesStatus,
   getServiceStatus,
+  getServiceUptime,
+  getAllServicesUptime,
   getUptimeChart,
   getIncidents,
   getIncident,
