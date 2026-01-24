@@ -1876,8 +1876,8 @@ try {
             has_confirming_email: hasConfirmingEmail,
             has_exports: hasExports,
             functions_found: {
-                pending: emailContent.match(/sendPaymentPendingEmail.*?\\{/s) ? true : false,
-                confirming: emailContent.match(/sendPaymentConfirmingEmail.*?\\{/s) ? true : false
+                pending: emailContent.match(/sendPaymentPendingEmail.*?{/s) ? true : false,
+                confirming: emailContent.match(/sendPaymentConfirmingEmail.*?{/s) ? true : false
             }
         }, null, 2));
         
@@ -1921,7 +1921,7 @@ try {
                         self.log_result(
                             "Pending Payment Email Template Structure", 
                             True, 
-                            "Email template functions found and properly exported",
+                            "✅ Email template functions found and properly exported",
                             {
                                 "pending_email": email_data.get('has_pending_email'),
                                 "confirming_email": email_data.get('has_confirming_email'),
@@ -1932,7 +1932,7 @@ try {
                         self.log_result(
                             "Pending Payment Email Template Structure", 
                             False, 
-                            "Email template functions missing or not exported properly",
+                            "❌ Email template functions missing or not exported properly",
                             email_data
                         )
                         
@@ -1940,14 +1940,14 @@ try {
                     self.log_result(
                         "Pending Payment Email Template Structure", 
                         False, 
-                        "Failed to parse email template check results",
+                        "❌ Failed to parse email template check results",
                         {"stdout": result.stdout, "stderr": result.stderr}
                     )
             else:
                 self.log_result(
                     "Pending Payment Email Template Structure", 
                     False, 
-                    "Email template check script failed",
+                    "❌ Email template check script failed",
                     {"stdout": result.stdout, "stderr": result.stderr}
                 )
                 
@@ -1955,7 +1955,7 @@ try {
             self.log_result(
                 "Pending Payment Email Template Structure", 
                 False, 
-                f"Email template check failed: {str(e)}"
+                f"❌ Email template check failed: {str(e)}"
             )
     
     def test_notification_types_include_pending(self):
