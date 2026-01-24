@@ -1679,7 +1679,7 @@ const cryptoVerification = async (address, webhook = true) => {
           console.log(`[cryptoVerification] Customer pays fees mode:
             - Total received: ${totalAmountReceived} ${tempCurrency}
             - Merchant should receive: ${merchant_amount} ${tempCurrency}
-            - Fees for DynoPay: ${totalAmountReceived - merchant_amount} ${tempCurrency}`);
+            - Fees for DynoPay: ${Number(totalAmountReceived) - Number(merchant_amount)} ${tempCurrency}`);
           
           userAmountToSend = Number(merchant_amount);
           adminAmountToSend = Number(totalAmountReceived) - Number(merchant_amount);
