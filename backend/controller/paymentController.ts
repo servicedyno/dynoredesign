@@ -1061,6 +1061,7 @@ const Crypto = async (
   if (Object.keys(walletDetails).length > 0) {
     let address, privateKey;
     let subscriptionId;
+    const latestIndex = Number(walletDetails.last_index) + 1;
     
     try {
       // Try KMS decryption
@@ -1072,7 +1073,6 @@ const Crypto = async (
 
       const userXPub = walletData.xpub;
       const userMnemonic = walletData.mnemonic;
-      const latestIndex = Number(walletDetails.last_index) + 1;
 
       const addressData = await tatumApi.generateUserAddress({
         currency,
