@@ -366,7 +366,7 @@ export const sendPartialPaymentNotification = async (
       userId: user.user_id,
       receivedAmount,
       expectedAmount,
-    }, 7200);
+    });
 
     console.log(`Partial payment notification sent for address: ${address}`);
     return true;
