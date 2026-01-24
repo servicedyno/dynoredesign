@@ -1,0 +1,28 @@
+import express from "express";
+import invoiceController from "../controller/invoiceController";
+import authMiddleware from "../middleware/authMiddleware";
+
+const invoiceRouter = express.Router();
+
+// Get invoice for a specific transaction
+invoiceRouter.get(
+  "/transactions/:id/invoice",
+  authMiddleware,
+  invoiceController.getTransactionInvoice
+);
+
+// Get all invoices for user
+invoiceRouter.get(
+  "/invoices",
+  authMiddleware,
+  invoiceController.getAllInvoices
+);
+
+// Get specific invoice by invoice ID
+invoiceRouter.get(
+  "/invoices/:id",
+  authMiddleware,
+  invoiceController.getInvoiceById
+);
+
+export default invoiceRouter;
