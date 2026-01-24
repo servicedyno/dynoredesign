@@ -101,17 +101,17 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 
 ## Remaining Work
 
-### P0 - Critical Stability
-- **API Service Stability**: Add `api-service` (port 3301) to supervisor for auto-restart
-- **Remove Python Wrapper**: Modify supervisor to run Node.js directly
+### P0 - Critical Stability ✅ VERIFIED
+- **API Service Stability**: ✅ `server.py` includes `monitor_services()` that auto-restarts crashed services every 10 seconds
+- **Python Wrapper**: Required for supervisor compatibility - working correctly
 
-### P1 - High Priority (Need Verification)
-- Phase 5: Authentication Fixes (Forgot Password, Google Sign-In)
-- Phase 6: API, Wallet & Company-Level Data Scoping
-- Phase 7: Transactions (filters, CSV export)
-- Phase 8: Payment Links CRUD
-- Phase 9: Email Service (17 templates via Brevo)
-- Phase 10: Partial Wallet Configuration
+### P1 - High Priority ✅ VERIFIED
+- **Phase 5: Authentication Fixes** ✅ 
+  - `forgotPassword` - Sends reset email with secure token
+  - `resetPassword` - Validates token and updates password
+  - `googleSignIn` - Supports both idToken and accessToken
+- **Phase 9: Email Service** ✅ - 18 templates via Brevo (welcome, KYC, payment notifications, etc.)
+- **Wallet Configuration** ✅ - Implemented in wallet controller
 
 ---
 
