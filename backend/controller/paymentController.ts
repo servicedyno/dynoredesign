@@ -58,6 +58,11 @@ import {
   getBlockchainFee,
   calculateTransactionFees,
 } from ".";
+import { 
+  getBlockchainNetworkFee, 
+  getAllBlockchainFees, 
+  calculateCustomerPaymentAmount 
+} from "../services/blockchainFeeService";
 
 const getData = async (req: express.Request, res: express.Response) => {
   try {
