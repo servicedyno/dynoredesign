@@ -714,4 +714,57 @@ export default {
   sendKYCRejectedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
+  sendInvoiceGeneratedEmail,
+};
+
+/**
+ * Template 18: Invoice Generated Email
+ * Trigger: Invoice created for transaction
+ */
+export const sendInvoiceGeneratedEmail = async (
+  email: string,
+  name: string,
+  invoiceData: {
+    invoice_number: string;
+    transaction_id: number;
+    total_usd: number;
+    invoice_date: Date;
+    invoice_url: string;
+  }
+) => {
+  try {
+    const subject = `Invoice ${invoiceData.invoice_number} - DynoPay`;
+    const content = `<p class="message">Hello ${name},</p>
+    <p class="message">Your invoice has been successfully generated for transaction #${invoiceData.transaction_id}.</p>
+    <div class="highlight-box">
+      <p><strong>Invoice Details:</strong></p>
+      <p>
+        <strong>Invoice Number:</strong> ${invoiceData.invoice_number}<br />
+        <strong>Transaction ID:</strong> ${invoiceData.transaction_id}<br />
+        <strong>Total Amount:</strong> $${invoiceData.total_usd.toFixed(2)} USD<br />
+        <strong>Invoice Date:</strong> ${new Date(invoiceData.invoice_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+      </p>
+    </div>
+    <p class="message">You can view and download your invoice using the button below.</p>`;
+
+    const html = dynoPayEmailTemplate(
+      "Invoice Generated",
+      content,
+      true,
+      "View Invoice",
+      invoiceData.invoice_url
+    );
+
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+
+    console.log(`Invoice email sent to ${email} for invoice ${invoiceData.invoice_number}`);
+  } catch (error) {
+    console.error(`Failed to send invoice email to ${email}:`, error);
+    throw error;
+  }
 };
