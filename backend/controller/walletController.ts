@@ -3193,6 +3193,130 @@ const getConfiguredCurrencies = async (
   }
 };
 
+/**
+ * GET /api/wallet/network-fees
+ * Get real-time blockchain network fees for all supported chains
+ */
+const getNetworkFees = async (req: express.Request, res: express.Response) => {
+  try {
+    const { chain } = req.query;
+
+    if (chain) {
+      // Get fee for specific chain
+      const fee = await getBlockchainNetworkFee(chain as string);
+      successResponseHelper(res, 200, "Network fee retrieved", fee);
+    } else {
+      // Get fees for all chains
+      const fees = await getAllBlockchainFees();
+      successResponseHelper(res, 200, "Network fees retrieved", fees);
+    }
+  } catch (e) {
+    const message = getErrorMessage(e);
+    walletLogger.error(message, {}, new Error(e));
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * POST /api/wallet/calculate-payment
+ * Calculate total amount customer needs to pay including blockchain fees
+ * Used when fee_payer = 'customer' on payment links
+ */
+const calculatePaymentAmount = async (req: express.Request, res: express.Response) => {
+  try {
+    const { amount_usd, chain, fee_payer = 'customer' } = req.body;
+
+    if (!amount_usd || !chain) {
+      return errorResponseHelper(res, 400, "amount_usd and chain are required");
+    }
+
+    // Get current crypto price
+    const cryptoPrice = await getCryptoPrice(chain);
+    
+    if (fee_payer === 'customer') {
+      // Customer pays blockchain fees - add to total
+      const calculation = await calculateCustomerPaymentAmount(
+        parseFloat(amount_usd),
+        chain,
+        cryptoPrice
+      );
+
+      successResponseHelper(res, 200, "Payment amount calculated", {
+        fee_payer: 'customer',
+        base_amount_usd: parseFloat(amount_usd),
+        base_amount_crypto: calculation.baseAmountCrypto,
+        blockchain_fee_native: calculation.blockchainFeeNative,
+        blockchain_fee_usd: calculation.blockchainFeeUSD,
+        total_amount_crypto: calculation.totalAmountCrypto,
+        total_amount_usd: calculation.totalAmountUSD,
+        crypto_currency: chain,
+        crypto_price_usd: cryptoPrice,
+      });
+    } else {
+      // Company pays blockchain fees - customer only pays base amount
+      const baseAmountCrypto = parseFloat(amount_usd) / cryptoPrice;
+      const networkFee = await getBlockchainNetworkFee(chain);
+
+      successResponseHelper(res, 200, "Payment amount calculated", {
+        fee_payer: 'company',
+        base_amount_usd: parseFloat(amount_usd),
+        base_amount_crypto: baseAmountCrypto,
+        blockchain_fee_native: networkFee.feeInNative,
+        blockchain_fee_usd: networkFee.feeInUSD,
+        total_amount_crypto: baseAmountCrypto, // Customer only pays base
+        total_amount_usd: parseFloat(amount_usd),
+        crypto_currency: chain,
+        crypto_price_usd: cryptoPrice,
+        note: "Blockchain fee will be deducted from merchant settlement"
+      });
+    }
+  } catch (e) {
+    const message = getErrorMessage(e);
+    walletLogger.error(message, {}, new Error(e));
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Helper: Get crypto price in USD
+ */
+const getCryptoPrice = async (symbol: string): Promise<number> => {
+  try {
+    const idMap: Record<string, string> = {
+      'BTC': 'bitcoin',
+      'ETH': 'ethereum',
+      'LTC': 'litecoin',
+      'DOGE': 'dogecoin',
+      'TRX': 'tron',
+      'USDT': 'tether',
+      'USDT_ERC20': 'tether',
+      'USDT_TRC20': 'tether',
+      'BCH': 'bitcoin-cash',
+    };
+
+    const coinId = idMap[symbol.toUpperCase()] || symbol.toLowerCase();
+    const response = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`
+    );
+    
+    return response.data[coinId]?.usd || 0;
+  } catch (error) {
+    // Fallback prices
+    const fallbackPrices: Record<string, number> = {
+      'BTC': 95000,
+      'ETH': 3300,
+      'LTC': 100,
+      'DOGE': 0.35,
+      'TRX': 0.25,
+      'USDT': 1,
+      'USDT_ERC20': 1,
+      'USDT_TRC20': 1,
+      'BCH': 450,
+    };
+    return fallbackPrices[symbol.toUpperCase()] || 0;
+  }
+};
+
 export default {
   getWallet,
   addFunds,
@@ -3220,4 +3344,6 @@ export default {
   getTransactionDetails,
   exportTransactions,
   getConfiguredCurrencies,
+  getNetworkFees,
+  calculatePaymentAmount,
 };
