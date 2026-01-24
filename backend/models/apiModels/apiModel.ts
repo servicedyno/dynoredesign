@@ -48,6 +48,11 @@ const apiModel = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    // Permissions - JSON array of enabled permissions
+    permissions: {
+      type: DataTypes.TEXT,
+      defaultValue: '["payments","transactions","webhooks","wallets"]',
+    },
   },
   {
     tableName: "tbl_api",
