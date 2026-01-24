@@ -522,11 +522,11 @@ checkTransactions();
             )
     
     def test_get_payment_links_company_filter(self, headers, created_link_id):
-        """Test GET /api/pay/getPaymentLinks?company_id=3"""
+        """Test GET /api/pay/getPaymentLinks?company_id=13"""
         try:
             response = requests.get(
                 f"{self.backend_url}/api/pay/getPaymentLinks",
-                params={"company_id": 3},
+                params={"company_id": 13},
                 headers=headers,
                 timeout=15
             )
