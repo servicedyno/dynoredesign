@@ -101,6 +101,12 @@ const paymentLinkModel = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    // Fee payer - who pays blockchain fees: 'customer' or 'company'
+    fee_payer: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'customer',
+      allowNull: true,
+    },
   },
   {
     tableName: "tbl_payment_link",
