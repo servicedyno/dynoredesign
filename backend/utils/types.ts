@@ -16,6 +16,7 @@ export interface IUserType {
   adm_id: string;
   pathType: string;
   role: string;
+  company_id?: number | string;  // Optional company_id for multi-tenant isolation
 }
 
 export interface ICompany {
