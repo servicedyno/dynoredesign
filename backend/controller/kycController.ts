@@ -139,7 +139,7 @@ const getKYCRequirements = async (req: Request, res: Response) => {
  * Start KYC verification session
  * POST /api/kyc/submit
  */
-export const startKYCVerification = async (req: Request, res: Response) => {
+const startKYCVerification = async (req: Request, res: Response) => {
   try {
     const userData = jwt.decode(res.locals.token) as IUserType;
     const userId = userData.user_id;
