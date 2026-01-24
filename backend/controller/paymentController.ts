@@ -2010,6 +2010,7 @@ const createPaymentLink = async (
       callback_url: callback_url || null,
       redirect_url: redirect_url || null,
       webhook_url: webhook_url || null,
+      fee_payer: fee_payer || 'customer',  // Default: customer pays fees
     };
 
     const links = await paymentLinkModel.create(payload);
