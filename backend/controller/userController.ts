@@ -89,6 +89,171 @@ const registerUser = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Register User with Phone Number (Step 1: Send OTP)
+ * POST /api/user/registerPhone
+ * Sends OTP to phone for verification
+ */
+const registerPhoneStep1 = async (req: express.Request, res: express.Response) => {
+  try {
+    const { name, mobile, password } = req.body;
+    
+    if (!name || !mobile || !password) {
+      return errorResponseHelper(res, 400, "Name, mobile, and password are required");
+    }
+    
+    // Validate phone format
+    const phoneRegex = /^\d{10,15}$/;
+    if (!phoneRegex.test(mobile)) {
+      return errorResponseHelper(res, 400, "Invalid phone number format. Use 10-15 digits only");
+    }
+    
+    // Check if mobile already registered
+    const mobileExists = await userModel.findOne({
+      where: { mobile }
+    });
+    
+    if (mobileExists) {
+      return errorResponseHelper(res, 400, "Phone number already registered");
+    }
+    
+    // Send OTP via Telnyx
+    try {
+      await axios.post(
+        "https://api.telnyx.com/v2/verifications/sms",
+        {
+          phone_number: "+" + mobile,
+          verify_profile_id: process.env.TELNYX_VERIFY_PROFILE_ID || process.env.PROFILE_ID,
+          timeout_secs: 600,
+        },
+        {
+          headers: {
+            Authorization: "Bearer " + (process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN),
+          },
+        }
+      );
+      
+      // Store registration data temporarily (will be completed on OTP verification)
+      // In production, you might want to use Redis for this
+      successResponseHelper(res, 200, "OTP sent to your phone. Please verify to complete registration.");
+      
+    } catch (telnyxError) {
+      userLogger.error("Telnyx OTP send failed", telnyxError);
+      errorResponseHelper(res, 500, "Failed to send OTP. Please try again.");
+    }
+    
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Phone registration step 1 error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
+ * Register User with Phone Number (Step 2: Verify OTP & Create Account)
+ * POST /api/user/registerPhone/verify
+ * Verifies OTP and creates user account
+ */
+const registerPhoneStep2 = async (req: express.Request, res: express.Response) => {
+  try {
+    const { name, mobile, password, otp } = req.body;
+    
+    if (!name || !mobile || !password || !otp) {
+      return errorResponseHelper(res, 400, "All fields are required: name, mobile, password, otp");
+    }
+    
+    // Verify OTP with Telnyx
+    try {
+      const verifyResponse = await axios.post(
+        `https://api.telnyx.com/v2/verifications/by_phone_number/+${mobile}/actions/verify`,
+        {
+          code: otp,
+          verify_profile_id: process.env.TELNYX_VERIFY_PROFILE_ID || process.env.PROFILE_ID,
+        },
+        {
+          headers: {
+            Authorization: "Bearer " + (process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN),
+          },
+        }
+      );
+      
+      // Check if verification was successful
+      if (verifyResponse.data?.data?.response_code !== "accepted") {
+        return errorResponseHelper(res, 400, "Invalid or expired OTP");
+      }
+      
+    } catch (otpError) {
+      userLogger.error("OTP verification failed", otpError);
+      return errorResponseHelper(res, 400, "Invalid or expired OTP");
+    }
+    
+    // OTP verified, now create user account
+    const newPassword = sha256(password).toString();
+    
+    // Double-check mobile doesn't exist
+    const mobileExists = await userModel.findOne({
+      where: { mobile }
+    });
+    
+    if (mobileExists) {
+      return errorResponseHelper(res, 400, "Phone number already registered");
+    }
+    
+    // Download default user image
+    const photoLocation = await downloadUserImage();
+    const photo = process.env.SERVER_URL + photoLocation;
+    
+    // Create user with mobile as primary identifier
+    const createdUser = await userModel.create({
+      name,
+      mobile,
+      email: null, // Email is optional for phone registration
+      photo,
+      password: newPassword,
+      login_type: "SMS", // Mark as SMS-based login
+    });
+    
+    // Create wallets for the new user
+    const walletData = await adminWalletModel.findAll();
+    const fiatData = walletData.filter(
+      (x) => x.dataValues.currency_type === "FIAT"
+    );
+    const cryptoData = walletData.filter(
+      (x) => x.dataValues.currency_type === "CRYPTO"
+    );
+    
+    for (let i = 0; i < fiatData.length; i++) {
+      await userWalletModel.create({
+        id: crypto.randomUUID(),
+        user_id: createdUser.dataValues.user_id,
+        wallet_type: fiatData[i].dataValues.wallet_type,
+        currency_type: "FIAT",
+      });
+    }
+    
+    for (let i = 0; i < cryptoData.length; i++) {
+      await userWalletModel.create({
+        id: crypto.randomUUID(),
+        user_id: createdUser.dataValues.user_id,
+        wallet_type: cryptoData[i].dataValues.wallet_type,
+        currency_type: "CRYPTO",
+      });
+    }
+    
+    // Generate access token
+    const resData = await getAccessToken(createdUser.dataValues.user_id);
+    
+    userLogger.info(`New user registered via phone: ${mobile}`);
+    
+    successResponseHelper(res, 200, "Registration successful!", resData);
+    
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Phone registration step 2 error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 const login = async (req: express.Request, res: express.Response) => {
   try {
     const { email, password } = req.body;
