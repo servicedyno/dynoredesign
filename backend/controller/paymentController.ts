@@ -2015,11 +2015,21 @@ const createPaymentLink = async (
 const getPaymentLinks = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as any;
   try {
+    const { company_id } = req.query;  // Phase 10 Fix: Optional company_id filter
+    
     console.log("userData============>", userData);
+    
+    // Build where clause with optional company_id filter
+    const whereClause: any = {
+      user_id: userData.user_id,
+    };
+    
+    if (company_id) {
+      whereClause.company_id = parseInt(company_id as string);
+    }
+    
     const links = await paymentLinkModel.findAll({
-      where: {
-        user_id: userData.user_id,
-      },
+      where: whereClause,
       order: [['createdAt', 'DESC']],
     });
 
