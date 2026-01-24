@@ -1088,6 +1088,124 @@ const changePhone = async (req: express.Request, res: express.Response) => {
 };
 
 /**
+ * Remove Email from Account
+ * DELETE /api/user/email
+ * Requires password and must have alternative login method (mobile/social)
+ */
+const removeEmail = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { password } = req.body;
+    
+    if (!password) {
+      return errorResponseHelper(res, 400, "Password is required");
+    }
+    
+    // Get user data
+    const user = await userModel.findOne({
+      where: { user_id: userData.user_id }
+    });
+    
+    if (!user) {
+      return errorResponseHelper(res, 404, "User not found");
+    }
+    
+    // Verify password
+    const hashedPassword = sha256(password).toString();
+    if (user.dataValues.password !== hashedPassword) {
+      return errorResponseHelper(res, 401, "Invalid password");
+    }
+    
+    // Check if user has alternative login method
+    const hasMobile = user.dataValues.mobile && user.dataValues.mobile.length > 0;
+    const hasGoogle = user.dataValues.google_id;
+    const hasTelegram = user.dataValues.telegram_id;
+    
+    if (!hasMobile && !hasGoogle && !hasTelegram) {
+      return errorResponseHelper(
+        res, 
+        400, 
+        "Cannot remove email. Please add a phone number or link a social account first."
+      );
+    }
+    
+    // Remove email
+    await userModel.update(
+      { email: null },
+      { where: { user_id: userData.user_id } }
+    );
+    
+    userLogger.info(`Email removed for user ${userData.user_id}`);
+    
+    successResponseHelper(res, 200, "Email removed successfully. You can still login using your phone or social accounts.");
+    
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Remove email error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
+ * Remove Phone Number from Account
+ * DELETE /api/user/phone
+ * Requires password and must have alternative login method (email/social)
+ */
+const removePhone = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { password } = req.body;
+    
+    if (!password) {
+      return errorResponseHelper(res, 400, "Password is required");
+    }
+    
+    // Get user data
+    const user = await userModel.findOne({
+      where: { user_id: userData.user_id }
+    });
+    
+    if (!user) {
+      return errorResponseHelper(res, 404, "User not found");
+    }
+    
+    // Verify password
+    const hashedPassword = sha256(password).toString();
+    if (user.dataValues.password !== hashedPassword) {
+      return errorResponseHelper(res, 401, "Invalid password");
+    }
+    
+    // Check if user has alternative login method
+    const hasEmail = user.dataValues.email && user.dataValues.email.length > 0;
+    const hasGoogle = user.dataValues.google_id;
+    const hasTelegram = user.dataValues.telegram_id;
+    
+    if (!hasEmail && !hasGoogle && !hasTelegram) {
+      return errorResponseHelper(
+        res, 
+        400, 
+        "Cannot remove phone. Please add an email or link a social account first."
+      );
+    }
+    
+    // Remove mobile
+    await userModel.update(
+      { mobile: null },
+      { where: { user_id: userData.user_id } }
+    );
+    
+    userLogger.info(`Phone removed for user ${userData.user_id}`);
+    
+    successResponseHelper(res, 200, "Phone number removed successfully. You can still login using your email or social accounts.");
+    
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Remove phone error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
  * Delete User Account
  * DELETE /api/user/account
  * Requires password confirmation for security
