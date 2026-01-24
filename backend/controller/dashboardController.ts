@@ -286,17 +286,19 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     // Get transaction breakdown by currency
     const currencyBreakdown = await sequelize.query(
       `SELECT 
-        base_currency,
+        ut.base_currency,
         COUNT(*) as count,
-        COALESCE(SUM(base_amount), 0) as volume
-       FROM tbl_user_transaction 
-       WHERE user_id = :userId 
-       AND status = 'done'
-       AND "createdAt" >= :startDate
-       GROUP BY base_currency
+        COALESCE(SUM(ut.base_amount), 0) as volume
+       FROM tbl_user_transaction ut
+       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       WHERE ut.user_id = :userId 
+       AND ut.status = 'done'
+       AND ut."createdAt" >= :startDate
+       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
+       GROUP BY ut.base_currency
        ORDER BY volume DESC`,
       {
-        replacements: { userId, startDate },
+        replacements: { userId, startDate, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as any[];
@@ -304,14 +306,16 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     // Get transaction breakdown by status
     const statusBreakdown = await sequelize.query(
       `SELECT 
-        status,
+        ut.status,
         COUNT(*) as count
-       FROM tbl_user_transaction 
-       WHERE user_id = :userId 
-       AND "createdAt" >= :startDate
-       GROUP BY status`,
+       FROM tbl_user_transaction ut
+       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       WHERE ut.user_id = :userId 
+       AND ut."createdAt" >= :startDate
+       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
+       GROUP BY ut.status`,
       {
-        replacements: { userId, startDate },
+        replacements: { userId, startDate, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as any[];
