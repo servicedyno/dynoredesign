@@ -101,6 +101,38 @@ const getCompany = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Get Company by ID
+ * GET /api/company/getCompany/:id
+ */
+const getCompanyById = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const company_id = req.params.id;
+    
+    const resData = await companyModel.findOne({
+      where: {
+        user_id: userData.user_id,
+        company_id,
+      },
+    });
+
+    if (!resData) {
+      return errorResponseHelper(res, 404, "Company not found");
+    }
+
+    successResponseHelper(res, 200, "Company retrieved successfully", resData);
+  } catch (e) {
+    const message = getErrorMessage(e);
+    companyLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 const deleteCompany = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
