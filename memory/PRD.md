@@ -18,6 +18,8 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 
 **Tech Stack:** Node.js, TypeScript, Express, PostgreSQL, Redis, Sequelize ORM
 
+---
+
 ## Implemented Features
 
 ### Critical Fixes ✅ (December 2025)
@@ -28,52 +30,97 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
   - Test file: `/app/backend/tests/adminFeeMultiTenancy.test.ts`
 - **Wallet Migration Analysis**: Confirmed no data migration needed for multi-tenancy
 
-### Phase 1: Database Schema Updates ✅ (January 2026)
-- **Modified Tables:**
-  - `tbl_company`: Added address_line1, address_line2, city, state, country, zip_code, vat_number, vat_type, vat_verified
-  - `tbl_api`: Added api_name
-  - `tbl_user_wallet`: Added company_id, wallet_name
-  - `tbl_user_addresses`: Added company_id, wallet_name
-  
-- **New Tables Created:**
-  - `tbl_tax_rate`: Cache VAT rates by country
-  - `tbl_invoice`: Transaction invoices
-  - `tbl_notification`: Individual notifications
-  - `tbl_notification_preferences`: User notification settings
-  - `tbl_kyc`: KYC verification records
+### Phase 1: Database Schema Updates ✅
+- **Modified Tables:** tbl_company, tbl_api, tbl_user_wallet, tbl_user_addresses
+- **New Tables:** tbl_tax_rate, tbl_invoice, tbl_notification, tbl_notification_preferences, tbl_kyc
 
-## Prioritized Backlog
+### Phase 2: Company Profile & Tax Integration ✅
+- **Controller**: `/app/backend/controller/taxController.ts` (317 lines)
+- **Routes**: `/app/backend/routes/taxRouter.ts`
+- **Endpoints**:
+  - `GET /api/tax/rate/:countryCode` - Get tax rate by country
+  - `POST /api/tax/validate` - Validate tax ID
+  - `GET /api/tax/acronyms` - Get tax acronyms by country
+  - `GET /api/tax/lookup` - Lookup by country name
 
-### P0 (Critical)
-- Phase 2: Company Profile & Tax Integration (APILayer)
-- Phase 3: Dashboard APIs
+### Phase 3: Dashboard APIs ✅
+- **Controller**: `/app/backend/controller/dashboardController.ts` (470 lines)
+- **Routes**: `/app/backend/routes/dashboardRouter.ts`
+- **Endpoints**:
+  - `GET /api/dashboard` - Main dashboard data
+  - `GET /api/dashboard/chart` - Chart data
+  - `GET /api/dashboard/fee-tiers` - Fee tier information
+  - `GET /api/dashboard/recent-transactions` - Recent transactions
 
-### P1 (High Priority)
-- Phase 4: Notifications System
+### Phase 4: Notifications System ✅
+- **Controller**: `/app/backend/controller/notificationController.ts` (406 lines)
+- **Routes**: `/app/backend/routes/notificationRouter.ts`
+- **Endpoints**:
+  - `GET /api/notifications` - Get notifications
+  - `GET /api/notifications/preferences` - Get user preferences
+  - `PUT /api/notifications/preferences` - Update preferences
+  - `GET /api/notifications/unread-count` - Unread count
+  - `PUT /api/notifications/read-all` - Mark all as read
+  - `PUT /api/notifications/:id/read` - Mark single as read
+  - `DELETE /api/notifications/:id` - Delete notification
+
+### Phase 11: KYC System ✅
+- **Controller**: `/app/backend/controller/kycController.ts` (480 lines)
+- **Routes**: `/app/backend/routes/kycRouter.ts`
+- **Endpoints**:
+  - `GET /api/kyc/status` - Get KYC status
+  - `GET /api/kyc/requirements` - Get KYC requirements
+  - `POST /api/kyc/submit` - Start KYC verification
+  - `POST /api/kyc/webhook` - Veriff webhook handler
+
+### Phase 12: Invoice Generation ✅
+- **Controller**: `/app/backend/controller/invoiceController.ts` (512 lines)
+- **Routes**: `/app/backend/routes/invoiceRouter.ts`
+- **Endpoints**:
+  - `GET /api/invoices/transaction/:txId` - Get invoice for transaction
+  - `GET /api/invoices` - Get all invoices
+  - `GET /api/invoices/:id` - Get single invoice
+  - `GET /api/invoices/:id/download` - Download PDF
+
+---
+
+## Remaining Work
+
+### P0 - Critical Stability
+- **API Service Stability**: Add `api-service` (port 3301) to supervisor for auto-restart
+- **Remove Python Wrapper**: Modify supervisor to run Node.js directly
+
+### P1 - High Priority (Need Verification)
 - Phase 5: Authentication Fixes (Forgot Password, Google Sign-In)
 - Phase 6: API, Wallet & Company-Level Data Scoping
-
-### P2 (Medium Priority)
 - Phase 7: Transactions (filters, CSV export)
 - Phase 8: Payment Links CRUD
 - Phase 9: Email Service (17 templates via Brevo)
 - Phase 10: Partial Wallet Configuration
-- Phase 11: KYC System
-- Phase 12: Invoice Generation
+
+---
 
 ## Known Issues
 1. **Fee Logic Defaults Bug** - BTC should be $7, USDT-TRC20 should be $10 (currently $5)
 2. **Missing userReceives < $5 Check** - Full amount should go to admin if user receives < $5
 3. **Google Sign-In** - Needs investigation/fix
+4. **API Service Instability** - Not managed by supervisor, can crash
+
+---
 
 ## Key Integrations
 - PostgreSQL (external database)
 - Redis (caching/queues)
+- Google Cloud KMS (wallet encryption)
+- Tatum (blockchain APIs, webhooks)
 - APILayer (Tax Data API)
 - Brevo (Email)
 - Telnyx (SMS)
-- Tatum, BlockBee, Blockchair (Crypto APIs)
+- BlockBee, Blockchair (Crypto APIs)
 - Flutterwave (Payments)
+- Veriff (KYC)
+
+---
 
 ## Configuration
 - Implementation Plan: `/app/backend/DYNOPAY_IMPLEMENTATION_TASKS.txt`
