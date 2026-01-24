@@ -8,7 +8,7 @@ import {
 import { IUserType } from "../utils/types";
 import invoiceModel from "../models/invoiceModel";
 import { userTransactionModel, companyModel } from "../models";
-import { apiLogger } from "../utils/logger";
+import { apiLogger } from "../utils/loggers";
 
 /**
  * Generate invoice number
