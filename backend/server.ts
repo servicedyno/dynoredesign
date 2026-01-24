@@ -96,6 +96,9 @@ setupWeeklySummaryCron();
 // Setup wallet reminder cron job (every hour for users without wallets after 24h)
 setupWalletReminderCron();
 
+// Setup infrastructure health check cron job (every 5 minutes)
+setupHealthCheckCron();
+
 const startServer = async () => {
   await connectRedis();
   try {
