@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosInstance } from "axios";
-import crypto from "crypto";
+import * as crypto from "crypto";
 
 // Veriff API Configuration
 const VERIFF_API_BASE_URL = "https://stationapi.veriff.com";
