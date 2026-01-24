@@ -115,11 +115,13 @@ const addApi = async (req: express.Request, res: express.Response) => {
           adminToken: token.token,
           withdrawal_whitelist: withdrawal_whitelist,
           api_name: api_name || `${company_data.dataValues.company_name} API`,
+          permissions: JSON.stringify(apiPermissions),  // Store permissions as JSON
         });
 
         successResponseHelper(res, 200, "API generated successfully!", {
           ...resData.dataValues,
           ...company_data.dataValues,
+          permissions: apiPermissions,  // Return parsed permissions
         });
       }
     }
