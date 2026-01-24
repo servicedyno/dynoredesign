@@ -507,7 +507,7 @@ testInvoiceSchema();
         # First get a list of invoices to find valid IDs
         try:
             response = requests.get(
-                f"{self.backend_url}/api/invoices",
+                f"{self.backend_url}/invoices",
                 params={"limit": 5},
                 headers=headers,
                 timeout=15
