@@ -1,0 +1,189 @@
+<analysis>**original_problem_statement:**
+The user's initial request was to understand why a Python/Uvicorn setup was being used for a Node.js project. This evolved into a series of requests to improve and expand the application's functionality. The key requests included:
+- Refactoring the Python launcher to be more efficient.
+- Verifying and fixing payment link creation with external URLs.
+- Moving all hardcoded API keys and credentials from the source code into a  file for better security.
+- Fixing the SMS OTP login functionality, which was failing due to an incorrect Telnyx API configuration.
+- Adding a complete suite of profile management endpoints, including updating user profiles, changing email, and securely changing phone numbers with OTP verification.
+- Implementing a user onboarding flow using a phone number and OTP.
+- Adding endpoints to allow users to remove their email or phone number from their account.
+- Implementing and testing social logins (Telegram, Google, Facebook).
+- Ensuring all project dependencies (both Python and Node.js) are correctly listed and installed.
+- Analyzing and subsequently documenting all missing API endpoints in the project's Swagger/OpenAPI specification.
+
+**User's preferred language**: English
+
+**what currently exists?**
+The project is a full-stack application with a Node.js/Express backend and a React frontend. To align with a platform requirement for a Python-based supervisor, the Node.js server is started by a lightweight Python reverse-proxy script (). This script is launched by Uvicorn on port 8001 and forwards all traffic to the Node.js process running on port 3300.
+
+The application has a robust set of features, including user authentication (email, phone, social), extensive profile management, and payment processing capabilities. All sensitive credentials have been successfully externalized to a  file. The previously broken SMS OTP functionality via Telnyx has been repaired. The immediate task in progress is to complete the API documentation.
+
+**Last working item**:
+-   **Last item agent was working:** The agent was in the process of adding comprehensive Swagger/OpenAPI documentation for all API endpoints. An analysis revealed that 94 out of 146 endpoints were undocumented. The work started by creating a new, organized file structure for Swagger definitions under , beginning with .
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** manual testing by curl
+-   **User Testing Done:** N
+
+**All Pending/In progress Issue list**:
+-   **Issue 1 (P0):** Incomplete Swagger/OpenAPI documentation.
+-   **Issue 2 (P1):** Facebook social login is not tested.
+
+**Issues Detail:**
+-   **Issue 1:**
+    -   **Description:** The Swagger documentation is missing for 94 out of 146 API endpoints (64% of the API is undocumented).
+    -   **Attempted fixes:** The agent started creating modular Swagger definition files, beginning with , to house the missing documentation.
+    -   **Next debug checklist:**
+        1.  Continue creating modular Swagger definition files for the remaining modules (payment, wallet, admin, etc.) inside .
+        2.  Import all new definition files into the main Swagger configuration at .
+        3.  Restart the backend service.
+        4.  Access the  endpoint to visually confirm that all 146 endpoints are now documented.
+    -   **Why fix this issue and what will be achieved with the fix?** To provide complete and accurate API documentation, which is crucial for frontend development, testing, and future maintenance.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on other issue:** None
+
+-   **Issue 2:**
+    -   **Description:** The backend endpoint for Facebook social login () was created but has not been tested.
+    -   **Attempted fixes:** None.
+    -   **Next debug checklist:**
+        1.  Create a test script or use  to send a request to the  endpoint.
+        2.  The test will require a valid Facebook . The agent may need to ask the user to provide a developer access token for testing.
+        3.  Verify that the endpoint successfully logs in or creates a new user based on the token.
+    -   **Why fix this issue and what will be achieved with the fix?** To confirm the Facebook login feature is fully functional before it's integrated into the frontend.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on other issue:** Potentially blocked if a user-provided test token is required.
+
+**In progress Task List**:
+-   **Task 1:** Document all APIs in Swagger.
+    -   **Where to resume:** Continue by creating a new Swagger definition file for payment-related endpoints in , similar to how  was created. Then, proceed with other modules (wallet, admin, etc.).
+    -   **What will be achieved with this?** A fully documented API that is easy for developers to consume and understand.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on something:** No
+
+**Upcoming and Future Tasks**
+- **Upcoming Tasks:**
+    - **P0:** Test the implemented Facebook social login endpoint ( in ).
+    - **P1:** Begin implementing high-priority features identified in the  document, such as Admin Dashboard functionality (User Management, Transaction Monitoring).
+- **Future Tasks:**
+    - Implement other identified features like advanced notification preferences and multi-currency wallet views.
+    - Build out the frontend components to consume the newly created profile management and social login APIs.
+
+**Completed work in this session**
+- **Architecture Refactor:** The Python backend launcher () was simplified into a lightweight reverse proxy to align with platform constraints while improving clarity.
+- **Credential Security:** All hardcoded credentials (Tax API, Veriff, etc.) were moved to the  file, and an  template was created.
+- **Bug Fix (Telnyx SMS):** The SMS OTP login failure was diagnosed and fixed by using the correct Telnyx Verify Profile ID.
+- **Feature (Profile & Account Management):**
+    - Implemented a full suite of endpoints for profile management: , , , and a secure  endpoint.
+    - Created endpoints to allow users to remove their phone number or email from their account.
+- **Feature (User Onboarding):**
+    - A complete phone number registration flow with OTP verification was created (, ).
+    - Added a  endpoint (untested).
+- **Dependency Management:** A  file was created for Python dependencies, and missing packages were installed.
+- **Code Analysis:** A comprehensive analysis was performed to identify missing features and undocumented API endpoints, with findings recorded in markdown files.
+
+**Earlier issues found/mentioned but not fixed**
+-   None. The agent successfully addressed all issues raised by the user during the session.
+
+**Known issue recurrence from previous fork**
+-   Not applicable.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+-   **Backend:** Node.js, Express.js, TypeScript
+-   **Database:** PostgreSQL with Sequelize ORM
+-   **Architecture:** The Node.js app is launched via a Python () reverse-proxy script, which is a workaround for a read-only supervisor configuration that expects to run .
+-   **Authentication:** JWT-based system supporting email/password, phone/OTP, and social logins (Google, Telegram, Facebook).
+-   **API Documentation:** Swagger (OpenAPI) via .
+
+**key DB schema**
+-   **Users:** Stores user information including , , ,  (hashed), , and social IDs like .
+-   **PaymentLinks:** Manages payment link data, including , , , , , and .
+-   Other schemas exist for transactions, wallets, companies, and admin functions.
+
+**changes in tech stack**
+-   No fundamental changes. A  was added to formalize the Python dependencies for the existing launcher script.
+
+**All files of reference**
+-   **Key Updated Files:**
+    -   : Rewritten into a simple, efficient reverse proxy.
+    -   : Heavily modified to add endpoints for profile management, phone onboarding, and social login.
+    -   : Updated with routes for the new controller functions.
+    -   : Updated multiple times with corrected credentials and placeholders.
+    -   : Created to manage Python dependencies.
+    -   : Created to start documenting missing user endpoints.
+-   **New Documentation Files:** , , , , , , .
+
+**Areas that need refactoring**:
+-   The Swagger documentation structure requires completion. The ongoing effort to create modular definition files in  is the correct approach and should be seen through to completion.
+
+**key api endpoints**
+-   **Auth:** , , , , 
+-   **Profile:** , , , 
+-   **Payment:** , 
+-   **Docs:** 
+
+**Critical Info for New Agent**
+-   **Architecture Constraint:** The backend is a Node.js app but **must** be started via the backend: stopped
+backend: started command, which runs the Python proxy script (). Do not attempt to run  directly. This proxy forwards traffic from  to the Node app on port .
+-   **API Documentation:** The most immediate task is to complete the Swagger documentation. There are 94 endpoints missing. The plan is to create a separate file for each major feature set within .
+-   **Environment:** All secrets and configurations are managed in . Always use  to access them in the code.
+
+**documents and test reports created in this job**
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   Multiple other documentation and summary files.
+
+**Last 10 User Messages and any pending HUMAN messages**
+10. : **Completed.** Agent fixed the Telnyx configuration.
+9.  : **Completed.** Agent created/fixed profile, email, and password endpoints.
+8.  : **Completed.** Agent created a secure endpoint for this.
+7.  : **Completed.** Agent built a phone registration flow.
+6.  : **Completed.** Agent created these endpoints.
+5.  : **Partially Completed.** Agent added a Facebook endpoint but it remains untested.
+4.  : **Completed.** Agent performed a full analysis.
+3.  : **Completed.** Agent created the file and installed dependencies.
+2.  : **Completed.** Agent found 94 undocumented endpoints.
+1.  : **In Progress.** Agent started creating the documentation files.
+
+**Project Health Check:**
+-   **Broken:** None.
+-   **Mocked:** Test scripts use mock data (e.g., creating a test user) to facilitate API testing, but the underlying API calls to third parties like Telnyx are real.
+
+**3rd Party Integrations**
+-   **Telnyx, Infobip:** For SMS OTP and notifications.
+-   **Brevo:** For email services.
+-   **APILayer, FastForex:** For tax and currency data.
+-   **Veriff:** For identity verification.
+-   **Google, Telegram, Facebook:** For social login.
+-   **Flutterwave, Tatum, BlockBee, Blockchair:** For payment and crypto operations.
+-   **Google Cloud KMS:** For cryptographic key management.
+
+**Testing status**
+-   **Testing agent used after significant changes:** NO
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:**
+    -   
+    -   
+    -   
+    -   
+    -   
+-   **Known regressions:** None.
+
+**Credentials to test flow:**
+Credentials for various services are stored in . For testing SMS flows, the number  was used. New test users are created as needed by the test scripts.
+
+**What agent forgot to execute**
+-   The agent created the backend endpoint for Facebook sign-in as requested but did not proceed to test its functionality. This remains a pending task.</analysis>

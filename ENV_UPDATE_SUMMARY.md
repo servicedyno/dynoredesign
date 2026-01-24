@@ -9,14 +9,14 @@
 
 ### 1. ✅ SERVER_URL Updated
 ```diff
-- SERVER_URL=https://30d54806-7ea2-4a55-ad88-9900e9346b64.preview.emergentagent.com
-+ SERVER_URL=https://f64baf90-751f-40ed-b9cd-9efa6e941a02.preview.emergentagent.com
+- SERVER_URL=https://apidocs-overhaul.preview.emergentagent.com
++ SERVER_URL=https://apidocs-overhaul.preview.emergentagent.com
 ```
 
 ### 2. ✅ PROFILE_ID Updated
 ```diff
 - PROFILE_ID=unicorn-node
-+ PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
++ PROFILE_ID=apidocs-overhaul
 ```
 
 ### 3. ✅ Added Missing Credentials

@@ -8,7 +8,7 @@
 ## Issue Identified
 
 The SMS OTP login was failing because:
-1. ❌ **Wrong Profile ID**: Using `PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4` (Tatum profile)
+1. ❌ **Wrong Profile ID**: Using `PROFILE_ID=apidocs-overhaul` (Tatum profile)
 2. ❌ **Variable Conflict**: `ACCESS_TOKEN` and `PROFILE_ID` used for multiple services
 3. ✅ **Correct Profile ID**: Should be `49000190-3429-96c2-347f-ba26862735da` (Telnyx Verify Profile)
 
@@ -23,7 +23,7 @@ The SMS OTP login was failing because:
 ```env
 # Telnyx SMS Verification
 TELNYX_API_KEY=KEY019B6F591AACFAF1451A80C66809193A_TKJeBs8NaHEaqFkEh2HuYe
-TELNYX_VERIFY_PROFILE_ID=49000190-3429-96c2-347f-ba26862735da
+TELNYX_VERIFY_PROFILE_ID=apidocs-overhaul
 TELNYX_PHONE_NUMBER=+18022100479
 ```
 
