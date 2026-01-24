@@ -462,7 +462,7 @@ class PaymentThresholdRedisTester:
             # Setup Redis data for below-threshold payment
             test_data = {
                 "address": "test-btc-001",
-                "amount": 3,
+                "amount": 5,  # Use $5 instead of $3
                 "currency": "BTC",
                 "company_id": 1
             }
