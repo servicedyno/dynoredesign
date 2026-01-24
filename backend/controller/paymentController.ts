@@ -1957,6 +1957,7 @@ const createPaymentLink = async (
     callback_url,
     redirect_url,
     webhook_url,
+    fee_payer,  // Who pays blockchain fees: 'customer' or 'company'
     company_id  // Phase 10 Fix: Accept company_id for multi-tenant isolation
   } = req.body;
   
