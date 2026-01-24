@@ -417,11 +417,69 @@ const getInvoiceById = async (
   }
 };
 
+/**
+ * Download invoice as PDF
+ * GET /api/invoices/:id/pdf
+ */
+const downloadInvoicePDF = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  const { id } = req.params;
+
+  try {
+    const invoice = await invoiceModel.findOne({
+      where: { invoice_id: id },
+    });
+
+    if (!invoice) {
+      return errorResponseHelper(res, 404, "Invoice not found");
+    }
+
+    const invoiceData = invoice.dataValues;
+
+    // Verify user owns the company
+    const company = await companyModel.findOne({
+      where: {
+        company_id: invoiceData.company_id,
+        user_id: userData.user_id,
+      },
+    });
+
+    if (!company) {
+      return errorResponseHelper(res, 403, "Access denied");
+    }
+
+    // Generate PDF
+    const pdfStream = generateInvoicePDF(invoiceData);
+
+    // Set response headers for PDF download
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice-${invoiceData.invoice_number}.pdf`
+    );
+
+    // Pipe PDF stream to response
+    pdfStream.pipe(res);
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    apiLogger.error(
+      errorMessage,
+      { id: userData.user_id, email: userData.email, invoice_id: id },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 export default {
   getTransactionInvoice,
   getAllInvoices,
   getInvoiceById,
   autoGenerateInvoice,
+  downloadInvoicePDF,
 };
 
 // Named export for use in other controllers
