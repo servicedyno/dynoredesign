@@ -179,7 +179,7 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
     const localCurrency = currency.includes("USDT") ? "usdt" : currency;
 
     const currencyData = await axios.post(
-      process.env.SERVER_URL + "/api/pay/getCurrencyRates",
+      getBackendURL() + "/api/pay/getCurrencyRates",
       {
         source: data.base_currency,
         amount: amount,
