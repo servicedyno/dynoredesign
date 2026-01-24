@@ -168,6 +168,7 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
       topUp = false,
       currency,
       redirect_uri,
+      fee_payer,  // Who pays fees: 'customer' or 'company' (default)
     } = req.body;
 
     const data = res.locals.apiKeyData;
@@ -180,6 +181,7 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
 
     const localCurrency = currency.includes("USDT") ? "usdt" : currency;
 
+    // Pass fee_payer to getCurrencyRates for proper amount calculation
     const currencyData = await axios.post(
       getBackendURL() + "/api/pay/getCurrencyRatesInternal",
       {
@@ -187,6 +189,7 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
         amount: amount,
         currencyList: [localCurrency],
         fixedDecimal: false,
+        fee_payer: fee_payer || 'company',  // Pass fee_payer for calculation
       },
       {
         headers: {
@@ -200,9 +203,11 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
       company_id: data.company_id,
       adm_id: data.adm_id,
       base_currency: data.base_currency,
+      base_amount: amount,  // Store original amount
       amount: amount,
       pathType: topUp ? "addFund" : "cryptoPayment",
       redirect_uri,
+      fee_payer: fee_payer || 'company',  // Store fee_payer
       ...(meta_data && { meta_data: JSON.stringify(meta_data) }),
     };
 
