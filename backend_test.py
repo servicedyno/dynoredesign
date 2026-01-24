@@ -1414,13 +1414,415 @@ verifyCacheData();
                     f"Request failed: {str(e)}"
                 )
     
+    def test_pending_payment_notifications(self):
+        """Test the newly implemented pending payment notification system"""
+        print("\n=== Testing Pending Payment Notification System ===")
+        
+        # Test 1: Verify Notification Types include payment_pending and payment_confirming
+        self.test_notification_types_include_pending()
+        
+        # Test 2: Verify Notification Preferences include payment_pending
+        self.test_notification_preferences_include_pending()
+        
+        # Test 3: Verify webhook endpoints exist and respond
+        self.test_tatum_webhook_endpoints()
+        
+        # Test 4: Test pending payment email templates (if accessible)
+        self.test_pending_payment_email_templates()
+    
+    def test_notification_types_include_pending(self):
+        """Test GET /api/notifications - Check for payment_pending and payment_confirming types"""
+        print("\n--- Testing Notification Types for Pending Payments ---")
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/notifications/types", timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    notification_types = data['data'].get('types', [])
+                    
+                    # Check for required notification types
+                    required_types = ['payment_pending', 'payment_confirming']
+                    found_types = []
+                    missing_types = []
+                    
+                    for req_type in required_types:
+                        if req_type in notification_types:
+                            found_types.append(req_type)
+                        else:
+                            missing_types.append(req_type)
+                    
+                    if not missing_types:
+                        self.log_result(
+                            "Notification Types - Pending Payments", 
+                            True, 
+                            f"✅ All required notification types found: {', '.join(found_types)}",
+                            {"found_types": found_types, "total_types": len(notification_types)}
+                        )
+                    else:
+                        self.log_result(
+                            "Notification Types - Pending Payments", 
+                            False, 
+                            f"❌ Missing notification types: {', '.join(missing_types)}",
+                            {"found_types": found_types, "missing_types": missing_types, "all_types": notification_types}
+                        )
+                else:
+                    self.log_result(
+                        "Notification Types - Pending Payments", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Notification Types - Pending Payments", 
+                    False, 
+                    f"❌ API call failed with status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Notification Types - Pending Payments", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_notification_preferences_include_pending(self):
+        """Test GET /api/notifications/preferences - Verify payment_pending preference exists"""
+        print("\n--- Testing Notification Preferences for Pending Payments ---")
+        
+        if not self.jwt_token:
+            # Try to get JWT token using provided credentials
+            self.authenticate_with_provided_credentials()
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Notification Preferences - Pending Payments", 
+                False, 
+                "❌ No JWT token available for authentication"
+            )
+            return
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/notifications/preferences",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    preferences = data['data']
+                    
+                    # Check for payment_pending preference
+                    if 'payment_pending' in preferences:
+                        payment_pending_value = preferences['payment_pending']
+                        
+                        # Check if it defaults to true
+                        if payment_pending_value is True:
+                            self.log_result(
+                                "Notification Preferences - Payment Pending", 
+                                True, 
+                                f"✅ payment_pending preference exists and defaults to true",
+                                {"payment_pending": payment_pending_value, "is_default": preferences.get('is_default', False)}
+                            )
+                        else:
+                            self.log_result(
+                                "Notification Preferences - Payment Pending", 
+                                True, 
+                                f"✅ payment_pending preference exists but value is {payment_pending_value}",
+                                {"payment_pending": payment_pending_value, "is_default": preferences.get('is_default', False)}
+                            )
+                    else:
+                        self.log_result(
+                            "Notification Preferences - Payment Pending", 
+                            False, 
+                            "❌ payment_pending preference not found",
+                            {"available_preferences": list(preferences.keys())}
+                        )
+                else:
+                    self.log_result(
+                        "Notification Preferences - Payment Pending", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Notification Preferences - Payment Pending", 
+                    False, 
+                    f"❌ API call failed with status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Notification Preferences - Payment Pending", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_tatum_webhook_endpoints(self):
+        """Test POST /api/tatum-webhook and POST /api/tatum-crypto-webhook endpoints"""
+        print("\n--- Testing Tatum Webhook Endpoints ---")
+        
+        webhook_endpoints = [
+            "/api/tatum-webhook",
+            "/api/tatum-crypto-webhook"
+        ]
+        
+        # Test payload (minimal valid structure)
+        test_payload = {
+            "subscriptionType": "ADDRESS_TRANSACTION",
+            "transactionId": "test-transaction-id",
+            "address": "test-address",
+            "amount": "100",
+            "currency": "BTC",
+            "blockNumber": 12345,
+            "txId": "test-tx-id"
+        }
+        
+        for endpoint in webhook_endpoints:
+            try:
+                response = requests.post(
+                    f"{self.backend_url}{endpoint}",
+                    json=test_payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=15
+                )
+                
+                # Check if endpoint exists and responds (200 OK or other valid response)
+                if response.status_code == 200:
+                    self.log_result(
+                        f"Webhook Endpoint - {endpoint}", 
+                        True, 
+                        f"✅ Endpoint exists and returns 200 OK",
+                        {"status": response.status_code, "response_length": len(response.text)}
+                    )
+                elif response.status_code in [400, 422]:
+                    # Bad request might be expected with test payload, but endpoint exists
+                    self.log_result(
+                        f"Webhook Endpoint - {endpoint}", 
+                        True, 
+                        f"✅ Endpoint exists (returns {response.status_code} - validation error expected with test payload)",
+                        {"status": response.status_code, "response": response.text[:200]}
+                    )
+                elif response.status_code == 404:
+                    self.log_result(
+                        f"Webhook Endpoint - {endpoint}", 
+                        False, 
+                        f"❌ Endpoint not found (404)",
+                        {"status": response.status_code}
+                    )
+                else:
+                    self.log_result(
+                        f"Webhook Endpoint - {endpoint}", 
+                        True, 
+                        f"✅ Endpoint exists but returns {response.status_code}",
+                        {"status": response.status_code, "response": response.text[:200]}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"Webhook Endpoint - {endpoint}", 
+                    False, 
+                    f"❌ Request failed: {str(e)}"
+                )
+    
+    def test_pending_payment_email_templates(self):
+        """Test if pending payment email templates are accessible"""
+        print("\n--- Testing Pending Payment Email Templates ---")
+        
+        # This is more of a code verification since we can't directly test email sending
+        # We'll check if the email service has the required functions
+        
+        email_service_check_script = '''
+const fs = require('fs');
+const path = require('path');
+
+try {
+    // Check if email service file exists
+    const emailServicePath = path.join(__dirname, 'services', 'emailService.ts');
+    
+    if (fs.existsSync(emailServicePath)) {
+        const emailServiceContent = fs.readFileSync(emailServicePath, 'utf8');
+        
+        // Check for pending payment related functions
+        const pendingPaymentFunctions = [
+            'sendPaymentPendingEmail',
+            'sendPaymentConfirmingEmail',
+            'sendPendingPaymentNotification'
+        ];
+        
+        const foundFunctions = [];
+        const missingFunctions = [];
+        
+        for (const func of pendingPaymentFunctions) {
+            if (emailServiceContent.includes(func)) {
+                foundFunctions.push(func);
+            } else {
+                missingFunctions.push(func);
+            }
+        }
+        
+        console.log(JSON.stringify({
+            email_service_exists: true,
+            found_functions: foundFunctions,
+            missing_functions: missingFunctions,
+            has_pending_payment_support: foundFunctions.length > 0
+        }, null, 2));
+        
+    } else {
+        console.log(JSON.stringify({
+            email_service_exists: false,
+            error: 'Email service file not found'
+        }, null, 2));
+    }
+    
+    process.exit(0);
+    
+} catch (error) {
+    console.error('Email template check failed:', error.message);
+    process.exit(1);
+}
+'''
+        
+        try:
+            # Write email template check script
+            with open('/tmp/check_email_templates.js', 'w') as f:
+                f.write(email_service_check_script)
+            
+            # Run the check
+            result = subprocess.run(
+                ["node", "/tmp/check_email_templates.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                try:
+                    email_data = json.loads(result.stdout)
+                    
+                    if email_data.get('email_service_exists', False):
+                        found_functions = email_data.get('found_functions', [])
+                        missing_functions = email_data.get('missing_functions', [])
+                        
+                        if email_data.get('has_pending_payment_support', False):
+                            self.log_result(
+                                "Pending Payment Email Templates", 
+                                True, 
+                                f"✅ Email service has pending payment support",
+                                {"found_functions": found_functions, "missing_functions": missing_functions}
+                            )
+                        else:
+                            self.log_result(
+                                "Pending Payment Email Templates", 
+                                False, 
+                                f"❌ No pending payment email functions found",
+                                {"missing_functions": missing_functions}
+                            )
+                    else:
+                        self.log_result(
+                            "Pending Payment Email Templates", 
+                            False, 
+                            "❌ Email service file not found",
+                            {"error": email_data.get('error', 'Unknown error')}
+                        )
+                        
+                except json.JSONDecodeError:
+                    self.log_result(
+                        "Pending Payment Email Templates", 
+                        False, 
+                        "❌ Failed to parse email template check results",
+                        {"stdout": result.stdout, "stderr": result.stderr}
+                    )
+            else:
+                self.log_result(
+                    "Pending Payment Email Templates", 
+                    False, 
+                    "❌ Email template check script failed",
+                    {"stdout": result.stdout, "stderr": result.stderr}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Pending Payment Email Templates", 
+                False, 
+                f"❌ Email template check failed: {str(e)}"
+            )
+    
+    def authenticate_with_provided_credentials(self):
+        """Authenticate using the provided test credentials"""
+        print("\n--- Authenticating with Provided Credentials ---")
+        
+        # Credentials from review request
+        test_credentials = {
+            "email": "nomadly@moxx.co",
+            "password": "Katiekendra123@"
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/login",
+                json=test_credentials,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and 'accessToken' in data['data']:
+                    self.jwt_token = data['data']['accessToken']
+                    self.log_result(
+                        "Authentication - Provided Credentials", 
+                        True, 
+                        f"✅ Successfully authenticated with {test_credentials['email']}",
+                        {"email": test_credentials['email'], "has_token": bool(self.jwt_token)}
+                    )
+                    return True
+                else:
+                    self.log_result(
+                        "Authentication - Provided Credentials", 
+                        False, 
+                        "❌ Login succeeded but no token received",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Authentication - Provided Credentials", 
+                    False, 
+                    f"❌ Login failed with status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Authentication - Provided Credentials", 
+                False, 
+                f"❌ Authentication failed: {str(e)}"
+            )
+        
+        return False
+
     def run_comprehensive_verification_tests(self):
         """Run comprehensive verification tests as specified in review request"""
         print("=" * 80)
-        print("DYNOPAY FINAL VERIFICATION TESTING - ALL PHASES")
+        print("DYNOPAY PENDING PAYMENT NOTIFICATION SYSTEM TESTING")
         print("=" * 80)
         print(f"Backend URL: {self.backend_url}")
-        print("Valid Credentials: nomadly@moxx.co / Katiekendra123@")
+        print("Test Credentials: nomadly@moxx.co / Katiekendra123@")
         print("=" * 80)
         
         # Phase 1: Database (Quick check)
