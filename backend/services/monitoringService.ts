@@ -1,0 +1,250 @@
+import sequelize from "../utils/dbInstance";
+import { QueryTypes } from "sequelize";
+import serviceHealthModel from "../models/serviceHealthModel";
+import { getRedisItem } from "../utils/redisInstance";
+
+/**
+ * Infrastructure Monitoring Service
+ * Performs real health checks on DynoPay services and stores results
+ */
+
+interface HealthCheckResult {
+  healthy: boolean;
+  latency: number;
+  error?: string;
+}
+
+// Service definitions with actual health check implementations
+const MONITORED_SERVICES = [
+  {
+    id: "api_gateway",
+    name: "API Gateway",
+    check: async (): Promise<HealthCheckResult> => {
+      const start = Date.now();
+      try {
+        // Check if database connection is working (core API dependency)
+        await sequelize.query("SELECT 1", { type: QueryTypes.SELECT });
+        return { healthy: true, latency: Date.now() - start };
+      } catch (error: any) {
+        return { healthy: false, latency: Date.now() - start, error: error.message };
+      }
+    }
+  },
+  {
+    id: "payment_processing",
+    name: "Payment Processing",
+    check: async (): Promise<HealthCheckResult> => {
+      const start = Date.now();
+      try {
+        // Check payment tables are accessible
+        await sequelize.query("SELECT COUNT(*) FROM tbl_payment_link LIMIT 1", { type: QueryTypes.SELECT });
+        await sequelize.query("SELECT COUNT(*) FROM tbl_customer_transaction LIMIT 1", { type: QueryTypes.SELECT });
+        return { healthy: true, latency: Date.now() - start };
+      } catch (error: any) {
+        return { healthy: false, latency: Date.now() - start, error: error.message };
+      }
+    }
+  },
+  {
+    id: "wallet_services",
+    name: "Wallet Services",
+    check: async (): Promise<HealthCheckResult> => {
+      const start = Date.now();
+      try {
+        // Check wallet tables
+        await sequelize.query("SELECT COUNT(*) FROM tbl_user_wallet LIMIT 1", { type: QueryTypes.SELECT });
+        await sequelize.query("SELECT COUNT(*) FROM tbl_user_addresses LIMIT 1", { type: QueryTypes.SELECT });
+        await sequelize.query("SELECT COUNT(*) FROM tbl_admin_wallet LIMIT 1", { type: QueryTypes.SELECT });
+        return { healthy: true, latency: Date.now() - start };
+      } catch (error: any) {
+        return { healthy: false, latency: Date.now() - start, error: error.message };
+      }
+    }
+  },
+  {
+    id: "webhook_delivery",
+    name: "Webhook Delivery",
+    check: async (): Promise<HealthCheckResult> => {
+      const start = Date.now();
+      try {
+        // Check Redis connectivity (used for webhook queuing)
+        const testKey = await getRedisItem("health_check_test");
+        // Redis is connected if no error thrown
+        return { healthy: true, latency: Date.now() - start };
+      } catch (error: any) {
+        return { healthy: false, latency: Date.now() - start, error: error.message };
+      }
+    }
+  },
+  {
+    id: "dashboard",
+    name: "Dashboard",
+    check: async (): Promise<HealthCheckResult> => {
+      const start = Date.now();
+      try {
+        // Check user and company tables (dashboard dependencies)
+        await sequelize.query("SELECT COUNT(*) FROM tbl_user LIMIT 1", { type: QueryTypes.SELECT });
+        await sequelize.query("SELECT COUNT(*) FROM tbl_company LIMIT 1", { type: QueryTypes.SELECT });
+        return { healthy: true, latency: Date.now() - start };
+      } catch (error: any) {
+        return { healthy: false, latency: Date.now() - start, error: error.message };
+      }
+    }
+  }
+];
+
+/**
+ * Run health checks for all services and store results
+ */
+export const runHealthChecks = async (): Promise<void> => {
+  const today = new Date().toISOString().split('T')[0];
+  
+  console.log(`[Monitor] Running health checks at ${new Date().toISOString()}`);
+  
+  for (const service of MONITORED_SERVICES) {
+    try {
+      const result = await service.check();
+      
+      let status: "operational" | "degraded" | "outage" = "operational";
+      if (!result.healthy) {
+        status = "outage";
+      } else if (result.latency > 1000) {
+        status = "degraded"; // Slow response = degraded
+      }
+      
+      await serviceHealthModel.create({
+        service_id: service.id,
+        service_name: service.name,
+        status,
+        latency_ms: result.latency,
+        error_message: result.error || null,
+        check_date: today,
+        check_timestamp: new Date(),
+      });
+      
+      console.log(`[Monitor] ${service.name}: ${status} (${result.latency}ms)`);
+    } catch (error: any) {
+      console.error(`[Monitor] Error checking ${service.name}:`, error.message);
+      
+      // Store the failure
+      await serviceHealthModel.create({
+        service_id: service.id,
+        service_name: service.name,
+        status: "outage",
+        latency_ms: 0,
+        error_message: error.message,
+        check_date: today,
+        check_timestamp: new Date(),
+      });
+    }
+  }
+};
+
+/**
+ * Get daily status for a service (aggregated from all checks that day)
+ * Returns the worst status for each day
+ */
+export const getDailyServiceStatus = async (
+  serviceId: string,
+  days: number = 90
+): Promise<Array<{ date: string; status: string; checks: number; avg_latency: number }>> => {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  const results = await sequelize.query(
+    `SELECT 
+      check_date as date,
+      CASE 
+        WHEN SUM(CASE WHEN status = 'outage' THEN 1 ELSE 0 END) > 0 THEN 'outage'
+        WHEN SUM(CASE WHEN status = 'degraded' THEN 1 ELSE 0 END) > 0 THEN 'degraded'
+        ELSE 'operational'
+      END as status,
+      COUNT(*) as checks,
+      ROUND(AVG(latency_ms)) as avg_latency
+    FROM tbl_service_health
+    WHERE service_id = :serviceId
+    AND check_date >= :startDate
+    GROUP BY check_date
+    ORDER BY check_date ASC`,
+    {
+      replacements: { serviceId, startDate: startDate.toISOString().split('T')[0] },
+      type: QueryTypes.SELECT
+    }
+  ) as any[];
+  
+  return results;
+};
+
+/**
+ * Get current status for all services (latest check)
+ */
+export const getCurrentServiceStatus = async (): Promise<Array<{
+  service_id: string;
+  service_name: string;
+  status: string;
+  latency_ms: number;
+  last_check: Date;
+}>> => {
+  const results = await sequelize.query(
+    `SELECT DISTINCT ON (service_id) 
+      service_id, service_name, status, latency_ms, check_timestamp as last_check
+    FROM tbl_service_health
+    ORDER BY service_id, check_timestamp DESC`,
+    { type: QueryTypes.SELECT }
+  ) as any[];
+  
+  return results;
+};
+
+/**
+ * Calculate uptime percentage for a service
+ */
+export const calculateServiceUptime = async (
+  serviceId: string,
+  days: number = 90
+): Promise<{ uptime_percentage: number; total_checks: number; failed_checks: number }> => {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  const results = await sequelize.query(
+    `SELECT 
+      COUNT(*) as total_checks,
+      SUM(CASE WHEN status = 'operational' THEN 1 ELSE 0 END) as operational_checks,
+      SUM(CASE WHEN status = 'outage' THEN 1 ELSE 0 END) as failed_checks
+    FROM tbl_service_health
+    WHERE service_id = :serviceId
+    AND check_date >= :startDate`,
+    {
+      replacements: { serviceId, startDate: startDate.toISOString().split('T')[0] },
+      type: QueryTypes.SELECT
+    }
+  ) as any[];
+  
+  const data = results[0] || { total_checks: 0, operational_checks: 0, failed_checks: 0 };
+  const total = parseInt(data.total_checks) || 0;
+  const operational = parseInt(data.operational_checks) || 0;
+  const failed = parseInt(data.failed_checks) || 0;
+  
+  return {
+    uptime_percentage: total > 0 ? (operational / total) * 100 : 100,
+    total_checks: total,
+    failed_checks: failed
+  };
+};
+
+/**
+ * Get all monitored services info
+ */
+export const getMonitoredServices = () => MONITORED_SERVICES.map(s => ({
+  id: s.id,
+  name: s.name
+}));
+
+export default {
+  runHealthChecks,
+  getDailyServiceStatus,
+  getCurrentServiceStatus,
+  calculateServiceUptime,
+  getMonitoredServices,
+  MONITORED_SERVICES
+};
