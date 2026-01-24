@@ -234,46 +234,52 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     if (groupBy === 'day') {
       chartQuery = `
         SELECT 
-          DATE("createdAt") as date,
+          DATE(ut."createdAt") as date,
           COUNT(*) as transaction_count,
-          COALESCE(SUM(base_amount), 0) as volume
-        FROM tbl_user_transaction 
-        WHERE user_id = :userId 
-        AND status = 'done'
-        AND "createdAt" >= :startDate
-        GROUP BY DATE("createdAt")
+          COALESCE(SUM(ut.base_amount), 0) as volume
+        FROM tbl_user_transaction ut
+        ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+        WHERE ut.user_id = :userId 
+        AND ut.status = 'done'
+        AND ut."createdAt" >= :startDate
+        ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
+        GROUP BY DATE(ut."createdAt")
         ORDER BY date ASC
       `;
     } else if (groupBy === 'week') {
       chartQuery = `
         SELECT 
-          DATE_TRUNC('week', "createdAt") as date,
+          DATE_TRUNC('week', ut."createdAt") as date,
           COUNT(*) as transaction_count,
-          COALESCE(SUM(base_amount), 0) as volume
-        FROM tbl_user_transaction 
-        WHERE user_id = :userId 
-        AND status = 'done'
-        AND "createdAt" >= :startDate
-        GROUP BY DATE_TRUNC('week', "createdAt")
+          COALESCE(SUM(ut.base_amount), 0) as volume
+        FROM tbl_user_transaction ut
+        ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+        WHERE ut.user_id = :userId 
+        AND ut.status = 'done'
+        AND ut."createdAt" >= :startDate
+        ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
+        GROUP BY DATE_TRUNC('week', ut."createdAt")
         ORDER BY date ASC
       `;
     } else {
       chartQuery = `
         SELECT 
-          DATE_TRUNC('month', "createdAt") as date,
+          DATE_TRUNC('month', ut."createdAt") as date,
           COUNT(*) as transaction_count,
-          COALESCE(SUM(base_amount), 0) as volume
-        FROM tbl_user_transaction 
-        WHERE user_id = :userId 
-        AND status = 'done'
-        AND "createdAt" >= :startDate
-        GROUP BY DATE_TRUNC('month', "createdAt")
+          COALESCE(SUM(ut.base_amount), 0) as volume
+        FROM tbl_user_transaction ut
+        ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+        WHERE ut.user_id = :userId 
+        AND ut.status = 'done'
+        AND ut."createdAt" >= :startDate
+        ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
+        GROUP BY DATE_TRUNC('month', ut."createdAt")
         ORDER BY date ASC
       `;
     }
 
     const chartData = await sequelize.query(chartQuery, {
-      replacements: { userId, startDate },
+      replacements: { userId, startDate, companyId: company_id },
       type: QueryTypes.SELECT,
     }) as any[];
 
