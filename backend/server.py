@@ -29,7 +29,7 @@ def start_node_server():
     env['PORT'] = str(NODE_PORT)
     
     NODE_PROCESS = subprocess.Popen(
-        ['./node_modules/.bin/ts-node', '--transpile-only', 'server.ts'],
+        ['/app/backend/node_modules/.bin/ts-node', '--transpile-only', 'server.ts'],
         cwd='/app/backend',
         env=env,
         stdout=subprocess.PIPE,
