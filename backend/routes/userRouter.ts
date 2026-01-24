@@ -20,7 +20,7 @@ userRouter.post("/google-signin", userController.googleSignIn);
 userRouter.put(
   "/updateUser",
   authMiddleware,
-  uploadImage.single("image") as RequestHandler,
+  uploadImage.single("image") as unknown as RequestHandler,
   userMiddleware,
   userController.updateUser
 );
