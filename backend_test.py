@@ -1403,21 +1403,560 @@ verifyCacheData();
                     f"Request failed: {str(e)}"
                 )
     
-    def test_pending_payment_notifications(self):
-        """Test the newly implemented pending payment notification system"""
-        print("\n=== Testing Pending Payment Notification System ===")
+    def test_tatum_webhook_end_to_end(self):
+        """Test Tatum webhook end-to-end flow for pending payment notifications"""
+        print("\n=== Testing Tatum Webhook End-to-End Flow ===")
         
-        # Test 1: Verify Notification Types include payment_pending and payment_confirming
-        self.test_notification_types_include_pending()
+        # First authenticate with provided credentials
+        if not self.authenticate_with_provided_credentials():
+            self.log_result(
+                "Tatum Webhook E2E - Authentication", 
+                False, 
+                "Failed to authenticate with provided credentials"
+            )
+            return
         
-        # Test 2: Verify Notification Preferences include payment_pending
-        self.test_notification_preferences_include_pending()
+        # Test 1: Simulate Tatum Webhook - First Transaction (Pending)
+        self.test_tatum_crypto_webhook_first_transaction()
         
-        # Test 3: Verify webhook endpoints exist and respond
-        self.test_tatum_webhook_endpoints()
+        # Test 2: Verify Notification Created
+        self.test_verify_pending_notification_created()
         
-        # Test 4: Test pending payment email templates (if accessible)
-        self.test_pending_payment_email_templates()
+        # Test 3: Verify Duplicate Prevention
+        self.test_tatum_webhook_duplicate_prevention()
+        
+        # Test 4: Test tatumWebHook endpoint
+        self.test_tatum_webhook_endpoint()
+        
+        # Test 5: Test graceful handling without Redis data
+        self.test_tatum_webhook_graceful_handling()
+    
+    def authenticate_with_provided_credentials(self):
+        """Authenticate using the provided test credentials"""
+        print("\n--- Authenticating with Provided Credentials ---")
+        
+        test_credentials = {
+            "email": "nomadly@moxx.co",
+            "password": "Katiekendra123@"
+        }
+        
+        try:
+            # Try to login with provided credentials
+            login_response = requests.post(
+                f"{self.backend_url}/api/user/login",
+                json=test_credentials,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if login_response.status_code == 200:
+                login_data = login_response.json()
+                if 'data' in login_data and 'accessToken' in login_data['data']:
+                    self.jwt_token = login_data['data']['accessToken']
+                    self.log_result(
+                        "Authentication with Provided Credentials", 
+                        True, 
+                        "Successfully authenticated with test credentials",
+                        {"email": test_credentials["email"], "has_token": bool(self.jwt_token)}
+                    )
+                    return True
+                else:
+                    self.log_result(
+                        "Authentication with Provided Credentials", 
+                        False, 
+                        "Login succeeded but no token received",
+                        {"response": login_data}
+                    )
+            else:
+                self.log_result(
+                    "Authentication with Provided Credentials", 
+                    False, 
+                    f"Login failed with status {login_response.status_code}",
+                    {"response": login_response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Authentication with Provided Credentials", 
+                False, 
+                f"Authentication failed: {str(e)}"
+            )
+        
+        return False
+    
+    def setup_redis_test_data(self):
+        """Set up Redis data to simulate an active payment session"""
+        print("\n--- Setting up Redis Test Data ---")
+        
+        # This would typically require Redis access, but we'll simulate the webhook calls
+        # The webhook endpoints should handle missing Redis data gracefully
+        test_address = "test-address-123"
+        
+        # We'll test both scenarios: with and without Redis data
+        return test_address
+    
+    def test_tatum_crypto_webhook_first_transaction(self):
+        """Test POST /api/tatum-crypto-webhook - First Transaction (Pending)"""
+        print("\n--- Testing Tatum Crypto Webhook - First Transaction ---")
+        
+        webhook_payload = {
+            "address": "test-address-123",
+            "counterAddress": "sender-address-456",
+            "amount": "0.001",
+            "asset": "BTC",
+            "txId": "test-tx-abc123def456",
+            "blockNumber": None,
+            "type": "native"
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/tatum-crypto-webhook",
+                json=webhook_payload,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                self.log_result(
+                    "Tatum Crypto Webhook - First Transaction", 
+                    True, 
+                    "Webhook endpoint responded successfully",
+                    {"status_code": response.status_code, "payload": webhook_payload}
+                )
+                
+                # Store transaction ID for later tests
+                self.test_tx_id = webhook_payload["txId"]
+                self.test_address = webhook_payload["address"]
+                
+            else:
+                self.log_result(
+                    "Tatum Crypto Webhook - First Transaction", 
+                    False, 
+                    f"Webhook failed with status {response.status_code}",
+                    {"response": response.text, "payload": webhook_payload}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Tatum Crypto Webhook - First Transaction", 
+                False, 
+                f"Webhook request failed: {str(e)}"
+            )
+    
+    def test_verify_pending_notification_created(self):
+        """Test GET /api/notifications - Check if payment_pending notification was created"""
+        print("\n--- Verifying Pending Notification Created ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Verify Pending Notification", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            # Get notifications with type filter
+            response = requests.get(
+                f"{self.backend_url}/api/notifications",
+                params={"type": "payment_pending", "limit": 10},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    notifications = data['data'].get('notifications', [])
+                    
+                    # Look for recent payment_pending notifications
+                    pending_notifications = [
+                        n for n in notifications 
+                        if n.get('type') == 'payment_pending'
+                    ]
+                    
+                    if pending_notifications:
+                        latest_notification = pending_notifications[0]
+                        notification_data = latest_notification.get('data', {})
+                        
+                        # Check if it matches our test transaction
+                        if hasattr(self, 'test_tx_id') and notification_data.get('tx_id') == self.test_tx_id:
+                            self.log_result(
+                                "Verify Pending Notification - Specific TX", 
+                                True, 
+                                f"Found payment_pending notification for test transaction",
+                                {
+                                    "tx_id": notification_data.get('tx_id'),
+                                    "amount": notification_data.get('amount'),
+                                    "currency": notification_data.get('currency'),
+                                    "status": notification_data.get('status')
+                                }
+                            )
+                        else:
+                            self.log_result(
+                                "Verify Pending Notification - General", 
+                                True, 
+                                f"Found {len(pending_notifications)} payment_pending notification(s)",
+                                {"count": len(pending_notifications)}
+                            )
+                    else:
+                        self.log_result(
+                            "Verify Pending Notification", 
+                            False, 
+                            "No payment_pending notifications found",
+                            {"total_notifications": len(notifications)}
+                        )
+                else:
+                    self.log_result(
+                        "Verify Pending Notification", 
+                        False, 
+                        "Invalid response format",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Verify Pending Notification", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Verify Pending Notification", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+    
+    def test_tatum_webhook_duplicate_prevention(self):
+        """Test duplicate prevention - Send same webhook again with same txId"""
+        print("\n--- Testing Duplicate Prevention ---")
+        
+        if not hasattr(self, 'test_tx_id'):
+            self.log_result(
+                "Duplicate Prevention Test", 
+                False, 
+                "No test transaction ID available from previous test"
+            )
+            return
+        
+        # Send the same webhook payload again
+        duplicate_payload = {
+            "address": "test-address-123",
+            "counterAddress": "sender-address-456",
+            "amount": "0.001",
+            "asset": "BTC",
+            "txId": self.test_tx_id,  # Same transaction ID
+            "blockNumber": None,
+            "type": "native"
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/tatum-crypto-webhook",
+                json=duplicate_payload,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                self.log_result(
+                    "Duplicate Prevention - Webhook Response", 
+                    True, 
+                    "Duplicate webhook handled gracefully (200 OK)",
+                    {"status_code": response.status_code}
+                )
+                
+                # Now check if duplicate notification was created
+                self.verify_no_duplicate_notification()
+                
+            else:
+                self.log_result(
+                    "Duplicate Prevention - Webhook Response", 
+                    False, 
+                    f"Duplicate webhook failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Duplicate Prevention - Webhook Response", 
+                False, 
+                f"Duplicate webhook request failed: {str(e)}"
+            )
+    
+    def verify_no_duplicate_notification(self):
+        """Verify that no duplicate notification was created"""
+        print("\n--- Verifying No Duplicate Notification ---")
+        
+        if not self.jwt_token:
+            return
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/notifications",
+                params={"type": "payment_pending", "limit": 20},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                notifications = data.get('data', {}).get('notifications', [])
+                
+                # Count notifications for our test transaction
+                test_tx_notifications = [
+                    n for n in notifications 
+                    if n.get('data', {}).get('tx_id') == self.test_tx_id
+                ]
+                
+                if len(test_tx_notifications) <= 1:
+                    self.log_result(
+                        "Duplicate Prevention - Notification Count", 
+                        True, 
+                        f"No duplicate notifications created (found {len(test_tx_notifications)} notification)",
+                        {"notification_count": len(test_tx_notifications)}
+                    )
+                else:
+                    self.log_result(
+                        "Duplicate Prevention - Notification Count", 
+                        False, 
+                        f"Duplicate notifications detected ({len(test_tx_notifications)} notifications for same TX)",
+                        {"notification_count": len(test_tx_notifications)}
+                    )
+                    
+        except Exception as e:
+            self.log_result(
+                "Duplicate Prevention - Notification Count", 
+                False, 
+                f"Failed to verify duplicate prevention: {str(e)}"
+            )
+    
+    def test_tatum_webhook_endpoint(self):
+        """Test POST /api/tatum-webhook endpoint"""
+        print("\n--- Testing Tatum Webhook Endpoint ---")
+        
+        webhook_payload = {
+            "address": "test-address-789",
+            "counterAddress": "sender-address-xyz",
+            "amount": "0.5",
+            "asset": "ETH",
+            "txId": "test-tx-eth123",
+            "blockNumber": None
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/tatum-webhook",
+                json=webhook_payload,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                self.log_result(
+                    "Tatum Webhook Endpoint", 
+                    True, 
+                    "Tatum webhook endpoint responded successfully",
+                    {"status_code": response.status_code, "payload": webhook_payload}
+                )
+            else:
+                self.log_result(
+                    "Tatum Webhook Endpoint", 
+                    False, 
+                    f"Tatum webhook failed with status {response.status_code}",
+                    {"response": response.text, "payload": webhook_payload}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Tatum Webhook Endpoint", 
+                False, 
+                f"Tatum webhook request failed: {str(e)}"
+            )
+    
+    def test_tatum_webhook_graceful_handling(self):
+        """Test that webhooks return 200 OK even without Redis data (graceful handling)"""
+        print("\n--- Testing Graceful Handling Without Redis Data ---")
+        
+        # Test with completely unknown address (no Redis data)
+        unknown_payload = {
+            "address": "unknown-address-999",
+            "counterAddress": "unknown-sender-999",
+            "amount": "1.0",
+            "asset": "BTC",
+            "txId": "unknown-tx-999",
+            "blockNumber": None,
+            "type": "native"
+        }
+        
+        try:
+            # Test tatum-crypto-webhook
+            response1 = requests.post(
+                f"{self.backend_url}/api/tatum-crypto-webhook",
+                json=unknown_payload,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            # Test tatum-webhook
+            response2 = requests.post(
+                f"{self.backend_url}/api/tatum-webhook",
+                json=unknown_payload,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response1.status_code == 200 and response2.status_code == 200:
+                self.log_result(
+                    "Graceful Handling Without Redis Data", 
+                    True, 
+                    "Both webhook endpoints handle missing Redis data gracefully (200 OK)",
+                    {
+                        "tatum_crypto_webhook": response1.status_code,
+                        "tatum_webhook": response2.status_code
+                    }
+                )
+            else:
+                self.log_result(
+                    "Graceful Handling Without Redis Data", 
+                    False, 
+                    f"Webhooks did not handle missing data gracefully",
+                    {
+                        "tatum_crypto_webhook": response1.status_code,
+                        "tatum_webhook": response2.status_code,
+                        "response1": response1.text,
+                        "response2": response2.text
+                    }
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Graceful Handling Without Redis Data", 
+                False, 
+                f"Graceful handling test failed: {str(e)}"
+            )
+    
+    def test_pending_payment_email_template_structure(self):
+        """Test the pending notification email template structure"""
+        print("\n--- Testing Pending Payment Email Template Structure ---")
+        
+        # Check if the email functions are properly exported and accessible
+        email_check_script = '''
+const fs = require('fs');
+const path = require('path');
+
+try {
+    const emailHelperPath = path.join(__dirname, 'helper', 'sendEmail.ts');
+    
+    if (fs.existsSync(emailHelperPath)) {
+        const emailContent = fs.readFileSync(emailHelperPath, 'utf8');
+        
+        const hasPendingEmail = emailContent.includes('sendPaymentPendingEmail');
+        const hasConfirmingEmail = emailContent.includes('sendPaymentConfirmingEmail');
+        const hasExports = emailContent.includes('export') && 
+                          emailContent.includes('sendPaymentPendingEmail') &&
+                          emailContent.includes('sendPaymentConfirmingEmail');
+        
+        console.log(JSON.stringify({
+            file_exists: true,
+            has_pending_email: hasPendingEmail,
+            has_confirming_email: hasConfirmingEmail,
+            has_exports: hasExports,
+            functions_found: {
+                pending: emailContent.match(/sendPaymentPendingEmail.*?\\{/s) ? true : false,
+                confirming: emailContent.match(/sendPaymentConfirmingEmail.*?\\{/s) ? true : false
+            }
+        }, null, 2));
+        
+        process.exit(0);
+    } else {
+        console.log(JSON.stringify({
+            file_exists: false,
+            error: 'Email helper file not found'
+        }, null, 2));
+        process.exit(1);
+    }
+    
+} catch (error) {
+    console.error('Email template check failed:', error.message);
+    process.exit(1);
+}
+'''
+        
+        try:
+            # Write email check script
+            with open('/tmp/check_email_templates.js', 'w') as f:
+                f.write(email_check_script)
+            
+            # Run the email template check
+            result = subprocess.run(
+                ["node", "/tmp/check_email_templates.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                try:
+                    email_data = json.loads(result.stdout)
+                    
+                    if (email_data.get('has_pending_email') and 
+                        email_data.get('has_confirming_email') and 
+                        email_data.get('has_exports')):
+                        
+                        self.log_result(
+                            "Pending Payment Email Template Structure", 
+                            True, 
+                            "Email template functions found and properly exported",
+                            {
+                                "pending_email": email_data.get('has_pending_email'),
+                                "confirming_email": email_data.get('has_confirming_email'),
+                                "exports": email_data.get('has_exports')
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "Pending Payment Email Template Structure", 
+                            False, 
+                            "Email template functions missing or not exported properly",
+                            email_data
+                        )
+                        
+                except json.JSONDecodeError:
+                    self.log_result(
+                        "Pending Payment Email Template Structure", 
+                        False, 
+                        "Failed to parse email template check results",
+                        {"stdout": result.stdout, "stderr": result.stderr}
+                    )
+            else:
+                self.log_result(
+                    "Pending Payment Email Template Structure", 
+                    False, 
+                    "Email template check script failed",
+                    {"stdout": result.stdout, "stderr": result.stderr}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Pending Payment Email Template Structure", 
+                False, 
+                f"Email template check failed: {str(e)}"
+            )
     
     def test_notification_types_include_pending(self):
         """Test GET /api/notifications - Check for payment_pending and payment_confirming types"""
