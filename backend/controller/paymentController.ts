@@ -702,6 +702,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             transaction_type: "CREDIT",
             status: data.status,
             customer_id: Number(tempData.customer_id),
+            company_id: tempData.company_id || null,  // Include company_id from Redis
           };
 
           await customerTransactionModel.create(
