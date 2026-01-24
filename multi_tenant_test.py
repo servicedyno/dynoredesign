@@ -815,7 +815,7 @@ checkCompanyIdSchema();
             }
             
             response = requests.post(
-                f"{self.backend_url}/api/company/createCompany",
+                f"{self.backend_url}/api/company/addCompany",
                 json=invalid_request,
                 headers=headers,
                 timeout=15
