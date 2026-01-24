@@ -395,7 +395,7 @@ const createCryptoPayment = async (
         merchant_amount: merchant_amount_crypto, // Amount merchant should receive
         total_fees: total_fees_crypto,          // Total fees (if customer pays)
         fee_payer: fee_payer,                   // Who pays fees
-        base_amount_usd: items.base_amount,     // Original USD amount
+        base_amount_usd: items.base_amount || items.amount,     // Original USD amount
         status: "pending",
         ref: uniqueRef,
         currency: data.currency,
@@ -403,6 +403,17 @@ const createCryptoPayment = async (
         walletType: "customer",
         temp_id: paymentRes.temp_id,
       });
+
+      // Also update the temp address record in database for partial payment handling
+      await userTempAddressModel.update(
+        {
+          fee_payer: fee_payer,
+          merchant_amount: merchant_amount_crypto,
+          base_amount_usd: items.base_amount || items.amount || 0,
+        },
+        { where: { temp_id: paymentRes.temp_id } }
+      );
+
       successResponseHelper(res, 200, "payment created! ", finalRes);
     } else {
       throw { message: "Please enter valid currency!" };
