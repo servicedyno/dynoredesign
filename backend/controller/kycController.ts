@@ -484,7 +484,7 @@ export const checkVolumeAndTriggerKYC = async (
           );
 
           // Send KYC required email
-          await sendKYCRequiredEmail(user.email, user.name, totalVolume);
+          await sendKYCRequiredEmail(user.email, user.name, totalVolume.toFixed(2));
         }
       }
     }
