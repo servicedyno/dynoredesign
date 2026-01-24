@@ -17,6 +17,9 @@ userRouter.post("/reset-password", userController.resetPassword);
 // Google Sign-In endpoint
 userRouter.post("/google-signin", userController.googleSignIn);
 
+// Profile endpoints (requires auth)
+userRouter.get("/profile", authMiddleware, userController.getProfile);
+
 userRouter.put(
   "/updateUser",
   authMiddleware,
@@ -31,5 +34,8 @@ userRouter.put(
   userMiddleware,
   userController.changePassword
 );
+
+// Account deletion (requires auth)
+userRouter.delete("/account", authMiddleware, userController.deleteAccount);
 
 export default userRouter;
