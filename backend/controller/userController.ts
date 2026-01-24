@@ -237,11 +237,11 @@ const confirmOTP = async (req: express.Request, res: express.Response) => {
           `https://api.telnyx.com/v2/verifications/by_phone_number/+${mobile}/actions/verify`,
           {
             code: otp,
-            verify_profile_id: process.env.PROFILE_ID,
+            verify_profile_id: process.env.TELNYX_VERIFY_PROFILE_ID || process.env.PROFILE_ID,
           },
           {
             headers: {
-              Authorization: "Bearer " + process.env.ACCESS_TOKEN,
+              Authorization: "Bearer " + (process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN),
             },
           }
         );
