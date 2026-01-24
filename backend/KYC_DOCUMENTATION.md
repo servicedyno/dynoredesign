@@ -1,0 +1,387 @@
+# DynoPay KYC System Documentation
+
+## Overview
+The DynoPay KYC (Know Your Customer) system provides identity verification for users once they reach $5,000 in transaction volume. The system is integrated with Veriff, a leading identity verification service.
+
+## Current Status: ⚠️ PARTIALLY IMPLEMENTED
+
+### ✅ What's Working:
+1. **Database Schema**: Fully implemented with Veriff integration fields
+2. **API Endpoints**: All 4 KYC endpoints are implemented and accessible
+3. **Email Notifications**: Templates ready for KYC required, approved, and rejected
+4. **Volume Monitoring**: Function ready to check transaction volume
+5. **Webhook Handler**: Ready to receive Veriff decisions
+
+### ⚠️ Temporary Limitations:
+- **Veriff Service Disabled**: Due to a TypeScript module import issue with the crypto library, the actual Veriff API integration is temporarily disabled
+- **Mock Mode Active**: The `/api/kyc/submit` endpoint currently returns a mock verification URL
+- **No Signature Verification**: Webhook signature verification is temporarily skipped
+
+---
+
+## API Endpoints
+
+### 1. GET /api/kyc/status
+**Description**: Get KYC status and volume information for authenticated user
+
+**Authentication**: Required (JWT)
+
+**Query Parameters**:
+- `company_id` (optional): Filter by specific company
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "KYC status retrieved successfully",
+  "data": {
+    "kyc_record": {
+      "kyc_id": 1,
+      "user_id": 123,
+      "company_id": 1,
+      "status": "submitted",
+      "veriff_session_id": "test_session_123456",
+      "veriff_session_url": "https://magic.veriff.me/test-session",
+      "volume_threshold": 4500.00
+    },
+    "total_volume": 4500.00,
+    "volume_threshold": 5000,
+    "requires_kyc": false,
+    "needs_submission": false,
+    "can_process_payments": true,
+    "status": "submitted"
+  }
+}
+```
+
+**Status Values**:
+- `not_started`: No KYC record exists
+- `pending`: Record created but not yet submitted
+- `submitted`: Verification session created, awaiting completion
+- `approved`: Identity verified successfully
+- `rejected`: Verification failed
+- `resubmission_requested`: Additional information needed
+- `expired`: Verification session expired
+- `abandoned`: User abandoned the verification process
+
+---
+
+### 2. GET /api/kyc/requirements
+**Description**: Get list of required documents and process information
+
+**Authentication**: Required (JWT)
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "KYC requirements retrieved successfully",
+  "data": {
+    "requirements": {
+      "volume_threshold": 5000,
+      "threshold_description": "KYC verification is required when your transaction volume reaches $5,000",
+      "required_documents": [
+        {
+          "type": "government_id",
+          "name": "Government-issued ID",
+          "description": "Valid passport, driver's license, or national ID card",
+          "required": true
+        },
+        {
+          "type": "proof_of_address",
+          "name": "Proof of Address",
+          "description": "Recent utility bill, bank statement, or government document (within last 3 months)",
+          "required": true
+        },
+        {
+          "type": "selfie",
+          "name": "Selfie Verification",
+          "description": "Live photo verification to confirm identity",
+          "required": true
+        }
+      ],
+      "verification_process": [
+        "Click 'Start Verification' to begin the process",
+        "Complete identity verification through our secure partner Veriff",
+        "Upload required documents and take a selfie",
+        "Wait for verification approval (usually within 24-48 hours)",
+        "Receive email notification once approved"
+      ],
+      "estimated_time": "5-10 minutes",
+      "verification_partner": "Veriff"
+    }
+  }
+}
+```
+
+---
+
+### 3. POST /api/kyc/submit
+**Description**: Start KYC verification session (currently returns mock data)
+
+**Authentication**: Required (JWT)
+
+**Request Body**:
+```json
+{
+  "company_id": 1,
+  "first_name": "John",
+  "last_name": "Doe"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "KYC verification session created successfully",
+  "data": {
+    "verification": {
+      "session_id": "test_session_1737771900123",
+      "verification_url": "https://magic.veriff.me/test-session",
+      "status": "submitted"
+    },
+    "kyc_id": 1
+  }
+}
+```
+
+**⚠️ Current Behavior**: Returns mock verification URL. Once Veriff service is fixed, this will return actual Veriff session URLs.
+
+---
+
+### 4. POST /api/kyc/webhook
+**Description**: Webhook endpoint for Veriff verification decisions
+
+**Authentication**: None (verified by HMAC signature when Veriff service is active)
+
+**Request Body** (Veriff format):
+```json
+{
+  "verification": {
+    "id": "abc123",
+    "status": "success",
+    "decision": "approved",
+    "code": 9001,
+    "reason": "",
+    "vendorData": "{\"user_id\":123,\"company_id\":1}"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Webhook processed successfully",
+  "data": {}
+}
+```
+
+**Webhook Actions**:
+- **Approved**: Updates KYC status to "approved", sends approval email, creates success notification
+- **Declined**: Updates status to "rejected", sends rejection email with reason, creates notification
+- **Resubmission Requested**: Updates status, sends notification with required actions
+
+---
+
+## Database Schema
+
+### tbl_kyc Table
+```sql
+CREATE TABLE tbl_kyc (
+  kyc_id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  company_id INTEGER,
+  status VARCHAR(20) DEFAULT 'pending',
+  documents JSONB,
+  rejection_reason TEXT,
+  volume_threshold DECIMAL(18,2),
+  submitted_at TIMESTAMP,
+  reviewed_at TIMESTAMP,
+  veriff_session_id VARCHAR,
+  veriff_session_url TEXT,
+  veriff_verification_id VARCHAR,
+  veriff_decision VARCHAR(50),
+  veriff_decision_code VARCHAR(20),
+  veriff_reason TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## Email Notifications
+
+### 1. KYC Required Email
+**Trigger**: User reaches $5,000 transaction volume  
+**Template**: Template #13 in emailService.ts  
+**Function**: `sendKYCRequiredEmail(email, name, volumeAmount)`
+
+### 2. KYC Approved Email
+**Trigger**: Veriff webhook with "approved" decision  
+**Template**: Template #14 in emailService.ts  
+**Function**: `sendKYCApprovedEmail(email, name)`
+
+### 3. KYC Rejected Email
+**Trigger**: Veriff webhook with "declined" decision  
+**Template**: Template #15 in emailService.ts  
+**Function**: `sendKYCRejectedEmail(email, name, reason)`
+
+---
+
+## Volume Monitoring
+
+### Function: `checkVolumeAndTriggerKYC(userId, companyId)`
+**Location**: `/app/backend/controller/kycController.ts`  
+**Purpose**: Automatically check if user has reached KYC threshold
+
+**Logic**:
+1. Calculate total transaction volume for user/company
+2. If volume >= $5,000:
+   - Check if KYC record exists
+   - If no KYC or status is "pending":
+     - Create "KYC Required" notification
+     - Send KYC required email (once per 7 days)
+
+**Integration Point**: Should be called from transaction completion webhooks
+
+---
+
+## Veriff Integration (Temporarily Disabled)
+
+### Issue
+TypeScript crypto module import causing Node.js process crash
+
+### Files Affected
+- `/app/backend/services/veriffService.ts` - Main Veriff API integration
+- `/app/backend/controller/kycController.ts` - Lines 11, 212-222, 305-321, 342-352
+
+### What Needs to Be Fixed
+1. Fix crypto import in veriffService.ts (currently using `import * as crypto from "crypto"`)
+2. Uncomment Veriff service calls in kycController.ts
+3. Enable signature verification in webhook handler
+
+### Configuration
+```env
+VERIFF_API_KEY=7a372667-446f-4860-9634-e27aad20ec03
+VERIFF_API_SECRET=671d951f-32ae-4a0b-a7ad-3be4c2ca39de
+```
+
+### When Fixed, Veriff Will Provide:
+- Real-time identity verification
+- Document validation (passport, driver's license, ID card)
+- Liveness detection (selfie verification)
+- Fraud prevention
+- GDPR compliant data handling
+- 24-48 hour verification turnaround
+
+---
+
+## Testing
+
+### Test KYC Status
+```bash
+curl -X GET "http://localhost:8001/api/kyc/status?company_id=1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Test KYC Requirements
+```bash
+curl -X GET "http://localhost:8001/api/kyc/requirements" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Test Start Verification
+```bash
+curl -X POST "http://localhost:8001/api/kyc/submit" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "company_id": 1,
+    "first_name": "John",
+    "last_name": "Doe"
+  }'
+```
+
+### Test Webhook (Simulated)
+```bash
+curl -X POST "http://localhost:8001/api/kyc/webhook" \
+  -H "Content-Type: application/json" \
+  -H "x-hmac-signature: test_signature" \
+  -d '{
+    "verification": {
+      "id": "test_verification_id",
+      "status": "success",
+      "decision": "approved",
+      "code": "9001",
+      "reason": "",
+      "vendorData": "{\"user_id\":1,\"company_id\":1}"
+    }
+  }'
+```
+
+---
+
+## Next Steps to Complete KYC System
+
+1. **Fix Veriff Service Import**:
+   - Resolve TypeScript crypto module import issue
+   - Test veriffService.ts independently
+   - Ensure HMAC signature generation works
+
+2. **Enable Veriff Integration**:
+   - Uncomment Veriff service calls in kycController.ts (3 locations)
+   - Test session creation with real Veriff API
+   - Verify webhook signature validation
+
+3. **Integrate Volume Monitoring**:
+   - Add `checkVolumeAndTriggerKYC()` call to transaction webhook handlers
+   - Test automatic KYC requirement notifications
+   - Verify email delivery
+
+4. **Frontend Integration**:
+   - Create KYC status banner component
+   - Build verification flow UI
+   - Handle Veriff iframe/redirect integration
+   - Display KYC requirements page
+
+5. **Testing**:
+   - End-to-end testing with real Veriff sandbox
+   - Test all decision types (approved, declined, resubmission)
+   - Verify email notifications
+   - Test volume threshold triggering
+
+---
+
+## Current System Status
+
+✅ **Working**:
+- Wallet Reminder Cron Job (every hour)
+- Weekly Summary Cron Job (Monday 9AM UTC)
+- All KYC API endpoints
+- Database schema
+- Email templates
+- Volume monitoring function
+
+⚠️ **Needs Attention**:
+- Veriff service integration (import issue)
+- Actual verification session creation
+- Webhook signature verification
+- Transaction volume trigger integration
+
+---
+
+## Support
+
+For issues or questions about the KYC system:
+1. Check logs: `/var/log/supervisor/backend.out.log`
+2. Review Veriff documentation: https://devdocs.veriff.com/apidocs
+3. Test endpoints using the curl commands above
+4. Verify environment variables are set correctly
+
+---
+
+**Last Updated**: January 24, 2026  
+**Version**: 1.0 (Partially Implemented)  
+**Status**: KYC endpoints operational, Veriff integration pending fix
