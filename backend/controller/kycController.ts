@@ -203,25 +203,16 @@ const startKYCVerification = async (req: express.Request, res: express.Response)
     const totalVolume = parseFloat(volumeResult[0]?.total_volume || "0");
 
     // Initialize Veriff service and create session
-    // const veriffService = getVeriffService();
+    const veriffService = getVeriffService();
     const callbackUrl = `${process.env.SERVER_URL}/api/kyc/webhook`;
 
-    // TODO: Uncomment when veriffService import issue is resolved
-    // const session = await veriffService.createSession({
-    //   userId,
-    //   companyId: company_id || null,
-    //   firstName: first_name || user.name.split(" ")[0],
-    //   lastName: last_name || user.name.split(" ").slice(1).join(" "),
-    //   callbackUrl,
-    // });
-
-    // Temporary mock response for testing
-    const session = {
-      verification: {
-        id: `test_session_${Date.now()}`,
-        url: "https://magic.veriff.me/test-session",
-      },
-    };
+    const session = await veriffService.createSession({
+      userId,
+      companyId: company_id || null,
+      firstName: first_name || user.name.split(" ")[0],
+      lastName: last_name || user.name.split(" ").slice(1).join(" "),
+      callbackUrl,
+    });
 
     // Create or update KYC record
     const kycData = {
