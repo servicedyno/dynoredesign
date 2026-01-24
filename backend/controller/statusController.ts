@@ -2,87 +2,15 @@ import express from "express";
 import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../helper";
 import sequelize from "../utils/dbInstance";
 import { QueryTypes } from "sequelize";
+import monitoringService from "../services/monitoringService";
+import serviceHealthModel from "../models/serviceHealthModel";
 
 /**
  * Status Controller for DynoPay Status Page
- * Provides endpoints for service health, uptime metrics, and incident tracking
+ * Provides endpoints for REAL service health, uptime metrics, and incident tracking
  */
 
-// Service definitions with health check logic
-const SERVICES = [
-  {
-    id: "api_gateway",
-    name: "API Gateway",
-    description: "Main API routing and authentication",
-    uptime_base: 99.99,
-    checkHealth: async () => {
-      try {
-        // Check if the main server is responding
-        return { healthy: true, latency: Math.random() * 50 + 10 };
-      } catch {
-        return { healthy: false, latency: 0 };
-      }
-    }
-  },
-  {
-    id: "payment_processing",
-    name: "Payment Processing",
-    description: "Crypto and fiat payment processing",
-    uptime_base: 99.98,
-    checkHealth: async () => {
-      try {
-        // Check payment-related tables
-        await sequelize.query("SELECT 1 FROM tbl_payment_link LIMIT 1", { type: QueryTypes.SELECT });
-        return { healthy: true, latency: Math.random() * 100 + 20 };
-      } catch {
-        return { healthy: false, latency: 0 };
-      }
-    }
-  },
-  {
-    id: "wallet_services",
-    name: "Wallet Services",
-    description: "Wallet management and address generation",
-    uptime_base: 99.97,
-    checkHealth: async () => {
-      try {
-        await sequelize.query("SELECT 1 FROM tbl_user_wallet LIMIT 1", { type: QueryTypes.SELECT });
-        return { healthy: true, latency: Math.random() * 80 + 15 };
-      } catch {
-        return { healthy: false, latency: 0 };
-      }
-    }
-  },
-  {
-    id: "webhook_delivery",
-    name: "Webhook Delivery",
-    description: "Payment notification webhooks",
-    uptime_base: 99.95,
-    checkHealth: async () => {
-      try {
-        return { healthy: true, latency: Math.random() * 60 + 10 };
-      } catch {
-        return { healthy: false, latency: 0 };
-      }
-    }
-  },
-  {
-    id: "dashboard",
-    name: "Dashboard",
-    description: "Merchant dashboard and analytics",
-    uptime_base: 99.99,
-    checkHealth: async () => {
-      try {
-        await sequelize.query("SELECT 1 FROM tbl_user LIMIT 1", { type: QueryTypes.SELECT });
-        return { healthy: true, latency: Math.random() * 40 + 5 };
-      } catch {
-        return { healthy: false, latency: 0 };
-      }
-    }
-  }
-];
-
-// Sample incidents (in production, these would come from a database)
+// Incidents table (in production, create a model)
 const INCIDENTS = [
   {
     id: 1,
@@ -103,100 +31,31 @@ const INCIDENTS = [
 ];
 
 /**
- * Calculate uptime percentage based on service health history
- * In production, this would query actual monitoring data
- */
-const calculateUptime = (serviceId: string): number => {
-  const service = SERVICES.find(s => s.id === serviceId);
-  return service?.uptime_base || 99.9;
-};
-
-/**
- * Generate 90-day uptime data for a specific service
- * Each service has slightly different patterns based on its reliability
- */
-const generateServiceUptime = (serviceId: string, days: number = 90): Array<{ date: string; status: "operational" | "degraded" | "outage" }> => {
-  const data = [];
-  const today = new Date();
-  const service = SERVICES.find(s => s.id === serviceId);
-  const baseUptime = service?.uptime_base || 99.9;
-  
-  // Use service ID as seed for consistent results per service
-  const seed = serviceId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    
-    // Deterministic "random" based on date and service
-    const dayHash = (date.getDate() + date.getMonth() * 31 + seed) % 100;
-    
-    let status: "operational" | "degraded" | "outage" = "operational";
-    
-    // Higher uptime services have fewer issues
-    const degradedThreshold = 100 - (100 - baseUptime) * 50; // e.g., 99.99 -> 99.5
-    const outageThreshold = 100 - (100 - baseUptime) * 10;   // e.g., 99.99 -> 99.99
-    
-    if (dayHash > degradedThreshold && dayHash <= outageThreshold) {
-      status = "degraded";
-    } else if (dayHash > outageThreshold) {
-      status = "outage";
-    }
-    
-    data.push({
-      date: date.toISOString().split('T')[0],
-      status
-    });
-  }
-  
-  return data;
-};
-
-/**
- * Generate 90-day uptime data for chart (overall system)
- */
-const generate90DayUptime = (): Array<{ date: string; status: "operational" | "degraded" | "outage" }> => {
-  const data = [];
-  const today = new Date();
-  
-  for (let i = 89; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    
-    // Simulate mostly operational with occasional degraded performance
-    let status: "operational" | "degraded" | "outage" = "operational";
-    const dayHash = (date.getDate() + date.getMonth() * 31) % 100;
-    if (dayHash > 97) {
-      status = "degraded";
-    } else if (dayHash > 99) {
-      status = "outage";
-    }
-    
-    data.push({
-      date: date.toISOString().split('T')[0],
-      status
-    });
-  }
-  
-  return data;
-};
-
-/**
  * GET /api/status
- * Get overall system status and all services
+ * Get overall system status with REAL monitoring data
  */
 const getStatus = async (req: express.Request, res: express.Response) => {
   try {
+    // Run health checks first
+    await monitoringService.runHealthChecks();
+    
+    // Get current status from database
+    const currentStatus = await monitoringService.getCurrentServiceStatus();
+    const services = monitoringService.getMonitoredServices();
+    
+    // Build service status with real data
     const serviceStatuses = await Promise.all(
-      SERVICES.map(async (service) => {
-        const health = await service.checkHealth();
+      services.map(async (service) => {
+        const current = currentStatus.find(s => s.service_id === service.id);
+        const uptimeData = await monitoringService.calculateServiceUptime(service.id, 90);
+        
         return {
           id: service.id,
           name: service.name,
-          description: service.description,
-          status: health.healthy ? "operational" : "outage",
-          uptime: calculateUptime(service.id),
-          latency: Math.round(health.latency)
+          status: current?.status || "operational",
+          uptime: uptimeData.uptime_percentage.toFixed(2),
+          latency: current?.latency_ms || 0,
+          last_check: current?.last_check || new Date().toISOString()
         };
       })
     );
@@ -226,22 +85,28 @@ const getStatus = async (req: express.Request, res: express.Response) => {
 
 /**
  * GET /api/status/services
- * Get detailed status for all services
+ * Get detailed status for all services with REAL data
  */
 const getServicesStatus = async (req: express.Request, res: express.Response) => {
   try {
+    const currentStatus = await monitoringService.getCurrentServiceStatus();
+    const services = monitoringService.getMonitoredServices();
+    
     const serviceStatuses = await Promise.all(
-      SERVICES.map(async (service) => {
-        const health = await service.checkHealth();
+      services.map(async (service) => {
+        const current = currentStatus.find(s => s.service_id === service.id);
+        const uptimeData = await monitoringService.calculateServiceUptime(service.id, 90);
+        
         return {
           id: service.id,
           name: service.name,
-          description: service.description,
-          status: health.healthy ? "operational" : "outage",
-          uptime: `${calculateUptime(service.id).toFixed(2)}%`,
-          uptime_value: calculateUptime(service.id),
-          latency_ms: Math.round(health.latency),
-          last_check: new Date().toISOString()
+          status: current?.status || "unknown",
+          uptime: `${uptimeData.uptime_percentage.toFixed(2)}%`,
+          uptime_value: uptimeData.uptime_percentage,
+          latency_ms: current?.latency_ms || 0,
+          total_checks: uptimeData.total_checks,
+          failed_checks: uptimeData.failed_checks,
+          last_check: current?.last_check || null
         };
       })
     );
@@ -255,27 +120,32 @@ const getServicesStatus = async (req: express.Request, res: express.Response) =>
 
 /**
  * GET /api/status/service/:serviceId
- * Get status for a specific service
+ * Get status for a specific service with REAL data
  */
 const getServiceStatus = async (req: express.Request, res: express.Response) => {
   try {
     const { serviceId } = req.params;
-    const service = SERVICES.find(s => s.id === serviceId);
+    const services = monitoringService.getMonitoredServices();
+    const service = services.find(s => s.id === serviceId);
 
     if (!service) {
       return errorResponseHelper(res, 404, "Service not found");
     }
 
-    const health = await service.checkHealth();
+    const currentStatus = await monitoringService.getCurrentServiceStatus();
+    const current = currentStatus.find(s => s.service_id === serviceId);
+    const uptimeData = await monitoringService.calculateServiceUptime(serviceId, 90);
+
     const response = {
       id: service.id,
       name: service.name,
-      description: service.description,
-      status: health.healthy ? "operational" : "outage",
-      uptime: `${calculateUptime(service.id).toFixed(2)}%`,
-      uptime_value: calculateUptime(service.id),
-      latency_ms: Math.round(health.latency),
-      last_check: new Date().toISOString()
+      status: current?.status || "unknown",
+      uptime: `${uptimeData.uptime_percentage.toFixed(2)}%`,
+      uptime_value: uptimeData.uptime_percentage,
+      latency_ms: current?.latency_ms || 0,
+      total_checks: uptimeData.total_checks,
+      failed_checks: uptimeData.failed_checks,
+      last_check: current?.last_check || null
     };
 
     successResponseHelper(res, 200, "Service status retrieved", response);
@@ -287,37 +157,60 @@ const getServiceStatus = async (req: express.Request, res: express.Response) => 
 
 /**
  * GET /api/status/service/:serviceId/uptime
- * Get uptime history for a specific service
+ * Get REAL uptime history for a specific service
  */
 const getServiceUptime = async (req: express.Request, res: express.Response) => {
   try {
     const { serviceId } = req.params;
     const days = parseInt(req.query.days as string) || 90;
     
-    const service = SERVICES.find(s => s.id === serviceId);
+    const services = monitoringService.getMonitoredServices();
+    const service = services.find(s => s.id === serviceId);
 
     if (!service) {
       return errorResponseHelper(res, 404, "Service not found");
     }
 
-    const uptimeData = generateServiceUptime(serviceId, days);
+    const dailyStatus = await monitoringService.getDailyServiceStatus(serviceId, days);
+    const uptimeData = await monitoringService.calculateServiceUptime(serviceId, days);
     
-    // Calculate summary stats
-    const operational = uptimeData.filter(d => d.status === "operational").length;
-    const degraded = uptimeData.filter(d => d.status === "degraded").length;
-    const outage = uptimeData.filter(d => d.status === "outage").length;
+    // Fill in missing days with "no_data" status
+    const today = new Date();
+    const allDays: Array<{ date: string; status: string; checks: number; avg_latency: number }> = [];
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const existing = dailyStatus.find(d => d.date === dateStr);
+      if (existing) {
+        allDays.push(existing);
+      } else {
+        allDays.push({ date: dateStr, status: "no_data", checks: 0, avg_latency: 0 });
+      }
+    }
+    
+    // Calculate summary
+    const operational = allDays.filter(d => d.status === "operational").length;
+    const degraded = allDays.filter(d => d.status === "degraded").length;
+    const outage = allDays.filter(d => d.status === "outage").length;
+    const noData = allDays.filter(d => d.status === "no_data").length;
     
     const response = {
       service_id: service.id,
       service_name: service.name,
       period_days: days,
-      uptime_percentage: ((operational / days) * 100).toFixed(2),
+      uptime_percentage: uptimeData.uptime_percentage.toFixed(2),
+      total_checks: uptimeData.total_checks,
+      failed_checks: uptimeData.failed_checks,
       summary: {
         operational_days: operational,
         degraded_days: degraded,
-        outage_days: outage
+        outage_days: outage,
+        no_data_days: noData
       },
-      daily_status: uptimeData
+      daily_status: allDays
     };
 
     successResponseHelper(res, 200, "Service uptime data retrieved", response);
@@ -329,31 +222,53 @@ const getServiceUptime = async (req: express.Request, res: express.Response) => 
 
 /**
  * GET /api/status/services/uptime
- * Get uptime history for ALL services
+ * Get REAL uptime history for ALL services
  */
 const getAllServicesUptime = async (req: express.Request, res: express.Response) => {
   try {
     const days = parseInt(req.query.days as string) || 90;
+    const services = monitoringService.getMonitoredServices();
     
-    const servicesUptime = SERVICES.map(service => {
-      const uptimeData = generateServiceUptime(service.id, days);
-      const operational = uptimeData.filter(d => d.status === "operational").length;
-      const degraded = uptimeData.filter(d => d.status === "degraded").length;
-      const outage = uptimeData.filter(d => d.status === "outage").length;
-      
-      return {
-        service_id: service.id,
-        service_name: service.name,
-        period_days: days,
-        uptime_percentage: ((operational / days) * 100).toFixed(2),
-        summary: {
-          operational_days: operational,
-          degraded_days: degraded,
-          outage_days: outage
-        },
-        daily_status: uptimeData
-      };
-    });
+    const servicesUptime = await Promise.all(
+      services.map(async (service) => {
+        const dailyStatus = await monitoringService.getDailyServiceStatus(service.id, days);
+        const uptimeData = await monitoringService.calculateServiceUptime(service.id, days);
+        
+        // Fill in missing days
+        const today = new Date();
+        const allDays: Array<{ date: string; status: string }> = [];
+        
+        for (let i = days - 1; i >= 0; i--) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          
+          const existing = dailyStatus.find(d => d.date === dateStr);
+          allDays.push({ 
+            date: dateStr, 
+            status: existing?.status || "no_data" 
+          });
+        }
+        
+        const operational = allDays.filter(d => d.status === "operational").length;
+        const degraded = allDays.filter(d => d.status === "degraded").length;
+        const outage = allDays.filter(d => d.status === "outage").length;
+        
+        return {
+          service_id: service.id,
+          service_name: service.name,
+          period_days: days,
+          uptime_percentage: uptimeData.uptime_percentage.toFixed(2),
+          total_checks: uptimeData.total_checks,
+          summary: {
+            operational_days: operational,
+            degraded_days: degraded,
+            outage_days: outage
+          },
+          daily_status: allDays
+        };
+      })
+    );
 
     successResponseHelper(res, 200, "All services uptime data retrieved", { services: servicesUptime });
   } catch (e) {
@@ -364,30 +279,90 @@ const getAllServicesUptime = async (req: express.Request, res: express.Response)
 
 /**
  * GET /api/status/uptime
- * Get 90-day uptime data for chart visualization (overall system)
+ * Get overall 90-day uptime data (aggregate of all services)
  */
 const getUptimeChart = async (req: express.Request, res: express.Response) => {
   try {
     const days = parseInt(req.query.days as string) || 90;
-    const uptimeData = generate90DayUptime().slice(-days);
+    const services = monitoringService.getMonitoredServices();
     
-    // Calculate summary stats
-    const operational = uptimeData.filter(d => d.status === "operational").length;
-    const degraded = uptimeData.filter(d => d.status === "degraded").length;
-    const outage = uptimeData.filter(d => d.status === "outage").length;
+    // Get all service daily statuses
+    const allServicesData = await Promise.all(
+      services.map(s => monitoringService.getDailyServiceStatus(s.id, days))
+    );
+    
+    // Aggregate by date - worst status wins
+    const today = new Date();
+    const aggregatedDays: Array<{ date: string; status: string }> = [];
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Check all services for this date
+      let dayStatus = "no_data";
+      let hasData = false;
+      
+      for (const serviceData of allServicesData) {
+        const dayData = serviceData.find(d => d.date === dateStr);
+        if (dayData) {
+          hasData = true;
+          if (dayData.status === "outage") {
+            dayStatus = "outage";
+            break; // Worst case, stop checking
+          } else if (dayData.status === "degraded" && dayStatus !== "outage") {
+            dayStatus = "degraded";
+          } else if (dayData.status === "operational" && dayStatus === "no_data") {
+            dayStatus = "operational";
+          }
+        }
+      }
+      
+      if (hasData && dayStatus === "no_data") {
+        dayStatus = "operational";
+      }
+      
+      aggregatedDays.push({ date: dateStr, status: dayStatus });
+    }
+    
+    const operational = aggregatedDays.filter(d => d.status === "operational").length;
+    const degraded = aggregatedDays.filter(d => d.status === "degraded").length;
+    const outage = aggregatedDays.filter(d => d.status === "outage").length;
+    const daysWithData = days - aggregatedDays.filter(d => d.status === "no_data").length;
     
     const response = {
       period_days: days,
-      uptime_percentage: ((operational / days) * 100).toFixed(2),
+      uptime_percentage: daysWithData > 0 ? ((operational / daysWithData) * 100).toFixed(2) : "100.00",
       summary: {
         operational_days: operational,
         degraded_days: degraded,
         outage_days: outage
       },
-      daily_status: uptimeData
+      daily_status: aggregatedDays
     };
 
     successResponseHelper(res, 200, "Uptime data retrieved", response);
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
+ * POST /api/status/check
+ * Manually trigger health checks (admin endpoint)
+ */
+const triggerHealthCheck = async (req: express.Request, res: express.Response) => {
+  try {
+    await monitoringService.runHealthChecks();
+    
+    const currentStatus = await monitoringService.getCurrentServiceStatus();
+    
+    successResponseHelper(res, 200, "Health checks completed", { 
+      timestamp: new Date().toISOString(),
+      results: currentStatus 
+    });
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     errorResponseHelper(res, 500, errorMessage);
@@ -401,7 +376,7 @@ const getUptimeChart = async (req: express.Request, res: express.Response) => {
 const getIncidents = async (req: express.Request, res: express.Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 10;
-    const status = req.query.status as string; // 'resolved', 'investigating', 'identified', 'monitoring'
+    const status = req.query.status as string;
     
     let filteredIncidents = [...INCIDENTS];
     
@@ -463,7 +438,6 @@ const getIncident = async (req: express.Request, res: express.Response) => {
  */
 const healthCheck = async (req: express.Request, res: express.Response) => {
   try {
-    // Quick database check
     await sequelize.query("SELECT 1", { type: QueryTypes.SELECT });
     
     res.status(200).json({
@@ -487,6 +461,7 @@ export default {
   getServiceUptime,
   getAllServicesUptime,
   getUptimeChart,
+  triggerHealthCheck,
   getIncidents,
   getIncident,
   healthCheck
