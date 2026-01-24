@@ -126,7 +126,7 @@ export const sendPendingPaymentNotification = async (
       txId,
       address,
       userId: user.user_id,
-    }, 86400);
+    });
 
     console.log(`Pending payment notification sent for tx: ${txId}`);
     return true;
