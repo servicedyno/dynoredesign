@@ -42,7 +42,7 @@ async function analyzeNomadly() {
     
     // Get wallet addresses for this user and company
     const wallets = await client.query(`
-      SELECT user_address_id, user_id, company_id, currency, wallet_name, last_4
+      SELECT user_address_id, user_id, company_id, currency, wallet_name
       FROM tbl_user_addresses 
       WHERE user_id = 4 AND company_id = 3
       ORDER BY currency
