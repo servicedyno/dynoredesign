@@ -2859,17 +2859,17 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
     // Verify OTP from Redis
     const storedOTPData = await getRedisItem(`wallet_edit_otp_${id}`);
     
-    if (!storedOTPData) {
+    if (!storedOTPData || Object.keys(storedOTPData).length === 0) {
       return errorResponseHelper(res, 400, "OTP expired or not found. Please request a new one.");
     }
 
-    const otpData = JSON.parse(storedOTPData);
+    const otpData = storedOTPData as { otp: string; user_id: string; expiry: string };
     
     if (otpData.otp !== otp) {
       return errorResponseHelper(res, 400, "Invalid OTP");
     }
 
-    if (otpData.user_id !== user_id) {
+    if (otpData.user_id !== user_id.toString()) {
       return errorResponseHelper(res, 403, "Unauthorized");
     }
 
