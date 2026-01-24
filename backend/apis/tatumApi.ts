@@ -89,11 +89,12 @@ async function decryptSymmetric(ciphertext, keyId) {
     },
   });
 
-  const buffer = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0));
+  // Convert base64 string to buffer - use Buffer.from for Node.js compatibility
+  const buffer = Buffer.from(ciphertext, 'base64');
 
   const keyName = client.cryptoKeyPath(projectId, locationId, keyRingId, keyId);
 
-  const ciphertextCrc32c = crc32c.calculate(buffer as Buffer);
+  const ciphertextCrc32c = crc32c.calculate(buffer);
   const [decryptResponse] = await client.decrypt({
     name: keyName,
     ciphertext: buffer,
@@ -102,7 +103,7 @@ async function decryptSymmetric(ciphertext, keyId) {
     },
   });
   if (
-    crc32c.calculate(decryptResponse.plaintext as string) !==
+    crc32c.calculate(decryptResponse.plaintext as Buffer) !==
     Number(decryptResponse.plaintextCrc32c.value)
   ) {
     throw new Error("Decrypt: response corrupted in-transit");
