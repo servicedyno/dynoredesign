@@ -244,8 +244,8 @@ export const setupWalletReminderCron = () => {
          FROM tbl_user u
          LEFT JOIN tbl_company c ON c.user_id = u.user_id
          LEFT JOIN tbl_user_addresses wa ON wa.user_id = u.user_id AND wa.company_id = c.company_id
-         WHERE u.created_at >= :twentyFiveHoursAgo
-         AND u.created_at <= :twentyFourHoursAgo
+         WHERE u."createdAt" >= :twentyFiveHoursAgo
+         AND u."createdAt" <= :twentyFourHoursAgo
          AND c.company_id IS NOT NULL
          AND wa.user_address_id IS NULL
          AND COALESCE(u.wallet_reminder_sent, false) = false`,
