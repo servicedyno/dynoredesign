@@ -96,6 +96,7 @@ async function testNomadlyPayment() {
     amount: 10,
     currency: 'USDT-TRC20',
     meta_data: {
+      product_name: 'Test Product',
       order_id: 'TEST-ORDER-' + Date.now(),
       customer_name: testCustomer.name,
       description: 'Test payment for $10 USDT'
