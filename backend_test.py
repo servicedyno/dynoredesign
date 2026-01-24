@@ -1437,6 +1437,9 @@ verifyCacheData();
         # Task 10.3: Test currency validation in crypto payment creation
         self.test_task_10_3_crypto_payment_validation(headers)
         
+        # Task 10.4: Test Payment Links Company Isolation Fix
+        self.test_task_10_4_payment_links_company_isolation(headers)
+        
         return True
     
     def test_task_10_1_api_key_creation(self, headers):
