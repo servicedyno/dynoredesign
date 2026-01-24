@@ -484,10 +484,10 @@ checkTransactions();
                     self.log_result(
                         "Payment Links Company Isolation - Create", 
                         True, 
-                        "✅ Payment link created with company_id=3",
+                        "✅ Payment link created with company_id=13",
                         {
                             "link_id": link_id,
-                            "company_id": 3,
+                            "company_id": 13,
                             "base_amount": payment_link_data["base_amount"],
                             "description": payment_link_data["description"]
                         }
