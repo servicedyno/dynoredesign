@@ -230,10 +230,16 @@ const calculateEvmFee = async (
   speed: 'fast' | 'medium' | 'slow' = 'fast'
 ): Promise<BlockchainFeeResult> => {
   const cacheKey = `blockchain_fee_${chain}`;
-  const cached = await getRedisItem(cacheKey);
+  const cached = await getRedisItem(cacheKey) as BlockchainFeeResult & { timestamp?: string } | null;
   
-  if (cached && cached.timestamp > Date.now() - FEE_CACHE_DURATION * 1000) {
-    return cached;
+  if (cached && cached.timestamp && Number(cached.timestamp) > Date.now() - FEE_CACHE_DURATION * 1000) {
+    return {
+      chain: cached.chain,
+      feeInNative: Number(cached.feeInNative),
+      feeInUSD: Number(cached.feeInUSD),
+      speed: cached.speed as 'fast' | 'medium' | 'slow',
+      timestamp: Number(cached.timestamp)
+    };
   }
 
   const feeData = await fetchTatumFee(chain);
