@@ -1,5 +1,6 @@
 import express from "express";
 import jwt from "jsonwebtoken";
+import { Op } from "sequelize";
 import {
   errorResponseHelper,
   getErrorMessage,
