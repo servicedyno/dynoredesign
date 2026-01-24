@@ -70,39 +70,45 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
 
     // Get current month transactions
     const currentMonthTransactions = await sequelize.query(
-      `SELECT COUNT(*) as count, COALESCE(SUM(base_amount), 0) as volume
-       FROM tbl_user_transaction 
-       WHERE user_id = :userId 
-       AND status = 'done'
-       AND "createdAt" >= :startOfMonth`,
+      `SELECT COUNT(*) as count, COALESCE(SUM(ut.base_amount), 0) as volume
+       FROM tbl_user_transaction ut
+       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       WHERE ut.user_id = :userId 
+       AND ut.status = 'done'
+       AND ut."createdAt" >= :startOfMonth
+       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
       {
-        replacements: { userId, startOfMonth },
+        replacements: { userId, startOfMonth, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as any[];
 
     // Get last month transactions
     const lastMonthTransactions = await sequelize.query(
-      `SELECT COUNT(*) as count, COALESCE(SUM(base_amount), 0) as volume
-       FROM tbl_user_transaction 
-       WHERE user_id = :userId 
-       AND status = 'done'
-       AND "createdAt" >= :startOfLastMonth
-       AND "createdAt" <= :endOfLastMonth`,
+      `SELECT COUNT(*) as count, COALESCE(SUM(ut.base_amount), 0) as volume
+       FROM tbl_user_transaction ut
+       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       WHERE ut.user_id = :userId 
+       AND ut.status = 'done'
+       AND ut."createdAt" >= :startOfLastMonth
+       AND ut."createdAt" <= :endOfLastMonth
+       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
       {
-        replacements: { userId, startOfLastMonth, endOfLastMonth },
+        replacements: { userId, startOfLastMonth, endOfLastMonth, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as any[];
 
     // Get all-time totals
     const allTimeTransactions = await sequelize.query(
-      `SELECT COUNT(*) as count, COALESCE(SUM(base_amount), 0) as volume
-       FROM tbl_user_transaction 
-       WHERE user_id = :userId 
-       AND status = 'done'`,
+      `SELECT COUNT(*) as count, COALESCE(SUM(ut.base_amount), 0) as volume
+       FROM tbl_user_transaction ut
+       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       WHERE ut.user_id = :userId 
+       AND ut.status = 'done'
+       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
       {
-        replacements: { userId },
+        replacements: { userId, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as any[];
