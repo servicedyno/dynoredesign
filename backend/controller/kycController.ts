@@ -1,0 +1,503 @@
+/**
+ * KYC Controller
+ * Handles identity verification using Veriff API
+ */
+
+import { Request, Response } from "express";
+import { QueryTypes } from "sequelize";
+import sequelize from "../utils/dbInstance";
+import kycModel from "../models/kycModel";
+import { getVeriffService } from "../services/veriffService";
+import { createNotification, NOTIFICATION_TYPES } from "./notificationController";
+import {
+  sendKYCRequiredEmail,
+  sendKYCApprovedEmail,
+  sendKYCRejectedEmail,
+} from "../services/emailService";
+
+/**
+ * Get KYC status for authenticated user
+ * GET /api/kyc/status
+ */
+export const getKYCStatus = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const companyId = req.query.company_id ? parseInt(req.query.company_id as string) : null;
+
+    // Get user's KYC record
+    const whereClause = companyId
+      ? { user_id: userId, company_id: companyId }
+      : { user_id: userId };
+
+    const kycRecord = await kycModel.findOne({
+      where: whereClause,
+      order: [["created_at", "DESC"]],
+    });
+
+    // Calculate user's total volume
+    const volumeQuery = companyId
+      ? `SELECT COALESCE(SUM(base_amount), 0) as total_volume
+         FROM tbl_user_transaction 
+         WHERE user_id = :userId AND company_id = :companyId AND status = 'done'`
+      : `SELECT COALESCE(SUM(base_amount), 0) as total_volume
+         FROM tbl_user_transaction 
+         WHERE user_id = :userId AND status = 'done'`;
+
+    const volumeResult = await sequelize.query(volumeQuery, {
+      replacements: { userId, companyId },
+      type: QueryTypes.SELECT,
+    }) as any[];
+
+    const totalVolume = parseFloat(volumeResult[0]?.total_volume || "0");
+    const volumeThreshold = 5000;
+    const requiresKYC = totalVolume >= volumeThreshold;
+
+    // Get KYC requirements status
+    const needsSubmission = requiresKYC && (!kycRecord || kycRecord.get("status") === "pending");
+    const canProcess = !requiresKYC || (kycRecord && kycRecord.get("status") === "approved");
+
+    res.status(200).json({
+      success: true,
+      kyc_record: kycRecord || null,
+      total_volume: totalVolume,
+      volume_threshold: volumeThreshold,
+      requires_kyc: requiresKYC,
+      needs_submission: needsSubmission,
+      can_process_payments: canProcess,
+      status: kycRecord ? kycRecord.get("status") : "not_started",
+    });
+
+  } catch (error: any) {
+    console.error("Get KYC status error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to get KYC status",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get KYC requirements/documents needed
+ * GET /api/kyc/requirements
+ */
+export const getKYCRequirements = async (req: Request, res: Response) => {
+  try {
+    const requirements = {
+      volume_threshold: 5000,
+      threshold_description: "KYC verification is required when your transaction volume reaches $5,000",
+      required_documents: [
+        {
+          type: "government_id",
+          name: "Government-issued ID",
+          description: "Valid passport, driver's license, or national ID card",
+          required: true,
+        },
+        {
+          type: "proof_of_address",
+          name: "Proof of Address",
+          description: "Recent utility bill, bank statement, or government document (within last 3 months)",
+          required: true,
+        },
+        {
+          type: "selfie",
+          name: "Selfie Verification",
+          description: "Live photo verification to confirm identity",
+          required: true,
+        },
+      ],
+      verification_process: [
+        "Click 'Start Verification' to begin the process",
+        "Complete identity verification through our secure partner Veriff",
+        "Upload required documents and take a selfie",
+        "Wait for verification approval (usually within 24-48 hours)",
+        "Receive email notification once approved",
+      ],
+      estimated_time: "5-10 minutes",
+      verification_partner: "Veriff",
+    };
+
+    res.status(200).json({
+      success: true,
+      requirements,
+    });
+
+  } catch (error: any) {
+    console.error("Get KYC requirements error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to get KYC requirements",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Start KYC verification session
+ * POST /api/kyc/submit
+ */
+export const startKYCVerification = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { company_id, first_name, last_name } = req.body;
+
+    // Validate company ownership
+    if (company_id) {
+      const company = await sequelize.query(
+        `SELECT company_id FROM tbl_company WHERE company_id = :companyId AND user_id = :userId`,
+        {
+          replacements: { companyId: company_id, userId },
+          type: QueryTypes.SELECT,
+        }
+      );
+
+      if (company.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid company_id or company does not belong to this user",
+        });
+      }
+    }
+
+    // Check if user already has approved KYC
+    const existingKYC = await kycModel.findOne({
+      where: {
+        user_id: userId,
+        ...(company_id && { company_id }),
+        status: "approved",
+      },
+    });
+
+    if (existingKYC) {
+      return res.status(400).json({
+        success: false,
+        message: "KYC already approved for this user/company",
+      });
+    }
+
+    // Get user details
+    const userResult = await sequelize.query(
+      `SELECT name, email FROM tbl_user WHERE user_id = :userId`,
+      {
+        replacements: { userId },
+        type: QueryTypes.SELECT,
+      }
+    ) as any[];
+
+    const user = userResult[0];
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Calculate current volume
+    const volumeQuery = company_id
+      ? `SELECT COALESCE(SUM(base_amount), 0) as total_volume
+         FROM tbl_user_transaction 
+         WHERE user_id = :userId AND company_id = :companyId AND status = 'done'`
+      : `SELECT COALESCE(SUM(base_amount), 0) as total_volume
+         FROM tbl_user_transaction 
+         WHERE user_id = :userId AND status = 'done'`;
+
+    const volumeResult = await sequelize.query(volumeQuery, {
+      replacements: { userId, companyId: company_id },
+      type: QueryTypes.SELECT,
+    }) as any[];
+
+    const totalVolume = parseFloat(volumeResult[0]?.total_volume || "0");
+
+    // Initialize Veriff service and create session
+    const veriffService = getVeriffService();
+    const callbackUrl = `${process.env.SERVER_URL}/api/kyc/webhook`;
+
+    const session = await veriffService.createSession({
+      userId,
+      companyId: company_id || null,
+      firstName: first_name || user.name.split(" ")[0],
+      lastName: last_name || user.name.split(" ").slice(1).join(" "),
+      callbackUrl,
+    });
+
+    // Create or update KYC record
+    const kycData = {
+      user_id: userId,
+      company_id: company_id || null,
+      status: "submitted",
+      volume_threshold: totalVolume,
+      submitted_at: new Date(),
+      veriff_session_id: session.verification.id,
+      veriff_session_url: session.verification.url,
+      veriff_verification_id: session.verification.id,
+    };
+
+    const [kycRecord, created] = await kycModel.findOrCreate({
+      where: {
+        user_id: userId,
+        ...(company_id && { company_id }),
+      },
+      defaults: kycData,
+    });
+
+    if (!created) {
+      await kycRecord.update(kycData);
+    }
+
+    // Create notification
+    await createNotification(
+      userId,
+      NOTIFICATION_TYPES.KYC_REQUIRED,
+      "KYC Verification Started",
+      `Your identity verification session has been created. Please complete the verification process.`,
+      {
+        volume_threshold: totalVolume,
+        session_id: session.verification.id,
+      },
+      company_id
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "KYC verification session created successfully",
+      verification: {
+        session_id: session.verification.id,
+        verification_url: session.verification.url,
+        status: "submitted",
+      },
+      kyc_id: kycRecord.get("kyc_id"),
+    });
+
+  } catch (error: any) {
+    console.error("Start KYC verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to start KYC verification",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Veriff webhook endpoint
+ * POST /api/kyc/webhook
+ * Receives verification decision from Veriff
+ */
+export const handleVeriffWebhook = async (req: Request, res: Response) => {
+  try {
+    const signature = req.headers["x-hmac-signature"] as string;
+    const payload = req.body;
+
+    // Verify webhook signature
+    const veriffService = getVeriffService();
+    const isValid = veriffService.verifyWebhookSignature(payload, signature);
+
+    if (!isValid) {
+      console.error("Invalid Veriff webhook signature");
+      return res.status(401).json({
+        success: false,
+        message: "Invalid webhook signature",
+      });
+    }
+
+    // Parse webhook payload
+    const webhookData = veriffService.parseWebhookPayload(payload);
+    const { verificationId, status, decision, decisionCode, reason, vendorData } = webhookData;
+
+    console.log("Veriff webhook received:", { verificationId, decision, status });
+
+    // Find KYC record
+    const kycRecord = await kycModel.findOne({
+      where: {
+        veriff_verification_id: verificationId,
+      },
+    });
+
+    if (!kycRecord) {
+      console.error("KYC record not found for verification:", verificationId);
+      return res.status(404).json({
+        success: false,
+        message: "KYC record not found",
+      });
+    }
+
+    // Update KYC record with decision
+    const kycStatus = veriffService.mapDecisionToStatus(decision);
+    
+    await kycRecord.update({
+      status: kycStatus,
+      veriff_decision: decision,
+      veriff_decision_code: decisionCode,
+      veriff_reason: reason,
+      reviewed_at: new Date(),
+      ...(decision === "declined" && { rejection_reason: reason }),
+    });
+
+    const userId = kycRecord.get("user_id") as number;
+    const companyId = kycRecord.get("company_id") as number | null;
+
+    // Get user details for notifications
+    const userResult = await sequelize.query(
+      `SELECT name, email FROM tbl_user WHERE user_id = :userId`,
+      {
+        replacements: { userId },
+        type: QueryTypes.SELECT,
+      }
+    ) as any[];
+
+    const user = userResult[0];
+
+    // Send notifications based on decision
+    if (decision === "approved") {
+      // Create approval notification
+      await createNotification(
+        userId,
+        NOTIFICATION_TYPES.KYC_APPROVED,
+        "KYC Verification Approved",
+        "Congratulations! Your identity verification has been approved. You can now process payments without restrictions.",
+        { verification_id: verificationId },
+        companyId
+      );
+
+      // Send approval email
+      await sendKYCApprovedEmail(user.email, user.name);
+
+    } else if (decision === "declined") {
+      // Create rejection notification
+      await createNotification(
+        userId,
+        NOTIFICATION_TYPES.KYC_REJECTED,
+        "KYC Verification Unsuccessful",
+        `Your identity verification was not approved. Reason: ${reason}. Please resubmit with correct documents.`,
+        {
+          verification_id: verificationId,
+          reason: reason,
+        },
+        companyId
+      );
+
+      // Send rejection email
+      await sendKYCRejectedEmail(user.email, user.name, reason);
+
+    } else if (decision === "resubmission_requested") {
+      // Create resubmission notification
+      await createNotification(
+        userId,
+        NOTIFICATION_TYPES.KYC_REQUIRED,
+        "KYC Resubmission Required",
+        `Additional information is needed for your verification. Reason: ${reason}`,
+        {
+          verification_id: verificationId,
+          reason: reason,
+        },
+        companyId
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Webhook processed successfully",
+    });
+
+  } catch (error: any) {
+    console.error("Veriff webhook error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to process webhook",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Check volume and trigger KYC requirement
+ * Called from transaction completion
+ */
+export const checkVolumeAndTriggerKYC = async (
+  userId: number,
+  companyId: number | null
+): Promise<void> => {
+  try {
+    // Calculate total volume
+    const volumeQuery = companyId
+      ? `SELECT COALESCE(SUM(base_amount), 0) as total_volume
+         FROM tbl_user_transaction 
+         WHERE user_id = :userId AND company_id = :companyId AND status = 'done'`
+      : `SELECT COALESCE(SUM(base_amount), 0) as total_volume
+         FROM tbl_user_transaction 
+         WHERE user_id = :userId AND status = 'done'`;
+
+    const volumeResult = await sequelize.query(volumeQuery, {
+      replacements: { userId, companyId },
+      type: QueryTypes.SELECT,
+    }) as any[];
+
+    const totalVolume = parseFloat(volumeResult[0]?.total_volume || "0");
+    const volumeThreshold = 5000;
+
+    // Check if KYC is required
+    if (totalVolume >= volumeThreshold) {
+      // Check if KYC already exists
+      const kycRecord = await kycModel.findOne({
+        where: {
+          user_id: userId,
+          ...(companyId && { company_id: companyId }),
+        },
+      });
+
+      // If no KYC record or status is pending, send notification
+      if (!kycRecord || kycRecord.get("status") === "pending") {
+        // Get user details
+        const userResult = await sequelize.query(
+          `SELECT name, email FROM tbl_user WHERE user_id = :userId`,
+          {
+            replacements: { userId },
+            type: QueryTypes.SELECT,
+          }
+        ) as any[];
+
+        const user = userResult[0];
+
+        // Create KYC required notification (only if not already notified)
+        const existingNotification = await sequelize.query(
+          `SELECT notification_id FROM tbl_notification 
+           WHERE user_id = :userId 
+           AND type = :type 
+           AND created_at > NOW() - INTERVAL '7 days'`,
+          {
+            replacements: { userId, type: NOTIFICATION_TYPES.KYC_REQUIRED },
+            type: QueryTypes.SELECT,
+          }
+        );
+
+        if (existingNotification.length === 0) {
+          await createNotification(
+            userId,
+            NOTIFICATION_TYPES.KYC_REQUIRED,
+            "KYC Verification Required",
+            `Your transaction volume has reached $${totalVolume.toFixed(2)}. Please complete KYC verification to continue processing payments.`,
+            {
+              total_volume: totalVolume,
+              threshold: volumeThreshold,
+            },
+            companyId
+          );
+
+          // Send KYC required email
+          await sendKYCRequiredEmail(user.email, user.name, totalVolume);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Check volume and trigger KYC error:", error);
+    // Don't throw error to avoid breaking transaction flow
+  }
+};
+
+export default {
+  getKYCStatus,
+  getKYCRequirements,
+  startKYCVerification,
+  handleVeriffWebhook,
+  checkVolumeAndTriggerKYC,
+};
