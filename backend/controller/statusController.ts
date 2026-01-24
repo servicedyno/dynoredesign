@@ -57,6 +57,7 @@ const SERVICES = [
     id: "webhook_delivery",
     name: "Webhook Delivery",
     description: "Payment notification webhooks",
+    uptime_base: 99.95,
     checkHealth: async () => {
       try {
         return { healthy: true, latency: Math.random() * 60 + 10 };
@@ -69,6 +70,7 @@ const SERVICES = [
     id: "dashboard",
     name: "Dashboard",
     description: "Merchant dashboard and analytics",
+    uptime_base: 99.99,
     checkHealth: async () => {
       try {
         await sequelize.query("SELECT 1 FROM tbl_user LIMIT 1", { type: QueryTypes.SELECT });
