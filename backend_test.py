@@ -2463,7 +2463,20 @@ try {
         print("\n" + "="*50)
         print("PHASE 3: PENDING PAYMENT NOTIFICATION SYSTEM")
         print("="*50)
-        self.test_pending_payment_notifications()
+        self.test_notification_types_include_pending()
+        self.test_notification_preferences_include_pending()
+        
+        # Phase 4: Tatum Webhook End-to-End Testing
+        print("\n" + "="*50)
+        print("PHASE 4: TATUM WEBHOOK END-TO-END TESTING")
+        print("="*50)
+        self.test_tatum_webhook_end_to_end()
+        
+        # Phase 5: Email Template Structure Verification
+        print("\n" + "="*50)
+        print("PHASE 5: EMAIL TEMPLATE VERIFICATION")
+        print("="*50)
+        self.test_pending_payment_email_template_structure()
         
         # Print summary
         self.print_test_summary()
