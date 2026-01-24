@@ -340,6 +340,8 @@ export default sendEmail;
 export {
   sendEmail,
   sendPaymentReceivedEmail,
+  sendPaymentPendingEmail,
+  sendPaymentConfirmingEmail,
   sendTransactionConfirmedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
