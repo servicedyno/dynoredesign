@@ -25,98 +25,132 @@ import flw from "../apis/flutterwaveApi";
 const addApi = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { company_id, base_currency, withdrawal_whitelist, api_name, permissions } = req.body;
+    const { 
+      company_id, 
+      base_currency, 
+      withdrawal_whitelist, 
+      api_name, 
+      permissions,
+      environment = 'production' // Default to production
+    } = req.body;
+
+    // Validate environment
+    if (!['production', 'development'].includes(environment)) {
+      return errorResponseHelper(res, 400, "Invalid environment. Must be 'production' or 'development'");
+    }
 
     const keyData = {
       base_currency,
       company_id,
       adm_id: userData.user_id,
+      env: environment,
     };
 
     // Default permissions if not provided
     const defaultPermissions = ["payments", "transactions", "webhooks", "wallets"];
     const apiPermissions = permissions || defaultPermissions;
 
-    // Check for at least 1 wallet address for this company
-    const walletAddresses = await userWalletAddressModel.findOne({
-      where: {
-        user_id: userData.user_id,
-        ...(company_id && { company_id }),
-      },
-    });
+    // Check for at least 1 wallet address for this company (only required for production keys)
+    if (environment === 'production') {
+      const walletAddresses = await userWalletAddressModel.findOne({
+        where: {
+          user_id: userData.user_id,
+          ...(company_id && { company_id }),
+        },
+      });
 
-
-    if(!walletAddresses){
-      return errorResponseHelper(
-        res,
-        500,
-        "User does not have any wallet address configured for this company!"
-      );
+      if(!walletAddresses){
+        return errorResponseHelper(
+          res,
+          500,
+          "User does not have any wallet address configured for this company! Required for production API keys."
+        );
+      }
     }
 
-    const keyString = "DYNOPAY_USER_API-" + JSON.stringify(keyData);
+    // Generate appropriate key prefix based on environment
+    const keyPrefix = environment === 'production' ? 'dpk_live_' : 'dpk_test_';
+    const keyString = keyPrefix + "DYNOPAY_USER_API-" + JSON.stringify(keyData);
 
     const apiKey = encrypt(keyString, process.env.API_SECRET);
 
+    // Check if API key already exists for this company, currency, AND environment
     const isExists = await apiModel
       .findOne({
         where: {
           company_id,
           base_currency,
+          environment,
         },
       })
       .then((token) => token !== null)
       .then((isExists) => isExists);
 
     if (isExists) {
-      errorResponseHelper(
+      return errorResponseHelper(
         res,
         400,
-        "API for this company and currency already exists!"
+        `${environment === 'production' ? 'Production' : 'Development'} API key for this company and currency already exists!`
       );
-    } else {
-      const isExists = await companyModel
-        .findOne({
-          where: {
-            company_id,
-          },
-        })
-        .then((token) => token !== null)
-        .then((isExists) => isExists);
-
-      if (!isExists) {
-        errorResponseHelper(res, 500, "Company does not exist!");
-      } else {
-        const company_data = await companyModel.findOne({
-          where: {
-            company_id,
-          },
-        });
-        const createdUser = await customerModel.create({
-          id: crypto.randomUUID(),
-          customer_name: company_data.dataValues.company_name + " admin",
-          email: company_data.dataValues.email,
-          mobile: company_data.dataValues.email,
-          company_id: company_id,
-        });
-
-        await customerWalletModel.create({
-          id: crypto.randomUUID(),
-          customer_id: createdUser.dataValues.customer_id,
-          wallet_type: base_currency,
-        });
-
-        const token = await getAccessToken(createdUser.dataValues.customer_id);
-        const resData = await apiModel.create({
+    }
+    
+    const companyExists = await companyModel
+      .findOne({
+        where: {
           company_id,
-          base_currency: base_currency,
-          apiKey,
-          user_id: userData.user_id,
-          adminToken: token.token,
-          withdrawal_whitelist: withdrawal_whitelist,
-          api_name: api_name || `${company_data.dataValues.company_name} API`,
-          permissions: JSON.stringify(apiPermissions),  // Store permissions as JSON
-        });
+        },
+      })
+      .then((token) => token !== null)
+      .then((isExists) => isExists);
+
+    if (!companyExists) {
+      return errorResponseHelper(res, 500, "Company does not exist!");
+    }
+    
+    const company_data = await companyModel.findOne({
+      where: {
+        company_id,
+      },
+    });
+    
+    const createdUser = await customerModel.create({
+      id: crypto.randomUUID(),
+      customer_name: company_data.dataValues.company_name + " admin",
+      email: company_data.dataValues.email,
+      mobile: company_data.dataValues.email,
+      company_id: company_id,
+    });
+
+    await customerWalletModel.create({
+      id: crypto.randomUUID(),
+      customer_id: createdUser.dataValues.customer_id,
+      wallet_type: base_currency,
+    });
+
+    const token = await getAccessToken(createdUser.dataValues.customer_id);
+    
+    // Default test mode restrictions for development keys
+    const testModeRestrictions = environment === 'development' 
+      ? JSON.stringify({
+          max_amount: 100,
+          allowed_currencies: ["BTC", "ETH", "USDT-TRC20", "TRX", "LTC"],
+          sandbox_mode: true,
+        })
+      : null;
+
+    const resData = await apiModel.create({
+      company_id,
+      base_currency: base_currency,
+      apiKey,
+      user_id: userData.user_id,
+      adminToken: token.token,
+      withdrawal_whitelist: withdrawal_whitelist,
+      api_name: api_name || `${company_data.dataValues.company_name} ${environment === 'production' ? 'Production' : 'Development'} API`,
+      permissions: JSON.stringify(apiPermissions),
+      environment,
+      status: 'active',
+      test_mode_restrictions: testModeRestrictions,
+    });
 
         successResponseHelper(res, 200, "API generated successfully!", {
           ...resData.dataValues,
