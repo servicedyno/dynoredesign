@@ -1085,18 +1085,17 @@ const changeEmail = async (req: express.Request, res: express.Response) => {
     
     // Send confirmation email to new address
     try {
-      await mailTransporter.sendMail({
-        from: '"DynoPay" <no-reply@dynopay.com>',
-        to: newEmail,
-        subject: "Email Address Changed - DynoPay",
-        html: `
-          <h2>Email Address Updated</h2>
-          <p>Your DynoPay account email has been successfully changed to this address.</p>
-          <p>If you didn't make this change, please contact support immediately.</p>
-          <br>
-          <p>Best regards,<br>DynoPay Team</p>
-        `
-      });
+      await sendEmail(
+        newEmail,
+        user.dataValues.name || "User",
+        "Email Address Changed - DynoPay",
+        `Your DynoPay account email has been successfully changed to this address.
+
+If you didn't make this change, please contact support immediately.
+
+Best regards,
+DynoPay Team`
+      );
     } catch (emailError) {
       userLogger.error("Failed to send email change confirmation", emailError);
     }
