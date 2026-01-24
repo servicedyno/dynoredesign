@@ -1015,12 +1015,12 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Phase 10 Partial Wallet Configuration successfully implemented and tested"
+    - "Task 10.4: Payment Links Company Isolation Fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
