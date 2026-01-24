@@ -272,7 +272,7 @@ const getCryptoTransaction = async (
         const {
           data: { data, message },
         } = await axios.post(
-          process.env.SERVER_URL + "/api/pay/verifyCryptoPayment",
+          getBackendURL() + "/api/pay/verifyCryptoPayment",
           { address },
           {
             headers: {
