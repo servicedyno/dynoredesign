@@ -6,6 +6,21 @@
 
 user_problem_statement: "COMPREHENSIVE UNIT TESTING FOR DYNOPAY BACKEND - ALL PHASES (1-12) - Complete backend unit tests for all implemented phases from Phase 1 through Phase 12. This is a re-verification of all features after environment configuration changes."
 
+  - task: "Development/Production API Key Functionality Testing"
+    implemented: true
+    working: true
+    file: "/app/backend_test.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Newly implemented Development/Production API key functionality with environment support, key prefixes, status management, and filtering capabilities"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: All Development/Production API key functionality working correctly. GET /api/userApi/getApi returns grouped data with environment info (production/development). POST /api/userApi/addApi creates development keys with proper environment field. PUT /api/userApi/toggleStatus/:id successfully toggles API key status. POST /api/userApi/revoke/:id successfully revokes API keys. Environment filtering via ?environment=production/development parameter working correctly. API keys are properly encrypted with environment-specific prefixes (dpk_live_/dpk_test_) applied before encryption. Duplicate key prevention working as expected."
+
 backend:
   - task: "CRUD Endpoints Testing - User Profile Management"
     implemented: true
