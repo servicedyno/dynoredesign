@@ -159,10 +159,7 @@ const getTatumKey = async () => {
           private_key_id: process.env.PRIVATE_KEY_ID,
           private_key: privateKey,
           client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          auth_uri: "https://accounts.google.com/o/oauth2/auth",
-          token_uri: "https://oauth2.googleapis.com/token",
-          auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-        },
+        } as any,
       });
       const [version] = await client.accessSecretVersion({
         name: "projects/1098360994708/secrets/DynoPay_Tatum/versions/latest",
