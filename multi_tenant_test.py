@@ -295,49 +295,43 @@ class MultiTenantTester:
         
         # Check existing transactions for Nomadly company using SQL query
         sql_check_script = '''
-const { Sequelize, QueryTypes } = require('sequelize');
+const { Client } = require('pg');
 require('dotenv').config();
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.USER_NAME,
-  process.env.PASSWORD,
-  {
-    host: process.env.HOST,
-    port: Number(process.env.DB_PORT),
-    dialect: "postgres",
-    logging: false
-  }
-);
+const client = new Client({
+  host: process.env.HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.USER_NAME,
+  password: process.env.PASSWORD,
+});
 
 async function checkTransactions() {
   try {
-    await sequelize.authenticate();
+    await client.connect();
     
     // Check transactions for user_id=4 (Nomadly user)
-    const transactions = await sequelize.query(
-      `SELECT transaction_id, user_id, company_id, base_amount, status, created_at 
+    const transactions = await client.query(
+      `SELECT transaction_id, user_id, company_id, base_amount, status, "createdAt"
        FROM tbl_user_transaction 
        WHERE user_id = 4 
-       ORDER BY created_at DESC
+       ORDER BY "createdAt" DESC
        LIMIT 5`,
-      { type: QueryTypes.SELECT }
     );
     
     // Check if company_id column exists and is populated
-    const columnCheck = await sequelize.query(
+    const columnCheck = await client.query(
       `SELECT column_name, data_type, is_nullable 
        FROM information_schema.columns 
        WHERE table_name = 'tbl_user_transaction' AND column_name = 'company_id'`,
-      { type: QueryTypes.SELECT }
     );
     
     console.log(JSON.stringify({
-      column_exists: columnCheck.length > 0,
-      column_info: columnCheck[0] || null,
-      transaction_count: transactions.length,
-      sample_transactions: transactions,
-      company_id_populated: transactions.filter(t => t.company_id !== null).length
+      column_exists: columnCheck.rows.length > 0,
+      column_info: columnCheck.rows[0] || null,
+      transaction_count: transactions.rows.length,
+      sample_transactions: transactions.rows,
+      company_id_populated: transactions.rows.filter(t => t.company_id !== null).length
     }, null, 2));
     
     process.exit(0);
@@ -345,6 +339,8 @@ async function checkTransactions() {
   } catch (error) {
     console.error('Transaction check failed:', error.message);
     process.exit(1);
+  } finally {
+    await client.end();
   }
 }
 
