@@ -3390,7 +3390,14 @@ try {
                 else:
                     self.log_result("Create Development API Key", False, "❌ Invalid response structure", {"response": data})
             else:
-                self.log_result("Create Development API Key", False, f"❌ API returned status {response.status_code}", {"response": response.text})
+                # Get the error message from the response
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get('message', response.text)
+                except:
+                    error_message = response.text
+                
+                self.log_result("Create Development API Key", False, f"❌ API returned status {response.status_code}: {error_message}", {"response": response.text})
                 
         except Exception as e:
             self.log_result("Create Development API Key", False, f"❌ Request failed: {str(e)}")
