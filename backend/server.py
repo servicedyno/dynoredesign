@@ -1,31 +1,60 @@
-#!/usr/bin/env python3
 """
-Minimal launcher for Node.js TypeScript backend.
-This replaces the Python process with Node.js using exec.
-Required because supervisor config is readonly and expects a Python entry point.
+Node.js launcher - spawns Node.js TypeScript backend on port 8001.
+This file exists only because supervisor config is readonly and expects Python.
+The actual backend is pure Node.js/TypeScript.
 """
 
+import subprocess
 import os
 import sys
+import signal
+import time
+from dotenv import load_dotenv
 
-# Change to backend directory
-os.chdir('/app/backend')
+# Load environment variables
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
-# Set PORT to 8001 (what supervisor expects)
+# Node.js will handle port 8001 directly
 os.environ['PORT'] = '8001'
 
-# Load .env file manually for Node.js
-from dotenv import dotenv_values
-env_path = '/app/backend/.env'
-if os.path.exists(env_path):
-    env_vars = dotenv_values(env_path)
-    for key, value in env_vars.items():
-        if value is not None:
-            os.environ[key] = value
+def run_node_server():
+    """Run Node.js server directly on port 8001."""
+    process = subprocess.Popen(
+        ['/app/backend/node_modules/.bin/ts-node', '--transpile-only', 'server.ts'],
+        cwd='/app/backend',
+        env=os.environ.copy(),
+        stdout=sys.stdout,
+        stderr=sys.stderr
+    )
+    return process
 
-# Replace this process with Node.js ts-node
-# This completely replaces Python with Node.js - no proxy, no subprocess
-os.execvp(
-    '/app/backend/node_modules/.bin/ts-node',
-    ['ts-node', '--transpile-only', 'server.ts']
-)
+def main():
+    """Main entry point - runs Node.js and waits."""
+    print("Starting Node.js TypeScript backend on port 8001...")
+    
+    node_process = run_node_server()
+    
+    # Handle signals to properly terminate Node.js
+    def signal_handler(signum, frame):
+        print(f"Received signal {signum}, shutting down Node.js...")
+        node_process.terminate()
+        node_process.wait()
+        sys.exit(0)
+    
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Wait for Node.js process
+    try:
+        node_process.wait()
+    except KeyboardInterrupt:
+        node_process.terminate()
+        node_process.wait()
+
+if __name__ == "__main__":
+    main()
+
+# Dummy ASGI app for uvicorn (required by supervisor config)
+# This won't actually be used since we run main() first
+async def app(scope, receive, send):
+    pass
