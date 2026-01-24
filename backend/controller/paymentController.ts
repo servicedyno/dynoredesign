@@ -790,10 +790,10 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           transaction.commit();
 
           // Auto-generate invoice for completed transaction
-          if (tempData.company_id && userPayload.transaction_id) {
+          if (tempData.company_id && userPayload.id) {
             autoGenerateInvoice(
-              userPayload.transaction_id,
-              tempData.company_id
+              userPayload.id as any,
+              Number(tempData.company_id)
             ).catch(err => {
               console.error("Failed to generate invoice:", err);
             });
