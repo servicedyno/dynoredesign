@@ -581,6 +581,118 @@ const connectSocial = async (req: express.Request, res: express.Response) => {
 };
 
 /**
+ * Facebook Sign-In / Sign-Up
+ * POST /api/user/facebook-signin
+ * Authenticates or registers user via Facebook OAuth
+ */
+const facebookSignIn = async (req: express.Request, res: express.Response) => {
+  try {
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+      return errorResponseHelper(res, 400, "Facebook access token is required");
+    }
+
+    // Verify token and get user info from Facebook
+    let facebookUserInfo: any;
+    try {
+      const response = await axios.get(
+        `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`
+      );
+      facebookUserInfo = response.data;
+    } catch (fbError) {
+      userLogger.error("Facebook token verification failed", fbError);
+      return errorResponseHelper(res, 401, "Invalid Facebook access token");
+    }
+
+    if (!facebookUserInfo || !facebookUserInfo.id) {
+      return errorResponseHelper(res, 400, "Could not retrieve user info from Facebook");
+    }
+
+    const { id: facebookId, name, email, picture } = facebookUserInfo;
+    const photoUrl = picture?.data?.url;
+
+    // Check if user exists by email or facebook ID (stored in external_id)
+    let user = await userModel.findOne({
+      where: {
+        [Op.or]: [
+          email ? { email: email.toLowerCase() } : null,
+          { external_id: facebookId },
+        ].filter(Boolean),
+      },
+    });
+
+    if (user) {
+      // Update external_id if not set
+      if (!user.dataValues.external_id && facebookId) {
+        await userModel.update(
+          { 
+            external_id: facebookId,
+            login_type: "FACEBOOK",
+          },
+          { where: { user_id: user.dataValues.user_id } }
+        );
+      }
+
+      // Generate access token and return
+      const resData = await getAccessToken(user.dataValues.user_id);
+      return successResponseHelper(res, 200, "Login Successful!", resData);
+    }
+
+    // Create new user
+    const defaultPhoto = process.env.SERVER_URL + (await downloadUserImage());
+    const finalPhoto = photoUrl || defaultPhoto;
+    
+    const createdUser = await userModel.create({
+      name: name || (email ? email.split("@")[0] : "Facebook User"),
+      email: email ? email.toLowerCase() : null,
+      photo: finalPhoto,
+      login_type: "FACEBOOK",
+      external_id: facebookId,
+    });
+
+    // Create wallets for the new user
+    const walletData = await adminWalletModel.findAll();
+    const fiatData = walletData.filter(
+      (x) => x.dataValues.currency_type === "FIAT"
+    );
+    const cryptoData = walletData.filter(
+      (x) => x.dataValues.currency_type === "CRYPTO"
+    );
+
+    for (let i = 0; i < fiatData.length; i++) {
+      await userWalletModel.create({
+        id: crypto.randomUUID(),
+        user_id: createdUser.dataValues.user_id,
+        wallet_type: fiatData[i].dataValues.wallet_type,
+        currency_type: "FIAT",
+      });
+    }
+
+    for (let i = 0; i < cryptoData.length; i++) {
+      await userWalletModel.create({
+        id: crypto.randomUUID(),
+        user_id: createdUser.dataValues.user_id,
+        wallet_type: cryptoData[i].dataValues.wallet_type,
+        currency_type: "CRYPTO",
+      });
+    }
+
+    // Generate access token
+    const resData = await getAccessToken(createdUser.dataValues.user_id);
+
+    userLogger.info(`New user registered via Facebook: ${facebookId}`);
+
+    return successResponseHelper(res, 200, "Registration Successful!", resData);
+
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Facebook sign-in error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
  * Forgot Password - Send reset email with token
  * POST /api/user/forgot-password
  */
