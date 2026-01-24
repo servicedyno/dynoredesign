@@ -15,6 +15,10 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
+# Load .env file so environment variables are available to Node.js subprocess
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 # Node.js server will run on this internal port
 NODE_PORT = 3300
