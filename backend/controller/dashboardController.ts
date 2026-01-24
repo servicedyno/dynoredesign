@@ -119,9 +119,10 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
        FROM tbl_user_wallet 
        WHERE user_id = :userId 
        AND currency_type = 'CRYPTO'
-       AND wallet_address IS NOT NULL`,
+       AND wallet_address IS NOT NULL
+       ${company_id ? 'AND company_id = :companyId' : ''}`,
       {
-        replacements: { userId },
+        replacements: { userId, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as any[];
@@ -129,11 +130,13 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     // Get pending transactions count
     const pendingTransactions = await sequelize.query(
       `SELECT COUNT(*) as count
-       FROM tbl_user_transaction 
-       WHERE user_id = :userId 
-       AND status = 'pending'`,
+       FROM tbl_user_transaction ut
+       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       WHERE ut.user_id = :userId 
+       AND ut.status = 'pending'
+       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
       {
-        replacements: { userId },
+        replacements: { userId, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as any[];
