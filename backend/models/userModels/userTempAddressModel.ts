@@ -65,6 +65,21 @@ const userTempAddressModel = sequelize.define(
     amount: {
       type: DataTypes.FLOAT,
       defaultValue: 0,
+    },
+    // Fee payer mode: 'company' (default) or 'customer'
+    fee_payer: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'company',
+    },
+    // Amount merchant should receive (for customer-pays-fees mode)
+    merchant_amount: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+    // Original USD amount
+    base_amount_usd: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
     }
   },
   {
