@@ -996,9 +996,9 @@ backend:
 
   - task: "Phase 12: VAT calculations for EU companies"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/controller/invoiceController.ts"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
@@ -1008,6 +1008,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ VERIFIED: VAT calculation logic components verified. EU countries list complete (27 countries) ✅. Tax rates integration available ✅. VAT-verified company validation implemented ✅. Logic correctly applies VAT only to EU companies with vat_verified=true status."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL: VAT Rate Integration test failed. Database connection or tbl_tax_rate table access issues. VAT calculations cannot work properly without dynamic tax rates from database. Need to verify database connectivity and tax rate table structure."
 
   - task: "Phase 12: Provider information (Dynotech Innovations, LDA)"
     implemented: true
