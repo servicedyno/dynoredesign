@@ -6,7 +6,7 @@ import taxRouter from "./taxRouter";
 import dashboardRouter from "./dashboardRouter";
 import notificationRouter from "./notificationRouter";
 import invoiceRouter from "./invoiceRouter";
-// import kycRouter from "./kycRouter"; // KYC routes - requires fixing import issue with veriffService
+import kycRouter from "./kycRouter";
 
 import {
   authMiddleware,
