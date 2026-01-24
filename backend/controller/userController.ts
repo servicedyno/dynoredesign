@@ -671,6 +671,122 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Get User Profile
+ * GET /api/user/profile
+ */
+const getProfile = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const user = await userModel.findOne({
+      where: { user_id: userData.user_id },
+      attributes: { exclude: ['password', 'reset_token', 'reset_token_expiry', 'verified_otp', 'otp_expired'] }
+    });
+
+    if (!user) {
+      return errorResponseHelper(res, 404, "User not found");
+    }
+
+    // Get additional stats
+    const companiesCount = await companyModel.count({
+      where: { user_id: userData.user_id }
+    });
+
+    const walletsCount = await userWalletAddressModel.count({
+      where: { user_id: userData.user_id }
+    });
+
+    const apiKeysCount = await apiModel.count({
+      where: { user_id: userData.user_id }
+    });
+
+    return successResponseHelper(res, 200, "Profile retrieved successfully", {
+      ...user.dataValues,
+      stats: {
+        companies: companiesCount,
+        wallets: walletsCount,
+        api_keys: apiKeysCount,
+      }
+    });
+
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Get profile error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
+ * Delete User Account
+ * DELETE /api/user/account
+ * Requires password confirmation for security
+ */
+const deleteAccount = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { password, confirmation } = req.body;
+
+    if (!password) {
+      return errorResponseHelper(res, 400, "Password is required for account deletion");
+    }
+
+    if (confirmation !== "DELETE") {
+      return errorResponseHelper(res, 400, "Please type 'DELETE' to confirm account deletion");
+    }
+
+    // Verify password
+    const hashedPassword = sha256(password).toString();
+    const user = await userModel.findOne({
+      where: {
+        user_id: userData.user_id,
+        password: hashedPassword,
+      }
+    });
+
+    if (!user) {
+      return errorResponseHelper(res, 401, "Invalid password");
+    }
+
+    // Delete all related data (cascading should handle most, but let's be explicit)
+    const userId = userData.user_id;
+
+    // Delete notifications
+    await notificationModel.destroy({ where: { user_id: userId } });
+    
+    // Delete notification preferences
+    await notificationPreferencesModel.destroy({ where: { user_id: userId } });
+
+    // Delete KYC records
+    await kycModel.destroy({ where: { user_id: userId } });
+
+    // Delete wallet addresses
+    await userWalletAddressModel.destroy({ where: { user_id: userId } });
+
+    // Delete wallets
+    await userWalletModel.destroy({ where: { user_id: userId } });
+
+    // Delete API keys (will cascade to plans and subscriptions)
+    await apiModel.destroy({ where: { user_id: userId } });
+
+    // Delete companies (will cascade to related data)
+    await companyModel.destroy({ where: { user_id: userId } });
+
+    // Finally, delete the user
+    await userModel.destroy({ where: { user_id: userId } });
+
+    userLogger.info(`User account deleted: ${userData.email}`);
+
+    return successResponseHelper(res, 200, "Account deleted successfully", {
+      message: "Your account and all associated data have been permanently deleted"
+    });
+
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Delete account error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 export default {
   registerUser,
   login,
@@ -683,4 +799,6 @@ export default {
   forgotPassword,
   resetPassword,
   googleSignIn,
+  getProfile,
+  deleteAccount,
 };
