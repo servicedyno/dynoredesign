@@ -150,7 +150,10 @@ The DynoPay KYC (Know Your Customer) system provides identity verification for u
 ### 4. POST /api/kyc/webhook
 **Description**: Webhook endpoint for Veriff verification decisions
 
-**Authentication**: None (verified by HMAC signature when Veriff service is active)
+**Authentication**: None (verified by HMAC-SHA256 signature)
+
+**Headers**:
+- `x-hmac-signature`: HMAC-SHA256 signature of the payload (required)
 
 **Request Body** (Veriff format):
 ```json
