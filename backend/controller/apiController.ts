@@ -900,6 +900,8 @@ export default {
   getApiById,
   updateApi,
   regenerateApiKey,
+  toggleApiStatus,
+  revokeApi,
   deleteApi,
   getApiCustomers,
   updateCustomer,
