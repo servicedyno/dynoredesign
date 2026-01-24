@@ -5668,20 +5668,7 @@ testEmailSending();
             )
 
 
-if __name__ == "__main__":
-    print("Starting DynoPay Quick Verification Testing...")
-    
-    tester = DynoPayBackendTester()
-    
-    # Run quick verification tests as specified in review request
-    success = tester.run_quick_verification_tests()
-    
-    if success:
-        print("\n🎉 All tests passed! TypeScript fixes did not break functionality.")
-        sys.exit(0)
-    else:
-        print(f"\n⚠️  {len(tester.errors)} test(s) failed. Please check the results above.")
-        sys.exit(1)
+# Old main execution block removed - using new main() function
 
     def run_all_tests(self):
         """Run all backend tests"""
