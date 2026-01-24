@@ -48,7 +48,7 @@ class PaymentFlowTester:
                         return line.split('=', 1)[1].strip()
         except:
             pass
-        return "http://localhost:8001"
+        return "http://localhost:3300"
         
     def log_result(self, test_name: str, success: bool, message: str, details: Dict = None):
         """Log test result"""
