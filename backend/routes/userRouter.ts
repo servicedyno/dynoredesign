@@ -4,6 +4,8 @@ import { authMiddleware, uploadImage, userMiddleware } from "../middleware";
 const userRouter = express.Router();
 
 userRouter.post("/registerUser", userMiddleware, userController.registerUser);
+userRouter.post("/registerPhone", userController.registerPhoneStep1);
+userRouter.post("/registerPhone/verify", userController.registerPhoneStep2);
 userRouter.post("/login", userMiddleware, userController.login);
 userRouter.get("/checkEmail", userController.checkEmail);
 userRouter.post("/generateOTP", userController.generateOTP);
