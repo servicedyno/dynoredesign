@@ -298,7 +298,7 @@ def main():
         status = "✅ PASSED" if passed else "❌ FAILED"
         print(f"   {test_name.replace('_', ' ').title()}: {status}")
     
-    total_passed = sum(results.values())
+    total_passed = sum(1 for result in results.values() if result is True)
     total_tests = len(results)
     
     print(f"\n🎯 Overall Result: {total_passed}/{total_tests} tests passed")
