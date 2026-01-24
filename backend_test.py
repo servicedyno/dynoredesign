@@ -1450,13 +1450,16 @@ verifyCacheData();
                 if 'data' in data:
                     notification_types = data['data'].get('types', [])
                     
+                    # Extract values from the notification types objects
+                    type_values = [nt.get('value') for nt in notification_types if isinstance(nt, dict) and 'value' in nt]
+                    
                     # Check for PAYMENT_PARTIAL and PAYMENT_PARTIAL_EXPIRED
                     required_types = ['payment_partial', 'payment_partial_expired']
                     found_types = []
                     missing_types = []
                     
                     for required_type in required_types:
-                        if required_type in notification_types:
+                        if required_type in type_values:
                             found_types.append(required_type)
                         else:
                             missing_types.append(required_type)
@@ -1473,7 +1476,7 @@ verifyCacheData();
                             "Notification Types - PAYMENT_PARTIAL", 
                             False, 
                             f"Missing PAYMENT_PARTIAL types: {', '.join(missing_types)}",
-                            {"found_types": found_types, "missing_types": missing_types, "all_types": notification_types}
+                            {"found_types": found_types, "missing_types": missing_types, "all_type_values": type_values}
                         )
                 else:
                     self.log_result(
