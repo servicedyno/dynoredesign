@@ -420,12 +420,118 @@ You can track the full status in your DynoPay dashboard.`;
   }
 };
 
+/**
+ * Send partial payment notification email
+ * Sent when a partial payment is received and more funds are needed
+ */
+const sendPaymentPartialEmail = async (
+  recipientEmail: string,
+  name: string,
+  companyName: string,
+  receivedAmount: string,
+  expectedAmount: string,
+  remainingAmount: string,
+  currency: string,
+  transactionId: string,
+  walletAddress: string,
+  gracePeriodMinutes: number = 30
+) => {
+  try {
+    const subject = "⚠️ Partial Payment Received - Action Required - DynoPay";
+    const message = `A partial payment has been received for your company ${companyName}.
+
+💰 Expected Amount: ${expectedAmount} ${currency}
+✅ Received Amount: ${receivedAmount} ${currency}
+⚠️ Remaining Amount: ${remainingAmount} ${currency}
+
+📝 Transaction ID: ${transactionId}
+📍 Wallet Address: ${walletAddress}
+
+⏰ IMPORTANT: You have ${gracePeriodMinutes} minutes to send the remaining ${remainingAmount} ${currency} to complete this payment.
+
+What happens next?
+• If the remaining amount is received within ${gracePeriodMinutes} minutes, the full payment will be processed and forwarded to your wallet.
+• If the grace period expires, the partial amount received will be processed with adjusted fees.
+
+To complete the payment, send exactly ${remainingAmount} ${currency} to:
+${walletAddress}
+
+You can track the payment status in your DynoPay dashboard.`;
+
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name,
+      subject,
+      body: message,
+    });
+    return info;
+  } catch (e) {
+    console.log("Payment partial email error:", e);
+  }
+};
+
+/**
+ * Send partial payment expired notification email
+ * Sent when a partial payment grace period has expired
+ */
+const sendPaymentPartialExpiredEmail = async (
+  recipientEmail: string,
+  name: string,
+  companyName: string,
+  receivedAmount: string,
+  expectedAmount: string,
+  currency: string,
+  transactionId: string,
+  status: "completed_partial" | "incomplete_expired"
+) => {
+  try {
+    const isCompleted = status === "completed_partial";
+    const subject = isCompleted 
+      ? "✅ Partial Payment Processed - DynoPay"
+      : "⏰ Partial Payment Expired - DynoPay";
+    
+    const message = isCompleted
+      ? `The partial payment for your company ${companyName} has been processed.
+
+💰 Expected Amount: ${expectedAmount} ${currency}
+✅ Received Amount: ${receivedAmount} ${currency}
+📝 Transaction ID: ${transactionId}
+
+The received amount has been processed with adjusted fees and forwarded to your wallet. The transaction is now complete.
+
+You can view the full transaction details in your DynoPay dashboard.`
+      : `The grace period for the partial payment to your company ${companyName} has expired.
+
+💰 Expected Amount: ${expectedAmount} ${currency}
+⚠️ Received Amount: ${receivedAmount} ${currency}
+📝 Transaction ID: ${transactionId}
+
+Since the full payment was not received within the grace period, the partial amount has been processed. Please note that fees may be higher for incomplete payments.
+
+If you believe this is an error or need assistance, please contact our support team.
+
+You can view the transaction details in your DynoPay dashboard.`;
+
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name,
+      subject,
+      body: message,
+    });
+    return info;
+  } catch (e) {
+    console.log("Payment partial expired email error:", e);
+  }
+};
+
 export default sendEmail;
 export {
   sendEmail,
   sendPaymentReceivedEmail,
   sendPaymentPendingEmail,
   sendPaymentConfirmingEmail,
+  sendPaymentPartialEmail,
+  sendPaymentPartialExpiredEmail,
   sendTransactionConfirmedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
