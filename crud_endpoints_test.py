@@ -306,11 +306,12 @@ class DynoPayCRUDTester:
                     {"response": data}
                 )
             else:
+                error_details = {"status": response.status_code, "response": response.text[:500]}
                 self.log_result(
                     f"PUT Update API Key {api_id}", 
                     False, 
-                    f"API returned status {response.status_code}",
-                    {"response": response.text}
+                    f"API returned status {response.status_code}: {response.text[:200]}",
+                    error_details
                 )
                 
         except Exception as e:
