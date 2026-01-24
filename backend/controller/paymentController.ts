@@ -2963,6 +2963,18 @@ const processIncompletePayments = async () => {
               }
             }
 
+            // Send partial payment completed notification
+            await sendPartialPaymentExpiredNotification(
+              tempTx.wallet_address,
+              tempTx.txId,
+              totalReceived,
+              Number(tempTx.expected_amount || tempTx.amount),
+              tempTx.wallet_type,
+              tempTx.user_id,
+              tempTx.company_id,
+              "completed_partial"
+            );
+
             console.log(`Incomplete payment processed successfully for ${tempTx.wallet_address}`);
           } else {
             console.log(`No additional payment for ${tempTx.wallet_address}. Processing with existing amount ${tempTx.amount}`);
