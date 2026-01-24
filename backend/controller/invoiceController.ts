@@ -507,6 +507,3 @@ export default {
   autoGenerateInvoice,
   downloadInvoicePDF,
 };
-
-// Named export for use in other controllers
-export { autoGenerateInvoice };
