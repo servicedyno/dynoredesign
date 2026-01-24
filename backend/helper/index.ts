@@ -6,6 +6,8 @@ import errorResponseHelper from "./errorResponseHelper";
 import getErrorMessage from "./getErrorMessage";
 import sendEmail, {
   sendPaymentReceivedEmail,
+  sendPaymentPendingEmail,
+  sendPaymentConfirmingEmail,
   sendTransactionConfirmedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
@@ -31,6 +33,8 @@ export {
   downloadUserImage,
   sendEmail,
   sendPaymentReceivedEmail,
+  sendPaymentPendingEmail,
+  sendPaymentConfirmingEmail,
   sendTransactionConfirmedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
