@@ -1959,7 +1959,7 @@ try {
             )
     
     def test_notification_types_include_pending(self):
-        """Test GET /api/notifications - Check for payment_pending and payment_confirming types"""
+        """Test GET /api/notifications/types - Check for payment_pending and payment_confirming types"""
         print("\n--- Testing Notification Types for Pending Payments ---")
         
         try:
@@ -2079,9 +2079,6 @@ try {
                             "❌ payment_pending preference not found - may need database migration",
                             {"available_preferences": list(preferences.keys()), "note": "The payment_pending field is defined in the model but not returned by API"}
                         )
-                        
-                        # Additional check - verify the model has the field
-                        self.check_notification_preferences_model()
                 else:
                     self.log_result(
                         "Notification Preferences - Payment Pending", 
@@ -2103,6 +2100,34 @@ try {
                 False, 
                 f"❌ Request failed: {str(e)}"
             )
+    
+    def print_test_summary(self):
+        """Print a comprehensive test summary"""
+        print("\n" + "="*80)
+        print("TEST SUMMARY")
+        print("="*80)
+        
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for result in self.test_results.values() if result['success'])
+        failed_tests = total_tests - passed_tests
+        
+        print(f"Total Tests: {total_tests}")
+        print(f"✅ Passed: {passed_tests}")
+        print(f"❌ Failed: {failed_tests}")
+        
+        if failed_tests > 0:
+            print(f"\n❌ FAILED TESTS ({failed_tests}):")
+            for test_name, result in self.test_results.items():
+                if not result['success']:
+                    print(f"  - {test_name}: {result['message']}")
+        
+        if passed_tests > 0:
+            print(f"\n✅ PASSED TESTS ({passed_tests}):")
+            for test_name, result in self.test_results.items():
+                if result['success']:
+                    print(f"  - {test_name}: {result['message']}")
+        
+        print("="*80)
     
     def check_notification_preferences_model(self):
         """Check if payment_pending field is defined in the notification preferences model"""
