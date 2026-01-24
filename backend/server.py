@@ -1,15 +1,12 @@
 """
 Node.js Backend Launcher for DynoPay
 
-Spawns TWO Node.js TypeScript services:
-1. Main Backend (port 3300 internal) - proxied to 8001
-2. API Service (port 3301) - external merchant API
-
-Required because supervisor config is readonly and expects Python/uvicorn.
+Simple launcher that spawns Node.js TypeScript services directly.
+Required because supervisor config expects Python/uvicorn but project is Node.js.
 
 Architecture:
-- Main Backend: Node.js on internal port 3300, proxied via this ASGI app on 8001
-- API Service: Node.js on port 3301 (direct access, no proxy needed)
+- Main Backend: Node.js on port 8001 (direct, no proxy)
+- API Service: Node.js on port 3301 (external merchant API)
 - Supervisor manages this Python process, which manages both Node.js services
 """
 
@@ -19,36 +16,32 @@ import sys
 import signal
 import atexit
 import time
-from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-import httpx
-import threading
 
 # Load environment variables
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
-# Internal port for main Node.js backend
-NODE_PORT = 3300
+# Port for main Node.js backend (direct on 8001)
+BACKEND_PORT = int(os.environ.get('PORT', 8001))
 # API Service port (external)
 API_SERVICE_PORT = int(os.environ.get('API_SERVICE_PORT', 3301))
 
 # Process references
-NODE_PROCESS = None
+BACKEND_PROCESS = None
 API_SERVICE_PROCESS = None
-HTTP_CLIENT = None
 
-def start_node_server():
-    """Start main Node.js TypeScript backend on internal port."""
-    global NODE_PROCESS
+def start_backend_server():
+    """Start main Node.js TypeScript backend directly on port 8001."""
+    global BACKEND_PROCESS
     
     env = os.environ.copy()
-    env['PORT'] = str(NODE_PORT)
+    env['PORT'] = str(BACKEND_PORT)
     
     print("=" * 60)
-    print(f" DYNOPAY - Starting Main Backend (internal port {NODE_PORT})")
+    print(f" DYNOPAY - Starting Main Backend (port {BACKEND_PORT})")
     print("=" * 60, flush=True)
     
-    NODE_PROCESS = subprocess.Popen(
+    BACKEND_PROCESS = subprocess.Popen(
         [
             '/app/backend/node_modules/.bin/ts-node',
             '--transpile-only',
@@ -63,12 +56,13 @@ def start_node_server():
     # Wait for Node.js to start
     time.sleep(4)
     
-    if NODE_PROCESS.poll() is None:
-        print(f"[Launcher] Main Backend started (PID: {NODE_PROCESS.pid})", flush=True)
+    if BACKEND_PROCESS.poll() is None:
+        print(f"[Launcher] Main Backend started successfully (PID: {BACKEND_PROCESS.pid})", flush=True)
     else:
-        print(f"[Launcher] WARNING: Main Backend may have failed to start", flush=True)
+        print(f"[Launcher] ERROR: Main Backend failed to start", flush=True)
+        sys.exit(1)
     
-    return NODE_PROCESS
+    return BACKEND_PROCESS
 
 def start_api_service():
     """Start API Service on its configured port."""
@@ -97,163 +91,109 @@ def start_api_service():
     time.sleep(3)
     
     if API_SERVICE_PROCESS.poll() is None:
-        print(f"[Launcher] API Service started (PID: {API_SERVICE_PROCESS.pid})", flush=True)
+        print(f"[Launcher] API Service started successfully (PID: {API_SERVICE_PROCESS.pid})", flush=True)
     else:
         print(f"[Launcher] WARNING: API Service may have failed to start", flush=True)
     
     return API_SERVICE_PROCESS
 
 def stop_all_services():
-    """Stop all Node.js services."""
-    global NODE_PROCESS, API_SERVICE_PROCESS
+    """Stop all Node.js services gracefully."""
+    global BACKEND_PROCESS, API_SERVICE_PROCESS
     
-    for name, process in [("Main Backend", NODE_PROCESS), ("API Service", API_SERVICE_PROCESS)]:
+    for name, process in [("Main Backend", BACKEND_PROCESS), ("API Service", API_SERVICE_PROCESS)]:
         if process and process.poll() is None:
             print(f"[Launcher] Stopping {name}...", flush=True)
             process.terminate()
             try:
                 process.wait(timeout=10)
+                print(f"[Launcher] {name} stopped gracefully", flush=True)
             except subprocess.TimeoutExpired:
+                print(f"[Launcher] {name} did not stop gracefully, forcing...", flush=True)
                 process.kill()
                 process.wait()
-            print(f"[Launcher] {name} stopped", flush=True)
+                print(f"[Launcher] {name} stopped forcefully", flush=True)
 
-# Register cleanup
+# Register cleanup handlers
 atexit.register(stop_all_services)
 
 def handle_signal(signum, frame):
-    print(f"[Launcher] Received signal {signum}", flush=True)
+    """Handle termination signals."""
+    print(f"[Launcher] Received signal {signum}, shutting down...", flush=True)
     stop_all_services()
     sys.exit(0)
 
 signal.signal(signal.SIGTERM, handle_signal)
 signal.signal(signal.SIGINT, handle_signal)
 
-def monitor_services():
-    """Monitor and restart services if they crash."""
-    global NODE_PROCESS, API_SERVICE_PROCESS
+def monitor_and_keep_alive():
+    """Monitor services and restart if they crash. Keep Python process alive."""
+    global BACKEND_PROCESS, API_SERVICE_PROCESS
+    
+    print("[Launcher] Monitoring services...", flush=True)
     
     while True:
         time.sleep(10)
         
         # Check main backend
-        if NODE_PROCESS and NODE_PROCESS.poll() is not None:
-            print("[Launcher] Main Backend crashed, restarting...", flush=True)
+        if BACKEND_PROCESS and BACKEND_PROCESS.poll() is not None:
+            print("[Launcher] ⚠️  Main Backend crashed, restarting...", flush=True)
             time.sleep(2)
-            start_node_server()
+            start_backend_server()
         
         # Check API service
         if API_SERVICE_PROCESS and API_SERVICE_PROCESS.poll() is not None:
-            print("[Launcher] API Service crashed, restarting...", flush=True)
+            print("[Launcher] ⚠️  API Service crashed, restarting...", flush=True)
             time.sleep(2)
             start_api_service()
 
-async def proxy_request(scope, receive, send):
-    """Proxy HTTP request to Node.js main backend."""
-    global HTTP_CLIENT
-    
-    # Build path with query string
-    path = scope.get('path', '/')
-    query_string = scope.get('query_string', b'')
-    if query_string:
-        path = f"{path}?{query_string.decode()}"
-    
-    # Get headers
-    headers = {}
-    for name, value in scope.get('headers', []):
-        name = name.decode()
-        if name.lower() not in ('host', 'content-length'):
-            headers[name] = value.decode()
-    
-    # Get request body
-    body = b''
-    while True:
-        message = await receive()
-        body += message.get('body', b'')
-        if not message.get('more_body', False):
-            break
-    
-    method = scope.get('method', 'GET')
-    
-    try:
-        # Forward request to Node.js
-        response = await HTTP_CLIENT.request(
-            method=method,
-            url=path,
-            headers=headers,
-            content=body if body else None
-        )
-        
-        # Send response back
-        response_headers = [
-            (k.lower().encode(), v.encode())
-            for k, v in response.headers.items()
-            if k.lower() not in ('content-encoding', 'transfer-encoding', 'content-length')
-        ]
-        response_headers.append((b'content-length', str(len(response.content)).encode()))
-        
-        await send({
-            'type': 'http.response.start',
-            'status': response.status_code,
-            'headers': response_headers,
-        })
-        await send({
-            'type': 'http.response.body',
-            'body': response.content,
-        })
-        
-    except httpx.ConnectError:
-        await send({
-            'type': 'http.response.start',
-            'status': 503,
-            'headers': [(b'content-type', b'application/json')],
-        })
-        await send({
-            'type': 'http.response.body',
-            'body': b'{"error": "Backend starting up, please retry"}',
-        })
-    except Exception as e:
-        print(f"[Proxy] Error: {e}", flush=True)
-        await send({
-            'type': 'http.response.start',
-            'status': 502,
-            'headers': [(b'content-type', b'application/json')],
-        })
-        await send({
-            'type': 'http.response.body',
-            'body': f'{{"error": "Proxy error: {str(e)}"}}'.encode(),
-        })
-
+# ASGI app interface (required by uvicorn, but we just start Node.js and keep alive)
 async def app(scope, receive, send):
-    """Main ASGI application."""
-    global HTTP_CLIENT
-    
+    """
+    Minimal ASGI app that uvicorn expects.
+    We don't actually handle requests here - Node.js does directly on port 8001.
+    This just keeps the Python process alive so supervisor is happy.
+    """
     if scope['type'] == 'lifespan':
         while True:
             message = await receive()
             if message['type'] == 'lifespan.startup':
                 # Start both Node.js services
-                start_node_server()
+                start_backend_server()
                 start_api_service()
-                
-                # Start monitoring thread
-                monitor_thread = threading.Thread(target=monitor_services, daemon=True)
-                monitor_thread.start()
-                
-                # Create HTTP client for proxying
-                HTTP_CLIENT = httpx.AsyncClient(
-                    base_url=f"http://127.0.0.1:{NODE_PORT}",
-                    timeout=httpx.Timeout(60.0, connect=10.0)
-                )
-                
                 await send({'type': 'lifespan.startup.complete'})
                 
+                # Keep monitoring in background
+                import threading
+                monitor_thread = threading.Thread(target=monitor_and_keep_alive, daemon=True)
+                monitor_thread.start()
+                
             elif message['type'] == 'lifespan.shutdown':
-                if HTTP_CLIENT:
-                    await HTTP_CLIENT.aclose()
                 stop_all_services()
                 await send({'type': 'lifespan.shutdown.complete'})
                 return
-                
+    
+    # If uvicorn somehow routes HTTP requests here, return error
+    # (shouldn't happen since Node.js is bound to port 8001)
     elif scope['type'] == 'http':
-        await proxy_request(scope, receive, send)
+        await send({
+            'type': 'http.response.start',
+            'status': 500,
+            'headers': [(b'content-type', b'text/plain')],
+        })
+        await send({
+            'type': 'http.response.body',
+            'body': b'This endpoint should not be called. Node.js backend is on port 8001.',
+        })
+
+# If run directly (not via uvicorn), start services
+if __name__ == '__main__':
+    print("[Launcher] Starting DynoPay services directly...", flush=True)
+    start_backend_server()
+    start_api_service()
+    
+    try:
+        monitor_and_keep_alive()
+    except KeyboardInterrupt:
+        print("\n[Launcher] Shutting down...", flush=True)
+        stop_all_services()
