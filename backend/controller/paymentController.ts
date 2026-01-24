@@ -3083,6 +3083,18 @@ const processIncompletePayments = async () => {
               }
             }
 
+            // Send partial payment expired notification
+            await sendPartialPaymentExpiredNotification(
+              tempTx.wallet_address,
+              tempTx.txId,
+              Number(tempTx.amount),
+              Number(tempTx.expected_amount || tempTx.amount * 2), // Use expected if available
+              tempTx.wallet_type,
+              tempTx.user_id,
+              tempTx.company_id,
+              "incomplete_expired"
+            );
+
             console.log(`Partial payment processed after timeout for ${tempTx.wallet_address}`);
           }
         } catch (innerError) {
