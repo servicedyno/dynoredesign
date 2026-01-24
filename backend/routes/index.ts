@@ -7,6 +7,7 @@ import dashboardRouter from "./dashboardRouter";
 import notificationRouter from "./notificationRouter";
 import invoiceRouter from "./invoiceRouter";
 import kycRouter from "./kycRouter";
+import statusRouter from "./statusRouter";
 
 import {
   authMiddleware,
@@ -38,6 +39,7 @@ router.use("/tax", taxRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/notifications", notificationRouter);
 router.use("/kyc", kycRouter);
+router.use("/status", statusRouter); // Public status page endpoints
 router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
 router.post("/webhook", flutterwaveWebHook);
