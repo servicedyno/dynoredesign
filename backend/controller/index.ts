@@ -123,6 +123,7 @@ export {
   taxController,
   dashboardController,
   notificationController,
+  subscriptionController,
   createNotification,
   NOTIFICATION_TYPES,
 };
