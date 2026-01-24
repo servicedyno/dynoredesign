@@ -389,7 +389,7 @@ class PaymentThresholdRedisTester:
         print("--- Testing threshold test endpoint ABOVE ---")
         
         try:
-            # Test ETH $15 (threshold is $5)
+            # Test ETH $15 (threshold is $5, so this is above threshold)
             test_data = {
                 "blockchain": "ETH",
                 "amount": 15
