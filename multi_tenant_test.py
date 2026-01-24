@@ -550,7 +550,7 @@ checkTransactions();
                             self.log_result(
                                 "Payment Links Company Filter - Get", 
                                 True, 
-                                "✅ Payment links filtered by company_id=3, company_id included in response",
+                                "✅ Payment links filtered by company_id=13, company_id included in response",
                                 {
                                     "total_links": len(payment_links),
                                     "found_created_link": True,
