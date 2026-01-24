@@ -1402,6 +1402,7 @@ export default {
   forgotPassword,
   resetPassword,
   googleSignIn,
+  facebookSignIn,
   getProfile,
   updateProfile,
   changeEmail,
