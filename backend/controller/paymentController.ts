@@ -1129,16 +1129,20 @@ const Crypto = async (
       console.log('⚠️ WARNING: Using mock address generation - implement proper local generation for production');
     }
 
-    const cipherText = await tatumApi.encryptSymmetric(
-      privateKey,
-      process.env.TEMP_KEY_ID
-    );
+    // Encrypt private key if available, otherwise skip
+    let cipherText = null;
+    if (privateKey) {
+      cipherText = await tatumApi.encryptSymmetric(
+        privateKey,
+        process.env.TEMP_KEY_ID
+      );
+    }
 
     const tempPayload = {
       user_id: tokenData.adm_id,
       wallet_type: walletDetails.wallet_type,
       wallet_address: address,
-      subscription_id: id,
+      subscription_id: subscriptionId,
       privateKey: cipherText,
     };
 
