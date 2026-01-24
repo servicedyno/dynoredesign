@@ -60,7 +60,7 @@ class Phase12InvoiceTester:
         
         try:
             response = requests.post(
-                f"{self.backend_url}/api/user/login",
+                f"{self.backend_url}/user/login",
                 json=test_user,
                 headers={"Content-Type": "application/json"},
                 timeout=15
