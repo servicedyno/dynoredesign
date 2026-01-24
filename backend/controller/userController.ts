@@ -8,7 +8,12 @@ import {
   sendEmail,
   successResponseHelper,
 } from "../helper/index";
-import { adminWalletModel, userModel, userWalletModel } from "../models";
+import { adminWalletModel, userModel, userWalletModel, companyModel, apiModel } from "../models";
+import { userWalletAddressModel } from "../models/userModels";
+import notificationModel from "../models/notificationModel";
+import notificationPreferencesModel from "../models/notificationPreferencesModel";
+import kycModel from "../models/kycModel";
+import invoiceModel from "../models/invoiceModel";
 import sha256 from "crypto-js/sha256";
 import crypto from "crypto";
 import sequelize from "../utils/dbInstance";
