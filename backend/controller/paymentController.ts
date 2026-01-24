@@ -2113,11 +2113,21 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
         callback_url: linkData.callback_url,
         redirect_url: linkData.redirect_url,
         webhook_url: linkData.webhook_url,
+        fee_payer: linkData.fee_payer || 'customer',  // Who pays blockchain fees
         company_id: linkData.company_id,  // Phase 10 Fix: Include company_id in response
       };
     });
 
-    successResponseHelper(res, 200, "Links Fetched Successfully!", formattedLinks);
+    // Return with pagination info
+    successResponseHelper(res, 200, "Links Fetched Successfully!", {
+      links: formattedLinks,
+      pagination: {
+        total: totalCount,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+      }
+    });
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
