@@ -11,6 +11,7 @@
   "author": "Krushang Chauhan",
   "license": "ISC",
   "dependencies": {
+    "@aws-crypto/crc32c": "^5.2.0",
     "@google-cloud/kms": "^5.1.0",
     "@google-cloud/secret-manager": "^5.6.0",
     "@infobip-api/sdk": "^0.3.2",
