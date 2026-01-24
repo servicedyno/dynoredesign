@@ -303,7 +303,7 @@ testInvoiceSchema();
             for tx_id in transaction_ids[:3]:  # Test first 3 transactions
                 try:
                     response = requests.get(
-                        f"{self.backend_url}/api/transactions/{tx_id}/invoice",
+                        f"{self.backend_url}/transactions/{tx_id}/invoice",
                         headers=headers,
                         timeout=15
                     )
