@@ -165,7 +165,14 @@ const getApi = async (req: express.Request, res: express.Response) => {
         `,
       { type: QueryTypes.SELECT }
     );
-    successResponseHelper(res, 200, "", resData);
+    
+    // Parse permissions JSON for each API
+    const formattedData = resData.map((api: any) => ({
+      ...api,
+      permissions: api.permissions ? JSON.parse(api.permissions) : ["payments", "transactions", "webhooks", "wallets"],
+    }));
+    
+    successResponseHelper(res, 200, "", formattedData);
   } catch (e) {
     const message = getErrorMessage(e);
     apiLogger.error(
