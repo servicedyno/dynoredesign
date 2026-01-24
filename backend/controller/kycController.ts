@@ -326,7 +326,17 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
     }
 
     // Update KYC record with decision
-    const kycStatus = veriffService.mapDecisionToStatus(decision);
+    // const kycStatus = veriffService.mapDecisionToStatus(decision);
+    
+    // Temporary: Map decision manually
+    const statusMap: { [key: string]: string } = {
+      approved: "approved",
+      declined: "rejected",
+      resubmission_requested: "resubmission_requested",
+      expired: "expired",
+      abandoned: "abandoned",
+    };
+    const kycStatus = statusMap[decision] || "pending";
     
     await kycRecord.update({
       status: kycStatus,
