@@ -302,7 +302,7 @@ const checkEmail = async (req: express.Request, res: express.Response) => {
   }
 };
 
-const getAccessToken = async (id) => {
+const getAccessToken = async (id: number) => {
   const users: IUserType[] = await sequelize.query(
     "select * from tbl_user where user_id=" + id,
     {
