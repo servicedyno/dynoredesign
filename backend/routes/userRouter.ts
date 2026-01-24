@@ -27,6 +27,8 @@ userRouter.get("/profile", authMiddleware, userController.getProfile);
 userRouter.put("/profile", authMiddleware, userController.updateProfile);
 userRouter.put("/email", authMiddleware, userController.changeEmail);
 userRouter.put("/phone", authMiddleware, userController.changePhone);
+userRouter.delete("/email", authMiddleware, userController.removeEmail);
+userRouter.delete("/phone", authMiddleware, userController.removePhone);
 
 userRouter.put(
   "/updateUser",
