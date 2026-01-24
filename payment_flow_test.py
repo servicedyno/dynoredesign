@@ -255,11 +255,13 @@ class PaymentFlowTester:
                 if 'data' in data and 'payment_link' in data['data']:
                     payment_link = data['data']['payment_link']
                     transaction_id = data['data'].get('transaction_id')
+                    link_id = data['data'].get('link_id')
                     # Extract reference from payment link
                     if '/pay?d=' in payment_link:
                         self.payment_link_ref = payment_link.split('/pay?d=')[-1]
-                        # Store transaction_id for checkout calls
+                        # Store IDs for checkout calls
                         self.transaction_id = transaction_id
+                        self.link_id = link_id
                         self.log_result(
                             "Create Payment Link", 
                             True, 
@@ -269,7 +271,8 @@ class PaymentFlowTester:
                                 "currency": currency,
                                 "payment_link": payment_link,
                                 "reference": self.payment_link_ref,
-                                "transaction_id": transaction_id
+                                "transaction_id": transaction_id,
+                                "link_id": link_id
                             }
                         )
                         return True
