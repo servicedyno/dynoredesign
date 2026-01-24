@@ -254,8 +254,8 @@ class PaymentFlowTester:
                 if 'data' in data and 'payment_link' in data['data']:
                     payment_link = data['data']['payment_link']
                     # Extract reference from payment link
-                    if '/checkout/' in payment_link:
-                        self.payment_link_ref = payment_link.split('/checkout/')[-1]
+                    if '/pay?d=' in payment_link:
+                        self.payment_link_ref = payment_link.split('/pay?d=')[-1]
                         self.log_result(
                             "Create Payment Link", 
                             True, 
