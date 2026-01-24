@@ -2785,11 +2785,11 @@ const sendEditWalletOTP = async (req: express.Request, res: express.Response) =>
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Store OTP in Redis with address_id as key
-    await setRedisItem(`wallet_edit_otp_${address_id}`, JSON.stringify({
+    await setRedisItem(`wallet_edit_otp_${address_id}`, {
       otp,
-      user_id,
+      user_id: user_id.toString(),
       expiry: otpExpiry.toISOString(),
-    }), 600); // 10 minutes TTL
+    }); // TTL managed by Redis key expiry
 
     // Send OTP email
     const emailMessage = `You requested to edit your wallet address.
