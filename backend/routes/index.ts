@@ -6,7 +6,7 @@ import taxRouter from "./taxRouter";
 import dashboardRouter from "./dashboardRouter";
 import notificationRouter from "./notificationRouter";
 import invoiceRouter from "./invoiceRouter";
-// import kycRouter from "./kycRouter"; // Temporarily disabled until Veriff credentials are provided
+import kycRouter from "./kycRouter";
 
 import {
   authMiddleware,
