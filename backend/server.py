@@ -147,33 +147,40 @@ def monitor_and_keep_alive():
             time.sleep(2)
             start_api_service()
 
-# ASGI app interface (required by uvicorn, but we just start Node.js and keep alive)
+# Track if services have been started
+_services_started = False
+
+# ASGI app interface (required by uvicorn)
 async def app(scope, receive, send):
     """
     Minimal ASGI app that uvicorn expects.
-    We don't actually handle requests here - Node.js does directly on port 8001.
-    This just keeps the Python process alive so supervisor is happy.
+    Node.js handles actual requests on port 8001.
+    This just launches Node.js and keeps the Python process alive.
     """
+    global _services_started
+    
     if scope['type'] == 'lifespan':
-        while True:
-            message = await receive()
-            if message['type'] == 'lifespan.startup':
+        message = await receive()
+        if message['type'] == 'lifespan.startup':
+            if not _services_started:
                 # Start both Node.js services
                 start_backend_server()
                 start_api_service()
-                await send({'type': 'lifespan.startup.complete'})
+                _services_started = True
                 
                 # Keep monitoring in background
                 import threading
                 monitor_thread = threading.Thread(target=monitor_and_keep_alive, daemon=True)
                 monitor_thread.start()
-                
-            elif message['type'] == 'lifespan.shutdown':
-                stop_all_services()
-                await send({'type': 'lifespan.shutdown.complete'})
-                return
+            
+            await send({'type': 'lifespan.startup.complete'})
+            
+        message = await receive()
+        if message['type'] == 'lifespan.shutdown':
+            stop_all_services()
+            await send({'type': 'lifespan.shutdown.complete'})
     
-    # If uvicorn somehow routes HTTP requests here, return error
+    # If HTTP requests somehow come here, return error
     # (shouldn't happen since Node.js is bound to port 8001)
     elif scope['type'] == 'http':
         await send({
