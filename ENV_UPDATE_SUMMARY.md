@@ -9,8 +9,8 @@
 
 ### 1. ✅ SERVER_URL Updated
 ```diff
-- SERVER_URL=https://apidocs-overhaul.preview.emergentagent.com
-+ SERVER_URL=https://apidocs-overhaul.preview.emergentagent.com
+- SERVER_URL=https://dev-url-sync.preview.emergentagent.com
++ SERVER_URL=https://dev-url-sync.preview.emergentagent.com
 ```
 
 ### 2. ✅ PROFILE_ID Updated

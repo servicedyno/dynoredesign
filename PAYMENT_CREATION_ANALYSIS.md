@@ -206,7 +206,7 @@ const { id } = await tatumApi.createSubscription(
 
 **Current SERVER_URL:**
 ```env
-SERVER_URL=https://apidocs-overhaul.preview.emergentagent.com
+SERVER_URL=https://dev-url-sync.preview.emergentagent.com
 ```
 
 ---

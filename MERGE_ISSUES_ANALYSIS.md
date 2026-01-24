@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://apidocs-overhaul.preview.emergentagent.com
+SERVER_URL=https://dev-url-sync.preview.emergentagent.com
 ```
 
 **Impact:**
