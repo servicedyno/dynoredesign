@@ -15,6 +15,11 @@ import { QueryTypes } from "sequelize";
 import axios from "axios";
 import { Authorization } from "../utils/types";
 
+// Use internal backend URL for service-to-service communication
+const getBackendURL = () => {
+  return process.env.INTERNAL_BACKEND_URL || process.env.SERVER_URL || 'http://localhost:3300';
+};
+
 const createUser = async (req: express.Request, res: express.Response) => {
   try {
     const { name, email, mobile } = req.body;
