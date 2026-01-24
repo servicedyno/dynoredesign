@@ -219,7 +219,7 @@ export const sendConfirmationProgressNotification = async (
       sent: true,
       sentAt: new Date().toISOString(),
       milestone: nearestMilestone,
-    }, 86400);
+    });
 
     return true;
 
