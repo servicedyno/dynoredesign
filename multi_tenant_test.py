@@ -49,20 +49,20 @@ class MultiTenantTester:
             self.errors.append(f"{test_name}: {message}")
     
     def authenticate_nomadly_user(self):
-        """Authenticate with Nomadly company credentials"""
-        print("\n--- Authenticating Nomadly User ---")
+        """Authenticate with test user credentials (since Nomadly user password is unknown)"""
+        print("\n--- Authenticating Test User ---")
         
-        # Nomadly credentials from review request
-        nomadly_credentials = {
-            "email": "nomadly@moxx.co",
-            "password": "TestPassword123!"  # Assuming standard test password
+        # Use working test credentials
+        test_credentials = {
+            "email": "multitenant@test.com",
+            "password": "TestPass123!"
         }
         
         try:
-            # Try to login with Nomadly credentials
+            # Try to login with test credentials
             login_response = requests.post(
                 f"{self.backend_url}/api/user/login",
-                json=nomadly_credentials,
+                json=test_credentials,
                 headers={"Content-Type": "application/json"},
                 timeout=15
             )
@@ -72,18 +72,18 @@ class MultiTenantTester:
                 if 'data' in login_data and 'accessToken' in login_data['data']:
                     self.jwt_token = login_data['data']['accessToken']
                     self.log_result(
-                        "Nomadly User Authentication", 
+                        "Test User Authentication", 
                         True, 
-                        "Successfully authenticated Nomadly user",
-                        {"email": nomadly_credentials["email"], "user_id": 4, "company_id": 3}
+                        "Successfully authenticated test user for multi-tenant testing",
+                        {"email": test_credentials["email"], "note": "Using test user since Nomadly password unknown"}
                     )
                     return True
             
-            # If login fails, create the user for testing
+            # If login fails, try to register the user
             register_data = {
-                "name": "Nomadly Test User",
-                "email": nomadly_credentials["email"],
-                "password": nomadly_credentials["password"]
+                "name": "Multi Tenant Test User",
+                "email": test_credentials["email"],
+                "password": test_credentials["password"]
             }
             
             register_response = requests.post(
@@ -98,15 +98,15 @@ class MultiTenantTester:
                 if 'data' in register_result and 'accessToken' in register_result['data']:
                     self.jwt_token = register_result['data']['accessToken']
                     self.log_result(
-                        "Nomadly User Registration", 
+                        "Test User Registration", 
                         True, 
-                        "Successfully registered Nomadly user for testing",
-                        {"email": nomadly_credentials["email"]}
+                        "Successfully registered test user for multi-tenant testing",
+                        {"email": test_credentials["email"]}
                     )
                     return True
             
             self.log_result(
-                "Nomadly User Authentication", 
+                "Test User Authentication", 
                 False, 
                 f"Authentication failed with status {login_response.status_code}",
                 {"login_response": login_response.text, "register_response": register_response.text if 'register_response' in locals() else None}
@@ -115,7 +115,7 @@ class MultiTenantTester:
                 
         except Exception as e:
             self.log_result(
-                "Nomadly User Authentication", 
+                "Test User Authentication", 
                 False, 
                 f"Authentication failed: {str(e)}"
             )
