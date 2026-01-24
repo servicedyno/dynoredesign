@@ -84,7 +84,7 @@ const getAccessToken = async (id) => {
 const createPayment = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as any;
   try {
-    const { amount, redirect_uri, meta_data } = req.body;
+    const { amount, redirect_uri, meta_data, fee_payer } = req.body;
 
     const data = res.locals.apiKeyData;
 
@@ -99,9 +99,11 @@ const createPayment = async (req: express.Request, res: express.Response) => {
       company_id: data.company_id,
       adm_id: data.adm_id,
       base_currency: data.base_currency,
+      base_amount: amount,  // Store as base_amount for consistency
       amount: amount,
       redirect_uri,
       pathType: "createPayment",
+      fee_payer: fee_payer || 'company',  // Who pays fees: 'customer' or 'company'
       ...(meta_data && { meta_data: JSON.stringify(meta_data) }),
     };
 
@@ -119,7 +121,7 @@ const createPayment = async (req: express.Request, res: express.Response) => {
 
     const redirect_url = process.env.CHECKOUT_URL + "/pay?d=" + transactionId;
 
-    successResponseHelper(res, 200, "Link Generated!", { redirect_url });
+    successResponseHelper(res, 200, "Link Generated!", { redirect_url, fee_payer: redisPayload.fee_payer });
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     customerLogger.error(
