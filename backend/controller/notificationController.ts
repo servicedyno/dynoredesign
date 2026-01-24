@@ -14,8 +14,10 @@ import sequelize from "../utils/dbInstance";
 export const NOTIFICATION_TYPES = {
   TRANSACTION_CONFIRMED: "transaction_confirmed",
   PAYMENT_RECEIVED: "payment_received",
-  PAYMENT_PENDING: "payment_pending",           // New: Unconfirmed payment detected
-  PAYMENT_CONFIRMING: "payment_confirming",     // New: Payment confirmation in progress
+  PAYMENT_PENDING: "payment_pending",           // Unconfirmed payment detected
+  PAYMENT_CONFIRMING: "payment_confirming",     // Payment confirmation in progress
+  PAYMENT_PARTIAL: "payment_partial",           // Partial payment received
+  PAYMENT_PARTIAL_EXPIRED: "payment_partial_expired", // Partial payment expired
   WEEKLY_SUMMARY: "weekly_summary",
   SECURITY_ALERT: "security_alert",
   KYC_REQUIRED: "kyc_required",
