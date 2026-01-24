@@ -141,7 +141,8 @@ export const getKYCRequirements = async (req: Request, res: Response) => {
  */
 export const startKYCVerification = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userData = jwt.decode(res.locals.token) as IUserType;
+    const userId = userData.user_id;
     const { company_id, first_name, last_name } = req.body;
 
     // Validate company ownership
