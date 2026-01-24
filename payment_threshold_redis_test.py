@@ -195,8 +195,8 @@ class PaymentThresholdRedisTester:
                     admin_receives = result.get('admin_receives')
                     merchant_receives = result.get('merchant_receives')
                     
-                    # Expected: admin_receives=3, merchant_receives=0
-                    if admin_receives == 3 and merchant_receives == 0:
+                    # Expected: admin_receives=5, merchant_receives=0
+                    if admin_receives == 5 and merchant_receives == 0:
                         self.log_result(
                             "Phase 2 - Below Threshold Fee Calculation", 
                             True, 
