@@ -365,7 +365,7 @@ const createCryptoPayment = async (
             amount: baseAmountUSD,
             fixedDecimal: false,
           });
-          merchant_amount_crypto = parseFloat(baseRates[0]?.amount || data.amount);
+          merchant_amount_crypto = parseFloat(baseRates[0]?.amount?.toString() || data.amount.toString());
           total_fees_crypto = data.amount - merchant_amount_crypto;
           
           console.log(`[createCryptoPayment] Customer pays fees mode:
