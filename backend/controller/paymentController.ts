@@ -2843,20 +2843,38 @@ const processIncompletePayments = async () => {
 
             const totalReceived = Number(tempTx.amount) + Number(actualBalance);
 
-            const { totalDeduction, minForwarding } = await calculateTransactionFees(
-              tempTx.wallet_type,
-              totalReceived
-            );
+            // Check fee_payer mode from temp address record
+            const fee_payer = tempTx.fee_payer || 'company';
+            const merchant_amount = tempTx.merchant_amount;
 
             let adminAmountToSend, userAmountToSend;
-            if (Number(totalReceived) < Number(minForwarding)) {
-              adminAmountToSend = Number(totalReceived);
-              userAmountToSend = 0;
-              console.log(`Total amount ${totalReceived} below threshold ${minForwarding}. Sending all to admin.`);
+
+            if (fee_payer === 'customer' && merchant_amount > 0) {
+              // CUSTOMER PAYS FEES MODE
+              userAmountToSend = Number(merchant_amount);
+              adminAmountToSend = Number(totalReceived) - Number(merchant_amount);
+              
+              if (adminAmountToSend < 0) {
+                adminAmountToSend = 0;
+                userAmountToSend = Number(totalReceived);
+              }
+              console.log(`[processIncompletePayments] Customer pays fees: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
             } else {
-              adminAmountToSend = Number(totalDeduction);
-              userAmountToSend = Number(totalReceived) - Number(totalDeduction);
-              console.log(`Splitting final amount: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
+              // COMPANY PAYS FEES MODE (default)
+              const { totalDeduction, minForwarding } = await calculateTransactionFees(
+                tempTx.wallet_type,
+                totalReceived
+              );
+
+              if (Number(totalReceived) < Number(minForwarding)) {
+                adminAmountToSend = Number(totalReceived);
+                userAmountToSend = 0;
+                console.log(`Total amount ${totalReceived} below threshold ${minForwarding}. Sending all to admin.`);
+              } else {
+                adminAmountToSend = Number(totalDeduction);
+                userAmountToSend = Number(totalReceived) - Number(totalDeduction);
+                console.log(`Splitting final amount: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
+              }
             }
 
             const result = await settleCryptoTransaction({
