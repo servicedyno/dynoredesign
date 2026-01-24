@@ -252,8 +252,8 @@ CREATE TABLE tbl_kyc (
 
 ### Configuration
 ```env
-VERIFF_API_KEY=7a372667-446f-4860-9634-e27aad20ec03
-VERIFF_API_SECRET=671d951f-32ae-4a0b-a7ad-3be4c2ca39de
+VERIFF_API_KEY=basic-setup-16
+VERIFF_API_SECRET=basic-setup-16
 ```
 
 ### Implementation Details
