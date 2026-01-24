@@ -45,6 +45,11 @@ import { getTransactionFee, getBlockchainFee } from ".";
 import mailTransporter from "../utils/mailTransporter";
 import { getAdminWalletAddress } from "../utils/adminUtils";
 import WAValidator from "wallet-address-validator";
+import { 
+  getBlockchainNetworkFee, 
+  getAllBlockchainFees, 
+  calculateCustomerPaymentAmount 
+} from "../services/blockchainFeeService";
 
 const getWallet = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
