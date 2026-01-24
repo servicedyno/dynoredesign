@@ -11542,24 +11542,42 @@ def main():
     """Main test execution"""
     tester = DynoPayBackendTester()
     
-    try:
-        # Run comprehensive verification tests as specified in review request
-        success = tester.run_comprehensive_verification_tests()
+    # Check command line arguments for specific test mode
+    if len(sys.argv) > 1:
+        test_mode = sys.argv[1].lower()
         
-        if success:
-            print("\n🎉 ALL TESTS PASSED! Backend is working correctly.")
-            sys.exit(0)
+        if test_mode == "dev_prod_api":
+            print("Running Development/Production API Key Functionality tests...")
+            if tester.test_database_connectivity():
+                success = tester.test_development_production_api_keys()
+            else:
+                print("❌ Backend connectivity failed - cannot run Dev/Prod API tests")
+                success = False
         else:
-            print(f"\n❌ {len(tester.errors)} TESTS FAILED!")
-            for error in tester.errors:
-                print(f"  - {error}")
+            print(f"Unknown test mode: {test_mode}")
+            print("Available modes: dev_prod_api")
+            success = False
+    else:
+        # Default: Run comprehensive verification tests as specified in review request
+        try:
+            success = tester.run_comprehensive_verification_tests()
+        except KeyboardInterrupt:
+            print("\n\n⏹️  Tests interrupted by user")
             sys.exit(1)
-            
-    except KeyboardInterrupt:
-        print("\n\n⏹️  Tests interrupted by user")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n💥 Unexpected error: {str(e)}")
+        except Exception as e:
+            print(f"\n💥 Unexpected error: {str(e)}")
+            sys.exit(1)
+    
+    # Print final summary
+    tester.print_test_summary()
+    
+    if success:
+        print("\n🎉 ALL TESTS PASSED! Backend is working correctly.")
+        sys.exit(0)
+    else:
+        print(f"\n❌ {len(tester.errors)} TESTS FAILED!")
+        for error in tester.errors:
+            print(f"  - {error}")
         sys.exit(1)
 
 if __name__ == "__main__":
