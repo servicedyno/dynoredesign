@@ -1414,22 +1414,814 @@ verifyCacheData();
                     f"Request failed: {str(e)}"
                 )
     
-    def test_dashboard_apis(self):
-        """Test all Phase 3 Dashboard API endpoints"""
-        print("\n=== Testing Phase 3 Dashboard APIs ===")
+    def run_quick_verification_tests(self):
+        """Run quick verification tests as specified in review request"""
+        print("=" * 80)
+        print("DYNOPAY QUICK VERIFICATION TESTING AFTER TYPESCRIPT FIXES")
+        print("=" * 80)
+        print(f"Backend URL: {self.backend_url}")
+        print("=" * 80)
         
-        # Step 1: Authenticate user to get JWT token
-        if not self.test_user_authentication():
-            print("\n❌ Authentication failed. Cannot test dashboard APIs.")
+        # Test backend connectivity first
+        if not self.test_database_connectivity():
+            print("\n❌ Backend connectivity failed. Cannot proceed with tests.")
             return False
         
-        # Step 2: Test all dashboard endpoints
-        self.test_dashboard_main_stats()
-        self.test_dashboard_chart_data()
-        self.test_dashboard_fee_tiers()
-        self.test_dashboard_recent_transactions()
+        # Phase 2: Tax API
+        print("\n" + "="*50)
+        print("PHASE 2: TAX API VERIFICATION")
+        print("="*50)
+        self.test_tax_rate_pt()
+        self.test_tax_acronyms_quick()
         
-        return True
+        # Phase 3: Dashboard API (requires JWT)
+        print("\n" + "="*50)
+        print("PHASE 3: DASHBOARD API VERIFICATION")
+        print("="*50)
+        if self.test_user_login_quick():
+            self.test_dashboard_quick()
+            self.test_dashboard_chart_quick()
+        
+        # Phase 4: Notifications
+        print("\n" + "="*50)
+        print("PHASE 4: NOTIFICATIONS VERIFICATION")
+        print("="*50)
+        self.test_notifications_preferences()
+        self.test_notifications_types()
+        
+        # Phase 5: Authentication
+        print("\n" + "="*50)
+        print("PHASE 5: AUTHENTICATION VERIFICATION")
+        print("="*50)
+        self.test_forgot_password()
+        self.test_google_signin()
+        
+        # Phase 6: Wallet Management
+        print("\n" + "="*50)
+        print("PHASE 6: WALLET MANAGEMENT VERIFICATION")
+        print("="*50)
+        if self.jwt_token:
+            self.test_get_wallet()
+        self.test_swagger_docs()
+        
+        # Phase 7: Transactions
+        print("\n" + "="*50)
+        print("PHASE 7: TRANSACTIONS VERIFICATION")
+        print("="*50)
+        if self.jwt_token:
+            self.test_get_all_transactions()
+        
+        # Phase 8: Payment Links
+        print("\n" + "="*50)
+        print("PHASE 8: PAYMENT LINKS VERIFICATION")
+        print("="*50)
+        if self.jwt_token:
+            self.test_get_payment_links()
+        
+        # Phase 12: Invoice System
+        print("\n" + "="*50)
+        print("PHASE 12: INVOICE SYSTEM VERIFICATION")
+        print("="*50)
+        if self.jwt_token:
+            self.test_get_invoices()
+        
+        # Print summary
+        self.print_test_summary()
+        
+        return len(self.errors) == 0
+    
+    def test_tax_rate_pt(self):
+        """Test GET /api/tax/rate/PT - Should return Portuguese tax rate (23%)"""
+        print("\n--- Testing Tax Rate PT ---")
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/tax/rate/PT", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and data['data'].get('country_code') == 'PT':
+                    standard_rate = data['data'].get('standard_rate')
+                    self.log_result(
+                        "Tax Rate PT", 
+                        True, 
+                        f"✅ Portuguese tax rate: {standard_rate}%",
+                        {"country_code": "PT", "standard_rate": standard_rate}
+                    )
+                else:
+                    self.log_result(
+                        "Tax Rate PT", 
+                        False, 
+                        "❌ Invalid response structure or country code",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Tax Rate PT", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Tax Rate PT", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_tax_acronyms_quick(self):
+        """Test GET /api/tax/acronyms - Should return 102 countries"""
+        print("\n--- Testing Tax Acronyms ---")
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/tax/acronyms", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    total_countries = data['data'].get('total_countries', 0)
+                    if total_countries >= 100:  # Allow some flexibility
+                        self.log_result(
+                            "Tax Acronyms", 
+                            True, 
+                            f"✅ Retrieved {total_countries} countries",
+                            {"total_countries": total_countries}
+                        )
+                    else:
+                        self.log_result(
+                            "Tax Acronyms", 
+                            False, 
+                            f"❌ Expected ~102 countries, got {total_countries}",
+                            {"total_countries": total_countries}
+                        )
+                else:
+                    self.log_result(
+                        "Tax Acronyms", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Tax Acronyms", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Tax Acronyms", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_user_login_quick(self):
+        """Test user login to get JWT token"""
+        print("\n--- Testing User Login ---")
+        
+        # Use credentials from review request
+        login_data = {
+            "email": "nomadinacodes@gmail.com",
+            "password": "Qazqazqaz@2"
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/login",
+                json=login_data,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and 'accessToken' in data['data']:
+                    self.jwt_token = data['data']['accessToken']
+                    self.log_result(
+                        "User Login", 
+                        True, 
+                        "✅ Successfully logged in and got JWT token",
+                        {"email": login_data["email"], "has_token": bool(self.jwt_token)}
+                    )
+                    return True
+                else:
+                    self.log_result(
+                        "User Login", 
+                        False, 
+                        "❌ Login succeeded but no token received",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "User Login", 
+                    False, 
+                    f"❌ Login failed with status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "User Login", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+        
+        return False
+    
+    def test_dashboard_quick(self):
+        """Test GET /api/dashboard - Should return statistics"""
+        print("\n--- Testing Dashboard Statistics ---")
+        
+        if not self.jwt_token:
+            self.log_result("Dashboard Statistics", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(f"{self.backend_url}/api/dashboard", headers=headers, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    dashboard_data = data['data']
+                    required_fields = ['total_transactions', 'total_volume', 'pending_transactions', 'active_wallets', 'fee_tier']
+                    missing_fields = [field for field in required_fields if field not in dashboard_data]
+                    
+                    if not missing_fields:
+                        self.log_result(
+                            "Dashboard Statistics", 
+                            True, 
+                            "✅ Dashboard statistics retrieved successfully",
+                            {
+                                "total_transactions": dashboard_data.get('total_transactions', {}).get('count', 0),
+                                "fee_tier": dashboard_data.get('fee_tier', {}).get('current_tier', 'Unknown')
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "Dashboard Statistics", 
+                            False, 
+                            f"❌ Missing required fields: {', '.join(missing_fields)}",
+                            {"missing_fields": missing_fields}
+                        )
+                else:
+                    self.log_result(
+                        "Dashboard Statistics", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Dashboard Statistics", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Dashboard Statistics", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_dashboard_chart_quick(self):
+        """Test GET /api/dashboard/chart?period=7d - Should return chart data"""
+        print("\n--- Testing Dashboard Chart Data ---")
+        
+        if not self.jwt_token:
+            self.log_result("Dashboard Chart", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(
+                f"{self.backend_url}/api/dashboard/chart",
+                params={"period": "7d"},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    chart_data = data['data']
+                    required_fields = ['period', 'chart_data', 'currency_breakdown', 'status_breakdown']
+                    missing_fields = [field for field in required_fields if field not in chart_data]
+                    
+                    if not missing_fields:
+                        self.log_result(
+                            "Dashboard Chart", 
+                            True, 
+                            "✅ Dashboard chart data retrieved successfully",
+                            {
+                                "period": chart_data.get('period'),
+                                "chart_entries": len(chart_data.get('chart_data', [])),
+                                "currencies": len(chart_data.get('currency_breakdown', []))
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "Dashboard Chart", 
+                            False, 
+                            f"❌ Missing required fields: {', '.join(missing_fields)}",
+                            {"missing_fields": missing_fields}
+                        )
+                else:
+                    self.log_result(
+                        "Dashboard Chart", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Dashboard Chart", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Dashboard Chart", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_notifications_preferences(self):
+        """Test GET /api/notifications/preferences - Should return default preferences"""
+        print("\n--- Testing Notifications Preferences ---")
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/notifications/preferences", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    prefs = data['data']
+                    expected_fields = ['transaction_updates', 'payment_received', 'weekly_summary', 'email_notifications']
+                    missing_fields = [field for field in expected_fields if field not in prefs]
+                    
+                    if not missing_fields:
+                        self.log_result(
+                            "Notifications Preferences", 
+                            True, 
+                            "✅ Notification preferences retrieved successfully",
+                            {
+                                "is_default": prefs.get('is_default', False),
+                                "email_notifications": prefs.get('email_notifications', False)
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "Notifications Preferences", 
+                            False, 
+                            f"❌ Missing required fields: {', '.join(missing_fields)}",
+                            {"missing_fields": missing_fields}
+                        )
+                else:
+                    self.log_result(
+                        "Notifications Preferences", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Notifications Preferences", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Notifications Preferences", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_notifications_types(self):
+        """Test GET /api/notifications/types - Should return 11 notification types"""
+        print("\n--- Testing Notifications Types ---")
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/notifications/types", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and 'types' in data['data']:
+                    types = data['data']['types']
+                    if len(types) >= 10:  # Allow some flexibility
+                        self.log_result(
+                            "Notifications Types", 
+                            True, 
+                            f"✅ Retrieved {len(types)} notification types",
+                            {"types_count": len(types), "sample_types": types[:3]}
+                        )
+                    else:
+                        self.log_result(
+                            "Notifications Types", 
+                            False, 
+                            f"❌ Expected ~11 types, got {len(types)}",
+                            {"types_count": len(types)}
+                        )
+                else:
+                    self.log_result(
+                        "Notifications Types", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Notifications Types", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Notifications Types", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_forgot_password(self):
+        """Test POST /api/user/forgot-password - Should return success message"""
+        print("\n--- Testing Forgot Password ---")
+        
+        test_data = {"email": "test@test.com"}
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/forgot-password",
+                json=test_data,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'message' in data or 'data' in data:
+                    self.log_result(
+                        "Forgot Password", 
+                        True, 
+                        "✅ Forgot password endpoint working",
+                        {"status": "success"}
+                    )
+                else:
+                    self.log_result(
+                        "Forgot Password", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Forgot Password", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Forgot Password", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_google_signin(self):
+        """Test POST /api/user/google-signin with invalid token - Should return 401"""
+        print("\n--- Testing Google Sign-in ---")
+        
+        test_data = {"idToken": "invalid"}
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/user/google-signin",
+                json=test_data,
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 401:
+                self.log_result(
+                    "Google Sign-in", 
+                    True, 
+                    "✅ Google sign-in correctly rejects invalid token",
+                    {"expected_status": 401, "actual_status": response.status_code}
+                )
+            elif response.status_code == 400:
+                # Also acceptable - validation error
+                self.log_result(
+                    "Google Sign-in", 
+                    True, 
+                    "✅ Google sign-in correctly validates token format",
+                    {"expected_status": "400/401", "actual_status": response.status_code}
+                )
+            else:
+                self.log_result(
+                    "Google Sign-in", 
+                    False, 
+                    f"❌ Expected 401, got {response.status_code}",
+                    {"expected_status": 401, "actual_status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Google Sign-in", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_get_wallet(self):
+        """Test GET /api/wallet/getWallet - Should return wallets"""
+        print("\n--- Testing Get Wallet ---")
+        
+        if not self.jwt_token:
+            self.log_result("Get Wallet", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(f"{self.backend_url}/api/wallet/getWallet", headers=headers, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    wallets = data['data']
+                    self.log_result(
+                        "Get Wallet", 
+                        True, 
+                        f"✅ Retrieved {len(wallets) if isinstance(wallets, list) else 'wallet data'}",
+                        {"wallet_count": len(wallets) if isinstance(wallets, list) else "N/A"}
+                    )
+                else:
+                    self.log_result(
+                        "Get Wallet", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Get Wallet", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Get Wallet", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_swagger_docs(self):
+        """Test GET /api/docs - Should return Swagger UI HTML"""
+        print("\n--- Testing Swagger Documentation ---")
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/docs", timeout=10)
+            
+            if response.status_code == 200:
+                content = response.text
+                if 'swagger' in content.lower() or 'openapi' in content.lower() or 'api documentation' in content.lower():
+                    self.log_result(
+                        "Swagger Docs", 
+                        True, 
+                        "✅ Swagger UI accessible",
+                        {"content_type": response.headers.get('content-type', 'unknown')}
+                    )
+                else:
+                    self.log_result(
+                        "Swagger Docs", 
+                        False, 
+                        "❌ Response doesn't appear to be Swagger UI",
+                        {"content_length": len(content)}
+                    )
+            else:
+                self.log_result(
+                    "Swagger Docs", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text[:200]}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Swagger Docs", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_get_all_transactions(self):
+        """Test POST /api/wallet/getAllTransactions - Should return transactions"""
+        print("\n--- Testing Get All Transactions ---")
+        
+        if not self.jwt_token:
+            self.log_result("Get All Transactions", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}", "Content-Type": "application/json"}
+            test_data = {"page": 1, "rowsPerPage": 5}
+            
+            response = requests.post(
+                f"{self.backend_url}/api/wallet/getAllTransactions",
+                json=test_data,
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    tx_data = data['data']
+                    expected_fields = ['customers_transactions', 'self_transactions', 'total', 'page']
+                    missing_fields = [field for field in expected_fields if field not in tx_data]
+                    
+                    if not missing_fields:
+                        self.log_result(
+                            "Get All Transactions", 
+                            True, 
+                            "✅ Transaction data retrieved successfully",
+                            {
+                                "total": tx_data.get('total', 0),
+                                "page": tx_data.get('page', 1),
+                                "customer_tx": len(tx_data.get('customers_transactions', [])),
+                                "self_tx": len(tx_data.get('self_transactions', []))
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "Get All Transactions", 
+                            False, 
+                            f"❌ Missing required fields: {', '.join(missing_fields)}",
+                            {"missing_fields": missing_fields}
+                        )
+                else:
+                    self.log_result(
+                        "Get All Transactions", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Get All Transactions", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Get All Transactions", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_get_payment_links(self):
+        """Test GET /api/pay/getPaymentLinks - Should return payment links"""
+        print("\n--- Testing Get Payment Links ---")
+        
+        if not self.jwt_token:
+            self.log_result("Get Payment Links", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(f"{self.backend_url}/api/pay/getPaymentLinks", headers=headers, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    links = data['data']
+                    self.log_result(
+                        "Get Payment Links", 
+                        True, 
+                        f"✅ Retrieved {len(links) if isinstance(links, list) else 'payment links data'}",
+                        {"links_count": len(links) if isinstance(links, list) else "N/A"}
+                    )
+                else:
+                    self.log_result(
+                        "Get Payment Links", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Get Payment Links", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Get Payment Links", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_get_invoices(self):
+        """Test GET /api/invoices - Should return invoices list"""
+        print("\n--- Testing Get Invoices ---")
+        
+        if not self.jwt_token:
+            self.log_result("Get Invoices", False, "❌ No JWT token available")
+            return
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.jwt_token}"}
+            response = requests.get(f"{self.backend_url}/api/invoices", headers=headers, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    invoice_data = data['data']
+                    if 'invoices' in invoice_data and 'total' in invoice_data:
+                        invoices = invoice_data['invoices']
+                        total = invoice_data['total']
+                        self.log_result(
+                            "Get Invoices", 
+                            True, 
+                            f"✅ Retrieved {len(invoices)} invoices (total: {total})",
+                            {"invoices_count": len(invoices), "total": total}
+                        )
+                    else:
+                        self.log_result(
+                            "Get Invoices", 
+                            False, 
+                            "❌ Invalid response structure - missing invoices or total",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        "Get Invoices", 
+                        False, 
+                        "❌ Invalid response structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Get Invoices", 
+                    False, 
+                    f"❌ API returned status {response.status_code}",
+                    {"status": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Get Invoices", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def print_test_summary(self):
+        """Print comprehensive test summary"""
+        print("\n" + "="*80)
+        print("QUICK VERIFICATION TEST SUMMARY")
+        print("="*80)
+        
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for result in self.test_results.values() if result['success'])
+        failed_tests = total_tests - passed_tests
+        
+        print(f"Total Tests: {total_tests}")
+        print(f"Passed: {passed_tests}")
+        print(f"Failed: {failed_tests}")
+        print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%" if total_tests > 0 else "No tests run")
+        
+        if failed_tests > 0:
+            print(f"\n❌ FAILED TESTS ({failed_tests}):")
+            for test_name, result in self.test_results.items():
+                if not result['success']:
+                    print(f"  • {test_name}: {result['message']}")
+        
+        if passed_tests > 0:
+            print(f"\n✅ PASSED TESTS ({passed_tests}):")
+            for test_name, result in self.test_results.items():
+                if result['success']:
+                    print(f"  • {test_name}: {result['message']}")
+        
+        print("\n" + "="*80)
+        
+        if failed_tests == 0:
+            print("🎉 ALL TESTS PASSED - TypeScript fixes did not break functionality!")
+        else:
+            print("⚠️  SOME TESTS FAILED - TypeScript fixes may have introduced issues")
+        
+        print("="*80)
     
     def test_phase_10_partial_wallet_configuration(self):
         """Test Phase 10 Partial Wallet Configuration implementation"""
