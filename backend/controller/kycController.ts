@@ -21,7 +21,7 @@ import {
  * Get KYC status for authenticated user
  * GET /api/kyc/status
  */
-export const getKYCStatus = async (req: Request, res: Response) => {
+const getKYCStatus = async (req: Request, res: Response) => {
   try {
     const userData = jwt.decode(res.locals.token) as IUserType;
     const userId = userData.user_id;
