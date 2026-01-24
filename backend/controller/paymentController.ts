@@ -2039,7 +2039,7 @@ const createPaymentLink = async (
 const getPaymentLinks = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as any;
   try {
-    const { company_id } = req.query;  // Phase 10 Fix: Optional company_id filter
+    const { company_id, page = 1, limit = 10 } = req.query;  // Added pagination params
     
     console.log("userData============>", userData);
     
@@ -2052,9 +2052,19 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
       whereClause.company_id = parseInt(company_id as string);
     }
     
+    // Get total count for pagination
+    const totalCount = await paymentLinkModel.count({ where: whereClause });
+    
+    // Calculate pagination
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 10;
+    const offset = (pageNum - 1) * limitNum;
+    
     const links = await paymentLinkModel.findAll({
       where: whereClause,
       order: [['createdAt', 'DESC']],
+      limit: limitNum,
+      offset: offset,
     });
 
     // Format for UI with computed status
