@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
 import { QueryTypes } from "sequelize";
 import sequelize from "../utils/dbInstance";
 import kycModel from "../models/kycModel";
-import { getVeriffService } from "../services/veriffService";
+// import { getVeriffService } from "../services/veriffService"; // Temporarily disabled for testing
 import { createNotification, NOTIFICATION_TYPES } from "./notificationController";
 import { IUserType } from "../utils/types";
 import {
