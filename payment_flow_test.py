@@ -312,8 +312,8 @@ class PaymentFlowTester:
         """Get checkout session to see temp address and Redis data"""
         print(f"\n=== Getting Checkout Session ===")
         
-        if not self.transaction_id:
-            self.log_result("Get Checkout Session", False, "No transaction ID available")
+        if not self.link_id:
+            self.log_result("Get Checkout Session", False, "No link ID available")
             return False
         
         try:
@@ -323,7 +323,7 @@ class PaymentFlowTester:
             }
             
             response = requests.get(
-                f"{self.backend_url}/api/pay/links/{self.transaction_id}",
+                f"{self.backend_url}/api/pay/links/{self.link_id}",
                 headers=headers,
                 timeout=15
             )
