@@ -919,5 +919,7 @@ export default {
   resetPassword,
   googleSignIn,
   getProfile,
+  updateProfile,
+  changeEmail,
   deleteAccount,
 };
