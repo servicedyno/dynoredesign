@@ -232,9 +232,9 @@ class PaymentFlowTester:
             
             payment_data = {
                 "email": "test@example.com",
-                "amount": amount_usd,
+                "amount": max(amount_usd, 5.0),  # Ensure minimum $5
                 "base_currency": "USD",
-                "modes": ["crypto"],
+                "modes": ["CRYPTO"],
                 "description": f"Test payment for threshold testing - ${amount_usd}",
                 "expire": "24h",
                 "callback_url": "https://example.com/callback",
