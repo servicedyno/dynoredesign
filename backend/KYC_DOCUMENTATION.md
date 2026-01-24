@@ -248,19 +248,7 @@ CREATE TABLE tbl_kyc (
 
 ---
 
-## Veriff Integration (Temporarily Disabled)
-
-### Issue
-TypeScript crypto module import causing Node.js process crash
-
-### Files Affected
-- `/app/backend/services/veriffService.ts` - Main Veriff API integration
-- `/app/backend/controller/kycController.ts` - Lines 11, 212-222, 305-321, 342-352
-
-### What Needs to Be Fixed
-1. Fix crypto import in veriffService.ts (currently using `import * as crypto from "crypto"`)
-2. Uncomment Veriff service calls in kycController.ts
-3. Enable signature verification in webhook handler
+## Veriff Integration ✅ FULLY OPERATIONAL
 
 ### Configuration
 ```env
@@ -268,13 +256,20 @@ VERIFF_API_KEY=7a372667-446f-4860-9634-e27aad20ec03
 VERIFF_API_SECRET=671d951f-32ae-4a0b-a7ad-3be4c2ca39de
 ```
 
-### When Fixed, Veriff Will Provide:
+### Implementation Details
+- **HMAC Signature Generation**: Using crypto-js library for SHA-256 HMAC signatures
+- **Session Creation**: Real-time session creation with Veriff API
+- **Webhook Verification**: Signature validation for all incoming webhooks
+- **Error Handling**: Comprehensive error handling and logging
+
+### Features Provided by Veriff:
 - Real-time identity verification
 - Document validation (passport, driver's license, ID card)
 - Liveness detection (selfie verification)
-- Fraud prevention
+- Fraud prevention with AI-powered checks
 - GDPR compliant data handling
 - 24-48 hour verification turnaround
+- Support for 190+ countries and 9000+ document types
 
 ---
 
