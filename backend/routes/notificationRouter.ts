@@ -1,7 +1,7 @@
 import express from "express";
 import notificationController from "../controller/notificationController";
 import { authMiddleware } from "../middleware";
-import { triggerWeeklySummary } from "../utils/cronJobs";
+import { triggerWeeklySummary, triggerWalletReminder } from "../utils/cronJobs";
 import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../helper";
 
 const notificationRouter = express.Router();
