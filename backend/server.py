@@ -1,10 +1,13 @@
 """
-Node.js Backend Launcher
+Node.js Backend Launcher for DynoPay
 
-This module spawns Node.js TypeScript backend on port 8001.
-Exists because supervisor is readonly and expects a Python entry point.
+Spawns Node.js TypeScript backend and proxies requests to it.
+Required because supervisor config is readonly and expects Python/uvicorn.
 
-The actual DynoPay backend is pure Node.js/TypeScript.
+Architecture:
+- Node.js runs on internal port 3300
+- This ASGI app proxies all requests from port 8001 to Node.js
+- Supervisor manages this Python process, which manages Node.js
 """
 
 import subprocess
@@ -13,32 +16,28 @@ import sys
 import signal
 import atexit
 import time
-import socket
+import asyncio
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+import httpx
 
 # Load environment variables
-env_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(env_path)
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
+# Internal port for Node.js (not exposed externally)
+NODE_PORT = 3300
 NODE_PROCESS = None
-STARTUP_COMPLETE = False
-
-def is_port_in_use(port):
-    """Check if a port is already in use."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('localhost', port)) == 0
+HTTP_CLIENT = None
 
 def start_node_server():
-    """Start Node.js TypeScript server on port 8001."""
-    global NODE_PROCESS, STARTUP_COMPLETE
+    """Start Node.js TypeScript server on internal port."""
+    global NODE_PROCESS
     
-    # Set Node.js to use port 8001
     env = os.environ.copy()
-    env['PORT'] = '8001'
+    env['PORT'] = str(NODE_PORT)
     
     print("=" * 60)
-    print(" DYNOPAY - Starting Node.js TypeScript Backend")
-    print(" Port: 8001")
+    print(f" DYNOPAY - Starting Node.js Backend (internal port {NODE_PORT})")
     print("=" * 60, flush=True)
     
     NODE_PROCESS = subprocess.Popen(
@@ -53,70 +52,157 @@ def start_node_server():
         stderr=sys.stderr,
     )
     
-    # Wait for Node.js to start and bind to port
-    for i in range(30):  # Wait up to 30 seconds
-        time.sleep(1)
-        if is_port_in_use(8001):
-            print(f"[Launcher] Node.js successfully bound to port 8001", flush=True)
-            STARTUP_COMPLETE = True
-            break
-        if NODE_PROCESS.poll() is not None:
-            print(f"[Launcher] Node.js process exited unexpectedly", flush=True)
-            break
+    # Wait for Node.js to start
+    time.sleep(4)
+    
+    if NODE_PROCESS.poll() is None:
+        print(f"[Launcher] Node.js started successfully (PID: {NODE_PROCESS.pid})", flush=True)
+    else:
+        print(f"[Launcher] WARNING: Node.js may have failed to start", flush=True)
     
     return NODE_PROCESS
 
-def cleanup():
-    """Terminate Node.js on exit."""
+def stop_node_server():
+    """Stop the Node.js server."""
     global NODE_PROCESS
     if NODE_PROCESS and NODE_PROCESS.poll() is None:
-        print("[Launcher] Shutting down Node.js...", flush=True)
+        print("[Launcher] Stopping Node.js server...", flush=True)
         NODE_PROCESS.terminate()
         try:
             NODE_PROCESS.wait(timeout=10)
         except subprocess.TimeoutExpired:
             NODE_PROCESS.kill()
-        print("[Launcher] Node.js stopped", flush=True)
+            NODE_PROCESS.wait()
+        print("[Launcher] Node.js server stopped", flush=True)
 
-atexit.register(cleanup)
+# Register cleanup
+atexit.register(stop_node_server)
 
 def handle_signal(signum, frame):
-    """Handle termination signals."""
     print(f"[Launcher] Received signal {signum}", flush=True)
-    cleanup()
+    stop_node_server()
     sys.exit(0)
 
 signal.signal(signal.SIGTERM, handle_signal)
 signal.signal(signal.SIGINT, handle_signal)
 
-# ============================================================
-# START NODE.JS IMMEDIATELY
-# ============================================================
-# This runs when uvicorn imports this module
-start_node_server()
+@asynccontextmanager
+async def lifespan(scope):
+    """ASGI lifespan - start/stop Node.js."""
+    global HTTP_CLIENT
+    
+    # Start Node.js
+    start_node_server()
+    
+    # Create HTTP client for proxying
+    HTTP_CLIENT = httpx.AsyncClient(
+        base_url=f"http://127.0.0.1:{NODE_PORT}",
+        timeout=httpx.Timeout(60.0, connect=10.0)
+    )
+    
+    yield
+    
+    # Cleanup
+    await HTTP_CLIENT.aclose()
+    stop_node_server()
 
-# Keep the launcher alive, monitoring Node.js
-def keep_alive():
-    """Keep launcher running and restart Node if needed."""
-    global NODE_PROCESS
+async def proxy_request(scope, receive, send):
+    """Proxy HTTP request to Node.js backend."""
+    global HTTP_CLIENT
+    
+    # Build path with query string
+    path = scope.get('path', '/')
+    query_string = scope.get('query_string', b'')
+    if query_string:
+        path = f"{path}?{query_string.decode()}"
+    
+    # Get headers
+    headers = {}
+    for name, value in scope.get('headers', []):
+        name = name.decode()
+        if name.lower() not in ('host', 'content-length'):
+            headers[name] = value.decode()
+    
+    # Get request body
+    body = b''
     while True:
-        time.sleep(10)
-        if NODE_PROCESS and NODE_PROCESS.poll() is not None:
-            exit_code = NODE_PROCESS.returncode
-            print(f"[Launcher] Node.js exited with code {exit_code}, restarting...", flush=True)
-            time.sleep(2)
-            start_node_server()
+        message = await receive()
+        body += message.get('body', b'')
+        if not message.get('more_body', False):
+            break
+    
+    method = scope.get('method', 'GET')
+    
+    try:
+        # Forward request to Node.js
+        response = await HTTP_CLIENT.request(
+            method=method,
+            url=path,
+            headers=headers,
+            content=body if body else None
+        )
+        
+        # Send response back
+        response_headers = [
+            (k.lower().encode(), v.encode())
+            for k, v in response.headers.items()
+            if k.lower() not in ('content-encoding', 'transfer-encoding', 'content-length')
+        ]
+        response_headers.append((b'content-length', str(len(response.content)).encode()))
+        
+        await send({
+            'type': 'http.response.start',
+            'status': response.status_code,
+            'headers': response_headers,
+        })
+        await send({
+            'type': 'http.response.body',
+            'body': response.content,
+        })
+        
+    except httpx.ConnectError:
+        # Node.js not ready yet
+        await send({
+            'type': 'http.response.start',
+            'status': 503,
+            'headers': [(b'content-type', b'application/json')],
+        })
+        await send({
+            'type': 'http.response.body',
+            'body': b'{"error": "Backend starting up, please retry"}',
+        })
+    except Exception as e:
+        print(f"[Proxy] Error: {e}", flush=True)
+        await send({
+            'type': 'http.response.start',
+            'status': 502,
+            'headers': [(b'content-type', b'application/json')],
+        })
+        await send({
+            'type': 'http.response.body',
+            'body': f'{{"error": "Proxy error: {str(e)}"}}'.encode(),
+        })
 
-# Run keep_alive in background thread
-import threading
-keep_alive_thread = threading.Thread(target=keep_alive, daemon=True)
-keep_alive_thread.start()
-
-# ============================================================
-# ASGI APP (required by uvicorn but not used)
-# ============================================================
-# uvicorn will fail to bind to 8001 since Node.js has it
-# That's expected - Node.js handles all traffic
 async def app(scope, receive, send):
-    """Placeholder ASGI app - Node.js handles port 8001."""
-    pass
+    """Main ASGI application."""
+    global HTTP_CLIENT
+    
+    if scope['type'] == 'lifespan':
+        while True:
+            message = await receive()
+            if message['type'] == 'lifespan.startup':
+                # Start Node.js on startup
+                start_node_server()
+                HTTP_CLIENT = httpx.AsyncClient(
+                    base_url=f"http://127.0.0.1:{NODE_PORT}",
+                    timeout=httpx.Timeout(60.0, connect=10.0)
+                )
+                await send({'type': 'lifespan.startup.complete'})
+            elif message['type'] == 'lifespan.shutdown':
+                if HTTP_CLIENT:
+                    await HTTP_CLIENT.aclose()
+                stop_node_server()
+                await send({'type': 'lifespan.shutdown.complete'})
+                return
+    elif scope['type'] == 'http':
+        await proxy_request(scope, receive, send)
