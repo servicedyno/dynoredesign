@@ -91,6 +91,9 @@ cron.schedule("0 */24 * * *", function () {
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
 setupWeeklySummaryCron();
 
+// Setup wallet reminder cron job (every hour for users without wallets after 24h)
+setupWalletReminderCron();
+
 const startServer = async () => {
   await connectRedis();
   try {
