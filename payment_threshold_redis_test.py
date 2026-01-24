@@ -25,14 +25,8 @@ class PaymentThresholdRedisTester:
         
     def get_backend_url(self):
         """Get backend URL from frontend .env file"""
-        try:
-            with open('/app/frontend/.env', 'r') as f:
-                for line in f:
-                    if line.startswith('REACT_APP_BACKEND_URL='):
-                        return line.split('=', 1)[1].strip()
-        except:
-            pass
-        return "http://localhost:8001"
+        # For testing, use the direct Node.js backend port
+        return "http://localhost:3300"
         
     def log_result(self, test_name: str, success: bool, message: str, details: Dict = None):
         """Log test result"""
