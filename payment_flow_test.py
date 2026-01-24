@@ -337,7 +337,7 @@ class PaymentFlowTester:
                         True, 
                         f"Checkout session retrieved successfully",
                         {
-                            "reference": self.payment_link_ref,
+                            "link_id": self.link_id,
                             "has_temp_address": 'temp_address' in checkout_data,
                             "payment_status": checkout_data.get('status', 'unknown'),
                             "amount": checkout_data.get('base_amount'),
