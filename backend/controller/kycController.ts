@@ -23,7 +23,8 @@ import {
  */
 export const getKYCStatus = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userData = jwt.decode(res.locals.token) as IUserType;
+    const userId = userData.user_id;
     const companyId = req.query.company_id ? parseInt(req.query.company_id as string) : null;
 
     // Get user's KYC record
