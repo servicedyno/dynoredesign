@@ -562,11 +562,9 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
         ? "TRON"
         : currency;
 
-    // Ensure proper URL construction with or without trailing slash
-    const baseUrl = process.env.SERVER_URL.endsWith('/') 
-      ? process.env.SERVER_URL 
-      : process.env.SERVER_URL + '/';
-    const url = baseUrl + (onlyCrypto ? "api/tatum-crypto-webhook" : "api/tatum-webhook");
+    // Construct webhook URL properly
+    const webhookPath = onlyCrypto ? "api/tatum-crypto-webhook" : "api/tatum-webhook";
+    const url = buildUrl(webhookPath);
 
     // const url = process.env.SERVER_URL + "api/tatum-webhook";
 
