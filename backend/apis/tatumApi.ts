@@ -117,8 +117,10 @@ const getTatumSDK = async () => {
   try {
     let tatumKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
     console.log('[getTatumSDK] tatumKey exists:', !!tatumKey, 'length:', tatumKey?.length);
+    console.log('[getTatumSDK] tatumKey starts with:', tatumKey?.substring(0, 25));
+    
     if (!tatumKey) {
-      console.log('[getTatumSDK] No Tatum key found, attempting Secret Manager...');
+      console.log('[getTatumSDK] No Tatum key found in .env, attempting Secret Manager...');
       const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
       const client = new SecretManagerServiceClient({
         credentials: {
@@ -137,7 +139,11 @@ const getTatumSDK = async () => {
       });
       const payload = version.payload.data.toString();
       tatumKey = payload;
+      console.log('[getTatumSDK] Using key from Secret Manager, starts with:', tatumKey?.substring(0, 25));
+    } else {
+      console.log('[getTatumSDK] Using key from .env file');
     }
+    
     const tatumSdk = TatumApi(tatumKey);
     console.log('[getTatumSDK] TatumApi initialized:', !!tatumSdk);
     return tatumSdk;
