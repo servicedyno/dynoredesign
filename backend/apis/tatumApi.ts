@@ -608,11 +608,13 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
           },
         }
       );
+      console.log("Tatum subscription created:", data);
       resData = data;
     }
     return resData;
   } catch (e) {
-    console.log(e);
+    console.log("Tatum subscription error:", e.response?.data || e.message);
+    throw e;
   }
 };
 
