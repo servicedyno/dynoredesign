@@ -6,7 +6,12 @@
 import { QueryTypes } from "sequelize";
 import sequelize from "../utils/dbInstance";
 import { createNotification, NOTIFICATION_TYPES } from "../controller/notificationController";
-import { sendPaymentPendingEmail, sendPaymentConfirmingEmail } from "../helper";
+import { 
+  sendPaymentPendingEmail, 
+  sendPaymentConfirmingEmail,
+  sendPaymentPartialEmail,
+  sendPaymentPartialExpiredEmail
+} from "../helper";
 import { getRedisItem, setRedisItem } from "../utils/redisInstance";
 
 // Confirmation requirements by blockchain
