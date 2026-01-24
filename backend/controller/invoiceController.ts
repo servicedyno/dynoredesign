@@ -205,6 +205,31 @@ export const autoGenerateInvoice = async (
 
     console.log(`Invoice ${invoiceNumber} generated for transaction ${transactionId}`);
 
+    // Send invoice notification email
+    try {
+      const user = await userModel.findOne({
+        where: { user_id: txData.user_id },
+      });
+
+      if (user) {
+        const userData = user.dataValues;
+        const invoiceUrl = `${process.env.SERVER_URL}/api/invoices/${invoice.dataValues.invoice_id}`;
+        
+        await sendInvoiceGeneratedEmail(userData.email, userData.name, {
+          invoice_number: invoiceNumber,
+          transaction_id: transactionId,
+          total_usd: totalUsd,
+          invoice_date: new Date(),
+          invoice_url: invoiceUrl,
+        });
+
+        console.log(`Invoice email sent to ${userData.email}`);
+      }
+    } catch (emailError) {
+      console.error("Failed to send invoice email:", emailError);
+      // Don't fail invoice generation if email fails
+    }
+
     return invoice;
   } catch (error) {
     console.error("Error generating invoice:", error);
