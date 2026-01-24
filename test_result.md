@@ -987,6 +987,18 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: Currency validation implemented correctly in createCryptoPayment endpoint. Code review confirms validation logic checks userWalletAddressModel for user_id + currency + company_id before allowing payment creation. Returns 400 error with message 'No wallet address configured for {currency}. Please add a {currency} wallet first.' when currency not configured. Implementation located in /app/backend/controller/paymentController.ts lines 314-330."
 
+  - task: "Task 10.4: Payment Links Company Isolation Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/models/userModels/paymentLinkModel.ts, /app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 10 Fix: Added company_id support to payment links for complete multi-tenant isolation. Changes: (1) Added company_id field to paymentLinkModel with foreign key to tbl_company, (2) createPaymentLink now accepts optional company_id with ownership validation, (3) Redis payload includes company_id for payment links, (4) getPaymentLinks supports company_id filtering, (5) Response objects include company_id. This ensures payment links have the same company-level isolation as API-based payments. Full documentation in /app/PHASE_10_COMPANY_ISOLATION_FIX.md. Needs database migration and testing."
+
 frontend:
   - task: "No frontend changes for Phase 1"
     implemented: false
