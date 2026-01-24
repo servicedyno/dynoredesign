@@ -532,7 +532,7 @@ checkTransactions();
                 data = response.json()
                 
                 if 'data' in data:
-                    payment_links = data['data'].get('payment_links', [])
+                    payment_links = data['data']  # data is directly an array
                     
                     # Check if our created link is in the filtered results
                     found_link = None
