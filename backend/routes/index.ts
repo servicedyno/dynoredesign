@@ -9,6 +9,7 @@ import invoiceRouter from "./invoiceRouter";
 import kycRouter from "./kycRouter";
 import statusRouter from "./statusRouter";
 import subscriptionRouter from "./subscriptionRouter";
+import testRouter from "./testRouter";
 
 import {
   authMiddleware,
