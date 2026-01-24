@@ -25,4 +25,11 @@ invoiceRouter.get(
   invoiceController.getInvoiceById
 );
 
+// Download invoice as PDF
+invoiceRouter.get(
+  "/invoices/:id/pdf",
+  authMiddleware,
+  invoiceController.downloadInvoicePDF
+);
+
 export default invoiceRouter;
