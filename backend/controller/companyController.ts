@@ -188,6 +188,7 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
 export default {
   addCompany,
   getCompany,
+  getCompanyById,
   deleteCompany,
   updateCompany,
   getTransactions,
