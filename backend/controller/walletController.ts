@@ -437,7 +437,7 @@ const getAllTransactions = async (
       ...(offset !== undefined && limit && { offset, limit }),
     });
 
-    const total = countData[0]?.total || 0;
+    const total = (countData[0] as any)?.total || 0;
     const totalPages = limit ? Math.ceil(total / limit) : 1;
 
     successResponseHelper(res, 200, "", {
