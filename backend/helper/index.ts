@@ -19,6 +19,14 @@ const getMinutesBetweenDates = (startDate, endDate) => {
   return Math.abs(diff / 60000);
 };
 
+// Helper to construct URLs properly with or without trailing slash
+export const buildUrl = (path: string): string => {
+  const baseUrl = process.env.SERVER_URL || '';
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+  const normalizedPath = path.startsWith('/') ? path.substring(1) : path;
+  return normalizedBase + normalizedPath;
+};
+
 export {
   downloadUserImage,
   sendEmail,
