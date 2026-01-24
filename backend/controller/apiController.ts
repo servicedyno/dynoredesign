@@ -191,22 +191,176 @@ const getAccessToken = async (id) => {
 const getApi = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
+    const { environment, company_id, status } = req.query;
+    
+    // Build query with optional filters
+    let whereClause = `WHERE a.user_id = :user_id`;
+    const replacements: any = { user_id: userData.user_id };
+    
+    if (environment && ['production', 'development'].includes(environment as string)) {
+      whereClause += ` AND a.environment = :environment`;
+      replacements.environment = environment;
+    }
+    
+    if (company_id) {
+      whereClause += ` AND a.company_id = :company_id`;
+      replacements.company_id = company_id;
+    }
+    
+    if (status && ['active', 'inactive', 'revoked'].includes(status as string)) {
+      whereClause += ` AND a.status = :status`;
+      replacements.status = status;
+    }
+    
     const resData = await sequelize.query(
-      `select a.*,c.company_id,c.company_name from tbl_api a
-        join tbl_company c on a.company_id=c.company_id
-        where a.user_id=${userData.user_id}
-        order by a."createdAt" DESC
-        `,
-      { type: QueryTypes.SELECT }
+      `SELECT a.*, c.company_id, c.company_name 
+       FROM tbl_api a
+       JOIN tbl_company c ON a.company_id = c.company_id
+       ${whereClause}
+       ORDER BY a.environment ASC, a."createdAt" DESC`,
+      { 
+        replacements,
+        type: QueryTypes.SELECT 
+      }
     );
     
-    // Parse permissions JSON for each API
+    // Parse permissions and test_mode_restrictions JSON for each API
     const formattedData = resData.map((api: any) => ({
       ...api,
       permissions: api.permissions ? JSON.parse(api.permissions) : ["payments", "transactions", "webhooks", "wallets"],
+      test_mode_restrictions: api.test_mode_restrictions ? JSON.parse(api.test_mode_restrictions) : null,
+      // Mask sensitive parts of the API key for display
+      apiKey_masked: api.apiKey ? maskApiKey(api.apiKey, api.environment) : null,
     }));
     
-    successResponseHelper(res, 200, "", formattedData);
+    // Group by environment for better organization
+    const grouped = {
+      production: formattedData.filter((api: any) => api.environment === 'production' || !api.environment),
+      development: formattedData.filter((api: any) => api.environment === 'development'),
+    };
+    
+    successResponseHelper(res, 200, "API keys retrieved successfully", {
+      all: formattedData,
+      grouped,
+      total: formattedData.length,
+      production_count: grouped.production.length,
+      development_count: grouped.development.length,
+    });
+  } catch (e) {
+    const message = getErrorMessage(e);
+    apiLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Mask API key for secure display
+ */
+const maskApiKey = (apiKey: string, environment: string = 'production'): string => {
+  const prefix = environment === 'development' ? 'dpk_test_' : 'dpk_live_';
+  if (apiKey.length <= 16) return prefix + '****';
+  const visibleStart = apiKey.substring(0, 8);
+  const visibleEnd = apiKey.substring(apiKey.length - 4);
+  return `${prefix}${visibleStart}...${visibleEnd}`;
+};
+
+/**
+ * Toggle API key status (activate/deactivate)
+ * PUT /api/userApi/toggleStatus/:id
+ */
+const toggleApiStatus = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const api_id = req.params.id;
+    const { status } = req.body;
+
+    if (!['active', 'inactive'].includes(status)) {
+      return errorResponseHelper(res, 400, "Invalid status. Must be 'active' or 'inactive'");
+    }
+
+    // Check if API exists and belongs to user
+    const existingApi = await apiModel.findOne({
+      where: {
+        api_id,
+        user_id: userData.user_id,
+      },
+    });
+
+    if (!existingApi) {
+      return errorResponseHelper(res, 404, "API key not found");
+    }
+
+    // Can't reactivate revoked keys
+    if (existingApi.dataValues.status === 'revoked') {
+      return errorResponseHelper(res, 400, "Cannot change status of a revoked API key. Please create a new key.");
+    }
+
+    await apiModel.update(
+      { status },
+      { where: { api_id, user_id: userData.user_id } }
+    );
+
+    const updatedApi = await apiModel.findOne({ where: { api_id } });
+
+    apiLogger.info(`API ${api_id} status changed to ${status} by user ${userData.user_id}`);
+    successResponseHelper(res, 200, `API key ${status === 'active' ? 'activated' : 'deactivated'} successfully`, {
+      api_id,
+      status,
+      environment: updatedApi?.dataValues.environment,
+    });
+  } catch (e) {
+    const message = getErrorMessage(e);
+    apiLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Revoke API key (permanent deactivation)
+ * POST /api/userApi/revoke/:id
+ */
+const revokeApi = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const api_id = req.params.id;
+    const { reason } = req.body;
+
+    // Check if API exists and belongs to user
+    const existingApi = await apiModel.findOne({
+      where: {
+        api_id,
+        user_id: userData.user_id,
+      },
+    });
+
+    if (!existingApi) {
+      return errorResponseHelper(res, 404, "API key not found");
+    }
+
+    if (existingApi.dataValues.status === 'revoked') {
+      return errorResponseHelper(res, 400, "API key is already revoked");
+    }
+
+    await apiModel.update(
+      { status: 'revoked' },
+      { where: { api_id, user_id: userData.user_id } }
+    );
+
+    apiLogger.warn(`API ${api_id} REVOKED by user ${userData.user_id}. Reason: ${reason || 'Not specified'}`);
+    successResponseHelper(res, 200, "API key revoked successfully. This action cannot be undone.", {
+      api_id,
+      status: 'revoked',
+      revoked_at: new Date().toISOString(),
+      message: "Please create a new API key if needed. Update your integrations to use the new key.",
+    });
   } catch (e) {
     const message = getErrorMessage(e);
     apiLogger.error(
