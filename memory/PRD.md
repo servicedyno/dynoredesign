@@ -97,6 +97,7 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 - **OpenAPI Spec**: Available at `/api/docs.json`
 - **Coverage improved**: From 38% to 100%
 - **Payment Examples Added**: E-commerce checkout, invoice payment, crypto payment flows with multiple scenarios
+- **Webhook Documentation**: 8 merchant webhook payload examples (payment.completed, pending, confirming, partial, expired, failed, refunded) + 3 Tatum internal webhook examples
 
 ---
 
