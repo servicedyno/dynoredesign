@@ -4,7 +4,7 @@
 # Last Updated: 2026-01-24
 #===================================================
 
-user_problem_statement: "DynoPay crypto payment gateway - Phase 10 Task 10.4: Payment Links Company Isolation Fix"
+user_problem_statement: "COMPREHENSIVE UNIT TESTING FOR DYNOPAY BACKEND - ALL PHASES (1-12) - Complete backend unit tests for all implemented phases from Phase 1 through Phase 12. This is a re-verification of all features after environment configuration changes."
 
 backend:
   - task: "tbl_company extended with address and VAT fields"
