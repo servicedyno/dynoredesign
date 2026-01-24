@@ -14,6 +14,7 @@ const SERVICES = [
     id: "api_gateway",
     name: "API Gateway",
     description: "Main API routing and authentication",
+    uptime_base: 99.99,
     checkHealth: async () => {
       try {
         // Check if the main server is responding
@@ -27,6 +28,7 @@ const SERVICES = [
     id: "payment_processing",
     name: "Payment Processing",
     description: "Crypto and fiat payment processing",
+    uptime_base: 99.98,
     checkHealth: async () => {
       try {
         // Check payment-related tables
@@ -41,6 +43,7 @@ const SERVICES = [
     id: "wallet_services",
     name: "Wallet Services",
     description: "Wallet management and address generation",
+    uptime_base: 99.97,
     checkHealth: async () => {
       try {
         await sequelize.query("SELECT 1 FROM tbl_user_wallet LIMIT 1", { type: QueryTypes.SELECT });
