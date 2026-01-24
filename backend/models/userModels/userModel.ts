@@ -68,6 +68,12 @@ const userModel = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    // Wallet reminder tracking
+    wallet_reminder_sent: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: true,
+    },
   },
   {
     tableName: "tbl_user",
