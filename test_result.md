@@ -1067,8 +1067,14 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
-  stuck_tasks: []
+  current_focus:
+    - "Phase 12: Invoice Generation System - tbl_invoice table"
+    - "Phase 12: VAT calculations for EU companies"
+    - "Phase 12: PDF Generation functionality"
+    - "Phase 12: Email Integration with Phase 9 Email Service"
+  stuck_tasks:
+    - "Phase 12: Invoice Generation System - tbl_invoice table"
+    - "Phase 12: VAT calculations for EU companies"
   test_all: false
   test_priority: "high_first"
 
