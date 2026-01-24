@@ -2260,16 +2260,22 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
       };
     });
 
-    // Return with pagination info
-    successResponseHelper(res, 200, "Links Fetched Successfully!", {
-      links: formattedLinks,
-      pagination: {
-        total: totalCount,
-        page: pageNum,
-        limit: limitNum,
-        totalPages: Math.ceil(totalCount / limitNum),
-      }
-    });
+    // Return with pagination info only if pagination was requested
+    // Otherwise return array directly for backward compatibility
+    if (usePagination) {
+      successResponseHelper(res, 200, "Links Fetched Successfully!", {
+        links: formattedLinks,
+        pagination: {
+          total: totalCount,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(totalCount / limitNum),
+        }
+      });
+    } else {
+      // Backward compatible: return array directly
+      successResponseHelper(res, 200, "Links Fetched Successfully!", formattedLinks);
+    }
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
