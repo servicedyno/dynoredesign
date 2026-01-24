@@ -8,6 +8,7 @@ import notificationRouter from "./notificationRouter";
 import invoiceRouter from "./invoiceRouter";
 import kycRouter from "./kycRouter";
 import statusRouter from "./statusRouter";
+import subscriptionRouter from "./subscriptionRouter";
 
 import {
   authMiddleware,
@@ -31,8 +32,8 @@ const router = express.Router();
 
 router.use("/user", userRouter);
 router.use("/admin", adminRouter);
-router.use("/company", authMiddleware, companyRouter);
-router.use("/userApi", authMiddleware, apiRouter);
+router.use("/company", companyRouter);
+router.use("/userApi", apiRouter);
 router.use("/wallet", authMiddleware, walletMiddleware, walletRouter);
 router.use("/pay", paymentRouter);
 router.use("/tax", taxRouter);
@@ -40,6 +41,7 @@ router.use("/dashboard", dashboardRouter);
 router.use("/notifications", notificationRouter);
 router.use("/kyc", kycRouter);
 router.use("/status", statusRouter); // Public status page endpoints
+router.use("/subscriptions", subscriptionRouter); // Subscription management
 router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
 router.post("/webhook", flutterwaveWebHook);
