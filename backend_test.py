@@ -49,37 +49,57 @@ class DynoPayBackendTester:
             self.errors.append(f"{test_name}: {message}")
     
     def test_database_connectivity(self):
-        """Test PostgreSQL database connectivity"""
+        """Test backend server connectivity and basic API response"""
         print("\n=== Testing Database Connectivity ===")
         
         try:
-            # Test backend server is running
-            response = requests.get(f"{self.backend_url}/", timeout=10)
+            # Test a simple API endpoint that should work
+            response = requests.get(
+                f"{self.backend_url}/api/tax/rate/PT",
+                timeout=10
+            )
+            
             if response.status_code == 200:
                 data = response.json()
-                self.log_result(
-                    "Backend Server Connection", 
-                    True, 
-                    f"Server responding with status {response.status_code}",
-                    {"response_data": data}
-                )
+                if 'data' in data and 'country_code' in data['data']:
+                    self.log_result(
+                        "Backend Server Connection", 
+                        True, 
+                        "Backend API is responding correctly",
+                        {"country_code": data['data']['country_code']}
+                    )
+                    return True
+                else:
+                    self.log_result(
+                        "Backend Server Connection", 
+                        False, 
+                        "Backend API response format unexpected",
+                        {"response": data}
+                    )
+                    return False
             else:
                 self.log_result(
                     "Backend Server Connection", 
                     False, 
-                    f"Server returned status {response.status_code}"
+                    f"Backend API returned status {response.status_code}",
+                    {"response": response.text}
                 )
                 return False
                 
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             self.log_result(
                 "Backend Server Connection", 
                 False, 
                 f"Failed to connect to backend: {str(e)}"
             )
             return False
-            
-        return True
+        except json.JSONDecodeError as e:
+            self.log_result(
+                "Backend Server Connection", 
+                False, 
+                f"Failed to parse backend response: {str(e)}"
+            )
+            return False
     
     def run_database_migration(self):
         """Run the database migration to sync all models"""
