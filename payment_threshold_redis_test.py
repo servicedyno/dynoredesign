@@ -174,10 +174,10 @@ class PaymentThresholdRedisTester:
         print("--- Testing BELOW threshold ---")
         
         try:
-            # Test BELOW threshold: BTC $3 (threshold is $7)
+            # Test BELOW threshold: BTC $5 (threshold is $7, minimum fee tier is $5)
             test_data = {
                 "blockchain": "BTC",
-                "amount": 3
+                "amount": 5
             }
             
             response = requests.post(
