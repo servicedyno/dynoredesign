@@ -52,7 +52,7 @@ async function analyzeNomadly() {
     console.log(`Found ${wallets.rows.length} wallet addresses`);
     if (wallets.rows.length > 0) {
       wallets.rows.forEach(w => {
-        console.log(`  - ${w.currency}: wallet_name="${w.wallet_name}", last_4="${w.last_4}"`);
+        console.log(`  - ${w.currency}: wallet_name="${w.wallet_name}"`);
       });
     } else {
       console.log('⚠️  No wallet addresses configured for this user/company combination');
