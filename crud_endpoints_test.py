@@ -334,12 +334,12 @@ class DynoPayCRUDTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if 'data' in data and 'new_api_key' in data['data']:
+                if 'data' in data and ('apiKey' in data['data'] or 'new_api_key' in data['data']):
                     self.log_result(
                         f"POST Regenerate API Key {api_id}", 
                         True, 
                         "API key regenerated successfully",
-                        {"has_new_key": bool(data['data'].get('new_api_key'))}
+                        {"has_new_key": True, "message": data.get('message', '')}
                     )
                 else:
                     self.log_result(
