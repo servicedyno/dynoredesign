@@ -414,7 +414,7 @@ testInvoiceSchema();
         for scenario in test_scenarios:
             try:
                 response = requests.get(
-                    f"{self.backend_url}/api/invoices",
+                    f"{self.backend_url}/invoices",
                     params=scenario['params'],
                     headers=headers,
                     timeout=15
