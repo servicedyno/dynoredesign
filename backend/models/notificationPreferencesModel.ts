@@ -35,7 +35,11 @@ const notificationPreferencesModel = sequelize.define(
     },
     payment_received: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      defaultValue: true,
+    },
+    payment_pending: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
     weekly_summary: {
       type: DataTypes.BOOLEAN,
