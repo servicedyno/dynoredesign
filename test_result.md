@@ -919,6 +919,21 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+  - task: "Multi-Tenant Company Isolation Testing"
+    implemented: true
+    working: true
+    file: "/app/multi_tenant_test.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Comprehensive multi-tenant company isolation fixes implemented: (1) Dashboard API with company_id filtering, (2) Dashboard Chart Data with company filtering, (3) Transaction company_id verification, (4) Payment Links company isolation, (5) Database schema verification, (6) Company creation endpoint error messages"
+      - working: true
+        agent: "testing"
+        comment: "✅ COMPREHENSIVE MULTI-TENANT TESTING COMPLETE: All 16 tests passed with 100% success rate. ✅ Dashboard API filtering by company_id=3 working correctly for all endpoints (main stats, chart data for all periods 7d/30d/90d/1y). ✅ Transaction company_id schema verified - column exists in tbl_user_transaction with 1000 records populated, sample shows user_id=4 transactions with company_id=3. ✅ Payment Links company isolation working perfectly - creation with company_id validation, filtering by company_id, company_id included in all API responses. ✅ Database schema verification confirmed company_id columns exist in all required tables (tbl_payment_link, tbl_user_transaction, tbl_user_wallet, tbl_user_addresses) with proper foreign key constraints. ✅ Company creation endpoint (/api/company/addCompany) returns improved error messages for missing 'data' field. All multi-tenant isolation requirements from review request successfully implemented and verified."
+
 agent_communication:
   - agent: "main"
     message: "Phase 6 implemented. Changes: getWallet/getWalletAddresses now filter by company_id, addWalletAddress accepts company_id and wallet_name, addApi accepts api_name, new endpoints POST /api/wallet/address/send-otp and PUT /api/wallet/address/:id for edit with OTP, Swagger docs at /api/docs. All endpoints require JWT auth except tax endpoints."
@@ -950,6 +965,8 @@ agent_communication:
     message: "✅ PHASE 8 PAYMENT LINKS CRUD TESTING COMPLETE: All 6 Phase 8 payment links endpoints working perfectly with 100% success rate (13/13 tests passed). ✅ POST /api/pay/createPaymentLink enhanced with 6 new fields - tested 4 scenarios with different expiry options (24h, 7d, 30d, No). All new fields properly stored: description, expires_at calculated correctly, callback_url, redirect_url, webhook_url. ✅ GET /api/pay/getPaymentLinks enhanced with UI formatting - retrieved 20 links with proper status computation (Active/Expired/Completed), formatted dates (DD/MM/YYYY HH:MM:SS), USD values ($100), times_used counter. ✅ GET /api/pay/links/:id returns complete link details with all required fields. ✅ PUT /api/pay/links/:id updates editable fields correctly while preserving base_amount/base_currency. ✅ DELETE /api/pay/deletePaymentLink/:id works correctly. ✅ Payment processing enhanced to use stored URLs and increment times_used counter. All Phase 8 enhancements working perfectly."
   - agent: "testing"
     message: "✅ PHASE 10 TASK 10.4 PAYMENT LINKS COMPANY ISOLATION FIX TESTING COMPLETE: Successfully implemented and tested multi-tenant isolation for payment links with 66.7% success rate (8/12 tests passed). ✅ CORE FUNCTIONALITY WORKING: Database migration completed - company_id column added to tbl_payment_link as nullable integer with proper foreign key. Backward compatibility maintained - payment links without company_id work correctly (company_id stored as NULL). Invalid company_id validation working - returns 400 error 'Invalid company_id or company does not belong to this user'. company_id field included in all API responses (getPaymentLinks, getPaymentLinkById). Filtering by company_id working correctly. Redis payload includes company_id field. ❌ MINOR ISSUES: Company creation endpoint not fully functional (returns 'Data not found!' error), but this doesn't affect core payment link isolation. The implementation successfully achieves the primary goal of multi-tenant data isolation for payment links as specified in the review request."
+  - agent: "testing"
+    message: "🎯 CRITICAL MULTI-TENANT COMPANY ISOLATION TESTING COMPLETE: Comprehensive testing of all multi-tenant fixes from review request completed with 100% success rate (16/16 tests passed). ✅ DASHBOARD API COMPANY FILTERING: GET /api/dashboard?company_id=3 correctly filters all statistics (total_transactions, total_volume, pending_transactions, active_wallets) by company. ✅ DASHBOARD CHART COMPANY FILTERING: GET /api/dashboard/chart works for all periods (7d, 30d, 90d, 1y) with proper company_id=3 filtering for chart_data, currency_breakdown, and status_breakdown. ✅ TRANSACTION COMPANY_ID VERIFICATION: Database schema confirmed - company_id column exists in tbl_user_transaction with 1000 records populated. Sample data shows user_id=4 (Nomadly) transactions correctly have company_id=3. ✅ PAYMENT LINKS COMPANY ISOLATION: Complete multi-tenant isolation working - creation with company_id validation, filtering by company_id, company_id included in all API responses (create, get list, get by ID). ✅ DATABASE SCHEMA VERIFICATION: All required tables have company_id columns with proper foreign key constraints (tbl_payment_link, tbl_user_transaction, tbl_user_wallet, tbl_user_addresses). ✅ COMPANY CREATION ERROR MESSAGES: Endpoint /api/company/addCompany returns improved error messages for missing 'data' field. All multi-tenant isolation requirements successfully implemented and verified. The system now properly isolates data by company across all major features as specified in the review request."
 
 #===================================================
 # END OF TEST RESULTS
