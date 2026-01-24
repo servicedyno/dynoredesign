@@ -2927,12 +2927,23 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
  * Get transaction details by ID
  * GET /api/wallet/transaction/:id
  */
+/**
+ * GET /api/wallet/transaction/:id
+ * Get detailed transaction information - scoped by company
+ */
 const getTransactionDetails = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
     const { id } = req.params;
+    const { company_id } = req.query;
 
-    // Try to find in user_transaction table
+    // Build company filter
+    let companyFilter = '';
+    if (company_id) {
+      companyFilter = `AND ut.company_id = ${parseInt(company_id as string)}`;
+    }
+
+    // Fetch transaction with all related data
     const transaction = await sequelize.query(
       `
       SELECT 
@@ -2940,14 +2951,16 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
         c.customer_name,
         c.email as customer_email,
         cm.company_name,
-        cm.company_id,
-        uw.wallet_type as crypto_currency,
-        uw.wallet_address as wallet_address
+        cm.company_id as tx_company_id,
+        uw.wallet_type,
+        uw.wallet_address
       FROM tbl_user_transaction ut 
-      LEFT JOIN tbl_customer c ON c.customer_id=ut.customer_id
-      LEFT JOIN tbl_company cm ON cm.company_id=c.company_id
-      LEFT JOIN tbl_user_wallet uw ON uw.wallet_id=ut.wallet_id
-      WHERE ut.user_id=${userData.user_id} AND (ut.id='${id}' OR ut.transaction_id=${parseInt(id) || 0})
+      LEFT JOIN tbl_customer c ON c.customer_id = ut.customer_id
+      LEFT JOIN tbl_company cm ON cm.company_id = ut.company_id
+      LEFT JOIN tbl_user_wallet uw ON uw.wallet_id = ut.wallet_id
+      WHERE ut.user_id = ${userData.user_id} 
+        AND (ut.id = '${id}' OR ut.transaction_id = ${parseInt(id) || 0})
+        ${companyFilter}
       LIMIT 1
       `,
       { type: QueryTypes.SELECT }
@@ -2959,40 +2972,60 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
 
     const txData: any = transaction[0];
 
+    // Calculate total fees
+    const totalFees = (txData.transaction_fee || 0) + (txData.fixed_fee || 0) + (txData.blockchain_buffer_fee || 0);
+
     // Format response according to Figma UI requirements
     const response = {
       // Header
       status: txData.status,
-      transaction_id: txData.id || `TX${txData.transaction_id}`,
+      transaction_id: txData.id || `TX${String(txData.transaction_id).padStart(3, '0')}`,
       date_time: txData.createdAt,
       
       // Amount Details
-      cryptocurrency: txData.crypto_currency || txData.base_currency,
-      amount: txData.base_amount,
-      usd_value: txData.base_currency === 'USD' ? txData.base_amount : null,
-      fees: txData.transaction_fee || 0,
-      confirmations: txData.confirmations || 0,
+      cryptocurrency: txData.crypto_currency || txData.wallet_type || txData.base_currency,
+      amount: txData.crypto_amount || txData.base_amount,
+      usd_value: txData.usd_value || txData.base_amount,
+      fees: {
+        total: totalFees,
+        transaction_fee: txData.transaction_fee || 0,
+        fixed_fee: txData.fixed_fee || 0,
+        blockchain_buffer: txData.blockchain_buffer_fee || 0,
+      },
+      confirmations: {
+        current: txData.confirmations || 0,
+        required: txData.required_confirmations || 6,
+      },
       
       // Transaction Hashes
-      incoming_transaction_id: txData.transaction_reference,
+      incoming_transaction_id: txData.incoming_tx_hash || txData.transaction_reference,
       outgoing_transaction_id: txData.outgoing_tx_hash || null,
       
       // Callback Information
       callback_url: txData.callback_url || null,
+      webhook_url: txData.webhook_url || null,
       webhook_response: txData.webhook_response ? JSON.parse(txData.webhook_response) : null,
       
-      // Additional details
-      customer_name: txData.customer_name,
-      customer_email: txData.customer_email,
-      company_name: txData.company_name,
-      company_id: txData.company_id,
+      // Company & Customer Details
+      company: {
+        company_id: txData.tx_company_id || txData.company_id,
+        company_name: txData.company_name,
+      },
+      customer: {
+        customer_id: txData.customer_id,
+        customer_name: txData.customer_name,
+        customer_email: txData.customer_email,
+      },
+      
+      // Additional Details
       wallet_address: txData.wallet_address,
       payment_mode: txData.payment_mode,
       transaction_type: txData.transaction_type,
       transaction_details: txData.transaction_details,
+      base_currency: txData.base_currency,
     };
 
-    successResponseHelper(res, 200, "", response);
+    successResponseHelper(res, 200, "Transaction details retrieved", response);
   } catch (e) {
     const message = getErrorMessage(e);
     walletLogger.error(
