@@ -2079,6 +2079,7 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
         callback_url: linkData.callback_url,
         redirect_url: linkData.redirect_url,
         webhook_url: linkData.webhook_url,
+        company_id: linkData.company_id,  // Phase 10 Fix: Include company_id in response
       };
     });
 
