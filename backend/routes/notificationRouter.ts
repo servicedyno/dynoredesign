@@ -38,6 +38,17 @@ notificationRouter.post("/trigger-weekly-summary", async (req, res) => {
   }
 });
 
+// POST /api/notifications/trigger-wallet-reminder - Manually trigger wallet reminder (for testing)
+notificationRouter.post("/trigger-wallet-reminder", async (req, res) => {
+  try {
+    const results = await triggerWalletReminder(req.body.user_id);
+    return successResponseHelper(res, 200, "Wallet reminder triggered", { results });
+  } catch (e) {
+    const message = getErrorMessage(e);
+    return errorResponseHelper(res, 500, message);
+  }
+});
+
 // PUT /api/notifications/read-all - Mark all notifications as read
 notificationRouter.put("/read-all", notificationController.markAllAsRead);
 
