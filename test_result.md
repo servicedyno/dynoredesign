@@ -1366,6 +1366,21 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: GET /api/notifications?type=payment_partial and GET /api/notifications?type=payment_partial_expired both work correctly. Successfully retrieved 0 notifications of each type (expected for new system). Type filtering working correctly with proper pagination structure."
 
+  - task: "Payment Threshold and Redis Flow Testing - Complete End-to-End Verification"
+    implemented: true
+    working: true
+    file: "/app/payment_threshold_redis_test.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Complete payment threshold and Redis flow testing as requested in review - test credentials nomadly@moxx.co, webhook scenarios, notification retrieval, fee calculation, threshold logic"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Complete payment threshold and Redis flow testing successful! All 12 tests passed (100% success rate). ✅ Authentication with nomadly@moxx.co working correctly. ✅ All blockchain thresholds correctly loaded from environment (BTC=$7, ETH=$5, TRX=$5, USDT-TRC20=$10, LTC=$5, DOGE=$5). ✅ Below threshold fee calculation working correctly - ALL funds go to admin, ZERO to merchant. ✅ Above threshold fee calculation working correctly - fees to admin, remainder to merchant. ✅ Threshold test endpoints working for both below and above threshold scenarios. ✅ Redis data setup working correctly for payment simulation. ✅ Redis data verification successful with all expected fields. ✅ Webhook simulation working correctly (POST /api/tatum-crypto-webhook). ✅ Payment notifications being created and retrieved successfully. ✅ Above threshold payment flow working with correct merchant fund distribution. ✅ All 6 verification checklist items passed: thresholds loaded, below/above threshold logic, Redis setup, webhooks, and end-to-end payment flow. The payment threshold and Redis infrastructure is fully functional and ready for production use."
+
 frontend:
   # Frontend testing not performed by testing agent
 
