@@ -20,6 +20,14 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 
 ## Implemented Features
 
+### Critical Fixes ✅ (December 2025)
+- **KMS Integration Fixed**: Replaced broken `fast-crc32c` native module with `@aws-crypto/crc32c` for Google Cloud KMS
+- **Tatum Subscription Fixed**: Corrected webhook URL construction and error handling
+- **Admin Fee Multi-Tenancy Verified**: ✅ Confirmed `company_id` flows correctly through entire payment lifecycle
+  - Analysis document: `/app/ADMIN_FEE_MULTI_TENANCY_ANALYSIS.md`
+  - Test file: `/app/backend/tests/adminFeeMultiTenancy.test.ts`
+- **Wallet Migration Analysis**: Confirmed no data migration needed for multi-tenancy
+
 ### Phase 1: Database Schema Updates ✅ (January 2026)
 - **Modified Tables:**
   - `tbl_company`: Added address_line1, address_line2, city, state, country, zip_code, vat_number, vat_type, vat_verified
