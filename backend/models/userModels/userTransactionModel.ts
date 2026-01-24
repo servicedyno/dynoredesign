@@ -43,8 +43,52 @@ const userTransactionModel = sequelize.define(
       type: DataTypes.STRING,
       defaultValue: "USD",
     },
+    // Crypto-specific fields
+    crypto_amount: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+    crypto_currency: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    usd_value: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+    // Fee breakdown
+    transaction_fee: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+    fixed_fee: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+    blockchain_buffer_fee: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+    // Blockchain confirmations
+    confirmations: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    required_confirmations: {
+      type: DataTypes.INTEGER,
+      defaultValue: 6,
+    },
+    // Transaction hashes
     transaction_reference: {
       type: DataTypes.STRING,
+    },
+    incoming_tx_hash: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    outgoing_tx_hash: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     transaction_details: {
       type: DataTypes.TEXT,
@@ -57,6 +101,19 @@ const userTransactionModel = sequelize.define(
     status: {
       type: DataTypes.STRING,
       defaultValue: "failed",
+    },
+    // Callback/Webhook
+    callback_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    webhook_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    webhook_response: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     customer_id: {
       type: DataTypes.INTEGER,
