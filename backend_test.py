@@ -1632,49 +1632,51 @@ verifyCacheData();
         """Test if pending payment email templates are accessible"""
         print("\n--- Testing Pending Payment Email Templates ---")
         
-        # This is more of a code verification since we can't directly test email sending
-        # We'll check if the email service has the required functions
-        
-        email_service_check_script = '''
+        # Check if the email functions exist in helper/sendEmail.ts
+        email_functions_check_script = '''
 const fs = require('fs');
 const path = require('path');
 
 try {
-    // Check if email service file exists
-    const emailServicePath = path.join(__dirname, 'services', 'emailService.ts');
+    // Check helper/sendEmail.ts file
+    const sendEmailPath = path.join(__dirname, 'helper', 'sendEmail.ts');
     
-    if (fs.existsSync(emailServicePath)) {
-        const emailServiceContent = fs.readFileSync(emailServicePath, 'utf8');
+    if (fs.existsSync(sendEmailPath)) {
+        const sendEmailContent = fs.readFileSync(sendEmailPath, 'utf8');
         
-        // Check for pending payment related functions
+        // Check for pending payment email functions
         const pendingPaymentFunctions = [
             'sendPaymentPendingEmail',
-            'sendPaymentConfirmingEmail',
-            'sendPendingPaymentNotification'
+            'sendPaymentConfirmingEmail'
         ];
         
         const foundFunctions = [];
         const missingFunctions = [];
         
         for (const func of pendingPaymentFunctions) {
-            if (emailServiceContent.includes(func)) {
+            if (sendEmailContent.includes(`const ${func}`) || sendEmailContent.includes(`export const ${func}`)) {
                 foundFunctions.push(func);
             } else {
                 missingFunctions.push(func);
             }
         }
         
+        // Check if pendingPaymentService.ts exists
+        const pendingServicePath = path.join(__dirname, 'services', 'pendingPaymentService.ts');
+        const pendingServiceExists = fs.existsSync(pendingServicePath);
+        
         console.log(JSON.stringify({
-            email_service_exists: true,
+            sendEmail_file_exists: true,
+            pendingPaymentService_exists: pendingServiceExists,
             found_functions: foundFunctions,
             missing_functions: missingFunctions,
-            has_pending_payment_support: foundFunctions.length > 0
+            has_pending_payment_support: foundFunctions.length === 2
         }, null, 2));
         
     } else {
         console.log(JSON.stringify({
-            email_service_exists: false,
-            error: 'Email service file not found'
+            sendEmail_file_exists: false,
+            error: 'helper/sendEmail.ts file not found'
         }, null, 2));
     }
     
@@ -1688,12 +1690,12 @@ try {
         
         try:
             # Write email template check script
-            with open('/tmp/check_email_templates.js', 'w') as f:
-                f.write(email_service_check_script)
+            with open('/tmp/check_pending_email_templates.js', 'w') as f:
+                f.write(email_functions_check_script)
             
             # Run the check
             result = subprocess.run(
-                ["node", "/tmp/check_email_templates.js"],
+                ["node", "/tmp/check_pending_email_templates.js"],
                 cwd="/app/backend",
                 capture_output=True,
                 text=True,
@@ -1704,29 +1706,30 @@ try {
                 try:
                     email_data = json.loads(result.stdout)
                     
-                    if email_data.get('email_service_exists', False):
+                    if email_data.get('sendEmail_file_exists', False):
                         found_functions = email_data.get('found_functions', [])
                         missing_functions = email_data.get('missing_functions', [])
+                        pending_service_exists = email_data.get('pendingPaymentService_exists', False)
                         
-                        if email_data.get('has_pending_payment_support', False):
+                        if email_data.get('has_pending_payment_support', False) and pending_service_exists:
                             self.log_result(
                                 "Pending Payment Email Templates", 
                                 True, 
-                                f"✅ Email service has pending payment support",
-                                {"found_functions": found_functions, "missing_functions": missing_functions}
+                                f"✅ All pending payment email functions found: {', '.join(found_functions)}. Pending payment service also exists.",
+                                {"found_functions": found_functions, "pendingPaymentService_exists": pending_service_exists}
                             )
                         else:
                             self.log_result(
                                 "Pending Payment Email Templates", 
                                 False, 
-                                f"❌ No pending payment email functions found",
-                                {"missing_functions": missing_functions}
+                                f"❌ Missing components - Functions: {missing_functions}, Service exists: {pending_service_exists}",
+                                {"found_functions": found_functions, "missing_functions": missing_functions, "pendingPaymentService_exists": pending_service_exists}
                             )
                     else:
                         self.log_result(
                             "Pending Payment Email Templates", 
                             False, 
-                            "❌ Email service file not found",
+                            "❌ Email helper file not found",
                             {"error": email_data.get('error', 'Unknown error')}
                         )
                         
