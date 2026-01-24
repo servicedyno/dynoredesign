@@ -39,6 +39,7 @@ class PaymentFlowTester:
         self.wallet_addresses = None
         self.payment_link_ref = None
         self.transaction_id = None
+        self.link_id = None
         
     def get_backend_url(self):
         """Get backend URL from frontend .env file"""
