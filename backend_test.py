@@ -1580,10 +1580,10 @@ verifyCacheData();
         """Test user login to get JWT token"""
         print("\n--- Testing User Login ---")
         
-        # Use credentials from review request
+        # Use valid credentials from review request
         login_data = {
-            "email": "nomadinacodes@gmail.com",
-            "password": "Qazqazqaz@2"
+            "email": "nomadly@moxx.co",
+            "password": "Katiekendra123@"
         }
         
         try:
