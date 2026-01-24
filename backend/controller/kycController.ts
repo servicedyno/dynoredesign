@@ -471,10 +471,147 @@ export const checkVolumeAndTriggerKYC = async (
   }
 };
 
+/**
+ * Resubmit KYC verification
+ * POST /api/kyc/resubmit
+ * Allows user to restart KYC process after rejection or expiration
+ */
+const resubmitKYC = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  
+  try {
+    const userId = userData.user_id;
+    const { company_id, first_name, last_name } = req.body;
+
+    // Find existing KYC record
+    const existingKYC = await kycModel.findOne({
+      where: {
+        user_id: userId,
+        ...(company_id && { company_id }),
+      },
+      order: [["created_at", "DESC"]],
+    });
+
+    if (!existingKYC) {
+      return errorResponseHelper(res, 404, "No previous KYC record found. Please submit a new KYC application.");
+    }
+
+    const currentStatus = existingKYC.get("status") as string;
+    const allowedStatuses = ["declined", "resubmission_requested", "abandoned", "expired"];
+
+    if (!allowedStatuses.includes(currentStatus)) {
+      return errorResponseHelper(res, 400, `Cannot resubmit KYC with status: ${currentStatus}. Only declined, expired, or resubmission_requested KYC can be resubmitted.`);
+    }
+
+    // Get user details
+    const userResult = await sequelize.query(
+      `SELECT name, email FROM tbl_user WHERE user_id = :userId`,
+      {
+        replacements: { userId },
+        type: QueryTypes.SELECT,
+      }
+    ) as any[];
+
+    if (!userResult || userResult.length === 0) {
+      return errorResponseHelper(res, 404, "User not found");
+    }
+
+    const user = userResult[0];
+
+    // Initialize Veriff service and create new session
+    const veriffService = getVeriffService();
+    const callbackUrl = `${process.env.SERVER_URL}/api/kyc/webhook`;
+
+    const session = await veriffService.createSession({
+      userId,
+      companyId: company_id || null,
+      firstName: first_name || user.name.split(" ")[0],
+      lastName: last_name || user.name.split(" ").slice(1).join(" "),
+      callbackUrl,
+    });
+
+    // Update existing KYC record with new session
+    await existingKYC.update({
+      status: "submitted",
+      submitted_at: new Date(),
+      veriff_session_id: session.verification.id,
+      veriff_session_url: session.verification.url,
+      veriff_verification_id: session.verification.id,
+      veriff_decision: null,
+      veriff_decision_code: null,
+      veriff_reason: null,
+      rejection_reason: null,
+      reviewed_at: null,
+    });
+
+    // Create notification
+    await createNotification(
+      userId,
+      NOTIFICATION_TYPES.KYC_REQUIRED,
+      "KYC Resubmission Started",
+      `Your identity verification has been resubmitted. Please complete the verification process.`,
+      {
+        session_id: session.verification.id,
+        resubmission: true,
+      },
+      company_id
+    );
+
+    return successResponseHelper(res, 200, "KYC resubmission started successfully", {
+      verification: {
+        session_id: session.verification.id,
+        verification_url: session.verification.url,
+        status: "submitted",
+      },
+      kyc_id: existingKYC.get("kyc_id"),
+      message: "Please complete the verification process using the new session URL",
+    });
+
+  } catch (error: any) {
+    console.error("Resubmit KYC error:", error);
+    const message = getErrorMessage(error);
+    return errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Get KYC history for user
+ * GET /api/kyc/history
+ */
+const getKYCHistory = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  
+  try {
+    const userId = userData.user_id;
+    const companyId = req.query.company_id ? parseInt(req.query.company_id as string) : null;
+
+    const whereClause = companyId
+      ? { user_id: userId, company_id: companyId }
+      : { user_id: userId };
+
+    const kycHistory = await kycModel.findAll({
+      where: whereClause,
+      order: [["created_at", "DESC"]],
+    });
+
+    return successResponseHelper(res, 200, "KYC history retrieved successfully", {
+      records: kycHistory,
+      total: kycHistory.length,
+    });
+
+  } catch (error: any) {
+    console.error("Get KYC history error:", error);
+    const message = getErrorMessage(error);
+    return errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   getKYCStatus,
   getKYCRequirements,
   startKYCVerification,
   handleVeriffWebhook,
   checkVolumeAndTriggerKYC,
+  resubmitKYC,
+  getKYCHistory,
 };
