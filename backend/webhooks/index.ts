@@ -115,6 +115,21 @@ const tatumCryptoWebHook = async (
 
     const previousReceived = Number(items.receivedAmount ?? 0);
     const totalReceived = previousReceived + incomingAmount;
+    const isFirstTransaction = !items.txId;
+
+    // Send pending notification for first transaction
+    if (isFirstTransaction) {
+      const customerData = await getRedisItem(items?.ref);
+      if (customerData) {
+        await sendPendingPaymentNotification(
+          address,
+          payload.txId,
+          incomingAmount,
+          items?.currency || payload.asset,
+          customerData
+        );
+      }
+    }
 
     await setRedisItem("crypto-" + address, {
       ...items,
