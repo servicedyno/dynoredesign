@@ -208,7 +208,152 @@ export const triggerWeeklySummary = async (userId?: number) => {
   }
 };
 
+/**
+ * Wallet Reminder Cron Job
+ * Schedule: Every hour
+ * Logic:
+ * 1. Find users who registered 24 hours ago
+ * 2. Check if they have any wallet addresses
+ * 3. If not, send wallet reminder email
+ * 4. Mark as reminded to avoid duplicates
+ */
+export const setupWalletReminderCron = () => {
+  // Run every hour
+  // Cron format: minute hour day-of-month month day-of-week
+  // 0 * * * * = At minute 0 of every hour
+  cron.schedule("0 * * * *", async () => {
+    console.log("Wallet Reminder Cron Job ==============> Starting");
+    
+    try {
+      // Get date 24 hours ago
+      const twentyFourHoursAgo = new Date();
+      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+      
+      // Get date 25 hours ago (1 hour window)
+      const twentyFiveHoursAgo = new Date();
+      twentyFiveHoursAgo.setHours(twentyFiveHoursAgo.getHours() - 25);
+
+      // Find users who:
+      // 1. Registered between 25-24 hours ago
+      // 2. Have at least one company created
+      // 3. Have no wallet addresses
+      // 4. Haven't been reminded yet
+      const usersWithoutWallets = await sequelize.query(
+        `SELECT DISTINCT u.user_id, u.name, u.email, c.company_id, c.company_name,
+                COALESCE(u.wallet_reminder_sent, false) as wallet_reminder_sent
+         FROM tbl_user u
+         LEFT JOIN tbl_company c ON c.user_id = u.user_id
+         LEFT JOIN tbl_user_addresses wa ON wa.user_id = u.user_id AND wa.company_id = c.company_id
+         WHERE u.created_at >= :twentyFiveHoursAgo
+         AND u.created_at <= :twentyFourHoursAgo
+         AND c.company_id IS NOT NULL
+         AND wa.user_address_id IS NULL
+         AND COALESCE(u.wallet_reminder_sent, false) = false`,
+        {
+          replacements: { 
+            twentyFourHoursAgo: twentyFourHoursAgo.toISOString(),
+            twentyFiveHoursAgo: twentyFiveHoursAgo.toISOString()
+          },
+          type: QueryTypes.SELECT
+        }
+      ) as any[];
+
+      console.log(`Found ${usersWithoutWallets.length} users without wallets to remind`);
+
+      for (const user of usersWithoutWallets) {
+        try {
+          // Send wallet reminder email
+          const { sendAddWalletReminderEmail } = await import("../services/emailService");
+          await sendAddWalletReminderEmail(user.email, user.name, user.company_name);
+
+          // Mark user as reminded
+          await sequelize.query(
+            `UPDATE tbl_user SET wallet_reminder_sent = true WHERE user_id = :userId`,
+            {
+              replacements: { userId: user.user_id },
+              type: QueryTypes.UPDATE
+            }
+          );
+
+          console.log(`Wallet reminder sent to user ${user.user_id} (${user.email})`);
+
+        } catch (userError) {
+          console.error(`Error sending wallet reminder to user ${user.user_id}:`, userError);
+        }
+      }
+
+      console.log("Wallet Reminder Cron Job ==============> Completed");
+      
+    } catch (e) {
+      console.error("Wallet Reminder Cron Job Error:", e);
+      cronLogger?.error?.("Wallet Reminder Cron Error", {}, new Error(e as any));
+    }
+  });
+
+  console.log("Wallet Reminder Cron Job scheduled for every hour");
+};
+
+/**
+ * Trigger wallet reminder manually (for testing)
+ */
+export const triggerWalletReminder = async (userId?: number) => {
+  try {
+    let users: any[];
+
+    if (userId) {
+      // Get specific user
+      users = await sequelize.query(
+        `SELECT u.user_id, u.name, u.email, c.company_id, c.company_name
+         FROM tbl_user u
+         LEFT JOIN tbl_company c ON c.user_id = u.user_id
+         LEFT JOIN tbl_user_addresses wa ON wa.user_id = u.user_id AND wa.company_id = c.company_id
+         WHERE u.user_id = :userId
+         AND c.company_id IS NOT NULL
+         AND wa.user_address_id IS NULL`,
+        { 
+          replacements: { userId },
+          type: QueryTypes.SELECT 
+        }
+      ) as any[];
+    } else {
+      // Get all users without wallets (for testing)
+      users = await sequelize.query(
+        `SELECT DISTINCT u.user_id, u.name, u.email, c.company_id, c.company_name
+         FROM tbl_user u
+         LEFT JOIN tbl_company c ON c.user_id = u.user_id
+         LEFT JOIN tbl_user_addresses wa ON wa.user_id = u.user_id AND wa.company_id = c.company_id
+         WHERE c.company_id IS NOT NULL
+         AND wa.user_address_id IS NULL
+         LIMIT 10`,
+        { type: QueryTypes.SELECT }
+      ) as any[];
+    }
+
+    const results = [];
+
+    for (const user of users) {
+      const { sendAddWalletReminderEmail } = await import("../services/emailService");
+      await sendAddWalletReminderEmail(user.email, user.name, user.company_name);
+
+      results.push({
+        user_id: user.user_id,
+        email: user.email,
+        company_name: user.company_name,
+        reminder_sent: true
+      });
+    }
+
+    return results;
+
+  } catch (e) {
+    console.error("Trigger wallet reminder error:", e);
+    throw e;
+  }
+};
+
 export default {
   setupWeeklySummaryCron,
   triggerWeeklySummary,
+  setupWalletReminderCron,
+  triggerWalletReminder,
 };
