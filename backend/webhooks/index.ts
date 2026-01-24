@@ -5,6 +5,7 @@ import { ITatumWebHook, IWebHook } from "../utils/types";
 import { getRedisItem, setRedisItem } from "../utils/redisInstance";
 import axios from "axios";
 import { paymentController } from "../controller";
+import { sendPendingPaymentNotification } from "../services/pendingPaymentService";
 
 const flutterwaveWebHook = async (
   req: express.Request,
