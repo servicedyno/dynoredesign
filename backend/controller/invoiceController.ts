@@ -11,6 +11,7 @@ import invoiceModel from "../models/invoiceModel";
 import taxRateModel from "../models/taxRateModel";
 import { userTransactionModel, companyModel } from "../models";
 import { apiLogger } from "../utils/loggers";
+import { generateInvoicePDF } from "../services/pdfService";
 
 /**
  * Generate invoice number
