@@ -852,20 +852,18 @@ class PaymentThresholdRedisTester:
         
         # Analyze test results to determine checklist status
         for test_name, result in self.test_results.items():
-            print(f"DEBUG: Checking test '{test_name}' - success: {result['success']}")
             if "Threshold Verification" in test_name and result['success']:
                 passed_items.append("Thresholds correctly loaded from env")
-            elif "Below Threshold" in test_name and result['success']:
+            if "Below Threshold" in test_name and result['success']:
                 passed_items.append("Below threshold → ALL to admin, ZERO to merchant")
-            elif "Above Threshold" in test_name and result['success']:
+            if "Above Threshold" in test_name and result['success']:
                 passed_items.append("Above threshold → Fees to admin, remainder to merchant")
-            elif "Redis" in test_name and result['success']:
+            if "Redis" in test_name and result['success']:
                 passed_items.append("Redis data setup working")
-            elif "Webhook" in test_name and result['success']:
+            if "Webhook" in test_name and result['success']:
                 passed_items.append("Webhooks trigger notifications")
-            elif ("Phase 4" in test_name and result['success']) or ("Payment Flow" in test_name and result['success']):
+            if ("Phase 4" in test_name and result['success']) or ("Payment Flow" in test_name and result['success']):
                 passed_items.append("Payment flow works end-to-end")
-                print(f"DEBUG: Added 'Payment flow works end-to-end' for test: {test_name}")
         
         # Remove duplicates
         passed_items = list(set(passed_items))
