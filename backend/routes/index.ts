@@ -43,6 +43,7 @@ router.use("/notifications", notificationRouter);
 router.use("/kyc", kycRouter);
 router.use("/status", statusRouter); // Public status page endpoints
 router.use("/subscriptions", subscriptionRouter); // Subscription management
+router.use("/test", testRouter); // Test endpoints for development
 router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
 router.post("/webhook", flutterwaveWebHook);
