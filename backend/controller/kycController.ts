@@ -5,10 +5,12 @@
 
 import { Request, Response } from "express";
 import { QueryTypes } from "sequelize";
+import jwt from "jsonwebtoken";
 import sequelize from "../utils/dbInstance";
 import kycModel from "../models/kycModel";
 import { getVeriffService } from "../services/veriffService";
 import { createNotification, NOTIFICATION_TYPES } from "./notificationController";
+import { IUserType } from "../utils/types";
 import {
   sendKYCRequiredEmail,
   sendKYCApprovedEmail,
