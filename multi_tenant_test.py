@@ -358,7 +358,8 @@ checkTransactions();
                 cwd="/app/backend",
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                env={**os.environ, "NODE_PATH": "/app/backend/node_modules"}
             )
             
             if result.returncode == 0:
