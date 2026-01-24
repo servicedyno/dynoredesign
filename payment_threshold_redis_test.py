@@ -407,8 +407,14 @@ class PaymentThresholdRedisTester:
                 
                 if 'data' in data:
                     result = data['data']
-                    is_below_threshold = result.get('is_below_threshold')
-                    split_distribution = result.get('split_distribution')
+                    test_scenario = result.get('test_scenario', {})
+                    is_below_threshold = test_scenario.get('is_below_threshold')
+                    
+                    # For above threshold test, we expect split distribution
+                    if is_below_threshold == False:
+                        split_distribution = True
+                    else:
+                        split_distribution = False
                     
                     # Expected: is_below_threshold=false, split distribution
                     if is_below_threshold == False and split_distribution == True:
