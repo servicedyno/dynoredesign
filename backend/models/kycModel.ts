@@ -31,6 +31,7 @@ const kycModel = sequelize.define(
     status: {
       type: DataTypes.STRING(20),
       defaultValue: "pending",
+      // Status values: pending, submitted, approved, resubmission_requested, declined, abandoned
     },
     documents: {
       type: DataTypes.JSONB,
@@ -46,6 +47,32 @@ const kycModel = sequelize.define(
     },
     reviewed_at: {
       type: DataTypes.DATE,
+    },
+    // Veriff integration fields
+    veriff_session_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    veriff_session_url: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    veriff_verification_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    veriff_decision: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      // Decision values: approved, declined, resubmission_requested, expired, abandoned
+    },
+    veriff_decision_code: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    veriff_reason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
   },
   {
