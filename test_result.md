@@ -1126,9 +1126,7 @@ test_plan:
     - "Phase 12: VAT calculations for EU companies"
     - "Phase 12: PDF Generation functionality"
     - "Phase 12: Email Integration with Phase 9 Email Service"
-  stuck_tasks:
-    - "Phase 12: Invoice Generation System - tbl_invoice table"
-    - "Phase 12: VAT calculations for EU companies"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
