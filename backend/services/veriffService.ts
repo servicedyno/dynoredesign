@@ -91,15 +91,12 @@ class VeriffService {
   /**
    * Generate signature for API requests
    * Required for POST requests to Veriff API
+   * Uses crypto-js for HMAC-SHA256 signature generation
    */
   private generateSignature(payload: any): string {
     const payloadString = JSON.stringify(payload);
-    const signature = crypto
-      .createHmac("sha256", this.apiSecret)
-      .update(Buffer.from(payloadString, "utf-8"))
-      .digest("hex")
-      .toLowerCase();
-    return signature;
+    const signature = CryptoJS.HmacSHA256(payloadString, this.apiSecret).toString(CryptoJS.enc.Hex);
+    return signature.toLowerCase();
   }
 
   /**
