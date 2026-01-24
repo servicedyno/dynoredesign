@@ -3273,43 +3273,50 @@ try {
             if response.status_code == 200:
                 data = response.json()
                 if 'data' in data:
-                    api_keys = data['data']
+                    api_data = data['data']
                     
-                    # Check if response includes environment field and grouped data
-                    has_environment_field = False
-                    has_grouped_data = False
+                    # Check if response includes grouped data structure
+                    expected_fields = ['all', 'grouped', 'total', 'production_count', 'development_count']
+                    missing_fields = [field for field in expected_fields if field not in api_data]
                     
-                    if isinstance(api_keys, list) and len(api_keys) > 0:
-                        # Check if first API key has environment field
-                        first_key = api_keys[0]
-                        has_environment_field = 'environment' in first_key
-                    elif isinstance(api_keys, dict):
-                        # Check if response is grouped by environment
-                        has_grouped_data = 'production' in api_keys or 'development' in api_keys
-                        if has_grouped_data:
-                            # Check if individual keys have environment field
-                            for env_type in ['production', 'development']:
-                                if env_type in api_keys and len(api_keys[env_type]) > 0:
-                                    has_environment_field = 'environment' in api_keys[env_type][0]
-                                    break
-                    
-                    if has_environment_field or has_grouped_data:
-                        self.log_result(
-                            "API Keys with Environment Info", 
-                            True, 
-                            f"✅ API keys include environment info (grouped: {has_grouped_data}, env field: {has_environment_field})",
-                            {
-                                "api_keys_count": len(api_keys) if isinstance(api_keys, list) else sum(len(v) for v in api_keys.values() if isinstance(v, list)),
-                                "has_environment_field": has_environment_field,
-                                "has_grouped_data": has_grouped_data
-                            }
-                        )
+                    if not missing_fields:
+                        # Check grouped structure
+                        grouped = api_data.get('grouped', {})
+                        has_production = 'production' in grouped
+                        has_development = 'development' in grouped
+                        
+                        # Check if individual API keys have environment field
+                        all_apis = api_data.get('all', [])
+                        has_environment_field = False
+                        if all_apis and len(all_apis) > 0:
+                            has_environment_field = 'environment' in all_apis[0]
+                        
+                        if has_production and has_development:
+                            self.log_result(
+                                "API Keys with Environment Info", 
+                                True, 
+                                f"✅ API keys include environment info and grouped data structure",
+                                {
+                                    "total_apis": api_data.get('total', 0),
+                                    "production_count": api_data.get('production_count', 0),
+                                    "development_count": api_data.get('development_count', 0),
+                                    "has_grouped_structure": True,
+                                    "has_environment_field": has_environment_field
+                                }
+                            )
+                        else:
+                            self.log_result(
+                                "API Keys with Environment Info", 
+                                False, 
+                                "❌ Missing production or development groups in response",
+                                {"grouped_keys": list(grouped.keys()), "response": api_data}
+                            )
                     else:
                         self.log_result(
                             "API Keys with Environment Info", 
                             False, 
-                            "❌ API keys response missing environment information",
-                            {"response_structure": type(api_keys).__name__, "sample_key": api_keys[0] if isinstance(api_keys, list) and len(api_keys) > 0 else None}
+                            f"❌ Missing required fields in response: {', '.join(missing_fields)}",
+                            {"available_fields": list(api_data.keys()), "missing_fields": missing_fields}
                         )
                 else:
                     self.log_result("API Keys with Environment Info", False, "❌ Invalid response structure", {"response": data})
