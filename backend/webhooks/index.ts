@@ -67,6 +67,18 @@ const tatumWebHook = async (req: express.Request, res: express.Response) => {
     }
 
     if (!items?.txId && Number(payload.amount) > 0) {
+      // First time transaction detected - send pending notification
+      const customerData = await getRedisItem(items?.ref);
+      if (customerData) {
+        await sendPendingPaymentNotification(
+          address,
+          payload.txId,
+          Number(payload.amount),
+          items?.currency || payload.asset,
+          customerData
+        );
+      }
+
       await setRedisItem("crypto-" + address, {
         ...newPayload,
         txId: payload.txId,
