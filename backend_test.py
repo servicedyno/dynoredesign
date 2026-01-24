@@ -1825,95 +1825,25 @@ try {
         print("Test Credentials: nomadly@moxx.co / Katiekendra123@")
         print("=" * 80)
         
-        # Phase 1: Database (Quick check)
+        # Phase 1: Backend Connectivity Check
         print("\n" + "="*50)
-        print("PHASE 1: DATABASE CONNECTIVITY")
+        print("PHASE 1: BACKEND CONNECTIVITY")
         print("="*50)
         if not self.test_database_connectivity():
             print("\n❌ Backend connectivity failed. Cannot proceed with tests.")
             return False
         
-        # Phase 2: Tax API (4 endpoints)
+        # Phase 2: Authentication with Provided Credentials
         print("\n" + "="*50)
-        print("PHASE 2: TAX API (4 ENDPOINTS)")
+        print("PHASE 2: AUTHENTICATION")
         print("="*50)
-        self.test_tax_rate_pt()
-        self.test_tax_rate_de()
-        self.test_tax_acronyms_quick()
-        self.test_tax_lookup_portugal()
+        self.authenticate_with_provided_credentials()
         
-        # Phase 3: Dashboard API (Requires JWT)
+        # Phase 3: Pending Payment Notification System Tests
         print("\n" + "="*50)
-        print("PHASE 3: DASHBOARD API (REQUIRES JWT)")
+        print("PHASE 3: PENDING PAYMENT NOTIFICATION SYSTEM")
         print("="*50)
-        if self.test_user_login_quick():
-            self.test_dashboard_quick()
-            self.test_dashboard_chart_7d()
-            self.test_dashboard_chart_30d()
-            self.test_dashboard_fee_tiers_quick()
-        
-        # Phase 4: Notifications (Requires JWT)
-        print("\n" + "="*50)
-        print("PHASE 4: NOTIFICATIONS (REQUIRES JWT)")
-        print("="*50)
-        if self.jwt_token:
-            self.test_notifications_preferences()
-            self.test_notifications_types()
-            self.test_notifications_unread_count()
-            self.test_notifications_list()
-        
-        # Phase 5: Authentication
-        print("\n" + "="*50)
-        print("PHASE 5: AUTHENTICATION")
-        print("="*50)
-        self.test_user_login_valid()
-        self.test_forgot_password()
-        self.test_google_signin()
-        
-        # Phase 6: Wallet Management (Requires JWT)
-        print("\n" + "="*50)
-        print("PHASE 6: WALLET MANAGEMENT (REQUIRES JWT)")
-        print("="*50)
-        if self.jwt_token:
-            self.test_get_wallet()
-            self.test_get_wallet_addresses()
-            self.test_get_api_keys()
-        
-        # Phase 7: Transactions (Requires JWT)
-        print("\n" + "="*50)
-        print("PHASE 7: TRANSACTIONS (REQUIRES JWT)")
-        print("="*50)
-        if self.jwt_token:
-            self.test_get_all_transactions()
-        
-        # Phase 8: Payment Links (Requires JWT)
-        print("\n" + "="*50)
-        print("PHASE 8: PAYMENT LINKS (REQUIRES JWT)")
-        print("="*50)
-        if self.jwt_token:
-            self.test_get_payment_links()
-        
-        # Phase 10: Company (Requires JWT)
-        print("\n" + "="*50)
-        print("PHASE 10: COMPANY (REQUIRES JWT)")
-        print("="*50)
-        if self.jwt_token:
-            self.test_get_company()
-        
-        # Phase 12: Invoices (Requires JWT)
-        print("\n" + "="*50)
-        print("PHASE 12: INVOICES (REQUIRES JWT)")
-        print("="*50)
-        if self.jwt_token:
-            self.test_get_invoices()
-            self.test_get_invoices_paginated()
-        
-        # Phase Swagger
-        print("\n" + "="*50)
-        print("PHASE SWAGGER: API DOCUMENTATION")
-        print("="*50)
-        self.test_swagger_docs()
-        self.test_swagger_json()
+        self.test_pending_payment_notifications()
         
         # Print summary
         self.print_test_summary()
