@@ -866,11 +866,231 @@ export const paymentPaths = {
   },
 
   // ==================== WEBHOOKS ====================
+  
+  // MERCHANT WEBHOOK DOCUMENTATION
+  // This describes what YOUR server receives when payment events occur
+  '/webhooks/merchant-endpoint': {
+    post: {
+      tags: ['Webhooks'],
+      summary: '📘 Merchant Webhook Payloads (Documentation)',
+      description: `**This is documentation only - not an actual DynoPay endpoint.**
+
+When you create a payment link with a \`webhook_url\`, DynoPay will POST to YOUR server when payment events occur.
+
+### Webhook Setup
+1. Create a payment link with \`webhook_url: "https://yourserver.com/webhooks/dynopay"\`
+2. DynoPay sends POST requests to your URL when payment status changes
+3. Your server should respond with HTTP 200 to acknowledge receipt
+
+### Security
+- Verify the \`signature\` header using your API secret
+- Signature: HMAC-SHA256 of request body with your secret key
+- Always validate \`transaction_id\` matches your records
+
+### Retry Policy
+- DynoPay retries failed webhooks 3 times with exponential backoff
+- Intervals: 1 min, 5 min, 30 min
+- After 3 failures, webhook is marked as failed (check dashboard)`,
+      requestBody: {
+        description: 'Example webhook payloads sent to YOUR webhook_url',
+        content: {
+          'application/json': {
+            examples: {
+              'payment.completed': {
+                summary: '✅ Payment Completed (Crypto)',
+                description: 'Sent when crypto payment is fully confirmed on blockchain',
+                value: {
+                  event: 'payment.completed',
+                  timestamp: '2024-01-15T10:45:00Z',
+                  data: {
+                    transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                    link_id: 'link_xyz789',
+                    status: 'completed',
+                    amount: 199.99,
+                    currency: 'USD',
+                    crypto_amount: 0.00456789,
+                    crypto_currency: 'BTC',
+                    tx_hash: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
+                    confirmations: 3,
+                    customer_email: 'customer@example.com',
+                    metadata: {
+                      order_id: '12345',
+                      product: 'Premium Subscription'
+                    },
+                    completed_at: '2024-01-15T10:45:00Z'
+                  }
+                }
+              },
+              'payment.completed_fiat': {
+                summary: '✅ Payment Completed (Card/Bank)',
+                description: 'Sent when fiat payment via card or bank is successful',
+                value: {
+                  event: 'payment.completed',
+                  timestamp: '2024-01-15T10:45:00Z',
+                  data: {
+                    transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                    link_id: 'link_xyz789',
+                    status: 'completed',
+                    amount: 199.99,
+                    currency: 'USD',
+                    payment_method: 'CARD',
+                    transaction_reference: 'FLW-TXN-123456789',
+                    customer_email: 'customer@example.com',
+                    metadata: {
+                      order_id: '12345'
+                    },
+                    completed_at: '2024-01-15T10:45:00Z'
+                  }
+                }
+              },
+              'payment.pending': {
+                summary: '⏳ Payment Pending',
+                description: 'Sent when crypto transaction is detected but awaiting confirmations',
+                value: {
+                  event: 'payment.pending',
+                  timestamp: '2024-01-15T10:35:00Z',
+                  data: {
+                    transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                    link_id: 'link_xyz789',
+                    status: 'pending',
+                    amount: 199.99,
+                    currency: 'USD',
+                    crypto_amount: 0.00456789,
+                    crypto_currency: 'BTC',
+                    tx_hash: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
+                    confirmations: 0,
+                    confirmations_required: 3,
+                    detected_at: '2024-01-15T10:35:00Z'
+                  }
+                }
+              },
+              'payment.confirming': {
+                summary: '🔄 Payment Confirming',
+                description: 'Sent as blockchain confirmations progress',
+                value: {
+                  event: 'payment.confirming',
+                  timestamp: '2024-01-15T10:40:00Z',
+                  data: {
+                    transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                    link_id: 'link_xyz789',
+                    status: 'confirming',
+                    amount: 199.99,
+                    currency: 'USD',
+                    crypto_amount: 0.00456789,
+                    crypto_currency: 'BTC',
+                    tx_hash: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
+                    confirmations: 2,
+                    confirmations_required: 3
+                  }
+                }
+              },
+              'payment.partial': {
+                summary: '⚠️ Partial Payment Received',
+                description: 'Sent when customer sends less than required amount',
+                value: {
+                  event: 'payment.partial',
+                  timestamp: '2024-01-15T10:38:00Z',
+                  data: {
+                    transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                    link_id: 'link_xyz789',
+                    status: 'partial',
+                    expected_amount: 199.99,
+                    received_amount: 150.00,
+                    remaining_amount: 49.99,
+                    currency: 'USD',
+                    crypto_expected: 0.00456789,
+                    crypto_received: 0.00342592,
+                    crypto_currency: 'BTC',
+                    tx_hash: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
+                    grace_period_ends: '2024-01-15T11:08:00Z',
+                    deposit_address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh'
+                  }
+                }
+              },
+              'payment.expired': {
+                summary: '⏰ Payment Link Expired',
+                description: 'Sent when payment link expires without payment',
+                value: {
+                  event: 'payment.expired',
+                  timestamp: '2024-01-16T10:30:00Z',
+                  data: {
+                    transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                    link_id: 'link_xyz789',
+                    status: 'expired',
+                    amount: 199.99,
+                    currency: 'USD',
+                    created_at: '2024-01-15T10:30:00Z',
+                    expired_at: '2024-01-16T10:30:00Z',
+                    metadata: {
+                      order_id: '12345'
+                    }
+                  }
+                }
+              },
+              'payment.failed': {
+                summary: '❌ Payment Failed',
+                description: 'Sent when payment fails (card declined, etc.)',
+                value: {
+                  event: 'payment.failed',
+                  timestamp: '2024-01-15T10:36:00Z',
+                  data: {
+                    transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                    link_id: 'link_xyz789',
+                    status: 'failed',
+                    amount: 199.99,
+                    currency: 'USD',
+                    payment_method: 'CARD',
+                    failure_reason: 'Card declined - insufficient funds',
+                    failure_code: 'INSUFFICIENT_FUNDS',
+                    metadata: {
+                      order_id: '12345'
+                    }
+                  }
+                }
+              },
+              'payment.refunded': {
+                summary: '💸 Payment Refunded',
+                description: 'Sent when a payment is refunded',
+                value: {
+                  event: 'payment.refunded',
+                  timestamp: '2024-01-20T14:00:00Z',
+                  data: {
+                    transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                    link_id: 'link_xyz789',
+                    status: 'refunded',
+                    original_amount: 199.99,
+                    refunded_amount: 199.99,
+                    currency: 'USD',
+                    refund_reason: 'Customer request',
+                    original_payment_date: '2024-01-15T10:45:00Z',
+                    refunded_at: '2024-01-20T14:00:00Z'
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Your server should return HTTP 200 to acknowledge receipt',
+          content: {
+            'application/json': {
+              example: {
+                received: true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  
   '/api/pay/webhook/tatum': {
     post: {
       tags: ['Webhooks'],
-      summary: 'Tatum blockchain webhook',
-      description: 'Receives blockchain transaction notifications from Tatum. This endpoint is called automatically when deposits are detected.',
+      summary: 'Tatum blockchain webhook (Internal)',
+      description: 'Internal endpoint - receives blockchain transaction notifications from Tatum. This is called automatically by Tatum when deposits are detected on monitored addresses.',
       requestBody: {
         content: {
           'application/json': {
@@ -885,19 +1105,46 @@ export const paymentPaths = {
                 blockNumber: { type: 'integer' }
               }
             },
-            example: {
-              subscriptionType: 'ADDRESS_TRANSACTION',
-              address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
-              txId: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
-              amount: '0.00456789',
-              currency: 'BTC',
-              blockNumber: 823456
+            examples: {
+              'BTC Deposit': {
+                summary: 'Bitcoin deposit detected',
+                value: {
+                  subscriptionType: 'ADDRESS_TRANSACTION',
+                  address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+                  txId: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
+                  amount: '0.00456789',
+                  currency: 'BTC',
+                  blockNumber: 823456
+                }
+              },
+              'ETH Deposit': {
+                summary: 'Ethereum deposit detected',
+                value: {
+                  subscriptionType: 'ADDRESS_TRANSACTION',
+                  address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE4E',
+                  txId: '0xabc123def456789...',
+                  amount: '0.085',
+                  currency: 'ETH',
+                  blockNumber: 19234567
+                }
+              },
+              'USDT-TRC20 Deposit': {
+                summary: 'USDT (Tron) deposit detected',
+                value: {
+                  subscriptionType: 'ADDRESS_TRANSACTION',
+                  address: 'TN7cWz1s5p5XKT8KJhKjZ8EWPH4v8hGhqN',
+                  txId: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
+                  amount: '199.99',
+                  currency: 'USDT',
+                  blockNumber: 58234567
+                }
+              }
             }
           }
         }
       },
       responses: {
-        200: { description: 'Webhook processed' }
+        200: { description: 'Webhook processed successfully' }
       }
     }
   },
