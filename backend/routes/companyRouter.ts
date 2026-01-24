@@ -1,10 +1,11 @@
 import express, { RequestHandler } from "express";
 import { companyController } from "../controller";
-import { companyMiddleware, uploadImage } from "../middleware";
+import { companyMiddleware, uploadImage, authMiddleware } from "../middleware";
 const companyRouter = express.Router();
 
 companyRouter.post(
   "/addCompany",
+  authMiddleware,
   uploadImage.single("image") as unknown as RequestHandler,
   companyMiddleware,
   companyController.addCompany
@@ -12,13 +13,15 @@ companyRouter.post(
 
 companyRouter.put(
   "/updateCompany/:id",
+  authMiddleware,
   uploadImage.single("image") as unknown as RequestHandler,
   companyMiddleware,
   companyController.updateCompany
 );
 
-companyRouter.get("/getCompany", companyController.getCompany);
-companyRouter.get("/getTransactions/:id", companyController.getTransactions);
-companyRouter.delete("/deleteCompany/:id", companyController.deleteCompany);
+companyRouter.get("/getCompany", authMiddleware, companyController.getCompany);
+companyRouter.get("/getCompany/:id", authMiddleware, companyController.getCompanyById);
+companyRouter.get("/getTransactions/:id", authMiddleware, companyController.getTransactions);
+companyRouter.delete("/deleteCompany/:id", authMiddleware, companyController.deleteCompany);
 
 export default companyRouter;
