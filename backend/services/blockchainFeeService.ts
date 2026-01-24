@@ -43,7 +43,7 @@ interface BlockchainFeeResult {
   speed: 'fast' | 'medium' | 'slow';
   gasPrice?: number;        // For EVM chains (in gwei)
   satPerByte?: number;      // For UTXO chains
-  timestamp: Date;
+  timestamp: number | Date;
 }
 
 /**
