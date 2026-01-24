@@ -22,18 +22,7 @@ class Phase12InvoiceTester:
         
     def get_backend_url(self):
         """Get backend URL from frontend .env file"""
-        try:
-            with open('/app/frontend/.env', 'r') as f:
-                for line in f:
-                    if line.startswith('REACT_APP_BACKEND_URL='):
-                        external_url = line.split('=', 1)[1].strip()
-                        print(f"Found external URL: {external_url}")
-                        # For testing, use the external URL with /api prefix
-                        return f"{external_url}/api"
-        except Exception as e:
-            print(f"Warning: Could not read frontend .env file: {e}")
-        
-        # Fallback to localhost
+        # Use localhost for testing since external URL routes to frontend
         return "http://localhost:8001/api"
         
     def log_result(self, test_name: str, success: bool, message: str, details: Dict = None):
