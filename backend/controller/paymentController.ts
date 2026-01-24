@@ -1653,18 +1653,50 @@ const cryptoVerification = async (address, webhook = true) => {
           ? Number(tempData.previousAmount) + Number(receivedAmount)
           : Number(receivedAmount);
 
-        const { totalDeduction, minForwarding } = await calculateTransactionFees(
-          tempCurrency,
-          Number(totalAmountReceived)
-        );
-
+        // Check fee_payer mode
+        const fee_payer = tempData?.fee_payer || 'company';
+        const merchant_amount = tempData?.merchant_amount;
+        
         let adminAmountToSend, userAmountToSend;
-        if (Number(totalAmountReceived) < Number(minForwarding)) {
-          adminAmountToSend = Number(totalAmountReceived);
-          userAmountToSend = 0;
+        
+        if (fee_payer === 'customer' && merchant_amount) {
+          // CUSTOMER PAYS FEES MODE
+          // Customer already paid extra to cover fees
+          // Merchant receives the original base amount (merchant_amount)
+          // DynoPay keeps everything else (the fees)
+          
+          console.log(`[cryptoVerification] Customer pays fees mode:
+            - Total received: ${totalAmountReceived} ${tempCurrency}
+            - Merchant should receive: ${merchant_amount} ${tempCurrency}
+            - Fees for DynoPay: ${totalAmountReceived - merchant_amount} ${tempCurrency}`);
+          
+          userAmountToSend = Number(merchant_amount);
+          adminAmountToSend = Number(totalAmountReceived) - Number(merchant_amount);
+          
+          // Ensure we don't send negative or more than received
+          if (adminAmountToSend < 0) {
+            adminAmountToSend = 0;
+            userAmountToSend = Number(totalAmountReceived);
+          }
+          if (userAmountToSend > Number(totalAmountReceived)) {
+            userAmountToSend = Number(totalAmountReceived);
+            adminAmountToSend = 0;
+          }
         } else {
-          adminAmountToSend = Number(totalDeduction);
-          userAmountToSend = Number(totalAmountReceived) - Number(totalDeduction);
+          // COMPANY PAYS FEES MODE (default)
+          // Standard fee deduction from received amount
+          const { totalDeduction, minForwarding } = await calculateTransactionFees(
+            tempCurrency,
+            Number(totalAmountReceived)
+          );
+
+          if (Number(totalAmountReceived) < Number(minForwarding)) {
+            adminAmountToSend = Number(totalAmountReceived);
+            userAmountToSend = 0;
+          } else {
+            adminAmountToSend = Number(totalDeduction);
+            userAmountToSend = Number(totalAmountReceived) - Number(totalDeduction);
+          }
         }
 
         const adminTransferResult = await settleCryptoTransaction({
