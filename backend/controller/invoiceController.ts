@@ -389,3 +389,6 @@ export default {
   getInvoiceById,
   autoGenerateInvoice,
 };
+
+// Named export for use in other controllers
+export { autoGenerateInvoice };
