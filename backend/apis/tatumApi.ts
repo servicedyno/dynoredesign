@@ -613,7 +613,7 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
     }
     return resData;
   } catch (e) {
-    console.log("Tatum subscription error:", e.response?.data || e.message);
+    console.log("Tatum subscription error:", JSON.stringify(e.response?.data || e.message, null, 2));
     throw e;
   }
 };
