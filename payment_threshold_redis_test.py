@@ -213,7 +213,7 @@ class PaymentThresholdRedisTester:
                         self.log_result(
                             "Phase 2 - Below Threshold Fee Calculation", 
                             False, 
-                            f"Incorrect fee distribution - expected admin=3, merchant=0, got admin={admin_receives}, merchant={merchant_receives}",
+                            f"Incorrect fee distribution - expected admin=5, merchant=0, got admin={admin_receives}, merchant={merchant_receives}",
                             {"response": data}
                         )
                 else:
