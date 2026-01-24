@@ -5,14 +5,14 @@ const companyRouter = express.Router();
 
 companyRouter.post(
   "/addCompany",
-  uploadImage.single("image") as RequestHandler,
+  uploadImage.single("image") as unknown as RequestHandler,
   companyMiddleware,
   companyController.addCompany
 );
 
 companyRouter.put(
   "/updateCompany/:id",
-  uploadImage.single("image") as RequestHandler,
+  uploadImage.single("image") as unknown as RequestHandler,
   companyMiddleware,
   companyController.updateCompany
 );
