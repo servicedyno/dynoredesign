@@ -2808,7 +2808,7 @@ try {
     def run_comprehensive_verification_tests(self):
         """Run comprehensive verification tests as specified in review request"""
         print("=" * 80)
-        print("DYNOPAY PENDING PAYMENT NOTIFICATION SYSTEM TESTING")
+        print("DYNOPAY PAYMENT_PARTIAL NOTIFICATION SYSTEM TESTING")
         print("=" * 80)
         print(f"Backend URL: {self.backend_url}")
         print("Test Credentials: nomadly@moxx.co / Katiekendra123@")
@@ -2822,30 +2822,11 @@ try {
             print("\n❌ Backend connectivity failed. Cannot proceed with tests.")
             return False
         
-        # Phase 2: Authentication with Provided Credentials
+        # Phase 2: PAYMENT_PARTIAL Notification System Tests
         print("\n" + "="*50)
-        print("PHASE 2: AUTHENTICATION")
+        print("PHASE 2: PAYMENT_PARTIAL NOTIFICATION SYSTEM")
         print("="*50)
-        self.authenticate_with_provided_credentials()
-        
-        # Phase 3: Pending Payment Notification System Tests
-        print("\n" + "="*50)
-        print("PHASE 3: PENDING PAYMENT NOTIFICATION SYSTEM")
-        print("="*50)
-        self.test_notification_types_include_pending()
-        self.test_notification_preferences_include_pending()
-        
-        # Phase 4: Tatum Webhook End-to-End Testing
-        print("\n" + "="*50)
-        print("PHASE 4: TATUM WEBHOOK END-TO-END TESTING")
-        print("="*50)
-        self.test_tatum_webhook_end_to_end()
-        
-        # Phase 5: Email Template Structure Verification
-        print("\n" + "="*50)
-        print("PHASE 5: EMAIL TEMPLATE VERIFICATION")
-        print("="*50)
-        self.test_pending_payment_email_template_structure()
+        self.test_payment_partial_notification_system()
         
         # Print summary
         self.print_test_summary()
