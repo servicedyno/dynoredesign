@@ -23,11 +23,25 @@ router.get("/status", authMiddleware, kycController.getKYCStatus);
 router.get("/requirements", authMiddleware, kycController.getKYCRequirements);
 
 /**
+ * @route   GET /api/kyc/history
+ * @desc    Get KYC verification history for user
+ * @access  Private (requires JWT)
+ */
+router.get("/history", authMiddleware, kycController.getKYCHistory);
+
+/**
  * @route   POST /api/kyc/submit
  * @desc    Start KYC verification session with Veriff
  * @access  Private (requires JWT)
  */
 router.post("/submit", authMiddleware, kycController.startKYCVerification);
+
+/**
+ * @route   POST /api/kyc/resubmit
+ * @desc    Resubmit KYC verification after rejection/expiration
+ * @access  Private (requires JWT)
+ */
+router.post("/resubmit", authMiddleware, kycController.resubmitKYC);
 
 /**
  * @route   POST /api/kyc/webhook
