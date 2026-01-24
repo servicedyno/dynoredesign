@@ -14,10 +14,16 @@ statusRouter.get("/health", statusController.healthCheck);
 // GET /api/status/services - All services status
 statusRouter.get("/services", statusController.getServicesStatus);
 
+// GET /api/status/services/uptime - All services uptime history
+statusRouter.get("/services/uptime", statusController.getAllServicesUptime);
+
 // GET /api/status/service/:serviceId - Specific service status
 statusRouter.get("/service/:serviceId", statusController.getServiceStatus);
 
-// GET /api/status/uptime - 90-day uptime chart data
+// GET /api/status/service/:serviceId/uptime - Specific service uptime history
+statusRouter.get("/service/:serviceId/uptime", statusController.getServiceUptime);
+
+// GET /api/status/uptime - 90-day uptime chart data (overall system)
 statusRouter.get("/uptime", statusController.getUptimeChart);
 
 // GET /api/status/incidents - Recent incidents
