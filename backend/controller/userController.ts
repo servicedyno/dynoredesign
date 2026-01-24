@@ -717,6 +717,125 @@ const getProfile = async (req: express.Request, res: express.Response) => {
 };
 
 /**
+ * Update Profile (name, mobile, username)
+ * PUT /api/user/profile
+ * Allows updating basic profile fields without image
+ */
+const updateProfile = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { name, mobile, username } = req.body;
+    
+    // Build update object with only provided fields
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (mobile !== undefined) updateData.mobile = mobile;
+    if (username !== undefined) updateData.username = username;
+    
+    // Check if there's anything to update
+    if (Object.keys(updateData).length === 0) {
+      return errorResponseHelper(res, 400, "No fields to update");
+    }
+    
+    await userModel.update(updateData, {
+      where: { user_id: userData.user_id }
+    });
+    
+    // Get updated user data
+    const updatedUser = await userModel.findOne({
+      where: { user_id: userData.user_id },
+      attributes: { exclude: ['password', 'reset_token', 'reset_token_expiry'] }
+    });
+    
+    successResponseHelper(res, 200, "Profile updated successfully!", updatedUser);
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Update profile error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
+ * Change Email Address
+ * PUT /api/user/email
+ * Requires password confirmation for security
+ */
+const changeEmail = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { newEmail, password } = req.body;
+    
+    if (!newEmail || !password) {
+      return errorResponseHelper(res, 400, "Email and password are required");
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      return errorResponseHelper(res, 400, "Invalid email format");
+    }
+    
+    // Verify password
+    const hashedPassword = sha256(password).toString();
+    const user = await userModel.findOne({
+      where: {
+        user_id: userData.user_id,
+        password: hashedPassword
+      }
+    });
+    
+    if (!user) {
+      return errorResponseHelper(res, 401, "Invalid password");
+    }
+    
+    // Check if new email is already in use
+    const emailExists = await userModel.findOne({
+      where: {
+        email: newEmail.toLowerCase(),
+        user_id: { [Op.ne]: userData.user_id }
+      }
+    });
+    
+    if (emailExists) {
+      return errorResponseHelper(res, 400, "Email address already in use");
+    }
+    
+    // Update email
+    await userModel.update(
+      { email: newEmail.toLowerCase() },
+      { where: { user_id: userData.user_id } }
+    );
+    
+    // Send confirmation email to new address
+    try {
+      await mailTransporter.sendMail({
+        from: '"DynoPay" <no-reply@dynopay.com>',
+        to: newEmail,
+        subject: "Email Address Changed - DynoPay",
+        html: `
+          <h2>Email Address Updated</h2>
+          <p>Your DynoPay account email has been successfully changed to this address.</p>
+          <p>If you didn't make this change, please contact support immediately.</p>
+          <br>
+          <p>Best regards,<br>DynoPay Team</p>
+        `
+      });
+    } catch (emailError) {
+      userLogger.error("Failed to send email change confirmation", emailError);
+    }
+    
+    // Generate new token with updated email
+    const token = await getAccessToken(userData.user_id);
+    
+    successResponseHelper(res, 200, "Email updated successfully!", token);
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Change email error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
  * Delete User Account
  * DELETE /api/user/account
  * Requires password confirmation for security
