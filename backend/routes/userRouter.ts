@@ -21,6 +21,7 @@ userRouter.post("/google-signin", userController.googleSignIn);
 userRouter.get("/profile", authMiddleware, userController.getProfile);
 userRouter.put("/profile", authMiddleware, userController.updateProfile);
 userRouter.put("/email", authMiddleware, userController.changeEmail);
+userRouter.put("/phone", authMiddleware, userController.changePhone);
 
 userRouter.put(
   "/updateUser",
