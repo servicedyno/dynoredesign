@@ -452,14 +452,17 @@ checkTransactions();
             "Content-Type": "application/json"
         }
         
-        # Test 1: Create payment link with company_id=3
+        # Test 1: Create payment link with company_id=13 (user's company)
         try:
             payment_link_data = {
+                "email": "customer@test.com",
+                "amount": 100,
+                "modes": ["CRYPTO"],
                 "base_amount": 100,
                 "base_currency": "USD",
                 "description": "Multi-tenant test payment link",
                 "expire": "24h",
-                "company_id": 3,
+                "company_id": 13,  # Use the test user's company
                 "callback_url": "https://example.com/callback",
                 "redirect_url": "https://example.com/success",
                 "webhook_url": "https://example.com/webhook"
