@@ -836,6 +836,93 @@ const changeEmail = async (req: express.Request, res: express.Response) => {
 };
 
 /**
+ * Change Phone Number
+ * PUT /api/user/phone
+ * Requires password confirmation for security (since phone is used for SMS auth)
+ */
+const changePhone = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { newPhone, password } = req.body;
+    
+    if (!newPhone || !password) {
+      return errorResponseHelper(res, 400, "Phone number and password are required");
+    }
+    
+    // Validate phone format (basic - digits only, 10-15 chars)
+    const phoneRegex = /^\d{10,15}$/;
+    if (!phoneRegex.test(newPhone)) {
+      return errorResponseHelper(res, 400, "Invalid phone number format. Use digits only (10-15 digits)");
+    }
+    
+    // Verify password
+    const hashedPassword = sha256(password).toString();
+    const user = await userModel.findOne({
+      where: {
+        user_id: userData.user_id,
+        password: hashedPassword
+      }
+    });
+    
+    if (!user) {
+      return errorResponseHelper(res, 401, "Invalid password");
+    }
+    
+    // Check if new phone is already in use by another user
+    const phoneExists = await userModel.findOne({
+      where: {
+        mobile: newPhone,
+        user_id: { [Op.ne]: userData.user_id }
+      }
+    });
+    
+    if (phoneExists) {
+      return errorResponseHelper(res, 400, "Phone number already in use by another account");
+    }
+    
+    // Update phone number
+    await userModel.update(
+      { mobile: newPhone },
+      { where: { user_id: userData.user_id } }
+    );
+    
+    // Get updated user data
+    const updatedUser = await userModel.findOne({
+      where: { user_id: userData.user_id },
+      attributes: { exclude: ['password', 'reset_token', 'reset_token_expiry'] }
+    });
+    
+    // Optionally send SMS confirmation to new number
+    try {
+      await axios.post(
+        "https://api.telnyx.com/v2/messages",
+        {
+          from: process.env.TELNYX_PHONE_NUMBER,
+          to: "+" + newPhone,
+          text: `Your DynoPay phone number has been successfully updated to this number. If you didn't make this change, please contact support immediately.`
+        },
+        {
+          headers: {
+            Authorization: "Bearer " + (process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN),
+          },
+        }
+      );
+    } catch (smsError) {
+      // Log but don't fail the request if SMS fails
+      userLogger.error("Failed to send phone change confirmation SMS", smsError);
+    }
+    
+    userLogger.info(`Phone number updated for user ${userData.user_id}`);
+    
+    successResponseHelper(res, 200, "Phone number updated successfully!", updatedUser);
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Change phone error: ${errorMessage}`, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
  * Delete User Account
  * DELETE /api/user/account
  * Requires password confirmation for security
