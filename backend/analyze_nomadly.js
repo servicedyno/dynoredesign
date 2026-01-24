@@ -60,7 +60,7 @@ async function analyzeNomadly() {
     
     // Get API keys for this company
     const apis = await client.query(`
-      SELECT api_id, company_id, base_currency, api_name, created_date
+      SELECT api_id, company_id, base_currency, api_name, "createdAt"
       FROM tbl_api 
       WHERE company_id = 3
     `);
