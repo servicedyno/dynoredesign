@@ -696,27 +696,6 @@ export const sendSecurityAlertEmail = async (
   }
 };
 
-export default {
-  sendWelcomeEmail,
-  sendCompanyProfileCreatedEmail,
-  sendWalletOTPEmail,
-  sendWalletVerifiedEmail,
-  sendWalletUpdateOTPEmail,
-  sendPaymentReceivedEmail,
-  sendAddWalletReminderEmail,
-  sendEmailVerificationOTPEmail,
-  sendLoginOTPEmail,
-  sendForgotPasswordOTPEmail,
-  sendPasswordChangedEmail,
-  sendPaymentLinkCreatedEmail,
-  sendKYCRequiredEmail,
-  sendKYCApprovedEmail,
-  sendKYCRejectedEmail,
-  sendWeeklySummaryEmail,
-  sendSecurityAlertEmail,
-  sendInvoiceGeneratedEmail,
-};
-
 /**
  * Template 18: Invoice Generated Email
  * Trigger: Invoice created for transaction
@@ -767,4 +746,25 @@ export const sendInvoiceGeneratedEmail = async (
     console.error(`Failed to send invoice email to ${email}:`, error);
     throw error;
   }
+};
+
+export default {
+  sendWelcomeEmail,
+  sendCompanyProfileCreatedEmail,
+  sendWalletOTPEmail,
+  sendWalletVerifiedEmail,
+  sendWalletUpdateOTPEmail,
+  sendPaymentReceivedEmail,
+  sendAddWalletReminderEmail,
+  sendEmailVerificationOTPEmail,
+  sendLoginOTPEmail,
+  sendForgotPasswordOTPEmail,
+  sendPasswordChangedEmail,
+  sendPaymentLinkCreatedEmail,
+  sendKYCRequiredEmail,
+  sendKYCApprovedEmail,
+  sendKYCRejectedEmail,
+  sendWeeklySummaryEmail,
+  sendSecurityAlertEmail,
+  sendInvoiceGeneratedEmail,
 };
