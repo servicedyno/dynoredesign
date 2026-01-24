@@ -1,4 +1,4 @@
-import express from "express";
+import express, { RequestHandler } from "express";
 import { userController } from "../controller";
 import { authMiddleware, uploadImage, userMiddleware } from "../middleware";
 const userRouter = express.Router();
@@ -20,7 +20,7 @@ userRouter.post("/google-signin", userController.googleSignIn);
 userRouter.put(
   "/updateUser",
   authMiddleware,
-  uploadImage.single("image"),
+  uploadImage.single("image") as RequestHandler,
   userMiddleware,
   userController.updateUser
 );
