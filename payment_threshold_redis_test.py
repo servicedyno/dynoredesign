@@ -614,7 +614,7 @@ class PaymentThresholdRedisTester:
             # Simulate webhook for the test payment
             webhook_data = {
                 "address": "test-btc-001",
-                "amount": "3",
+                "amount": "5",  # Use "5" instead of "3"
                 "asset": "BTC",
                 "txId": "test-tx-btc-001"
             }
