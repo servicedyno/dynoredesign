@@ -84,6 +84,7 @@ const getData = async (req: express.Request, res: express.Response) => {
         ),
         payment_mode: item.pathType,
         allowedModes: item.allowedModes,
+        fee_payer: item.fee_payer || 'company',  // Include fee_payer for checkout
       };
     } else {
       payload = {
@@ -91,6 +92,7 @@ const getData = async (req: express.Request, res: express.Response) => {
         base_currency: item.base_currency,
         token: await getAccessToken(item.customer_id, data),
         payment_mode: item.pathType,
+        fee_payer: item.fee_payer || 'company',
       };
     }
 
