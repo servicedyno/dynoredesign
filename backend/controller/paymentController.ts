@@ -1105,7 +1105,6 @@ const Crypto = async (
       // Fallback: Use local address generation
       // Generate a deterministic address using wallet_id and last_index
       const WAValidator = require('wallet-address-validator');
-      const latestIndex = Number(walletDetails.last_index) + 1;
       
       // For now, use a mock address for testing
       // In production, implement proper local address generation
