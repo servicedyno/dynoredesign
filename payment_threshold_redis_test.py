@@ -343,7 +343,7 @@ class PaymentThresholdRedisTester:
                             "Correct threshold logic for below threshold amount",
                             {
                                 "blockchain": "ETH",
-                                "amount": 2,
+                                "amount": 5,
                                 "is_below_threshold": is_below_threshold,
                                 "admin_gets_all": admin_gets_all
                             }
