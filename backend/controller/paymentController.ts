@@ -41,6 +41,7 @@ import { paymentTypes } from "../utils/enums";
 import flw from "../apis/flutterwaveApi";
 import crypto from "crypto";
 import axios from "axios";
+import { autoGenerateInvoice } from "./invoiceController";
 
 import {
   userTempAddressModel,
