@@ -33,7 +33,7 @@ class DynoPayBackendTester:
         except Exception as e:
             print(f"Warning: Could not read frontend .env file: {e}")
         
-        # Fallback to localhost
+        # Fallback to localhost (use localhost for testing as external URL may not be accessible)
         return "http://localhost:8001"
         
     def log_result(self, test_name: str, success: bool, message: str, details: Dict = None):
