@@ -996,9 +996,9 @@ backend:
 
   - task: "Phase 12: VAT calculations for EU companies"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/controller/invoiceController.ts"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -1011,6 +1011,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL: VAT Rate Integration test failed. Database connection or tbl_tax_rate table access issues. VAT calculations cannot work properly without dynamic tax rates from database. Need to verify database connectivity and tax rate table structure."
+      - working: true
+        agent: "testing"
+        comment: "✅ FIXED: VAT Rate Integration now working correctly. Database connectivity verified and tbl_tax_rate table accessible. Dynamic VAT rates working: PT=23%, DE=19%, GB=20%, FR=20%, US=0%. All 5 VAT rates cached and available for invoice generation. VAT calculation logic properly integrates with database for accurate rates."
 
   - task: "Phase 12: Provider information (Dynotech Innovations, LDA)"
     implemented: true
