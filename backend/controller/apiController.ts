@@ -152,13 +152,12 @@ const addApi = async (req: express.Request, res: express.Response) => {
       test_mode_restrictions: testModeRestrictions,
     });
 
-        successResponseHelper(res, 200, "API generated successfully!", {
-          ...resData.dataValues,
-          ...company_data.dataValues,
-          permissions: apiPermissions,  // Return parsed permissions
-        });
-      }
-    }
+    successResponseHelper(res, 200, "API generated successfully!", {
+      ...resData.dataValues,
+      ...company_data.dataValues,
+      permissions: apiPermissions,
+      environment,
+    });
   } catch (e) {
     const message = getErrorMessage(e);
     apiLogger.error(
