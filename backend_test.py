@@ -22,6 +22,11 @@ class DynoPayBackendTester:
         
     def get_backend_url(self):
         """Get backend URL from frontend .env file"""
+        # Check if BACKEND_URL environment variable is set (for testing)
+        env_backend_url = os.environ.get('BACKEND_URL')
+        if env_backend_url:
+            return env_backend_url
+            
         try:
             with open('/app/frontend/.env', 'r') as f:
                 for line in f:
