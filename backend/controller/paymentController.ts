@@ -354,7 +354,7 @@ const createCryptoPayment = async (
       
       if (fee_payer === 'customer') {
         // Customer paid total including fees, calculate what merchant should receive
-        const baseAmountUSD = items.base_amount || 0;
+        const baseAmountUSD = items.base_amount || items.amount || 0;  // Handle both createLink and createPayment
         const chain = requestedCurrency.replace('-', '_').toUpperCase();
         
         try {
