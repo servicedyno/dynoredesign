@@ -2949,20 +2949,41 @@ const processIncompletePayments = async () => {
               throw new Error(`Merchant wallet not found for user ${tempTx.user_id}`);
             }
 
-            const { totalDeduction, minForwarding } = await calculateTransactionFees(
-              tempTx.wallet_type,
-              Number(tempTx.amount)
-            );
+            // Check fee_payer mode from temp address record
+            const fee_payer = tempTx.fee_payer || 'company';
+            const merchant_amount = tempTx.merchant_amount;
 
             let adminAmountToSend, userAmountToSend;
-            if (Number(tempTx.amount) < Number(minForwarding)) {
-              adminAmountToSend = Number(tempTx.amount);
-              userAmountToSend = 0;
-              console.log(`Amount ${tempTx.amount} below threshold. Sending all to admin.`);
+
+            if (fee_payer === 'customer' && merchant_amount > 0) {
+              // CUSTOMER PAYS FEES MODE - but partial payment, so prorate
+              // Customer only paid partial, so merchant gets proportional amount
+              const expectedTotal = Number(tempTx.amount) + (Number(tempTx.amount) - Number(merchant_amount));
+              const paidRatio = Number(tempTx.amount) / expectedTotal;
+              userAmountToSend = Number(merchant_amount) * paidRatio;
+              adminAmountToSend = Number(tempTx.amount) - userAmountToSend;
+              
+              if (adminAmountToSend < 0) {
+                adminAmountToSend = 0;
+                userAmountToSend = Number(tempTx.amount);
+              }
+              console.log(`[processIncompletePayments] Customer pays fees (incomplete): Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
             } else {
-              adminAmountToSend = Number(totalDeduction);
-              userAmountToSend = Number(tempTx.amount) - Number(totalDeduction);
-              console.log(`Splitting partial amount: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
+              // COMPANY PAYS FEES MODE (default)
+              const { totalDeduction, minForwarding } = await calculateTransactionFees(
+                tempTx.wallet_type,
+                Number(tempTx.amount)
+              );
+
+              if (Number(tempTx.amount) < Number(minForwarding)) {
+                adminAmountToSend = Number(tempTx.amount);
+                userAmountToSend = 0;
+                console.log(`Amount ${tempTx.amount} below threshold. Sending all to admin.`);
+              } else {
+                adminAmountToSend = Number(totalDeduction);
+                userAmountToSend = Number(tempTx.amount) - Number(totalDeduction);
+                console.log(`Splitting partial amount: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
+              }
             }
 
             const result = await settleCryptoTransaction({
