@@ -1160,6 +1160,8 @@ const deleteAccount = async (req: express.Request, res: express.Response) => {
 
 export default {
   registerUser,
+  registerPhoneStep1,
+  registerPhoneStep2,
   login,
   checkEmail,
   generateOTP,
