@@ -653,24 +653,20 @@ checkTransactions();
         print("\n--- Testing Company ID Database Schema ---")
         
         schema_check_script = '''
-const { Sequelize, QueryTypes } = require('sequelize');
+const { Client } = require('pg');
 require('dotenv').config();
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.USER_NAME,
-  process.env.PASSWORD,
-  {
-    host: process.env.HOST,
-    port: Number(process.env.DB_PORT),
-    dialect: "postgres",
-    logging: false
-  }
-);
+const client = new Client({
+  host: process.env.HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.USER_NAME,
+  password: process.env.PASSWORD,
+});
 
 async function checkCompanyIdSchema() {
   try {
-    await sequelize.authenticate();
+    await client.connect();
     
     // Tables that should have company_id column
     const tables_to_check = [
@@ -684,15 +680,14 @@ async function checkCompanyIdSchema() {
     
     for (const table of tables_to_check) {
       try {
-        const columns = await sequelize.query(
+        const columns = await client.query(
           `SELECT column_name, data_type, is_nullable, column_default
            FROM information_schema.columns 
-           WHERE table_name = '${table}' AND column_name = 'company_id'`,
-          { type: QueryTypes.SELECT }
+           WHERE table_name = '${table}' AND column_name = 'company_id'`
         );
         
         // Check for foreign key constraints
-        const constraints = await sequelize.query(
+        const constraints = await client.query(
           `SELECT tc.constraint_name, tc.constraint_type, kcu.column_name, 
                   ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name
            FROM information_schema.table_constraints AS tc 
@@ -701,14 +696,13 @@ async function checkCompanyIdSchema() {
            JOIN information_schema.constraint_column_usage AS ccu
              ON ccu.constraint_name = tc.constraint_name
            WHERE tc.table_name = '${table}' AND kcu.column_name = 'company_id'
-             AND tc.constraint_type = 'FOREIGN KEY'`,
-          { type: QueryTypes.SELECT }
+             AND tc.constraint_type = 'FOREIGN KEY'`
         );
         
         results[table] = {
-          has_company_id: columns.length > 0,
-          column_info: columns[0] || null,
-          foreign_key_constraints: constraints
+          has_company_id: columns.rows.length > 0,
+          column_info: columns.rows[0] || null,
+          foreign_key_constraints: constraints.rows
         };
       } catch (error) {
         results[table] = {
@@ -724,6 +718,8 @@ async function checkCompanyIdSchema() {
   } catch (error) {
     console.error('Schema check failed:', error.message);
     process.exit(1);
+  } finally {
+    await client.end();
   }
 }
 
