@@ -232,6 +232,160 @@ const options: swaggerJsdoc.Options = {
             data: { type: "object" },
           },
         },
+        // Status Page Schemas
+        ServiceStatus: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "api_gateway" },
+            name: { type: "string", example: "API Gateway" },
+            status: { type: "string", enum: ["operational", "degraded", "outage"] },
+            uptime: { type: "string", example: "99.99" },
+            latency: { type: "integer", example: 45 },
+            last_check: { type: "string", format: "date-time" },
+          },
+        },
+        ServiceDetailedStatus: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            status: { type: "string", enum: ["operational", "degraded", "outage", "unknown"] },
+            uptime: { type: "string", example: "99.99%" },
+            uptime_value: { type: "number", example: 99.99 },
+            latency_ms: { type: "integer" },
+            total_checks: { type: "integer" },
+            failed_checks: { type: "integer" },
+            last_check: { type: "string", format: "date-time" },
+          },
+        },
+        ServiceHealthResult: {
+          type: "object",
+          properties: {
+            service_id: { type: "string" },
+            service_name: { type: "string" },
+            status: { type: "string", enum: ["operational", "degraded", "outage"] },
+            latency_ms: { type: "integer" },
+            last_check: { type: "string", format: "date-time" },
+          },
+        },
+        ServiceUptimeHistory: {
+          type: "object",
+          properties: {
+            service_id: { type: "string" },
+            service_name: { type: "string" },
+            period_days: { type: "integer" },
+            uptime_percentage: { type: "string" },
+            total_checks: { type: "integer" },
+            summary: {
+              type: "object",
+              properties: {
+                operational_days: { type: "integer" },
+                degraded_days: { type: "integer" },
+                outage_days: { type: "integer" },
+                no_data_days: { type: "integer" },
+              },
+            },
+            daily_status: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  date: { type: "string", format: "date" },
+                  status: { type: "string", enum: ["operational", "degraded", "outage", "no_data"] },
+                  checks: { type: "integer" },
+                  avg_latency: { type: "integer" },
+                },
+              },
+            },
+          },
+        },
+        Incident: {
+          type: "object",
+          properties: {
+            id: { type: "integer" },
+            title: { type: "string" },
+            description: { type: "string" },
+            status: { type: "string", enum: ["resolved", "investigating", "identified", "monitoring"] },
+            date: { type: "string", format: "date" },
+            formatted_date: { type: "string" },
+            services_affected: { type: "array", items: { type: "string" } },
+          },
+        },
+        // Invoice Schemas
+        Invoice: {
+          type: "object",
+          properties: {
+            invoice_id: { type: "string" },
+            invoice_number: { type: "string", example: "INV-2026-0001" },
+            transaction_id: { type: "string" },
+            company_id: { type: "integer" },
+            customer_email: { type: "string" },
+            customer_name: { type: "string" },
+            subtotal: { type: "number" },
+            fee_amount: { type: "number" },
+            fee_percentage: { type: "number" },
+            vat_rate: { type: "number" },
+            vat_amount: { type: "number" },
+            total_amount: { type: "number" },
+            currency: { type: "string" },
+            status: { type: "string", enum: ["draft", "sent", "paid", "cancelled"] },
+            created_at: { type: "string", format: "date-time" },
+          },
+        },
+        // Transaction Schema
+        Transaction: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            transaction_reference: { type: "string" },
+            base_amount: { type: "number" },
+            base_currency: { type: "string" },
+            crypto_amount: { type: "number" },
+            crypto_currency: { type: "string" },
+            status: { type: "string", enum: ["pending", "done", "failed", "expired"] },
+            payment_mode: { type: "string" },
+            customer_email: { type: "string" },
+            created_at: { type: "string", format: "date-time" },
+          },
+        },
+        // Payment Link Schema
+        PaymentLink: {
+          type: "object",
+          properties: {
+            link_id: { type: "integer" },
+            payment_link: { type: "string", format: "uri" },
+            email: { type: "string" },
+            base_amount: { type: "number" },
+            base_currency: { type: "string" },
+            description: { type: "string" },
+            status: { type: "string", enum: ["pending", "paid", "expired"] },
+            fee_payer: { type: "string", enum: ["customer", "company"] },
+            expires_at: { type: "string", format: "date-time" },
+            created_at: { type: "string", format: "date-time" },
+          },
+        },
+        // KYC Schema
+        KYCStatus: {
+          type: "object",
+          properties: {
+            kyc_id: { type: "integer" },
+            status: { type: "string", enum: ["not_started", "pending", "approved", "rejected"] },
+            document_type: { type: "string" },
+            submitted_at: { type: "string", format: "date-time" },
+            reviewed_at: { type: "string", format: "date-time" },
+            rejection_reason: { type: "string" },
+          },
+        },
+        // Pagination Schema
+        Pagination: {
+          type: "object",
+          properties: {
+            total: { type: "integer" },
+            page: { type: "integer" },
+            limit: { type: "integer" },
+            totalPages: { type: "integer" },
+          },
+        },
       },
     },
     tags: [
