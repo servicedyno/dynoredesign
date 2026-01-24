@@ -286,8 +286,85 @@ const getServiceStatus = async (req: express.Request, res: express.Response) => 
 };
 
 /**
+ * GET /api/status/service/:serviceId/uptime
+ * Get uptime history for a specific service
+ */
+const getServiceUptime = async (req: express.Request, res: express.Response) => {
+  try {
+    const { serviceId } = req.params;
+    const days = parseInt(req.query.days as string) || 90;
+    
+    const service = SERVICES.find(s => s.id === serviceId);
+
+    if (!service) {
+      return errorResponseHelper(res, 404, "Service not found");
+    }
+
+    const uptimeData = generateServiceUptime(serviceId, days);
+    
+    // Calculate summary stats
+    const operational = uptimeData.filter(d => d.status === "operational").length;
+    const degraded = uptimeData.filter(d => d.status === "degraded").length;
+    const outage = uptimeData.filter(d => d.status === "outage").length;
+    
+    const response = {
+      service_id: service.id,
+      service_name: service.name,
+      period_days: days,
+      uptime_percentage: ((operational / days) * 100).toFixed(2),
+      summary: {
+        operational_days: operational,
+        degraded_days: degraded,
+        outage_days: outage
+      },
+      daily_status: uptimeData
+    };
+
+    successResponseHelper(res, 200, "Service uptime data retrieved", response);
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
+ * GET /api/status/services/uptime
+ * Get uptime history for ALL services
+ */
+const getAllServicesUptime = async (req: express.Request, res: express.Response) => {
+  try {
+    const days = parseInt(req.query.days as string) || 90;
+    
+    const servicesUptime = SERVICES.map(service => {
+      const uptimeData = generateServiceUptime(service.id, days);
+      const operational = uptimeData.filter(d => d.status === "operational").length;
+      const degraded = uptimeData.filter(d => d.status === "degraded").length;
+      const outage = uptimeData.filter(d => d.status === "outage").length;
+      
+      return {
+        service_id: service.id,
+        service_name: service.name,
+        period_days: days,
+        uptime_percentage: ((operational / days) * 100).toFixed(2),
+        summary: {
+          operational_days: operational,
+          degraded_days: degraded,
+          outage_days: outage
+        },
+        daily_status: uptimeData
+      };
+    });
+
+    successResponseHelper(res, 200, "All services uptime data retrieved", { services: servicesUptime });
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
  * GET /api/status/uptime
- * Get 90-day uptime data for chart visualization
+ * Get 90-day uptime data for chart visualization (overall system)
  */
 const getUptimeChart = async (req: express.Request, res: express.Response) => {
   try {
