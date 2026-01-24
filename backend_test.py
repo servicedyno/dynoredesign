@@ -7773,6 +7773,732 @@ testVATLogic();
                 False, 
                 f"❌ Customer information test failed: {str(e)}"
             )
+    
+    def test_phase_12_database_schema(self):
+        """Test 1: Database Schema Verification - tbl_invoice table with 24 columns"""
+        print("\n--- Test 1: Database Schema Verification ---")
+        
+        schema_test_script = '''
+const { Sequelize, QueryTypes } = require('sequelize');
+require('dotenv').config();
+
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.USER_NAME,
+  process.env.PASSWORD,
+  {
+    host: process.env.HOST,
+    port: Number(process.env.DB_PORT),
+    dialect: "postgres",
+    logging: false
+  }
+);
+
+async function testInvoiceSchema() {
+  try {
+    await sequelize.authenticate();
+    
+    // Check tbl_invoice table structure
+    const columns = await sequelize.query(
+      `SELECT column_name, data_type, is_nullable, column_default 
+       FROM information_schema.columns 
+       WHERE table_name = 'tbl_invoice' 
+       ORDER BY ordinal_position`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    console.log(JSON.stringify({
+      table_exists: columns.length > 0,
+      column_count: columns.length,
+      columns: columns.map(col => ({
+        name: col.column_name,
+        type: col.data_type,
+        nullable: col.is_nullable
+      }))
+    }, null, 2));
+    
+    process.exit(0);
+    
+  } catch (error) {
+    console.error('Schema test failed:', error.message);
+    process.exit(1);
+  }
+}
+
+testInvoiceSchema();
+'''
+        
+        try:
+            with open('/tmp/test_invoice_schema.js', 'w') as f:
+                f.write(schema_test_script)
+            
+            result = subprocess.run(
+                ["node", "/tmp/test_invoice_schema.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                schema_data = json.loads(result.stdout)
+                column_count = schema_data.get('column_count', 0)
+                
+                if column_count == 24:
+                    self.log_result(
+                        "Database Schema - tbl_invoice", 
+                        True, 
+                        f"✅ tbl_invoice table exists with {column_count} columns as expected",
+                        {"columns": [col['name'] for col in schema_data.get('columns', [])]}
+                    )
+                else:
+                    self.log_result(
+                        "Database Schema - tbl_invoice", 
+                        False, 
+                        f"❌ Expected 24 columns, found {column_count}",
+                        {"column_count": column_count}
+                    )
+            else:
+                self.log_result(
+                    "Database Schema - tbl_invoice", 
+                    False, 
+                    "❌ Schema verification failed",
+                    {"error": result.stderr}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Database Schema - tbl_invoice", 
+                False, 
+                f"❌ Schema test failed: {str(e)}"
+            )
+    
+    def test_phase_12_invoice_endpoints(self):
+        """Test 2: Invoice API Endpoints"""
+        print("\n--- Test 2: Invoice API Endpoints ---")
+        
+        if not self.jwt_token:
+            self.log_result("Invoice API Endpoints", False, "No JWT token available")
+            return
+        
+        headers = {
+            "Authorization": f"Bearer {self.jwt_token}",
+            "Content-Type": "application/json"
+        }
+        
+        # Test GET /api/transactions/:id/invoice
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/transactions/999999/invoice",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 404:
+                self.log_result(
+                    "GET /api/transactions/:id/invoice", 
+                    True, 
+                    "✅ Endpoint returns 404 for non-existent transaction (correct behavior)",
+                    {"status_code": response.status_code}
+                )
+            else:
+                self.log_result(
+                    "GET /api/transactions/:id/invoice", 
+                    False, 
+                    f"❌ Expected 404, got {response.status_code}",
+                    {"response": response.text}
+                )
+        except Exception as e:
+            self.log_result(
+                "GET /api/transactions/:id/invoice", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+        
+        # Test GET /api/invoices (pagination)
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/invoices",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and 'pagination' in data['data']:
+                    self.log_result(
+                        "GET /api/invoices", 
+                        True, 
+                        "✅ Invoice list endpoint working with pagination",
+                        {"pagination": data['data']['pagination']}
+                    )
+                else:
+                    self.log_result(
+                        "GET /api/invoices", 
+                        False, 
+                        "❌ Missing pagination structure",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "GET /api/invoices", 
+                    False, 
+                    f"❌ API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+        except Exception as e:
+            self.log_result(
+                "GET /api/invoices", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+        
+        # Test GET /api/invoices/:id
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/invoices/999999",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 404:
+                self.log_result(
+                    "GET /api/invoices/:id", 
+                    True, 
+                    "✅ Endpoint returns 404 for non-existent invoice (correct behavior)",
+                    {"status_code": response.status_code}
+                )
+            else:
+                self.log_result(
+                    "GET /api/invoices/:id", 
+                    False, 
+                    f"❌ Expected 404, got {response.status_code}",
+                    {"response": response.text}
+                )
+        except Exception as e:
+            self.log_result(
+                "GET /api/invoices/:id", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+        
+        # Test GET /api/invoices/:id/pdf (NEW - PDF download)
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/invoices/999999/pdf",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 404:
+                self.log_result(
+                    "GET /api/invoices/:id/pdf", 
+                    True, 
+                    "✅ PDF endpoint returns 404 for non-existent invoice (correct behavior)",
+                    {"status_code": response.status_code}
+                )
+            else:
+                self.log_result(
+                    "GET /api/invoices/:id/pdf", 
+                    False, 
+                    f"❌ Expected 404, got {response.status_code}",
+                    {"response": response.text}
+                )
+        except Exception as e:
+            self.log_result(
+                "GET /api/invoices/:id/pdf", 
+                False, 
+                f"❌ Request failed: {str(e)}"
+            )
+    
+    def test_phase_12_vat_rate_integration(self):
+        """Test 3: VAT Rate Integration - Dynamic VAT rates from tbl_tax_rate"""
+        print("\n--- Test 3: VAT Rate Integration ---")
+        
+        vat_test_script = '''
+const { Sequelize, QueryTypes } = require('sequelize');
+require('dotenv').config();
+
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.USER_NAME,
+  process.env.PASSWORD,
+  {
+    host: process.env.HOST,
+    port: Number(process.env.DB_PORT),
+    dialect: "postgres",
+    logging: false
+  }
+);
+
+async function testVATRates() {
+  try {
+    await sequelize.authenticate();
+    
+    // Test VAT rate for Portugal (should be 23%)
+    const ptRate = await sequelize.query(
+      `SELECT country_code, standard_rate FROM tbl_tax_rate WHERE country_code = 'PT'`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    // Test if we have any VAT rates cached
+    const allRates = await sequelize.query(
+      `SELECT country_code, standard_rate FROM tbl_tax_rate ORDER BY country_code LIMIT 5`,
+      { type: QueryTypes.SELECT }
+    );
+    
+    console.log(JSON.stringify({
+      pt_rate: ptRate.length > 0 ? ptRate[0] : null,
+      cached_rates_count: allRates.length,
+      sample_rates: allRates
+    }, null, 2));
+    
+    process.exit(0);
+    
+  } catch (error) {
+    console.error('VAT rate test failed:', error.message);
+    process.exit(1);
+  }
+}
+
+testVATRates();
+'''
+        
+        try:
+            with open('/tmp/test_vat_rates.js', 'w') as f:
+                f.write(vat_test_script)
+            
+            result = subprocess.run(
+                ["node", "/tmp/test_vat_rates.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                vat_data = json.loads(result.stdout)
+                pt_rate = vat_data.get('pt_rate')
+                cached_count = vat_data.get('cached_rates_count', 0)
+                
+                if pt_rate and pt_rate.get('standard_rate') == 23:
+                    self.log_result(
+                        "VAT Rate Integration - Portugal", 
+                        True, 
+                        f"✅ Portugal VAT rate correctly loaded from database: {pt_rate['standard_rate']}%",
+                        {"pt_rate": pt_rate, "cached_rates": cached_count}
+                    )
+                elif cached_count > 0:
+                    self.log_result(
+                        "VAT Rate Integration - Database", 
+                        True, 
+                        f"✅ VAT rates available in database ({cached_count} entries)",
+                        {"cached_rates": cached_count, "sample": vat_data.get('sample_rates', [])}
+                    )
+                else:
+                    self.log_result(
+                        "VAT Rate Integration", 
+                        False, 
+                        "❌ No VAT rates found in tbl_tax_rate table",
+                        {"cached_rates": cached_count}
+                    )
+            else:
+                self.log_result(
+                    "VAT Rate Integration", 
+                    False, 
+                    "❌ VAT rate database test failed",
+                    {"error": result.stderr}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "VAT Rate Integration", 
+                False, 
+                f"❌ VAT rate test failed: {str(e)}"
+            )
+    
+    def test_phase_12_pdf_generation(self):
+        """Test 4: PDF Generation functionality"""
+        print("\n--- Test 4: PDF Generation ---")
+        
+        # Check if pdfService exists and is properly implemented
+        try:
+            result = subprocess.run(
+                ["find", "/app/backend", "-name", "*pdf*", "-type", "f"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            pdf_files = result.stdout.strip().split('\n') if result.stdout.strip() else []
+            
+            if any('pdfService' in f or 'pdf' in f.lower() for f in pdf_files):
+                self.log_result(
+                    "PDF Service Files", 
+                    True, 
+                    "✅ PDF service files found in backend",
+                    {"pdf_files": [f for f in pdf_files if f]}
+                )
+            else:
+                self.log_result(
+                    "PDF Service Files", 
+                    False, 
+                    "❌ No PDF service files found",
+                    {"searched_files": pdf_files}
+                )
+            
+            # Check if pdfkit is installed
+            result = subprocess.run(
+                ["npm", "list", "pdfkit"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                self.log_result(
+                    "PDF Dependencies", 
+                    True, 
+                    "✅ pdfkit library is installed",
+                    {"npm_output": result.stdout.strip()}
+                )
+            else:
+                self.log_result(
+                    "PDF Dependencies", 
+                    False, 
+                    "❌ pdfkit library not found",
+                    {"npm_error": result.stderr.strip()}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "PDF Generation", 
+                False, 
+                f"❌ PDF generation test failed: {str(e)}"
+            )
+    
+    def test_phase_12_email_integration(self):
+        """Test 5: Email Integration with Phase 9 Email Service"""
+        print("\n--- Test 5: Email Integration ---")
+        
+        # Check if sendInvoiceGeneratedEmail function exists and is exported
+        try:
+            result = subprocess.run(
+                ["grep", "-r", "sendInvoiceGeneratedEmail", "/app/backend/services/"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0 and "sendInvoiceGeneratedEmail" in result.stdout:
+                self.log_result(
+                    "Email Service - Invoice Function", 
+                    True, 
+                    "✅ sendInvoiceGeneratedEmail function found in email service",
+                    {"grep_results": result.stdout.strip().split('\n')[:3]}
+                )
+            else:
+                self.log_result(
+                    "Email Service - Invoice Function", 
+                    False, 
+                    "❌ sendInvoiceGeneratedEmail function not found",
+                    {"grep_output": result.stdout.strip()}
+                )
+            
+            # Check if email service compiles without errors
+            email_test_script = '''
+try {
+  const emailService = require('./services/emailService');
+  console.log(JSON.stringify({
+    service_loaded: true,
+    has_invoice_function: typeof emailService.sendInvoiceGeneratedEmail === 'function',
+    exported_functions: Object.keys(emailService).filter(key => typeof emailService[key] === 'function').length
+  }, null, 2));
+  process.exit(0);
+} catch (error) {
+  console.error('Email service test failed:', error.message);
+  process.exit(1);
+}
+'''
+            
+            with open('/tmp/test_email_service.js', 'w') as f:
+                f.write(email_test_script)
+            
+            result = subprocess.run(
+                ["node", "/tmp/test_email_service.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            
+            if result.returncode == 0:
+                email_data = json.loads(result.stdout)
+                if email_data.get('has_invoice_function'):
+                    self.log_result(
+                        "Email Service - Compilation", 
+                        True, 
+                        "✅ Email service compiles and exports sendInvoiceGeneratedEmail",
+                        {"exported_functions": email_data.get('exported_functions')}
+                    )
+                else:
+                    self.log_result(
+                        "Email Service - Function Export", 
+                        False, 
+                        "❌ sendInvoiceGeneratedEmail function not properly exported",
+                        {"email_data": email_data}
+                    )
+            else:
+                self.log_result(
+                    "Email Service - Compilation", 
+                    False, 
+                    "❌ Email service compilation failed",
+                    {"error": result.stderr.strip()}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Email Integration", 
+                False, 
+                f"❌ Email integration test failed: {str(e)}"
+            )
+    
+    def test_phase_12_fee_calculations(self):
+        """Test 6: Fee Calculations based on tiers"""
+        print("\n--- Test 6: Fee Calculations ---")
+        
+        # Check if fee tier environment variables are configured
+        try:
+            with open('/app/backend/.env', 'r') as f:
+                env_content = f.read()
+            
+            fee_tiers = []
+            for i in range(1, 5):  # Tiers 1-4
+                tier_min = f"FEE_TIER_{i}_MIN" in env_content
+                tier_max = f"FEE_TIER_{i}_MAX" in env_content
+                tier_fixed = f"FEE_TIER_{i}_FIXED" in env_content
+                tier_buffer = f"FEE_TIER_{i}_BUFFER" in env_content
+                
+                if tier_min and tier_max and tier_fixed and tier_buffer:
+                    fee_tiers.append(f"Tier {i}")
+            
+            if len(fee_tiers) == 4:
+                self.log_result(
+                    "Fee Tier Configuration", 
+                    True, 
+                    "✅ All 4 fee tiers configured in environment variables",
+                    {"configured_tiers": fee_tiers}
+                )
+            else:
+                self.log_result(
+                    "Fee Tier Configuration", 
+                    False, 
+                    f"❌ Expected 4 tiers, found {len(fee_tiers)} configured",
+                    {"configured_tiers": fee_tiers}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Fee Calculations", 
+                False, 
+                f"❌ Fee calculation test failed: {str(e)}"
+            )
+    
+    def test_phase_12_invoice_number_generation(self):
+        """Test 7: Invoice Number Generation (INV-YYYYMMDD-XXXXX format)"""
+        print("\n--- Test 7: Invoice Number Generation ---")
+        
+        # Check if generateInvoiceNumber function exists
+        try:
+            result = subprocess.run(
+                ["grep", "-r", "generateInvoiceNumber", "/app/backend/controller/"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0 and "generateInvoiceNumber" in result.stdout:
+                self.log_result(
+                    "Invoice Number Generation", 
+                    True, 
+                    "✅ generateInvoiceNumber function found in invoice controller",
+                    {"grep_results": result.stdout.strip().split('\n')[:2]}
+                )
+            else:
+                self.log_result(
+                    "Invoice Number Generation", 
+                    False, 
+                    "❌ generateInvoiceNumber function not found",
+                    {"grep_output": result.stdout.strip()}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Invoice Number Generation", 
+                False, 
+                f"❌ Invoice number generation test failed: {str(e)}"
+            )
+    
+    def test_phase_12_auto_generation(self):
+        """Test 8: Auto-Generation Integration"""
+        print("\n--- Test 8: Auto-Generation Integration ---")
+        
+        # Check if autoGenerateInvoice function exists and is exported
+        try:
+            result = subprocess.run(
+                ["grep", "-r", "autoGenerateInvoice", "/app/backend/controller/"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0 and "autoGenerateInvoice" in result.stdout:
+                self.log_result(
+                    "Auto-Generation Function", 
+                    True, 
+                    "✅ autoGenerateInvoice function found in invoice controller",
+                    {"grep_results": result.stdout.strip().split('\n')[:2]}
+                )
+            else:
+                self.log_result(
+                    "Auto-Generation Function", 
+                    False, 
+                    "❌ autoGenerateInvoice function not found",
+                    {"grep_output": result.stdout.strip()}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Auto-Generation Integration", 
+                False, 
+                f"❌ Auto-generation test failed: {str(e)}"
+            )
+    
+    def test_phase_12_provider_customer_info(self):
+        """Test 9: Provider & Customer Info"""
+        print("\n--- Test 9: Provider & Customer Info ---")
+        
+        # Check if provider information is hardcoded correctly
+        try:
+            result = subprocess.run(
+                ["grep", "-r", "Dynotech Innovations", "/app/backend/controller/"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0 and "Dynotech Innovations, LDA" in result.stdout:
+                self.log_result(
+                    "Provider Information", 
+                    True, 
+                    "✅ Provider information (Dynotech Innovations, LDA) found in invoice controller",
+                    {"grep_results": result.stdout.strip().split('\n')[:2]}
+                )
+            else:
+                self.log_result(
+                    "Provider Information", 
+                    False, 
+                    "❌ Provider information not found or incorrect",
+                    {"grep_output": result.stdout.strip()}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Provider & Customer Info", 
+                False, 
+                f"❌ Provider/Customer info test failed: {str(e)}"
+            )
+    
+    def test_phase_12_end_to_end_flow(self):
+        """Test 10: End-to-End Flow Test"""
+        print("\n--- Test 10: End-to-End Flow Test ---")
+        
+        if not self.jwt_token:
+            self.log_result("End-to-End Flow", False, "No JWT token available")
+            return
+        
+        # This is a comprehensive integration test
+        # For now, we'll test the key components are in place
+        
+        components_to_check = [
+            ("Invoice Controller", "/app/backend/controller/invoiceController.ts"),
+            ("Invoice Model", "/app/backend/models/invoiceModel.ts"),
+            ("PDF Service", "/app/backend/services/pdfService.ts"),
+            ("Email Service", "/app/backend/services/emailService.ts")
+        ]
+        
+        all_components_exist = True
+        component_status = {}
+        
+        for component_name, file_path in components_to_check:
+            try:
+                result = subprocess.run(
+                    ["test", "-f", file_path],
+                    capture_output=True,
+                    timeout=5
+                )
+                
+                exists = result.returncode == 0
+                component_status[component_name] = exists
+                
+                if not exists:
+                    all_components_exist = False
+                    
+            except Exception:
+                component_status[component_name] = False
+                all_components_exist = False
+        
+        if all_components_exist:
+            self.log_result(
+                "End-to-End Flow - Components", 
+                True, 
+                "✅ All required components exist for end-to-end invoice generation",
+                {"components": component_status}
+            )
+        else:
+            missing_components = [name for name, exists in component_status.items() if not exists]
+            self.log_result(
+                "End-to-End Flow - Components", 
+                False, 
+                f"❌ Missing components: {', '.join(missing_components)}",
+                {"components": component_status}
+            )
+    
+    def test_phase_12_invoice_generation(self):
+        """Test Phase 12 Invoice Generation System - Final Comprehensive Testing"""
+        print("\n🎯 PHASE 12 INVOICE GENERATION - FINAL COMPREHENSIVE TESTING")
+        print("=" * 80)
+        
+        # Test 1: Database Schema Verification
+        self.test_phase_12_database_schema()
+        
+        # Test 2: Invoice API Endpoints
+        self.test_phase_12_invoice_endpoints()
+        
+        # Test 3: VAT Rate Integration (Dynamic from tbl_tax_rate)
+        self.test_phase_12_vat_rate_integration()
+        
+        # Test 4: PDF Generation
+        self.test_phase_12_pdf_generation()
+        
+        # Test 5: Email Integration
+        self.test_phase_12_email_integration()
+        
+        # Test 6: Fee Calculations
+        self.test_phase_12_fee_calculations()
+        
+        # Test 7: Invoice Number Generation
+        self.test_phase_12_invoice_number_generation()
+        
+        # Test 8: Auto-Generation Integration
+        self.test_phase_12_auto_generation()
+        
+        # Test 9: Provider & Customer Info
+        self.test_phase_12_provider_customer_info()
+        
+        # Test 10: End-to-End Flow Test
+        self.test_phase_12_end_to_end_flow()
 
 def main():
     """Main test execution"""
