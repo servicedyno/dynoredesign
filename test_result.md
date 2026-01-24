@@ -1084,6 +1084,21 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: Both payment_pending and payment_confirming notification types are available in GET /api/notifications/types endpoint. Authentication working correctly with provided credentials."
 
+  - task: "Complete Payment Notification Flow End-to-End Testing"
+    implemented: true
+    working: true
+    file: "/app/payment_notification_test.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Complete payment notification flow testing as requested in review - test credentials nomadly@moxx.co, webhook scenarios, notification retrieval"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Complete payment notification flow testing successful! All 12 tests passed (100% success rate). ✅ Authentication with nomadly@moxx.co working correctly. ✅ All required notification types found (payment_pending, payment_received, payment_partial). ✅ Both webhook endpoints responding correctly (POST /api/tatum-crypto-webhook, POST /api/tatum-webhook). ✅ Notification retrieval endpoints working for all payment types. ✅ Full payment and partial payment webhook scenarios processed successfully. ✅ Crypto verification endpoint exists and responds appropriately. The payment notification infrastructure is fully functional and ready for production use."
+
   - task: "Pending Payment Notification System - Notification Preferences"
     implemented: true
     working: false
