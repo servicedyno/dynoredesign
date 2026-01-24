@@ -1,18 +1,18 @@
-import express from "express";
+import express, { RequestHandler } from "express";
 import { companyController } from "../controller";
 import { companyMiddleware, uploadImage } from "../middleware";
 const companyRouter = express.Router();
 
 companyRouter.post(
   "/addCompany",
-  uploadImage.single("image"),
+  uploadImage.single("image") as RequestHandler,
   companyMiddleware,
   companyController.addCompany
 );
 
 companyRouter.put(
   "/updateCompany/:id",
-  uploadImage.single("image"),
+  uploadImage.single("image") as RequestHandler,
   companyMiddleware,
   companyController.updateCompany
 );
