@@ -1533,12 +1533,16 @@ verifyCacheData();
                                 {"payment_pending": payment_pending_value, "is_default": preferences.get('is_default', False)}
                             )
                     else:
+                        # Check if this is a database migration issue
                         self.log_result(
                             "Notification Preferences - Payment Pending", 
                             False, 
-                            "❌ payment_pending preference not found",
-                            {"available_preferences": list(preferences.keys())}
+                            "❌ payment_pending preference not found - may need database migration",
+                            {"available_preferences": list(preferences.keys()), "note": "The payment_pending field is defined in the model but not returned by API"}
                         )
+                        
+                        # Additional check - verify the model has the field
+                        self.check_notification_preferences_model()
                 else:
                     self.log_result(
                         "Notification Preferences - Payment Pending", 
@@ -1559,6 +1563,91 @@ verifyCacheData();
                 "Notification Preferences - Payment Pending", 
                 False, 
                 f"❌ Request failed: {str(e)}"
+            )
+    
+    def check_notification_preferences_model(self):
+        """Check if payment_pending field is defined in the notification preferences model"""
+        print("\n--- Checking Notification Preferences Model ---")
+        
+        model_check_script = '''
+const fs = require('fs');
+const path = require('path');
+
+try {
+    const modelPath = path.join(__dirname, 'models', 'notificationPreferencesModel.ts');
+    
+    if (fs.existsSync(modelPath)) {
+        const modelContent = fs.readFileSync(modelPath, 'utf8');
+        
+        // Check if payment_pending field is defined
+        const hasPaymentPending = modelContent.includes('payment_pending');
+        const hasDefaultTrue = modelContent.includes('payment_pending') && modelContent.includes('defaultValue: true');
+        
+        console.log(JSON.stringify({
+            model_exists: true,
+            has_payment_pending_field: hasPaymentPending,
+            has_default_true: hasDefaultTrue,
+            suggestion: hasPaymentPending ? "Field exists in model - database migration may be needed" : "Field missing from model"
+        }, null, 2));
+        
+    } else {
+        console.log(JSON.stringify({
+            model_exists: false,
+            error: 'notificationPreferencesModel.ts not found'
+        }, null, 2));
+    }
+    
+    process.exit(0);
+    
+} catch (error) {
+    console.error('Model check failed:', error.message);
+    process.exit(1);
+}
+'''
+        
+        try:
+            with open('/tmp/check_preferences_model.js', 'w') as f:
+                f.write(model_check_script)
+            
+            result = subprocess.run(
+                ["node", "/tmp/check_preferences_model.js"],
+                cwd="/app/backend",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                try:
+                    model_data = json.loads(result.stdout)
+                    
+                    if model_data.get('has_payment_pending_field', False):
+                        self.log_result(
+                            "Notification Preferences Model Check", 
+                            True, 
+                            f"✅ payment_pending field is defined in model with defaultValue: true",
+                            {"suggestion": model_data.get('suggestion', '')}
+                        )
+                    else:
+                        self.log_result(
+                            "Notification Preferences Model Check", 
+                            False, 
+                            "❌ payment_pending field not found in model",
+                            {"suggestion": model_data.get('suggestion', '')}
+                        )
+                        
+                except json.JSONDecodeError:
+                    self.log_result(
+                        "Notification Preferences Model Check", 
+                        False, 
+                        "❌ Failed to parse model check results"
+                    )
+                    
+        except Exception as e:
+            self.log_result(
+                "Notification Preferences Model Check", 
+                False, 
+                f"❌ Model check failed: {str(e)}"
             )
     
     def test_tatum_webhook_endpoints(self):
