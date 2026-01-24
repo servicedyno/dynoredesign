@@ -2889,6 +2889,124 @@ const processIncompletePayments = async () => {
 };
 
 
+/**
+ * GET /api/payment/network-fees
+ * Public endpoint - Get real-time blockchain network fees
+ */
+const getNetworkFees = async (req: express.Request, res: express.Response) => {
+  try {
+    const { chain } = req.query;
+
+    if (chain) {
+      const fee = await getBlockchainNetworkFee(chain as string);
+      successResponseHelper(res, 200, "Network fee retrieved", fee);
+    } else {
+      const fees = await getAllBlockchainFees();
+      successResponseHelper(res, 200, "Network fees retrieved", fees);
+    }
+  } catch (e) {
+    const message = getErrorMessage(e);
+    console.error("[getNetworkFees] Error:", message);
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * POST /api/payment/calculate-payment
+ * Public endpoint - Calculate total payment amount with blockchain fees
+ */
+const calculatePaymentAmount = async (req: express.Request, res: express.Response) => {
+  try {
+    const { amount_usd, chain, fee_payer = 'customer' } = req.body;
+
+    if (!amount_usd || !chain) {
+      return errorResponseHelper(res, 400, "amount_usd and chain are required");
+    }
+
+    // Get current crypto price
+    const cryptoPrice = await getCryptoPriceForPayment(chain);
+    
+    if (fee_payer === 'customer') {
+      const calculation = await calculateCustomerPaymentAmount(
+        parseFloat(amount_usd),
+        chain,
+        cryptoPrice
+      );
+
+      successResponseHelper(res, 200, "Payment amount calculated", {
+        fee_payer: 'customer',
+        base_amount_usd: parseFloat(amount_usd),
+        base_amount_crypto: calculation.baseAmountCrypto,
+        blockchain_fee_native: calculation.blockchainFeeNative,
+        blockchain_fee_usd: calculation.blockchainFeeUSD,
+        total_amount_crypto: calculation.totalAmountCrypto,
+        total_amount_usd: calculation.totalAmountUSD,
+        crypto_currency: chain,
+        crypto_price_usd: cryptoPrice,
+      });
+    } else {
+      const baseAmountCrypto = parseFloat(amount_usd) / cryptoPrice;
+      const networkFee = await getBlockchainNetworkFee(chain);
+
+      successResponseHelper(res, 200, "Payment amount calculated", {
+        fee_payer: 'company',
+        base_amount_usd: parseFloat(amount_usd),
+        base_amount_crypto: baseAmountCrypto,
+        blockchain_fee_native: networkFee.feeInNative,
+        blockchain_fee_usd: networkFee.feeInUSD,
+        total_amount_crypto: baseAmountCrypto,
+        total_amount_usd: parseFloat(amount_usd),
+        crypto_currency: chain,
+        crypto_price_usd: cryptoPrice,
+        note: "Blockchain fee will be deducted from merchant settlement"
+      });
+    }
+  } catch (e) {
+    const message = getErrorMessage(e);
+    console.error("[calculatePaymentAmount] Error:", message);
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Helper: Get crypto price in USD for payment calculations
+ */
+const getCryptoPriceForPayment = async (symbol: string): Promise<number> => {
+  try {
+    const idMap: Record<string, string> = {
+      'BTC': 'bitcoin',
+      'ETH': 'ethereum',
+      'LTC': 'litecoin',
+      'DOGE': 'dogecoin',
+      'TRX': 'tron',
+      'USDT': 'tether',
+      'USDT_ERC20': 'tether',
+      'USDT_TRC20': 'tether',
+      'BCH': 'bitcoin-cash',
+    };
+
+    const coinId = idMap[symbol.toUpperCase()] || symbol.toLowerCase();
+    const response = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`
+    );
+    
+    return response.data[coinId]?.usd || 0;
+  } catch (error) {
+    const fallbackPrices: Record<string, number> = {
+      'BTC': 95000,
+      'ETH': 3300,
+      'LTC': 100,
+      'DOGE': 0.35,
+      'TRX': 0.25,
+      'USDT': 1,
+      'USDT_ERC20': 1,
+      'USDT_TRC20': 1,
+      'BCH': 450,
+    };
+    return fallbackPrices[symbol.toUpperCase()] || 0;
+  }
+};
+
 export default {
   getData,
   addPayment,
@@ -2911,5 +3029,7 @@ export default {
   checkOnBlockchair,
   removeUnwantedSubscriptions,
   processIncompletePayments,
+  getNetworkFees,
+  calculatePaymentAmount,
 };
 
