@@ -33,6 +33,18 @@ const apiModel = sequelize.define(
     api_name: {
       type: DataTypes.STRING(100),
     },
+    // Environment: 'production' or 'development'
+    environment: {
+      type: DataTypes.ENUM('production', 'development'),
+      defaultValue: 'production',
+      allowNull: false,
+    },
+    // Status: 'active', 'inactive', 'revoked'
+    status: {
+      type: DataTypes.ENUM('active', 'inactive', 'revoked'),
+      defaultValue: 'active',
+      allowNull: false,
+    },
     base_currency: {
       type: DataTypes.STRING,
       defaultValue: "USD",
@@ -52,6 +64,21 @@ const apiModel = sequelize.define(
     permissions: {
       type: DataTypes.TEXT,
       defaultValue: '["payments","transactions","webhooks","wallets"]',
+    },
+    // Test mode restrictions for development keys
+    test_mode_restrictions: {
+      type: DataTypes.TEXT,
+      defaultValue: '{"max_amount": 100, "allowed_currencies": ["BTC", "ETH", "USDT-TRC20"]}',
+    },
+    // Last used timestamp
+    last_used_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    // Usage count
+    usage_count: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
     },
   },
   {
