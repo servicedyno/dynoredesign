@@ -249,7 +249,7 @@ testInvoiceSchema();
         try:
             # Get user transactions to find valid transaction IDs
             tx_response = requests.post(
-                f"{self.backend_url}/api/wallet/getAllTransactions",
+                f"{self.backend_url}/wallet/getAllTransactions",
                 json={"page": 1, "rowsPerPage": 5},
                 headers=headers,
                 timeout=15
