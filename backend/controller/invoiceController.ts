@@ -143,8 +143,26 @@ export const autoGenerateInvoice = async (
       ];
 
       if (euCountries.includes(companyData.country)) {
-        // Get VAT rate from tax_rate table or use default
-        vatRate = 23; // Portugal standard rate, should be fetched from tbl_tax_rate
+        // Get VAT rate from tbl_tax_rate dynamically
+        try {
+          const taxRate = await taxRateModel.findOne({
+            where: { country_code: companyData.country },
+          });
+
+          if (taxRate) {
+            const taxData = taxRate.dataValues;
+            vatRate = parseFloat(taxData.standard_rate || 0);
+            console.log(`VAT rate for ${companyData.country}: ${vatRate}%`);
+          } else {
+            // Fallback to default rate if not in database
+            vatRate = 23; // Default EU VAT rate
+            console.log(`Using default VAT rate for ${companyData.country}: ${vatRate}%`);
+          }
+        } catch (error) {
+          console.error("Error fetching VAT rate:", error);
+          vatRate = 23; // Fallback
+        }
+
         vatAmount = (baseAmount * vatRate) / 100;
       }
     }
