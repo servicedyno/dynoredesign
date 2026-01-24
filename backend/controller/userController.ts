@@ -175,12 +175,12 @@ const generateOTP = async (req: express.Request, res: express.Response) => {
           "https://api.telnyx.com/v2/verifications/sms",
           {
             phone_number: "+" + mobile,
-            verify_profile_id: process.env.PROFILE_ID,
+            verify_profile_id: process.env.TELNYX_VERIFY_PROFILE_ID || process.env.PROFILE_ID,
             timeout_secs: 600,
           },
           {
             headers: {
-              Authorization: "Bearer " + process.env.ACCESS_TOKEN,
+              Authorization: "Bearer " + (process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN),
             },
           }
         );
