@@ -1227,12 +1227,13 @@ metadata:
 
 test_plan:
   current_focus:
-    - "VERIFICATION: All fixes applied, test with valid credentials"
-    - "Test email: nomadly@moxx.co"
-    - "Test password: Katiekendra123@"
-  stuck_tasks: []
+    - "CRUD Endpoints Testing Complete - 64.7% success rate"
+    - "KYC database schema issue requires fixing"
+    - "Plan/Customer endpoints need existing data for full testing"
+  stuck_tasks:
+    - "KYC Management endpoints - missing veriff_session_id column"
   test_all: true
-  test_priority: "comprehensive"
+  test_priority: "critical_fixes_first"
 
   - task: "Multi-Tenant Company Isolation Testing"
     implemented: true
