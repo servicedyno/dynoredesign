@@ -3,7 +3,7 @@
  */
 
 import { Router } from "express";
-import { authMiddleware } from "../middleware/authMiddleware";
+import authMiddleware from "../middleware/authMiddleware";
 import kycController from "../controller/kycController";
 
 const router = Router();
