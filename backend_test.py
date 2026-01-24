@@ -1428,6 +1428,302 @@ verifyCacheData();
         # Test 4: Test notification retrieval by type
         self.test_notification_retrieval_by_type()
 
+    def test_notification_types_payment_partial(self):
+        """Test GET /api/notifications/types - Verify PAYMENT_PARTIAL types are available"""
+        print("\n--- Testing Notification Types for PAYMENT_PARTIAL ---")
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/notifications/types",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    notification_types = data['data'].get('types', [])
+                    
+                    # Check for PAYMENT_PARTIAL and PAYMENT_PARTIAL_EXPIRED
+                    required_types = ['payment_partial', 'payment_partial_expired']
+                    found_types = []
+                    missing_types = []
+                    
+                    for required_type in required_types:
+                        if required_type in notification_types:
+                            found_types.append(required_type)
+                        else:
+                            missing_types.append(required_type)
+                    
+                    if not missing_types:
+                        self.log_result(
+                            "Notification Types - PAYMENT_PARTIAL", 
+                            True, 
+                            f"All required PAYMENT_PARTIAL types found: {', '.join(found_types)}",
+                            {"found_types": found_types, "total_types": len(notification_types)}
+                        )
+                    else:
+                        self.log_result(
+                            "Notification Types - PAYMENT_PARTIAL", 
+                            False, 
+                            f"Missing PAYMENT_PARTIAL types: {', '.join(missing_types)}",
+                            {"found_types": found_types, "missing_types": missing_types, "all_types": notification_types}
+                        )
+                else:
+                    self.log_result(
+                        "Notification Types - PAYMENT_PARTIAL", 
+                        False, 
+                        "Invalid response format",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Notification Types - PAYMENT_PARTIAL", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Notification Types - PAYMENT_PARTIAL", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+
+    def test_notification_preferences_payment_partial(self):
+        """Test GET /api/notifications/preferences - Verify all notification types are present in defaults"""
+        print("\n--- Testing Notification Preferences for PAYMENT_PARTIAL ---")
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/notifications/preferences",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    preferences = data['data']
+                    
+                    # Check if PAYMENT_PARTIAL related preferences are present
+                    expected_fields = [
+                        'transaction_updates', 'payment_received', 'weekly_summary', 
+                        'security_alerts', 'email_notifications', 'sms_notifications', 
+                        'browser_notifications'
+                    ]
+                    
+                    # Also check for payment_partial if it should be in preferences
+                    if 'payment_partial' in preferences:
+                        expected_fields.append('payment_partial')
+                    
+                    missing_fields = [field for field in expected_fields if field not in preferences]
+                    
+                    if not missing_fields:
+                        self.log_result(
+                            "Notification Preferences - All Types", 
+                            True, 
+                            f"All expected notification preference fields present",
+                            {
+                                "total_fields": len(preferences),
+                                "has_payment_partial": 'payment_partial' in preferences,
+                                "is_default": preferences.get('is_default', False)
+                            }
+                        )
+                    else:
+                        self.log_result(
+                            "Notification Preferences - Missing Fields", 
+                            False, 
+                            f"Missing preference fields: {', '.join(missing_fields)}",
+                            {"missing_fields": missing_fields, "available_fields": list(preferences.keys())}
+                        )
+                else:
+                    self.log_result(
+                        "Notification Preferences - PAYMENT_PARTIAL", 
+                        False, 
+                        "Invalid response format",
+                        {"response": data}
+                    )
+            else:
+                self.log_result(
+                    "Notification Preferences - PAYMENT_PARTIAL", 
+                    False, 
+                    f"API call failed with status {response.status_code}",
+                    {"response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Notification Preferences - PAYMENT_PARTIAL", 
+                False, 
+                f"Request failed: {str(e)}"
+            )
+
+    def test_webhook_endpoints_still_work(self):
+        """Test webhook endpoints still work with empty body"""
+        print("\n--- Testing Webhook Endpoints Still Work ---")
+        
+        # Test 1: POST /api/tatum-crypto-webhook with empty body
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/tatum-crypto-webhook",
+                json={},
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                self.log_result(
+                    "Webhook - tatum-crypto-webhook", 
+                    True, 
+                    "tatum-crypto-webhook endpoint returns 200 with empty body",
+                    {"status_code": response.status_code}
+                )
+            else:
+                self.log_result(
+                    "Webhook - tatum-crypto-webhook", 
+                    False, 
+                    f"tatum-crypto-webhook failed with status {response.status_code}",
+                    {"status_code": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Webhook - tatum-crypto-webhook", 
+                False, 
+                f"tatum-crypto-webhook request failed: {str(e)}"
+            )
+        
+        # Test 2: POST /api/tatum-webhook with empty body
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/tatum-webhook",
+                json={},
+                headers={"Content-Type": "application/json"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                self.log_result(
+                    "Webhook - tatum-webhook", 
+                    True, 
+                    "tatum-webhook endpoint returns 200 with empty body",
+                    {"status_code": response.status_code}
+                )
+            else:
+                self.log_result(
+                    "Webhook - tatum-webhook", 
+                    False, 
+                    f"tatum-webhook failed with status {response.status_code}",
+                    {"status_code": response.status_code, "response": response.text}
+                )
+                
+        except Exception as e:
+            self.log_result(
+                "Webhook - tatum-webhook", 
+                False, 
+                f"tatum-webhook request failed: {str(e)}"
+            )
+
+    def test_notification_retrieval_by_type(self):
+        """Test notification retrieval by type for payment_partial and payment_partial_expired"""
+        print("\n--- Testing Notification Retrieval by Type ---")
+        
+        if not self.jwt_token:
+            self.log_result(
+                "Notification Retrieval by Type", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return
+        
+        # Test types to retrieve
+        test_types = ['payment_partial', 'payment_partial_expired']
+        
+        for notification_type in test_types:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {self.jwt_token}",
+                    "Content-Type": "application/json"
+                }
+                
+                response = requests.get(
+                    f"{self.backend_url}/api/notifications",
+                    params={"type": notification_type},
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if 'data' in data:
+                        notifications_data = data['data']
+                        notifications = notifications_data.get('notifications', [])
+                        total = notifications_data.get('total', 0)
+                        
+                        # Filter to ensure all returned notifications are of the correct type
+                        correct_type_notifications = [
+                            n for n in notifications 
+                            if n.get('type') == notification_type
+                        ]
+                        
+                        if len(correct_type_notifications) == len(notifications):
+                            self.log_result(
+                                f"Notification Retrieval - {notification_type}", 
+                                True, 
+                                f"Successfully retrieved {len(notifications)} notifications of type {notification_type}",
+                                {
+                                    "type": notification_type,
+                                    "count": len(notifications),
+                                    "total": total,
+                                    "pagination": {
+                                        "page": notifications_data.get('page', 1),
+                                        "limit": notifications_data.get('limit', 10)
+                                    }
+                                }
+                            )
+                        else:
+                            self.log_result(
+                                f"Notification Retrieval - {notification_type} Type Filter", 
+                                False, 
+                                f"Type filter not working correctly. Expected {len(notifications)} of type {notification_type}, got {len(correct_type_notifications)}",
+                                {"expected_type": notification_type, "notifications": notifications}
+                            )
+                    else:
+                        self.log_result(
+                            f"Notification Retrieval - {notification_type}", 
+                            False, 
+                            "Invalid response format",
+                            {"response": data}
+                        )
+                else:
+                    self.log_result(
+                        f"Notification Retrieval - {notification_type}", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text}
+                    )
+                    
+            except Exception as e:
+                self.log_result(
+                    f"Notification Retrieval - {notification_type}", 
+                    False, 
+                    f"Request failed: {str(e)}"
+                )
     def test_tatum_webhook_end_to_end(self):
         """Test Tatum webhook end-to-end flow for pending payment notifications"""
         print("\n=== Testing Tatum Webhook End-to-End Flow ===")
