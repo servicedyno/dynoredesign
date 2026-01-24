@@ -37,7 +37,7 @@ router.use("/pay", paymentRouter);
 router.use("/tax", taxRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/notifications", notificationRouter);
-// router.use("/kyc", kycRouter); // KYC routes - requires fixing import issue with veriffService
+router.use("/kyc", kycRouter);
 router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
 router.post("/webhook", flutterwaveWebHook);
