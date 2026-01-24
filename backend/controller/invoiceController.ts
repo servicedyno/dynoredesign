@@ -8,6 +8,7 @@ import {
 } from "../helper";
 import { IUserType } from "../utils/types";
 import invoiceModel from "../models/invoiceModel";
+import taxRateModel from "../models/taxRateModel";
 import { userTransactionModel, companyModel } from "../models";
 import { apiLogger } from "../utils/loggers";
 
