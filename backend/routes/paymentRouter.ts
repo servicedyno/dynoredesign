@@ -57,6 +57,18 @@ paymentRouter.post(
   paymentController.getCurrencyRates
 );
 
+// Public endpoint for blockchain network fees (used by checkout pages)
+paymentRouter.get(
+  "/network-fees",
+  paymentController.getNetworkFees
+);
+
+// Public endpoint to calculate payment amount with fees
+paymentRouter.post(
+  "/calculate-payment",
+  paymentController.calculatePaymentAmount
+);
+
 paymentRouter.get(
   "/getBalance",
   customerAuthMiddleware,
