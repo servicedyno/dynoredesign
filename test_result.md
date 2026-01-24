@@ -1069,20 +1069,65 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: GET /api/invoices/:id endpoint working correctly. Returns 404 for non-existent invoice IDs as expected. Endpoint properly validates user ownership and handles edge cases appropriately."
 
-  - task: "Phase 12: Invoice number generation (INV-YYYYMMDD-XXXXX format)"
+  - task: "Pending Payment Notification System - Notification Types"
     implemented: true
     working: true
-    file: "/app/backend/controller/invoiceController.ts"
+    file: "/app/backend/controller/notificationController.ts"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Phase 12: Invoice number generation with format INV-YYYYMMDD-XXXXX where XXXXX is a 5-digit sequence that resets daily. Includes uniqueness validation and proper date formatting."
+        comment: "Newly implemented pending payment notification system - notification types payment_pending and payment_confirming"
       - working: true
         agent: "testing"
-        comment: "✅ VERIFIED: Invoice number generation logic implemented correctly in generateInvoiceNumber() function. Format follows INV-YYYYMMDD-XXXXX specification with daily sequence reset. Uniqueness ensured through database count queries and proper padding."
+        comment: "✅ VERIFIED: Both payment_pending and payment_confirming notification types are available in GET /api/notifications/types endpoint. Authentication working correctly with provided credentials."
+
+  - task: "Pending Payment Notification System - Notification Preferences"
+    implemented: true
+    working: false
+    file: "/app/backend/models/notificationPreferencesModel.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Newly implemented pending payment notification system - payment_pending preference should default to true"
+      - working: false
+        agent: "testing"
+        comment: "❌ ISSUE: payment_pending field is defined in notificationPreferencesModel.ts with defaultValue: true, but GET /api/notifications/preferences does not return this field. This suggests a database migration issue - the column may not exist in the actual database table yet."
+
+  - task: "Pending Payment Notification System - Webhook Endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/webhooks/"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Newly implemented pending payment notification system - webhook endpoints for Tatum integration"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Both webhook endpoints exist and respond correctly. POST /api/tatum-webhook returns 200 OK. POST /api/tatum-crypto-webhook returns 200 OK. Infrastructure is in place for external webhook calls from Tatum."
+
+  - task: "Pending Payment Notification System - Email Templates"
+    implemented: true
+    working: true
+    file: "/app/backend/helper/sendEmail.ts, /app/backend/services/pendingPaymentService.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Newly implemented pending payment notification system - email templates for pending payment notifications"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Pending payment email system is fully implemented. Found sendPaymentPendingEmail and sendPaymentConfirmingEmail functions in /app/backend/helper/sendEmail.ts. Dedicated pendingPaymentService.ts exists with comprehensive notification logic including confirmation requirements by blockchain, estimated times, and Redis caching for notification deduplication."
 
   - task: "Phase 12: Fee calculations based on tiers"
     implemented: true
