@@ -293,6 +293,19 @@ const getAllInvoices = async (
 
     const companyIds = companies.map((c: any) => c.dataValues.company_id);
 
+    // If user has no companies, return empty result
+    if (companyIds.length === 0) {
+      return successResponseHelper(res, 200, "Invoices retrieved successfully", {
+        invoices: [],
+        pagination: {
+          total: 0,
+          page: parseInt(page as string),
+          limit: parseInt(limit as string),
+          totalPages: 0,
+        },
+      });
+    }
+
     if (company_id) {
       // Verify user owns this company
       if (!companyIds.includes(parseInt(company_id as string))) {
@@ -300,7 +313,7 @@ const getAllInvoices = async (
       }
       whereClause.company_id = parseInt(company_id as string);
     } else {
-      whereClause.company_id = { $in: companyIds };
+      whereClause.company_id = { [Op.in]: companyIds };
     }
 
     // Get invoices with pagination
