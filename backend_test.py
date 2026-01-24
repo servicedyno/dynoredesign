@@ -4326,6 +4326,9 @@ testEmailSending();
         # Test 12: Phase 10 Partial Wallet Configuration (NEW - PRIORITY)
         self.test_phase_10_partial_wallet_configuration()
         
+        # Test 13: Phase 12 Invoice Generation System (NEW - PRIORITY)
+        self.test_phase_12_invoice_generation()
+        
         return True
     
     def test_phase6_wallet_apis(self):
