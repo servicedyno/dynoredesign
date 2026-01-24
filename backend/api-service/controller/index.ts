@@ -309,7 +309,7 @@ const getCryptoTransaction = async (
 const addFunds = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as any;
   try {
-    const { amount, redirect_uri } = req.body;
+    const { amount, redirect_uri, fee_payer } = req.body;
 
     const data = res.locals.apiKeyData;
 
@@ -324,9 +324,11 @@ const addFunds = async (req: express.Request, res: express.Response) => {
       company_id: data.company_id,
       adm_id: data.adm_id,
       base_currency: data.base_currency,
+      base_amount: amount,
       amount: amount,
       redirect_uri,
       pathType: "addFund",
+      fee_payer: fee_payer || 'company',
     };
 
     const transactionId = Crypto.randomBytes(24).toString("hex");
@@ -343,7 +345,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
 
     const redirect_url = process.env.CHECKOUT_URL + "/pay?d=" + transactionId;
 
-    successResponseHelper(res, 200, "Link Generated!", { redirect_url });
+    successResponseHelper(res, 200, "Link Generated!", { redirect_url, fee_payer: redisPayload.fee_payer });
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     customerLogger.error(
