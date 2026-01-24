@@ -185,7 +185,7 @@ const calculateUtxoFee = async (
   speed: 'fast' | 'medium' | 'slow' = 'fast'
 ): Promise<BlockchainFeeResult> => {
   const cacheKey = `blockchain_fee_${chain}`;
-  const cached = await getRedisItem(cacheKey) as BlockchainFeeResult & { timestamp?: string } | null;
+  const cached = await getRedisItem(cacheKey) as unknown as (BlockchainFeeResult & { timestamp?: string }) | null;
   
   // Return cached if valid
   if (cached && cached.timestamp && Number(cached.timestamp) > Date.now() - FEE_CACHE_DURATION * 1000) {
