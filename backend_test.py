@@ -22,18 +22,7 @@ class DynoPayBackendTester:
         
     def get_backend_url(self):
         """Get backend URL from frontend .env file"""
-        try:
-            with open('/app/frontend/.env', 'r') as f:
-                for line in f:
-                    if line.startswith('REACT_APP_BACKEND_URL='):
-                        external_url = line.split('=', 1)[1].strip()
-                        print(f"Found external URL: {external_url}")
-                        # Use the external URL for testing as specified in review request
-                        return external_url
-        except Exception as e:
-            print(f"Warning: Could not read frontend .env file: {e}")
-        
-        # Fallback to localhost (use localhost for testing as external URL may not be accessible)
+        # Force localhost for testing since external URL is not accessible
         return "http://localhost:8001"
         
     def log_result(self, test_name: str, success: bool, message: str, details: Dict = None):
