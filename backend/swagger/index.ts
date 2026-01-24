@@ -2,6 +2,26 @@ import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import { Express } from "express";
 
+// Import path definitions
+import { userPaths } from "./paths/user";
+import { paymentPaths } from "./paths/payment";
+import { walletPaths } from "./paths/wallet";
+import { adminPaths } from "./paths/admin";
+import { subscriptionPaths } from "./paths/subscription";
+import { apiKeyPaths } from "./paths/apiKeys";
+import { notificationPaths } from "./paths/notification";
+
+// Merge all paths
+const allPaths = {
+  ...userPaths,
+  ...paymentPaths,
+  ...walletPaths,
+  ...adminPaths,
+  ...subscriptionPaths,
+  ...apiKeyPaths,
+  ...notificationPaths,
+};
+
 const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.0",
