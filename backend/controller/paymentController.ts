@@ -1111,6 +1111,7 @@ const Crypto = async (
       transaction_type: "CREDIT",
       status: "pending",
       customer_id: Number(tokenData.customer_id),
+      company_id: tokenData.company_id || null,  // Include company_id from token data
     };
     console.log(userPayload);
 
