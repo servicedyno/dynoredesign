@@ -10,6 +10,7 @@ import walletController from "./walletController";
 import taxController from "./taxController";
 import dashboardController from "./dashboardController";
 import notificationController, { createNotification, NOTIFICATION_TYPES } from "./notificationController";
+import subscriptionController from "./subscriptionController";
 import { getBlockchainThreshold, getTransactionFeePercent, getFeeTiers } from "../utils/feeConfigUtils";
 
 export const getTransactionFee = async () => {
