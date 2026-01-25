@@ -56,6 +56,10 @@ const apiModel = sequelize.define(
     adminToken: {
       type: DataTypes.TEXT,
     },
+    admin_token: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     withdrawal_whitelist: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
@@ -79,6 +83,38 @@ const apiModel = sequelize.define(
     usage_count: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
+    },
+    request_count: {
+      type: DataTypes.BIGINT,
+      defaultValue: 0,
+    },
+    rate_limit_per_minute: {
+      type: DataTypes.INTEGER,
+      defaultValue: 60,
+    },
+    rate_limit_per_hour: {
+      type: DataTypes.INTEGER,
+      defaultValue: 3600,
+    },
+    rate_limit_per_day: {
+      type: DataTypes.INTEGER,
+      defaultValue: 100000,
+    },
+    webhook_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    webhook_secret: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   },
   {
