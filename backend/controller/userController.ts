@@ -121,7 +121,7 @@ const registerUser = async (req: express.Request, res: express.Response) => {
 
       // Send welcome email
       try {
-        await sendWelcomeEmail(email.toLowerCase(), name);
+        await emailService.sendWelcomeEmail(email.toLowerCase(), name);
       } catch (emailError) {
         // Log error but don't fail registration
         console.error("Error sending welcome email:", emailError);
