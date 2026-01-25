@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
+import path from "path";
 import router from "./routes";
 import tatumApi from "./apis/tatumApi";
 import { setupSwagger } from "./swagger";
