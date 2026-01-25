@@ -296,6 +296,47 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
     );
 
     const finalArray = resData[1][0].dataValues;
+    
+    // Send email notification to account holder
+    try {
+      // Get user details
+      const user = await userModel.findOne({
+        where: { user_id: userData.user_id },
+        attributes: ['name', 'email']
+      });
+      
+      if (user) {
+        // Track what fields were updated
+        const updatedFields = [];
+        if (data.company_name) updatedFields.push('Company Name');
+        if (data.email) updatedFields.push('Email Address');
+        if (data.mobile) updatedFields.push('Phone Number');
+        if (data.website) updatedFields.push('Website');
+        if (data.address_line1 || data.city || data.state || data.country) updatedFields.push('Address');
+        if (data.vat_number) updatedFields.push('VAT/Tax ID');
+        if (photo) updatedFields.push('Company Logo');
+        
+        await sendCompanyProfileUpdatedEmail(
+          user.dataValues.email,
+          user.dataValues.name,
+          finalArray.company_name,
+          updatedFields
+        );
+        
+        companyLogger.info(
+          `Company profile updated email sent to: ${user.dataValues.email}`,
+          { user_id: userData.user_id, company_id }
+        );
+      }
+    } catch (emailError) {
+      // Log email error but don't fail the update
+      companyLogger.error(
+        `Failed to send company update email: ${getErrorMessage(emailError)}`,
+        { user_id: userData.user_id, company_id },
+        new Error(emailError as string)
+      );
+    }
+    
     successResponseHelper(
       res,
       200,
