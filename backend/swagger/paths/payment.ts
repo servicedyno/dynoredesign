@@ -6,12 +6,31 @@ export const paymentPaths = {
       summary: 'Create payment link',
       description: `Create a new payment link for accepting crypto or fiat payments. The link can be shared with customers to collect payments.
 
-**IMPORTANT - Field Name Flexibility:**
-You only need to provide ONE of these field combinations:
-- NEW format: \`base_amount\` + \`base_currency\` (recommended)
-- LEGACY format: \`amount\` + \`currency\` (supported for backward compatibility)
+**FIELD NAME COMPATIBILITY:**
+The API supports flexible field naming for backward compatibility:
+- \`amount\` (recommended for most use cases)
+- \`base_amount\` (alternative, both work identically)
+- \`currency\` (recommended for most use cases)
+- \`base_currency\` (alternative, both work identically)
 
-Do NOT send both formats - choose one that works for your integration. If both are provided, \`base_amount\` and \`base_currency\` take priority.`,
+**Use ONE set of field names** - don't mix. If both are provided, the API prioritizes \`base_*\` fields.
+
+**PAYMENT MODES:**
+Modes must be provided in **UPPERCASE**. Valid modes:
+- \`CRYPTO\` - Cryptocurrency payments
+- \`CARD\` - Credit/debit card payments
+- \`BANK_TRANSFER\` - Bank transfer
+- \`GOOGLE_PAY\` - Google Pay
+- \`APPLE_PAY\` - Apple Pay
+- \`USSD\` - USSD payments
+- \`MOBILE_MONEY\` - Mobile money
+- \`QR_CODE\` - QR code payments
+
+**EXPIRATION OPTIONS:**
+- \`24h\` - Link expires in 24 hours
+- \`7d\` - Link expires in 7 days
+- \`30d\` - Link expires in 30 days
+- \`No\` - Link never expires (default)`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -19,28 +38,30 @@ Do NOT send both formats - choose one that works for your integration. If both a
           'application/json': {
             schema: {
               type: 'object',
-              required: ['company_id'],
+              required: ['company_id', 'email', 'modes'],
               properties: {
-                base_amount: { 
-                  type: 'number', 
-                  description: '💡 NEW FORMAT: Payment amount. Use this OR amount (not both)',
-                  example: 100.00
-                },
-                base_currency: { 
-                  type: 'string', 
-                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
-                  description: '💡 NEW FORMAT: Currency code. Use this OR currency (not both)',
-                  example: 'USD'
-                },
                 amount: { 
                   type: 'number', 
-                  description: '🔄 LEGACY FORMAT: Payment amount. Use this OR base_amount (not both)',
-                  example: 100.00
+                  description: '💰 Payment amount (recommended field name). Use this OR base_amount',
+                  example: 100.00,
+                  minimum: 0.01
+                },
+                base_amount: { 
+                  type: 'number', 
+                  description: '💰 Payment amount (alternative field name). Use this OR amount',
+                  example: 100.00,
+                  minimum: 0.01
                 },
                 currency: { 
                   type: 'string', 
                   enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
-                  description: '🔄 LEGACY FORMAT: Currency code. Use this OR base_currency (not both)',
+                  description: '💱 Currency code (recommended field name). Use this OR base_currency',
+                  example: 'USD'
+                },
+                base_currency: { 
+                  type: 'string', 
+                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
+                  description: '💱 Currency code (alternative field name). Use this OR currency',
                   example: 'USD'
                 },
                 company_id: { 
@@ -51,14 +72,18 @@ Do NOT send both formats - choose one that works for your integration. If both a
                 email: {
                   type: 'string',
                   format: 'email',
-                  description: '📧 OPTIONAL: Customer email for notifications',
+                  description: '✅ REQUIRED: Customer email for notifications and payment link access',
                   example: 'customer@example.com'
                 },
                 modes: {
                   type: 'array',
-                  items: { type: 'string', enum: ['crypto', 'card'] },
-                  description: '💳 OPTIONAL: Allowed payment modes. Defaults to ["crypto", "card"] if not provided',
-                  example: ['crypto', 'card']
+                  items: { 
+                    type: 'string', 
+                    enum: ['CRYPTO', 'CARD', 'BANK_TRANSFER', 'GOOGLE_PAY', 'APPLE_PAY', 'USSD', 'MOBILE_MONEY', 'QR_CODE']
+                  },
+                  description: '✅ REQUIRED: Payment modes (UPPERCASE). Must include at least one mode',
+                  example: ['CRYPTO', 'CARD'],
+                  minItems: 1
                 },
                 description: { 
                   type: 'string', 
@@ -69,7 +94,8 @@ Do NOT send both formats - choose one that works for your integration. If both a
                   type: 'string',
                   enum: ['24h', '7d', '30d', 'No'],
                   description: '⏰ OPTIONAL: Link expiration period. Defaults to "No" (never expires)',
-                  example: '24h'
+                  example: '24h',
+                  default: 'No'
                 },
                 callback_url: { 
                   type: 'string', 
@@ -93,62 +119,82 @@ Do NOT send both formats - choose one that works for your integration. If both a
                   type: 'string',
                   enum: ['customer', 'company'],
                   description: '💰 OPTIONAL: Who pays blockchain fees. Defaults to "company"',
-                  example: 'company'
+                  example: 'company',
+                  default: 'company'
                 }
               }
             },
             examples: {
-              'Recommended - New Format': {
-                summary: '💡 RECOMMENDED: Use base_amount and base_currency (clearer naming)',
+              'Standard Payment - Recommended': {
+                summary: '💡 RECOMMENDED: Using standard field names',
+                value: {
+                  amount: 100.00,
+                  currency: 'USD',
+                  company_id: 1,
+                  email: 'customer@example.com',
+                  modes: ['CRYPTO', 'CARD'],
+                  description: 'Test payment for production',
+                  expire: '24h'
+                }
+              },
+              'Alternative Field Names': {
+                summary: '🔄 ALTERNATIVE: Using base_* field names (works identically)',
                 value: {
                   base_amount: 100.00,
                   base_currency: 'USD',
                   company_id: 1,
-                  description: 'Test payment for production readiness',
-                  expire: '24h',
-                  callback_url: 'https://example.com/callback',
-                  redirect_url: 'https://example.com/success'
+                  email: 'customer@example.com',
+                  modes: ['CRYPTO', 'CARD'],
+                  description: 'Test payment for production',
+                  expire: '24h'
                 }
               },
-              'Legacy Format - Still Works': {
-                summary: '🔄 LEGACY: Old integrations can keep using amount and currency',
+              'Minimal Required Fields': {
+                summary: '⚡ MINIMAL: Only required fields',
+                value: {
+                  amount: 50.00,
+                  currency: 'USD',
+                  company_id: 1,
+                  email: 'customer@example.com',
+                  modes: ['CRYPTO']
+                }
+              },
+              'Crypto Only Payment': {
+                summary: '₿ CRYPTO: Bitcoin payment with webhook',
+                value: {
+                  amount: 0.001,
+                  currency: 'BTC',
+                  company_id: 1,
+                  email: 'crypto@example.com',
+                  modes: ['CRYPTO'],
+                  description: 'BTC Payment - Invoice #001',
+                  expire: '30d',
+                  webhook_url: 'https://myapp.com/webhooks/payment'
+                }
+              },
+              'Multiple Payment Methods': {
+                summary: '💳 MULTIPLE: Accept various payment methods',
                 value: {
                   amount: 199.99,
                   currency: 'USD',
                   company_id: 1,
                   email: 'customer@example.com',
-                  modes: ['crypto', 'card'],
-                  description: 'Order #12345 - Premium Subscription',
+                  modes: ['CRYPTO', 'CARD', 'GOOGLE_PAY', 'APPLE_PAY'],
+                  description: 'Premium Subscription - Annual',
                   expire: '7d',
-                  webhook_url: 'https://mystore.com/webhooks/dynopay'
+                  redirect_url: 'https://myapp.com/thank-you',
+                  webhook_url: 'https://myapp.com/webhooks/payment'
                 }
               },
-              'Minimal Payment': {
-                summary: '⚡ MINIMAL: Only required fields (uses defaults)',
+              'No Expiration Link': {
+                summary: '∞ PERMANENT: Link never expires',
                 value: {
-                  amount: 50.00,
-                  currency: 'USD',
-                  company_id: 1
-                }
-              },
-              'Crypto Only Payment': {
-                summary: '₿ CRYPTO: Bitcoin payment with 30-day expiration',
-                value: {
-                  base_amount: 0.001,
-                  base_currency: 'BTC',
+                  amount: 999.99,
+                  currency: 'EUR',
                   company_id: 1,
-                  modes: ['crypto'],
-                  description: 'BTC Payment - Invoice #INV-2024-001',
-                  expire: '30d'
-                }
-              },
-              'No Expiration': {
-                summary: '∞ PERMANENT: Link that never expires',
-                value: {
-                  base_amount: 999.99,
-                  base_currency: 'EUR',
-                  company_id: 1,
-                  description: 'Annual Membership Fee',
+                  email: 'customer@example.com',
+                  modes: ['CARD', 'BANK_TRANSFER'],
+                  description: 'Lifetime Membership',
                   expire: 'No'
                 }
               }
