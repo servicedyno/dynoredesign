@@ -345,7 +345,7 @@ const checkEmail = async (req: express.Request, res: express.Response) => {
         mobile: userData.dataValues.mobile ? userData.dataValues.mobile : null,
       };
     }
-    successResponseHelper(res, 200, "", resData);
+    successResponseHelper(res, 200, "User profile retrieved successfully", resData);
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     userLogger.error(errorMessage, new Error(e));
