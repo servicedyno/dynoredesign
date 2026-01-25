@@ -216,7 +216,10 @@ class VerifyFixesTester:
         print("\n--- Test 1.3: Validation - missing amount ---")
         missing_amount_data = {
             "currency": "USD",
-            "company_id": 1
+            "base_currency": "USD",
+            "company_id": 3,
+            "email": "test@example.com",
+            "modes": ["CRYPTO"]
         }
         
         try:
