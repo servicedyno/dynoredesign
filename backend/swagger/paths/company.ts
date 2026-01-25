@@ -14,7 +14,14 @@
  *       3. Click the "Authorize" button at the top of this page
  *       4. Enter your token in the format: `your-jwt-token-here` (without "Bearer" prefix)
  *       
- *       **Required Fields**: company_name, email, mobile, address (for VAT validation)
+ *       **⚠️ IMPORTANT - Editing the data field:**
+ *       The `data` field is a JSON string. When using "Try it out":
+ *       - Click on the data field and edit the JSON string directly
+ *       - Only provide the fields you want to set
+ *       - Minimum required: `{"company_name":"Your Company","email":"your@email.com"}`
+ *       - Optional fields: mobile, address_line1, city, state, country, zip_code, vat_number
+ *       
+ *       **Required Fields**: company_name and email
  *     security:
  *       - BearerAuth: []
  *     requestBody:
