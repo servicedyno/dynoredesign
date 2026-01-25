@@ -18,21 +18,31 @@ const userMiddleware = (
 
   const pathname = req.path;
   if (req.headers["content-type"].includes("multipart/form-data")) {
-    if (!req.body && !req.body.data) {
-      return res.status(400).json({ message: "Data not found!" });
+    if (!req.body.data && !req.body.name && !req.body.email) {
+      return res.status(400).json({ message: "Data not found! Please provide name and email." });
     } else {
-      // Handle both JSON string and object formats
+      // Handle both JSON string, object, and individual field formats
       let parsedData;
-      try {
-        if (typeof req.body.data === 'string') {
-          parsedData = JSON.parse(req.body.data);
-        } else if (typeof req.body.data === 'object') {
-          parsedData = req.body.data;
-        } else {
-          return res.status(400).json({ message: "Invalid data format" });
+      
+      if (req.body.data) {
+        // Old format: JSON string or object in "data" field
+        try {
+          if (typeof req.body.data === 'string') {
+            parsedData = JSON.parse(req.body.data);
+          } else if (typeof req.body.data === 'object') {
+            parsedData = req.body.data;
+          } else {
+            return res.status(400).json({ message: "Invalid data format" });
+          }
+        } catch (error) {
+          return res.status(400).json({ message: "Invalid JSON format in 'data' field" });
         }
-      } catch (error) {
-        return res.status(400).json({ message: "Invalid JSON format in 'data' field" });
+      } else {
+        // New format: Individual form fields
+        parsedData = {
+          name: req.body.name,
+          email: req.body.email,
+        };
       }
       
       const { name, email }: IUserType = parsedData;
