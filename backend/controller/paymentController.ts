@@ -2183,13 +2183,66 @@ const createPaymentLink = async (
   const normalizedAmount = base_amount || amount;
   
   try {
-    // Validate required fields
+    // Validate required fields with clear error messages
     if (!normalizedAmount) {
-      return errorResponseHelper(res, 400, "Amount is required");
+      return errorResponseHelper(
+        res, 
+        400, 
+        "Amount is required. Please provide either 'amount' or 'base_amount' field."
+      );
     }
     
     if (!normalizedCurrency) {
-      return errorResponseHelper(res, 400, "Currency is required");
+      return errorResponseHelper(
+        res, 
+        400, 
+        "Currency is required. Please provide either 'currency' or 'base_currency' field."
+      );
+    }
+    
+    // Validate amount is positive
+    if (normalizedAmount <= 0) {
+      return errorResponseHelper(
+        res,
+        400,
+        "Amount must be greater than zero."
+      );
+    }
+    
+    // Validate email format if provided
+    if (email && !email.includes('@')) {
+      return errorResponseHelper(
+        res,
+        400,
+        "Invalid email format. Please provide a valid email address."
+      );
+    }
+    
+    // Validate modes if provided
+    if (modes) {
+      const validModes = ['CRYPTO', 'CARD', 'BANK_TRANSFER', 'GOOGLE_PAY', 'APPLE_PAY', 'USSD', 'MOBILE_MONEY', 'QR_CODE'];
+      const invalidModes = modes.filter((mode: string) => !validModes.includes(mode.toUpperCase()));
+      
+      if (invalidModes.length > 0) {
+        return errorResponseHelper(
+          res,
+          400,
+          `Invalid payment modes: ${invalidModes.join(', ')}. Valid modes are: ${validModes.join(', ')}`
+        );
+      }
+      
+      // Convert to uppercase if lowercase provided
+      const normalizedModes = modes.map((mode: string) => mode.toUpperCase());
+      req.body.modes = normalizedModes;
+    }
+    
+    // Validate expire format if provided
+    if (expire && expire !== 'No' && !['24h', '7d', '30d'].includes(expire)) {
+      return errorResponseHelper(
+        res,
+        400,
+        "Invalid expire value. Valid options are: '24h', '7d', '30d', or 'No'."
+      );
     }
     
     // Phase 10 Fix: Validate company_id if provided
