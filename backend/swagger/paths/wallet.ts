@@ -179,11 +179,18 @@ This endpoint queries a different table (tbl_user_wallet_address) that is NOT in
 1. **This endpoint** - Validates the wallet address and sends OTP to your email
 2. **Then call** \`POST /api/wallet/verifyOtp\` - Enter OTP to complete creation
 
+## Important:
+- ✅ Saves to main payment system (tbl_user_wallet)
+- ✅ Wallet will appear in \`GET /api/wallet/getWallet\`
+- ✅ Integrated with payment forwarding
+- ✅ Enforces one-wallet-per-blockchain rule
+- 🔒 OTP is tied to specific currency (cannot swap currencies during verification)
+
 ## Why OTP?
-Security measure to ensure only authorized users can add wallet addresses.
+Security measure to ensure only authorized users can add wallet addresses and prevent cross-currency corruption.
 
 ## Next Step:
-Check your email for a 6-digit OTP code and call \`/api/wallet/verifyOtp\``,
+Check your email for a 6-digit OTP code and call \`/api/wallet/verifyOtp\` with the **SAME currency**`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
