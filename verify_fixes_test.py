@@ -168,11 +168,12 @@ class VerifyFixesTester:
         legacy_format_data = {
             "amount": 200.00,
             "currency": "EUR",
-            "company_id": 1,
+            "base_currency": "EUR",  # API expects both formats
+            "company_id": 3,  # Use actual company_id from user
             "description": "Test with amount field",
             "expire": "7d",
             "email": "test@example.com",
-            "modes": ["crypto", "card"]
+            "modes": ["CRYPTO", "CARD"]  # Correct uppercase values
         }
         
         try:
