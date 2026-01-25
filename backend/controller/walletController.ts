@@ -2617,15 +2617,8 @@ const validateWallet = async (
         return errorResponseHelper(res, 403, "You don't have access to this company!");
       }
       
-      let balance;
-      if (currency === "TRX" || currency === "USDT-TRC20") {
-        balance = await tatumApi.validateTronAddress(wallet_address);
-      } else {
-        balance = await tatumApi.getAddressBalance(wallet_address, currency);
-      }
-      console.log(balance);
-      
-      // Check if the address already exists for this company
+      // CRITICAL VALIDATION: Check if company already has a wallet for this blockchain type
+      // Each company can only have ONE wallet address per blockchain (BTC, ETH, etc.)
       const existingWallet = await userWalletModel.findOne({
         where: {
           wallet_address: { [Op.not]: null },
@@ -2639,9 +2632,17 @@ const validateWallet = async (
         return errorResponseHelper(
           res,
           400,
-          `This address with ${currency} currency already exists for this company!`
+          `A ${currency} wallet address already exists for this company! Each company can only have one wallet address per blockchain type. Existing address: ${existingWallet.dataValues.wallet_address.substring(0, 10)}...`
         );
       }
+      
+      let balance;
+      if (currency === "TRX" || currency === "USDT-TRC20") {
+        balance = await tatumApi.validateTronAddress(wallet_address);
+      } else {
+        balance = await tatumApi.getAddressBalance(wallet_address, currency);
+      }
+      console.log(balance);
 
       await updateOtp(userData, wallet_address, currency);
 
