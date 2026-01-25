@@ -1,5 +1,5 @@
 import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../../db/index';
+import sequelize from '../../utils/dbInstance';
 
 interface KBArticleFeedbackAttributes {
   feedback_id: number;
