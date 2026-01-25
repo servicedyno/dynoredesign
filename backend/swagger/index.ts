@@ -10,6 +10,9 @@ import { adminPaths } from "./paths/admin";
 import { subscriptionPaths } from "./paths/subscription";
 import { apiKeyPaths } from "./paths/apiKeys";
 import { notificationPaths } from "./paths/notification";
+import { referralPaths } from "./paths/referral";
+import { knowledgeBasePaths } from "./paths/knowledgeBase";
+import { apiUsagePaths } from "./paths/apiUsage";
 
 // Merge all paths
 const allPaths = {
@@ -20,6 +23,9 @@ const allPaths = {
   ...subscriptionPaths,
   ...apiKeyPaths,
   ...notificationPaths,
+  ...referralPaths,
+  ...knowledgeBasePaths,
+  ...apiUsagePaths,
 };
 
 const options: swaggerJsdoc.Options = {
