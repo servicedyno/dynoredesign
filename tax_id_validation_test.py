@@ -647,6 +647,7 @@ class TaxIdValidationTester:
         form_data = {
             "company_name": "Test Invalid TAX",
             "email": "invalid@company.com",
+            "mobile": "+351555666777",  # Required field
             "country": "PT",
             "vat_number": "INVALIDFORMAT"
         }
