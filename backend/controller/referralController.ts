@@ -1,0 +1,473 @@
+import { Request, Response } from 'express';
+import crypto from 'crypto';
+import Referral from '../models/referralModels/referralModel';
+import ReferralReward from '../models/referralModels/referralRewardModel';
+import User from '../models/userModels/userModel';
+import { Op } from 'sequelize';
+
+/**
+ * Generate unique referral code for user
+ */
+export const generateReferralCode = (userId: number, userName: string): string => {
+  const prefix = "DYNO";
+  const year = new Date().getFullYear();
+  const userPart = userName.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+  const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
+  return `${prefix}${year}${userPart}${randomPart}`;
+};
+
+/**
+ * Get user's referral code and statistics
+ * GET /api/referral/my-code
+ */
+export const getMyReferralCode = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.user_id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized. Please login.",
+      });
+    }
+
+    const user = await User.findByPk(userId, {
+      attributes: ['user_id', 'name', 'email', 'referral_code', 'referral_count', 'referral_bonus_earned'],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    // If user doesn't have a referral code, generate one
+    let referralCode = (user as any).referral_code;
+    if (!referralCode) {
+      referralCode = generateReferralCode(userId, (user as any).name || 'USER');
+      await User.update(
+        { referral_code: referralCode },
+        { where: { user_id: userId } }
+      );
+    }
+
+    // Get referral statistics
+    const referrals = await Referral.findAll({
+      where: { referrer_user_id: userId },
+      include: [
+        {
+          model: User,
+          as: 'referred_user',
+          attributes: ['user_id', 'name', 'email', 'createdAt'],
+        },
+      ],
+      order: [['referred_at', 'DESC']],
+    });
+
+    const stats = {
+      total_referrals: referrals.length,
+      pending_referrals: referrals.filter(r => r.status === 'pending').length,
+      active_referrals: referrals.filter(r => r.status === 'active').length,
+      rewarded_referrals: referrals.filter(r => r.status === 'rewarded').length,
+      total_earnings: (user as any).referral_bonus_earned || 0,
+    };
+
+    return res.status(200).json({
+      message: "Referral code retrieved successfully",
+      data: {
+        referral_code: referralCode,
+        referral_link: `${process.env.SERVER_URL}/signup?ref=${referralCode}`,
+        stats,
+        user: {
+          name: (user as any).name,
+          email: (user as any).email,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error in getMyReferralCode:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get list of user's referrals
+ * GET /api/referral/list
+ */
+export const listMyReferrals = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.user_id;
+    const { page = 1, limit = 10, status } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized. Please login.",
+      });
+    }
+
+    const offset = (Number(page) - 1) * Number(limit);
+    const whereClause: any = { referrer_user_id: userId };
+
+    if (status) {
+      whereClause.status = status;
+    }
+
+    const { count, rows } = await Referral.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: 'referred_user',
+          attributes: ['user_id', 'name', 'email', 'createdAt'],
+        },
+      ],
+      order: [['referred_at', 'DESC']],
+      limit: Number(limit),
+      offset,
+    });
+
+    return res.status(200).json({
+      message: "Referrals retrieved successfully",
+      data: {
+        referrals: rows,
+        pagination: {
+          total: count,
+          page: Number(page),
+          limit: Number(limit),
+          total_pages: Math.ceil(count / Number(limit)),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error in listMyReferrals:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Apply referral code during signup
+ * POST /api/referral/apply
+ */
+export const applyReferralCode = async (req: Request, res: Response) => {
+  try {
+    const { referral_code, user_id } = req.body;
+
+    if (!referral_code || !user_id) {
+      return res.status(400).json({
+        message: "Referral code and user ID are required",
+      });
+    }
+
+    // Find the referrer
+    const referrer = await User.findOne({
+      where: { referral_code },
+    });
+
+    if (!referrer) {
+      return res.status(404).json({
+        message: "Invalid referral code",
+      });
+    }
+
+    // Check if user is trying to refer themselves
+    if ((referrer as any).user_id === user_id) {
+      return res.status(400).json({
+        message: "You cannot refer yourself",
+      });
+    }
+
+    // Check if referral already exists
+    const existingReferral = await Referral.findOne({
+      where: {
+        referrer_user_id: (referrer as any).user_id,
+        referred_user_id: user_id,
+      },
+    });
+
+    if (existingReferral) {
+      return res.status(400).json({
+        message: "Referral already applied",
+      });
+    }
+
+    // Create referral record
+    const referral = await Referral.create({
+      referrer_user_id: (referrer as any).user_id,
+      referred_user_id: user_id,
+      referral_code,
+      status: 'pending',
+      activation_requirement: 'first_transaction_100',
+      bonus_amount: 10.00,
+      bonus_currency: 'USD',
+      referee_discount_percent: 50.00,
+      referee_discount_duration_days: 30,
+      referred_at: new Date(),
+      expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+    } as any);
+
+    // Update referred_by_code in user table
+    await User.update(
+      { referred_by_code: referral_code },
+      { where: { user_id } }
+    );
+
+    return res.status(200).json({
+      message: "Referral code applied successfully",
+      data: {
+        referral_id: referral.referral_id,
+        status: referral.status,
+        bonus_info: {
+          referrer_bonus: `$${referral.bonus_amount} ${referral.bonus_currency}`,
+          referee_discount: `${referral.referee_discount_percent}% off fees for ${referral.referee_discount_duration_days} days`,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error in applyReferralCode:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Validate referral code
+ * POST /api/referral/validate
+ */
+export const validateReferralCode = async (req: Request, res: Response) => {
+  try {
+    const { referral_code } = req.body;
+
+    if (!referral_code) {
+      return res.status(400).json({
+        message: "Referral code is required",
+      });
+    }
+
+    const referrer = await User.findOne({
+      where: { referral_code },
+      attributes: ['user_id', 'name', 'email'],
+    });
+
+    if (!referrer) {
+      return res.status(404).json({
+        message: "Invalid referral code",
+        valid: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Referral code is valid",
+      valid: true,
+      data: {
+        referrer_name: (referrer as any).name,
+        bonus_info: {
+          referrer_bonus: "$10 USD",
+          referee_discount: "50% off fees for 30 days",
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error in validateReferralCode:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get referral earnings and rewards
+ * GET /api/referral/earnings
+ */
+export const getReferralEarnings = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.user_id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized. Please login.",
+      });
+    }
+
+    const rewards = await ReferralReward.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: Referral,
+          as: 'referral',
+          include: [
+            {
+              model: User,
+              as: 'referred_user',
+              attributes: ['name', 'email'],
+            },
+          ],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    const summary = {
+      total_earnings: rewards.reduce((sum, r) => sum + Number(r.amount), 0),
+      pending_earnings: rewards
+        .filter(r => r.status === 'pending')
+        .reduce((sum, r) => sum + Number(r.amount), 0),
+      credited_earnings: rewards
+        .filter(r => r.status === 'credited')
+        .reduce((sum, r) => sum + Number(r.amount), 0),
+      withdrawn_earnings: rewards
+        .filter(r => r.status === 'withdrawn')
+        .reduce((sum, r) => sum + Number(r.amount), 0),
+    };
+
+    return res.status(200).json({
+      message: "Earnings retrieved successfully",
+      data: {
+        summary,
+        rewards,
+      },
+    });
+  } catch (error) {
+    console.error("Error in getReferralEarnings:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Process referral reward (internal function, called when conditions are met)
+ * This should be called from transaction controller when a referred user completes qualifying transaction
+ */
+export const processReferralReward = async (userId: number, transactionAmount: number) => {
+  try {
+    // Find if user was referred
+    const user = await User.findByPk(userId);
+    if (!user || !(user as any).referred_by_code) {
+      return null; // User wasn't referred
+    }
+
+    // Find referral record
+    const referral = await Referral.findOne({
+      where: {
+        referred_user_id: userId,
+        status: 'pending',
+      },
+    });
+
+    if (!referral) {
+      return null; // No pending referral
+    }
+
+    // Check if transaction meets activation requirement
+    if (transactionAmount < 100) {
+      return null; // Doesn't meet minimum transaction amount
+    }
+
+    // Activate referral
+    await referral.update({
+      status: 'active',
+      activated_at: new Date(),
+    });
+
+    // Create reward for referrer
+    const referrerReward = await ReferralReward.create({
+      referral_id: referral.referral_id,
+      user_id: referral.referrer_user_id,
+      reward_type: 'bonus_credit',
+      amount: referral.bonus_amount,
+      currency: referral.bonus_currency,
+      status: 'pending',
+    } as any);
+
+    // Update referrer's total earnings
+    await User.increment(
+      { referral_bonus_earned: referral.bonus_amount },
+      { where: { user_id: referral.referrer_user_id } }
+    );
+
+    // Mark referral as rewarded
+    await referral.update({
+      status: 'rewarded',
+      rewarded_at: new Date(),
+    });
+
+    // Credit the reward to referrer's wallet (implement wallet credit logic here)
+    // TODO: Integrate with wallet system
+
+    return {
+      referral_id: referral.referral_id,
+      reward_id: referrerReward.reward_id,
+      amount: referral.bonus_amount,
+      currency: referral.bonus_currency,
+    };
+  } catch (error) {
+    console.error("Error in processReferralReward:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get referral leaderboard (top referrers)
+ * GET /api/referral/leaderboard
+ */
+export const getReferralLeaderboard = async (req: Request, res: Response) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    const leaderboard = await User.findAll({
+      attributes: [
+        'user_id',
+        'name',
+        'referral_code',
+        'referral_count',
+        'referral_bonus_earned',
+      ],
+      where: {
+        referral_count: {
+          [Op.gt]: 0,
+        },
+      },
+      order: [['referral_count', 'DESC']],
+      limit: Number(limit),
+    });
+
+    return res.status(200).json({
+      message: "Leaderboard retrieved successfully",
+      data: {
+        leaderboard: leaderboard.map((user, index) => ({
+          rank: index + 1,
+          user_id: (user as any).user_id,
+          name: (user as any).name,
+          referral_count: (user as any).referral_count,
+          total_earnings: (user as any).referral_bonus_earned,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("Error in getReferralLeaderboard:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+export default {
+  getMyReferralCode,
+  listMyReferrals,
+  applyReferralCode,
+  validateReferralCode,
+  getReferralEarnings,
+  processReferralReward,
+  getReferralLeaderboard,
+  generateReferralCode,
+};
