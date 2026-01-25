@@ -741,6 +741,16 @@ const facebookSignIn = async (req: express.Request, res: express.Response) => {
     // Generate access token
     const resData = await getAccessToken(createdUser.dataValues.user_id);
 
+    // Send welcome email if email is available
+    if (email) {
+      try {
+        await emailService.sendWelcomeEmail(email.toLowerCase(), name || "Facebook User");
+      } catch (emailError) {
+        // Log error but don't fail registration
+        console.error("Error sending welcome email:", emailError);
+      }
+    }
+
     userLogger.info(`New user registered via Facebook: ${facebookId}`);
 
     return successResponseHelper(res, 200, "Registration Successful!", resData);
