@@ -142,6 +142,52 @@ const addCompany = async (req: express.Request, res: express.Response) => {
       photo,
     });
 
+    // Send email notifications
+    try {
+      // Fetch user details for email
+      const user = await userModel.findOne({
+        where: { user_id: userData.user_id },
+        attributes: ['name', 'email'],
+      });
+
+      if (user) {
+        const userDetails = user.dataValues as { name: string; email: string };
+        const companyName = data.company_name || 'Your Company';
+        const companyContactEmail = data.email; // Company contact email from form
+
+        // Email 1: Send to account holder (operational confirmation)
+        await sendCompanyProfileCreatedEmail(
+          userDetails.email,
+          userDetails.name || 'User',
+          companyName
+        );
+        companyLogger.info(
+          `Company profile created email sent to account: ${userDetails.email}`,
+          { user_id: userData.user_id, company_name: companyName }
+        );
+
+        // Email 2: Send to company contact (if provided and different from account email)
+        if (companyContactEmail && companyContactEmail.toLowerCase() !== userDetails.email.toLowerCase()) {
+          await sendCompanyContactWelcomeEmail(
+            companyContactEmail,
+            companyName,
+            userDetails.name || 'the account holder'
+          );
+          companyLogger.info(
+            `Company contact welcome email sent to: ${companyContactEmail}`,
+            { user_id: userData.user_id, company_name: companyName }
+          );
+        }
+      }
+    } catch (emailError) {
+      // Log email error but don't fail the company creation
+      companyLogger.error(
+        `Failed to send company creation emails: ${getErrorMessage(emailError)}`,
+        { user_id: userData.user_id },
+        new Error(emailError as string)
+      );
+    }
+
     // Include tax validation result in response
     const responseData = {
       ...resData.dataValues,
