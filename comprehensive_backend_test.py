@@ -1219,10 +1219,10 @@ class ComprehensiveBackendTester:
                 "Content-Type": "application/json"
             }
             
-            # API requires both 'amount' and 'base_currency' fields for backward compatibility
+            # LEGACY format - using 'currency' field (should be supported via backward compatibility)
             payment_data = {
                 "amount": 50.00,
-                "base_currency": "EUR",
+                "currency": "EUR",  # Legacy field - should work now
                 "company_id": self.company_id,
                 "email": "test@dynopay.com",
                 "modes": ["CRYPTO", "CARD"],
@@ -1242,7 +1242,7 @@ class ComprehensiveBackendTester:
                     "5.2 Create Payment Link (LEGACY)",
                     True,
                     "Payment link created successfully (LEGACY format)",
-                    {"amount": payment_data["amount"], "currency": payment_data["base_currency"]},
+                    {"amount": payment_data["amount"], "currency": payment_data["currency"]},
                     response_time
                 )
             else:
