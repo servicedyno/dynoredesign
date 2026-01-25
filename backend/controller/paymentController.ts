@@ -567,7 +567,7 @@ const verifyPayment = async (req: express.Request, res: express.Response) => {
       finalRes = {
         txRef: uniqueRef,
       };
-      successResponseHelper(res, 200, "transaction successful! ", finalRes);
+      successResponseHelper(res, 200, "Payment verified successfully", finalRes);
     } else {
       errorResponseHelper(res, 500, "Transaction still in progress!");
     }
