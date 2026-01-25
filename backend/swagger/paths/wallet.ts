@@ -2,18 +2,39 @@ export const walletPaths = {
   '/api/wallet/validateWalletAddress': {
     post: {
       tags: ['Wallet Management'],
-      summary: 'Validate cryptocurrency wallet address',
-      description: `Validate if a cryptocurrency wallet address has correct format and structure.
-      
+      summary: '🔐 Step 1: Validate & send OTP for wallet address',
+      description: `**⚠️ TWO-STEP PROCESS** - This is Step 1 of 2 for adding a wallet address.
+
+**Complete Wallet Address Flow:**
+
+**STEP 1:** Use this endpoint → Validates address format & sends OTP to your email
+**STEP 2:** Use \`/api/wallet/verifyOtp\` endpoint → Verify OTP to complete addition
+
+---
+
+**What This Endpoint Does:**
+1. ✅ Validates cryptocurrency wallet address format
+2. 📧 Sends 6-digit OTP to your registered email
+3. ⏱️ OTP expires in 5 minutes
+4. 💾 Temporarily stores address (pending verification)
+
+**After receiving OTP email:**
+- Copy the 6-digit code
+- Call \`/api/wallet/verifyOtp\` endpoint (documented below)
+- Provide: wallet_address, currency, and OTP code
+
 **Supported Cryptocurrencies:**
 - BTC (Bitcoin)
-- ETH (Ethereum)  
+- ETH (Ethereum)
 - TRX (Tron)
 - LTC (Litecoin)
 - DOGE (Dogecoin)
 
-**Usage:**
-Validate addresses before saving or sending funds to ensure correct format.`,
+**Example Flow:**
+1. POST /api/wallet/validateWalletAddress with address & currency
+2. Check your email for OTP code
+3. POST /api/wallet/verifyOtp with address, currency & OTP
+4. ✅ Wallet address added successfully!`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -21,11 +42,11 @@ Validate addresses before saving or sending funds to ensure correct format.`,
           'application/json': {
             schema: {
               type: 'object',
-              required: ['address', 'currency'],
+              required: ['wallet_address', 'currency'],
               properties: {
-                address: { 
+                wallet_address: { 
                   type: 'string', 
-                  description: '✅ REQUIRED: Cryptocurrency wallet address to validate',
+                  description: '✅ REQUIRED: Cryptocurrency wallet address to add',
                   example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' 
                 },
                 currency: { 
@@ -41,24 +62,135 @@ Validate addresses before saving or sending funds to ensure correct format.`,
       },
       responses: {
         200: {
-          description: 'Address validation result',
+          description: '✅ OTP sent successfully - Check your email for 6-digit code',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  valid: { type: 'boolean', description: 'true if address is valid' },
-                  message: { type: 'string', description: 'Validation result message' }
-                },
-                example: {
-                  valid: true,
-                  message: 'Valid BTC address'
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'OTP sent to your email. Please verify to complete wallet addition.' }
                 }
               }
             }
           }
         },
-        400: { description: 'Invalid request parameters' },
+        400: { description: 'Invalid wallet address format' },
+        401: { description: 'Unauthorized - JWT token required' }
+      }
+    }
+  },
+  '/api/wallet/verifyOtp': {
+    post: {
+      tags: ['Wallet Management'],
+      summary: '🔐 Step 2: Verify OTP & complete wallet addition',
+      description: `**⚠️ TWO-STEP PROCESS** - This is Step 2 of 2 for adding a wallet address.
+
+**Previous Step Required:**
+You must first call \`/api/wallet/validateWalletAddress\` to receive an OTP via email.
+
+**What This Endpoint Does:**
+1. ✅ Verifies the 6-digit OTP from your email
+2. 💾 Permanently saves the wallet address to your account
+3. 🔒 Secures the operation with OTP verification
+
+**How to Use in Swagger UI:**
+1. **First**, call \`/api/wallet/validateWalletAddress\` above
+2. **Check your email** for the 6-digit OTP code
+3. **Then**, use this endpoint with:
+   - Same wallet_address you validated
+   - Same currency you validated
+   - The OTP code from email
+4. Click "Execute"
+5. ✅ Wallet address is now saved!
+
+**OTP Security:**
+- ⏱️ Expires in 5 minutes
+- 🔒 Single-use only
+- 📧 Sent to registered email only
+
+**Example:**
+If you received OTP: 123456
+Provide all three fields below to complete the addition.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['otp', 'wallet_address', 'currency'],
+              properties: {
+                otp: {
+                  type: 'string',
+                  description: '✅ REQUIRED: 6-digit OTP code from your email',
+                  example: '123456',
+                  minLength: 6,
+                  maxLength: 6
+                },
+                wallet_address: {
+                  type: 'string',
+                  description: '✅ REQUIRED: Same wallet address from Step 1',
+                  example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+                },
+                currency: {
+                  type: 'string',
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE'],
+                  description: '✅ REQUIRED: Same currency from Step 1',
+                  example: 'BTC'
+                },
+                currency_type: {
+                  type: 'string',
+                  description: '📝 OPTIONAL: Currency subtype (e.g., ERC20, TRC20)',
+                  example: 'native'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: '✅ OTP verified successfully - Wallet address added!',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'OTP verified successfully!' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      verified: { type: 'boolean', example: true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { 
+          description: 'Invalid OTP, expired OTP, or missing parameters',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string' },
+                  message: { 
+                    type: 'string',
+                    enum: [
+                      'OTP is required!',
+                      'Please enter a valid OTP!',
+                      'OTP has expired! Please request a new one.'
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
         401: { description: 'Unauthorized - JWT token required' }
       }
     }
