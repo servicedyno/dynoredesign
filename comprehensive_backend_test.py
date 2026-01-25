@@ -865,15 +865,23 @@ class ComprehensiveBackendTester:
             if response.status_code == 200:
                 data = response.json()
                 if 'data' in data:
-                    api_keys = data['data']
-                    if isinstance(api_keys, list) and len(api_keys) > 0:
+                    api_response_data = data['data']
+                    # Check if data is a dict with 'all' key or a list
+                    if isinstance(api_response_data, dict) and 'all' in api_response_data:
+                        api_keys = api_response_data['all']
+                    elif isinstance(api_response_data, list):
+                        api_keys = api_response_data
+                    else:
+                        api_keys = []
+                    
+                    if len(api_keys) > 0:
                         self.api_key_id = api_keys[0].get('api_id')
                     
                     self.log_result(
                         "4.1 Get API Keys",
                         True,
                         "API keys retrieved successfully",
-                        {"api_key_count": len(api_keys) if isinstance(api_keys, list) else "N/A"},
+                        {"api_key_count": len(api_keys), "first_api_id": self.api_key_id},
                         response_time
                     )
                 else:
