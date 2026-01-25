@@ -18,6 +18,3 @@ frontend
 memory
 services
 tests
-*.json
-!package.json
-!tsconfig.json
