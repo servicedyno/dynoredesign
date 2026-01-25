@@ -2,31 +2,35 @@ export const apiKeyPaths = {
   '/api/userApi/getApi/{id}': {
     get: {
       tags: ['API Keys'],
-      summary: 'Get API key by ID',
-      description: 'Retrieve specific API key details',
+      summary: 'Get API key details',
+      description: `Retrieve specific API key configuration and usage statistics.
+      
+**Security Note:** The actual API key value is not returned for security reasons. Only the key configuration and metadata are shown.`,
       security: [{ BearerAuth: [] }],
       parameters: [{
         in: 'path',
         name: 'id',
         required: true,
         schema: { type: 'integer' },
-        description: 'API key ID'
+        description: '✅ REQUIRED: API key ID',
+        example: 1
       }],
       responses: {
         200: {
-          description: 'API key retrieved',
+          description: 'API key details retrieved',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  message: { type: 'string' },
+                  message: { type: 'string', example: 'API key retrieved successfully' },
                   data: { $ref: '#/components/schemas/ApiKey' }
                 }
               }
             }
           }
         },
+        401: { description: 'Unauthorized' },
         404: { description: 'API key not found' }
       }
     }
@@ -34,14 +38,24 @@ export const apiKeyPaths = {
   '/api/userApi/updateApi/{id}': {
     put: {
       tags: ['API Keys'],
-      summary: 'Update API key',
-      description: 'Update API key configuration',
+      summary: 'Update API key configuration',
+      description: `Update API key settings such as name, currency, webhook, and withdrawal whitelist.
+      
+**Configurable Settings:**
+- API name (for identification)
+- Base currency (default currency for transactions)
+- Withdrawal whitelist (approved wallet addresses)
+- Webhook URL (for payment notifications)
+
+**Security:** Whitelisted addresses add extra security by only allowing withdrawals to approved wallets.`,
       security: [{ BearerAuth: [] }],
       parameters: [{
         in: 'path',
         name: 'id',
         required: true,
-        schema: { type: 'integer' }
+        schema: { type: 'integer' },
+        description: '✅ REQUIRED: API key ID',
+        example: 1
       }],
       requestBody: {
         required: true,
@@ -50,10 +64,29 @@ export const apiKeyPaths = {
             schema: {
               type: 'object',
               properties: {
-                api_name: { type: 'string' },
-                base_currency: { type: 'string', enum: ['USD', 'EUR', 'NGN'] },
-                withdrawal_whitelist: { type: 'array', items: { type: 'string' } },
-                webhook_url: { type: 'string', format: 'uri' }
+                api_name: { 
+                  type: 'string',
+                  description: '📝 OPTIONAL: Friendly name for this API key',
+                  example: 'Production API'
+                },
+                base_currency: { 
+                  type: 'string', 
+                  enum: ['USD', 'EUR', 'NGN', 'GBP'],
+                  description: '📝 OPTIONAL: Default currency for API transactions',
+                  example: 'USD'
+                },
+                withdrawal_whitelist: { 
+                  type: 'array', 
+                  items: { type: 'string' },
+                  description: '📝 OPTIONAL: Approved wallet addresses for withdrawals (security feature)',
+                  example: ['1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', '3J98t1WpEZ73CNmYviecrnyiWrnqRhWNLy']
+                },
+                webhook_url: { 
+                  type: 'string', 
+                  format: 'uri',
+                  description: '📝 OPTIONAL: URL to receive payment webhooks/notifications',
+                  example: 'https://yourapp.com/api/webhooks/payments'
+                }
               }
             }
           }
