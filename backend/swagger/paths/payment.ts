@@ -4,7 +4,14 @@ export const paymentPaths = {
     post: {
       tags: ['Payments'],
       summary: 'Create payment link',
-      description: 'Create a new payment link for accepting crypto or fiat payments. The link can be shared with customers to collect payments. Supports both legacy field names (amount/currency) and new field names (base_amount/base_currency) for backward compatibility.',
+      description: `Create a new payment link for accepting crypto or fiat payments. The link can be shared with customers to collect payments.
+
+**IMPORTANT - Field Name Flexibility:**
+You only need to provide ONE of these field combinations:
+- NEW format: \`base_amount\` + \`base_currency\` (recommended)
+- LEGACY format: \`amount\` + \`currency\` (supported for backward compatibility)
+
+Do NOT send both formats - choose one that works for your integration. If both are provided, \`base_amount\` and \`base_currency\` take priority.`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -14,85 +21,85 @@ export const paymentPaths = {
               type: 'object',
               required: ['company_id'],
               properties: {
-                amount: { 
-                  type: 'number', 
-                  description: 'Payment amount (use either amount or base_amount)',
-                  example: 100.00
-                },
                 base_amount: { 
                   type: 'number', 
-                  description: 'Payment amount (alternative to amount)',
+                  description: '💡 NEW FORMAT: Payment amount. Use this OR amount (not both)',
+                  example: 100.00
+                },
+                base_currency: { 
+                  type: 'string', 
+                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
+                  description: '💡 NEW FORMAT: Currency code. Use this OR currency (not both)',
+                  example: 'USD'
+                },
+                amount: { 
+                  type: 'number', 
+                  description: '🔄 LEGACY FORMAT: Payment amount. Use this OR base_amount (not both)',
                   example: 100.00
                 },
                 currency: { 
                   type: 'string', 
                   enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
-                  description: 'Currency (use either currency or base_currency)',
-                  example: 'USD'
-                },
-                base_currency: { 
-                  type: 'string', 
-                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
-                  description: 'Currency (alternative to currency)',
+                  description: '🔄 LEGACY FORMAT: Currency code. Use this OR base_currency (not both)',
                   example: 'USD'
                 },
                 company_id: { 
                   type: 'integer', 
-                  description: 'Company ID receiving the payment (required)',
+                  description: '✅ REQUIRED: Company ID receiving the payment',
                   example: 1
                 },
                 email: {
                   type: 'string',
                   format: 'email',
-                  description: 'Customer email (optional)',
+                  description: '📧 OPTIONAL: Customer email for notifications',
                   example: 'customer@example.com'
                 },
                 modes: {
                   type: 'array',
                   items: { type: 'string', enum: ['crypto', 'card'] },
-                  description: 'Allowed payment modes (default: ["crypto", "card"])',
+                  description: '💳 OPTIONAL: Allowed payment modes. Defaults to ["crypto", "card"] if not provided',
                   example: ['crypto', 'card']
                 },
                 description: { 
                   type: 'string', 
-                  description: 'Payment description shown to customer',
+                  description: '📝 OPTIONAL: Payment description shown to customer',
                   example: 'Order #12345 - Premium Subscription'
                 },
                 expire: {
                   type: 'string',
                   enum: ['24h', '7d', '30d', 'No'],
-                  description: 'Link expiration period (default: No expiration)',
+                  description: '⏰ OPTIONAL: Link expiration period. Defaults to "No" (never expires)',
                   example: '24h'
                 },
                 callback_url: { 
                   type: 'string', 
                   format: 'uri', 
-                  description: 'URL to call after payment completion',
+                  description: '🔗 OPTIONAL: URL to call after payment completion',
                   example: 'https://example.com/callback'
                 },
                 redirect_url: { 
                   type: 'string', 
                   format: 'uri', 
-                  description: 'URL to redirect customer after successful payment',
+                  description: '↪️ OPTIONAL: URL to redirect customer after successful payment',
                   example: 'https://example.com/success'
                 },
                 webhook_url: { 
                   type: 'string', 
                   format: 'uri', 
-                  description: 'URL to receive payment status webhooks',
+                  description: '📡 OPTIONAL: URL to receive payment status webhooks',
                   example: 'https://example.com/webhook'
                 },
                 fee_payer: {
                   type: 'string',
                   enum: ['customer', 'company'],
-                  description: 'Who pays blockchain fees (default: company)',
+                  description: '💰 OPTIONAL: Who pays blockchain fees. Defaults to "company"',
                   example: 'company'
                 }
               }
             },
             examples: {
-              'Standard Payment Link': {
-                summary: 'Create payment link with new field names',
+              'Recommended - New Format': {
+                summary: '💡 RECOMMENDED: Use base_amount and base_currency (clearer naming)',
                 value: {
                   base_amount: 100.00,
                   base_currency: 'USD',
@@ -100,12 +107,11 @@ export const paymentPaths = {
                   description: 'Test payment for production readiness',
                   expire: '24h',
                   callback_url: 'https://example.com/callback',
-                  redirect_url: 'https://example.com/success',
-                  webhook_url: 'https://example.com/webhook'
+                  redirect_url: 'https://example.com/success'
                 }
               },
-              'Legacy Format': {
-                summary: 'Create payment link with legacy field names (backward compatible)',
+              'Legacy Format - Still Works': {
+                summary: '🔄 LEGACY: Old integrations can keep using amount and currency',
                 value: {
                   amount: 199.99,
                   currency: 'USD',
@@ -114,12 +120,19 @@ export const paymentPaths = {
                   modes: ['crypto', 'card'],
                   description: 'Order #12345 - Premium Subscription',
                   expire: '7d',
-                  redirect_url: 'https://mystore.com/order/12345/success',
                   webhook_url: 'https://mystore.com/webhooks/dynopay'
                 }
               },
+              'Minimal Payment': {
+                summary: '⚡ MINIMAL: Only required fields (uses defaults)',
+                value: {
+                  amount: 50.00,
+                  currency: 'USD',
+                  company_id: 1
+                }
+              },
               'Crypto Only Payment': {
-                summary: 'Payment link accepting only crypto',
+                summary: '₿ CRYPTO: Bitcoin payment with 30-day expiration',
                 value: {
                   base_amount: 0.001,
                   base_currency: 'BTC',
@@ -129,13 +142,14 @@ export const paymentPaths = {
                   expire: '30d'
                 }
               },
-              'Simple Payment': {
-                summary: 'Minimal payment link',
+              'No Expiration': {
+                summary: '∞ PERMANENT: Link that never expires',
                 value: {
-                  amount: 50.00,
-                  currency: 'USD',
+                  base_amount: 999.99,
+                  base_currency: 'EUR',
                   company_id: 1,
-                  description: 'Donation to Project X'
+                  description: 'Annual Membership Fee',
+                  expire: 'No'
                 }
               }
             }
