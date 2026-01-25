@@ -243,14 +243,36 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
   try {
     const file = req.file as Express.Multer.File;
     
-    // Handle both JSON string and object formats
+    // Handle multiple input formats for better Swagger UI experience
     let data;
-    if (typeof req.body.data === 'string') {
+    
+    // Format 1: JSON string in "data" field (backwards compatibility)
+    if (req.body.data && typeof req.body.data === 'string') {
       data = JSON.parse(req.body.data);
-    } else if (typeof req.body.data === 'object') {
+    } 
+    // Format 2: Object in "data" field (backwards compatibility)
+    else if (req.body.data && typeof req.body.data === 'object') {
       data = req.body.data;
+    } 
+    // Format 3: Individual form fields (NEW - Swagger UI friendly)
+    else if (req.body.company_name || req.body.email || req.body.mobile) {
+      data = {
+        company_name: req.body.company_name,
+        email: req.body.email,
+        mobile: req.body.mobile,
+        website: req.body.website,
+        address_line1: req.body.address_line1,
+        address_line2: req.body.address_line2,
+        city: req.body.city,
+        state: req.body.state,
+        country: req.body.country,
+        zip_code: req.body.zip_code,
+        vat_number: req.body.vat_number,
+      };
+      // Remove undefined fields
+      Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
     } else {
-      return errorResponseHelper(res, 400, "Invalid data format");
+      return errorResponseHelper(res, 400, "No data provided for update");
     }
     
     const company_id = req.params.id;
