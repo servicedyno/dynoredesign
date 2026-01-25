@@ -994,20 +994,35 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: Phase 10 implementation fix successful! GET /api/wallet/configured-currencies now correctly uses userWalletModel.findAll() with wallet_address: { [Op.not]: null } and wallet_type field. Retrieved 8 currencies from 28 wallets with proper response structure: configured_currencies array, wallet_count, wallets array with masked addresses (first 6 + last 4 chars), and skip_selection boolean logic. Company filtering via company_id parameter working correctly. Address masking implemented properly showing sample like 'TTve8v6Y48...'."
 
-  - task: "Task 10.3: Currency validation using userWalletModel in payment creation"
+  - task: "Phase 10 Data Migration Validation - tbl_user_wallet populated"
     implemented: true
     working: true
-    file: "/app/backend/controller/paymentController.ts"
+    file: "/app/backend/models/userModels/userWalletModel.ts"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Phase 10 Task 10.3: Updated createCryptoPayment to use userWalletModel for currency validation instead of userWalletAddressModel"
+        comment: "Phase 10: Verified tbl_user_wallet table has wallet data with non-NULL wallet_address values"
       - working: true
         agent: "testing"
-        comment: "✅ VERIFIED: Phase 10 implementation fix successful! Currency validation in createCryptoPayment now correctly uses userWalletModel.findOne() with wallet_type: requestedCurrency, wallet_address: { [Op.not]: null }, and company_id filtering. Code review confirms implementation on lines 327-343 in paymentController.ts. Returns 400 error 'No wallet address configured for {currency}. Please add a {currency} wallet first.' when currency not configured. Runtime testing shows proper error handling (500 error due to missing Redis data is expected for incomplete payment flow)."
+        comment: "✅ VERIFIED: Phase 10 data migration successful! Found 28 wallet records with non-NULL wallet_address in tbl_user_wallet table. Wallet types distribution: TRX (4), BTC (4), USDT-TRC20 (7), USDT-ERC20 (3), ETH (3), DOGE (3), LTC (2), BCH (2). All wallets currently have company_id=null (no company scoping yet). Sample addresses properly stored with formats like 'TTve8v6Y48...', '1JH5TnZzjY...', '0x9a7221b5...'. Database schema includes wallet_type, wallet_address, company_id, and wallet_name fields as required."
+
+  - task: "Phase 10 Backward Compatibility Verification"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Phase 10: Ensured existing API endpoints still work after userWalletModel migration"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Phase 10 backward compatibility maintained! All existing endpoints working correctly: GET /api/wallet/getWallet (200), GET /api/wallet/getWalletAddresses (200), GET /api/userApi/getApi (200). No breaking changes detected. Wallet listing, address management, and API key management functionality preserved. Migration from userWalletAddressModel to userWalletModel completed without affecting existing features."
 
   - task: "Task 10.4: Payment Links Company Isolation Fix"
     implemented: true
