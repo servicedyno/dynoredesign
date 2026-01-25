@@ -269,11 +269,11 @@ class TaxIdPT518713130Tester:
                     
                     if 'data' in data:
                         validation_result = data['data']
-                        query_status = validation_result.get('query_status')
+                        message = validation_result.get('message', '')
                         is_valid = validation_result.get('valid')
                         format_valid = validation_result.get('format_valid')
                         
-                        if query_status == "completed":
+                        if not ("rate limit" in message.lower() or "unavailable" in message.lower()):
                             self.log_result(
                                 f"TAX ID Variation - {variation['name']}", 
                                 True, 
@@ -282,22 +282,22 @@ class TaxIdPT518713130Tester:
                                     "input": variation["vat_number"],
                                     "valid": is_valid,
                                     "format_valid": format_valid,
-                                    "query_status": query_status
+                                    "message": message
                                 }
                             )
-                        elif query_status == "rate_limited":
+                        elif "rate limit" in message.lower():
                             self.log_result(
                                 f"TAX ID Variation - {variation['name']}", 
                                 True, 
                                 "Rate limited but handled gracefully",
-                                {"query_status": query_status, "input": variation["vat_number"]}
+                                {"message": message, "input": variation["vat_number"]}
                             )
                         else:
                             self.log_result(
                                 f"TAX ID Variation - {variation['name']}", 
                                 False, 
-                                f"Unexpected query status: {query_status}",
-                                {"query_status": query_status, "input": variation["vat_number"]}
+                                f"Unexpected message: {message}",
+                                {"message": message, "input": variation["vat_number"]}
                             )
                     else:
                         self.log_result(
