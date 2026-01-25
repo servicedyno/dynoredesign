@@ -2858,26 +2858,44 @@ const checkFeeBalance = async () => {
         }
       }
       if (flag) {
-        const adminData: any[] = await sequelize.query(
-          "select email from tbl_admin",
-          {
-            type: QueryTypes.SELECT,
+        // Try to get admin email from database or environment variable
+        let adminEmail = process.env.ADMIN_EMAIL || "moxxcompany@gmail.com"; // Default fallback
+        
+        try {
+          const adminData: any[] = await sequelize.query(
+            "select email from tbl_admin limit 1",
+            {
+              type: QueryTypes.SELECT,
+            }
+          );
+          if (adminData && adminData.length > 0 && adminData[0].email) {
+            adminEmail = adminData[0].email;
           }
-        );
-        const { email } = adminData[0];
+        } catch (dbError) {
+          console.log("Could not fetch admin from database, using fallback email:", adminEmail);
+        }
+        
         textData += `\n\n Please recharge as soon as possible.`;
+        
+        console.log(`Sending low fee balance alert to: ${adminEmail}`);
+        
         await sendEmail(
-          email,
-          "DynoCash Admin",
+          adminEmail,
+          "DynoPay Admin",
           "Low amount in Fee wallet",
           textData
         );
-        const { alert_duration } = adminFeesWallets[0].dataValues;
+        
+        const alert_duration = adminFeesWallets[0]?.dataValues?.alert_duration || 24; // Default 24 hours
         await setRedisItem("admin_fee_alert", {
           status: "sent",
           expiresAt:
             new Date().getTime() + Number(alert_duration) * 60 * 60 * 1000,
         });
+        
+        console.log(`Fee balance alert sent successfully to ${adminEmail}`);
+      } else {
+        console.log("Fee balance alert already sent recently, skipping");
       }
     }
   } catch (e) {
