@@ -54,6 +54,12 @@ export const walletPaths = {
                   enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE'], 
                   description: '✅ REQUIRED: Cryptocurrency type',
                   example: 'BTC' 
+                },
+                wallet_name: {
+                  type: 'string',
+                  description: '📝 OPTIONAL: Friendly name for this wallet (e.g., "My Bitcoin Wallet", "Trading Address")',
+                  example: 'My Main BTC Wallet',
+                  maxLength: 100
                 }
               }
             }
