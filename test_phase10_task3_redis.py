@@ -55,9 +55,9 @@ def login() -> tuple:
         )
         
         if response.status_code == 200:
-            data = response.json()
-            token = data.get('data', {}).get('token')
-            user_data = data.get('data', {})
+            data = response.json().get('data', {})
+            token = data.get('accessToken')  # Fixed: was 'token'
+            user_data = data.get('userData', {})
             user_id = user_data.get('user_id')
             
             if token and user_id:
@@ -66,6 +66,7 @@ def login() -> tuple:
                 return token, user_id
             else:
                 print_error("Token or user_id not found in response")
+                print_error(f"Response structure: {json.dumps(data, indent=2)[:200]}")
                 return None, None
         else:
             print_error(f"Login failed: {response.status_code}")
