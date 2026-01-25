@@ -13,6 +13,7 @@ import { notificationPaths } from "./paths/notification";
 import { referralPaths } from "./paths/referral";
 import { knowledgeBasePaths } from "./paths/knowledgeBase";
 import { apiUsagePaths } from "./paths/apiUsage";
+import { companyPaths } from "./paths/company";
 
 // Merge all paths
 const allPaths = {
@@ -26,6 +27,7 @@ const allPaths = {
   ...referralPaths,
   ...knowledgeBasePaths,
   ...apiUsagePaths,
+  ...companyPaths,
 };
 
 const options: swaggerJsdoc.Options = {
