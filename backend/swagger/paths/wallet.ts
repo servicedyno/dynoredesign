@@ -2,8 +2,18 @@ export const walletPaths = {
   '/api/wallet/validateWalletAddress': {
     post: {
       tags: ['Wallet Management'],
-      summary: 'Validate wallet address',
-      description: 'Validate cryptocurrency wallet address format',
+      summary: 'Validate cryptocurrency wallet address',
+      description: `Validate if a cryptocurrency wallet address has correct format and structure.
+      
+**Supported Cryptocurrencies:**
+- BTC (Bitcoin)
+- ETH (Ethereum)  
+- TRX (Tron)
+- LTC (Litecoin)
+- DOGE (Dogecoin)
+
+**Usage:**
+Validate addresses before saving or sending funds to ensure correct format.`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -13,8 +23,17 @@ export const walletPaths = {
               type: 'object',
               required: ['address', 'currency'],
               properties: {
-                address: { type: 'string', example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' },
-                currency: { type: 'string', enum: ['BTC', 'ETH', 'TRX', 'LTC'], example: 'BTC' }
+                address: { 
+                  type: 'string', 
+                  description: '✅ REQUIRED: Cryptocurrency wallet address to validate',
+                  example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' 
+                },
+                currency: { 
+                  type: 'string', 
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE'], 
+                  description: '✅ REQUIRED: Cryptocurrency type',
+                  example: 'BTC' 
+                }
               }
             }
           }
@@ -22,19 +41,25 @@ export const walletPaths = {
       },
       responses: {
         200: {
-          description: 'Address validated',
+          description: 'Address validation result',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  valid: { type: 'boolean' },
-                  message: { type: 'string' }
+                  valid: { type: 'boolean', description: 'true if address is valid' },
+                  message: { type: 'string', description: 'Validation result message' }
+                },
+                example: {
+                  valid: true,
+                  message: 'Valid BTC address'
                 }
               }
             }
           }
-        }
+        },
+        400: { description: 'Invalid request parameters' },
+        401: { description: 'Unauthorized - JWT token required' }
       }
     }
   },
@@ -42,7 +67,9 @@ export const walletPaths = {
     post: {
       tags: ['Wallet Management'],
       summary: 'Delete saved wallet address',
-      description: 'Remove a saved wallet address',
+      description: `Remove a previously saved wallet address from your account.
+      
+**Note:** This only removes the address from your saved list. It does not affect the actual blockchain wallet.`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -52,14 +79,38 @@ export const walletPaths = {
               type: 'object',
               required: ['address_id'],
               properties: {
-                address_id: { type: 'string' }
+                address_id: { 
+                  type: 'string',
+                  description: '✅ REQUIRED: ID of the saved wallet address to delete',
+                  example: '550e8400-e29b-41d4-a716-446655440000'
+                }
               }
             }
           }
         }
       },
       responses: {
-        200: { description: 'Address deleted successfully' }
+        200: { 
+          description: 'Address deleted successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  message: { type: 'string' }
+                },
+                example: {
+                  success: true,
+                  message: 'Wallet address deleted successfully'
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid address_id' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Address not found' }
       }
     }
   },
