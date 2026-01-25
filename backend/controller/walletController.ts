@@ -3602,6 +3602,8 @@ export default {
   validateWallet,
   verifyOtp,
   deleteWalletAddress,
+  deleteWalletAddressWithOTP,
+  sendDeleteWalletOTP,
   sendEditWalletOTP,
   editWalletAddress,
   getTransactionDetails,
