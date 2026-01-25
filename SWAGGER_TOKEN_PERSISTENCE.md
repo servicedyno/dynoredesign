@@ -15,7 +15,7 @@ Added `persistAuthorization: true` to Swagger UI configuration.
 ## How It Works Now
 
 ### 1. Authorize Once
-1. Open Swagger UI: https://f5006fc4-5cad-480e-8552-90fd171f8760.preview.emergentagent.com/api/docs
+1. Open Swagger UI: https://emaildevops.preview.emergentagent.com/api/docs
 2. Click "Authorize" (🔓)
 3. Paste your JWT token
 4. Click "Authorize" → "Close"

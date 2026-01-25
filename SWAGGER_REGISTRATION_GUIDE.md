@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://f5006fc4-5cad-480e-8552-90fd171f8760.preview.emergentagent.com/api/docs
+Go to: https://emaildevops.preview.emergentagent.com/api/docs
 
 ---
 

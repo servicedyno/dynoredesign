@@ -4,7 +4,7 @@
 
 I've added debugging to see what's in your token. Please:
 
-1. **Go to Swagger UI**: https://f5006fc4-5cad-480e-8552-90fd171f8760.preview.emergentagent.com/api/docs
+1. **Go to Swagger UI**: https://emaildevops.preview.emergentagent.com/api/docs
 
 2. **Make sure you're authorized**:
    - Click the "Authorize" button (🔓)
