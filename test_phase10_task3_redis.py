@@ -118,7 +118,6 @@ def setup_redis_payment_data(user_id: int, currency: str, company_id: int = None
         redis_data = {
             "user_id": str(user_id),
             "adm_id": str(user_id),  # Admin ID (same as user for this test)
-            "company_id": str(company_id) if company_id else "",
             "pathType": "createLink",  # Payment link flow
             "transaction_id": transaction_id,
             "amount": "100",
@@ -128,6 +127,10 @@ def setup_redis_payment_data(user_id: int, currency: str, company_id: int = None
             "created_at": datetime.utcnow().isoformat(),
             "modes": "crypto"
         }
+        
+        # Only add company_id if it's provided and not None
+        if company_id is not None:
+            redis_data["company_id"] = str(company_id)
         
         # Store in Redis using HSET (hash set) to match backend's hGetAll
         for field, value in redis_data.items():
