@@ -2156,24 +2156,30 @@ const createPaymentLink = async (
   res: express.Response
 ) => {
   const userData = jwt.decode(res.locals.token) as any;
+  
+  // Extract both old and new field names for backward compatibility
+  // IMPORTANT: Client should send EITHER new format OR legacy format, not both
+  // If both provided, new format (base_*) takes priority
   const { 
     email, 
-    base_currency,
-    currency,  // Accept both base_currency and currency for backward compatibility
+    base_currency,    // NEW format (recommended)
+    currency,         // LEGACY format (backward compatibility)
     modes, 
-    amount,
-    base_amount,  // Accept both amount and base_amount
+    amount,           // LEGACY format (backward compatibility)
+    base_amount,      // NEW format (recommended)
     description,
     expire,
     callback_url,
     redirect_url,
     webhook_url,
-    fee_payer,  // Who pays blockchain fees: 'customer' or 'company'
-    company_id  // Phase 10 Fix: Accept company_id for multi-tenant isolation
+    fee_payer,        // Who pays blockchain fees: 'customer' or 'company'
+    company_id        // Phase 10 Fix: Accept company_id for multi-tenant isolation
   } = req.body;
   
-  // Normalize field names for backward compatibility
+  // Normalize field names - use new format first, fall back to legacy, then default
+  // Priority: base_currency > currency > 'USD'
   const normalizedCurrency = base_currency || currency || 'USD';
+  // Priority: base_amount > amount
   const normalizedAmount = base_amount || amount;
   
   try {
