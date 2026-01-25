@@ -116,9 +116,9 @@ def setup_redis_payment_data(user_id: int, currency: str, company_id: int = None
         # Create Redis payload (matching the structure used in production)
         redis_key = f"customer-{transaction_id}"
         redis_data = {
-            "user_id": user_id,
-            "adm_id": user_id,  # Admin ID (same as user for this test)
-            "company_id": company_id,
+            "user_id": str(user_id),
+            "adm_id": str(user_id),  # Admin ID (same as user for this test)
+            "company_id": str(company_id) if company_id else "",
             "pathType": "createLink",  # Payment link flow
             "transaction_id": transaction_id,
             "amount": "100",
@@ -126,18 +126,21 @@ def setup_redis_payment_data(user_id: int, currency: str, company_id: int = None
             "customer_email": "test@example.com",
             "description": "Test payment for Phase 10 currency validation",
             "created_at": datetime.utcnow().isoformat(),
-            "modes": ["crypto"]
+            "modes": "crypto"
         }
         
-        # Store in Redis
-        r.set(redis_key, json.dumps(redis_data))
+        # Store in Redis using HSET (hash set) to match backend's hGetAll
+        for field, value in redis_data.items():
+            if value:  # Only set non-empty values
+                r.hset(redis_key, field, value)
+        
         r.expire(redis_key, 3600)  # 1 hour expiry
         
         print_success(f"Redis data created with key: {redis_key}")
         print_info(f"Payload: {json.dumps(redis_data, indent=2)}")
         
         # Verify data was stored
-        stored_data = r.get(redis_key)
+        stored_data = r.hgetall(redis_key)
         if stored_data:
             print_success("Redis data verified and stored successfully")
             return transaction_id
