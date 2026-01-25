@@ -696,7 +696,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
         }
         
         await deleteRedisItem(uniqueRef);
-        successResponseHelper(res, 200, "transaction successful!", returnData);
+        successResponseHelper(res, 200, "Payment confirmed successfully", returnData);
       } else {
         const company_data = (
           await companyModel.findOne({
