@@ -11,3 +11,5 @@ test/
 coverage/
 *.swp
 *.swo
+dist/
+build/
