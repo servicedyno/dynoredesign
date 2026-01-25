@@ -206,7 +206,7 @@ const { id } = await tatumApi.createSubscription(
 
 **Current SERVER_URL:**
 ```env
-SERVER_URL=https://redis-wallet-fix.preview.emergentagent.com
+SERVER_URL=https://env-setup-22.preview.emergentagent.com
 ```
 
 ---

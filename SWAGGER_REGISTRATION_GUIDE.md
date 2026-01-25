@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://redis-wallet-fix.preview.emergentagent.com/api/docs
+Go to: https://env-setup-22.preview.emergentagent.com/api/docs
 
 ---
 

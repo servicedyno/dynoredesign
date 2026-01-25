@@ -6,7 +6,7 @@
 
 #### 1. **SERVER_URL** ✅
 - **Status**: Maintained current development URL
-- **Value**: `https://redis-wallet-fix.preview.emergentagent.com`
+- **Value**: `https://env-setup-22.preview.emergentagent.com`
 - **Reason**: Kept existing development environment URL as instructed
 
 #### 2. **PROFILE_ID** ✅

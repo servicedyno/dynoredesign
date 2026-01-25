@@ -329,5 +329,5 @@ The system demonstrates:
 
 **Report Generated:** January 25, 2026  
 **Test Credentials:** nomadly@moxx.co  
-**Backend URL:** https://redis-wallet-fix.preview.emergentagent.com  
+**Backend URL:** https://env-setup-22.preview.emergentagent.com  
 **Tester:** Main Development Agent

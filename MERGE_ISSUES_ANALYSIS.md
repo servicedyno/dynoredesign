@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://redis-wallet-fix.preview.emergentagent.com
+SERVER_URL=https://env-setup-22.preview.emergentagent.com
 ```
 
 **Impact:**
