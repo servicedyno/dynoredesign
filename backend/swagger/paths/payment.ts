@@ -7,13 +7,17 @@ export const paymentPaths = {
       description: `Create a new payment link for accepting crypto or fiat payments. The link can be shared with customers to collect payments.
 
 **FIELD NAME COMPATIBILITY:**
-The API supports flexible field naming for backward compatibility:
-- \`amount\` (recommended for most use cases)
-- \`base_amount\` (alternative, both work identically)
-- \`currency\` (recommended for most use cases)
-- \`base_currency\` (alternative, both work identically)
+The API supports flexible field naming for backward compatibility. You only need to provide **ONE** currency field and **ONE** amount field:
 
-**Use ONE set of field names** - don't mix. If both are provided, the API prioritizes \`base_*\` fields.
+**Currency Field (choose one):**
+- \`currency\` - **RECOMMENDED** for most use cases
+- \`base_currency\` - Alternative name (works identically)
+
+**Amount Field (choose one):**
+- \`amount\` - **RECOMMENDED** for most use cases  
+- \`base_amount\` - Alternative name (works identically)
+
+⚠️ **IMPORTANT:** Only provide ONE of each field type. If both are provided, \`base_*\` fields take priority.
 
 **PAYMENT MODES:**
 Modes must be provided in **UPPERCASE**. Valid modes:
@@ -42,26 +46,26 @@ Modes must be provided in **UPPERCASE**. Valid modes:
               properties: {
                 amount: { 
                   type: 'number', 
-                  description: '💰 Payment amount (recommended field name). Use this OR base_amount',
+                  description: '💰 Payment amount (RECOMMENDED field name). Provide this OR base_amount, not both',
                   example: 100.00,
-                  minimum: 0.01
+                  minimum: 5.00
                 },
                 base_amount: { 
                   type: 'number', 
-                  description: '💰 Payment amount (alternative field name). Use this OR amount',
+                  description: '💰 Payment amount (alternative field name). Provide this OR amount, not both',
                   example: 100.00,
-                  minimum: 0.01
+                  minimum: 5.00
                 },
                 currency: { 
                   type: 'string', 
-                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
-                  description: '💱 Currency code (recommended field name). Use this OR base_currency',
+                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'LTC', 'DOGE', 'KES', 'UGX', 'RWF'], 
+                  description: '💱 Currency code (RECOMMENDED field name). Provide this OR base_currency, not both',
                   example: 'USD'
                 },
                 base_currency: { 
                   type: 'string', 
-                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
-                  description: '💱 Currency code (alternative field name). Use this OR currency',
+                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'LTC', 'DOGE', 'KES', 'UGX', 'RWF'], 
+                  description: '💱 Currency code (alternative field name). Provide this OR currency, not both',
                   example: 'USD'
                 },
                 company_id: { 
