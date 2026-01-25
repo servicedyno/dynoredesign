@@ -42,7 +42,7 @@ export const walletPaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['wallet_address', 'currency'],
+              required: ['wallet_address', 'currency', 'company_id'],
               properties: {
                 wallet_address: { 
                   type: 'string', 
@@ -54,6 +54,11 @@ export const walletPaths = {
                   enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE'], 
                   description: '✅ REQUIRED: Cryptocurrency type',
                   example: 'BTC' 
+                },
+                company_id: {
+                  type: 'integer',
+                  description: '✅ REQUIRED: Company ID (multi-tenant - wallet belongs to this company)',
+                  example: 1
                 },
                 wallet_name: {
                   type: 'string',
