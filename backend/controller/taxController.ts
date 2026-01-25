@@ -146,7 +146,7 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
       country_code: newTaxRate.dataValues.country_code,
       country_name: newTaxRate.dataValues.country_name,
       tax_acronym: newTaxRate.dataValues.tax_acronym,
-      standard_rate: newTaxRate.dataValues.standard_rate,
+      standard_rate: parseFloat(newTaxRate.dataValues.standard_rate),  // Ensure number format
       reduced_rates: newTaxRate.dataValues.reduced_rates,
       cached: false,
       source,
