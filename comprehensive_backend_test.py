@@ -458,7 +458,7 @@ class ComprehensiveBackendTester:
             timestamp = int(time.time())
             company_data = {
                 "company_name": f"API Test Company {timestamp}",
-                "email": "apitest@dynopay.test",
+                "email": f"apitest{timestamp}@example.com",
                 "mobile": "+351999888777",
                 "address_line1": "Test Street 123",
                 "city": "Lisbon",
