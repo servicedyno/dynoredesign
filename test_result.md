@@ -964,7 +964,7 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: Phase 9 Email Notifications Service implementation complete. All 17 email functions found and properly exported: sendWelcomeEmail, sendCompanyProfileCreatedEmail, sendWalletOTPEmail, sendWalletVerifiedEmail, sendWalletUpdateOTPEmail, sendPaymentReceivedEmail, sendAddWalletReminderEmail, sendEmailVerificationOTPEmail, sendLoginOTPEmail, sendForgotPasswordOTPEmail, sendPasswordChangedEmail, sendPaymentLinkCreatedEmail, sendKYCRequiredEmail, sendKYCApprovedEmail, sendKYCRejectedEmail, sendWeeklySummaryEmail, sendSecurityAlertEmail. HTML templates include professional design with DynoPay branding, responsive layout, template variables (${name}, ${email}, etc.), and proper CSS styling. Brevo API integration configured correctly with mailTransporter.ts using api.brevo.com endpoint and BREVO_API_KEY environment variable. All functions are callable with correct parameter signatures. Email service compiles successfully and imports without errors."
 
-  - task: "Task 10.1: API Key Creation Logic (verified from Phase 6)"
+  - task: "Task 10.1: API Key Creation Logic using userWalletModel"
     implemented: true
     working: true
     file: "/app/backend/controller/apiController.ts"
@@ -974,10 +974,10 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Phase 10 Task 10.1: API key creation requires minimum 1 wallet address configured for the company"
+        comment: "Phase 10 Task 10.1: Updated API key creation to use userWalletModel instead of userWalletAddressModel for wallet validation"
       - working: true
         agent: "testing"
-        comment: "✅ VERIFIED: API key creation logic working correctly. Requires at least 1 wallet address configured for the company before allowing API key creation. Validation implemented in POST /api/userApi/addApi endpoint."
+        comment: "✅ VERIFIED: Phase 10 implementation fix successful! API key creation now correctly uses userWalletModel.count() with wallet_address: { [Op.not]: null } validation. Tested with production API key creation - correctly validates wallet requirement and returns 400 error 'At least one wallet address is required for production API keys' when user has no wallets configured. Code review confirms userWalletModel usage on lines 55-70 in apiController.ts."
 
   - task: "Task 10.2: GET /api/wallet/configured-currencies endpoint"
     implemented: true
