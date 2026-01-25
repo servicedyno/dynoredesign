@@ -68,7 +68,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     const walletData = await userWalletModel.findAll({
       attributes: {
         exclude: [
-          "wallet_id",
+          // "wallet_id", // ✅ MUST RETURN: Required for delete operations
           "privateKey",
           "subscription_id",
           "wallet_account_id",
