@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["nodejs-18_x", "yarn"]
+nixPkgs = ["nodejs_20", "yarn"]
 
 [phases.install]
-cmds = ["cd backend && yarn install"]
+cmds = ["cd backend && yarn install --ignore-engines"]
 
 [phases.build]
 cmds = ["cd backend && yarn build"]
