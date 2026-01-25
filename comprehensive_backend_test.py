@@ -1139,7 +1139,7 @@ class ComprehensiveBackendTester:
                         "5.1 Create Payment Link (NEW)",
                         True,
                         "Payment link created successfully (NEW format)",
-                        {"link_id": self.payment_link_id, "amount": payment_data["base_amount"]},
+                        {"link_id": self.payment_link_id, "amount": payment_data["amount"]},
                         response_time
                     )
                 else:
