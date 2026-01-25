@@ -206,7 +206,7 @@ const { id } = await tatumApi.createSubscription(
 
 **Current SERVER_URL:**
 ```env
-SERVER_URL=https://server-manager-19.preview.emergentagent.com
+SERVER_URL=https://dynopay-backend.preview.emergentagent.com
 ```
 
 ---

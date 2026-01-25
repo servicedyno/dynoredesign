@@ -14,7 +14,7 @@ Based on code analysis and actual usage patterns, the environment configuration 
 ```ini
 # Tatum Customer
 CUSTOMER_ID=6708cc37177ff63b812c0db9
-PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4  # ❌ Misleading placement
+PROFILE_ID=dynopay-backend  # ❌ Misleading placement
 
 # Telnyx SMS Verification
 TELNYX_API_KEY=KEY019B6F591AACFAF1451A80C66809193A_TKJeBs8NaHEaqFkEh2HuYe
@@ -30,7 +30,7 @@ CUSTOMER_ID=6708cc37177ff63b812c0db9  # May be legacy/unused
 # Telnyx SMS Verification
 TELNYX_API_KEY=KEY019B6F591AACFAF1451A80C66809193A_TKJeBs8NaHEaqFkEh2HuYe
 TELNYX_VERIFY_PROFILE_ID=apidocs-overhaul
-PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4  # ✅ Telnyx fallback
+PROFILE_ID=dynopay-backend  # ✅ Telnyx fallback
 TELNYX_PHONE_NUMBER=+18022100479
 ```
 
