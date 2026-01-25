@@ -335,15 +335,24 @@ const createCryptoPayment = async (
       const requestedCurrency = data.currency;
       console.log(`[Phase 10 Validation] Checking wallet for currency: ${requestedCurrency}, user_id: ${items.adm_id}, company_id: ${items.company_id}`);
       
+      // Parse user_id safely
+      const userId = parseInt(items.adm_id);
+      if (isNaN(userId)) {
+        return errorResponseHelper(res, 400, "Invalid user ID");
+      }
+      
       const whereClause: any = {
-        user_id: parseInt(items.adm_id) || items.adm_id,
+        user_id: userId,
         wallet_type: requestedCurrency,
         wallet_address: { [Op.not]: null },
       };
       
-      // Handle company_id: if not provided or empty, explicitly check for NULL
+      // Handle company_id: if provided and valid, add to query; otherwise check for NULL
       if (items.company_id && items.company_id !== '' && items.company_id !== 'undefined' && items.company_id !== 'null') {
-        whereClause.company_id = parseInt(items.company_id) || items.company_id;
+        const companyId = parseInt(items.company_id);
+        if (!isNaN(companyId)) {
+          whereClause.company_id = companyId;
+        }
       } else {
         // If company_id not provided, check for NULL company_id wallets
         whereClause.company_id = null;
