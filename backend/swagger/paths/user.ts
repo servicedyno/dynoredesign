@@ -447,8 +447,15 @@ export const userPaths = {
   '/api/user/updateUser': {
     put: {
       tags: ['User Management'],
-      summary: 'Update user with image',
-      description: 'Update user profile with optional image upload',
+      summary: 'Update user profile',
+      description: |
+        Update user profile with optional image upload.
+        
+        **💡 Swagger UI Usage:**
+        1. Click "Try it out"
+        2. Fill in the fields you want to update
+        3. Optionally upload a profile image
+        4. Click "Execute"
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -456,20 +463,33 @@ export const userPaths = {
           'multipart/form-data': {
             schema: {
               type: 'object',
+              required: ['name', 'email'],
               properties: {
-                data: { 
-                  type: 'string', 
-                  description: 'JSON string containing name and email',
-                  example: '{"name":"John Doe","email":"john@example.com"}'
+                name: {
+                  type: 'string',
+                  description: 'User full name (required)',
+                  example: 'John Doe'
                 },
-                image: { type: 'string', format: 'binary' }
+                email: {
+                  type: 'string',
+                  format: 'email',
+                  description: 'User email address (required)',
+                  example: 'john@example.com'
+                },
+                image: {
+                  type: 'string',
+                  format: 'binary',
+                  description: 'Profile picture (optional, PNG/JPG)'
+                }
               }
             }
           }
         }
       },
       responses: {
-        200: { description: 'User updated successfully' }
+        200: { description: 'User updated successfully' },
+        400: { description: 'Invalid input' },
+        401: { description: 'Unauthorized' }
       }
     }
   },
