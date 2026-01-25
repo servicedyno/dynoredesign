@@ -592,8 +592,15 @@ class ComprehensiveBackendTester:
         try:
             headers = {"Authorization": f"Bearer {self.jwt_token}"}
             
+            # Include all required fields as per API validation
             update_data = {
-                "company_name": "Updated API Test Company"
+                "company_name": "Updated API Test Company",
+                "email": "updated@example.com",
+                "mobile": "+351999888777",
+                "address_line1": "Updated Street 456",
+                "city": "Porto",
+                "country": "PT",
+                "zip_code": "4000-001"
             }
             
             files = {'data': (None, json.dumps(update_data), 'application/json')}
