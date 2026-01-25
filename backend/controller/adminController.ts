@@ -166,7 +166,12 @@ const getWallets = async (req: express.Request, res: express.Response) => {
     const cryptoWallets = returnData.filter(
       (x) => x.currency_type === "CRYPTO"
     );
-    successResponseHelper(res, 200, "", { fiatWallets, cryptoWallets });
+    const totalWallets = (fiatWallets?.length || 0) + (cryptoWallets?.length || 0);
+    const message = totalWallets === 0
+      ? "No wallets found in the system"
+      : `Successfully retrieved ${totalWallets} wallet${totalWallets === 1 ? '' : 's'} (${fiatWallets.length} fiat, ${cryptoWallets.length} crypto)`;
+    
+    successResponseHelper(res, 200, message, { fiatWallets, cryptoWallets });
   } catch (e) {
     const message = getErrorMessage(e);
     adminLogger.error(message, new Error(e));
