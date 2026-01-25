@@ -1924,6 +1924,15 @@ const cryptoVerification = async (address, webhook = true) => {
             message: `Transaction ${customerPayload?.status}!`,
             paymentStatus: "complete",
             resData,
+            ...(tempAmount > 0 && {
+              overpayment: {
+                detected: true,
+                amount_crypto: tempAmount,
+                currency_crypto: tempCurrency,
+                amount_base: newAmount[0].amount,
+                currency_base: customerData?.base_currency || "USD",
+              }
+            })
           };
         }
 
