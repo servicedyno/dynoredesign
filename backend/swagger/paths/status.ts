@@ -817,6 +817,77 @@
  *     responses:
  *       200:
  *         description: Company deleted
+ *
+ * /api/company/validateTaxId:
+ *   post:
+ *     tags: [Company]
+ *     summary: Validate TAX ID/VAT Number
+ *     description: Validates a TAX ID/VAT number using APILayer Tax Data API. This endpoint can be used before company creation to verify the tax ID is valid and registered.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [vat_number, country_code]
+ *             properties:
+ *               vat_number:
+ *                 type: string
+ *                 description: Tax ID / VAT number to validate
+ *                 example: "PT123456789"
+ *               country_code:
+ *                 type: string
+ *                 description: ISO 2-letter country code
+ *                 example: "PT"
+ *           examples:
+ *             Portugal VAT:
+ *               summary: Validate Portuguese VAT
+ *               value:
+ *                 vat_number: "PT123456789"
+ *                 country_code: "PT"
+ *             German VAT:
+ *               summary: Validate German VAT
+ *               value:
+ *                 vat_number: "DE123456789"
+ *                 country_code: "DE"
+ *     responses:
+ *       200:
+ *         description: Tax ID validation completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     vat_number:
+ *                       type: string
+ *                     country_code:
+ *                       type: string
+ *                     valid:
+ *                       type: boolean
+ *                       description: Whether the tax ID is valid and registered
+ *                     format_valid:
+ *                       type: boolean
+ *                       description: Whether the format is valid for the country
+ *                     company_name:
+ *                       type: string
+ *                       description: Registered company name (if valid)
+ *                     company_address:
+ *                       type: string
+ *                       description: Registered company address (if valid)
+ *                     message:
+ *                       type: string
+ *                       description: Human-readable result message
+ *       400:
+ *         description: Missing required fields
+ *       500:
+ *         description: Tax validation service not configured
  */
 
 /**
