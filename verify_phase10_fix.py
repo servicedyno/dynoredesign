@@ -206,18 +206,20 @@ def main():
     token = login()
     
     if not token:
-        print_error("Cannot proceed without authentication")
-        return
+        print_error("Cannot proceed without authentication - skipping API tests")
+        results['task_10_2'] = False
+        results['task_10_3'] = False
+    else:
     
-    # Test each task
-    print_info("\nStep 3: Testing Task 10.1...")
-    results['task_10_1'] = test_task_10_1_api_key_validation()
-    
-    print_info("\nStep 4: Testing Task 10.2...")
-    results['task_10_2'] = test_task_10_2_configured_currencies(token)
-    
-    print_info("\nStep 5: Testing Task 10.3...")
-    results['task_10_3'] = test_task_10_3_currency_validation(token)
+        # Test each task
+        print_info("\nStep 3: Testing Task 10.1...")
+        results['task_10_1'] = test_task_10_1_api_key_validation()
+        
+        print_info("\nStep 4: Testing Task 10.2...")
+        results['task_10_2'] = test_task_10_2_configured_currencies(token)
+        
+        print_info("\nStep 5: Testing Task 10.3...")
+        results['task_10_3'] = test_task_10_3_currency_validation(token)
     
     # Summary
     print_header("TEST SUMMARY")
