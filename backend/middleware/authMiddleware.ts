@@ -28,8 +28,13 @@ const authMiddleware = async (
       // Verify token synchronously or using promisified version
       const decoded = jwt.verify(token, tokenSecret) as IUserType;
       
+      // Debug logging
+      console.log("Auth Middleware - Decoded token:", JSON.stringify(decoded).substring(0, 200));
+      console.log("Auth Middleware - user_id present:", !!decoded?.user_id);
+      
       // Check if decoded token has user_id
       if (!decoded || !decoded.user_id) {
+        console.log("Auth Middleware - Token validation failed: missing user_id");
         return errorResponseHelper(res, 401, "Invalid token format. Please login again.");
       }
       
