@@ -1178,6 +1178,8 @@ class ComprehensiveBackendTester:
                 "amount": 50.00,
                 "currency": "EUR",
                 "company_id": self.company_id,
+                "email": "test@dynopay.com",
+                "modes": ["crypto", "card"],
                 "description": "Legacy Format Test",
                 "expire": "7d"
             }
