@@ -14,13 +14,16 @@ const authMiddleware = async (
   try {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader?.split(" ")[1];
-    if (!token) errorResponseHelper(res, 403, "Your Login has Expired");
+    if (!token) {
+      return errorResponseHelper(res, 401, "Authentication required. Please provide a valid token.");
+    }
     const tokenSecret = process.env.ACCESS_TOKEN_SECRET;
     if (tokenSecret && token) {
       await Promise.resolve(
         jwt.verify(token, tokenSecret, async (err, user) => {
-          if (err) errorResponseHelper(res, 403, "Your Login has Expired");
-          else {
+          if (err) {
+            return errorResponseHelper(res, 401, "Invalid or expired token. Please login again.");
+          } else {
             const userData = jwt.decode(token) as IUserType;
             const isExists = await userModel
               .findOne({
@@ -32,7 +35,7 @@ const authMiddleware = async (
               .then((isExists) => isExists);
 
             if (!isExists) {
-              errorResponseHelper(res, 403, "Account does not exists!!!");
+              return errorResponseHelper(res, 401, "User account does not exist. Please login again.");
             } else {
               res.locals.token = token;
 
