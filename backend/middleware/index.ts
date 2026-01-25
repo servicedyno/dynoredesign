@@ -7,6 +7,7 @@ import userMiddleware from "./userMiddleware";
 import linkMiddleware from "./linkMiddleware";
 import adminAuthMiddleware from "./adminAuthMiddleware";
 import walletMiddleware from "./walletMiddleware";
+import apiUsageLogger from "./apiUsageLogger";
 
 export {
   adminAuthMiddleware,
@@ -18,4 +19,5 @@ export {
   apiMiddleware,
   linkMiddleware,
   walletMiddleware,
+  apiUsageLogger,
 };
