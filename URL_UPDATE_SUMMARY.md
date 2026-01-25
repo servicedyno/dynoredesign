@@ -1,6 +1,7 @@
 # DynoPay URL Configuration Update Summary
 
 ## Date: 2025-01-27
+## Last Updated: 2025-01-27 (Development URL Applied)
 
 ## Changes Implemented
 
@@ -8,7 +9,7 @@
 **File:** `/app/backend/.env`
 
 **Key Changes:**
-- **SERVER_URL**: `https://dynobackendconsolidated-production.up.railway.app`
+- **SERVER_URL**: `https://f5006fc4-5cad-480e-8552-90fd171f8760.preview.emergentagent.com` (Current Development URL)
 - **CHECKOUT_URL**: `https://dynocheckoutfix-production.up.railway.app/`
 - All environment variables replaced with provided configuration
 - Fixed GOOGLE_CLIENT_KEY format (converted multiline to escaped single-line format for python-dotenv compatibility)
