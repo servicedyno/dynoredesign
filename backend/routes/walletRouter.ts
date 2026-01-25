@@ -3,36 +3,42 @@ import { walletController } from "../controller";
 
 const walletRouter = express.Router();
 
+// ============================================
+// WALLET ADDRESS CRUD OPERATIONS (Merchant-facing)
+// All CUD operations require OTP verification
+// ============================================
+
+// READ - Get wallet addresses (No OTP required)
 walletRouter.get("/getWallet", walletController.getWallet);
 walletRouter.get("/getWalletAddresses", walletController.getWalletAddresses);
-walletRouter.post(
-  "/validateWalletAddress",
-  walletController.validateWallet
-);
-walletRouter.post(
-  "/verifyOtp",
-  walletController.verifyOtp
-);
 
-walletRouter.post(
-  "/deleteWalletAddress",
-  walletController.deleteWalletAddress
-);
+// CREATE - Add wallet address (2-step OTP flow)
+// Step 1: Validate address and send OTP
+walletRouter.post("/validateWalletAddress", walletController.validateWallet);
+// Step 2: Verify OTP and complete creation
+walletRouter.post("/verifyOtp", walletController.verifyOtp);
+// Alternative: Direct add (for merchants, no OTP)
+walletRouter.post("/addWalletAddress", walletController.addWalletAddress);
 
-walletRouter.post(
-  "/getWalletTransactions/:id",
-  walletController.getWalletTransactions
-);
+// UPDATE - Edit wallet address (2-step OTP flow)
+// Step 1: Send OTP for update
+walletRouter.post("/address/send-otp", walletController.sendEditWalletOTP);
+// Step 2: Verify OTP and update
+walletRouter.put("/address/:id", walletController.editWalletAddress);
 
+// DELETE - Delete wallet address (2-step OTP flow)
+// Step 1: Send OTP for deletion
+walletRouter.post("/address/delete/send-otp", walletController.sendDeleteWalletOTP);
+// Step 2: Verify OTP and delete
+walletRouter.post("/deleteWalletAddress", walletController.deleteWalletAddressWithOTP);
+
+// ============================================
+// TRANSACTION & OTHER WALLET OPERATIONS
+// ============================================
+walletRouter.post("/getWalletTransactions/:id", walletController.getWalletTransactions);
 walletRouter.post("/getAllTransactions", walletController.getAllTransactions);
 walletRouter.get("/transaction/:id", walletController.getTransactionDetails);
 walletRouter.post("/transactions/export", walletController.exportTransactions);
-// Direct wallet address addition (re-enabled for merchant setup)
-walletRouter.post("/addWalletAddress", walletController.addWalletAddress);
-
-// Edit wallet address endpoints (with OTP verification)
-walletRouter.post("/address/send-otp", walletController.sendEditWalletOTP);
-walletRouter.put("/address/:id", walletController.editWalletAddress);
 
 walletRouter.post("/addFunds", walletController.addFunds);
 walletRouter.post("/authStep", walletController.authStep);
