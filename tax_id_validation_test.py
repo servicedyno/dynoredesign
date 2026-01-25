@@ -569,6 +569,7 @@ class TaxIdValidationTester:
         form_data = {
             "company_name": "Test Company No TAX",
             "email": "noTax@company.com",
+            "mobile": "+351987654321",  # Required field
             "address_line1": "456 Test Ave",
             "city": "Porto",
             "country": "PT",
