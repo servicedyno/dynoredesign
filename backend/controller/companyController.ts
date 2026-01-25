@@ -86,7 +86,17 @@ const addCompany = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
     const file = req.file as Express.Multer.File;
-    const data = JSON.parse(req.body.data);
+    
+    // Handle both JSON string and object formats
+    let data;
+    if (typeof req.body.data === 'string') {
+      data = JSON.parse(req.body.data);
+    } else if (typeof req.body.data === 'object') {
+      data = req.body.data;
+    } else {
+      return errorResponseHelper(res, 400, "Invalid data format");
+    }
+    
     let photo;
     if (file) {
       photo = process.env.SERVER_URL + "images/" + file.filename;
