@@ -3170,24 +3170,25 @@ const getConfiguredCurrencies = async (
   try {
     const { company_id } = req.query;
 
-    // Get user's configured wallet addresses
-    const walletAddresses = await userWalletAddressModel.findAll({
+    // Phase 10 Task 10.2: Get user's configured wallets from userWalletModel
+    const configuredWallets = await userWalletModel.findAll({
       where: {
         user_id: userData.user_id,
+        wallet_address: { [Op.not]: null },
         ...(company_id && { company_id: parseInt(company_id as string) }),
       },
-      attributes: ['currency', 'wallet_address', 'label', 'wallet_name'],
+      attributes: ['wallet_type', 'wallet_address', 'wallet_name'],
     });
 
     // Extract unique currencies
-    const currencies = [...new Set(walletAddresses.map((w: any) => w.currency))];
+    const currencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
     
     const response = {
       configured_currencies: currencies,
-      wallet_count: walletAddresses.length,
-      wallets: walletAddresses.map((w: any) => ({
-        currency: w.currency,
-        label: w.label || w.wallet_name,
+      wallet_count: configuredWallets.length,
+      wallets: configuredWallets.map((w: any) => ({
+        currency: w.wallet_type,
+        label: w.wallet_name,
         address_masked: w.wallet_address ? 
           `${w.wallet_address.substring(0, 6)}...${w.wallet_address.substring(w.wallet_address.length - 4)}` : 
           null
