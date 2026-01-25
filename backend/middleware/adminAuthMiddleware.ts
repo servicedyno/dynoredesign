@@ -14,27 +14,49 @@ const adminAuthMiddleware = async (
   try {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader?.split(" ")[1];
-    if (!token) errorResponseHelper(res, 403, "Your Login has Expired");
+    
+    if (!token) {
+      return errorResponseHelper(res, 403, "Your Login has Expired");
+    }
+    
     const tokenSecret = process.env.ACCESS_TOKEN_SECRET;
-    if (tokenSecret && token) {
-      await Promise.resolve(
-        jwt.verify(token, tokenSecret, async (err, user) => {
-          if (err) errorResponseHelper(res, 403, "Your Login has Expired");
-          else {
-            const userData = jwt.decode(token) as IUserType;
-            if (userData?.role && userData?.role === "ADMIN") {
-              res.locals.token = token;
-
-              next();
-            } else {
-              errorResponseHelper(res, 403, "Account does not exists!!!");
-            }
-          }
-        })
-      );
+    if (!tokenSecret) {
+      return errorResponseHelper(res, 500, "Server configuration error. Token secret not set.");
+    }
+    
+    try {
+      // Verify token synchronously
+      const decoded = jwt.verify(token, tokenSecret) as IUserType;
+      
+      // Check if decoded token is valid and has required fields
+      if (!decoded) {
+        return errorResponseHelper(res, 403, "Invalid token format");
+      }
+      
+      // Check if user has admin role
+      if (!decoded.role || decoded.role !== "ADMIN") {
+        return errorResponseHelper(res, 403, "Admin access required. You do not have permission.");
+      }
+      
+      // Store token in res.locals for use in controllers
+      res.locals.token = token;
+      res.locals.user = decoded;
+      
+      next();
+    } catch (err: any) {
+      // Handle JWT-specific errors
+      if (err.name === 'TokenExpiredError') {
+        return errorResponseHelper(res, 403, "Your Login has Expired");
+      } else if (err.name === 'JsonWebTokenError') {
+        return errorResponseHelper(res, 403, "Invalid token. Please login again.");
+      } else if (err.name === 'NotBeforeError') {
+        return errorResponseHelper(res, 403, "Token not active yet. Please try again later.");
+      } else {
+        throw err; // Re-throw to be caught by outer catch
+      }
     }
   } catch (e: any) {
-    console.log(e);
+    console.log("Admin Auth Middleware Error:", e);
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);
   }
