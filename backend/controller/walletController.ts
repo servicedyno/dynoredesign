@@ -2673,12 +2673,29 @@ const validateWallet = async (
 const verifyOtp = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { otp, wallet_address, currency, currency_type, wallet_name } = req.body;
+    const { otp, wallet_address, currency, currency_type, wallet_name, company_id } = req.body;
 
     if (!otp) {
       return errorResponseHelper(res, 400, "OTP is required!");
     }
+    
+    if (!company_id) {
+      return errorResponseHelper(res, 400, "Company ID is required!");
+    }
+    
     const user_id = userData.user_id;
+    
+    // Verify user has access to this company
+    const company = await companyModel.findOne({
+      where: {
+        company_id,
+        user_id
+      }
+    });
+    
+    if (!company) {
+      return errorResponseHelper(res, 403, "You don't have access to this company!");
+    }
 
     // Find the wallet with OTP
     const walletWithOtp = await userModel.findOne({
@@ -2719,10 +2736,11 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       }
     );
 
-    // Update wallet with address and optional name
+    // Update wallet with address, name, and company_id
     await userWalletModel.update(
       {
         wallet_address,
+        company_id,
         ...(wallet_name && { wallet_name })
       },
       {
@@ -2737,6 +2755,7 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
     successResponseHelper(res, 200, "OTP verified successfully!", {
       verified: true,
       wallet_name,
+      company_id,
     });
   } catch (e) {
     const message = getErrorMessage(e);
