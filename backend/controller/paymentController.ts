@@ -452,7 +452,7 @@ const createCryptoPayment = async (
         { where: { temp_id: paymentRes.temp_id } }
       );
 
-      successResponseHelper(res, 200, "payment created! ", finalRes);
+      successResponseHelper(res, 200, "Payment created successfully", finalRes);
     } else {
       throw { message: "Please enter valid currency!" };
     }
