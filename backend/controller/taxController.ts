@@ -79,12 +79,12 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
     });
 
     if (cachedRate) {
-      // Return cached data
+      // Return cached data with consistent formatting
       return successResponseHelper(res, 200, "Tax rate retrieved from cache", {
         country_code: cachedRate.dataValues.country_code,
         country_name: cachedRate.dataValues.country_name,
         tax_acronym: cachedRate.dataValues.tax_acronym,
-        standard_rate: cachedRate.dataValues.standard_rate,
+        standard_rate: parseFloat(cachedRate.dataValues.standard_rate),  // Ensure number format
         reduced_rates: cachedRate.dataValues.reduced_rates,
         cached: true,
       });
