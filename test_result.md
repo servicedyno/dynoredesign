@@ -1159,6 +1159,18 @@ backend:
         agent: "testing"
         comment: "❌ ISSUE: payment_pending field is defined in notificationPreferencesModel.ts with defaultValue: true, but GET /api/notifications/preferences does not return this field. This suggests a database migration issue - the column may not exist in the actual database table yet."
 
+  - task: "Database Company ID Validation Issue Investigation"
+    implemented: true
+    working: true
+    file: "/app/database_wallet_check.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "CRITICAL FINDING: User ID 4 wallet company_id validation issue identified. All wallets for user_id 4 have company_id=NULL, but Redis payload is setting company_id=1. This mismatch is causing validation failures. Specific findings: (1) User ID 4 has 16 total wallets, all with company_id=NULL, (2) Wallets for specified types (USDT-TRC20, BTC, ETH) all have company_id=NULL, (3) No wallets exist with company_id=1 for user_id 4, (4) This explains why validation fails when Redis sets company_id=1 but database lookup finds no matching wallets. SOLUTION NEEDED: Either update user's wallet company_id values to 1, or modify Redis payload to use company_id=NULL, or adjust validation logic to handle NULL company_id values."
+
   - task: "Pending Payment Notification System - Webhook Endpoints"
     implemented: true
     working: true
