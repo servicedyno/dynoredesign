@@ -521,7 +521,17 @@ const confirmOTP = async (req: express.Request, res: express.Response) => {
 const updateUser = async (req: express.Request, res: express.Response) => {
   try {
     const file = req.file as Express.Multer.File;
-    const data = JSON.parse(req.body.data);
+    
+    // Handle both JSON string and object formats
+    let data;
+    if (typeof req.body.data === 'string') {
+      data = JSON.parse(req.body.data);
+    } else if (typeof req.body.data === 'object') {
+      data = req.body.data;
+    } else {
+      return res.status(400).json({ message: "Invalid data format", error: true });
+    }
+    
     const userData = jwt.decode(res.locals.token) as IUserType;
     let photo;
     if (file) {
