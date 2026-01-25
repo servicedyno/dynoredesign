@@ -100,7 +100,7 @@ const newTransactionFee = async (
     const blockchain_fee = blockchainFeeInput ?? 0;
     await setRedisItem("admin_fee", { transaction_fee });
     await setRedisItem("admin_fee", { blockchain_fee });
-    successResponseHelper(res, 200, "", { transaction_fee, blockchain_fee });
+    successResponseHelper(res, 200, "Admin fees retrieved successfully", { transaction_fee, blockchain_fee });
   } catch (e) {
     const message = getErrorMessage(e);
     adminLogger.error(message, new Error(e));
