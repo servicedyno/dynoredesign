@@ -2108,11 +2108,11 @@ const getCurrencyRates = async (
         })
       );
       
-      return successResponseHelper(res, 200, "", enhancedRates);
+      return successResponseHelper(res, 200, "Exchange rates retrieved successfully", enhancedRates);
     }
 
     // Default: company pays fees (original behavior)
-    successResponseHelper(res, 200, "", currencyRateList);
+    successResponseHelper(res, 200, "Exchange rates retrieved successfully", currencyRateList);
   } catch (e) {
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);
