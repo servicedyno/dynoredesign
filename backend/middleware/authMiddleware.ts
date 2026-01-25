@@ -14,45 +14,55 @@ const authMiddleware = async (
   try {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader?.split(" ")[1];
+    
     if (!token) {
       return errorResponseHelper(res, 401, "Authentication required. Please provide a valid token.");
     }
+    
     const tokenSecret = process.env.ACCESS_TOKEN_SECRET;
-    if (tokenSecret && token) {
-      await Promise.resolve(
-        jwt.verify(token, tokenSecret, async (err, user) => {
-          if (err) {
-            return errorResponseHelper(res, 401, "Invalid or expired token. Please login again.");
-          } else {
-            const userData = jwt.decode(token) as IUserType;
-            
-            // Check if userData is valid and has user_id
-            if (!userData || !userData.user_id) {
-              return errorResponseHelper(res, 401, "Invalid token format. Please login again.");
-            }
-            
-            const isExists = await userModel
-              .findOne({
-                where: {
-                  user_id: userData.user_id,
-                },
-              })
-              .then((token) => token !== null)
-              .then((isExists) => isExists);
+    if (!tokenSecret) {
+      return errorResponseHelper(res, 500, "Server configuration error. Token secret not set.");
+    }
+    
+    try {
+      // Verify token synchronously or using promisified version
+      const decoded = jwt.verify(token, tokenSecret) as IUserType;
+      
+      // Check if decoded token has user_id
+      if (!decoded || !decoded.user_id) {
+        return errorResponseHelper(res, 401, "Invalid token format. Please login again.");
+      }
+      
+      // Check if user exists in database
+      const userExists = await userModel.findOne({
+        where: {
+          user_id: decoded.user_id,
+        },
+      });
 
-            if (!isExists) {
-              return errorResponseHelper(res, 401, "User account does not exist. Please login again.");
-            } else {
-              res.locals.token = token;
-
-              next();
-            }
-          }
-        })
-      );
+      if (!userExists) {
+        return errorResponseHelper(res, 401, "User account does not exist. Please login again.");
+      }
+      
+      // Store token in res.locals for use in controllers
+      res.locals.token = token;
+      res.locals.user = decoded;
+      
+      next();
+    } catch (err: any) {
+      // Handle JWT-specific errors
+      if (err.name === 'TokenExpiredError') {
+        return errorResponseHelper(res, 401, "Token has expired. Please login again.");
+      } else if (err.name === 'JsonWebTokenError') {
+        return errorResponseHelper(res, 401, "Invalid token. Please login again.");
+      } else if (err.name === 'NotBeforeError') {
+        return errorResponseHelper(res, 401, "Token not active yet. Please try again later.");
+      } else {
+        throw err; // Re-throw to be caught by outer catch
+      }
     }
   } catch (e: any) {
-    console.log(e);
+    console.log("Auth Middleware Error:", e);
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);
   }
