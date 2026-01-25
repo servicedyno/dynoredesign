@@ -29,7 +29,7 @@
  *               data:
  *                 type: string
  *                 description: JSON string containing company information
- *                 example: '{"company_name":"Acme Corp","email":"contact@acme.com","mobile":"+1234567890","address_line1":"123 Main St","city":"New York","state":"NY","country":"US","zip_code":"10001","vat_number":"US123456789","vat_type":"US"}'
+ *                 example: '{"company_name":"Acme Corp","email":"contact@acme.com","mobile":"+1234567890","address_line1":"123 Main St","city":"New York","state":"NY","country":"US","zip_code":"10001"}'
  *               image:
  *                 type: string
  *                 format: binary
