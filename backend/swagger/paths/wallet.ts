@@ -48,7 +48,7 @@ export const walletPaths = {
                     items: {
                       type: 'object',
                       properties: {
-                        wallet_id: { type: 'integer', example: 145 },
+                        wallet_id: { type: 'integer', example: 145, description: '⚠️ REQUIRED for delete operations' },
                         user_id: { type: 'integer', example: 28 },
                         company_id: { type: 'integer', example: 38 },
                         wallet_type: { type: 'string', example: 'ETH', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'] },
@@ -71,7 +71,7 @@ export const walletPaths = {
                     "message": "Successfully retrieved 2 wallet",
                     "data": [
                       {
-                        "wallet_id": 145,
+                        "wallet_id": 431,
                         "user_id": 28,
                         "company_id": 38,
                         "wallet_type": "ETH",
@@ -82,7 +82,7 @@ export const walletPaths = {
                         "transfer_rate": 0.00035729
                       },
                       {
-                        "wallet_id": 144,
+                        "wallet_id": 430,
                         "user_id": 28,
                         "company_id": 38,
                         "wallet_type": "BTC",
