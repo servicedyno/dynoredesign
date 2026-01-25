@@ -50,20 +50,21 @@ const addApi = async (req: express.Request, res: express.Response) => {
     const defaultPermissions = ["payments", "transactions", "webhooks", "wallets"];
     const apiPermissions = permissions || defaultPermissions;
 
-    // Check for at least 1 wallet address for this company (only required for production keys)
+    // Phase 10 Task 10.1: Check for at least 1 wallet address for this company (only required for production keys)
     if (environment === 'production') {
-      const walletAddresses = await userWalletAddressModel.findOne({
+      const walletCount = await userWalletModel.count({
         where: {
           user_id: userData.user_id,
+          wallet_address: { [Op.not]: null },
           ...(company_id && { company_id }),
         },
       });
 
-      if(!walletAddresses){
+      if (walletCount < 1) {
         return errorResponseHelper(
           res,
-          500,
-          "User does not have any wallet address configured for this company! Required for production API keys."
+          400,
+          "At least one wallet address is required for production API keys"
         );
       }
     }
