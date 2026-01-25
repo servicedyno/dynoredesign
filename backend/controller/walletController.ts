@@ -2786,7 +2786,11 @@ const deleteWalletAddress = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { currency, company_id, wallet_id } = req.body;
+    // Support wallet_id from URL params (DELETE /wallet/:wallet_id) or body (POST /wallet/delete)
+    const wallet_id_param = req.params.wallet_id;
+    const { currency, company_id, wallet_id: wallet_id_body } = req.body;
+    
+    const wallet_id = wallet_id_param || wallet_id_body;
     
     // Support both wallet_id (preferred) and currency (legacy) methods
     if (!wallet_id && (!currency || typeof currency !== "string")) {
@@ -2802,7 +2806,7 @@ const deleteWalletAddress = async (
 
     // Preferred method: Use wallet_id for precise deletion
     if (wallet_id) {
-      whereClause.wallet_id = wallet_id;
+      whereClause.wallet_id = parseInt(wallet_id);
       
       // Add company_id for multi-tenant security
       if (company_id) {
