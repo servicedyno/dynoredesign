@@ -2,15 +2,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files first for better caching
-COPY backend/package.json ./package.json
-COPY backend/yarn.lock ./yarn.lock
-
-# Install dependencies
-RUN yarn install --frozen-lockfile --ignore-engines || yarn install --ignore-engines
-
 # Copy all backend source code
 COPY backend/ .
+
+# Install dependencies (without frozen lockfile since it might not exist)
+RUN yarn install --ignore-engines
 
 # Build TypeScript
 RUN yarn build
