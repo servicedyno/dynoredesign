@@ -130,6 +130,17 @@ const addApi = async (req: express.Request, res: express.Response) => {
 
     const token = await getAccessToken(createdUser.dataValues.customer_id);
     
+    // Generate admin token (separate from customer token)
+    const adminTokenSecret = process.env.ACCESS_TOKEN_SECRET;
+    const adminTokenPayload = {
+      api_id: null, // Will be set after creation
+      company_id,
+      user_id: userData.user_id,
+      type: 'admin_token',
+      environment,
+    };
+    const adminToken = jwt.sign(adminTokenPayload, adminTokenSecret, { expiresIn: '365d' });
+    
     // Default test mode restrictions for development keys
     const testModeRestrictions = environment === 'development' 
       ? JSON.stringify({
@@ -144,13 +155,18 @@ const addApi = async (req: express.Request, res: express.Response) => {
       base_currency: base_currency,
       apiKey,
       user_id: userData.user_id,
-      adminToken: token.token,
+      adminToken: token.token, // Customer token (legacy)
+      admin_token: adminToken, // New admin token
       withdrawal_whitelist: withdrawal_whitelist,
       api_name: api_name || `${company_data.dataValues.company_name} ${environment === 'production' ? 'Production' : 'Development'} API`,
       permissions: JSON.stringify(apiPermissions),
       environment,
       status: 'active',
       test_mode_restrictions: testModeRestrictions,
+      request_count: 0,
+      rate_limit_per_minute: 60,
+      rate_limit_per_hour: 3600,
+      rate_limit_per_day: 100000,
     });
 
     successResponseHelper(res, 200, "API generated successfully!", {
