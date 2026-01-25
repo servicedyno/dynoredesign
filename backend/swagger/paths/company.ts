@@ -173,11 +173,14 @@
  *     description: |
  *       Update an existing company profile.
  *       
+ *       **Required Fields:** company_name and email must always be provided
+ *       
  *       **💡 Swagger UI Usage:**
  *       1. Click "Try it out"
- *       2. Fill only the fields you want to update
- *       3. Leave other fields empty
- *       4. Click "Execute"
+ *       2. Enter company ID
+ *       3. Fill in company_name and email (required)
+ *       4. Fill any other fields you want to update
+ *       5. Click "Execute"
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -187,55 +190,67 @@
  *         schema:
  *           type: integer
  *         description: Company ID
+ *         example: 38
  *     requestBody:
  *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - company_name
+ *               - email
  *             properties:
  *               company_name:
  *                 type: string
- *                 description: Company legal name
+ *                 description: '✅ REQUIRED: Company legal name'
  *                 example: Updated Company Name
  *               email:
  *                 type: string
  *                 format: email
- *                 description: Company contact email
+ *                 description: '✅ REQUIRED: Company contact email'
  *                 example: newemail@company.com
  *               mobile:
  *                 type: string
- *                 description: Company phone number
+ *                 description: '📝 OPTIONAL: Company phone number'
  *                 example: '+1234567890'
  *               website:
  *                 type: string
  *                 format: uri
- *                 description: Company website
+ *                 description: '📝 OPTIONAL: Company website'
+ *                 example: 'https://company.com'
  *               address_line1:
  *                 type: string
- *                 description: Street address
+ *                 description: '📝 OPTIONAL: Street address'
+ *                 example: '123 Main Street'
  *               address_line2:
  *                 type: string
- *                 description: Additional address info
+ *                 description: '📝 OPTIONAL: Additional address info'
+ *                 example: 'Suite 100'
  *               city:
  *                 type: string
- *                 description: City
+ *                 description: '📝 OPTIONAL: City'
+ *                 example: 'New York'
  *               state:
  *                 type: string
- *                 description: State/Province
+ *                 description: '📝 OPTIONAL: State/Province'
+ *                 example: 'NY'
  *               country:
  *                 type: string
- *                 description: Country code (ISO 2-letter)
+ *                 description: '📝 OPTIONAL: Country code (ISO 2-letter)'
+ *                 example: 'US'
  *               zip_code:
  *                 type: string
- *                 description: Postal/ZIP code
+ *                 description: '📝 OPTIONAL: Postal/ZIP code'
+ *                 example: '10001'
  *               vat_number:
  *                 type: string
- *                 description: VAT/Tax ID
+ *                 description: '📝 OPTIONAL: VAT/Tax ID (validated if provided)'
+ *                 example: ''
  *               image:
  *                 type: string
  *                 format: binary
- *                 description: New company logo (optional)
+ *                 description: '📝 OPTIONAL: New company logo (PNG/JPG)'
  *     responses:
  *       200:
  *         description: Company updated successfully
