@@ -306,6 +306,89 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Validate TAX ID/VAT Number - Public endpoint
+ * POST /api/company/validateTaxId
+ */
+const validateTaxId = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { vat_number, country_code } = req.body;
+
+    if (!vat_number || !country_code) {
+      return errorResponseHelper(
+        res,
+        400,
+        "vat_number and country_code are required"
+      );
+    }
+
+    companyLogger.info(
+      `Tax ID validation requested: ${vat_number} for ${country_code}`,
+      { user_id: userData.user_id, email: userData.email }
+    );
+
+    const validationResult = await validateTaxIdInternal(vat_number, country_code);
+
+    // Return appropriate response based on validation status
+    if (validationResult.query_status === "api_key_missing") {
+      return errorResponseHelper(res, 500, "Tax validation service not configured");
+    }
+
+    if (validationResult.query_status === "invalid_format") {
+      return successResponseHelper(res, 200, "Tax ID validation completed", {
+        vat_number,
+        country_code: country_code.toUpperCase(),
+        valid: false,
+        format_valid: false,
+        message: `Invalid TAX ID format for ${country_code}`,
+      });
+    }
+
+    if (validationResult.query_status === "rate_limited") {
+      return successResponseHelper(res, 200, "Tax ID validation - Rate limit reached", {
+        vat_number,
+        country_code: country_code.toUpperCase(),
+        valid: null,
+        format_valid: null,
+        message: "API rate limit exceeded. Please try again later.",
+      });
+    }
+
+    if (validationResult.query_status === "completed") {
+      return successResponseHelper(res, 200, "Tax ID validation completed", {
+        vat_number,
+        country_code: country_code.toUpperCase(),
+        valid: validationResult.valid,
+        format_valid: validationResult.format_valid,
+        company_name: validationResult.company_name,
+        company_address: validationResult.company_address,
+        message: validationResult.valid 
+          ? "Tax ID is valid and registered" 
+          : "Tax ID is not registered or invalid",
+      });
+    }
+
+    // Validation failed for other reasons
+    return successResponseHelper(res, 200, "Tax ID validation unavailable", {
+      vat_number,
+      country_code: country_code.toUpperCase(),
+      valid: null,
+      format_valid: null,
+      message: "Tax validation service temporarily unavailable. Please try again.",
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    companyLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   addCompany,
   getCompany,
@@ -313,4 +396,5 @@ export default {
   deleteCompany,
   updateCompany,
   getTransactions,
+  validateTaxId,
 };
