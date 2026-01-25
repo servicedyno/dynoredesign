@@ -902,10 +902,11 @@ class ComprehensiveBackendTester:
             }
             
             timestamp = int(time.time())
+            # Try creating with EUR to avoid duplicates
             api_data = {
                 "company_id": self.company_id,
                 "api_name": f"Test Dev API {timestamp}",
-                "base_currency": "USD",
+                "base_currency": "EUR",
                 "environment": "development",
                 "permissions": ["payments", "transactions"],
                 "withdrawal_whitelist": False
