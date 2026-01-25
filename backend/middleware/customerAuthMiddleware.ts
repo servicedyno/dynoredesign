@@ -23,11 +23,14 @@ const customerAuthMiddleware = async (
           else {
             const userData = jwt.decode(token) as any;
             console.log("userData=========>", userData);
+            
+            // For payment link flow - check if this is from Redis payload
             if (userData?.pathType && userData?.pathType === "createLink") {
+              // Payment link uses transaction_id
               const isExists = await paymentLinkModel
                 .findOne({
                   where: {
-                    transaction_id: userData.transaction_id || userData.id,
+                    transaction_id: userData.transaction_id,
                   },
                 })
                 .then((token) => token !== null)
@@ -37,14 +40,14 @@ const customerAuthMiddleware = async (
                 errorResponseHelper(res, 403, "Link does not exists!!!");
               } else {
                 res.locals.token = token;
-
                 next();
               }
-            } else {
+            } else if (userData?.customer_id) {
+              // Customer model uses id field
               const isExists = await customerModel
                 .findOne({
                   where: {
-                    id: userData.customer_id || userData.id,
+                    id: userData.customer_id,
                   },
                 })
                 .then((token) => token !== null)
@@ -54,9 +57,13 @@ const customerAuthMiddleware = async (
                 errorResponseHelper(res, 403, "Account does not exists!!!");
               } else {
                 res.locals.token = token;
-
                 next();
               }
+            } else {
+              // Regular user authentication - skip customer/link check
+              // This is for regular user JWT tokens (user_id)
+              res.locals.token = token;
+              next();
             }
           }
         })
