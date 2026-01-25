@@ -130,7 +130,7 @@ Provide all three fields below to complete the addition.`,
           'application/json': {
             schema: {
               type: 'object',
-              required: ['otp', 'wallet_address', 'currency'],
+              required: ['otp', 'wallet_address', 'currency', 'company_id'],
               properties: {
                 otp: {
                   type: 'string',
@@ -149,6 +149,11 @@ Provide all three fields below to complete the addition.`,
                   enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE'],
                   description: '✅ REQUIRED: Same currency from Step 1',
                   example: 'BTC'
+                },
+                company_id: {
+                  type: 'integer',
+                  description: '✅ REQUIRED: Same Company ID from Step 1 (multi-tenant - wallet belongs to this company)',
+                  example: 1
                 },
                 wallet_name: {
                   type: 'string',
