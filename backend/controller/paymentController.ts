@@ -1836,12 +1836,14 @@ const cryptoVerification = async (address, webhook = true) => {
         let newAmount = [{ amount: 0 }];
         const tempAmount = Number(receivedAmount) - Number(tempData?.amount);
         if (tempAmount > 0) {
+          // Convert overpayment to API key's base currency (not hardcoded USD)
           newAmount = await currencyConvert({
             sourceCurrency: tempCurrency,
-            currency: ["USD"],
+            currency: [customerData?.base_currency || "USD"],  // Use API key base currency
             amount: tempAmount,
             fixedDecimal: true,
           });
+          // Flag overpayment if > 5 in base currency (USD/EUR/GBP/etc.)
           if (newAmount[0].amount > 5) {
             overPayment = true;
           }
