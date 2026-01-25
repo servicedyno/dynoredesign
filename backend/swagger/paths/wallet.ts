@@ -145,6 +145,12 @@ Provide all three fields below to complete the addition.`,
                   description: '✅ REQUIRED: Same currency from Step 1',
                   example: 'BTC'
                 },
+                wallet_name: {
+                  type: 'string',
+                  description: '📝 OPTIONAL: Friendly name for this wallet (e.g., "My Bitcoin Wallet", "Trading Address")',
+                  example: 'My Main BTC Wallet',
+                  maxLength: 100
+                },
                 currency_type: {
                   type: 'string',
                   description: '📝 OPTIONAL: Currency subtype (e.g., ERC20, TRC20)',
