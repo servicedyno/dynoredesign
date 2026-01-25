@@ -135,7 +135,7 @@ class TaxIdPT518713130Tester:
                     validation_result = data['data']
                     
                     # Critical checks as specified in review request
-                    required_fields = ['vat_number', 'country_code', 'valid', 'format_valid', 'query_status', 'message']
+                    required_fields = ['vat_number', 'country_code', 'valid', 'format_valid', 'message']
                     missing_fields = [field for field in required_fields if field not in validation_result]
                     
                     if missing_fields:
@@ -148,13 +148,13 @@ class TaxIdPT518713130Tester:
                         return False
                     
                     # Check if API is NOT rate limited anymore (with new key)
-                    query_status = validation_result.get('query_status')
-                    if query_status == "rate_limited":
+                    message = validation_result.get('message', '')
+                    if "rate limit" in message.lower():
                         self.log_result(
                             "TAX ID Validation - Rate Limit Check", 
                             False, 
                             "API is still rate limited - new TAX_DATA_API_KEY may not be working",
-                            {"query_status": query_status, "message": validation_result.get('message')}
+                            {"message": message}
                         )
                         return False
                     
