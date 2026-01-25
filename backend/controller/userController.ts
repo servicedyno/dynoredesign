@@ -27,7 +27,7 @@ import { userLogger } from "../utils/loggers";
 
 const registerUser = async (req: express.Request, res: express.Response) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, referral_code } = req.body;
     const newPassword = sha256(password).toString();
     const isExists = await userModel
       .findOne({
@@ -45,11 +45,24 @@ const registerUser = async (req: express.Request, res: express.Response) => {
       const photoLocation = await downloadUserImage();
       const photo = process.env.SERVER_URL + photoLocation;
 
+      // Generate unique referral code for new user
+      const generateReferralCode = () => {
+        const prefix = "DYNO";
+        const year = new Date().getFullYear();
+        const userPart = (name || 'USER').substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+        const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
+        return `${prefix}${year}${userPart}${randomPart}`;
+      };
+
+      const userReferralCode = generateReferralCode();
+
       const createdUser = await userModel.create({
         name,
         email: email.toLowerCase(),
         photo,
         password: newPassword,
+        referral_code: userReferralCode,
+        referred_by_code: referral_code || null,
       });
 
       const walletData = await adminWalletModel.findAll();
@@ -78,9 +91,40 @@ const registerUser = async (req: express.Request, res: express.Response) => {
         });
       }
 
+      // If user was referred, create referral record
+      if (referral_code) {
+        try {
+          const referrer = await userModel.findOne({ where: { referral_code } });
+          if (referrer) {
+            // Import Referral model at the top if not already imported
+            const Referral = require('../models/referralModels/referralModel').default;
+            await Referral.create({
+              referrer_user_id: referrer.dataValues.user_id,
+              referred_user_id: createdUser.dataValues.user_id,
+              referral_code,
+              status: 'pending',
+              activation_requirement: 'first_transaction_100',
+              bonus_amount: 10.00,
+              bonus_currency: 'USD',
+              referee_discount_percent: 50.00,
+              referee_discount_duration_days: 30,
+              referred_at: new Date(),
+              expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+            });
+          }
+        } catch (refError) {
+          // Log error but don't fail registration
+          console.error("Error creating referral record:", refError);
+        }
+      }
+
       const resData = await getAccessToken(createdUser.dataValues.user_id);
 
-      successResponseHelper(res, 200, "Registered Successful!", resData);
+      successResponseHelper(res, 200, "Registered Successful!", {
+        ...resData,
+        referral_code: userReferralCode,
+        referred_by: referral_code || null,
+      });
     }
   } catch (e) {
     const errorMessage = getErrorMessage(e);
