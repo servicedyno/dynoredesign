@@ -1,0 +1,493 @@
+{
+  "summary": {
+    "total_tests": 31,
+    "passed_tests": 19,
+    "failed_tests": 12,
+    "success_rate": "61.3%",
+    "avg_response_time": "0.36s",
+    "max_response_time": "0.85s",
+    "production_ready": false
+  },
+  "phase_results": {
+    "Phase 1 - Authentication": [
+      [
+        "User Login",
+        {
+          "success": true,
+          "message": "Successfully authenticated and received valid JWT token",
+          "details": {
+            "email": "nomadly@moxx.co",
+            "token_length": 716,
+            "token_parts": 3,
+            "user_id": null
+          },
+          "response_time": 0.8503849506378174
+        }
+      ],
+      [
+        "User Profile",
+        {
+          "success": true,
+          "message": "Profile retrieved successfully with correct data",
+          "details": {
+            "user_id": 4,
+            "name": "Bozz Mail Updated",
+            "email": "nomadly@moxx.co"
+          },
+          "response_time": 0.5965030193328857
+        }
+      ],
+      [
+        "Invalid Token Test 1",
+        {
+          "success": false,
+          "message": "Expected 401, got 403",
+          "details": {
+            "token_preview": "invalid.jwt.token...",
+            "response": "{\"success\":false,\"message\":\"Your Login has Expired\",\"statusCode\":403}"
+          },
+          "response_time": null
+        }
+      ],
+      [
+        "Invalid Token Test 2",
+        {
+          "success": false,
+          "message": "Expected 401, got 403",
+          "details": {
+            "token_preview": "Bearer invalid_token...",
+            "response": "{\"success\":false,\"message\":\"Your Login has Expired\",\"statusCode\":403}"
+          },
+          "response_time": null
+        }
+      ],
+      [
+        "Invalid Token Test 3",
+        {
+          "success": false,
+          "message": "Expected 401, got 403",
+          "details": {
+            "token_preview": "expired.token.here...",
+            "response": "{\"success\":false,\"message\":\"Your Login has Expired\",\"statusCode\":403}"
+          },
+          "response_time": null
+        }
+      ],
+      [
+        "Missing Token Test",
+        {
+          "success": false,
+          "message": "Expected 401, got 403",
+          "details": {
+            "response": "{\"success\":false,\"message\":\"Your Login has Expired\",\"statusCode\":403}"
+          },
+          "response_time": null
+        }
+      ],
+      [
+        "Invalid Token Edge Case 1",
+        {
+          "success": false,
+          "message": "Empty token: Expected 401, got 403",
+          "details": {
+            "response": "{\"success\":false,\"message\":\"Your Login has Expired\",\"statusCode\":403}"
+          },
+          "response_time": null
+        }
+      ],
+      [
+        "Invalid Token Edge Case 2",
+        {
+          "success": false,
+          "message": "Malformed token: Expected 401, got 403",
+          "details": {
+            "response": "{\"success\":false,\"message\":\"Your Login has Expired\",\"statusCode\":403}"
+          },
+          "response_time": null
+        }
+      ],
+      [
+        "Invalid Token Edge Case 3",
+        {
+          "success": false,
+          "message": "Potentially expired token: Expected 401, got 403",
+          "details": {
+            "response": "{\"success\":false,\"message\":\"Your Login has Expired\",\"statusCode\":403}"
+          },
+          "response_time": null
+        }
+      ]
+    ],
+    "Phase 2 - Account Setup": [
+      [
+        "Get Company",
+        {
+          "success": true,
+          "message": "Retrieved 1 company(ies)",
+          "details": {
+            "company_count": 1,
+            "first_company_id": 3,
+            "first_company_name": "Nomadly1"
+          },
+          "response_time": 0.2356400489807129
+        }
+      ],
+      [
+        "Configured Currencies",
+        {
+          "success": true,
+          "message": "Retrieved 0 configured currencies",
+          "details": {
+            "currency_count": 0,
+            "wallet_count": 0,
+            "currencies": []
+          },
+          "response_time": 0.24535775184631348
+        }
+      ],
+      [
+        "Get Wallet",
+        {
+          "success": true,
+          "message": "Retrieved 0 wallet(s)",
+          "details": {
+            "wallet_count": 0,
+            "sample_wallet": null
+          },
+          "response_time": 0.23720264434814453
+        }
+      ],
+      [
+        "Get API Keys",
+        {
+          "success": true,
+          "message": "Retrieved 0 API key(s)",
+          "details": {
+            "api_key_count": 0
+          },
+          "response_time": 0.2328023910522461
+        }
+      ]
+    ],
+    "Phase 3 - Payment Processing": [
+      [
+        "Create Payment Link",
+        {
+          "success": false,
+          "message": "Request failed with status 400",
+          "details": {
+            "response": "{\"message\":\"Please enter proper values!\",\"errors\":[{\"key\":\"email\",\"error\":\"\\\"email\\\" is required\"},{\"key\":\"amount\",\"error\":\"\\\"amount\\\" is required\"},{\"key\":\"modes\",\"error\":\"\\\"modes\\\" is required\"}]}",
+            "payment_data": {
+              "company_id": 3,
+              "base_amount": 100.0,
+              "base_currency": "USD",
+              "description": "Production readiness test payment",
+              "expire": "24h",
+              "callback_url": "https://example.com/callback"
+            }
+          },
+          "response_time": 0.1314995288848877
+        }
+      ],
+      [
+        "Get Payment Links",
+        {
+          "success": true,
+          "message": "Retrieved 5 payment link(s)",
+          "details": {
+            "link_count": 5,
+            "created_link_found": false,
+            "status_computation": true,
+            "date_formatting": true,
+            "sample_link": {
+              "link_id": 55,
+              "transaction_id": "a5d7d98b-4f55-4f8c-a3e0-0c8d100e1011",
+              "description": "Test Payment - $10",
+              "usd_value": "$10",
+              "base_amount": 10,
+              "base_currency": "USD",
+              "created": "24/01/2026 14:11:03",
+              "expires": "31/01/2026 14:11:03",
+              "status": "Active",
+              "times_used": 0,
+              "payment_link": "https://checkout.dynopay.com/pay?d=f63e3e91fb7dd92afda366ecf89e55cd52285c32f94eed07",
+              "email": "customer@example.com",
+              "allowedModes": "CRYPTO",
+              "callback_url": null,
+              "redirect_url": null,
+              "webhook_url": null,
+              "fee_payer": "customer",
+              "company_id": 3
+            }
+          },
+          "response_time": 0.356858491897583
+        }
+      ],
+      [
+        "Get Payment Link By ID",
+        {
+          "success": false,
+          "message": "Missing requirements - JWT: True, Payment Link ID: False",
+          "details": {},
+          "response_time": null
+        }
+      ],
+      [
+        "Get All Transactions",
+        {
+          "success": true,
+          "message": "Retrieved 10 transaction(s) with pagination",
+          "details": {
+            "customer_transactions": 10,
+            "self_transactions": 0,
+            "total_transactions": 10,
+            "pagination_complete": true,
+            "pagination": {
+              "total": 951,
+              "page": 1,
+              "rowsPerPage": 10,
+              "totalPages": 96
+            }
+          },
+          "response_time": 0.46475648880004883
+        }
+      ],
+      [
+        "Transaction Filter 1",
+        {
+          "success": true,
+          "message": "Status filter - Done: 0 results",
+          "details": {
+            "filter": {
+              "status": "Done"
+            },
+            "results": 0
+          },
+          "response_time": 0.4519977569580078
+        }
+      ],
+      [
+        "Transaction Filter 2",
+        {
+          "success": true,
+          "message": "Currency filter - USD: 0 results",
+          "details": {
+            "filter": {
+              "currency": "USD"
+            },
+            "results": 0
+          },
+          "response_time": 0.45651745796203613
+        }
+      ],
+      [
+        "Transaction Filter 3",
+        {
+          "success": true,
+          "message": "Search filter - test: 0 results",
+          "details": {
+            "filter": {
+              "search": "test"
+            },
+            "results": 0
+          },
+          "response_time": 0.4560525417327881
+        }
+      ],
+      [
+        "Dashboard Recent Transactions",
+        {
+          "success": true,
+          "message": "Retrieved 5 recent transaction(s)",
+          "details": {
+            "transaction_count": 5,
+            "sample_transaction": {
+              "id": 1017,
+              "amount": 0,
+              "currency": "USDT-TRC20",
+              "status": "pending"
+            }
+          },
+          "response_time": 0.246992826461792
+        }
+      ],
+      [
+        "Invalid Transaction ID",
+        {
+          "success": true,
+          "message": "Correctly returned 404 for invalid transaction ID",
+          "details": {
+            "invalid_tx_id": "invalid-id-99999"
+          },
+          "response_time": 0.23605680465698242
+        }
+      ]
+    ],
+    "Phase 4 - Dashboard Analytics": [
+      [
+        "Dashboard Main",
+        {
+          "success": true,
+          "message": "All dashboard statistics retrieved successfully",
+          "details": {
+            "total_transactions": "0 (+0.0%)",
+            "total_volume": "0 USD (+0.0%)",
+            "pending_transactions": {
+              "count": 511
+            },
+            "active_wallets": {
+              "count": 0,
+              "wallets": [],
+              "details": []
+            },
+            "fee_tier": "Starter"
+          },
+          "response_time": 0.6681978702545166
+        }
+      ],
+      [
+        "Dashboard Chart - 7d",
+        {
+          "success": true,
+          "message": "Chart data retrieved successfully for 7d period",
+          "details": {
+            "period": "7d",
+            "chart_entries": 8,
+            "expected_grouping": "daily",
+            "currency_breakdown": 0,
+            "status_breakdown": 2
+          },
+          "response_time": 0.46646857261657715
+        }
+      ],
+      [
+        "Dashboard Chart - 30d",
+        {
+          "success": true,
+          "message": "Chart data retrieved successfully for 30d period",
+          "details": {
+            "period": "30d",
+            "chart_entries": 31,
+            "expected_grouping": "weekly",
+            "currency_breakdown": 0,
+            "status_breakdown": 2
+          },
+          "response_time": 0.46131134033203125
+        }
+      ]
+    ],
+    "Phase 5 - Error Handling": [
+      [
+        "Invalid Credentials",
+        {
+          "success": false,
+          "message": "Expected 401, got 520",
+          "details": {
+            "response": "{\"success\":false,\"message\":\"Please enter a valid password!\",\"statusCode\":500}"
+          },
+          "response_time": null
+        }
+      ],
+      [
+        "Missing Required Fields",
+        {
+          "success": true,
+          "message": "Correctly rejected request with missing base_amount (400)",
+          "details": {
+            "missing_field": "base_amount"
+          },
+          "response_time": 0.1275935173034668
+        }
+      ],
+      [
+        "Unauthorized Access",
+        {
+          "success": true,
+          "message": "Correctly returned empty result for unauthorized company access",
+          "details": {
+            "fake_company_id": 99999
+          },
+          "response_time": 0.27696847915649414
+        }
+      ]
+    ],
+    "Phase 6 - Tax & Compliance": [
+      [
+        "Tax Rate PT - Rate Verification",
+        {
+          "success": false,
+          "message": "Expected 23% for PT, got 23.00%",
+          "details": {
+            "tax_data": {
+              "country_code": "PT",
+              "country_name": "Portugal",
+              "tax_acronym": "VAT",
+              "standard_rate": "23.00",
+              "reduced_rates": null,
+              "cached": true
+            }
+          },
+          "response_time": null
+        }
+      ],
+      [
+        "Tax Acronyms",
+        {
+          "success": true,
+          "message": "Retrieved exactly 102 countries with proper EU/Rest of World grouping",
+          "details": {
+            "total_countries": 102,
+            "eu_countries": 27,
+            "rest_of_world": 75
+          },
+          "response_time": 0.017688512802124023
+        }
+      ],
+      [
+        "Tax Lookup - Resolution",
+        {
+          "success": false,
+          "message": "Expected PT with 23%, got PT with 23.00%",
+          "details": {
+            "lookup_data": {
+              "country_code": "PT",
+              "country_name": "Portugal",
+              "tax_acronym": "VAT",
+              "standard_rate": "23.00",
+              "reduced_rates": null,
+              "cached": true
+            }
+          },
+          "response_time": null
+        }
+      ]
+    ]
+  },
+  "critical_failures": [
+    "Invalid Token Test 1",
+    "Invalid Token Test 2",
+    "Invalid Token Test 3",
+    "Missing Token Test",
+    "Invalid Token Edge Case 1",
+    "Invalid Token Edge Case 2",
+    "Invalid Token Edge Case 3",
+    "Create Payment Link",
+    "Get Payment Link By ID",
+    "Invalid Credentials"
+  ],
+  "all_errors": [
+    "Invalid Token Test 1: Expected 401, got 403",
+    "Invalid Token Test 2: Expected 401, got 403",
+    "Invalid Token Test 3: Expected 401, got 403",
+    "Missing Token Test: Expected 401, got 403",
+    "Create Payment Link: Request failed with status 400",
+    "Get Payment Link By ID: Missing requirements - JWT: True, Payment Link ID: False",
+    "Invalid Credentials: Expected 401, got 520",
+    "Invalid Token Edge Case 1: Empty token: Expected 401, got 403",
+    "Invalid Token Edge Case 2: Malformed token: Expected 401, got 403",
+    "Invalid Token Edge Case 3: Potentially expired token: Expected 401, got 403",
+    "Tax Rate PT - Rate Verification: Expected 23% for PT, got 23.00%",
+    "Tax Lookup - Resolution: Expected PT with 23%, got PT with 23.00%"
+  ],
+  "recommendation": "ISSUES FOUND - DO NOT DEPLOY"
+}
