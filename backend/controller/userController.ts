@@ -129,6 +129,12 @@ const registerUser = async (req: express.Request, res: express.Response) => {
 
       const resData = await getAccessToken(createdUser.dataValues.user_id);
 
+      // Send welcome email (non-blocking)
+      emailService.sendWelcomeEmail(email.toLowerCase(), name).catch(err => {
+        console.error("Failed to send welcome email:", err);
+        // Don't fail registration if email fails
+      });
+
       successResponseHelper(res, 200, "Registered Successful!", {
         ...resData,
         referral_code: userReferralCode,
