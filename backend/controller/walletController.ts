@@ -2725,11 +2725,21 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       );
     }
 
+    // CRITICAL SECURITY CHECK: Validate currency matches what was validated
+    if (walletWithOtp.dataValues.otp_currency && walletWithOtp.dataValues.otp_currency !== currency) {
+      return errorResponseHelper(
+        res,
+        400,
+        `Security validation failed! OTP was issued for ${walletWithOtp.dataValues.otp_currency} wallet, but you're trying to verify ${currency} wallet. Please request a new OTP for ${currency}.`
+      );
+    }
+
     // If OTP is valid, clear it and mark as verified
     await userModel.update(
       {
         verified_otp: null,
         otp_expired: null,
+        otp_currency: null, // Clear currency context
       },
       {
         where: {
