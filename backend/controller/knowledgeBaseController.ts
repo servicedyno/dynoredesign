@@ -4,7 +4,7 @@ import KBArticle from '../models/knowledgeBaseModels/kbArticleModel';
 import KBArticleFeedback from '../models/knowledgeBaseModels/kbArticleFeedbackModel';
 import User from '../models/userModels/userModel';
 import { Op } from 'sequelize';
-import sequelize from '../db/index';
+import sequelize from '../utils/dbInstance';
 
 /**
  * Get all KB categories
