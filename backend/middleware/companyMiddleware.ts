@@ -14,7 +14,21 @@ const companyMiddleware = (
   if (!req.body.data) {
     return res.status(400).json({ message: "Request body 'data' field is required. Please provide company details in JSON format." });
   } else {
-    const { company_name, email, mobile }: ICompany = JSON.parse(req.body.data);
+    // Handle both JSON string and object formats
+    let parsedData;
+    try {
+      if (typeof req.body.data === 'string') {
+        parsedData = JSON.parse(req.body.data);
+      } else if (typeof req.body.data === 'object') {
+        parsedData = req.body.data;
+      } else {
+        return res.status(400).json({ message: "Invalid data format. Expected JSON string or object." });
+      }
+    } catch (error) {
+      return res.status(400).json({ message: "Invalid JSON format in 'data' field. Please check your JSON syntax." });
+    }
+    
+    const { company_name, email, mobile }: ICompany = parsedData;
     let validateFields;
 
     const pathname = req.path;
