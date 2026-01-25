@@ -37,7 +37,15 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3300;
 
-app.use(cors());
+// CORS Configuration
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? allowedOrigins
+    : '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
+}));
 app.use(express.json());
 app.use(helmet({
   contentSecurityPolicy: false, // Required for Swagger UI
