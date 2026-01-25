@@ -83,7 +83,7 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
   - `GET /api/invoices/:id/download` - Download PDF
 
 ### Phase 13: Swagger/OpenAPI Documentation ✅ (December 2025)
-- **Complete API documentation** with 139 documented endpoints
+- **Complete API documentation** with 151 documented endpoints
 - **Path Definition Files** created in `/app/backend/swagger/paths/`:
   - `user.ts` - User Management (16 endpoints)
   - `payment.ts` - Payment Processing (17 endpoints) **with realistic request/response examples**
@@ -93,11 +93,53 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
   - `apiKeys.ts` - API Keys Management (15 endpoints)
   - `notification.ts` - Notifications (5 new endpoints)
   - `api.ts` & `status.ts` - Auth, Dashboard, Tax, Company, KYC, Status
+  - `referral.ts` - Referral System (6 endpoints) **NEW**
+  - `knowledgeBase.ts` - Knowledge Base (9 endpoints) **NEW**
+  - `apiUsage.ts` - API Usage/Logs/Rate Limits (5 endpoints) **NEW**
 - **Swagger UI**: Available at `/api/docs`
 - **OpenAPI Spec**: Available at `/api/docs.json`
 - **Coverage improved**: From 38% to 100%
 - **Payment Examples Added**: E-commerce checkout, invoice payment, crypto payment flows with multiple scenarios
 - **Webhook Documentation**: 8 merchant webhook payload examples (payment.completed, pending, confirming, partial, expired, failed, refunded) + 3 Tatum internal webhook examples
+- **New Schemas Added (January 2026)**: Referral, ReferralReward, KBCategory, KBArticle
+
+### Phase 14: Referral System ✅ (January 2026)
+- **Controller**: `/app/backend/controller/referralController.ts` (488 lines)
+- **Routes**: `/app/backend/routes/referralRouter.ts`
+- **Models**: `/app/backend/models/referralModels/`
+- **Endpoints**:
+  - `GET /api/referral/my-code` - Get user's referral code and stats
+  - `GET /api/referral/list` - List user's referrals with pagination
+  - `GET /api/referral/earnings` - Get referral earnings summary
+  - `POST /api/referral/validate` - Validate a referral code
+  - `POST /api/referral/apply` - Apply referral code during signup
+  - `GET /api/referral/leaderboard` - Get top referrers
+- **Features**: Auto-generated referral codes (DYNO{YEAR}{USER}{RANDOM}), $10 bonus for referrer, 50% fee discount for referee
+
+### Phase 15: Knowledge Base ✅ (January 2026)
+- **Controller**: `/app/backend/controller/knowledgeBaseController.ts` (449 lines)
+- **Routes**: `/app/backend/routes/knowledgeBaseRouter.ts`
+- **Models**: `/app/backend/models/knowledgeBaseModels/`
+- **Public Endpoints**:
+  - `GET /api/kb/categories` - Get all categories
+  - `GET /api/kb/articles` - Get articles (with category filter)
+  - `GET /api/kb/articles/:slug` - Get article by slug
+  - `GET /api/kb/search` - Full-text search
+  - `GET /api/kb/popular` - Get most viewed articles
+  - `POST /api/kb/articles/:id/feedback` - Submit helpful/not helpful feedback
+- **Admin Endpoints**:
+  - `POST /api/kb/admin/articles` - Create article
+  - `PUT /api/kb/admin/articles/:id` - Update article
+  - `DELETE /api/kb/admin/articles/:id` - Delete article
+
+### Phase 16: Enhanced API Key Management ✅ (January 2026)
+- **Controller**: `/app/backend/controller/apiController.ts` (Enhanced)
+- **Routes**: `/app/backend/routes/apiRouter.ts`
+- **New Endpoints**:
+  - `GET /api/userApi/usage/:id` - API usage statistics (daily request counts, avg response time, top endpoints)
+  - `GET /api/userApi/logs/:id` - API request logs with filtering
+  - `PUT /api/userApi/rateLimit/:id` - Update rate limits (per minute/hour/day)
+- **Features**: Environment support (production/development), admin tokens, rate limit configuration, usage tracking
 
 ---
 
