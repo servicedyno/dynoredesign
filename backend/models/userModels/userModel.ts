@@ -54,6 +54,11 @@ const userModel = sequelize.define(
     otp_expired: {
       type: DataTypes.DATE,
     },
+    otp_currency: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: "Currency type for OTP validation (BTC, ETH, etc.)",
+    },
     // Password reset fields
     reset_token: {
       type: DataTypes.STRING,
