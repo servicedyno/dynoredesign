@@ -910,6 +910,218 @@ const deleteCustomer = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Get API Usage Statistics
+ * GET /api/userApi/usage/:id
+ */
+const getApiUsageStats = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const api_id = req.params.id;
+    const { days = 7 } = req.query;
+
+    // Verify API belongs to user
+    const apiKey = await apiModel.findOne({
+      where: {
+        api_id,
+        user_id: userData.user_id,
+      },
+    });
+
+    if (!apiKey) {
+      return errorResponseHelper(res, 404, "API key not found");
+    }
+
+    // Get usage logs from the last N days
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - Number(days));
+
+    const usageLogs = await sequelize.query(
+      `SELECT 
+        DATE(request_time) as date,
+        COUNT(*) as request_count,
+        AVG(response_time_ms) as avg_response_time,
+        COUNT(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 END) as success_count,
+        COUNT(CASE WHEN status_code >= 400 THEN 1 END) as error_count
+       FROM tbl_api_usage_log
+       WHERE api_id = :api_id AND request_time >= :startDate
+       GROUP BY DATE(request_time)
+       ORDER BY date DESC`,
+      {
+        replacements: { api_id, startDate },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    // Get endpoint distribution
+    const endpointStats = await sequelize.query(
+      `SELECT 
+        endpoint,
+        method,
+        COUNT(*) as count
+       FROM tbl_api_usage_log
+       WHERE api_id = :api_id AND request_time >= :startDate
+       GROUP BY endpoint, method
+       ORDER BY count DESC
+       LIMIT 10`,
+      {
+        replacements: { api_id, startDate },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    const stats = {
+      api_id: apiKey.dataValues.api_id,
+      api_name: apiKey.dataValues.api_name,
+      total_requests: apiKey.dataValues.request_count || 0,
+      last_used_at: apiKey.dataValues.last_used_at,
+      rate_limits: {
+        per_minute: apiKey.dataValues.rate_limit_per_minute,
+        per_hour: apiKey.dataValues.rate_limit_per_hour,
+        per_day: apiKey.dataValues.rate_limit_per_day,
+      },
+      usage_by_day: usageLogs,
+      top_endpoints: endpointStats,
+    };
+
+    successResponseHelper(res, 200, "Usage statistics retrieved", stats);
+  } catch (e) {
+    const message = getErrorMessage(e);
+    apiLogger.error(message, { user_id: userData.user_id }, new Error(e));
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Get Recent API Request Logs
+ * GET /api/userApi/logs/:id
+ */
+const getApiLogs = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const api_id = req.params.id;
+    const { limit = 50, offset = 0, status_code } = req.query;
+
+    // Verify API belongs to user
+    const apiKey = await apiModel.findOne({
+      where: {
+        api_id,
+        user_id: userData.user_id,
+      },
+    });
+
+    if (!apiKey) {
+      return errorResponseHelper(res, 404, "API key not found");
+    }
+
+    let whereClause = `WHERE api_id = :api_id`;
+    const replacements: any = { api_id, limit: Number(limit), offset: Number(offset) };
+
+    if (status_code) {
+      whereClause += ` AND status_code = :status_code`;
+      replacements.status_code = Number(status_code);
+    }
+
+    const logs = await sequelize.query(
+      `SELECT 
+        log_id,
+        endpoint,
+        method,
+        status_code,
+        ip_address,
+        response_time_ms,
+        error_message,
+        request_time
+       FROM tbl_api_usage_log
+       ${whereClause}
+       ORDER BY request_time DESC
+       LIMIT :limit OFFSET :offset`,
+      {
+        replacements,
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    // Get total count
+    const [countResult] = await sequelize.query(
+      `SELECT COUNT(*) as total FROM tbl_api_usage_log ${whereClause}`,
+      {
+        replacements: { api_id, status_code: status_code ? Number(status_code) : null },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    const total = (countResult as any).total;
+
+    successResponseHelper(res, 200, "API logs retrieved", {
+      logs,
+      pagination: {
+        total,
+        limit: Number(limit),
+        offset: Number(offset),
+        has_more: Number(offset) + Number(limit) < total,
+      },
+    });
+  } catch (e) {
+    const message = getErrorMessage(e);
+    apiLogger.error(message, { user_id: userData.user_id }, new Error(e));
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Update API Rate Limits
+ * PUT /api/userApi/rateLimit/:id
+ */
+const updateRateLimit = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const api_id = req.params.id;
+    const { rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day } = req.body;
+
+    // Verify API belongs to user
+    const apiKey = await apiModel.findOne({
+      where: {
+        api_id,
+        user_id: userData.user_id,
+      },
+    });
+
+    if (!apiKey) {
+      return errorResponseHelper(res, 404, "API key not found");
+    }
+
+    const updateData: any = {};
+    if (rate_limit_per_minute) updateData.rate_limit_per_minute = rate_limit_per_minute;
+    if (rate_limit_per_hour) updateData.rate_limit_per_hour = rate_limit_per_hour;
+    if (rate_limit_per_day) updateData.rate_limit_per_day = rate_limit_per_day;
+
+    if (Object.keys(updateData).length === 0) {
+      return errorResponseHelper(res, 400, "No rate limits provided");
+    }
+
+    await apiModel.update(updateData, {
+      where: { api_id, user_id: userData.user_id },
+    });
+
+    const updatedApi = await apiModel.findOne({ where: { api_id } });
+
+    apiLogger.info(`Rate limits updated for API ${api_id} by user ${userData.user_id}`);
+    successResponseHelper(res, 200, "Rate limits updated", {
+      api_id,
+      rate_limits: {
+        per_minute: updatedApi.dataValues.rate_limit_per_minute,
+        per_hour: updatedApi.dataValues.rate_limit_per_hour,
+        per_day: updatedApi.dataValues.rate_limit_per_day,
+      },
+    });
+  } catch (e) {
+    const message = getErrorMessage(e);
+    apiLogger.error(message, { user_id: userData.user_id }, new Error(e));
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   addApi,
   getApi,
@@ -926,4 +1138,7 @@ export default {
   getPlans,
   updatePlan,
   deletePlan,
+  getApiUsageStats,
+  getApiLogs,
+  updateRateLimit,
 };
