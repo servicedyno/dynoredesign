@@ -292,7 +292,8 @@ export const validateReferralCode = async (req: Request, res: Response) => {
  */
 export const getReferralEarnings = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.user_id;
+    const userData = jwt.decode(res.locals.token) as IUserType;
+    const userId = userData?.user_id;
 
     if (!userId) {
       return res.status(401).json({
