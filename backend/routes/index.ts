@@ -10,6 +10,8 @@ import kycRouter from "./kycRouter";
 import statusRouter from "./statusRouter";
 import subscriptionRouter from "./subscriptionRouter";
 import testRouter from "./testRouter";
+import referralRouter from "./referralRouter";
+import knowledgeBaseRouter from "./knowledgeBaseRouter";
 
 import {
   authMiddleware,
@@ -44,6 +46,8 @@ router.use("/kyc", kycRouter);
 router.use("/status", statusRouter); // Public status page endpoints
 router.use("/subscriptions", subscriptionRouter); // Subscription management
 router.use("/test", testRouter); // Test endpoints for development
+router.use("/referral", referralRouter); // Referral system endpoints
+router.use("/kb", knowledgeBaseRouter); // Knowledge Base endpoints
 router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
 router.post("/webhook", flutterwaveWebHook);
