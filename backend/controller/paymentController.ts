@@ -336,14 +336,14 @@ const createCryptoPayment = async (
       console.log(`[Phase 10 Validation] Checking wallet for currency: ${requestedCurrency}, user_id: ${items.adm_id}, company_id: ${items.company_id}`);
       
       const whereClause: any = {
-        user_id: items.adm_id,
+        user_id: parseInt(items.adm_id) || items.adm_id,  // Convert to integer
         wallet_type: requestedCurrency,
         wallet_address: { [Op.not]: null },
       };
       
-      // Only add company_id if it exists and is valid
-      if (items.company_id && items.company_id !== null && items.company_id !== undefined) {
-        whereClause.company_id = items.company_id;
+      // Only add company_id if it exists and is valid (not empty string, not undefined, not null)
+      if (items.company_id && items.company_id !== '' && items.company_id !== 'undefined' && items.company_id !== 'null') {
+        whereClause.company_id = parseInt(items.company_id) || items.company_id;
       }
       
       console.log('[Phase 10 Validation] Where clause:', JSON.stringify(whereClause));
