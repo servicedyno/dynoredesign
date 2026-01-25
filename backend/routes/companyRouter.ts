@@ -24,4 +24,7 @@ companyRouter.get("/getCompany/:id", authMiddleware, companyController.getCompan
 companyRouter.get("/getTransactions/:id", authMiddleware, companyController.getTransactions);
 companyRouter.delete("/deleteCompany/:id", authMiddleware, companyController.deleteCompany);
 
+// TAX ID Validation endpoint
+companyRouter.post("/validateTaxId", authMiddleware, companyController.validateTaxId);
+
 export default companyRouter;
