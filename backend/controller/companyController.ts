@@ -10,7 +10,7 @@ import { companyModel, userModel } from "../models";
 import { companyLogger } from "../utils/loggers";
 import sequelize from "../utils/dbInstance";
 import { QueryTypes } from "sequelize";
-import { sendCompanyProfileCreatedEmail, sendCompanyContactWelcomeEmail } from "../services/emailService";
+import { sendCompanyProfileCreatedEmail, sendCompanyContactWelcomeEmail, sendCompanyProfileUpdatedEmail } from "../services/emailService";
 
 import axios from "axios";
 
