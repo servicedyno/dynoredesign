@@ -4,7 +4,7 @@
 # Last Updated: 2025-01-25
 #===================================================
 
-user_problem_statement: "PHASE 10 IMPLEMENTATION FIX VERIFICATION - Testing all three Phase 10 tasks after updating implementation to use userWalletModel instead of userWalletAddressModel. Comprehensive testing including data validation, API key creation, configured currencies endpoint, and currency validation in payment processing."
+user_problem_statement: "API KEY BASE CURRENCY FUNCTIONALITY VERIFICATION - Testing if API key base_currency field is properly working and being used in payment processing. Comprehensive analysis of database structure, API key creation with different currencies, payment processing logic, and identification of overpayment conversion bug."
 
   - task: "Development/Production API Key Functionality Testing"
     implemented: true
