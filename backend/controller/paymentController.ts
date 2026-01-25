@@ -532,7 +532,7 @@ const authStep = async (req: express.Request, res: express.Response) => {
         }
       }
 
-      successResponseHelper(res, 200, "fund ", finalRes);
+      successResponseHelper(res, 200, "Payment authenticated successfully", finalRes);
     } else {
       throw { message: "Please enter valid data!" };
     }
