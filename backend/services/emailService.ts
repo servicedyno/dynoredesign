@@ -108,6 +108,7 @@ export const sendWelcomeEmail = async (
 /**
  * Template 2: Company Profile Created
  * Trigger: Company created
+ * Recipient: Account email (user who created the company)
  */
 export const sendCompanyProfileCreatedEmail = async (
   email: string,
@@ -136,6 +137,44 @@ export const sendCompanyProfileCreatedEmail = async (
     console.log(`Company profile created email sent to ${email}`);
   } catch (e) {
     console.error("Company profile created email error:", e);
+  }
+};
+
+/**
+ * Template 2b: Company Contact Welcome Email
+ * Trigger: Company created (sent to company contact email if different from account)
+ * Recipient: Company contact email
+ */
+export const sendCompanyContactWelcomeEmail = async (
+  companyContactEmail: string,
+  companyName: string,
+  accountHolderName: string
+) => {
+  try {
+    const subject = `Welcome to DynoPay — ${companyName} is now registered`;
+    const content = `<p class="message">Hello,</p>
+    <p class="message">Great news! <strong>${companyName}</strong> has been registered on DynoPay by ${accountHolderName}. 🎉</p>
+    <p class="message">DynoPay is a secure crypto payment gateway that enables businesses to accept cryptocurrency payments easily and safely.</p>
+    <div class="highlight-box">
+      <p><strong>What this means for you:</strong></p>
+      <p>✓ Your company can now accept crypto payments<br />
+      ✓ Fast and secure transactions<br />
+      ✓ Real-time payment notifications</p>
+    </div>
+    <p class="message">If you have any questions about this registration or need assistance, please contact our support team or reach out to ${accountHolderName}.</p>`;
+
+    const html = dynoPayEmailTemplate("Welcome to DynoPay", content, true, "Learn More", "https://dynopay.com");
+    
+    await mailTransporter({
+      to: companyContactEmail,
+      name: companyName,
+      subject,
+      body: html,
+    });
+    
+    console.log(`Company contact welcome email sent to ${companyContactEmail}`);
+  } catch (e) {
+    console.error("Company contact welcome email error:", e);
   }
 };
 
@@ -751,6 +790,7 @@ export const sendInvoiceGeneratedEmail = async (
 export default {
   sendWelcomeEmail,
   sendCompanyProfileCreatedEmail,
+  sendCompanyContactWelcomeEmail,
   sendWalletOTPEmail,
   sendWalletVerifiedEmail,
   sendWalletUpdateOTPEmail,
