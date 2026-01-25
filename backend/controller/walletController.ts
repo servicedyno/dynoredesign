@@ -2990,6 +2990,193 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
 };
 
 /**
+ * Send OTP for wallet address deletion
+ * POST /api/wallet/address/delete/send-otp
+ */
+const sendDeleteWalletOTP = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { address_id, company_id } = req.body;
+    const user_id = userData.user_id;
+
+    if (!address_id) {
+      return errorResponseHelper(res, 400, "address_id is required");
+    }
+
+    // Build where clause for multi-tenancy
+    const whereClause: any = {
+      user_address_id: address_id,
+      user_id,
+    };
+    
+    if (company_id) {
+      whereClause.company_id = company_id;
+    }
+
+    // Verify the wallet address belongs to the user
+    const walletAddress = await userWalletAddressModel.findOne({
+      where: whereClause,
+    });
+
+    if (!walletAddress) {
+      return errorResponseHelper(res, 404, "Wallet address not found or you don't have access");
+    }
+
+    // Get user email
+    const user = await userModel.findOne({
+      where: { user_id },
+    });
+
+    if (!user || !user.dataValues.email) {
+      return errorResponseHelper(res, 400, "User email not found");
+    }
+
+    // Generate OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store OTP in Redis with address_id as key
+    await setRedisItem(`wallet_delete_otp_${address_id}`, {
+      otp,
+      user_id: user_id.toString(),
+      company_id: company_id?.toString() || null,
+      expiry: otpExpiry.toISOString(),
+    });
+
+    // Send OTP email
+    const walletInfo = `${walletAddress.dataValues.wallet_name || walletAddress.dataValues.currency} (${walletAddress.dataValues.wallet_address?.substring(0, 10)}...)`;
+    const emailMessage = `You requested to DELETE your wallet address: ${walletInfo}
+
+Your verification code is: ${otp}
+
+This code will expire in 10 minutes.
+
+⚠️ WARNING: This action is IRREVERSIBLE. The wallet address will be permanently removed from your account.
+
+If you didn't request this, please ignore this email or contact support immediately.`;
+
+    await sendEmail(
+      user.dataValues.email,
+      user.dataValues.name || "User",
+      "⚠️ Wallet Deletion Verification Code - DynoPay",
+      emailMessage
+    );
+
+    walletLogger.info(`Delete wallet OTP sent for address ${address_id} to user ${user_id}`);
+
+    return successResponseHelper(res, 200, "OTP sent to your email for wallet deletion", {
+      address_id,
+      email: user.dataValues.email.replace(/(.{2})(.*)(@.*)/, "$1***$3"),
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    walletLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    return errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Delete wallet address with OTP verification
+ * POST /api/wallet/deleteWalletAddress
+ */
+const deleteWalletAddressWithOTP = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { address_id, otp, company_id } = req.body;
+    const user_id = userData.user_id;
+
+    if (!address_id) {
+      return errorResponseHelper(res, 400, "address_id is required");
+    }
+
+    if (!otp) {
+      return errorResponseHelper(res, 400, "OTP is required");
+    }
+
+    // Build where clause for multi-tenancy
+    const whereClause: any = {
+      user_address_id: address_id,
+      user_id,
+    };
+    
+    if (company_id) {
+      whereClause.company_id = company_id;
+    }
+
+    // Verify the wallet address belongs to the user
+    const walletAddress = await userWalletAddressModel.findOne({
+      where: whereClause,
+    });
+
+    if (!walletAddress) {
+      return errorResponseHelper(res, 404, "Wallet address not found or you don't have access");
+    }
+
+    // Verify OTP from Redis
+    const storedOTPData = await getRedisItem(`wallet_delete_otp_${address_id}`);
+    
+    if (!storedOTPData || Object.keys(storedOTPData).length === 0) {
+      return errorResponseHelper(res, 400, "OTP expired or not found. Please request a new one.");
+    }
+
+    const otpData = storedOTPData as { otp: string; user_id: string; company_id: string | null; expiry: string };
+    
+    if (otpData.otp !== otp) {
+      return errorResponseHelper(res, 400, "Invalid OTP");
+    }
+
+    if (otpData.user_id !== user_id.toString()) {
+      return errorResponseHelper(res, 403, "Unauthorized");
+    }
+
+    if (new Date(otpData.expiry) < new Date()) {
+      await deleteRedisItem(`wallet_delete_otp_${address_id}`);
+      return errorResponseHelper(res, 400, "OTP expired. Please request a new one.");
+    }
+
+    // Store wallet info before deletion for response
+    const deletedWalletInfo = {
+      address_id: walletAddress.dataValues.user_address_id,
+      wallet_address: walletAddress.dataValues.wallet_address,
+      wallet_name: walletAddress.dataValues.wallet_name,
+      currency: walletAddress.dataValues.currency,
+    };
+
+    // Delete the wallet address
+    await userWalletAddressModel.destroy({
+      where: whereClause,
+    });
+
+    // Delete OTP from Redis
+    await deleteRedisItem(`wallet_delete_otp_${address_id}`);
+
+    walletLogger.info(`Wallet address ${address_id} deleted by user ${user_id}`);
+
+    return successResponseHelper(res, 200, "Wallet address deleted successfully", {
+      deleted: true,
+      ...deletedWalletInfo,
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    walletLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    return errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
  * Get transaction details by ID
  * GET /api/wallet/transaction/:id
  */
