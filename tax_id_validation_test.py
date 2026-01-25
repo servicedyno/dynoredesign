@@ -344,7 +344,7 @@ class TaxIdValidationTester:
                 
                 if response.status_code == 200:
                     data = response.json()
-                    response_data = data.get('data', data)
+                    response_data = data.get('data', {})  # Response is in data field
                     
                     # Just verify the API handles different countries
                     if 'valid' in response_data and 'format_valid' in response_data:
@@ -356,7 +356,8 @@ class TaxIdValidationTester:
                                 "country": country_test["name"],
                                 "country_code": country_test["country_code"],
                                 "valid": response_data.get('valid'),
-                                "format_valid": response_data.get('format_valid')
+                                "format_valid": response_data.get('format_valid'),
+                                "message": response_data.get('message', '')
                             }
                         )
                     else:
