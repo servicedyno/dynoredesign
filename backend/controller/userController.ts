@@ -1007,6 +1007,14 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
 
     const resData = await getAccessToken(createdUser.dataValues.user_id);
 
+    // Send welcome email
+    try {
+      await emailService.sendWelcomeEmail(email.toLowerCase(), name || email.split("@")[0]);
+    } catch (emailError) {
+      // Log error but don't fail registration
+      console.error("Error sending welcome email:", emailError);
+    }
+
     userLogger.info(`New user registered via Google: ${email}`);
 
     return successResponseHelper(res, 200, "Registration Successful!", resData);
