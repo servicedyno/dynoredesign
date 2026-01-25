@@ -2597,7 +2597,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
       },
     });
 
-    successResponseHelper(res, 200, "Link Updated Successfully!", updatedLink);
+    successResponseHelper(res, 200, "Payment link updated successfully", updatedLink);
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
