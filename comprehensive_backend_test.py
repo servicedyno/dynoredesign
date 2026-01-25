@@ -1159,9 +1159,10 @@ class ComprehensiveBackendTester:
                 "Content-Type": "application/json"
             }
             
+            # NEW format - using 'base_currency' field (recommended)
             payment_data = {
                 "amount": 100.00,
-                "base_currency": "USD",
+                "base_currency": "USD",  # Recommended field name
                 "company_id": self.company_id,
                 "email": "test@dynopay.com",
                 "modes": ["CRYPTO", "CARD"],
@@ -1184,7 +1185,7 @@ class ComprehensiveBackendTester:
                         "5.1 Create Payment Link (NEW)",
                         True,
                         "Payment link created successfully (NEW format)",
-                        {"link_id": self.payment_link_id, "amount": payment_data["amount"]},
+                        {"link_id": self.payment_link_id, "amount": payment_data["amount"], "currency": payment_data["base_currency"]},
                         response_time
                     )
                 else:
