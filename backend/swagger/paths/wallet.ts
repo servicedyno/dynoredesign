@@ -325,7 +325,7 @@ Wallet address is saved and ready to receive payments!`,
     }
   },
 
-  // DELETE - Remove wallet from main payment system (No OTP required)
+  // DELETE - Remove wallet from main payment system
   '/api/wallet/wallet/delete': {
     post: {
       tags: ['Wallet Address Management'],
