@@ -179,7 +179,12 @@ const getWalletTransactions = async (
       return rest;
     });
 
-    successResponseHelper(res, 200, "", {
+    const totalTransactions = (customer_data?.length || 0) + (selfData?.length || 0);
+    const message = totalTransactions === 0
+      ? "No transaction history found"
+      : `Successfully retrieved ${totalTransactions} transaction${totalTransactions === 1 ? '' : 's'}`;
+    
+    successResponseHelper(res, 200, message, {
       customers_transactions: customer_data,
       self_transactions: selfData,
     });
