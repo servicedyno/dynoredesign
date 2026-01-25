@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs-18_x", "yarn"]
 
 [phases.install]
-cmds = ["yarn install --frozen-lockfile"]
+cmds = ["yarn install"]
 
 [phases.build]
-cmds = []
+cmds = ["yarn build"]
 
 [start]
-cmd = "yarn start"
+cmd = "node dist/server.js"
