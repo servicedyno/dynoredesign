@@ -631,6 +631,16 @@ const connectSocial = async (req: express.Request, res: express.Response) => {
       }
       const resData = await getAccessToken(createdUser.dataValues.user_id);
 
+      // Send welcome email if email is available
+      if (email) {
+        try {
+          await emailService.sendWelcomeEmail(email.toLowerCase(), name || "User");
+        } catch (emailError) {
+          // Log error but don't fail registration
+          console.error("Error sending welcome email:", emailError);
+        }
+      }
+
       successResponseHelper(res, 200, "Registered Successful!", resData);
     }
   } catch (e) {
