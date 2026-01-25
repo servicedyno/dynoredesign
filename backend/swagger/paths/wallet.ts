@@ -1,17 +1,77 @@
 export const walletPaths = {
+  // ============================================
+  // WALLET ADDRESS MANAGEMENT - CRUD Operations
+  // All CUD (Create, Update, Delete) operations require OTP verification
+  // ============================================
+
+  // READ - Get wallet addresses (No OTP required)
+  '/api/wallet/getWalletAddresses': {
+    get: {
+      tags: ['Wallet Address Management'],
+      summary: '📖 Read All Wallet Addresses',
+      description: `Retrieve all cryptocurrency wallet addresses configured for your account.
+
+**No OTP Required** - This is a read-only operation.
+
+**Multi-tenancy:** Optionally filter by company_id.`,
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'query',
+        name: 'company_id',
+        schema: { type: 'integer' },
+        description: '(Optional) Filter by company ID',
+        example: 1
+      }],
+      responses: {
+        200: {
+          description: 'Wallet addresses retrieved successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Successfully retrieved 3 wallet addresses' },
+                  data: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        user_address_id: { type: 'string', example: '550e8400-e29b-41d4-a716-446655440000' },
+                        wallet_address: { type: 'string', example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' },
+                        wallet_name: { type: 'string', example: 'Main BTC Wallet' },
+                        currency: { type: 'string', example: 'BTC' },
+                        label: { type: 'string', example: 'BTC' },
+                        company_id: { type: 'integer', example: 1 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized - Invalid or missing token' }
+      }
+    }
+  },
+
+  // CREATE - Step 1: Validate address and send OTP
   '/api/wallet/validateWalletAddress': {
     post: {
-      tags: ['Wallet Addresses'],
-      summary: 'Create Wallet Address - Step 1: Send OTP',
-      description: `Add a new cryptocurrency wallet address to your company (requires OTP verification).
-      
-**This is Step 1 of 2-step process:**
-1. This endpoint validates address & sends OTP to your email
-2. Then call \`/api/wallet/verifyOtp\` with the OTP to complete
+      tags: ['Wallet Address Management'],
+      summary: '➕ Create Wallet Address - Step 1: Validate & Send OTP',
+      description: `**Add a new cryptocurrency wallet address (requires OTP verification)**
 
-**Purpose:** Configure where crypto payments should be forwarded for your company.
+## 2-Step Process:
+1. **This endpoint** - Validates the wallet address and sends OTP to your email
+2. **Then call** \`POST /api/wallet/verifyOtp\` - Enter OTP to complete creation
 
-**Security:** OTP verification ensures only authorized users can add wallet addresses.`,
+## Why OTP?
+Security measure to ensure only authorized users can add wallet addresses.
+
+## Next Step:
+Check your email for a 6-digit OTP code and call \`/api/wallet/verifyOtp\``,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -28,13 +88,13 @@ export const walletPaths = {
                 },
                 currency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE'],
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH', 'BSC'],
                   description: '✅ REQUIRED: Cryptocurrency type',
                   example: 'BTC'
                 },
                 company_id: {
                   type: 'integer',
-                  description: '✅ REQUIRED: Company ID',
+                  description: '✅ REQUIRED: Company ID (multi-tenancy)',
                   example: 1
                 },
                 wallet_name: {
@@ -50,36 +110,39 @@ export const walletPaths = {
       },
       responses: {
         200: {
-          description: '✅ OTP sent to email - Check your email and proceed to Step 2',
+          description: '✅ OTP sent to your email - Proceed to Step 2',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Address is a valid address and saved successfully!' }
+                  message: { type: 'string', example: 'Address validated! OTP sent to your email.' }
                 }
               }
             }
           }
         },
-        400: { description: 'Invalid address or duplicate address' },
+        400: { description: 'Invalid address format or duplicate address' },
         401: { description: 'Unauthorized' },
         403: { description: 'No access to this company' }
       }
     }
   },
+
+  // CREATE - Step 2: Verify OTP and complete creation
   '/api/wallet/verifyOtp': {
     post: {
-      tags: ['Wallet Addresses'],
-      summary: 'Create Wallet Address - Step 2: Verify OTP',
-      description: `Complete wallet address creation by verifying OTP.
-      
-**Prerequisites:**
-- Must call \`/api/wallet/validateWalletAddress\` first
-- Check email for 6-digit OTP code
+      tags: ['Wallet Address Management'],
+      summary: '➕ Create Wallet Address - Step 2: Verify OTP & Complete',
+      description: `**Complete wallet address creation by verifying OTP**
 
-**After this step:** Wallet address is permanently saved and ready to receive payments.`,
+## Prerequisites:
+1. Must call \`POST /api/wallet/validateWalletAddress\` first
+2. Check your email for the 6-digit OTP code
+
+## After Success:
+Wallet address is saved and ready to receive payments!`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -91,7 +154,7 @@ export const walletPaths = {
               properties: {
                 otp: {
                   type: 'string',
-                  description: '✅ REQUIRED: 6-digit OTP from email',
+                  description: '✅ REQUIRED: 6-digit OTP from your email',
                   example: '123456',
                   minLength: 6,
                   maxLength: 6
@@ -103,7 +166,7 @@ export const walletPaths = {
                 },
                 currency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE'],
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH', 'BSC'],
                   description: '✅ REQUIRED: Same currency from Step 1',
                   example: 'BTC'
                 },
@@ -131,7 +194,7 @@ export const walletPaths = {
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'OTP verified successfully!' }
+                  message: { type: 'string', example: 'OTP verified! Wallet address saved successfully.' }
                 }
               }
             }
@@ -142,56 +205,20 @@ export const walletPaths = {
       }
     }
   },
-  '/api/wallet/getWalletAddresses': {
-    get: {
-      tags: ['Wallet Addresses'],
-      summary: 'Read All Wallet Addresses',
-      description: `Get all cryptocurrency wallet addresses for your companies.
-      
-**No OTP required** for reading.`,
-      security: [{ BearerAuth: [] }],
-      responses: {
-        200: {
-          description: 'Wallet addresses retrieved successfully',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: { type: 'boolean', example: true },
-                  data: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        wallet_id: { type: 'string' },
-                        wallet_address: { type: 'string' },
-                        wallet_name: { type: 'string' },
-                        wallet_type: { type: 'string' },
-                        company_id: { type: 'integer' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        401: { description: 'Unauthorized' }
-      }
-    }
-  },
+
+  // UPDATE - Step 1: Send OTP
   '/api/wallet/address/send-otp': {
     post: {
-      tags: ['Wallet Addresses'],
-      summary: 'Update Wallet Address - Step 1: Send OTP',
-      description: `Send OTP to update an existing wallet address.
-      
-**This is Step 1 of 2-step process:**
-1. This endpoint sends OTP to your email
-2. Then call \`PUT /api/wallet/address/{id}\` with OTP to update
+      tags: ['Wallet Address Management'],
+      summary: '✏️ Update Wallet Address - Step 1: Send OTP',
+      description: `**Request OTP to update an existing wallet address**
 
-**Security:** OTP verification required to prevent unauthorized changes.`,
+## 2-Step Process:
+1. **This endpoint** - Sends OTP to your email
+2. **Then call** \`PUT /api/wallet/address/{id}\` - Enter OTP to complete update
+
+## Security:
+OTP verification prevents unauthorized changes to your wallet addresses.`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -213,14 +240,21 @@ export const walletPaths = {
       },
       responses: {
         200: {
-          description: '✅ OTP sent to email - Check your email and proceed to Step 2',
+          description: '✅ OTP sent to your email - Proceed to Step 2',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'OTP sent to your email' }
+                  message: { type: 'string', example: 'OTP sent to your email' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      address_id: { type: 'string', example: '550e8400-e29b-41d4-a716-446655440000' },
+                      email: { type: 'string', example: 'jo***@example.com' }
+                    }
+                  }
                 }
               }
             }
@@ -232,17 +266,21 @@ export const walletPaths = {
       }
     }
   },
+
+  // UPDATE - Step 2: Verify OTP and update
   '/api/wallet/address/{id}': {
     put: {
-      tags: ['Wallet Addresses'],
-      summary: 'Update Wallet Address - Step 2: Verify OTP & Update',
-      description: `Update wallet address after OTP verification.
-      
-**Prerequisites:**
-- Must call \`/api/wallet/address/send-otp\` first
-- Check email for 6-digit OTP code
+      tags: ['Wallet Address Management'],
+      summary: '✏️ Update Wallet Address - Step 2: Verify OTP & Update',
+      description: `**Complete wallet address update by verifying OTP**
 
-**Updatable:** wallet_address, wallet_name, currency`,
+## Prerequisites:
+1. Must call \`POST /api/wallet/address/send-otp\` first
+2. Check your email for the 6-digit OTP code
+
+## Updatable Fields:
+- wallet_address
+- wallet_name`,
       security: [{ BearerAuth: [] }],
       parameters: [{
         in: 'path',
@@ -262,7 +300,7 @@ export const walletPaths = {
               properties: {
                 otp: {
                   type: 'string',
-                  description: '✅ REQUIRED: 6-digit OTP from email',
+                  description: '✅ REQUIRED: 6-digit OTP from your email',
                   example: '123456',
                   minLength: 6,
                   maxLength: 6
@@ -270,18 +308,12 @@ export const walletPaths = {
                 wallet_address: {
                   type: 'string',
                   description: '📝 OPTIONAL: New wallet address',
-                  example: '3J98t1WpEZ73CNmYviecrnyiWrnqRhWNLy'
+                  example: '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'
                 },
                 wallet_name: {
                   type: 'string',
                   description: '📝 OPTIONAL: New wallet name',
                   example: 'Updated Trading Wallet'
-                },
-                currency: {
-                  type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE'],
-                  description: '📝 OPTIONAL: New currency',
-                  example: 'BTC'
                 }
               }
             }
@@ -309,17 +341,20 @@ export const walletPaths = {
       }
     }
   },
+
+  // DELETE - Step 1: Send OTP
   '/api/wallet/address/delete/send-otp': {
     post: {
-      tags: ['Wallet Addresses'],
-      summary: 'Delete Wallet Address - Step 1: Send OTP',
-      description: `Send OTP to delete a wallet address.
-      
-**This is Step 1 of 2-step process:**
-1. This endpoint sends OTP to your email
-2. Then call \`/api/wallet/deleteWalletAddress\` with OTP to complete deletion
+      tags: ['Wallet Address Management'],
+      summary: '🗑️ Delete Wallet Address - Step 1: Send OTP',
+      description: `**Request OTP to delete a wallet address**
 
-**Security:** OTP verification prevents accidental or unauthorized deletions.`,
+## 2-Step Process:
+1. **This endpoint** - Sends OTP to your email
+2. **Then call** \`POST /api/wallet/deleteWalletAddress\` - Enter OTP to confirm deletion
+
+## ⚠️ Warning:
+Deletion is PERMANENT and cannot be undone!`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -333,6 +368,11 @@ export const walletPaths = {
                   type: 'string',
                   description: '✅ REQUIRED: Wallet address ID to delete',
                   example: '550e8400-e29b-41d4-a716-446655440000'
+                },
+                company_id: {
+                  type: 'integer',
+                  description: '📝 OPTIONAL: Company ID for multi-tenancy verification',
+                  example: 1
                 }
               }
             }
@@ -341,14 +381,21 @@ export const walletPaths = {
       },
       responses: {
         200: {
-          description: '✅ OTP sent to email - Check your email and proceed to Step 2',
+          description: '✅ OTP sent to your email - Proceed to Step 2',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'OTP sent to your email for wallet deletion' }
+                  message: { type: 'string', example: 'OTP sent to your email for wallet deletion' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      address_id: { type: 'string', example: '550e8400-e29b-41d4-a716-446655440000' },
+                      email: { type: 'string', example: 'jo***@example.com' }
+                    }
+                  }
                 }
               }
             }
@@ -360,17 +407,23 @@ export const walletPaths = {
       }
     }
   },
+
+  // DELETE - Step 2: Verify OTP and delete
   '/api/wallet/deleteWalletAddress': {
     post: {
-      tags: ['Wallet Addresses'],
-      summary: 'Delete Wallet Address - Step 2: Verify OTP & Delete',
-      description: `Delete wallet address after OTP verification.
-      
-**Prerequisites:**
-- Must call \`/api/wallet/address/delete/send-otp\` first
-- Check email for 6-digit OTP code
+      tags: ['Wallet Address Management'],
+      summary: '🗑️ Delete Wallet Address - Step 2: Verify OTP & Delete',
+      description: `**Complete wallet address deletion by verifying OTP**
 
-**Note:** This removes the address from your account. The blockchain wallet itself is unaffected.`,
+## Prerequisites:
+1. Must call \`POST /api/wallet/address/delete/send-otp\` first
+2. Check your email for the 6-digit OTP code
+
+## ⚠️ Warning:
+This action is IRREVERSIBLE! The wallet address will be permanently removed from your account.
+
+## Note:
+This only removes the address from DynoPay. Your actual blockchain wallet is unaffected.`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -387,10 +440,15 @@ export const walletPaths = {
                 },
                 otp: {
                   type: 'string',
-                  description: '✅ REQUIRED: 6-digit OTP from email',
+                  description: '✅ REQUIRED: 6-digit OTP from your email',
                   example: '123456',
                   minLength: 6,
                   maxLength: 6
+                },
+                company_id: {
+                  type: 'integer',
+                  description: '📝 OPTIONAL: Company ID for multi-tenancy verification',
+                  example: 1
                 }
               }
             }
@@ -406,7 +464,17 @@ export const walletPaths = {
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Wallet address deleted successfully' }
+                  message: { type: 'string', example: 'Wallet address deleted successfully' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      deleted: { type: 'boolean', example: true },
+                      address_id: { type: 'string', example: '550e8400-e29b-41d4-a716-446655440000' },
+                      wallet_address: { type: 'string', example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' },
+                      wallet_name: { type: 'string', example: 'Main BTC Payment Address' },
+                      currency: { type: 'string', example: 'BTC' }
+                    }
+                  }
                 }
               }
             }
