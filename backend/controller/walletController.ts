@@ -2544,7 +2544,7 @@ const getUserAnalytics = async (
       revenue_performance,
     };
 
-    successResponseHelper(res, 200, "", returnData);
+    successResponseHelper(res, 200, "Analytics data retrieved successfully", returnData);
   } catch (e) {
     console.log(e);
     const message = getErrorMessage(e);
