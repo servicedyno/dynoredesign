@@ -115,9 +115,10 @@ class VerifyFixesTester:
             "Content-Type": "application/json"
         }
         
-        # Test 1.1: NEW field names (base_amount/base_currency)
+        # Test 1.1: NEW field names (base_amount/base_currency) - Currently requires both formats
         print("\n--- Test 1.1: NEW field names (base_amount/base_currency) ---")
         new_format_data = {
+            "amount": 100.00,  # Currently required for backward compatibility
             "base_amount": 100.00,
             "base_currency": "USD",
             "company_id": 3,  # Use actual company_id from user
