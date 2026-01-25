@@ -1115,11 +1115,11 @@ class ComprehensiveBackendTester:
             }
             
             payment_data = {
-                "base_amount": 100.00,
+                "amount": 100.00,
                 "base_currency": "USD",
                 "company_id": self.company_id,
                 "email": "test@dynopay.com",
-                "modes": ["crypto", "card"],
+                "modes": ["CRYPTO", "CARD"],
                 "description": "Test Payment Link",
                 "expire": "24h"
             }
