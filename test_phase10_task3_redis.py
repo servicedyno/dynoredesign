@@ -220,8 +220,8 @@ def test_scenario_1_configured_currency(token: str, user_id: int, configured_cur
     print_test(f"Testing payment creation with CONFIGURED currency: {test_currency}")
     print_info("Expected: Payment should be created successfully (200 OK)")
     
-    # Setup Redis data
-    transaction_id = setup_redis_payment_data(user_id, test_currency, company_id=1)
+    # Setup Redis data with company_id=None (wallets have NULL company_id)
+    transaction_id = setup_redis_payment_data(user_id, test_currency, company_id=None)
     
     if not transaction_id:
         print_error("Failed to setup Redis data")
@@ -263,8 +263,8 @@ def test_scenario_2_unconfigured_currency(token: str, user_id: int, configured_c
     print_info("Expected: Payment should be REJECTED with 400 error")
     print_info(f"Expected error: 'No wallet address configured for {test_currency}'")
     
-    # Setup Redis data
-    transaction_id = setup_redis_payment_data(user_id, test_currency, company_id=1)
+    # Setup Redis data with company_id=None
+    transaction_id = setup_redis_payment_data(user_id, test_currency, company_id=None)
     
     if not transaction_id:
         print_error("Failed to setup Redis data")
@@ -412,12 +412,12 @@ def main():
     # Run test scenarios
     print_info("\nStarting test scenarios...")
     
-    # Test 1: Configured currency (positive)
+    # Test 1: Configured currency (positive) - use company_id=None for wallets with NULL company_id
     results['scenario_1'] = test_scenario_1_configured_currency(
         token, user_id, configured_currencies
     )
     
-    # Test 2: Unconfigured currency (negative)
+    # Test 2: Unconfigured currency (negative) - use company_id=None
     results['scenario_2'] = test_scenario_2_unconfigured_currency(
         token, user_id, configured_currencies
     )
