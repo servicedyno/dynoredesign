@@ -4,7 +4,7 @@ export const paymentPaths = {
     post: {
       tags: ['Payments'],
       summary: 'Create payment link',
-      description: 'Create a new payment link for accepting crypto or fiat payments. The link can be shared with customers to collect payments.',
+      description: 'Create a new payment link for accepting crypto or fiat payments. The link can be shared with customers to collect payments. Supports both legacy field names (amount/currency) and new field names (base_amount/base_currency) for backward compatibility.',
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -12,53 +12,125 @@ export const paymentPaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['amount', 'currency', 'company_id'],
+              required: ['company_id'],
               properties: {
-                amount: { type: 'number', description: 'Payment amount' },
-                currency: { type: 'string', enum: ['USD', 'EUR', 'NGN', 'GBP'], description: 'Fiat currency for the payment' },
-                company_id: { type: 'integer', description: 'Company ID receiving the payment' },
-                description: { type: 'string', description: 'Payment description shown to customer' },
-                redirect_url: { type: 'string', format: 'uri', description: 'URL to redirect after successful payment' },
-                webhook_url: { type: 'string', format: 'uri', description: 'URL to receive payment notifications' },
-                expires_at: { type: 'string', format: 'date-time', description: 'Link expiration time (optional)' },
-                metadata: { type: 'object', description: 'Custom metadata (order_id, customer_id, etc.)' }
+                amount: { 
+                  type: 'number', 
+                  description: 'Payment amount (use either amount or base_amount)',
+                  example: 100.00
+                },
+                base_amount: { 
+                  type: 'number', 
+                  description: 'Payment amount (alternative to amount)',
+                  example: 100.00
+                },
+                currency: { 
+                  type: 'string', 
+                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
+                  description: 'Currency (use either currency or base_currency)',
+                  example: 'USD'
+                },
+                base_currency: { 
+                  type: 'string', 
+                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'ETH'], 
+                  description: 'Currency (alternative to currency)',
+                  example: 'USD'
+                },
+                company_id: { 
+                  type: 'integer', 
+                  description: 'Company ID receiving the payment (required)',
+                  example: 1
+                },
+                email: {
+                  type: 'string',
+                  format: 'email',
+                  description: 'Customer email (optional)',
+                  example: 'customer@example.com'
+                },
+                modes: {
+                  type: 'array',
+                  items: { type: 'string', enum: ['crypto', 'card'] },
+                  description: 'Allowed payment modes (default: ["crypto", "card"])',
+                  example: ['crypto', 'card']
+                },
+                description: { 
+                  type: 'string', 
+                  description: 'Payment description shown to customer',
+                  example: 'Order #12345 - Premium Subscription'
+                },
+                expire: {
+                  type: 'string',
+                  enum: ['24h', '7d', '30d', 'No'],
+                  description: 'Link expiration period (default: No expiration)',
+                  example: '24h'
+                },
+                callback_url: { 
+                  type: 'string', 
+                  format: 'uri', 
+                  description: 'URL to call after payment completion',
+                  example: 'https://example.com/callback'
+                },
+                redirect_url: { 
+                  type: 'string', 
+                  format: 'uri', 
+                  description: 'URL to redirect customer after successful payment',
+                  example: 'https://example.com/success'
+                },
+                webhook_url: { 
+                  type: 'string', 
+                  format: 'uri', 
+                  description: 'URL to receive payment status webhooks',
+                  example: 'https://example.com/webhook'
+                },
+                fee_payer: {
+                  type: 'string',
+                  enum: ['customer', 'company'],
+                  description: 'Who pays blockchain fees (default: company)',
+                  example: 'company'
+                }
               }
             },
             examples: {
-              'E-commerce Order': {
-                summary: 'Online store checkout',
+              'Standard Payment Link': {
+                summary: 'Create payment link with new field names',
+                value: {
+                  base_amount: 100.00,
+                  base_currency: 'USD',
+                  company_id: 1,
+                  description: 'Test payment for production readiness',
+                  expire: '24h',
+                  callback_url: 'https://example.com/callback',
+                  redirect_url: 'https://example.com/success',
+                  webhook_url: 'https://example.com/webhook'
+                }
+              },
+              'Legacy Format': {
+                summary: 'Create payment link with legacy field names (backward compatible)',
                 value: {
                   amount: 199.99,
                   currency: 'USD',
                   company_id: 1,
+                  email: 'customer@example.com',
+                  modes: ['crypto', 'card'],
                   description: 'Order #12345 - Premium Subscription',
+                  expire: '7d',
                   redirect_url: 'https://mystore.com/order/12345/success',
-                  webhook_url: 'https://mystore.com/webhooks/dynopay',
-                  metadata: {
-                    order_id: '12345',
-                    customer_email: 'customer@example.com',
-                    items: ['Premium Plan - Annual']
-                  }
+                  webhook_url: 'https://mystore.com/webhooks/dynopay'
                 }
               },
-              'Invoice Payment': {
-                summary: 'B2B invoice payment',
+              'Crypto Only Payment': {
+                summary: 'Payment link accepting only crypto',
                 value: {
-                  amount: 5000.00,
-                  currency: 'USD',
+                  base_amount: 0.001,
+                  base_currency: 'BTC',
                   company_id: 1,
-                  description: 'Invoice #INV-2024-001 - Consulting Services',
-                  redirect_url: 'https://mybusiness.com/invoices/paid',
-                  webhook_url: 'https://mybusiness.com/api/payment-webhook',
-                  expires_at: '2024-12-31T23:59:59Z',
-                  metadata: {
-                    invoice_id: 'INV-2024-001',
-                    client_name: 'Acme Corp'
-                  }
+                  modes: ['crypto'],
+                  description: 'BTC Payment - Invoice #INV-2024-001',
+                  expire: '30d'
                 }
               },
               'Simple Payment': {
-                summary: 'Basic payment without redirect',
+                summary: 'Minimal payment link',
                 value: {
                   amount: 50.00,
                   currency: 'USD',
