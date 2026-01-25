@@ -2177,6 +2177,15 @@ const createPaymentLink = async (
   const normalizedAmount = base_amount || amount;
   
   try {
+    // Validate required fields
+    if (!normalizedAmount) {
+      return errorResponseHelper(res, 400, "Amount is required");
+    }
+    
+    if (!normalizedCurrency) {
+      return errorResponseHelper(res, 400, "Currency is required");
+    }
+    
     // Phase 10 Fix: Validate company_id if provided
     if (company_id) {
       const companyExists = await companyModel.findOne({
@@ -2211,12 +2220,15 @@ const createPaymentLink = async (
       }
     }
     
+    // Default modes if not provided
+    const allowedModes = modes ? modes.join(",") : "crypto,card";
+    
     const payload = {
       transaction_id: crypto.randomUUID(),
-      email,
-      allowedModes: modes.join(","),
-      base_amount: amount,
-      base_currency: base_currency,
+      email: email || null,
+      allowedModes: allowedModes,
+      base_amount: normalizedAmount,
+      base_currency: normalizedCurrency,
       user_id: userData.user_id,
       adm_id: userData.user_id,  // Add adm_id for crypto payment compatibility
       company_id: company_id || null,  // Phase 10 Fix: Include company_id
