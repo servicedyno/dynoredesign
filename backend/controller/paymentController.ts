@@ -2136,7 +2136,7 @@ const getBalance = async (req: express.Request, res: express.Response) => {
 
     const { amount, wallet_type, ...rest } = customerData.dataValues;
 
-    successResponseHelper(res, 200, "Balance Fetched Successfully!", {
+    successResponseHelper(res, 200, "Balance retrieved successfully", {
       amount: amount.toFixed(2),
       currency: wallet_type,
     });
