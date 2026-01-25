@@ -760,7 +760,7 @@ const getAdminAnalytics = async (
       revenue_performance,
     };
 
-    successResponseHelper(res, 200, "", returnData);
+    successResponseHelper(res, 200, "Dashboard statistics retrieved successfully", returnData);
   } catch (e) {
     const message = getErrorMessage(e);
     adminLogger.error(message, new Error(e));
