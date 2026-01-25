@@ -40,8 +40,23 @@ export const subscriptionPaths = {
     },
     post: {
       tags: ['Subscriptions'],
-      summary: 'Create a new subscription',
-      description: 'Create a recurring payment subscription',
+      summary: 'Create recurring subscription',
+      description: `Create a new recurring payment subscription for a customer.
+      
+**Subscription Features:**
+- Automatic recurring billing
+- Flexible billing intervals (daily, weekly, monthly, yearly)
+- Multiple currency support
+- Optional start and end dates
+- Customizable metadata
+
+**Billing Intervals:**
+- \`daily\` - Charged every day
+- \`weekly\` - Charged every 7 days
+- \`monthly\` - Charged on same day each month
+- \`yearly\` - Charged on same date each year
+
+**Note:** First payment is processed immediately upon subscription creation.`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -51,16 +66,63 @@ export const subscriptionPaths = {
               type: 'object',
               required: ['customer_email', 'amount', 'currency', 'interval'],
               properties: {
-                customer_email: { type: 'string', format: 'email' },
-                customer_name: { type: 'string' },
-                amount: { type: 'number', example: 29.99 },
-                currency: { type: 'string', enum: ['USD', 'EUR', 'NGN'], default: 'USD' },
-                interval: { type: 'string', enum: ['daily', 'weekly', 'monthly', 'yearly'], example: 'monthly' },
-                description: { type: 'string' },
-                company_id: { type: 'integer' },
-                start_date: { type: 'string', format: 'date' },
-                end_date: { type: 'string', format: 'date' },
-                metadata: { type: 'object' }
+                customer_email: { 
+                  type: 'string', 
+                  format: 'email',
+                  description: '✅ REQUIRED: Customer email address',
+                  example: 'customer@example.com'
+                },
+                customer_name: { 
+                  type: 'string',
+                  description: '📝 OPTIONAL: Customer full name',
+                  example: 'John Doe'
+                },
+                amount: { 
+                  type: 'number', 
+                  description: '✅ REQUIRED: Subscription amount per billing cycle',
+                  example: 29.99,
+                  minimum: 1.00
+                },
+                currency: { 
+                  type: 'string', 
+                  enum: ['USD', 'EUR', 'NGN', 'GBP'], 
+                  description: '✅ REQUIRED: Currency code',
+                  default: 'USD',
+                  example: 'USD'
+                },
+                interval: { 
+                  type: 'string', 
+                  enum: ['daily', 'weekly', 'monthly', 'yearly'], 
+                  description: '✅ REQUIRED: Billing frequency',
+                  example: 'monthly' 
+                },
+                description: { 
+                  type: 'string',
+                  description: '📝 OPTIONAL: Subscription description shown to customer',
+                  example: 'Premium Plan - Monthly Subscription'
+                },
+                company_id: { 
+                  type: 'integer',
+                  description: '✅ REQUIRED: Your company ID receiving payments',
+                  example: 1
+                },
+                start_date: { 
+                  type: 'string', 
+                  format: 'date',
+                  description: '📝 OPTIONAL: When to start billing (defaults to now)',
+                  example: '2024-02-01'
+                },
+                end_date: { 
+                  type: 'string', 
+                  format: 'date',
+                  description: '📝 OPTIONAL: When to stop billing (defaults to never)',
+                  example: '2025-02-01'
+                },
+                metadata: { 
+                  type: 'object',
+                  description: '📝 OPTIONAL: Custom data for your reference',
+                  example: { plan_tier: 'premium', user_id: '12345' }
+                }
               }
             }
           }
@@ -68,13 +130,13 @@ export const subscriptionPaths = {
       },
       responses: {
         200: {
-          description: 'Subscription created',
+          description: 'Subscription created successfully',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  message: { type: 'string' },
+                  message: { type: 'string', example: 'Subscription created successfully' },
                   data: { $ref: '#/components/schemas/Subscription' }
                 }
               }
