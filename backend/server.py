@@ -227,30 +227,31 @@ async def app(scope, receive, send):
     global HTTP_CLIENT
     
     if scope['type'] == 'lifespan':
-        message = await receive()
-        if message['type'] == 'lifespan.startup':
-            # Start Node.js services
-            start_node_backend()
-            start_api_service()
-            
-            # Start monitoring thread
-            threading.Thread(target=monitor_services, daemon=True).start()
-            
-            # Create HTTP client for proxying
-            HTTP_CLIENT = httpx.AsyncClient(
-                base_url=f"http://127.0.0.1:{NODE_PORT}",
-                timeout=httpx.Timeout(60.0, connect=10.0)
-            )
-            
-            print("✅ Proxy ready on port 8001 → Node.js on port 3300", flush=True)
-            await send({'type': 'lifespan.startup.complete'})
-            
-        message = await receive()
-        if message['type'] == 'lifespan.shutdown':
-            if HTTP_CLIENT:
-                await HTTP_CLIENT.aclose()
-            stop_all()
-            await send({'type': 'lifespan.shutdown.complete'})
+        while True:
+            message = await receive()
+            if message['type'] == 'lifespan.startup':
+                # Start Node.js services
+                start_node_backend()
+                start_api_service()
+                
+                # Start monitoring thread
+                threading.Thread(target=monitor_services, daemon=True).start()
+                
+                # Create HTTP client for proxying
+                HTTP_CLIENT = httpx.AsyncClient(
+                    base_url=f"http://127.0.0.1:{NODE_PORT}",
+                    timeout=httpx.Timeout(60.0, connect=10.0)
+                )
+                
+                print("✅ Proxy ready on port 8001 → Node.js on port 3300", flush=True)
+                await send({'type': 'lifespan.startup.complete'})
+                
+            elif message['type'] == 'lifespan.shutdown':
+                if HTTP_CLIENT:
+                    await HTTP_CLIENT.aclose()
+                stop_all()
+                await send({'type': 'lifespan.shutdown.complete'})
+                break
             
     elif scope['type'] == 'http':
         await proxy_request(scope, receive, send)
