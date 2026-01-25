@@ -2628,7 +2628,6 @@ class ComprehensiveBackendTester:
             "SKIPPED - Plans management not implemented (optional feature)",
             {"note": "Endpoint /api/plans does not exist"}
         )
-            customer_data = {
                 "company_id": self.company_id,
                 "customer_name": f"Test Customer {timestamp}",
                 "email": "testcustomer@example.com",
