@@ -1238,7 +1238,7 @@ const getCurrencyRates = async (
       fixedDecimal,
     });
 
-    successResponseHelper(res, 200, "", currencyRateList);
+    successResponseHelper(res, 200, "Currency rates retrieved successfully", currencyRateList);
   } catch (e) {
     const message = getErrorMessage(e);
     walletLogger.error(message, new Error(e));
