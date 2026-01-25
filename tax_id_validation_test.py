@@ -231,7 +231,7 @@ class TaxIdValidationTester:
             
             if response.status_code == 200:
                 data = response.json()
-                response_data = data.get('data', data)
+                response_data = data.get('data', {})  # Response is in data field
                 
                 valid_status = response_data.get('valid')
                 format_valid = response_data.get('format_valid')
