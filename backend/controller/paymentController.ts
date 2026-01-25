@@ -378,6 +378,7 @@ const createCryptoPayment = async (
         ref: data.uniqueRef,
         adm_id: items.adm_id,
         customer_id: items.customer_id,
+        company_id: items.company_id,  // Include company_id from Redis
       };
       const { paymentRes, uniqueRef } = await Crypto(data, tokenData, true);
       finalRes = { hash: uniqueRef, ...paymentRes };
