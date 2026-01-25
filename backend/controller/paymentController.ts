@@ -325,13 +325,19 @@ const createCryptoPayment = async (
 
       // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
       const requestedCurrency = data.currency;
+      const whereClause: any = {
+        user_id: items.adm_id,
+        wallet_type: requestedCurrency,
+        wallet_address: { [Op.not]: null },
+      };
+      
+      // Only add company_id if it exists and is valid
+      if (items.company_id && items.company_id !== null && items.company_id !== undefined) {
+        whereClause.company_id = items.company_id;
+      }
+      
       const hasWallet = await userWalletModel.findOne({
-        where: {
-          user_id: items.adm_id,
-          wallet_type: requestedCurrency,
-          wallet_address: { [Op.not]: null },
-          ...(items.company_id && { company_id: items.company_id }),
-        },
+        where: whereClause,
       });
 
       if (!hasWallet) {
