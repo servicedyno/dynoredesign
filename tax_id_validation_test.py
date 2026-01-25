@@ -146,7 +146,7 @@ class TaxIdValidationTester:
                 
                 # Verify required fields are present
                 required_fields = ['valid', 'format_valid', 'message']
-                response_data = data.get('data', data)  # Handle both formats
+                response_data = data.get('data', {})  # Response is in data field
                 
                 missing_fields = [field for field in required_fields if field not in response_data]
                 
@@ -158,7 +158,7 @@ class TaxIdValidationTester:
                         {"response": data}
                     )
                 else:
-                    # Check if valid=true returns company info
+                    # Check validation results
                     valid_status = response_data.get('valid')
                     format_valid = response_data.get('format_valid')
                     message = response_data.get('message', '')
@@ -187,7 +187,7 @@ class TaxIdValidationTester:
                         self.log_result(
                             "Valid Portuguese VAT", 
                             True, 
-                            f"Validation completed: valid={valid_status}, format_valid={format_valid}",
+                            f"Validation completed: valid={valid_status}, format_valid={format_valid}, message='{message}'",
                             details
                         )
                     else:
