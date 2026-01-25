@@ -64,6 +64,28 @@ setupSwagger(app);
 
 app.use("/api", router);
 
+// Health check endpoint for Railway
+app.get("/health", async (req: express.Request, res: express.Response) => {
+  try {
+    await sequelize.authenticate();
+    res.status(200).json({ 
+      status: "healthy",
+      service: "DynoPay Backend",
+      database: "connected",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: "unhealthy",
+      service: "DynoPay Backend",
+      database: "disconnected",
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 app.get("/", async (req: express.Request, res: express.Response) => {
   const transaction_fee = await getTransactionFee();
   const blockchain_fee = await getBlockchainFee();
