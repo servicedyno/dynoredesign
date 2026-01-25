@@ -27,7 +27,7 @@ const customerAuthMiddleware = async (
               const isExists = await paymentLinkModel
                 .findOne({
                   where: {
-                    transaction_id: userData.id,
+                    transaction_id: userData.transaction_id || userData.id,
                   },
                 })
                 .then((token) => token !== null)
@@ -44,7 +44,7 @@ const customerAuthMiddleware = async (
               const isExists = await customerModel
                 .findOne({
                   where: {
-                    id: userData.id,
+                    id: userData.customer_id || userData.id,
                   },
                 })
                 .then((token) => token !== null)
