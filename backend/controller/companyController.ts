@@ -6,10 +6,11 @@ import {
 } from "../helper";
 import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
-import { companyModel } from "../models";
+import { companyModel, userModel } from "../models";
 import { companyLogger } from "../utils/loggers";
 import sequelize from "../utils/dbInstance";
 import { QueryTypes } from "sequelize";
+import { sendCompanyProfileCreatedEmail, sendCompanyContactWelcomeEmail } from "../services/emailService";
 
 import axios from "axios";
 
