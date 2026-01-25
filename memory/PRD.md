@@ -149,13 +149,18 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 - **API Service Stability**: ✅ `server.py` includes `monitor_services()` that auto-restarts crashed services every 10 seconds
 - **Python Wrapper**: Required for supervisor compatibility - working correctly
 
-### P1 - High Priority ✅ VERIFIED
-- **Phase 5: Authentication Fixes** ✅ 
-  - `forgotPassword` - Sends reset email with secure token
-  - `resetPassword` - Validates token and updates password
-  - `googleSignIn` - Supports both idToken and accessToken
-- **Phase 9: Email Service** ✅ - 18 templates via Brevo (welcome, KYC, payment notifications, etc.)
-- **Wallet Configuration** ✅ - Implemented in wallet controller
+### P1 - High Priority (Security Framework - IN PROGRESS)
+- **2FA Implementation** - DB tables exist, controllers NOT implemented
+  - Need: `twoFactorController.ts` with enable/verify/disable/backup codes
+  - Need: Integration with login flow
+- **Session Management** - DB tables exist, controllers NOT implemented
+  - Need: `sessionController.ts` with list/revoke session functionality
+- **Rate Limiter Middleware** - Apply rate limits to merchant API routes
+
+### P2 - Medium Priority
+- **Referral Business Logic Integration** - Apply referee discount to transaction fees in paymentController
+- **Profile & Preferences Feature** - Theme, timezone, profile picture uploads
+  - DB tables exist, controllers NOT implemented
 
 ---
 
