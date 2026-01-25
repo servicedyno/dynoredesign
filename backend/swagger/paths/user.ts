@@ -448,14 +448,13 @@ export const userPaths = {
     put: {
       tags: ['User Management'],
       summary: 'Update user profile',
-      description: |
-        Update user profile with optional image upload.
+      description: `Update user profile with optional image upload.
         
-        **💡 Swagger UI Usage:**
-        1. Click "Try it out"
-        2. Fill in the fields you want to update
-        3. Optionally upload a profile image
-        4. Click "Execute"
+**💡 Swagger UI Usage:**
+1. Click "Try it out"
+2. Fill in the fields you want to update
+3. Optionally upload a profile image
+4. Click "Execute"`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
