@@ -53,11 +53,11 @@ const companyMiddleware = (
           "string.empty": "Company Email is Required",
           "string.email": "Please Enter Valid Email",
         }),
-        mobile: Joi.string().required().messages({
-          "string.empty": "Mobile number is Required",
+        mobile: Joi.string().optional().allow('', null).messages({
+          "string.empty": "Mobile number must be a valid string",
         }),
       };
-      validateFields = { company_name, email, mobile };
+      validateFields = { company_name, email }; // Only validate required fields
     } else {
       return next();
     }
