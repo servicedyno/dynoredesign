@@ -444,7 +444,11 @@ const getAllTransactions = async (
     const total = (countData[0] as any)?.total || 0;
     const totalPages = limit ? Math.ceil(total / limit) : 1;
 
-    successResponseHelper(res, 200, "", {
+    const message = total === 0
+      ? "No transactions found"
+      : `Successfully retrieved ${total} transaction${total === 1 ? '' : 's'}`;
+    
+    successResponseHelper(res, 200, message, {
       customers_transactions: customer_data,
       self_transactions: selfData,
       pagination: {
