@@ -2210,7 +2210,7 @@ const createPaymentLink = async (
     }
     
     // Validate email format if provided
-    if (email && !email.includes('@')) {
+    if (email && email.trim() !== "" && !email.includes('@')) {
       return errorResponseHelper(
         res,
         400,
