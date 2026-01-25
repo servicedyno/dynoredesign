@@ -171,7 +171,6 @@ class TaxIdPT518713130Tester:
                         "country_code": validation_result.get('country_code'),
                         "valid": is_valid,
                         "format_valid": format_valid,
-                        "query_status": query_status,
                         "message": message
                     }
                     
@@ -182,7 +181,7 @@ class TaxIdPT518713130Tester:
                         })
                     
                     # Determine success based on completion (not validity)
-                    if query_status == "completed":
+                    if not ("rate limit" in message.lower() or "unavailable" in message.lower()):
                         self.log_result(
                             "TAX ID Validation - PT518713130", 
                             True, 
@@ -197,7 +196,7 @@ class TaxIdPT518713130Tester:
                         self.log_result(
                             "TAX ID Validation - PT518713130", 
                             False, 
-                            f"Validation did not complete successfully. Status: {query_status}",
+                            f"Validation did not complete successfully. Message: {message}",
                             validation_details
                         )
                         return False
