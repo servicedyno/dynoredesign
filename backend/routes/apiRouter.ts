@@ -14,6 +14,11 @@ apiRouter.put("/toggleStatus/:id", authMiddleware, apiController.toggleApiStatus
 apiRouter.post("/revoke/:id", authMiddleware, apiController.revokeApi);
 apiRouter.delete("/deleteApi/:id", authMiddleware, apiController.deleteApi);
 
+// API Usage & Monitoring (NEW)
+apiRouter.get("/usage/:id", authMiddleware, apiController.getApiUsageStats);
+apiRouter.get("/logs/:id", authMiddleware, apiController.getApiLogs);
+apiRouter.put("/rateLimit/:id", authMiddleware, apiController.updateRateLimit);
+
 // Plan Management
 apiRouter.post("/createPlan", authMiddleware, apiMiddleware, apiController.createPlan);
 apiRouter.get("/getPlans/:id", authMiddleware, apiController.getPlans);
