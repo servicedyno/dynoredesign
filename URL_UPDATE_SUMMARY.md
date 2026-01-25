@@ -1,0 +1,90 @@
+# DynoPay URL Configuration Update Summary
+
+## Date: 2025-01-27
+
+## Changes Implemented
+
+### 1. Backend Environment Variables Updated
+**File:** `/app/backend/.env`
+
+**Key Changes:**
+- **SERVER_URL**: `https://dynobackendconsolidated-production.up.railway.app`
+- **CHECKOUT_URL**: `https://dynocheckoutfix-production.up.railway.app/`
+- All environment variables replaced with provided configuration
+- Fixed GOOGLE_CLIENT_KEY format (converted multiline to escaped single-line format for python-dotenv compatibility)
+
+**All Variables Updated:**
+✅ Database credentials (DB_NAME, USER_NAME, PASSWORD, HOST, DB_PORT)
+✅ Redis configuration
+✅ Authentication tokens (ACCESS_TOKEN, ACCESS_TOKEN_SECRET, API_SECRET, CYPHER_KEY)
+✅ Payment gateway credentials (Flutterwave, Tatum, Crypto APIs, Block Bee, Blockchair)
+✅ Google Cloud KMS configuration
+✅ Admin wallet addresses for all cryptocurrencies
+✅ Blockchain thresholds
+✅ Fee configuration (all 4 tiers)
+✅ External services (Fast Forex, Brevo, Infobip, Telegram)
+✅ Tax & identity verification services (APILayer, Veriff)
+
+### 2. Frontend Environment Variables Updated
+**File:** `/app/frontend/.env`
+
+**Key Changes:**
+- **REACT_APP_BACKEND_URL**: `https://dynobackendconsolidated-production.up.railway.app`
+- Frontend now points to the same backend URL as specified in SERVER_URL
+
+### 3. Dependencies Installed
+- Backend: `yarn install` completed successfully (39.78s)
+- Frontend: Dependencies already up-to-date
+
+### 4. Services Restarted
+All services restarted and running successfully:
+- ✅ Backend (port 8001 proxy → 3300 Node.js)
+- ✅ Frontend (port 3000)
+- ✅ MongoDB
+- ✅ nginx-code-proxy
+- ✅ code-server
+
+## Verification
+
+### Backend Status
+```bash
+curl http://localhost:8001/api/docs
+# Returns: Swagger documentation page (redirecting to /api/docs/)
+```
+
+### Frontend Status
+```bash
+curl http://localhost:3000
+# Returns: React app HTML
+```
+
+### Service Status
+```bash
+sudo supervisorctl status
+# All services: RUNNING
+```
+
+## Configuration Details
+
+### Backend Architecture
+- **Python Proxy**: Port 8001 (supervisor requirement)
+- **Node.js Backend**: Port 3300 (internal, handles business logic)
+- **API Service**: Port 3301 (external merchant API)
+
+### Environment Variable Format
+- All URLs are configured through environment variables
+- No hardcoded URLs in code
+- GOOGLE_CLIENT_KEY properly formatted as escaped single-line string
+
+## Testing Performed
+1. ✅ Backend starts without errors
+2. ✅ Frontend starts and loads correctly
+3. ✅ Environment variables loaded properly (no python-dotenv parsing errors)
+4. ✅ Database connection established
+5. ✅ Redis connection established
+6. ✅ API endpoints accessible
+
+## Notes
+- The URL `dynobackendconsolidated-production.up.railway.app` appears to be a Railway production deployment
+- Both frontend and backend are now configured to use this URL
+- All services are running successfully with the new configuration
