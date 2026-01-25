@@ -2595,9 +2595,28 @@ const validateWallet = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { wallet_address, currency, wallet_name } = req.body;
+    const { wallet_address, currency, wallet_name, company_id } = req.body;
+    
+    // Validate required fields
+    if (!company_id) {
+      return errorResponseHelper(res, 400, "Company ID is required!");
+    }
+    
     try {
       const user_id = userData.user_id;
+      
+      // Verify user has access to this company
+      const company = await companyModel.findOne({
+        where: {
+          company_id,
+          user_id
+        }
+      });
+      
+      if (!company) {
+        return errorResponseHelper(res, 403, "You don't have access to this company!");
+      }
+      
       let balance;
       if (currency === "TRX" || currency === "USDT-TRC20") {
         balance = await tatumApi.validateTronAddress(wallet_address);
@@ -2605,19 +2624,22 @@ const validateWallet = async (
         balance = await tatumApi.getAddressBalance(wallet_address, currency);
       }
       console.log(balance);
-      // Check if the address already exists
+      
+      // Check if the address already exists for this company
       const existingWallet = await userWalletModel.findOne({
         where: {
           wallet_address: { [Op.not]: null },
           wallet_type: currency,
-          user_id: user_id
+          user_id: user_id,
+          company_id: company_id
         },
       });
+      
       if (existingWallet) {
         return errorResponseHelper(
           res,
           400,
-          `This address with ${currency} currency already exists!`
+          `This address with ${currency} currency already exists for this company!`
         );
       }
 
@@ -2628,7 +2650,7 @@ const validateWallet = async (
         res,
         200,
         "Address is a valid address and saved successfully!",
-        { valid: true, wallet_address, wallet_name }
+        { valid: true, wallet_address, wallet_name, company_id }
       );
     } catch (e) {
       errorResponseHelper(
