@@ -1167,7 +1167,7 @@ const MobileMoney = async (data: IFundData, tokenData: IUserType) => {
     fullname: tokenData.name,
     tx_ref: uniqueRef,
     ...(data.currency !== "KES" && {
-      redirect_url: "http://localhost:3000/payment/verify",
+      redirect_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/verify`,
     }),
   };
 
