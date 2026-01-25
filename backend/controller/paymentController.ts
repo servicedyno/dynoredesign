@@ -2410,7 +2410,7 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
     // Return with pagination info only if pagination was requested
     // Otherwise return array directly for backward compatibility
     if (usePagination) {
-      successResponseHelper(res, 200, "Links Fetched Successfully!", {
+      successResponseHelper(res, 200, "Payment links retrieved successfully", {
         links: formattedLinks,
         pagination: {
           total: totalCount,
