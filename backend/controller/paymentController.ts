@@ -2851,9 +2851,9 @@ const checkFeeBalance = async () => {
     if (textData.length > 0) {
       let flag = true;
       const sentData = await getRedisItem("admin_fee_alert");
-      if (sentData && Object.keys(sentData).length > 0) {
+      if (sentData) {
         const { expiresAt } = sentData;
-        if (expiresAt && new Date().getTime() < Number(expiresAt)) {
+        if (new Date().getTime() < Number(expiresAt)) {
           flag = false;
         }
       }
