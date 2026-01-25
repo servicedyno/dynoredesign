@@ -179,6 +179,47 @@ export const sendCompanyContactWelcomeEmail = async (
 };
 
 /**
+ * Template 2c: Company Profile Updated Email
+ * Trigger: Company profile updated
+ * Recipient: Account holder email
+ */
+export const sendCompanyProfileUpdatedEmail = async (
+  email: string,
+  name: string,
+  companyName: string,
+  updatedFields: string[]
+) => {
+  try {
+    const subject = "Company Profile Updated Successfully";
+    const fieldsList = updatedFields.length > 0 
+      ? `<ul>${updatedFields.map(field => `<li>${field}</li>`).join('')}</ul>`
+      : '<p>General profile information</p>';
+    
+    const content = `<p class="message">Hey ${name},</p>
+    <p class="message">Your company profile for <strong>${companyName}</strong> has been updated successfully. ✅</p>
+    <div class="highlight-box">
+      <p><strong>Updated Information:</strong></p>
+      ${fieldsList}
+    </div>
+    <p class="message">If you didn't make these changes, please contact our support team immediately.</p>`;
+
+    const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", "https://dynopay.com/dashboard/company");
+    
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+    
+    console.log(`Company profile updated email sent to ${email}`);
+  } catch (e) {
+    console.error("Company profile updated email error:", e);
+  }
+};
+
+
+/**
  * Template 3: Wallet OTP
  * Trigger: Adding wallet
  */
