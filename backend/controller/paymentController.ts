@@ -101,7 +101,7 @@ const getData = async (req: express.Request, res: express.Response) => {
     }
 
     console.log(payload);
-    successResponseHelper(res, 200, "", payload);
+    successResponseHelper(res, 200, "Payment link details retrieved successfully", payload);
   } catch (e) {
     const message = getErrorMessage(e);
     apiLogger.error(message, new Error(e));
