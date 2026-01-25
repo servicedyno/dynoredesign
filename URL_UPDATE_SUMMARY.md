@@ -67,6 +67,12 @@ sudo supervisorctl status
 
 ## Configuration Details
 
+### Current Development Environment
+- **Preview URL**: `https://f5006fc4-5cad-480e-8552-90fd171f8760.preview.emergentagent.com`
+- **Environment**: Emergent Agent Development Environment
+- **Backend Base URL**: Same as preview URL (configured via REACT_APP_BACKEND_URL)
+- **All API requests**: Routed through `/api` prefix to backend port 8001
+
 ### Backend Architecture
 - **Python Proxy**: Port 8001 (supervisor requirement)
 - **Node.js Backend**: Port 3300 (internal, handles business logic)
