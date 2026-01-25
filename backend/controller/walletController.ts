@@ -2786,26 +2786,70 @@ const deleteWalletAddress = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { currency } = req.body;
-    if (!currency || typeof currency !== "string") {
-      return errorResponseHelper(res, 400, "Currency is required!");
+    const { currency, company_id, wallet_id } = req.body;
+    
+    // Support both wallet_id (preferred) and currency (legacy) methods
+    if (!wallet_id && (!currency || typeof currency !== "string")) {
+      return errorResponseHelper(res, 400, "Either wallet_id or currency is required!");
     }
 
     const user_id = userData.user_id;
 
+    // Build where clause for deletion
+    const whereClause: any = {
+      user_id,
+    };
+
+    // Preferred method: Use wallet_id for precise deletion
+    if (wallet_id) {
+      whereClause.wallet_id = wallet_id;
+      
+      // Add company_id for multi-tenant security
+      if (company_id) {
+        whereClause.company_id = company_id;
+      }
+    } 
+    // Legacy method: Use currency (only works when one wallet per blockchain)
+    else {
+      whereClause.wallet_type = currency;
+      
+      // Add company_id if provided for multi-tenant security
+      if (company_id) {
+        whereClause.company_id = company_id;
+      }
+    }
+
+    // First verify the wallet exists and belongs to the user
+    const wallet = await userWalletModel.findOne({
+      where: whereClause,
+    });
+
+    if (!wallet) {
+      return errorResponseHelper(
+        res, 
+        404, 
+        "Wallet address not found or you don't have permission to delete it"
+      );
+    }
+
+    // Clear the wallet address (set to null) instead of deleting the record
+    // This preserves the wallet structure for future use
     await userWalletModel.update(
-      { wallet_address: null },
+      { 
+        wallet_address: null,
+        wallet_name: null,
+        company_id: null,
+      },
       {
-        where: {
-          user_id,
-          wallet_type: currency,
-        },
+        where: whereClause,
       }
     );
 
     return successResponseHelper(res, 200, "Wallet address removed successfully!", {
       removed: true,
-      currency,
+      wallet_id: wallet.dataValues.wallet_id,
+      wallet_type: wallet.dataValues.wallet_type,
+      company_id: wallet.dataValues.company_id,
     });
   } catch (e) {
     const message = getErrorMessage(e);
