@@ -234,19 +234,29 @@ class VerifyFixesTester:
             if response.status_code == 400:
                 data = response.json()
                 message = data.get('message', '') if isinstance(data, dict) else str(data)
-                if 'amount' in message.lower() and 'required' in message.lower():
+                errors = data.get('errors', []) if isinstance(data, dict) else []
+                
+                # Check if any error mentions amount requirement
+                amount_error_found = False
+                for error in errors:
+                    if isinstance(error, dict) and 'error' in error:
+                        if 'amount' in error.get('key', '') and 'required' in error.get('error', ''):
+                            amount_error_found = True
+                            break
+                
+                if amount_error_found or ('amount' in message.lower() and 'required' in message.lower()):
                     self.log_result(
                         "Payment Link - Missing Amount Validation", 
                         True, 
-                        f"Correctly returned 400 with amount required message: {message}",
-                        {"status_code": response.status_code, "message": message}
+                        f"Correctly returned 400 with amount required validation",
+                        {"status_code": response.status_code, "message": message, "errors": errors}
                     )
                 else:
                     self.log_result(
                         "Payment Link - Missing Amount Validation", 
                         False, 
-                        f"Got 400 but message doesn't mention amount requirement: {message}",
-                        {"response": response.text}
+                        f"Got 400 but validation message unclear: {message}",
+                        {"response": response.text, "errors": errors}
                     )
             else:
                 self.log_result(
