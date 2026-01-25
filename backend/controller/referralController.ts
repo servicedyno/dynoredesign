@@ -7,6 +7,16 @@ import User from '../models/userModels/userModel';
 import { Op } from 'sequelize';
 import { IUserType } from '../utils/types';
 
+// Set up associations
+Referral.belongsTo(User, { foreignKey: 'referrer_user_id', as: 'referrer' });
+Referral.belongsTo(User, { foreignKey: 'referred_user_id', as: 'referred_user' });
+User.hasMany(Referral, { foreignKey: 'referrer_user_id', as: 'referrals_made' });
+User.hasMany(Referral, { foreignKey: 'referred_user_id', as: 'referrals_received' });
+ReferralReward.belongsTo(Referral, { foreignKey: 'referral_id', as: 'referral' });
+ReferralReward.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+Referral.hasMany(ReferralReward, { foreignKey: 'referral_id', as: 'rewards' });
+User.hasMany(ReferralReward, { foreignKey: 'user_id', as: 'referral_rewards' });
+
 /**
  * Generate unique referral code for user
  */
