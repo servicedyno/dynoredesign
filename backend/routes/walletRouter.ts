@@ -32,6 +32,11 @@ walletRouter.post("/address/delete/send-otp", walletController.sendDeleteWalletO
 // Step 2: Verify OTP and delete
 walletRouter.post("/deleteWalletAddress", walletController.deleteWalletAddressWithOTP);
 
+// DELETE - Remove wallet address from main payment system (Simple, no OTP)
+// Used for payment forwarding wallets (tbl_user_wallet)
+walletRouter.delete("/wallet/:wallet_id", walletController.deleteWalletAddress);
+walletRouter.post("/wallet/delete", walletController.deleteWalletAddress); // Alternative POST method
+
 // ============================================
 // TRANSACTION & OTHER WALLET OPERATIONS
 // ============================================
