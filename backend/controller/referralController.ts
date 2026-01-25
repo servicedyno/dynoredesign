@@ -101,7 +101,8 @@ export const getMyReferralCode = async (req: Request, res: Response) => {
  */
 export const listMyReferrals = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.user_id;
+    const userData = jwt.decode(res.locals.token) as IUserType;
+    const userId = userData?.user_id;
     const { page = 1, limit = 10, status } = req.query;
 
     if (!userId) {
