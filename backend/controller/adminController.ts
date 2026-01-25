@@ -783,7 +783,11 @@ const getAllUsers = async (req: express.Request, res: express.Response) => {
     const userData = await userModel.findAll({
       attributes: { exclude: ["password"] },
     });
-    successResponseHelper(res, 200, "", userData);
+    const message = userData.length === 0
+      ? "No users found in the system"
+      : `Successfully retrieved ${userData.length} user${userData.length === 1 ? '' : 's'}`;
+    
+    successResponseHelper(res, 200, message, userData);
   } catch (e) {
     const message = getErrorMessage(e);
     adminLogger.error(message, new Error(e));
