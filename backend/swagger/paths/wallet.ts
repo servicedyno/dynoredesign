@@ -4,16 +4,128 @@ export const walletPaths = {
   // All CUD (Create, Update, Delete) operations require OTP verification
   // ============================================
 
-  // READ - Get wallet addresses (No OTP required)
-  '/api/wallet/getWalletAddresses': {
+  // READ - Get wallet addresses (No OTP required) - PRIMARY ENDPOINT
+  '/api/wallet/getWallet': {
     get: {
       tags: ['Wallet Address Management'],
-      summary: '📖 Read All Wallet Addresses',
-      description: `Retrieve all cryptocurrency wallet addresses configured for your account.
+      summary: '📖 Get Wallet Addresses (RECOMMENDED - Use This)',
+      description: `✅ **RECOMMENDED ENDPOINT** - Retrieve all cryptocurrency wallet addresses configured for your account.
+
+**This is the main wallet system** that integrates with payment forwarding.
+
+## Features:
+- ✅ Returns OTP-verified wallet addresses
+- ✅ Includes balance information
+- ✅ Shows current crypto transfer rates
+- ✅ Integrated with payment forwarding system
+- ✅ Enforces one-wallet-per-blockchain rule
 
 **No OTP Required** - This is a read-only operation.
 
-**Multi-tenancy:** Optionally filter by company_id.`,
+**Multi-tenancy:** Optionally filter by company_id, or omit to get all companies.
+
+**Table:** tbl_user_wallet (Main payment system)`,
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'query',
+        name: 'company_id',
+        schema: { type: 'integer' },
+        description: '(Optional) Filter by company ID. If omitted, returns wallets for all companies.',
+        example: 38
+      }],
+      responses: {
+        200: {
+          description: 'Wallet addresses retrieved successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Successfully retrieved 2 wallet' },
+                  data: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        wallet_id: { type: 'integer', example: 145 },
+                        user_id: { type: 'integer', example: 28 },
+                        company_id: { type: 'integer', example: 38 },
+                        wallet_type: { type: 'string', example: 'ETH', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'] },
+                        wallet_address: { type: 'string', example: '0x9a7221b5e32d5f99e8da95585835442e29afb38f' },
+                        wallet_name: { type: 'string', example: 'ETH Main Wallet' },
+                        amount: { type: 'string', example: '0.00' },
+                        balance_in_usd: { type: 'string', example: '0.00' },
+                        transfer_rate: { type: 'number', example: 0.00035729, description: 'Current crypto-to-USD rate' },
+                        createdAt: { type: 'string', example: '2026-01-25T18:18:05.691Z' },
+                        updatedAt: { type: 'string', example: '2026-01-25T23:17:20.112Z' }
+                      }
+                    }
+                  }
+                }
+              },
+              examples: {
+                'success': {
+                  summary: 'Successful response',
+                  value: {
+                    "message": "Successfully retrieved 2 wallet",
+                    "data": [
+                      {
+                        "wallet_id": 145,
+                        "user_id": 28,
+                        "company_id": 38,
+                        "wallet_type": "ETH",
+                        "wallet_address": "0x9a7221b5e32d5f99e8da95585835442e29afb38f",
+                        "wallet_name": "ETH Main Wallet",
+                        "amount": "0.00",
+                        "balance_in_usd": "0.00",
+                        "transfer_rate": 0.00035729
+                      },
+                      {
+                        "wallet_id": 144,
+                        "user_id": 28,
+                        "company_id": 38,
+                        "wallet_type": "BTC",
+                        "wallet_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+                        "wallet_name": "BTC Main Wallet",
+                        "amount": "0.00",
+                        "balance_in_usd": "0.00",
+                        "transfer_rate": 0.00001159
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized - Invalid or missing token' }
+      }
+    }
+  },
+
+  // READ - Legacy endpoint (Deprecated)
+  '/api/wallet/getWalletAddresses': {
+    get: {
+      tags: ['Wallet Address Management'],
+      summary: '⚠️ Get Wallet Addresses (LEGACY - Not Recommended)',
+      description: `⚠️ **DEPRECATED - USE /api/wallet/getWallet INSTEAD**
+
+This endpoint queries a different table (tbl_user_wallet_address) that is NOT integrated with the payment forwarding system.
+
+## Why Not Use This:
+- ❌ Returns from legacy alternative table
+- ❌ NOT integrated with payment forwarding
+- ❌ May return empty even if you have wallets
+- ❌ No balance information
+- ❌ No transfer rates
+
+## Use This Instead:
+✅ **GET /api/wallet/getWallet** - Returns wallets from main payment system
+
+**Multi-tenancy:** Optionally filter by company_id.
+
+**Table:** tbl_user_wallet_address (Legacy system)`,
       security: [{ BearerAuth: [] }],
       parameters: [{
         in: 'query',
