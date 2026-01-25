@@ -25,6 +25,12 @@ const authMiddleware = async (
             return errorResponseHelper(res, 401, "Invalid or expired token. Please login again.");
           } else {
             const userData = jwt.decode(token) as IUserType;
+            
+            // Check if userData is valid and has user_id
+            if (!userData || !userData.user_id) {
+              return errorResponseHelper(res, 401, "Invalid token format. Please login again.");
+            }
+            
             const isExists = await userModel
               .findOne({
                 where: {
