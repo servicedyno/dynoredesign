@@ -294,7 +294,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             temp_id: paymentRes.temp_id,
           });
         }
-        successResponseHelper(res, 200, "fund ", finalRes);
+        successResponseHelper(res, 200, "Payment created successfully", finalRes);
       } else {
         throw { message: "Please enter valid data!" };
       }
