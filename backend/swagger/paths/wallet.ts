@@ -1,143 +1,30 @@
 export const walletPaths = {
-  '/api/wallet/addWalletAddress': {
-    post: {
-      tags: ['Wallet Management'],
-      summary: '⚡ Quick Add: Add wallet address without OTP (Direct method)',
-      description: `**DIRECT WALLET ADDITION** - Add a wallet address without OTP verification.
-
-**⚠️ Two Ways to Add Wallets:**
-
-**Method 1: Direct Addition (This endpoint)**
-- ⚡ Faster - no email OTP required
-- ✅ Instant addition
-- 🔓 Less secure (no email verification)
-- Use for: Quick setup, development, trusted addresses
-
-**Method 2: OTP Verification (Recommended)**
-- 🔐 More secure - requires email OTP
-- ✅ Two-step verification
-- 📧 Confirms email ownership
-- Use for: Production, sensitive wallets
-- See: \`/api/wallet/validateWalletAddress\` + \`/api/wallet/verifyOtp\`
-
----
-
-**About the label field:**
-The \`label\` field is a legacy field that serves the same purpose as \`wallet_name\`.
-- If you provide \`wallet_name\`, it will be used as the display name
-- If you provide \`label\`, it will be used as the display name
-- If you provide both, \`wallet_name\` takes priority
-- If neither is provided, currency name (e.g., "BTC") is used as default
-
-**Recommendation:** Use \`wallet_name\` for clarity.`,
-      security: [{ BearerAuth: [] }],
-      requestBody: {
-        required: true,
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              required: ['wallet_address', 'currency', 'company_id'],
-              properties: {
-                wallet_address: {
-                  type: 'string',
-                  description: '✅ REQUIRED: Cryptocurrency wallet address',
-                  example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
-                },
-                currency: {
-                  type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-ERC20', 'USDT-TRC20', 'BCH', 'BSC'],
-                  description: '✅ REQUIRED: Cryptocurrency type',
-                  example: 'BTC'
-                },
-                company_id: {
-                  type: 'integer',
-                  description: '✅ REQUIRED: Company ID (multi-tenant - wallet belongs to this company)',
-                  example: 1
-                },
-                wallet_name: {
-                  type: 'string',
-                  description: '📝 RECOMMENDED: Friendly name for this wallet (e.g., "My Bitcoin Wallet", "Trading Address")',
-                  example: 'My Main BTC Wallet',
-                  maxLength: 100
-                },
-                label: {
-                  type: 'string',
-                  description: '📝 LEGACY: Alternative to wallet_name (deprecated, use wallet_name instead)',
-                  example: 'Trading Wallet',
-                  deprecated: true
-                }
-              }
-            }
-          }
-        }
-      },
-      responses: {
-        200: {
-          description: '✅ Wallet address added successfully',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Address added successfully!' },
-                  data: {
-                    type: 'object',
-                    properties: {
-                      wallet_address: { type: 'string' },
-                      currency: { type: 'string' },
-                      wallet_name: { type: 'string' },
-                      company_id: { type: 'integer' },
-                      user_id: { type: 'string' }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        400: { description: 'Invalid wallet address format' },
-        401: { description: 'Unauthorized - JWT token required' },
-        500: { 
-          description: 'Wallet address already exists for this company',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  error: { type: 'string', example: 'This address with BTC currency already exists for this company!' }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
   '/api/wallet/validateWalletAddress': {
     post: {
       tags: ['Wallet Management'],
-      summary: '🔐 Step 1: Validate & send OTP for wallet address',
-      description: `**⚠️ TWO-STEP PROCESS** - This is Step 1 of 2 for adding a wallet address.
+      summary: '🔐 Add Wallet Address - Step 1: Validate & Send OTP',
+      description: `**ADD WALLET ADDRESS (2-Step Secure Process)**
 
-**Complete Wallet Address Flow:**
+This is the secure way to add a cryptocurrency wallet address to your company account.
 
-**STEP 1:** Use this endpoint → Validates address format & sends OTP to your email
-**STEP 2:** Use \`/api/wallet/verifyOtp\` endpoint → Verify OTP to complete addition
+**Complete Flow:**
+1. **Step 1 (This endpoint):** Validate address format & send OTP to your email
+2. **Step 2:** Use \`/api/wallet/verifyOtp\` to verify OTP and complete addition
 
 ---
 
 **What This Endpoint Does:**
-1. ✅ Validates cryptocurrency wallet address format
-2. 📧 Sends 6-digit OTP to your registered email
-3. ⏱️ OTP expires in 5 minutes
-4. 💾 Temporarily stores address (pending verification)
+- ✅ Validates cryptocurrency wallet address format
+- ✅ Checks for duplicate addresses
+- 📧 Sends 6-digit OTP to your registered email
+- ⏱️ OTP expires in 5 minutes
+- 💾 Temporarily stores address (pending verification)
 
-**After receiving OTP email:**
-- Copy the 6-digit code
-- Call \`/api/wallet/verifyOtp\` endpoint (documented below)
-- Provide: wallet_address, currency, and OTP code
+**Security Features:**
+- 🔐 Email verification required
+- 🏢 Multi-tenant: Wallets scoped to specific company
+- 🔒 Prevents unauthorized wallet additions
+- ✅ Validates user has access to the company
 
 **Supported Cryptocurrencies:**
 - BTC (Bitcoin)
@@ -146,11 +33,11 @@ The \`label\` field is a legacy field that serves the same purpose as \`wallet_n
 - LTC (Litecoin)
 - DOGE (Dogecoin)
 
-**Example Flow:**
-1. POST /api/wallet/validateWalletAddress with address & currency
-2. Check your email for OTP code
-3. POST /api/wallet/verifyOtp with address, currency & OTP
-4. ✅ Wallet address added successfully!`,
+**After This Step:**
+1. Check your email for the 6-digit OTP code
+2. Call \`/api/wallet/verifyOtp\` (documented below)
+3. Provide the same wallet details + OTP code
+4. ✅ Wallet address will be added to your company account`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -178,8 +65,8 @@ The \`label\` field is a legacy field that serves the same purpose as \`wallet_n
                 },
                 wallet_name: {
                   type: 'string',
-                  description: '📝 OPTIONAL: Friendly name for this wallet (e.g., "My Bitcoin Wallet", "Trading Address")',
-                  example: 'My Main BTC Wallet',
+                  description: '📝 OPTIONAL: Friendly name for this wallet (e.g., "Company Trading Wallet", "Cold Storage")',
+                  example: 'Main BTC Trading Wallet',
                   maxLength: 100
                 }
               }
@@ -196,49 +83,60 @@ The \`label\` field is a legacy field that serves the same purpose as \`wallet_n
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'OTP sent to your email. Please verify to complete wallet addition.' }
+                  message: { type: 'string', example: 'OTP sent to your email. Please verify to complete wallet addition.' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      valid: { type: 'boolean', example: true },
+                      wallet_address: { type: 'string' },
+                      wallet_name: { type: 'string' },
+                      company_id: { type: 'integer' }
+                    }
+                  }
                 }
               }
             }
           }
         },
-        400: { description: 'Invalid wallet address format' },
-        401: { description: 'Unauthorized - JWT token required' }
+        400: { description: 'Invalid wallet address format or duplicate address' },
+        401: { description: 'Unauthorized - JWT token required' },
+        403: { description: 'You don\'t have access to this company' }
       }
     }
   },
   '/api/wallet/verifyOtp': {
     post: {
       tags: ['Wallet Management'],
-      summary: '🔐 Step 2: Verify OTP & complete wallet addition',
-      description: `**⚠️ TWO-STEP PROCESS** - This is Step 2 of 2 for adding a wallet address.
+      summary: '🔐 Add Wallet Address - Step 2: Verify OTP & Complete',
+      description: `**ADD WALLET ADDRESS (2-Step Secure Process)**
+
+This completes the wallet address addition by verifying the OTP sent to your email.
 
 **Previous Step Required:**
 You must first call \`/api/wallet/validateWalletAddress\` to receive an OTP via email.
 
 **What This Endpoint Does:**
-1. ✅ Verifies the 6-digit OTP from your email
-2. 💾 Permanently saves the wallet address to your account
-3. 🔒 Secures the operation with OTP verification
+- ✅ Verifies the 6-digit OTP from your email
+- 💾 Permanently saves the wallet address to your company account
+- 🔒 Completes the secure wallet addition process
 
-**How to Use in Swagger UI:**
-1. **First**, call \`/api/wallet/validateWalletAddress\` above
-2. **Check your email** for the 6-digit OTP code
-3. **Then**, use this endpoint with:
-   - Same wallet_address you validated
-   - Same currency you validated
+**How to Use:**
+1. ✅ **Already done:** Called \`/api/wallet/validateWalletAddress\`
+2. 📧 **Check your email** for the 6-digit OTP code
+3. 📝 **Fill in below:**
+   - Same wallet_address from Step 1
+   - Same currency from Step 1
+   - Same company_id from Step 1
    - The OTP code from email
-4. Click "Execute"
-5. ✅ Wallet address is now saved!
+   - Same wallet_name (optional)
+4. 🎯 Click "Execute"
+5. ✅ **Done!** Wallet address is now saved to your company
 
 **OTP Security:**
 - ⏱️ Expires in 5 minutes
 - 🔒 Single-use only
 - 📧 Sent to registered email only
-
-**Example:**
-If you received OTP: 123456
-Provide all three fields below to complete the addition.`,
+- 🔐 Required to complete wallet addition`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -253,7 +151,8 @@ Provide all three fields below to complete the addition.`,
                   description: '✅ REQUIRED: 6-digit OTP code from your email',
                   example: '123456',
                   minLength: 6,
-                  maxLength: 6
+                  maxLength: 6,
+                  pattern: '^[0-9]{6}$'
                 },
                 wallet_address: {
                   type: 'string',
@@ -268,18 +167,18 @@ Provide all three fields below to complete the addition.`,
                 },
                 company_id: {
                   type: 'integer',
-                  description: '✅ REQUIRED: Same Company ID from Step 1 (multi-tenant - wallet belongs to this company)',
+                  description: '✅ REQUIRED: Same Company ID from Step 1',
                   example: 1
                 },
                 wallet_name: {
                   type: 'string',
-                  description: '📝 OPTIONAL: Friendly name for this wallet (e.g., "My Bitcoin Wallet", "Trading Address")',
-                  example: 'My Main BTC Wallet',
+                  description: '📝 OPTIONAL: Same friendly name from Step 1',
+                  example: 'Main BTC Trading Wallet',
                   maxLength: 100
                 },
                 currency_type: {
                   type: 'string',
-                  description: '📝 OPTIONAL: Currency subtype (e.g., ERC20, TRC20)',
+                  description: '📝 OPTIONAL: Currency subtype (e.g., native, ERC20, TRC20)',
                   example: 'native'
                 }
               }
@@ -289,7 +188,7 @@ Provide all three fields below to complete the addition.`,
       },
       responses: {
         200: {
-          description: '✅ OTP verified successfully - Wallet address added!',
+          description: '✅ OTP verified successfully - Wallet address added to your company!',
           content: {
             'application/json': {
               schema: {
@@ -300,7 +199,9 @@ Provide all three fields below to complete the addition.`,
                   data: {
                     type: 'object',
                     properties: {
-                      verified: { type: 'boolean', example: true }
+                      verified: { type: 'boolean', example: true },
+                      wallet_name: { type: 'string' },
+                      company_id: { type: 'integer' }
                     }
                   }
                 }
@@ -309,7 +210,7 @@ Provide all three fields below to complete the addition.`,
           }
         },
         400: { 
-          description: 'Invalid OTP, expired OTP, or missing parameters',
+          description: 'Invalid OTP, expired OTP, or missing required fields',
           content: {
             'application/json': {
               schema: {
@@ -320,6 +221,7 @@ Provide all three fields below to complete the addition.`,
                     type: 'string',
                     enum: [
                       'OTP is required!',
+                      'Company ID is required!',
                       'Please enter a valid OTP!',
                       'OTP has expired! Please request a new one.'
                     ]
@@ -329,7 +231,8 @@ Provide all three fields below to complete the addition.`,
             }
           }
         },
-        401: { description: 'Unauthorized - JWT token required' }
+        401: { description: 'Unauthorized - JWT token required' },
+        403: { description: 'You don\'t have access to this company' }
       }
     }
   },
