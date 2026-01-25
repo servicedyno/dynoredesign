@@ -40,19 +40,27 @@ def login() -> str:
     """Login and get JWT token"""
     print_header("AUTHENTICATION")
     
-    response = requests.post(
-        f"{BASE_URL}/user/login",
-        json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
-    )
-    
-    if response.status_code == 200:
-        data = response.json()
-        token = data.get('data', {}).get('token')
-        print_success(f"Login successful: {TEST_EMAIL}")
-        return token
-    else:
-        print_error(f"Login failed: {response.status_code}")
-        print(response.text)
+    try:
+        response = requests.post(
+            f"{BASE_URL}/user/login",
+            json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            token = data.get('data', {}).get('token')
+            if token:
+                print_success(f"Login successful: {TEST_EMAIL}")
+                return token
+            else:
+                print_error("Token not found in response")
+                return None
+        else:
+            print_error(f"Login failed: {response.status_code}")
+            print(response.text)
+            return None
+    except Exception as e:
+        print_error(f"Login exception: {str(e)}")
         return None
 
 def test_task_10_2_configured_currencies(token: str) -> bool:
