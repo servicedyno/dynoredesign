@@ -323,17 +323,18 @@ const createCryptoPayment = async (
       let finalRes;
       const items = await getRedisItem("customer-" + data.uniqueRef);
 
-      // Phase 10 - Task 10.3: Validate currency is configured
+      // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
       const requestedCurrency = data.currency;
-      const walletAddress = await userWalletAddressModel.findOne({
+      const hasWallet = await userWalletModel.findOne({
         where: {
           user_id: items.adm_id,
-          currency: requestedCurrency,
+          wallet_type: requestedCurrency,
+          wallet_address: { [Op.not]: null },
           ...(items.company_id && { company_id: items.company_id }),
         },
       });
 
-      if (!walletAddress) {
+      if (!hasWallet) {
         return errorResponseHelper(
           res,
           400,
