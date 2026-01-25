@@ -52,9 +52,11 @@ app.use(helmet({
 }));
 app.options("*", cors());
 
+// Static files
+const uploadsPath = process.env.UPLOAD_PATH || path.join(__dirname, '../uploads');
 app.use(express.static("public"));
-app.use("/images", express.static("/images"));
-app.use("/videos", express.static("/videos"));
+app.use("/images", express.static(path.join(uploadsPath, "images")));
+app.use("/videos", express.static(path.join(uploadsPath, "videos")));
 
 // Setup Swagger API documentation
 setupSwagger(app);
