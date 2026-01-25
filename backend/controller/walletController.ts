@@ -2595,7 +2595,7 @@ const validateWallet = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { wallet_address, currency } = req.body;
+    const { wallet_address, currency, wallet_name } = req.body;
     try {
       const user_id = userData.user_id;
       let balance;
@@ -2628,7 +2628,7 @@ const validateWallet = async (
         res,
         200,
         "Address is a valid address and saved successfully!",
-        { valid: true, wallet_address }
+        { valid: true, wallet_address, wallet_name }
       );
     } catch (e) {
       errorResponseHelper(
