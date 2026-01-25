@@ -210,7 +210,18 @@ const getCompany = async (req: express.Request, res: express.Response) => {
         user_id: userData.user_id,
       },
     });
-    successResponseHelper(res, 200, "", resData);
+    
+    // Provide helpful message based on results
+    let message = "";
+    if (resData.length === 0) {
+      message = "No companies found. Create your first company using POST /api/company/addCompany";
+    } else if (resData.length === 1) {
+      message = `Successfully retrieved 1 company`;
+    } else {
+      message = `Successfully retrieved ${resData.length} companies`;
+    }
+    
+    successResponseHelper(res, 200, message, resData);
   } catch (e) {
     const message = getErrorMessage(e);
     companyLogger.error(
