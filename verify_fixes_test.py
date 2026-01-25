@@ -120,9 +120,11 @@ class VerifyFixesTester:
         new_format_data = {
             "base_amount": 100.00,
             "base_currency": "USD",
-            "company_id": 1,
+            "company_id": 3,  # Use actual company_id from user
             "description": "Test with base_amount field",
-            "expire": "24h"
+            "expire": "24h",
+            "email": "test@example.com",
+            "modes": ["CRYPTO", "CARD"]  # Required fields with correct values
         }
         
         try:
