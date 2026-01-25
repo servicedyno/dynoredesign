@@ -731,6 +731,17 @@
  *   post:
  *     tags: [Company]
  *     summary: Create a new company
+ *     description: |
+ *       Creates a new company profile. If vat_number and country are provided, 
+ *       the TAX ID will be automatically validated using the Tax Data API.
+ *       
+ *       **Validation Behavior:**
+ *       - If TAX ID format is invalid: Request will be rejected (400 error)
+ *       - If TAX ID is not registered: Request will be rejected (400 error)
+ *       - If TAX ID is valid: Company will be created with vat_verified=true
+ *       - If validation service unavailable: Company creation proceeds without verification
+ *       
+ *       **Tip:** Use `/api/company/validateTaxId` endpoint first to check TAX ID before creating company.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -743,31 +754,86 @@
  *             properties:
  *               company_name:
  *                 type: string
+ *                 description: Company legal name
+ *                 example: "DynoPay Tech Ltd"
  *               email:
  *                 type: string
  *                 format: email
+ *                 description: Company contact email
+ *                 example: "contact@dynopay.com"
  *               website:
  *                 type: string
+ *                 description: Company website URL
+ *                 example: "https://dynopay.com"
  *               address_line1:
  *                 type: string
+ *                 description: Primary address line
+ *                 example: "123 Tech Street"
  *               address_line2:
  *                 type: string
+ *                 description: Secondary address line (suite, floor, etc.)
+ *                 example: "Suite 100"
  *               city:
  *                 type: string
+ *                 description: City
+ *                 example: "Lisbon"
  *               state:
  *                 type: string
+ *                 description: State/Region
+ *                 example: "Lisbon"
  *               country:
  *                 type: string
+ *                 description: ISO 2-letter country code (required for TAX ID validation)
+ *                 example: "PT"
  *               zip_code:
  *                 type: string
+ *                 description: Postal/ZIP code
+ *                 example: "1000-001"
  *               vat_number:
  *                 type: string
+ *                 description: TAX ID / VAT number (will be validated if provided with country)
+ *                 example: "PT123456789"
+ *               vat_type:
+ *                 type: string
+ *                 description: Type of tax identifier (VAT, TIN, GST, etc.)
+ *                 example: "VAT"
  *               image:
  *                 type: string
  *                 format: binary
+ *                 description: Company logo image
  *     responses:
  *       200:
- *         description: Company created
+ *         description: Company created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     company_id:
+ *                       type: integer
+ *                     company_name:
+ *                       type: string
+ *                     vat_verified:
+ *                       type: boolean
+ *                       description: True if TAX ID was validated successfully
+ *                     tax_validation:
+ *                       type: object
+ *                       description: TAX ID validation result details
+ *       400:
+ *         description: Invalid TAX ID or validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "TAX ID PT123456789 is not registered in PT. Please verify the number."
  *
  * /api/company/updateCompany/{id}:
  *   put:
