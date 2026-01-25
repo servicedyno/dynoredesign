@@ -2641,41 +2641,6 @@ class ComprehensiveBackendTester:
     
     def test_phase_11_swagger_documentation(self):
         """Phase 11: Swagger Documentation"""
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if 'data' in data:
-                    subscriptions = data['data']
-                    self.log_result(
-                        "10.5 List Subscriptions",
-                        True,
-                        "Subscriptions retrieved successfully",
-                        {"subscription_count": len(subscriptions) if isinstance(subscriptions, list) else "N/A"},
-                        response_time
-                    )
-                else:
-                    self.log_result(
-                        "10.5 List Subscriptions",
-                        False,
-                        "Invalid response format",
-                        {"response": data},
-                        response_time
-                    )
-            else:
-                self.log_result(
-                    "10.5 List Subscriptions",
-                    False,
-                    f"Request failed with status {response.status_code}",
-                    {"response": response.text},
-                    response_time
-                )
-                
-        except Exception as e:
-            self.log_result("10.5 List Subscriptions", False, f"Request failed: {str(e)}")
-    
-    def test_phase_11_swagger_documentation(self):
-        """Phase 11: Swagger Documentation"""
         print("\n" + "=" * 60)
         print("PHASE 11: SWAGGER DOCUMENTATION")
         print("=" * 60)
