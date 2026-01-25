@@ -30,8 +30,8 @@
 **File:** `/app/frontend/.env`
 
 **Key Changes:**
-- **REACT_APP_BACKEND_URL**: `https://dynobackendconsolidated-production.up.railway.app`
-- Frontend now points to the same backend URL as specified in SERVER_URL
+- **REACT_APP_BACKEND_URL**: `https://f5006fc4-5cad-480e-8552-90fd171f8760.preview.emergentagent.com` (Current Development URL)
+- Frontend now points to the current Emergent preview environment
 
 ### 3. Dependencies Installed
 - Backend: `yarn install` completed successfully (39.78s)
