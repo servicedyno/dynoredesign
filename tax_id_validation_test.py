@@ -758,6 +758,7 @@ class TaxIdValidationTester:
             form_data = {
                 "company_name": "Workflow Test Company",
                 "email": "workflow@test.com",
+                "mobile": "+351111222333",  # Required field
                 "address_line1": "789 Workflow St",
                 "city": "Lisbon",
                 "country": "PT",
