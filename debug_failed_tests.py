@@ -228,19 +228,27 @@ class DynoPayDebugTester:
                 return str(data['company_id'])
             
             # In data object
-            if 'data' in data and isinstance(data['data'], dict):
-                if 'company_id' in data['data']:
-                    return str(data['data']['company_id'])
+            if 'data' in data:
+                # If data is a list (like from /api/company/getCompany)
+                if isinstance(data['data'], list) and data['data']:
+                    # Get first company's ID
+                    if 'company_id' in data['data'][0]:
+                        return str(data['data'][0]['company_id'])
                 
-                # In user profile
-                if 'user' in data['data'] and isinstance(data['data']['user'], dict):
-                    if 'company_id' in data['data']['user']:
-                        return str(data['data']['user']['company_id'])
-                
-                # In companies array
-                if 'companies' in data['data'] and isinstance(data['data']['companies'], list):
-                    if data['data']['companies'] and 'company_id' in data['data']['companies'][0]:
-                        return str(data['data']['companies'][0]['company_id'])
+                # If data is a dict
+                elif isinstance(data['data'], dict):
+                    if 'company_id' in data['data']:
+                        return str(data['data']['company_id'])
+                    
+                    # In user profile
+                    if 'user' in data['data'] and isinstance(data['data']['user'], dict):
+                        if 'company_id' in data['data']['user']:
+                            return str(data['data']['user']['company_id'])
+                    
+                    # In companies array
+                    if 'companies' in data['data'] and isinstance(data['data']['companies'], list):
+                        if data['data']['companies'] and 'company_id' in data['data']['companies'][0]:
+                            return str(data['data']['companies'][0]['company_id'])
         
         return None
     
