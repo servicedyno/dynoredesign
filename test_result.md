@@ -4,7 +4,7 @@
 # Last Updated: 2025-01-25
 #===================================================
 
-user_problem_statement: "API KEY BASE CURRENCY FUNCTIONALITY VERIFICATION - Testing if API key base_currency field is properly working and being used in payment processing. Comprehensive analysis of database structure, API key creation with different currencies, payment processing logic, and identification of overpayment conversion bug."
+user_problem_statement: "TAX ID VALIDATION FUNCTIONALITY VERIFICATION - Testing new TAX ID validation endpoint and company creation integration. Comprehensive testing of standalone validation, company creation with TAX ID validation, complete workflow integration, and rate limiting handling."
 
   - task: "API Key Base Currency Functionality Testing"
     implemented: true
