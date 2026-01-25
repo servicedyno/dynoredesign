@@ -4,10 +4,6 @@ import sequelize from "../../utils/dbInstance";
 const userWalletModel = sequelize.define(
   "Wallet",
   {
-    id: {
-      type: DataTypes.STRING,
-      unique: true,
-    },
     wallet_id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
