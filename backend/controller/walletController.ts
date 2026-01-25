@@ -2574,11 +2574,12 @@ To proceed with adding this address, please provide this code: ${randomNumberOTP
 This code will expire in 5 minutes.`,
   });
 
-  // Update OTP in DB
+  // Update OTP in DB with currency context
   await userModel.update(
     {
       verified_otp: randomNumberOTP.toString(),
       otp_expired: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
+      otp_currency: currency, // Store which currency was validated
     },
     {
       where: { user_id: userData.user_id },
