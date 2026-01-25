@@ -325,6 +325,8 @@ const createCryptoPayment = async (
 
       // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
       const requestedCurrency = data.currency;
+      console.log(`[Phase 10 Validation] Checking wallet for currency: ${requestedCurrency}, user_id: ${items.adm_id}, company_id: ${items.company_id}`);
+      
       const whereClause: any = {
         user_id: items.adm_id,
         wallet_type: requestedCurrency,
@@ -336,9 +338,13 @@ const createCryptoPayment = async (
         whereClause.company_id = items.company_id;
       }
       
+      console.log('[Phase 10 Validation] Where clause:', JSON.stringify(whereClause));
+      
       const hasWallet = await userWalletModel.findOne({
         where: whereClause,
       });
+      
+      console.log('[Phase 10 Validation] Wallet found:', hasWallet ? 'YES' : 'NO');
 
       if (!hasWallet) {
         return errorResponseHelper(
