@@ -305,7 +305,11 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
       return rest;
     });
 
-    successResponseHelper(res, 200, "", finalRes);
+    const message = finalRes.length === 0
+      ? "No transactions found for this company"
+      : `Successfully retrieved ${finalRes.length} transaction${finalRes.length === 1 ? '' : 's'}`;
+    
+    successResponseHelper(res, 200, message, finalRes);
   } catch (e) {
     const message = getErrorMessage(e);
     companyLogger.error(
