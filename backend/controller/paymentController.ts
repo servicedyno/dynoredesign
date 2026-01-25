@@ -2506,7 +2506,7 @@ const getPaymentLinkById = async (req: express.Request, res: express.Response) =
       company_id: linkData.company_id,  // Phase 10 Fix: Include company_id in response
     };
 
-    successResponseHelper(res, 200, "Link Fetched Successfully!", response);
+    successResponseHelper(res, 200, "Payment link retrieved successfully", response);
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
