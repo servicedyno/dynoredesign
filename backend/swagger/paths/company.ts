@@ -8,20 +8,19 @@
  *     description: |
  *       Create a new company profile for the authenticated user. 
  *       
- *       **📝 Note**: This endpoint requires JWT authentication. Make sure to:
- *       1. First login using `/api/user/login` endpoint
- *       2. Copy the JWT token from the login response
- *       3. Click the "Authorize" button at the top of this page
- *       4. Enter your token in the format: `your-jwt-token-here` (without "Bearer" prefix)
+ *       **📝 Authentication Required**: 
+ *       1. Login using `/api/user/login` endpoint
+ *       2. Copy the JWT token from response
+ *       3. Click "Authorize" button above
+ *       4. Paste token (without "Bearer" prefix)
  *       
- *       **⚠️ IMPORTANT - Editing the data field:**
- *       The `data` field is a JSON string. When using "Try it out":
- *       - Click on the data field and edit the JSON string directly
- *       - Only provide the fields you want to set
- *       - Minimum required: `{"company_name":"Your Company","email":"your@email.com"}`
- *       - Optional fields: mobile, address_line1, city, state, country, zip_code, vat_number
+ *       **💡 How to Use in Swagger UI:**
+ *       1. Click "Try it out"
+ *       2. Fill in the form fields below (company_name and email are required)
+ *       3. Optionally upload a company logo
+ *       4. Click "Execute"
  *       
- *       **Required Fields**: company_name and email
+ *       **Note**: The form data will be automatically converted to the required format.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -31,16 +30,59 @@
  *           schema:
  *             type: object
  *             required:
- *               - data
+ *               - company_name
+ *               - email
  *             properties:
- *               data:
+ *               company_name:
  *                 type: string
- *                 description: JSON string containing company information
- *                 example: '{"company_name":"My Company","email":"company@example.com"}'
+ *                 description: Company legal name (required)
+ *                 example: My Company Ltd
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Company contact email (required)
+ *                 example: contact@company.com
+ *               mobile:
+ *                 type: string
+ *                 description: Company phone number (optional)
+ *                 example: '+1234567890'
+ *               website:
+ *                 type: string
+ *                 format: uri
+ *                 description: Company website (optional)
+ *                 example: 'https://company.com'
+ *               address_line1:
+ *                 type: string
+ *                 description: Street address (optional)
+ *                 example: '123 Main Street'
+ *               address_line2:
+ *                 type: string
+ *                 description: Additional address info (optional)
+ *                 example: 'Suite 100'
+ *               city:
+ *                 type: string
+ *                 description: City (optional)
+ *                 example: 'New York'
+ *               state:
+ *                 type: string
+ *                 description: State/Province (optional)
+ *                 example: 'NY'
+ *               country:
+ *                 type: string
+ *                 description: Country code (ISO 2-letter, optional)
+ *                 example: 'US'
+ *               zip_code:
+ *                 type: string
+ *                 description: Postal/ZIP code (optional)
+ *                 example: '10001'
+ *               vat_number:
+ *                 type: string
+ *                 description: VAT/Tax ID (optional, will be validated if provided)
+ *                 example: ''
  *               image:
  *                 type: string
  *                 format: binary
- *                 description: Company logo (optional)
+ *                 description: Company logo (optional, PNG/JPG)
  *     responses:
  *       200:
  *         description: Company created successfully
