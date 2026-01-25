@@ -1,7 +1,8 @@
 export const walletPaths = {
   // ============================================
-  // WALLET ADDRESS MANAGEMENT - CRUD Operations
-  // All CUD (Create, Update, Delete) operations require OTP verification
+  // WALLET ADDRESS MANAGEMENT
+  // For merchant payment forwarding wallets
+  // Table: tbl_user_wallet (Main payment system)
   // ============================================
 
   // READ - Get wallet addresses (No OTP required) - PRIMARY ENDPOINT
