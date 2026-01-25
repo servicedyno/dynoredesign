@@ -16,7 +16,7 @@ import {
   setRedisItem,
 } from "../utils/redisInstance";
 import sequelize from "../utils/dbInstance";
-import { QueryTypes } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import jwt from "jsonwebtoken";
 import {
   adminFeeModel,
