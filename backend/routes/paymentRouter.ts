@@ -106,4 +106,23 @@ paymentRouter.delete(
   paymentController.deletePaymentLink
 );
 
+// TEMPORARY TEST ENDPOINT - For manual fee balance check testing
+paymentRouter.get("/test-fee-balance-alert", async (req, res) => {
+  try {
+    console.log("Manual fee balance check triggered via test endpoint");
+    await paymentController.checkFeeBalance();
+    res.json({ 
+      success: true, 
+      message: "Fee balance check completed. Check logs and your email (moxxcompany@gmail.com)" 
+    });
+  } catch (error) {
+    console.error("Test endpoint error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error checking fee balance", 
+      error: error.message 
+    });
+  }
+});
+
 export default paymentRouter;
