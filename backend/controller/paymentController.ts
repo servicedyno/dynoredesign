@@ -2311,7 +2311,7 @@ const createPaymentLink = async (
 
     await setRedisItem("customer-" + uniqueRef, redisPayload);
 
-    successResponseHelper(res, 200, "Link Created Successfully!", links);
+    successResponseHelper(res, 200, "Payment link created successfully", links);
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
