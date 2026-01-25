@@ -292,7 +292,7 @@ const estimateFees = async (req: express.Request, res: express.Response) => {
       }
     }
 
-    successResponseHelper(res, 200, "", tempFees);
+    successResponseHelper(res, 200, "Fee estimation calculated successfully", tempFees);
   } catch (e) {
     console.log("#############Error", e);
     const message = getErrorMessage(e);
