@@ -111,7 +111,11 @@ const getWallet = async (req: express.Request, res: express.Response) => {
       });
     }
 
-    successResponseHelper(res, 200, "", returnData);
+    const message = returnData.length === 0 
+      ? "No wallets found. Add your first wallet address to start receiving payments."
+      : `Successfully retrieved ${returnData.length} wallet${returnData.length === 1 ? '' : 's'}`;
+    
+    successResponseHelper(res, 200, message, returnData);
   } catch (e) {
     const message = getErrorMessage(e);
     walletLogger.error(
