@@ -2158,9 +2158,11 @@ const createPaymentLink = async (
   const userData = jwt.decode(res.locals.token) as any;
   const { 
     email, 
-    base_currency, 
+    base_currency,
+    currency,  // Accept both base_currency and currency for backward compatibility
     modes, 
     amount,
+    base_amount,  // Accept both amount and base_amount
     description,
     expire,
     callback_url,
@@ -2169,6 +2171,10 @@ const createPaymentLink = async (
     fee_payer,  // Who pays blockchain fees: 'customer' or 'company'
     company_id  // Phase 10 Fix: Accept company_id for multi-tenant isolation
   } = req.body;
+  
+  // Normalize field names for backward compatibility
+  const normalizedCurrency = base_currency || currency || 'USD';
+  const normalizedAmount = base_amount || amount;
   
   try {
     // Phase 10 Fix: Validate company_id if provided
