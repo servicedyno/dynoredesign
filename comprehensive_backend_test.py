@@ -2630,24 +2630,7 @@ class ComprehensiveBackendTester:
         )
     
     def test_list_subscriptions(self):
-                "customer_name": f"Test Customer {timestamp}",
-                "email": "testcustomer@example.com",
-                "mobile": "+351911222333"
-            }
-            
-            response, response_time = self.make_request(
-                "POST", "/api/customers",
-                json=customer_data,
-                headers=headers
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if 'data' in data and 'customer_id' in data['data']:
-                    self.customer_id = data['data']['customer_id']
-                    
-                    self.log_result(
-                        "10.2 Create Customer",
+        """10.5 List Subscriptions"""
                         True,
                         "Customer created successfully",
                         {"customer_id": self.customer_id, "customer_name": customer_data["customer_name"]},
