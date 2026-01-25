@@ -522,14 +522,27 @@ const updateUser = async (req: express.Request, res: express.Response) => {
   try {
     const file = req.file as Express.Multer.File;
     
-    // Handle both JSON string and object formats
+    // Handle multiple input formats
     let data;
-    if (typeof req.body.data === 'string') {
+    
+    // Format 1: JSON string in "data" field (backwards compatibility)
+    if (req.body.data && typeof req.body.data === 'string') {
       data = JSON.parse(req.body.data);
-    } else if (typeof req.body.data === 'object') {
+    } 
+    // Format 2: Object in "data" field (backwards compatibility)
+    else if (req.body.data && typeof req.body.data === 'object') {
       data = req.body.data;
+    } 
+    // Format 3: Individual form fields (NEW - Swagger UI friendly)
+    else if (req.body.name || req.body.email) {
+      data = {
+        name: req.body.name,
+        email: req.body.email,
+      };
+      // Remove undefined fields
+      Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
     } else {
-      return res.status(400).json({ message: "Invalid data format", error: true });
+      return res.status(400).json({ message: "Missing user data. Please provide name and email.", error: true });
     }
     
     const userData = jwt.decode(res.locals.token) as IUserType;
