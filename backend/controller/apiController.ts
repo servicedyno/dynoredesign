@@ -503,7 +503,11 @@ const getPlans = async (req: express.Request, res: express.Response) => {
       },
     });
 
-    successResponseHelper(res, 200, "", planData);
+    const message = planData.length === 0
+      ? "No subscription plans found. Create your first plan."
+      : `Successfully retrieved ${planData.length} subscription plan${planData.length === 1 ? '' : 's'}`;
+    
+    successResponseHelper(res, 200, message, planData);
   } catch (e) {
     const message = getErrorMessage(e);
     apiLogger.error(
