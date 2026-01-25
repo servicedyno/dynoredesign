@@ -8,6 +8,7 @@ import {
   sendEmail,
   successResponseHelper,
 } from "../helper/index";
+import { sendWelcomeEmail } from "../services/emailService";
 import { adminWalletModel, userModel, userWalletModel, companyModel, apiModel } from "../models";
 import { userWalletAddressModel } from "../models/userModels";
 import notificationModel from "../models/notificationModel";
