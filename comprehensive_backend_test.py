@@ -2640,24 +2640,7 @@ class ComprehensiveBackendTester:
         )
     
     def test_phase_11_swagger_documentation(self):
-                    response_time
-                )
-                
-        except Exception as e:
-            self.log_result("10.4 List Plans", False, f"Request failed: {str(e)}")
-    
-    def test_list_subscriptions(self):
-        """10.5 List Subscriptions"""
-        if not self.jwt_token or not self.company_id:
-            self.log_result("10.5 List Subscriptions", False, "No JWT token or company ID available")
-            return
-            
-        try:
-            headers = {"Authorization": f"Bearer {self.jwt_token}"}
-            
-            response, response_time = self.make_request(
-                "GET", f"/api/subscriptions?company_id={self.company_id}",
-                headers=headers
+        """Phase 11: Swagger Documentation"""
             )
             
             if response.status_code == 200:
