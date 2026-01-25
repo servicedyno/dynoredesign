@@ -94,7 +94,7 @@ const addCompany = async (req: express.Request, res: express.Response) => {
     
     // Validate TAX ID if provided
     let taxValidation = null;
-    if (data.vat_number && data.country) {
+    if (data.vat_number && data.vat_number.trim() !== "" && data.country && data.country.trim() !== "") {
       companyLogger.info(
         `Validating TAX ID: ${data.vat_number} for country: ${data.country}`,
         { user_id: userData.user_id, email: userData.email }
