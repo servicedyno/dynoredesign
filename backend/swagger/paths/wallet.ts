@@ -1,4 +1,120 @@
 export const walletPaths = {
+  '/api/wallet/addWalletAddress': {
+    post: {
+      tags: ['Wallet Management'],
+      summary: '⚡ Quick Add: Add wallet address without OTP (Direct method)',
+      description: `**DIRECT WALLET ADDITION** - Add a wallet address without OTP verification.
+
+**⚠️ Two Ways to Add Wallets:**
+
+**Method 1: Direct Addition (This endpoint)**
+- ⚡ Faster - no email OTP required
+- ✅ Instant addition
+- 🔓 Less secure (no email verification)
+- Use for: Quick setup, development, trusted addresses
+
+**Method 2: OTP Verification (Recommended)**
+- 🔐 More secure - requires email OTP
+- ✅ Two-step verification
+- 📧 Confirms email ownership
+- Use for: Production, sensitive wallets
+- See: \`/api/wallet/validateWalletAddress\` + \`/api/wallet/verifyOtp\`
+
+---
+
+**About the label field:**
+The \`label\` field is a legacy field that serves the same purpose as \`wallet_name\`.
+- If you provide \`wallet_name\`, it will be used as the display name
+- If you provide \`label\`, it will be used as the display name
+- If you provide both, \`wallet_name\` takes priority
+- If neither is provided, currency name (e.g., "BTC") is used as default
+
+**Recommendation:** Use \`wallet_name\` for clarity.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['wallet_address', 'currency', 'company_id'],
+              properties: {
+                wallet_address: {
+                  type: 'string',
+                  description: '✅ REQUIRED: Cryptocurrency wallet address',
+                  example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+                },
+                currency: {
+                  type: 'string',
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-ERC20', 'USDT-TRC20', 'BCH', 'BSC'],
+                  description: '✅ REQUIRED: Cryptocurrency type',
+                  example: 'BTC'
+                },
+                company_id: {
+                  type: 'integer',
+                  description: '✅ REQUIRED: Company ID (multi-tenant - wallet belongs to this company)',
+                  example: 1
+                },
+                wallet_name: {
+                  type: 'string',
+                  description: '📝 RECOMMENDED: Friendly name for this wallet (e.g., "My Bitcoin Wallet", "Trading Address")',
+                  example: 'My Main BTC Wallet',
+                  maxLength: 100
+                },
+                label: {
+                  type: 'string',
+                  description: '📝 LEGACY: Alternative to wallet_name (deprecated, use wallet_name instead)',
+                  example: 'Trading Wallet',
+                  deprecated: true
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: '✅ Wallet address added successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Address added successfully!' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      wallet_address: { type: 'string' },
+                      currency: { type: 'string' },
+                      wallet_name: { type: 'string' },
+                      company_id: { type: 'integer' },
+                      user_id: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid wallet address format' },
+        401: { description: 'Unauthorized - JWT token required' },
+        500: { 
+          description: 'Wallet address already exists for this company',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'This address with BTC currency already exists for this company!' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   '/api/wallet/validateWalletAddress': {
     post: {
       tags: ['Wallet Management'],
