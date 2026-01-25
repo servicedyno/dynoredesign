@@ -979,7 +979,7 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: Phase 10 implementation fix successful! API key creation now correctly uses userWalletModel.count() with wallet_address: { [Op.not]: null } validation. Tested with production API key creation - correctly validates wallet requirement and returns 400 error 'At least one wallet address is required for production API keys' when user has no wallets configured. Code review confirms userWalletModel usage on lines 55-70 in apiController.ts."
 
-  - task: "Task 10.2: GET /api/wallet/configured-currencies endpoint"
+  - task: "Task 10.2: GET /api/wallet/configured-currencies using userWalletModel"
     implemented: true
     working: true
     file: "/app/backend/controller/walletController.ts"
@@ -989,10 +989,10 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Phase 10 Task 10.2: New endpoint to return user's configured wallet currencies filtered by company_id with skip_selection logic"
+        comment: "Phase 10 Task 10.2: Updated configured-currencies endpoint to use userWalletModel instead of userWalletAddressModel"
       - working: true
         agent: "testing"
-        comment: "✅ VERIFIED: GET /api/wallet/configured-currencies endpoint working perfectly. Retrieved 9 wallets with 2 currencies (BTC, ETH). Returns proper response structure with configured_currencies array, wallet_count, wallets array with masked addresses, and skip_selection boolean. Address masking working correctly (shows first 6 and last 4 characters). Skip selection logic implemented (returns true when only 1 currency configured). Supports company_id filtering as expected."
+        comment: "✅ VERIFIED: Phase 10 implementation fix successful! GET /api/wallet/configured-currencies now correctly uses userWalletModel.findAll() with wallet_address: { [Op.not]: null } and wallet_type field. Retrieved 8 currencies from 28 wallets with proper response structure: configured_currencies array, wallet_count, wallets array with masked addresses (first 6 + last 4 chars), and skip_selection boolean logic. Company filtering via company_id parameter working correctly. Address masking implemented properly showing sample like 'TTve8v6Y48...'."
 
   - task: "Task 10.3: Currency validation in crypto payment creation"
     implemented: true
