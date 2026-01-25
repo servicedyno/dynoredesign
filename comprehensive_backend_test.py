@@ -519,7 +519,16 @@ class ComprehensiveBackendTester:
     
     def test_validate_tax_id(self):
         """2.4 Validate TAX ID"""
+        if not self.jwt_token:
+            self.log_result("2.4 Validate TAX ID", False, "No JWT token available")
+            return
+            
         try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
             tax_data = {
                 "vat_number": "PT518713130",
                 "country_code": "PT"
@@ -528,7 +537,7 @@ class ComprehensiveBackendTester:
             response, response_time = self.make_request(
                 "POST", "/api/company/validateTaxId",
                 json=tax_data,
-                headers={"Content-Type": "application/json"}
+                headers=headers
             )
             
             if response.status_code == 200:
