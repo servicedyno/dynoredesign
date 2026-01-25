@@ -437,7 +437,11 @@ const getApiCustomers = async (req: express.Request, res: express.Response) => {
       },
     });
 
-    successResponseHelper(res, 200, "", customer_data);
+    const message = customer_data.length === 0
+      ? "No customers found for this API"
+      : `Successfully retrieved ${customer_data.length} customer${customer_data.length === 1 ? '' : 's'}`;
+    
+    successResponseHelper(res, 200, message, customer_data);
   } catch (e) {
     const message = getErrorMessage(e);
     apiLogger.error(
