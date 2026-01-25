@@ -128,7 +128,7 @@ paymentRouter.get("/test-fee-balance-alert", async (req, res) => {
 // TEMPORARY TEST ENDPOINT - Clear Redis cooldown to force email
 paymentRouter.get("/test-clear-fee-alert-cooldown", async (req, res) => {
   try {
-    const { deleteRedisItem } = await import("../helper");
+    const { deleteRedisItem } = await import("../utils/redisInstance");
     await deleteRedisItem("admin_fee_alert");
     console.log("Redis cooldown cleared - next check will send email");
     res.json({ 
