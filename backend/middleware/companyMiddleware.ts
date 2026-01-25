@@ -11,21 +11,32 @@ const companyMiddleware = (
   if (method === "GET" || method === "DELETE") {
     return next();
   }
-  if (!req.body.data) {
-    return res.status(400).json({ message: "Request body 'data' field is required. Please provide company details in JSON format." });
+  if (!req.body.data && !req.body.company_name && !req.body.email) {
+    return res.status(400).json({ message: "Request body 'data' field or individual company fields (company_name, email) are required." });
   } else {
-    // Handle both JSON string and object formats
+    // Handle both JSON string, object, and individual field formats
     let parsedData;
-    try {
-      if (typeof req.body.data === 'string') {
-        parsedData = JSON.parse(req.body.data);
-      } else if (typeof req.body.data === 'object') {
-        parsedData = req.body.data;
-      } else {
-        return res.status(400).json({ message: "Invalid data format. Expected JSON string or object." });
+    
+    if (req.body.data) {
+      // Old format: JSON string or object in "data" field
+      try {
+        if (typeof req.body.data === 'string') {
+          parsedData = JSON.parse(req.body.data);
+        } else if (typeof req.body.data === 'object') {
+          parsedData = req.body.data;
+        } else {
+          return res.status(400).json({ message: "Invalid data format. Expected JSON string or object." });
+        }
+      } catch (error) {
+        return res.status(400).json({ message: "Invalid JSON format in 'data' field. Please check your JSON syntax." });
       }
-    } catch (error) {
-      return res.status(400).json({ message: "Invalid JSON format in 'data' field. Please check your JSON syntax." });
+    } else {
+      // New format: Individual form fields
+      parsedData = {
+        company_name: req.body.company_name,
+        email: req.body.email,
+        mobile: req.body.mobile,
+      };
     }
     
     const { company_name, email, mobile }: ICompany = parsedData;
