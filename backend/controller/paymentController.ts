@@ -1857,9 +1857,13 @@ const cryptoVerification = async (address, webhook = true) => {
             throw {
               status: 200,
               paymentStatus: "overpayment",
-              amount: tempAmount,
-              currency: tempCurrency,
-              message: `Overpayment detected!`,
+              overpayment: {
+                amount_crypto: tempAmount,
+                currency_crypto: tempCurrency,
+                amount_base: newAmount[0].amount,
+                currency_base: customerData?.base_currency || "USD",
+              },
+              message: `Overpayment detected! ${tempAmount} ${tempCurrency} (${newAmount[0].amount} ${customerData?.base_currency || "USD"})`,
               commit: false,
             };
           } else if (customerData?.pathType.includes("cryptoPayment") && overPayment) {
