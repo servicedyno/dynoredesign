@@ -1783,7 +1783,11 @@ const getWalletAddresses = async (
       where: whereClause,
       order: [['createdAt', 'DESC']],
     });
-    successResponseHelper(res, 200, "", resData);
+    const message = resData.length === 0
+      ? "No wallet addresses found. Add your first wallet address to start receiving payments."
+      : `Successfully retrieved ${resData.length} wallet address${resData.length === 1 ? '' : 'es'}`;
+    
+    successResponseHelper(res, 200, message, resData);
   } catch (e) {
     const message = getErrorMessage(e);
     walletLogger.error(
