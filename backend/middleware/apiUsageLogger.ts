@@ -1,0 +1,116 @@
+import express from 'express';
+import sequelize from '../utils/dbInstance';
+import { apiModel } from '../models';
+
+/**
+ * API Usage Logging Middleware
+ * Logs all API requests to tbl_api_usage_log for analytics
+ * Also updates last_used_at and request_count on the API key
+ */
+export const apiUsageLogger = async (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  const startTime = Date.now();
+  const originalSend = res.send;
+  
+  // Extract API key from headers
+  const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+  
+  // Only log if API key is present (merchant API calls)
+  if (!apiKey) {
+    return next();
+  }
+
+  // Find the API record
+  let apiId: number | null = null;
+  let companyId: number | null = null;
+
+  try {
+    const api = await apiModel.findOne({
+      where: { apiKey: apiKey },
+      attributes: ['api_id', 'company_id', 'request_count', 'last_used_at'],
+    });
+
+    if (api) {
+      apiId = api.dataValues.api_id;
+      companyId = api.dataValues.company_id;
+
+      // Update last_used_at and increment request_count
+      await apiModel.update(
+        {
+          last_used_at: new Date(),
+          request_count: (api.dataValues.request_count || 0) + 1,
+        },
+        { where: { api_id: apiId } }
+      );
+    }
+  } catch (error) {
+    console.error('Error finding API key:', error);
+  }
+
+  // Override res.send to capture response
+  res.send = function (data: any) {
+    res.send = originalSend; // Restore original send
+
+    const responseTime = Date.now() - startTime;
+    const statusCode = res.statusCode;
+
+    // Log to database asynchronously (don't block response)
+    if (apiId) {
+      setImmediate(async () => {
+        try {
+          let errorMessage = null;
+          let responseBody = null;
+
+          // Parse response if it's an error
+          if (statusCode >= 400) {
+            try {
+              const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+              errorMessage = parsedData.message || parsedData.error || 'Unknown error';
+            } catch (e) {
+              errorMessage = 'Failed to parse error response';
+            }
+          }
+
+          // Truncate large responses
+          if (data && data.length > 5000) {
+            responseBody = data.substring(0, 5000) + '... (truncated)';
+          } else {
+            responseBody = data;
+          }
+
+          await sequelize.query(
+            `INSERT INTO tbl_api_usage_log 
+             (api_id, company_id, endpoint, method, status_code, ip_address, user_agent, 
+              response_time_ms, error_message, request_time)
+             VALUES (:api_id, :company_id, :endpoint, :method, :status_code, :ip_address, 
+                     :user_agent, :response_time_ms, :error_message, NOW())`,
+            {
+              replacements: {
+                api_id: apiId,
+                company_id: companyId,
+                endpoint: req.originalUrl || req.url,
+                method: req.method,
+                status_code: statusCode,
+                ip_address: req.ip || req.socket.remoteAddress,
+                user_agent: req.headers['user-agent'] || 'Unknown',
+                response_time_ms: responseTime,
+                error_message: errorMessage,
+              },
+            }
+          );
+        } catch (error) {
+          console.error('Error logging API usage:', error);
+        }
+      });
+    }
+
+    return originalSend.call(this, data);
+  };
+
+  next();
+};
+
+export default apiUsageLogger;
