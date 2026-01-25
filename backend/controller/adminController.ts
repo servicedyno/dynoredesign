@@ -618,7 +618,12 @@ const getAllTransactions = async (
       return rest;
     });
 
-    successResponseHelper(res, 200, "", {
+    const totalTransactions = customer_data.length + selfData.length;
+    const message = totalTransactions === 0
+      ? "No transactions found"
+      : `Successfully retrieved ${totalTransactions} transaction${totalTransactions === 1 ? '' : 's'}`;
+    
+    successResponseHelper(res, 200, message, {
       customers_transactions: customer_data,
       users_transactions: selfData,
     });
