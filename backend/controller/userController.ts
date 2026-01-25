@@ -257,6 +257,12 @@ const registerPhoneStep2 = async (req: express.Request, res: express.Response) =
 const login = async (req: express.Request, res: express.Response) => {
   try {
     const { email, password } = req.body;
+    
+    // Validate required fields
+    if (!email || !password) {
+      return errorResponseHelper(res, 400, "Email and password are required");
+    }
+    
     const newPassword = sha256(password).toString();
     const userData = await userModel.findOne({
       where: {
@@ -264,8 +270,9 @@ const login = async (req: express.Request, res: express.Response) => {
         password: newPassword,
       },
     });
+    
     if (!userData) {
-      errorResponseHelper(res, 500, "Please enter a valid password!");
+      return errorResponseHelper(res, 401, "Invalid email or password");
     } else {
       const resData = await getAccessToken(userData.dataValues.user_id);
       successResponseHelper(res, 200, "Login Successful!", resData);
