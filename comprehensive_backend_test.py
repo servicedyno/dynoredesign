@@ -962,8 +962,18 @@ class ComprehensiveBackendTester:
                 )
                 if existing_keys_response.status_code == 200:
                     keys_data = existing_keys_response.json()
-                    if 'data' in keys_data and isinstance(keys_data['data'], list) and len(keys_data['data']) > 0:
-                        self.api_key_id = keys_data['data'][0].get('api_id')
+                    if 'data' in keys_data:
+                        api_response_data = keys_data['data']
+                        # Check if data is a dict with 'all' key or a list
+                        if isinstance(api_response_data, dict) and 'all' in api_response_data:
+                            api_keys = api_response_data['all']
+                        elif isinstance(api_response_data, list):
+                            api_keys = api_response_data
+                        else:
+                            api_keys = []
+                        
+                        if len(api_keys) > 0:
+                            self.api_key_id = api_keys[0].get('api_id')
                 
                 self.log_result(
                     "4.2 Create Development API Key",
