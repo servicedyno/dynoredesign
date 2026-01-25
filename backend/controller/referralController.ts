@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import Referral from '../models/referralModels/referralModel';
 import ReferralReward from '../models/referralModels/referralRewardModel';
 import User from '../models/userModels/userModel';
 import { Op } from 'sequelize';
+import { IUserType } from '../utils/types';
 
 /**
  * Generate unique referral code for user
@@ -22,7 +24,8 @@ export const generateReferralCode = (userId: number, userName: string): string =
  */
 export const getMyReferralCode = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.user_id;
+    const userData = jwt.decode(res.locals.token) as IUserType;
+    const userId = userData?.user_id;
 
     if (!userId) {
       return res.status(401).json({
