@@ -21,7 +21,21 @@ const userMiddleware = (
     if (!req.body && !req.body.data) {
       return res.status(400).json({ message: "Data not found!" });
     } else {
-      const { name, email }: IUserType = JSON.parse(req.body.data);
+      // Handle both JSON string and object formats
+      let parsedData;
+      try {
+        if (typeof req.body.data === 'string') {
+          parsedData = JSON.parse(req.body.data);
+        } else if (typeof req.body.data === 'object') {
+          parsedData = req.body.data;
+        } else {
+          return res.status(400).json({ message: "Invalid data format" });
+        }
+      } catch (error) {
+        return res.status(400).json({ message: "Invalid JSON format in 'data' field" });
+      }
+      
+      const { name, email }: IUserType = parsedData;
       if (pathname.includes("updateUser")) {
         schema = {
           name: Joi.string().required().messages({
