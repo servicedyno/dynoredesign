@@ -10,7 +10,7 @@ walletRouter.post(
   walletController.validateWallet
 );
 walletRouter.post(
-  "/verifyCode",
+  "/verifyOtp",
   walletController.verifyOtp
 );
 
