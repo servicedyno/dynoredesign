@@ -30,7 +30,12 @@ const authMiddleware = async (
       
       // Debug logging
       console.log("Auth Middleware - Decoded token:", JSON.stringify(decoded).substring(0, 200));
-      console.log("Auth Middleware - user_id present:", !!decoded?.user_id);
+      
+      // Check token type - customer tokens have 'id', user tokens have 'user_id'
+      if (decoded.id && !decoded.user_id) {
+        console.log("Auth Middleware - Customer token detected, but user token required");
+        return errorResponseHelper(res, 401, "This endpoint requires user authentication. Please login with a user account, not a customer account.");
+      }
       
       // Check if decoded token has user_id
       if (!decoded || !decoded.user_id) {
