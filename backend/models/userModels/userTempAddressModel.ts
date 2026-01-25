@@ -19,6 +19,16 @@ const userTempAddressModel = sequelize.define(
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
     },
+    // Multi-tenant support: Track which company this payment is for
+    company_id: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: "tbl_company",
+        key: "company_id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    },
     wallet_type: {
       type: DataTypes.STRING,
     },
