@@ -7,10 +7,26 @@ const linkMiddleware = (
   res: express.Response,
   next: express.NextFunction
 ) => {
-  const { email, base_currency, amount, modes } = req.body;
-  let validateFields, schema;
+  const { 
+    email, 
+    base_currency,  // NEW format (recommended)
+    currency,       // LEGACY format (backward compatibility)
+    amount,         // Both formats use 'amount'
+    base_amount,    // Alternative field name
+    modes 
+  } = req.body;
 
-  validateFields = { email, base_currency, amount, modes };
+  // Support both new and legacy field names
+  // Priority: base_currency > currency, base_amount > amount
+  const normalizedCurrency = base_currency || currency;
+  const normalizedAmount = base_amount || amount;
+
+  const validateFields = { 
+    email, 
+    currency: normalizedCurrency, 
+    amount: normalizedAmount, 
+    modes 
+  };
 
   const allowedCurrency = [
     "USD",
@@ -28,7 +44,7 @@ const linkMiddleware = (
     ...Object.keys(paymentTypes).filter((x) => x !== "WALLET" && x),
   ];
 
-  schema = {
+  const schema = {
     email: Joi.string().required().email().messages({
       "string.empty": "Email is Required",
     }),
@@ -37,13 +53,15 @@ const linkMiddleware = (
       .required()
       .min(5)
       .messages({
-        "number.min": `Amount must be greater then or equal to ${5}`,
+        "number.min": `Amount must be greater than or equal to ${5}`,
+        "any.required": "Amount is required. Please provide either 'amount' or 'base_amount' field.",
       }),
-    base_currency: Joi.string()
+    currency: Joi.string()
       .required()
       .valid(...allowedCurrency)
       .messages({
-        "string.empty": "Base Currency is Required",
+        "string.empty": "Currency is required. Please provide either 'currency' or 'base_currency' field.",
+        "any.required": "Currency is required. Please provide either 'currency' or 'base_currency' field.",
       }),
     modes: Joi.array()
       .required()
