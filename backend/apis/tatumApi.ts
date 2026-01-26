@@ -558,7 +558,7 @@ const deleteUserAddress = async (customerID, address) => {
 
 const createSubscription = async (address, currency, onlyCrypto = false) => {
   try {
-    const tatumKey = await getTatumKey();
+    const headers = await getTatumHeaders();
 
     const chain =
       currency === "USDT-ERC20"
@@ -577,11 +577,7 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
 
     const { data } = await axios.get(
       "https://api.tatum.io/v4/subscription?pageSize=10&address=" + address,
-      {
-        headers: {
-          "x-api-key": tatumKey,
-        },
-      }
+      { headers }
     );
     let resData = { id: null };
 
@@ -589,14 +585,8 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
       resData = { id: data[0]?.id };
       await axios.put(
         "https://api.tatum.io/v4/subscription/" + resData.id,
-        {
-          url,
-        },
-        {
-          headers: {
-            "x-api-key": tatumKey,
-          },
-        }
+        { url },
+        { headers }
       );
     } else {
       const { data } = await axios.post(
@@ -609,11 +599,7 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
             url,
           },
         },
-        {
-          headers: {
-            "x-api-key": tatumKey,
-          },
-        }
+        { headers }
       );
       console.log("Tatum subscription created:", data);
       resData = data;
