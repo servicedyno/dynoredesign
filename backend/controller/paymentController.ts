@@ -1928,16 +1928,28 @@ const cryptoVerification = async (address, webhook = true) => {
             Number(amountInUSD[0].amount)  // Pass USD amount for fee calculation
           );
 
+          console.log(`[cryptoVerification] Fee calculation DEBUG:
+            - Total received (crypto): ${totalAmountReceived} ${tempCurrency}
+            - Total received (USD): $${amountInUSD[0].amount}
+            - Total deduction (USD): $${totalDeduction}
+            - Min forwarding threshold: $${minForwarding}
+            - Fee percentage: ${(totalDeduction / Number(amountInUSD[0].amount) * 100).toFixed(2)}%`);
+
           if (Number(amountInUSD[0].amount) < Number(minForwarding)) {
             // Under threshold - all to admin
             adminAmountToSend = Number(totalAmountReceived);
             userAmountToSend = 0;
+            console.log(`[cryptoVerification] UNDER THRESHOLD - all to admin: ${adminAmountToSend} ${tempCurrency}`);
           } else {
             // Normal distribution
             // Convert USD fee back to crypto amount
             const feePercentage = totalDeduction / Number(amountInUSD[0].amount);
             adminAmountToSend = Number(totalAmountReceived) * feePercentage;
             userAmountToSend = Number(totalAmountReceived) - adminAmountToSend;
+            
+            console.log(`[cryptoVerification] NORMAL DISTRIBUTION:
+            - Admin (fees): ${adminAmountToSend.toFixed(8)} ${tempCurrency} (${(feePercentage * 100).toFixed(2)}%)
+            - Merchant: ${userAmountToSend.toFixed(8)} ${tempCurrency} (${((1 - feePercentage) * 100).toFixed(2)}%)`);
           }
         }
 
