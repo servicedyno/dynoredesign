@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://dynopay-api-test.preview.emergentagent.com/api/docs
+Go to: https://payment-api-6.preview.emergentagent.com/api/docs
 
 ---
 
