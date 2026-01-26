@@ -524,6 +524,53 @@ You can view the transaction details in your DynoPay dashboard.`;
   }
 };
 
+/**
+ * Send admin fee received email notification
+ * Sent to admin when platform fee is received from a merchant payment
+ */
+const sendAdminFeeReceivedEmail = async (
+  recipientEmail: string,
+  name: string,
+  feeAmount: string,
+  currency: string,
+  transactionId: string,
+  companyName: string,
+  merchantAmount: string,
+  totalAmount: string
+) => {
+  try {
+    const subject = "💰 Platform Fee Received - DynoPay";
+    const message = `Platform fee received from ${companyName}!
+
+💰 Fee Amount: ${feeAmount} ${currency}
+📊 Merchant Received: ${merchantAmount} ${currency}
+💵 Total Payment: ${totalAmount} ${currency}
+🏢 Company: ${companyName}
+
+📝 Transaction Reference:
+${transactionId}
+
+Fee Breakdown:
+• Platform Fee: ${feeAmount} ${currency}
+• Merchant Net: ${merchantAmount} ${currency}
+• Total Processed: ${totalAmount} ${currency}
+
+The fee has been credited to the admin ${currency} wallet.
+
+You can view the full transaction details in the DynoPay admin dashboard.`;
+
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name,
+      subject,
+      body: message,
+    });
+    return info;
+  } catch (e) {
+    console.log("Admin fee received email error:", e);
+  }
+};
+
 export default sendEmail;
 export {
   sendEmail,
@@ -533,6 +580,7 @@ export {
   sendPaymentPartialEmail,
   sendPaymentPartialExpiredEmail,
   sendTransactionConfirmedEmail,
+  sendAdminFeeReceivedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
   dynoPayEmailTemplate,
