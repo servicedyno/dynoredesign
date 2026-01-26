@@ -1208,9 +1208,17 @@ const Crypto = async (
       process.env.TEMP_KEY_ID
     );
 
+    // Validate IDs before creating temp address
+    const tempUserId = tokenData.adm_id;
+    const tempCompanyId = tokenData.company_id;
+    
+    if (!tempUserId || isNaN(Number(tempUserId))) {
+      throw { message: "Invalid user ID for payment" };
+    }
+
     const tempPayload = {
-      user_id: tokenData.adm_id,
-      company_id: tokenData.company_id,  // Multi-tenant: Store which company this payment is for
+      user_id: Number(tempUserId),
+      company_id: (tempCompanyId && !isNaN(Number(tempCompanyId))) ? Number(tempCompanyId) : null,
       wallet_type: walletDetails.wallet_type,
       wallet_address: address,
       subscription_id: id,
