@@ -11,6 +11,7 @@ import sendEmail, {
   sendPaymentPartialEmail,
   sendPaymentPartialExpiredEmail,
   sendTransactionConfirmedEmail,
+  sendAdminFeeReceivedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
   dynoPayEmailTemplate,
