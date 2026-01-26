@@ -1609,11 +1609,26 @@ const cryptoVerification = async (address, webhook = true) => {
       //   where: { wallet_type: tempCurrency },
       // });
 
+      // Multi-tenant fix: Include company_id in wallet lookup to ensure funds go to correct company
+      const whereClause: any = {
+        user_id: customerData.adm_id,
+        wallet_type: tempCurrency,
+        wallet_address: { [Op.not]: null },
+      };
+      
+      // Handle company_id: if provided and valid, add to query
+      if (customerData.company_id && customerData.company_id !== '' && customerData.company_id !== 'undefined' && customerData.company_id !== 'null') {
+        const companyId = parseInt(customerData.company_id);
+        if (!isNaN(companyId)) {
+          whereClause.company_id = companyId;
+        }
+      } else {
+        // If no company_id, look for wallets without company association
+        whereClause.company_id = null;
+      }
+      
       const walletData = await userWalletModel.findOne({
-        where: {
-          user_id: customerData.adm_id,
-          wallet_type: tempCurrency,
-        },
+        where: whereClause,
         transaction,
       });
       console.log(walletData);
