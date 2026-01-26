@@ -113,12 +113,12 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
-    const previousReceived = Number(items.receivedAmount ?? 0);
-    const totalReceived = previousReceived + incomingAmount;
+    // FIXED: Only process on FIRST transaction (when txId is not set)
+    // This matches the working DynoBackend behavior
     const isFirstTransaction = !items.txId;
 
-    // Send pending notification for first transaction
-    if (isFirstTransaction) {
+    if (isFirstTransaction && incomingAmount > 0) {
+      // Send pending notification for first transaction
       const customerData = await getRedisItem(items?.ref);
       if (customerData) {
         await sendPendingPaymentNotification(
@@ -129,15 +129,21 @@ const tatumCryptoWebHook = async (
           customerData
         );
       }
+
+      // Set status and amount ONLY on first transaction
+      const newPayload = {
+        ...items,
+        status: "successful",
+        txId: payload.txId,
+        receivedAmount: incomingAmount,  // Set once, don't accumulate
+      };
+
+      await setRedisItem("crypto-" + address, newPayload);
+
+      // Trigger verification only on first transaction
+      paymentController.cryptoVerification(address, true);
     }
-
-    await setRedisItem("crypto-" + address, {
-      ...items,
-      receivedAmount: totalReceived,
-      txId: items.txId ?? payload.txId,
-    });
-
-    paymentController.cryptoVerification(address, true);
+    // If txId already exists, this is a duplicate/retry - ignore it
 
     return res.status(200).end();
   } catch {
