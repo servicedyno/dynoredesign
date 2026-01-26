@@ -10,8 +10,31 @@ import { calculateTransactionFees, getBlockchainConfig } from "../controller/ind
 import { getBlockchainThreshold } from "../utils/feeConfigUtils";
 import { paymentController } from "../controller";
 import { authMiddleware } from "../middleware";
+import sequelize from "../config/database";
 
 const testRouter = express.Router();
+
+/**
+ * POST /api/test/fix-customer-id-column
+ * Fix the customer_id column to allow NULL values
+ */
+testRouter.post("/fix-customer-id-column", async (req, res) => {
+  try {
+    await sequelize.query('ALTER TABLE tbl_customer_transaction ALTER COLUMN customer_id DROP NOT NULL;');
+    
+    // Verify the change
+    const [result] = await sequelize.query(`
+      SELECT column_name, is_nullable 
+      FROM information_schema.columns 
+      WHERE table_name = 'tbl_customer_transaction' 
+      AND column_name = 'customer_id';
+    `);
+    
+    successResponseHelper(res, 200, "customer_id column fixed to allow NULL", result);
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
 
 /**
  * GET /api/test/thresholds
