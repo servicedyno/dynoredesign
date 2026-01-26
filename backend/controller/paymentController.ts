@@ -1227,19 +1227,25 @@ const Crypto = async (
       });
       qr_code = url;
     }
+    // Ensure user_id is a valid integer
+    const userId = tokenData.adm_id;
+    if (!userId || isNaN(Number(userId))) {
+      throw { message: "Invalid user ID for transaction" };
+    }
+    
     const userPayload = {
       id: crypto.randomUUID(),
       wallet_id: walletDetails.wallet_id,
-      user_id: tokenData.adm_id,
+      user_id: Number(userId),
       payment_mode: "CRYPTO",
-      base_amount: data.amount,
+      base_amount: isNaN(Number(data.amount)) ? 0 : Number(data.amount),
       base_currency: currency,
       transaction_type: "CREDIT",
       status: "pending",
       customer_id: (tokenData.customer_id && !isNaN(Number(tokenData.customer_id))) ? Number(tokenData.customer_id) : null,
       company_id: (tokenData.company_id && !isNaN(Number(tokenData.company_id))) ? Number(tokenData.company_id) : null,
     };
-    console.log(userPayload);
+    console.log("Crypto userPayload:", JSON.stringify(userPayload));
 
     await userTransactionModel.create({ ...userPayload });
     await adminWalletModel.update(
