@@ -206,7 +206,7 @@ const { id } = await tatumApi.createSubscription(
 
 **Current SERVER_URL:**
 ```env
-SERVER_URL=https://secure-wallet-api.preview.emergentagent.com
+SERVER_URL=https://finance-hub-522.preview.emergentagent.com
 ```
 
 ---

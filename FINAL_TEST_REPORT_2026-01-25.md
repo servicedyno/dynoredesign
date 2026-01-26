@@ -329,5 +329,5 @@ The system demonstrates:
 
 **Report Generated:** January 25, 2026  
 **Test Credentials:** nomadly@moxx.co  
-**Backend URL:** https://secure-wallet-api.preview.emergentagent.com  
+**Backend URL:** https://finance-hub-522.preview.emergentagent.com  
 **Tester:** Main Development Agent
