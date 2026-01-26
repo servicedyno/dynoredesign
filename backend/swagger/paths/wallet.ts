@@ -326,6 +326,338 @@ Wallet address is saved and ready to receive payments!`,
     }
   },
 
+  // UPDATE - Step 1: Send OTP for Update
+  '/api/wallet/wallet/update/send-otp': {
+    post: {
+      tags: ['Wallet Address Management'],
+      summary: '✏️ Update Wallet - Step 1: Send OTP',
+      description: `**Request OTP to update a payment forwarding wallet address**
+
+## 2-Step Process:
+1. **This endpoint** - Sends OTP to your email
+2. **Then call** \`POST /api/wallet/wallet/update\` - Verify OTP and update
+
+## What Can Be Updated:
+- Wallet address (to new crypto address)
+- Wallet name (custom label)
+- Currency type (blockchain)
+
+## Multi-Tenant:
+✅ Uses company_id for security
+
+**Table:** tbl_user_wallet (Main payment system)`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['wallet_id'],
+              properties: {
+                wallet_id: {
+                  type: 'integer',
+                  description: '✅ REQUIRED: Wallet ID to update (from getWallet response)',
+                  example: 431
+                },
+                company_id: {
+                  type: 'integer',
+                  description: '✅ RECOMMENDED: Company ID for multi-tenant security',
+                  example: 38
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'OTP sent successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'OTP sent to your email' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      wallet_id: { type: 'integer', example: 431 },
+                      wallet_type: { type: 'string', example: 'BTC' },
+                      current_address: { type: 'string', example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' },
+                      email: { type: 'string', example: 'jo***@example.com' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'wallet_id is required' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Wallet not found' }
+      }
+    }
+  },
+
+  // UPDATE - Step 2: Verify OTP and Update
+  '/api/wallet/wallet/update': {
+    post: {
+      tags: ['Wallet Address Management'],
+      summary: '✏️ Update Wallet - Step 2: Verify OTP & Update',
+      description: `**Complete wallet update by verifying OTP**
+
+## Prerequisites:
+1. Must call \`POST /api/wallet/wallet/update/send-otp\` first
+2. Check your email for 6-digit OTP
+
+## What Can Be Updated:
+- \`wallet_address\` - New cryptocurrency address
+- \`wallet_name\` - Custom display name
+- \`currency\` - Blockchain type (if changing)
+
+## Security:
+- ✅ OTP validation
+- ✅ Address format validation
+- ✅ Currency matching check
+- ✅ Multi-tenant security
+
+**Table:** tbl_user_wallet (Main payment system)`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['wallet_id', 'otp'],
+              properties: {
+                wallet_id: {
+                  type: 'integer',
+                  description: '✅ REQUIRED: Wallet ID to update',
+                  example: 431
+                },
+                otp: {
+                  type: 'string',
+                  description: '✅ REQUIRED: 6-digit OTP from email',
+                  example: '123456',
+                  pattern: '^[0-9]{6}$'
+                },
+                wallet_address: {
+                  type: 'string',
+                  description: 'New wallet address (optional)',
+                  example: '1NewBTCAddress...'
+                },
+                wallet_name: {
+                  type: 'string',
+                  description: 'New wallet name (optional)',
+                  example: 'Updated BTC Wallet'
+                },
+                currency: {
+                  type: 'string',
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'],
+                  description: 'New currency type (optional)',
+                  example: 'BTC'
+                },
+                company_id: {
+                  type: 'integer',
+                  description: 'Company ID for multi-tenant security (optional)',
+                  example: 38
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Wallet updated successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Wallet address updated successfully!' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      wallet_id: { type: 'integer', example: 431 },
+                      wallet_type: { type: 'string', example: 'BTC' },
+                      wallet_address: { type: 'string', example: '1NewBTCAddress...' },
+                      wallet_name: { type: 'string', example: 'Updated BTC Wallet' },
+                      company_id: { type: 'integer', example: 38 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid or expired OTP / Invalid wallet address' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Wallet not found' }
+      }
+    }
+  },
+
+  // DELETE WITH OTP - Step 1: Send OTP for Delete
+  '/api/wallet/wallet/delete/send-otp': {
+    post: {
+      tags: ['Wallet Address Management'],
+      summary: '🗑️ Delete Wallet - Step 1: Send OTP',
+      description: `**Request OTP to delete a payment forwarding wallet (SECURE)**
+
+## 2-Step Process:
+1. **This endpoint** - Sends OTP to your email
+2. **Then call** \`POST /api/wallet/wallet/delete/verify\` - Verify OTP and delete
+
+## Security Features:
+- ✅ OTP required (prevents accidental deletion)
+- ✅ Multi-tenant security with company_id
+- ✅ Warning message in email
+
+**⚠️ Warning:** This action is permanent and cannot be undone!
+
+**Table:** tbl_user_wallet (Main payment system)`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['wallet_id'],
+              properties: {
+                wallet_id: {
+                  type: 'integer',
+                  description: '✅ REQUIRED: Wallet ID to delete (from getWallet response)',
+                  example: 431
+                },
+                company_id: {
+                  type: 'integer',
+                  description: '✅ RECOMMENDED: Company ID for multi-tenant security',
+                  example: 38
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'OTP sent successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'OTP sent to your email' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      wallet_id: { type: 'integer', example: 431 },
+                      wallet_type: { type: 'string', example: 'BTC' },
+                      wallet_address: { type: 'string', example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' },
+                      email: { type: 'string', example: 'jo***@example.com' },
+                      warning: { type: 'string', example: 'This action is permanent and cannot be undone' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'wallet_id is required' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Wallet not found' }
+      }
+    }
+  },
+
+  // DELETE WITH OTP - Step 2: Verify OTP and Delete
+  '/api/wallet/wallet/delete/verify': {
+    post: {
+      tags: ['Wallet Address Management'],
+      summary: '🗑️ Delete Wallet - Step 2: Verify OTP & Delete',
+      description: `**Complete wallet deletion by verifying OTP (SECURE)**
+
+## Prerequisites:
+1. Must call \`POST /api/wallet/wallet/delete/send-otp\` first
+2. Check your email for 6-digit OTP
+
+## Security Features:
+- ✅ OTP validation
+- ✅ Currency matching check
+- ✅ Multi-tenant security
+- ✅ Soft delete (clears address, preserves record)
+
+**⚠️ Warning:** This action is permanent and cannot be undone!
+
+**Table:** tbl_user_wallet (Main payment system)`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['wallet_id', 'otp'],
+              properties: {
+                wallet_id: {
+                  type: 'integer',
+                  description: '✅ REQUIRED: Wallet ID to delete',
+                  example: 431
+                },
+                otp: {
+                  type: 'string',
+                  description: '✅ REQUIRED: 6-digit OTP from email',
+                  example: '123456',
+                  pattern: '^[0-9]{6}$'
+                },
+                company_id: {
+                  type: 'integer',
+                  description: 'Company ID for multi-tenant security (optional)',
+                  example: 38
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Wallet deleted successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Wallet address removed successfully!' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      removed: { type: 'boolean', example: true },
+                      wallet_id: { type: 'integer', example: 431 },
+                      wallet_type: { type: 'string', example: 'BTC' },
+                      company_id: { type: 'integer', example: 38 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid or expired OTP / Currency mismatch' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Wallet not found' }
+      }
+    }
+  },
+
   // DELETE - Remove wallet from main payment system
   '/api/wallet/wallet/delete': {
     post: {
