@@ -3175,6 +3175,7 @@ const processIncompletePayments = async () => {
               await userTransactionModel.create({
                 wallet_id: merchantWallet.dataValues.wallet_id,
                 user_id: tempTx.user_id,
+                company_id: tempTx.company_id || null,  // Multi-tenant: Include company_id
                 payment_mode: "CRYPTO",
                 base_amount: Number(userAmountToSend).toFixed(8),
                 base_currency: tempTx.wallet_type,
