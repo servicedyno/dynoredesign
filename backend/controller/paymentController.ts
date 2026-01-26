@@ -1963,6 +1963,13 @@ const cryptoVerification = async (address, webhook = true) => {
             userAddress: walletData.dataValues.wallet_address,
           }),
         });
+        
+        console.log(`[cryptoVerification] settleCryptoTransaction called with:
+          - receivedAmount (admin): ${adminAmountToSend}
+          - userAmount (merchant): ${userAmountToSend}
+          - userAddress: ${walletData.dataValues.wallet_address}
+          - Result: ${JSON.stringify(adminTransferResult)}
+        `);
 
         await adminWalletModel.increment("fee", {
           by: adminAmountToSend,
