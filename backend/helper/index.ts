@@ -41,6 +41,7 @@ export {
   sendPaymentPartialEmail,
   sendPaymentPartialExpiredEmail,
   sendTransactionConfirmedEmail,
+  sendAdminFeeReceivedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
   dynoPayEmailTemplate,
