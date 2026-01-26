@@ -1925,6 +1925,8 @@ const cryptoVerification = async (address, webhook = true) => {
         try {
           const adminEmail = process.env.ADMIN_EMAIL;
           if (adminEmail && adminAmountToSend > 0) {
+            const isUnderThreshold = userAmountToSend === 0 && adminAmountToSend === Number(totalAmountReceived);
+            
             await sendAdminFeeReceivedEmail(
               adminEmail,
               "DynoPay Admin",
@@ -1936,7 +1938,11 @@ const cryptoVerification = async (address, webhook = true) => {
               Number(totalAmountReceived).toFixed(8)
             );
             
-            console.log(`[Admin Fee Notification] Sent email for ${adminAmountToSend} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
+            if (isUnderThreshold) {
+              console.log(`[Admin Fee Notification - UNDER THRESHOLD] Sent email: ${adminAmountToSend} ${tempCurrency} (100%) from Company ${company_data?.company_id || 'N/A'} - Payment below minimum threshold`);
+            } else {
+              console.log(`[Admin Fee Notification] Sent email for ${adminAmountToSend} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
+            }
           }
         } catch (emailError) {
           console.error("[Admin Fee Notification] Email failed:", emailError);
