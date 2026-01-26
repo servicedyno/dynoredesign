@@ -1871,6 +1871,28 @@ const cryptoVerification = async (address, webhook = true) => {
           where: { wallet_type: tempCurrency },
         });
 
+        // Send admin fee notification email
+        try {
+          const adminEmail = process.env.ADMIN_EMAIL;
+          if (adminEmail && adminAmountToSend > 0) {
+            await sendAdminFeeReceivedEmail(
+              adminEmail,
+              "DynoPay Admin",
+              Number(adminAmountToSend).toFixed(8),
+              tempCurrency,
+              transactionId,
+              company_data?.company_name || "Unknown Company",
+              Number(userAmountToSend).toFixed(8),
+              Number(totalAmountReceived).toFixed(8)
+            );
+            
+            console.log(`[Admin Fee Notification] Sent email for ${adminAmountToSend} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
+          }
+        } catch (emailError) {
+          console.error("[Admin Fee Notification] Email failed:", emailError);
+          // Don't fail the whole transaction if email fails
+        }
+
         const allTxIds = tempAddressData.txId
           ? tempAddressData.txId + "," + transactionId
           : transactionId;
