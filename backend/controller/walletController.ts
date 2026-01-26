@@ -4085,7 +4085,7 @@ export default {
   // New: UPDATE with OTP
   sendUpdateWalletOTP,
   updateWalletWithOTP,
-  // New: DELETE with OTP (for main table)
-  sendDeletePaymentWalletOTP: sendDeleteWalletOTP,
-  deletePaymentWalletWithOTP: deleteWalletWithOTP,
+  // New: DELETE with OTP (for main table) - using unique names
+  sendDeletePaymentWalletOTP,
+  deletePaymentWalletWithOTP,
 };
