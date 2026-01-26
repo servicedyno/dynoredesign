@@ -131,9 +131,15 @@ async function decryptSymmetric(ciphertext, keyId) {
 
 const getTatumSDK = async () => {
   try {
+    // Use testnet key if in testnet mode
+    if (isTestnet() && process.env.TATUM_TESTNET_KEY) {
+      console.log('[getTatumSDK] Using TESTNET key');
+      const tatumSdk = TatumApi(process.env.TATUM_TESTNET_KEY);
+      return tatumSdk;
+    }
+    
     let tatumKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
     console.log('[getTatumSDK] tatumKey exists:', !!tatumKey, 'length:', tatumKey?.length);
-    console.log('[getTatumSDK] tatumKey starts with:', tatumKey?.substring(0, 25));
     
     if (!tatumKey) {
       console.log('[getTatumSDK] No Tatum key found in .env, attempting Secret Manager...');
@@ -152,7 +158,7 @@ const getTatumSDK = async () => {
       });
       const payload = version.payload.data.toString();
       tatumKey = payload;
-      console.log('[getTatumSDK] Using key from Secret Manager, starts with:', tatumKey?.substring(0, 25));
+      console.log('[getTatumSDK] Using key from Secret Manager');
     } else {
       console.log('[getTatumSDK] Using key from .env file');
     }
