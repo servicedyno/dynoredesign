@@ -1,147 +1,173 @@
-<analysis>**original_problem_statement:**
-The initial user request was to set up a full-stack application using a comprehensive list of provided environment variables. Following the setup, the user requested a series of critical features and bug fixes for the DynoPay crypto payment gateway application.
+<analysis>An analysis of the conversation and work history has been completed. Here is the summary to assist the next agent.
 
-**PRODUCT REQUIREMENTS:**
-1.  **Unique Blockchain Wallets:** Ensure a merchant can only add one wallet address per blockchain type (e.g., one BTC, one ETH) for each company they manage.
-2.  **Fix OTP-Currency Bug:** A critical bug was identified where validating an address for one currency (e.g., ETH) could lead to it being saved under a different currency (e.g., BTC) during OTP verification. This needed to be fixed to ensure data integrity.
-3.  **Fix Multi-Tenancy in Payment Forwarding:** The payment forwarding logic was not using the , causing a critical multi-tenancy flaw where payments could be sent to the wrong company's wallet if a user managed multiple companies.
-4.  **Implement Full, Secure CRUD for Wallets:** The main payment forwarding wallet system lacked complete and secure management features. The requirement was to implement full CRUD (Create, Read, Update, Delete) operations, ensuring all write actions (Create, Update, Delete) are protected by a two-step OTP verification process.
-5.  **API and Documentation Cleanup:** The API had two confusing wallet systems (a primary one and a legacy one). The user requested to clarify this by updating the  endpoint to return necessary data (), and then to clean up the Swagger UI entirely, removing all mentions and endpoints related to the legacy system to prevent confusion.
+**original_problem_statement**: The user wants to continue testing and debugging a multi-tenant payment processing application called DynoPay. The initial task was to set up the backend environment using a provided list of environment variables. The core of the request involves identifying and fixing bugs in the payment processing flow, ensuring multi-tenant data isolation is respected, and implementing missing features like admin notifications. The user has been actively involved in testing, reporting bugs, and guiding the development process.
 
-**User's preferred language**: English
+PRODUCT REQUIREMENTS:
+1.  The payment application must support multi-tenancy, ensuring that data and funds for different companies are strictly isolated.
+2.  The system must handle cryptocurrency payments (ETH, BTC, etc.) and card payments.
+3.  A fee model based on transaction tiers must be applied, with fees being routed to an admin wallet.
+4.  The system must send email notifications to merchants and admins at various stages of the payment process (payment detected, payment received, fees collected).
+5.  Payment links should be creatable for anonymous users who are not yet registered customers.
+
+**User's preferred language**: english
 
 **what currently exists?**
-The project is a full-stack crypto payment gateway application named DynoPay, built with a Node.js/Express (TypeScript) backend, a React frontend, and a PostgreSQL database. The environment is fully configured with the provided credentials. The application features two wallet management systems: a primary, multi-tenant system for payment forwarding () and a legacy system that is being phased out. The primary system now has full, secure, OTP-protected CRUD operations and the critical multi-tenancy bug in payment forwarding has been resolved. The Swagger API documentation has been cleaned up to exclusively feature the endpoints for the primary payment system.
+The project is a full-stack application with a React frontend and a NodeJS/TypeScript backend using PostgreSQL. The environment is fully configured, and all services are running. The application features multi-tenancy, user/wallet management, and payment processing via Tatum (crypto) and Flutterwave (cards). The agent has recently implemented an admin fee notification system and fixed several critical bugs related to multi-tenancy, JWT generation, and fee calculation logic.
 
 **Last working item**:
--   **Last item agent was working:** The agent finished cleaning up the Swagger documentation by editing  to remove the last remaining legacy endpoint (). This was done to ensure developers are only exposed to the correct, primary payment forwarding wallet system.
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Manual testing by . The agent needs to restart the backend and then inspect the  endpoint to confirm the legacy endpoint has been removed from the Swagger documentation.
--   **User Testing Done:** N
+*   **Last item agent was working**: The agent was debugging a failed payment transaction. After the user sent a payment, logs showed a . The agent identified and fixed two root causes: 1) A  constraint on  for anonymous payments, and 2) A fee calculation error where the crypto amount was passed instead of its USD equivalent. The user then reported the payment was successful, but the agent's analysis of logs and the database showed a contradiction: an insufficient gas error and a zero balance in the merchant's DB wallet.
+*   **Status**: BLOCKED
+*   **Agent Testing Done**: N
+*   **Which testing method agent to use?**: backend testing agent
+*   **User Testing Done**: Y
 
 **All Pending/In progress Issue list**:
-There are no outstanding bugs or user-reported issues. The primary pending work is to verify the last change and conclude the CRUD implementation task.
+*   **Issue 1**: Reconcile payment distribution discrepancy (P0)
+*   **Issue 2**: Insufficient gas error breaks fund forwarding (P1)
+*   **Issue 3**: Shared ETH address for merchant and admin (P1)
+
+**Issues Detail**:
+*   **Issue 1: Reconcile payment distribution discrepancy**
+    *   **Attempted fixes**: The agent identified the discrepancy but has not attempted a fix. The user claims a payment was distributed, but logs show an insufficient gas error, and the database shows the merchant wallet balance is still zero.
+    *   **Next debug checklist**:
+        1.  Ask the user for the transaction hash of the payment they claim was successful.
+        2.  Trace the hash on a public blockchain explorer to verify the final destinations of the funds.
+        3.  Query the  and  tables directly to check the current ETH balances.
+        4.  Inspect the  record for this payment to see its final status in the database.
+    *   **Why fix this issue and what will be achieved with the fix?**: To establish a ground truth for the payment system's state. If the automated flow is broken, we need to understand why and fix it.
+    *   **Status**: IN PROGRESS
+    *   **Is recurring issue?**: N
+    *   **Should Test frontend/backend/both after fix?**: backend
+    *   **Blocked on other issue**: None
+
+*   **Issue 2: Insufficient gas error breaks fund forwarding**
+    *   **Attempted fixes**: None. This error appeared in the logs after other bugs were fixed.
+    *   **Next debug checklist**:
+        1.  Review the fund forwarding logic within the  function in .
+        2.  Investigate the log message Sending low fee balance alert, as this suggests a mechanism to handle gas funding might exist or be intended.
+        3.  Propose a robust solution, such as using part of the received funds to cover gas or implementing a separate gas funding mechanism.
+    *   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker for the entire crypto payment flow. Without a fix, funds will be permanently stuck in temporary addresses.
+    *   **Status**: NOT STARTED
+    *   **Is recurring issue?**: Y
+    *   **Should Test frontend/backend/both after fix?**: backend
+    *   **Blocked on other issue**: None
+
+*   **Issue 3: Shared ETH address for merchant and admin**
+    *   **Attempted fixes**: The issue was identified and reported to the user. No fix has been implemented.
+    *   **Next debug checklist**:
+        1.  Proactively ask the user to provide a unique ETH address for the merchant (Company 38).
+        2.  Once the address is provided, implement a change in the  for that company.
+        3.  Verify that new wallet creation logic assigns unique addresses by default.
+    *   **Why fix this issue and what will be achieved with the fix?**: To ensure proper fund segregation, which is a fundamental requirement for a financial application. It prevents mixing of platform fees and merchant revenue.
+    *   **Status**: BLOCKED
+    *   **Is recurring issue?**: N
+    *   **Should Test frontend/backend/both after fix?**: backend
+    *   **Blocked on other issue**: Waiting for user input (new ETH address).
 
 **In progress Task List**:
--   **Task 1: Finalize and Verify Full Secure CRUD for Wallets** (Priority: P0)
-    -   **Where to resume:** The agent has just finished editing the Swagger file () to remove legacy endpoints. The next step is to restart the backend to apply these changes.
-    -   **What will be achieved with this?** This will complete the user's request for a clean, secure, and fully functional set of API endpoints for managing payment forwarding wallets, with no legacy system confusion.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Backend
-    -   **Blocked on something:** None
+There are no in-progress development tasks; the current focus is entirely on bug fixing.
 
 **Upcoming and Future Tasks**
--   **Future Tasks:**
-    -   **Refactor Legacy Code (P1):** The legacy wallet system ( and associated controller logic) still exists in the codebase. It should be fully removed to reduce technical debt and prevent future bugs. This involves deleting the model file and any functions/routes in  and  that reference it.
+There are no upcoming features requested by the user. The priority is to stabilize the existing payment flow.
 
 **Completed work in this session**
--   **Environment Setup:** Successfully configured the backend and frontend with an extensive list of user-provided environment variables.
--   **Multi-Tenancy Payment Forwarding Fix:** Patched a critical bug where payment forwarding logic didn't use . This involved updating  and the payment processing logic in .
--   **OTP Currency Validation Bug Fix:** Resolved a major data corruption bug by adding an  field to the  model and enforcing a match during OTP verification in .
--   **Full CRUD Implementation for Payment Wallets:**
-    -   **CREATE (Secure):** Implemented a two-step OTP flow ( -> ).
-    -   **READ:** Ensured the  endpoint returns all necessary data, including .
-    -   **UPDATE (Secure):** Created new two-step OTP endpoints (, ).
-    -   **DELETE (Secure):** Implemented an OTP-protected delete flow (, ).
--   **Swagger Documentation Overhaul:** Cleaned the API documentation () to remove all legacy endpoints, providing a clear and focused guide for the primary payment forwarding wallet system.
+- **Environment Setup**: Successfully configured the backend and frontend environments with all provided credentials and URLs.
+- **Bug Fix (JWT)**: Resolved an Invalid payment link token error by correcting the field name in the JWT payload from uid=0(root) gid=0(root) groups=0(root) to  in .
+- **Multi-Tenancy Hardening**: Conducted a full audit and fixed multiple bugs where  was missing from database queries in , ensuring data isolation.
+- **Feature (Admin Notifications)**: Implemented a new email notification system to alert the admin when platform fees are collected. This includes custom templates for normal and under-threshold payments, integrated across all payment flows ().
+- **Bug Fix (DB Schema)**: Resolved a  constraint violation on  for anonymous payments by updating the Sequelize model and running a manual database migration via a temporary test endpoint.
+- **Bug Fix (Fee Calculation)**: Fixed a critical bug where the fee calculation logic was failing because it received a crypto amount (e.g., 0.004 ETH) instead of the required USD amount. The fix involved adding a currency conversion step before the calculation in .
+
+**Earlier issues found/mentioned but not fixed**
+All identified issues are listed in the **All Pending/In progress Issue list** section.
 
 **Known issue recurrence from previous fork**
--   None.
+N/A
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend:** Node.js, Express.js, TypeScript, Sequelize ORM
--   **Frontend:** React
--   **Database:** PostgreSQL
--   **Authentication:** JWT
--   **API Documentation:** Swagger/OpenAPI
--   **Integrations:** Tatum, Brevo (for email), Google KMS, Flutterwave
+*   **Backend**: NodeJS, Express.js, TypeScript
+*   **Database**: PostgreSQL with Sequelize as the ORM.
+*   **Architecture**: Multi-tenant SaaS platform for payment processing.
+*   **Core Flows**: Payment Link creation, Webhook-driven Crypto Payment Verification, Tier-based Fee Calculation, Fund Forwarding, and Email Notifications.
+*   **Third-Party Integrations**: Tatum for crypto operations, Flutterwave for card payments, and various communication APIs (Brevo, Infobip).
 
 **key DB schema**
--   **tbl_user:** User data, including fields for OTP management (, , ).
--   **tbl_user_wallet:** The primary, multi-tenant table for merchant payment forwarding wallets. Contains , , , .
--   **tbl_user_temp_address:** Stores temporary addresses for incoming payments, now includes .
+*   : Stores records of each transaction. Key columns include  (PK), uid=0(root) gid=0(root) groups=0(root) (UUID), , and a now-nullable .
+*   : Manages wallets for each user within a company. Key columns include , , , .
+*   : Tracks admin fees.
+*   : Stores temporary crypto addresses generated for payments.
 
 **changes in tech stack**
--   The system prompt incorrectly stated the backend is FastAPI and the database is MongoDB. The actual stack is **Node.js/Express/TypeScript** and **PostgreSQL**.
+None.
 
 **All files of reference**
--   : Central logic for all wallet CRUD operations. Heavily modified.
--   : Modified to fix the multi-tenancy payment forwarding bug.
--   : Updated with new routes for secure CRUD operations.
--   : The OpenAPI specification file for wallet endpoints. Significantly cleaned and updated.
--   : Updated to include .
--   : Updated to include .
--   : The schema definition for the primary wallet table.
+*   ****: The most heavily modified file, containing fixes for multi-tenancy, fee calculation, and data type errors.
+*   ****: Updated with new email templates for the admin notification system.
+*   ****: Modified to allow  to be .
+*   ****: Temporarily modified to add a manual database migration endpoint. This should be cleaned up.
+*   ** / **: Updated with correct URLs and credentials.
+*   Multiple  files were created to document analyses and fixes, such as  and .
 
 **Areas that need refactoring**:
--   **Legacy Wallet System:** The codebase still contains the models, controller logic, and routes for a legacy wallet system (). This should be completely removed to eliminate technical debt, rather than just being hidden from the Swagger UI.
--   **Controller Size:**  is excessively large and handles logic for two systems. It should be split into smaller, more focused modules.
+*   The temporary migration endpoint  inside  is a technical debt and should be removed. A proper migration strategy using a tool like Sequelize CLI should be established for future schema changes.
 
 **key api endpoints**
--   : Read payment forwarding wallets.
--   : Initiate adding a new wallet (sends OTP).
--   : Complete adding a new wallet (verifies OTP).
--   : Initiate updating a wallet (sends OTP).
--   : Complete updating a wallet (verifies OTP).
--   : Initiate deleting a wallet (sends OTP).
--   : Complete deleting a wallet (verifies OTP).
+*   : Creates a public payment link.
+*   : Retrieves data associated with a payment link.
+*   : Entry point for all incoming crypto payment notifications from Tatum.
+*   : (Temporary) An endpoint created to run a raw SQL query to alter a table schema.
 
 **Critical Info for New Agent**
--   The backend stack is **Node.js/Express/TypeScript** with **PostgreSQL**, not FastAPI/MongoDB as stated in the system prompt.
--   The application has two wallet systems. All development must focus on the primary payment forwarding system, which uses the  (). The legacy system () should be ignored and is a candidate for removal.
--   All write operations (Create, Update, Delete) on the primary wallet system are now protected by a two-step OTP flow.
+*   **Payment Flow Discrepancy**: Your immediate priority is to resolve the conflict between the user's claim of a successful payment and the system's logs, which indicate failure. Do not assume the user is correct; verify everything against the blockchain and the database.
+*   **Critical Bugs**: The automated payment flow is currently non-functional due to two critical bugs: 1) insufficient gas for forwarding funds, and 2) a shared ETH address between the admin and a merchant. These must be addressed to make the system viable.
+*   **Multi-Tenancy is Key**: This is a multi-tenant application. Every database query that handles user or company-specific data **must** be filtered by . Previous work fixed many omissions, but you must remain vigilant.
+*   **Manual Migration**: A database schema change was applied using a temporary, insecure test endpoint. Do not use this method again. Propose using a standard migration tool if further schema changes are needed.
 
 **documents and test reports created in this job**
--   /app/OTP_CURRENCY_FIX_COMPLETE_REPORT.md
--   /app/WALLET_API_ENDPOINTS_GUIDE.md
--   /app/WALLET_CRUD_ANALYSIS.md
--   /app/test_otp_currency_validation.py
--   /app/test_real_otp_validation.py
--   /app/test_multitenant_payment_forwarding.py
+*   /app/FINAL_MULTI_TENANT_AUDIT_REPORT.md
+*   /app/ADMIN_FEE_NOTIFICATION_IMPLEMENTATION.md
+*   /app/UNDER_THRESHOLD_NOTIFICATION_ENHANCEMENT.md
+*   /app/PAYMENT_ADDRESS_NOTIFICATION_ANALYSIS.md
+*   /app/FEE_CALCULATION_ANALYSIS_10USD.md
+*   ...and several other analysis/summary documents.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request:** Remove all legacy wallet CRUD operations from Swagger UI, leaving only the primary payment forwarding wallet system. **Status: In Progress (code edited, verification pending).**
-2.  **Question:** Is  the table used for payment forwarding? **Status: Answered (Yes).**
-3.  **Question:** Is the  multi-tenant? **Status: Answered (Yes, but a critical bug was found and fixed).**
-4.  **Instruction:** A 4-step plan to fix the multi-tenancy bug. **Status: Completed.**
-5.  **Question:** Do we have full, secure CRUD for the multi-tenant wallet model with OTP? **Status: Answered (No, Update/Delete were missing/insecure).**
-6.  **Confirmation:** yes - go ahead and implement full secure CRUD. **Status: Completed.**
-7.  **Question:** Who is the author stdev321? **Status: Answered (No evidence found).**
-8.  **Clarification:** The functionality was part of two merged repos, not built by Emergent. **Status: Acknowledged and clarified.**
-9.  **Question:** Who authored the wallet forwarding mechanism? **Status: Answered (Krushang Chauhan).**
-10. **Instruction:** Clean up delete endpoints in Swagger to only show the primary payment system. **Status: Completed and superseded by the final cleanup request.**
+10. **User**: create new payment link for 0 - Request completed.
+9.  **User**: if i send the 0 ETH, based on current admin fee model... - Asked for an analysis of the fee calculation. Request completed.
+8.  **User**: which eth address will payment be forwarded to... - Asked for an analysis of fund routing and notifications. Request completed; led to bug discoveries.
+7.  **User**: implement the admin notification system - Feature request. Request completed.
+6.  **User**: how about if it was an under threshold payment... - Requested an enhancement to the notification system. Request completed.
+5.  **User**: create 0 crypto payment link - Request completed.
+4.  **User**: see logs, i sent the payment - User initiated a test payment. This led to the discovery of the  and fee calculation bugs.
+3.  **User**: i got the payment pending notification... we need to manually trigger this and fix the bug - User reported a stuck payment. The underlying bugs have since been fixed, but the transaction's state is contested.
+2.  **User**: CONTINUE THE FIX - Instruction to proceed with a bug fix. Request completed.
+1.  **User**: the funds have distributed to admin and merchant wallet. i got them. see log and trace it - The most recent message, claiming a payment was successful, which contradicts the agent's findings. This is the main point of contention to be resolved.
 
 **Project Health Check:**
--   **Broken:** The fundamental discrepancy between the system prompt's description of the tech stack (FastAPI/MongoDB) and the actual codebase (Node.js/PostgreSQL) is a major risk for future work.
--   **Mocked:** None.
+*   **Broken**:
+    *   Automated crypto fund forwarding is non-functional due to insufficient gas errors.
+    *   Fund segregation is compromised for ETH because the admin and at least one merchant share the same wallet address.
+*   **Mocked**: None.
 
 **3rd Party Integrations**
--   **Tatum:** Crypto node operations (API Key provided)
--   **Flutterwave:** Payment processing (API Keys provided)
--   **Brevo (Sendinblue):** Transactional emails (API Key provided)
--   **Google Cloud KMS:** Key management (Credentials provided)
--   **Blockchair, BlockBee, Crypto APIs:** Blockchain data (API Keys provided)
--   **FastForex:** Currency conversion (API Key provided)
--   **Infobip, Telnyx:** SMS/Verification (API Keys provided)
--   **APILayer Tax Data:** Tax information (API Key provided)
--   **Veriff:** KYC (API Keys provided)
--   **Redis:** Caching/sessions (URL provided)
+*   **Tatum**: Used for crypto wallet management and webhooks. Requires API Key.
+*   **Flutterwave**: Used for card payments. Requires User API Key.
+*   **Google Cloud KMS**: Used for key security. Requires User-provided service account credentials.
+*   **Brevo / Infobip / Telnyx**: Used for email and SMS notifications. Require User API Keys.
+*   **Redis / PostgreSQL**: Core infrastructure. Credentials are in .
+*No Emergent LLM Key integrations are used.*
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
--   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:**
-    -   /app/test_otp_currency_validation.py
-    -   /app/test_real_otp_validation.py
-    -   /app/test_multitenant_payment_forwarding.py
--   **Known regressions:** None.
+*   **Testing agent used after significant changes**: NO
+*   **Troubleshoot agent used after agent stuck in loop**: NO
+*   **Test files created**: None. All testing was done via  commands.
+*   **Known regressions**: None.
 
 **Credentials to test flow:**
--   The user  has been used for testing. The token has expired, but the agent can log in again.
+*   **JWT Token (User 28, Company 38)**: 
 
 **What agent forgot to execute**
--   The agent edited the Swagger documentation file () to remove legacy endpoints but did not restart the backend service to apply the change and verify its effect on the live  documentation. This is the immediate next step.</analysis>
+*   The agent did not remove the temporary and insecure migration endpoint () from  after its use.</analysis>
