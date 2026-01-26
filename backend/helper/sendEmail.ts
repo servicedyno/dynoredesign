@@ -540,24 +540,41 @@ const sendAdminFeeReceivedEmail = async (
 ) => {
   try {
     const subject = "💰 Platform Fee Received - DynoPay";
-    const message = `Platform fee received from ${companyName}!
-
-💰 Fee Amount: ${feeAmount} ${currency}
-📊 Merchant Received: ${merchantAmount} ${currency}
-💵 Total Payment: ${totalAmount} ${currency}
-🏢 Company: ${companyName}
-
-📝 Transaction Reference:
-${transactionId}
-
-Fee Breakdown:
-• Platform Fee: ${feeAmount} ${currency}
-• Merchant Net: ${merchantAmount} ${currency}
-• Total Processed: ${totalAmount} ${currency}
-
-The fee has been credited to the admin ${currency} wallet.
-
-You can view the full transaction details in the DynoPay admin dashboard.`;
+    
+    // Check if this is an under-threshold payment (merchant gets $0)
+    const merchantAmountNum = parseFloat(merchantAmount);
+    const feeAmountNum = parseFloat(feeAmount);
+    const totalAmountNum = parseFloat(totalAmount);
+    const isUnderThreshold = merchantAmountNum === 0 && feeAmountNum === totalAmountNum;
+    
+    let message = `Platform fee received from ${companyName}!\n\n`;
+    
+    if (isUnderThreshold) {
+      // Under-threshold payment - all goes to admin
+      message += `⚠️ UNDER THRESHOLD PAYMENT - All funds to platform\n\n`;
+      message += `💰 Total Amount Received: ${feeAmount} ${currency}\n`;
+      message += `📊 Merchant Received: ${merchantAmount} ${currency} (Below minimum threshold)\n`;
+      message += `💵 Platform Received: ${feeAmount} ${currency} (100%)\n`;
+      message += `🏢 Company: ${companyName}\n\n`;
+      message += `📝 Transaction Reference:\n${transactionId}\n\n`;
+      message += `ℹ️ This payment was below the minimum forwarding threshold.\n`;
+      message += `All funds have been credited to the admin ${currency} wallet.\n`;
+      message += `The merchant will not receive any funds from this transaction.`;
+    } else {
+      // Normal fee distribution
+      message += `💰 Fee Amount: ${feeAmount} ${currency}\n`;
+      message += `📊 Merchant Received: ${merchantAmount} ${currency}\n`;
+      message += `💵 Total Payment: ${totalAmount} ${currency}\n`;
+      message += `🏢 Company: ${companyName}\n\n`;
+      message += `📝 Transaction Reference:\n${transactionId}\n\n`;
+      message += `Fee Breakdown:\n`;
+      message += `• Platform Fee: ${feeAmount} ${currency}\n`;
+      message += `• Merchant Net: ${merchantAmount} ${currency}\n`;
+      message += `• Total Processed: ${totalAmount} ${currency}\n\n`;
+      message += `The fee has been credited to the admin ${currency} wallet.\n\n`;
+    }
+    
+    message += `You can view the full transaction details in the DynoPay admin dashboard.`;
 
     const info = await mailTransporter({
       to: recipientEmail,
