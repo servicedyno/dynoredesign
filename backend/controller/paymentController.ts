@@ -3127,14 +3127,17 @@ const processIncompletePayments = async () => {
           } else {
             console.log(`No additional payment for ${tempTx.wallet_address}. Processing with existing amount ${tempTx.amount}`);
 
+            // Get merchant wallet with multi-tenant security
             const merchantWallet = await userWalletModel.findOne({
               where: {
                 user_id: tempTx.user_id,
                 wallet_type: tempTx.wallet_type,
+                company_id: tempTx.company_id,  // Multi-tenant: Ensure correct company wallet
               },
             });
 
             if (!merchantWallet) {
+              console.error(`Merchant wallet not found for user ${tempTx.user_id}, company ${tempTx.company_id}, wallet_type ${tempTx.wallet_type}`);
               throw new Error(`Merchant wallet not found for user ${tempTx.user_id}`);
             }
 
