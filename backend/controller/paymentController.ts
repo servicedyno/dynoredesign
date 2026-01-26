@@ -2726,12 +2726,26 @@ const checkingUSDT = async () => {
         currentAddress?.wallet_address,
         currentAddress.wallet_type
       );
+      
+      // Multi-tenant fix: Include company_id in wallet lookup
+      const forwardingWalletWhere: any = {
+        wallet_type: currentAddress.wallet_type,
+        user_id: currentAddress.user_id,
+      };
+      
+      // Add company_id filter if present
+      if (currentAddress.company_id && currentAddress.company_id !== '' && currentAddress.company_id !== 'undefined' && currentAddress.company_id !== 'null') {
+        const companyId = parseInt(currentAddress.company_id);
+        if (!isNaN(companyId)) {
+          forwardingWalletWhere.company_id = companyId;
+        }
+      } else {
+        forwardingWalletWhere.company_id = null;
+      }
+      
       const userWallet = await (
         await userWalletModel.findOne({
-          where: {
-            wallet_type: currentAddress.wallet_type,
-            user_id: currentAddress.user_id,
-          },
+          where: forwardingWalletWhere,
         })
       ).dataValues;
       if (addressBalance?.balance && Number(addressBalance?.balance) > 0) {
