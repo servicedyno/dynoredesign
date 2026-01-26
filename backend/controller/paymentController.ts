@@ -1850,12 +1850,17 @@ const cryptoVerification = async (address, webhook = true) => {
           }),
         });
         
-        console.log(`[cryptoVerification] settleCryptoTransaction called with:
-          - receivedAmount (admin): ${adminAmountToSend}
-          - userAmount (merchant): ${userAmountToSend}
-          - userAddress: ${walletData.dataValues.wallet_address}
-          - Result: ${JSON.stringify(adminTransferResult)}
+        console.log(`[cryptoVerification] settleCryptoTransaction result:
+          - Admin fee to retain: ${adminAmountToSend} ${tempCurrency}
+          - Merchant amount sent: ${adminTransferResult.sendAmount} ${tempCurrency}
+          - Merchant TX: ${adminTransferResult.transactionDetails?.txId || 'N/A'}
+          - Admin fee retained for sweep: ${adminTransferResult.adminFeeRetained || 0} ${tempCurrency}
         `);
+
+        // For UTXO chains, admin fee is sent in the same transaction
+        // For account-based chains, admin fee is retained for batch sweep
+        const isUTXOChain = ["BTC", "LTC", "DOGE", "BCH"].includes(tempCurrency);
+        const adminFeeStatus = isUTXOChain ? "successful" : "pending_sweep";
 
         await adminWalletModel.increment("fee", {
           by: adminAmountToSend,
