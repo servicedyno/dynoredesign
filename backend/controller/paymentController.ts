@@ -1986,7 +1986,7 @@ const cryptoVerification = async (address, webhook = true) => {
             transaction_reference: allTxIds,
             transaction_type: "CREDIT",
             status: "successful",
-            customer_id: Number(customerData.customer_id),
+            customer_id: customerData.customer_id ? Number(customerData.customer_id) : null,
           };
 
           if (tempData?.incomplete) {
