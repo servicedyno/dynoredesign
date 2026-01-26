@@ -1734,7 +1734,7 @@ const cryptoVerification = async (address, webhook = true) => {
       console.log("finalAmount=========>", finalAmount[0]);
 
       const customerPayload = {
-        ...(tempData?.incomplete && tempData?.customerInternalRef ? { id: tempData.customerInternalRef } : {}),
+        id: tempData?.incomplete && tempData?.customerInternalRef ? tempData.customerInternalRef : crypto.randomUUID(),
         company_id: Number(customerData.company_id),
         customer_id: customerData.customer_id ? Number(customerData.customer_id) : null,
         payment_mode: "CRYPTO",
