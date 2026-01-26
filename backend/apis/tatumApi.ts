@@ -614,14 +614,11 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
 const deleteSubscription = async (id) => {
   try {
     if (id) {
-      const tatumKey = await getTatumKey();
+      const headers = await getTatumHeaders();
+      const networkType = isTestnet() ? 'testnet' : 'mainnet';
       const resData = await axios.delete(
-        `https://api.tatum.io/v4/subscription/${id}?type=mainnet`,
-        {
-          headers: {
-            "x-api-key": tatumKey,
-          },
-        }
+        `https://api.tatum.io/v4/subscription/${id}?type=${networkType}`,
+        { headers }
       );
       console.log(resData.data);
       return resData.data;
