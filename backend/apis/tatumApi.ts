@@ -465,6 +465,9 @@ const generateUserAddress = async ({
     let address;
     let privateKey;
 
+    // Import ethers for deriving address from private key (testnet compatibility)
+    const { ethers } = require('ethers');
+
     switch (currency) {
       case "BTC":
         address = await tatumSdk.blockchain.bitcoin.btcGenerateAddress(
@@ -478,28 +481,23 @@ const generateUserAddress = async ({
           });
         break;
       case "ETH":
-        address = await tatumSdk.blockchain.eth.ethGenerateAddress(xpub, index);
-        privateKey = await tatumSdk.blockchain.eth.ethGenerateAddressPrivateKey(
-          { mnemonic, index }
-        );
-        break;
       case "USDT-ERC20":
-        address = await tatumSdk.blockchain.eth.ethGenerateAddress(xpub, index);
+        // Generate private key first
         privateKey = await tatumSdk.blockchain.eth.ethGenerateAddressPrivateKey(
           { mnemonic, index }
         );
+        
+        // CRITICAL FIX: For testnet compatibility, derive address directly from private key
+        // This ensures address and private key always match, regardless of testnet/mainnet
+        if (isTestnet()) {
+          const wallet = new ethers.Wallet(privateKey.key);
+          address = { address: wallet.address };
+          console.log(`[generateUserAddress] Testnet: Derived address ${wallet.address} from private key`);
+        } else {
+          address = await tatumSdk.blockchain.eth.ethGenerateAddress(xpub, index);
+        }
         break;
       case "TRX":
-        address = await tatumSdk.blockchain.tron.tronGenerateAddress(
-          xpub,
-          index
-        );
-        privateKey =
-          await tatumSdk.blockchain.tron.tronGenerateAddressPrivateKey({
-            mnemonic,
-            index,
-          });
-        break;
       case "USDT-TRC20":
         address = await tatumSdk.blockchain.tron.tronGenerateAddress(
           xpub,
@@ -529,10 +527,19 @@ const generateUserAddress = async ({
         );
         break;
       case "BSC":
-        address = await tatumSdk.blockchain.bsc.bscGenerateAddress(xpub, index);
+        // Generate private key first for BSC too (same derivation as ETH)
         privateKey = await tatumSdk.blockchain.bsc.bscGenerateAddressPrivateKey(
           { mnemonic, index }
         );
+        
+        // For testnet, derive address from private key
+        if (isTestnet()) {
+          const wallet = new ethers.Wallet(privateKey.key);
+          address = { address: wallet.address };
+          console.log(`[generateUserAddress] Testnet BSC: Derived address ${wallet.address} from private key`);
+        } else {
+          address = await tatumSdk.blockchain.bsc.bscGenerateAddress(xpub, index);
+        }
         break;
       case "BCH":
         address = await tatumSdk.blockchain.bcash.bchGenerateAddress(
