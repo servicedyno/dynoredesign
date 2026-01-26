@@ -351,8 +351,6 @@ testRouter.post("/full-payment-flow", authMiddleware, async (req, res) => {
 testRouter.post("/diagnose-temp-address", async (req, res) => {
   try {
     const { temp_id } = req.body;
-    const ethers = require('ethers');
-    const tatumApi = require('../apis/tatumApi').default;
     
     // Get temp address from database
     const [result]: any = await sequelize.query(
@@ -403,8 +401,6 @@ testRouter.post("/diagnose-temp-address", async (req, res) => {
 testRouter.post("/manual-transfer", async (req, res) => {
   try {
     const { temp_id, to_address, amount } = req.body;
-    const ethers = require('ethers');
-    const tatumApi = require('../apis/tatumApi').default;
     
     // Get temp address from database
     const [result]: any = await sequelize.query(
