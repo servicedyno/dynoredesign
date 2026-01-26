@@ -395,18 +395,56 @@ const fillMissingDates = (data: any[], startDate: Date, endDate: Date, groupBy: 
 };
 
 /**
- * Get fee tiers information
  * GET /api/dashboard/fee-tiers
+ * Returns fee tiers with user's current tier based on transaction volume
  */
 const getFeeTiers = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  
   try {
+    const { company_id } = req.query;
+    const userId = userData.user_id;
+
+    // Calculate user's monthly transaction volume
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const monthlyVolumeResult = await sequelize.query(
+      `SELECT COALESCE(SUM(ut.base_amount), 0) as volume
+       FROM tbl_user_transaction ut
+       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       WHERE ut.user_id = :userId 
+       AND ut.status = 'done'
+       AND ut."createdAt" >= :startOfMonth
+       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
+      {
+        replacements: { userId, startOfMonth, companyId: company_id },
+        type: QueryTypes.SELECT,
+      }
+    ) as any[];
+
+    const monthlyVolume = parseFloat(monthlyVolumeResult[0]?.volume || 0);
+    const userTierInfo = getFeeTier(monthlyVolume);
+
+    // Build tiers with indicator for current tier
+    const tiersWithStatus = FEE_TIERS.map(tier => ({
+      name: tier.name,
+      min_volume: tier.min,
+      max_volume: tier.max === Infinity ? null : tier.max,
+      description: tier.description,
+      is_current: tier.name === userTierInfo.current_tier,
+    }));
+
     return successResponseHelper(res, 200, "Fee tiers retrieved successfully", {
-      tiers: FEE_TIERS.map(tier => ({
-        name: tier.name,
-        min_volume: tier.min,
-        max_volume: tier.max === Infinity ? null : tier.max,
-        description: tier.description,
-      })),
+      tiers: tiersWithStatus,
+      user_tier: {
+        current_tier: userTierInfo.current_tier,
+        tier_description: userTierInfo.tier_description,
+        monthly_volume: userTierInfo.monthly_volume,
+        percent_to_next_tier: userTierInfo.percent_complete,
+        amount_to_next_tier: userTierInfo.amount_to_next_tier,
+        next_tier: userTierInfo.next_tier,
+      },
     });
   } catch (e) {
     const message = getErrorMessage(e);
