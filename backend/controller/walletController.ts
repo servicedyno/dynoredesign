@@ -2751,6 +2751,29 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
     );
 
     // Update wallet with address, name, and company_id
+    // Find an empty wallet slot for this currency (not assigned to any company yet)
+    let walletSlot = await userWalletModel.findOne({
+      where: {
+        user_id,
+        wallet_type: currency,
+        company_id: null,
+        wallet_address: null,
+      },
+    });
+
+    // If no empty slot exists, create a new wallet record
+    if (!walletSlot) {
+      walletSlot = await userWalletModel.create({
+        user_id,
+        wallet_type: currency,
+        currency_type: 'CRYPTO',
+        amount: 0,
+        wallet_address: null,
+        company_id: null,
+      });
+    }
+
+    // Update the empty slot with the new wallet data
     await userWalletModel.update(
       {
         wallet_address,
@@ -2759,9 +2782,7 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       },
       {
         where: {
-          user_id,
-          wallet_type: currency,
-          company_id: null, // Only update wallets not yet assigned to a company
+          wallet_id: walletSlot.dataValues.wallet_id,
         },
       }
     );
