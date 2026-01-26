@@ -342,4 +342,129 @@ testRouter.post("/full-payment-flow", authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/test/diagnose-temp-address
+ * Diagnose a temp address - check private key decryption and derived address
+ */
+testRouter.post("/diagnose-temp-address", async (req, res) => {
+  try {
+    const { temp_id } = req.body;
+    const ethers = require('ethers');
+    const tatumApi = require('../apis/tatumApi');
+    
+    // Get temp address from database
+    const [result]: any = await sequelize.query(
+      'SELECT temp_id, wallet_address, "privateKey", wallet_type FROM tbl_user_temp_address WHERE temp_id = :temp_id',
+      { replacements: { temp_id } }
+    );
+    
+    if (!result || result.length === 0) {
+      return errorResponseHelper(res, 404, "Temp address not found");
+    }
+    
+    const tempData = result[0];
+    const expectedAddress = tempData.wallet_address;
+    
+    // Decrypt private key
+    let decryptedKey;
+    let derivedAddress;
+    let addressMatch = false;
+    
+    try {
+      decryptedKey = await tatumApi.decryptSymmetric(tempData.privateKey, process.env.TEMP_KEY_ID);
+      
+      // Derive address from private key
+      const wallet = new ethers.Wallet(decryptedKey);
+      derivedAddress = wallet.address;
+      addressMatch = expectedAddress.toLowerCase() === derivedAddress.toLowerCase();
+    } catch (decryptErr: any) {
+      return errorResponseHelper(res, 500, `Decryption error: ${decryptErr.message}`);
+    }
+    
+    successResponseHelper(res, 200, "Temp address diagnosis", {
+      temp_id: tempData.temp_id,
+      wallet_type: tempData.wallet_type,
+      expected_address: expectedAddress,
+      derived_address: derivedAddress,
+      addresses_match: addressMatch,
+      private_key_preview: decryptedKey ? decryptedKey.substring(0, 10) + "..." : null,
+    });
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
+/**
+ * POST /api/test/manual-transfer
+ * Manually trigger a transfer from a temp address (for debugging)
+ */
+testRouter.post("/manual-transfer", async (req, res) => {
+  try {
+    const { temp_id, to_address, amount } = req.body;
+    const ethers = require('ethers');
+    const tatumApi = require('../apis/tatumApi');
+    
+    // Get temp address from database
+    const [result]: any = await sequelize.query(
+      'SELECT temp_id, wallet_address, "privateKey", wallet_type FROM tbl_user_temp_address WHERE temp_id = :temp_id',
+      { replacements: { temp_id } }
+    );
+    
+    if (!result || result.length === 0) {
+      return errorResponseHelper(res, 404, "Temp address not found");
+    }
+    
+    const tempData = result[0];
+    
+    // Decrypt private key
+    const decryptedKey = await tatumApi.decryptSymmetric(tempData.privateKey, process.env.TEMP_KEY_ID);
+    
+    // Verify address
+    const wallet = new ethers.Wallet(decryptedKey);
+    const derivedAddress = wallet.address;
+    
+    if (derivedAddress.toLowerCase() !== tempData.wallet_address.toLowerCase()) {
+      return errorResponseHelper(res, 400, `Address mismatch! Expected: ${tempData.wallet_address}, Derived: ${derivedAddress}`);
+    }
+    
+    // Estimate fees
+    const fees = await tatumApi.feeEstimation(
+      tempData.wallet_type,
+      tempData.wallet_address,
+      to_address,
+      Number(amount)
+    );
+    
+    // Calculate send amount (deduct gas)
+    const gasFee = Number(fees?.slow ?? 0);
+    const sendAmount = Number((Number(amount) - gasFee).toFixed(6));
+    
+    if (sendAmount <= 0) {
+      return errorResponseHelper(res, 400, `Insufficient balance after gas. Amount: ${amount}, Gas: ${gasFee}`);
+    }
+    
+    // Execute transfer
+    const transaction = await tatumApi.assetToOtherAddress({
+      currency: tempData.wallet_type,
+      fromAddress: tempData.wallet_address,
+      toAddress: to_address,
+      privateKey: decryptedKey,
+      amount: sendAmount,
+      fee: fees,
+    });
+    
+    successResponseHelper(res, 200, "Transfer executed", {
+      temp_id: tempData.temp_id,
+      from_address: tempData.wallet_address,
+      to_address,
+      requested_amount: amount,
+      gas_fee: gasFee,
+      actual_sent: sendAmount,
+      transaction,
+    });
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
 export default testRouter;
