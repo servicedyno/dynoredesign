@@ -1559,9 +1559,18 @@ const settleCryptoTransaction = async ({
           Number(receivedAmount)
         );
 
+        // FIXED: For ETH/TRX/BSC, we must deduct gas fee from send amount
+        // The previous code sent 100% which caused "insufficient funds" errors
         if (currency === "ETH" || currency === "TRX" || currency === "BSC") {
-          adminSendAmount = Number(receivedAmount);
-          totalBlockchainFee = 0;
+          // Use 'slow' fee for ETH-based chains to maximize amount sent
+          const gasFee = Number(fees?.slow ?? 0);
+          adminSendAmount = Number((Number(receivedAmount) - gasFee).toFixed(6));
+          totalBlockchainFee = gasFee;
+          
+          // Safety check: ensure we have enough to cover gas
+          if (adminSendAmount <= 0) {
+            throw new Error(`Insufficient balance to cover gas fees. Balance: ${receivedAmount} ${currency}, Gas required: ${gasFee}`);
+          }
         } else {
           adminSendAmount = Number(
             (Number(receivedAmount) - Number(fees?.fast)).toFixed(8)
