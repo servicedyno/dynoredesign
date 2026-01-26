@@ -1899,14 +1899,18 @@ const cryptoVerification = async (address, webhook = true) => {
           ? tempAddressData.txId + "," + transactionId
           : transactionId;
 
+        // Update temp address status
+        // For UTXO chains: Both merchant and admin are transferred in single TX
+        // For account-based chains: Only merchant transferred, admin fee retained for sweep
         await userTempAddressModel.update(
           {
             status: "successful",
             txId: allTxIds,
-            adminTxId: adminTransferResult.transactionDetails?.txId,
-            admin_status: "successful",
+            adminTxId: adminTransferResult.transactionDetails?.txId || null,
+            admin_status: adminFeeStatus,  // "successful" for UTXO, "pending_sweep" for account chains
             blockchain_fee: adminTransferResult.blockchainFee,
-            amount: 0,
+            amount: isUTXOChain ? 0 : adminAmountToSend,  // Keep admin fee amount for sweep tracking
+            pending_admin_fee: isUTXOChain ? 0 : adminAmountToSend,  // Track pending admin fee
           },
           {
             where: { temp_id: tempAddressData.temp_id },
