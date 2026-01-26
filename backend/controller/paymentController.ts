@@ -1233,9 +1233,15 @@ const Crypto = async (
       throw { message: "Invalid user ID for transaction" };
     }
     
+    // Ensure wallet_id is valid
+    const walletId = walletDetails.wallet_id;
+    if (!walletId || isNaN(Number(walletId))) {
+      throw { message: "Invalid wallet configuration" };
+    }
+    
     const userPayload = {
       id: crypto.randomUUID(),
-      wallet_id: walletDetails.wallet_id,
+      wallet_id: Number(walletId),
       user_id: Number(userId),
       payment_mode: "CRYPTO",
       base_amount: isNaN(Number(data.amount)) ? 0 : Number(data.amount),
