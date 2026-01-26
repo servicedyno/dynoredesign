@@ -1891,17 +1891,30 @@ const cryptoVerification = async (address, webhook = true) => {
         } else {
           // COMPANY PAYS FEES MODE (default)
           // Standard fee deduction from received amount
+          
+          // Convert crypto amount to USD for fee calculation
+          const amountInUSD = await currencyConvert({
+            sourceCurrency: tempCurrency,
+            currency: [customerData?.base_currency || "USD"],
+            amount: totalAmountReceived,
+            fixedDecimal: false,
+          });
+          
           const { totalDeduction, minForwarding } = await calculateTransactionFees(
             tempCurrency,
-            Number(totalAmountReceived)
+            Number(amountInUSD[0].amount)  // Pass USD amount for fee calculation
           );
 
-          if (Number(totalAmountReceived) < Number(minForwarding)) {
+          if (Number(amountInUSD[0].amount) < Number(minForwarding)) {
+            // Under threshold - all to admin
             adminAmountToSend = Number(totalAmountReceived);
             userAmountToSend = 0;
           } else {
-            adminAmountToSend = Number(totalDeduction);
-            userAmountToSend = Number(totalAmountReceived) - Number(totalDeduction);
+            // Normal distribution
+            // Convert USD fee back to crypto amount
+            const feePercentage = totalDeduction / Number(amountInUSD[0].amount);
+            adminAmountToSend = Number(totalAmountReceived) * feePercentage;
+            userAmountToSend = Number(totalAmountReceived) - adminAmountToSend;
           }
         }
 
