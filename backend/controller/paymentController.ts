@@ -1371,11 +1371,11 @@ const settleCryptoTransaction = async ({
   userAddress,
 }: {
   tempAddressData: any;
-  receivedAmount: number;
+  receivedAmount: number;  // This is the admin fee amount
   currency: string;
   transactionId: string;
-  userAmount?: number;
-  userAddress?: string;
+  userAmount?: number;     // This is the merchant amount
+  userAddress?: string;    // Merchant wallet address
 }) => {
   try {
     const adminWalletAddress = getAdminWalletAddress(currency);
@@ -1392,32 +1392,167 @@ const settleCryptoTransaction = async ({
     );
 
     let fees;
-    let adminSendAmount = Number(receivedAmount);
-    let adminTransactionDetails;
-    let userTransactionDetails;
+    let merchantTransactionDetails;
     let totalBlockchainFee = 0;
+    let merchantSendAmount = 0;
 
+    // NEW APPROACH: Single transfer to merchant, admin fee stays in temp address for later sweep
+    // This eliminates nonce collision issues for account-based chains (ETH, TRX, BSC)
+    // and is more gas efficient as admin fees can be collected in batches
+
+    if (!userAmount || userAmount <= 0 || !userAddress) {
+      // No merchant amount (under threshold or error) - nothing to transfer now
+      // Admin fee stays in temp address for sweep cron
+      console.log(`[settleCryptoTransaction] No merchant transfer needed. Admin fee ${receivedAmount} ${currency} stays in temp address for sweep.`);
+      return {
+        transactionDetails: null,
+        userTransactionDetails: null,
+        sendAmount: 0,
+        blockchainFee: 0,
+        adminFeeRetained: receivedAmount,
+      };
+    }
+
+    // Calculate fees for merchant transfer
     if (currency === "USDT-TRC20" || currency === "USDT-ERC20") {
+      // Token transfers (handled separately)
       const wallet_type = currency === "USDT-ERC20" ? "ETH" : "TRX";
       const adminFeeWallet = await adminFeeModel.findOne({
         where: { wallet_type },
       });
 
       if (!adminFeeWallet) {
-        throw new Error(
-          `Admin fee wallet not found for ${wallet_type}.`
-        );
+        throw new Error(`Admin fee wallet not found for ${wallet_type}.`);
       }
 
-      let feeAmount;
-      if (currency === "USDT-ERC20") {
-        const usdtFees = await tatumApi.feeEstimation(
+      const contractAddress = currency === "USDT-ERC20" 
+        ? process.env.ETH_CONTRACT 
+        : process.env.TRX_CONTRACT;
+
+      fees = await tatumApi.feeEstimation(
+        currency,
+        tempAddressData.wallet_address,
+        userAddress,
+        Number(userAmount),
+        contractAddress
+      );
+
+      merchantSendAmount = Number(userAmount);
+      
+      merchantTransactionDetails = await tatumApi.assetToOtherAddress({
+        currency,
+        fromAddress: tempAddressData.wallet_address,
+        toAddress: userAddress,
+        privateKey: privateKey,
+        amount: merchantSendAmount,
+        fee: fees,
+        contractAddress,
+      });
+
+      totalBlockchainFee = Number(fees?.fast ?? 0);
+
+    } else {
+      // Native currency transfers
+      const canUseSingleUTXO = ["BTC", "LTC", "DOGE", "BCH"].includes(currency);
+
+      if (canUseSingleUTXO) {
+        // UTXO chains: Create single transaction with two outputs (merchant + admin)
+        fees = await tatumApi.feeEstimation(
           currency,
           tempAddressData.wallet_address,
-          adminWalletAddress,
-          Number(receivedAmount),
-          process.env.ETH_CONTRACT
+          userAddress,
+          Number(receivedAmount) + Number(userAmount)
         );
+
+        const feeToDeduct = fees?.fast ?? 0;
+        const adminAmount = Number(receivedAmount);
+        merchantSendAmount = Number(userAmount) - Number(feeToDeduct);
+
+        merchantTransactionDetails = await tatumApi.assetToOtherAddress({
+          currency,
+          fromAddress: tempAddressData.wallet_address,
+          toAddress: userAddress,  // Primary recipient is merchant
+          privateKey: privateKey,
+          amount: merchantSendAmount,
+          fee: String(fees.fast),
+          fromUTXO: [
+            {
+              txHash: transactionId,
+              index: 0,
+            },
+          ],
+          toUTXO: [
+            {
+              address: userAddress,
+              value: Number(merchantSendAmount),
+            },
+            {
+              address: adminWalletAddress,
+              value: Number(adminAmount),
+            },
+          ],
+        });
+
+        totalBlockchainFee = feeToDeduct;
+        
+        console.log(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${merchantSendAmount} + admin ${adminAmount}`);
+
+      } else {
+        // Account-based chains (ETH, TRX, BSC): Single transfer to merchant only
+        // Admin fee stays in temp address for batch sweep later
+        fees = await tatumApi.feeEstimation(
+          currency,
+          tempAddressData.wallet_address,
+          userAddress,
+          Number(userAmount)
+        );
+
+        const gasFee = Number(fees?.slow ?? 0);
+        merchantSendAmount = Number((Number(userAmount) - gasFee).toFixed(8));
+
+        if (merchantSendAmount <= 0) {
+          throw new Error(`Insufficient balance for merchant transfer after gas. Amount: ${userAmount}, Gas: ${gasFee}`);
+        }
+
+        console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant transfer ${merchantSendAmount} ${currency} (gas: ${gasFee})`);
+        console.log(`[settleCryptoTransaction] Admin fee ${receivedAmount} ${currency} retained in temp address for sweep`);
+
+        merchantTransactionDetails = await tatumApi.assetToOtherAddress({
+          currency,
+          fromAddress: tempAddressData.wallet_address,
+          toAddress: userAddress,
+          privateKey: privateKey,
+          amount: merchantSendAmount,
+          fee: fees,
+        });
+
+        totalBlockchainFee = gasFee;
+      }
+    }
+
+    return {
+      transactionDetails: merchantTransactionDetails,  // Now this is merchant tx, not admin
+      userTransactionDetails: null,  // No separate user tx needed
+      sendAmount: merchantSendAmount,
+      blockchainFee: totalBlockchainFee,
+      adminFeeRetained: Number(receivedAmount),  // Track admin fee for sweep
+    };
+  } catch (error) {
+    const message = getErrorMessage(error);
+    apiLogger.error(
+      "Failed to transfer funds",
+      {
+        currency,
+        tempAddress: tempAddressData.wallet_address,
+        receivedAmount,
+        userAmount,
+        error: message,
+      },
+      new Error(error)
+    );
+    throw error;
+  }
+};
         feeAmount = Number(Number(usdtFees?.fast)).toFixed(8);
 
         fees = await tatumApi.feeEstimation(
