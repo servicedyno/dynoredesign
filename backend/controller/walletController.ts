@@ -4082,4 +4082,10 @@ export default {
   getConfiguredCurrencies,
   getNetworkFees,
   calculatePaymentAmount,
+  // New: UPDATE with OTP
+  sendUpdateWalletOTP,
+  updateWalletWithOTP,
+  // New: DELETE with OTP (for main table)
+  sendDeleteWalletOTP as sendDeletePaymentWalletOTP,
+  deleteWalletWithOTP as deletePaymentWalletWithOTP,
 };
