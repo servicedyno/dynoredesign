@@ -32,10 +32,6 @@ walletRouter.post("/address/delete/send-otp", walletController.sendDeleteWalletO
 // Step 2: Verify OTP and delete
 walletRouter.post("/deleteWalletAddress", walletController.deleteWalletAddressWithOTP);
 
-// DELETE - Remove wallet from main payment system
-walletRouter.delete("/wallet/:wallet_id", walletController.deleteWalletAddress);
-walletRouter.post("/wallet/delete", walletController.deleteWalletAddress); // Alternative POST method
-
 // UPDATE - Update wallet in main payment system (2-step OTP flow)
 walletRouter.post("/wallet/update/send-otp", walletController.sendUpdateWalletOTP);
 walletRouter.post("/wallet/update", walletController.updateWalletWithOTP);
