@@ -1593,19 +1593,35 @@ const settleCryptoTransaction = async ({
         });
 
         if (userAmount && userAmount > 0 && userAddress) {
+          // For ETH/TRX/BSC: After the admin transaction, the temp address will have very little balance left
+          // We need to check if there's enough remaining for another transaction
+          const remainingBalance = Number(userAmount); // This is already set before admin transaction
+          
           const userFees = await tatumApi.feeEstimation(
             currency,
             tempAddressData.wallet_address,
             userAddress,
-            Number(userAmount)
+            remainingBalance
           );
 
           let userSendAmount;
           if (currency === "ETH" || currency === "TRX" || currency === "BSC") {
+            const userGasFee = Number(userFees?.slow ?? 0);
             userSendAmount = Number(
-              (Number(userAmount) - Number(userFees?.slow)).toFixed(6)
+              (remainingBalance - userGasFee).toFixed(6)
             );
-            totalBlockchainFee += userFees?.slow ?? 0;
+            totalBlockchainFee += userGasFee;
+            
+            // Safety check: if user amount after gas is too small or negative, skip this transaction
+            if (userSendAmount <= 0.000001) {
+              console.log(`[settleCryptoTransaction] Skipping user transaction - amount too small after gas: ${userSendAmount} ${currency}`);
+              return {
+                transactionDetails: adminTransactionDetails,
+                userTransactionDetails: null,
+                sendAmount: adminSendAmount,
+                blockchainFee: totalBlockchainFee,
+              };
+            }
           } else {
             userSendAmount = Number(
               (Number(userAmount) - Number(userFees?.fast)).toFixed(8)
