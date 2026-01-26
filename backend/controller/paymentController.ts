@@ -605,11 +605,24 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           })
         ).dataValues;
 
+        // Multi-tenant fix: Include company_id in wallet lookup
+        const walletWhereClause: any = {
+          user_id: Number(linkData.user_id),
+          wallet_type: data.currency,
+        };
+        
+        // Add company_id filter if present
+        if (linkData.company_id && linkData.company_id !== '' && linkData.company_id !== 'undefined' && linkData.company_id !== 'null') {
+          const companyId = parseInt(linkData.company_id);
+          if (!isNaN(companyId)) {
+            walletWhereClause.company_id = companyId;
+          }
+        } else {
+          walletWhereClause.company_id = null;
+        }
+        
         const walletData = await userWalletModel.findOne({
-          where: {
-            user_id: Number(linkData.user_id),
-            wallet_type: data.currency,
-          },
+          where: walletWhereClause,
           transaction,
         });
 
