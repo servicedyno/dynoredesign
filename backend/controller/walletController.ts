@@ -2699,16 +2699,18 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 403, "You don't have access to this company!");
     }
 
-    // Find the wallet with OTP
+    // Find the wallet with OTP - ensure string comparison
+    const otpString = String(otp).trim();
+    
     const walletWithOtp = await userModel.findOne({
       where: {
         user_id: user_id,
-        verified_otp: otp,
+        verified_otp: otpString,
       },
     });
 
     if (!walletWithOtp) {
-      console.log("inside this");
+      walletLogger.warn(`Invalid OTP attempt`, { user_id, otp_provided: otpString });
       return errorResponseHelper(
         res,
         400,
