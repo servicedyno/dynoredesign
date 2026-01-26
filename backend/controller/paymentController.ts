@@ -1851,6 +1851,7 @@ const cryptoVerification = async (address, webhook = true) => {
           const userPayload = {
             wallet_id: walletData.dataValues.wallet_id,
             user_id: customerData.adm_id,
+            company_id: customerData.company_id ? Number(customerData.company_id) : null,  // Multi-tenant: Include company_id
             payment_mode: tempData.mode,
             base_amount: Number(userAmountToSend).toFixed(8),
             base_currency: tempCurrency,
