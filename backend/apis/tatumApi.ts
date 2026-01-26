@@ -13,6 +13,25 @@ import tronweb from "tronweb";
 import { Crc32c } from "@aws-crypto/crc32c";
 import { buildUrl } from "../helper";
 
+// Testnet configuration helper
+const isTestnet = () => process.env.TATUM_TESTNET === 'true';
+const getTestnetType = () => process.env.TATUM_TESTNET_TYPE || 'ethereum-sepolia';
+
+// Get headers with optional testnet type
+const getTatumHeaders = async () => {
+  const tatumKey = await getTatumKey();
+  const headers: Record<string, string> = {
+    "x-api-key": tatumKey,
+  };
+  
+  if (isTestnet()) {
+    headers["x-testnet-type"] = getTestnetType();
+    console.log(`[Tatum] Using TESTNET mode: ${getTestnetType()}`);
+  }
+  
+  return headers;
+};
+
 // CRC32C helper using AWS Crypto library (pure JavaScript, works on all platforms)
 const crc32c = {
   calculate: (data: Buffer | string): number => {
