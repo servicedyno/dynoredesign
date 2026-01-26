@@ -9,7 +9,7 @@ import json
 from typing import Dict, Any
 
 # Configuration
-BASE_URL = "https://finance-hub-522.preview.emergentagent.com/api"
+BASE_URL = "https://dynopay-api-test.preview.emergentagent.com/api"
 TEST_EMAIL = "nomadly@moxx.co"
 TEST_PASSWORD = "test123"
 

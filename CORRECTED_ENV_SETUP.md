@@ -14,8 +14,8 @@
 - **Note**: MongoDB service in supervisor is a leftover from template but NOT used by DynoPay
 
 ### 2. **Backend URL Updated to Current Development URL**
-- **Previous URL**: https://server-manager-19.preview.emergentagent.com
-- **Current Development URL**: `https://3d3a5db3-8070-48c9-a09a-bd39302832b2.preview.emergentagent.com`
+- **Previous URL**: https://dynopay-api-test.preview.emergentagent.com
+- **Current Development URL**: `https://dynopay-api-test.preview.emergentagent.com`
 - Updated in both `/app/backend/.env` and `/app/frontend/.env`
 
 ### 3. **Backend Architecture Clarified**
@@ -49,7 +49,7 @@ DynoPay backend is a **Node.js/Express/TypeScript** application, NOT Python:
 ```bash
 PORT=8001                    # External port mapping
 API_SERVICE_PORT=3301        # API service port
-SERVER_URL=https://3d3a5db3-8070-48c9-a09a-bd39302832b2.preview.emergentagent.com
+SERVER_URL=https://dynopay-api-test.preview.emergentagent.com
 CHECKOUT_URL=https://checkout.dynopay.com
 ```
 
@@ -179,7 +179,7 @@ TELEGRAM_BOT_TOKEN=7098839658:AAFBGaj4OpIoH-HzVQ3h1rzf2DrvsVso9yI
 ```bash
 TELNYX_API_KEY=...
 TELNYX_VERIFY_PROFILE_ID=apidocs-overhaul
-PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
+PROFILE_ID=dynopay-api-test
 ```
 
 #### Tax & Identity Verification Services
@@ -189,8 +189,8 @@ TAX_DATA_API_URL=https://api.apilayer.com/tax_data
 TAX_DATA_API_KEY=If5U0zLLWBd3GKanYoE5H5zaSpLeQDGo
 
 # Veriff Identity Verification (KYC)
-VERIFF_API_KEY=7a372667-446f-4860-9634-e27aad20ec03
-VERIFF_API_SECRET=671d951f-32ae-4a0b-a7ad-3be4c2ca39de
+VERIFF_API_KEY=dynopay-api-test
+VERIFF_API_SECRET=dynopay-api-test
 ```
 
 #### Admin Configuration
@@ -201,7 +201,7 @@ CUSTOMER_ID=6708cc37177ff63b812c0db9
 
 ### Frontend Environment (/app/frontend/.env)
 ```bash
-REACT_APP_BACKEND_URL=https://3d3a5db3-8070-48c9-a09a-bd39302832b2.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://dynopay-api-test.preview.emergentagent.com
 WDS_SOCKET_PORT=443
 ENABLE_HEALTH_CHECK=false
 ```
@@ -209,8 +209,8 @@ ENABLE_HEALTH_CHECK=false
 ## 🎯 API Endpoints Available
 
 ### Main Backend API (Port 3300)
-- **Swagger Documentation**: `https://3d3a5db3-8070-48c9-a09a-bd39302832b2.preview.emergentagent.com/api/docs`
-- **Base API URL**: `https://3d3a5db3-8070-48c9-a09a-bd39302832b2.preview.emergentagent.com/api`
+- **Swagger Documentation**: `https://dynopay-api-test.preview.emergentagent.com/api/docs`
+- **Base API URL**: `https://dynopay-api-test.preview.emergentagent.com/api`
 
 ### API Service (Port 3301)
 - Additional API service for specific operations

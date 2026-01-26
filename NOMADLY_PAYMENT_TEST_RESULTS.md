@@ -152,7 +152,7 @@ const currencyData = await axios.post(
 
 **Current SERVER_URL:** 
 ```
-https://finance-hub-522.preview.emergentagent.com
+https://dynopay-api-test.preview.emergentagent.com
 ```
 
 **Issue:** API service should call `http://localhost:3300/api/pay/getCurrencyRates` for internal communication, not the external preview URL.
