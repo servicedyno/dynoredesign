@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://env-setup-22.preview.emergentagent.com"
+backend_url = "https://secure-wallet-api.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(

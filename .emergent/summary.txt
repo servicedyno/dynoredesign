@@ -1,139 +1,147 @@
-<analysis>**original_problem_statement**: The initial request was to update the base URL in the environment configuration files. However, the scope of work expanded significantly to include debugging, feature implementation, and major UX improvements to the API documentation.
+<analysis>**original_problem_statement:**
+The initial user request was to set up a full-stack application using a comprehensive list of provided environment variables. Following the setup, the user requested a series of critical features and bug fixes for the DynoPay crypto payment gateway application.
 
-The core tasks completed were:
-- Debugging and fixing backend startup issues.
-- Investigating and resolving a bug in a Redis-based cron job for fee wallet balance alerts.
-- Implementing robust validation and fixing multiple bugs related to data parsing (especially for  from Swagger UI) across company and user endpoints.
-- Adding a new email notification for when a company's profile is updated.
-- Systematically improving the Swagger UI/OpenAPI documentation for clarity, usability, and correctness across numerous endpoints, including , , and .
-- Refactoring the wallet management flow to enforce multi-tenancy (requiring ) and ensuring all Create, Update, and Delete operations are protected by a clearly documented OTP (One-Time Password) verification process.
+**PRODUCT REQUIREMENTS:**
+1.  **Unique Blockchain Wallets:** Ensure a merchant can only add one wallet address per blockchain type (e.g., one BTC, one ETH) for each company they manage.
+2.  **Fix OTP-Currency Bug:** A critical bug was identified where validating an address for one currency (e.g., ETH) could lead to it being saved under a different currency (e.g., BTC) during OTP verification. This needed to be fixed to ensure data integrity.
+3.  **Fix Multi-Tenancy in Payment Forwarding:** The payment forwarding logic was not using the , causing a critical multi-tenancy flaw where payments could be sent to the wrong company's wallet if a user managed multiple companies.
+4.  **Implement Full, Secure CRUD for Wallets:** The main payment forwarding wallet system lacked complete and secure management features. The requirement was to implement full CRUD (Create, Read, Update, Delete) operations, ensuring all write actions (Create, Update, Delete) are protected by a two-step OTP verification process.
+5.  **API and Documentation Cleanup:** The API had two confusing wallet systems (a primary one and a legacy one). The user requested to clarify this by updating the  endpoint to return necessary data (), and then to clean up the Swagger UI entirely, removing all mentions and endpoints related to the legacy system to prevent confusion.
 
 **User's preferred language**: English
 
-**what currently exists?**: The project is a full-stack application with a React frontend and a Node.js/TypeScript backend that uses a PostgreSQL database. The backend is launched via a Python proxy script. It features JWT-based authentication, Redis for caching, Brevo for emails, and Sequelize as the ORM. The application provides functionalities for managing companies, users, API keys, and multi-currency wallets. Significant improvements have been made to the Swagger UI to make it more user-friendly and accurate.
+**what currently exists?**
+The project is a full-stack crypto payment gateway application named DynoPay, built with a Node.js/Express (TypeScript) backend, a React frontend, and a PostgreSQL database. The environment is fully configured with the provided credentials. The application features two wallet management systems: a primary, multi-tenant system for payment forwarding () and a legacy system that is being phased out. The primary system now has full, secure, OTP-protected CRUD operations and the critical multi-tenancy bug in payment forwarding has been resolved. The Swagger API documentation has been cleaned up to exclusively feature the endpoints for the primary payment system.
 
 **Last working item**:
--   **Last item agent was working**: The user requested a complete overhaul of how wallet management is presented in Swagger UI. The goal was to ensure that only the essential CRUD (Create, Read, Update, Delete) endpoints for merchant wallet addresses are visible. Furthermore, all CUD operations must be protected by an OTP verification flow, which needed to be explicitly and clearly documented in the UI. All other complex wallet operation endpoints (like transactions, exchanges, etc.) were to be hidden from Swagger.
--   **Status**: USER VERIFICATION PENDING
--   **Agent Testing Done**: N (The changes were to documentation and route visibility, which the agent confirmed by inspecting the generated Swagger UI content. No new business logic was added that required a test script.)
--   **Which testing method agent to use?**: manual testing by curl
--   **User Testing Done**: N
+-   **Last item agent was working:** The agent finished cleaning up the Swagger documentation by editing  to remove the last remaining legacy endpoint (). This was done to ensure developers are only exposed to the correct, primary payment forwarding wallet system.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** Manual testing by . The agent needs to restart the backend and then inspect the  endpoint to confirm the legacy endpoint has been removed from the Swagger documentation.
+-   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   There are no outstanding bugs or in-progress issues. The primary pending item is user verification of the last set of changes made to the Swagger UI for wallet endpoints.
+There are no outstanding bugs or user-reported issues. The primary pending work is to verify the last change and conclude the CRUD implementation task.
 
 **In progress Task List**:
--   There are no tasks currently in progress.
+-   **Task 1: Finalize and Verify Full Secure CRUD for Wallets** (Priority: P0)
+    -   **Where to resume:** The agent has just finished editing the Swagger file () to remove legacy endpoints. The next step is to restart the backend to apply these changes.
+    -   **What will be achieved with this?** This will complete the user's request for a clean, secure, and fully functional set of API endpoints for managing payment forwarding wallets, with no legacy system confusion.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
--   **Future Tasks**:
-    -   **P1: Continue Comprehensive Swagger UI/UX Improvements**: While major endpoints (, , ) were improved, a full pass on all remaining endpoints could be beneficial. This includes adding more detailed examples for complex workflows (e.g., subscriptions, referrals) and ensuring every endpoint has clear request/response examples.
-    -   **P2: Add API Name to API Key Creation**: The user mentioned that  should be a required field when creating an API key, but this was not implemented as the focus shifted to wallet management. This should be added to the  and its corresponding Swagger documentation in .
+-   **Future Tasks:**
+    -   **Refactor Legacy Code (P1):** The legacy wallet system ( and associated controller logic) still exists in the codebase. It should be fully removed to reduce technical debt and prevent future bugs. This involves deleting the model file and any functions/routes in  and  that reference it.
 
 **Completed work in this session**
--   **Environment & Startup**:
-    -   Updated backend environment variables ().
-    -   Fixed backend startup failures by installing missing Node.js dependencies.
--   **Bug Fixes**:
-    -   Resolved a critical bug in  where an empty Redis object was incorrectly evaluated, preventing low-balance alerts from being re-triggered.
-    -   Fixed multiple JSON parsing errors in , , and their respective middlewares, which caused  on update operations.
-    -   Corrected a validation flaw in  that caused  on company creation due to mishandling of optional  from Swagger defaults.
-    -   Fixed a backend-crashing TypeScript syntax error in .
--   **Feature Implementation**:
-    -   Added a new email notification in  and  that is sent to the account owner when a company profile is updated.
--   **Swagger UI & Validation Overhaul**:
-    -   Systematically refactored  endpoints (, ) to accept individual form fields instead of a single JSON string, dramatically improving Swagger UI usability. The backend was made backward compatible.
-    -   Made  and  mandatory for company updates, reflecting this in both validation logic () and Swagger docs.
-    -   Made the  number field optional for company updates.
-    -   Clarified and documented the entire two-step OTP flow for wallet address management in .
-    -   Added the missing  field to the wallet creation and verification flow.
-    -   Enforced multi-tenancy by making  a required, validated parameter for all wallet CUD operations in  and its Swagger documentation.
-    -   Cleaned up the Swagger UI to hide complex, non-CRUD wallet operation endpoints and re-enabled the direct add route, presenting a simplified and secure interface for merchants as requested.
+-   **Environment Setup:** Successfully configured the backend and frontend with an extensive list of user-provided environment variables.
+-   **Multi-Tenancy Payment Forwarding Fix:** Patched a critical bug where payment forwarding logic didn't use . This involved updating  and the payment processing logic in .
+-   **OTP Currency Validation Bug Fix:** Resolved a major data corruption bug by adding an  field to the  model and enforcing a match during OTP verification in .
+-   **Full CRUD Implementation for Payment Wallets:**
+    -   **CREATE (Secure):** Implemented a two-step OTP flow ( -> ).
+    -   **READ:** Ensured the  endpoint returns all necessary data, including .
+    -   **UPDATE (Secure):** Created new two-step OTP endpoints (, ).
+    -   **DELETE (Secure):** Implemented an OTP-protected delete flow (, ).
+-   **Swagger Documentation Overhaul:** Cleaned the API documentation () to remove all legacy endpoints, providing a clear and focused guide for the primary payment forwarding wallet system.
+
+**Known issue recurrence from previous fork**
+-   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend**: Node.js with TypeScript, Express.js
--   **Database**: PostgreSQL with Sequelize ORM
--   **API Documentation**: Swagger (OpenAPI 3.0)
--   **Authentication**: JSON Web Tokens (JWT)
--   **Caching/Job Cooldown**: Redis
--   **Email Service**: Brevo
--   **Process Management**: A Python script () launches the Node.js backend, which is managed by backend                          RUNNING   pid 48, uptime 0:00:05
-code-server                      STOPPED   Not started
-frontend                         STOPPED   Jan 25 10:10 PM
-mongodb                          RUNNING   pid 50, uptime 0:00:05
-nginx-code-proxy                 RUNNING   pid 47, uptime 0:00:05
-supervisor> .
+-   **Backend:** Node.js, Express.js, TypeScript, Sequelize ORM
+-   **Frontend:** React
+-   **Database:** PostgreSQL
+-   **Authentication:** JWT
+-   **API Documentation:** Swagger/OpenAPI
+-   **Integrations:** Tatum, Brevo (for email), Google KMS, Flutterwave
 
 **key DB schema**
--   **tbl_companies**: 
--   **tbl_user_wallet**: 
--   **tbl_admin_fee_wallet**: 
+-   **tbl_user:** User data, including fields for OTP management (, , ).
+-   **tbl_user_wallet:** The primary, multi-tenant table for merchant payment forwarding wallets. Contains , , , .
+-   **tbl_user_temp_address:** Stores temporary addresses for incoming payments, now includes .
+
+**changes in tech stack**
+-   The system prompt incorrectly stated the backend is FastAPI and the database is MongoDB. The actual stack is **Node.js/Express/TypeScript** and **PostgreSQL**.
 
 **All files of reference**
--   : Major logic changes for validation, data parsing, and adding email notifications.
--   : Heavily modified to implement OTP flow, multi-tenancy (), and new fields ().
--   : Updated validation schemas and data parsing logic.
--   : Fixed data parsing logic.
--   : Major UX improvements for form data.
--   : Major UX improvements and syntax error fix.
--   : Completely overhauled to clarify the OTP flow and hide irrelevant endpoints.
--   : Added the  function.
--   : Modified to control route visibility.
--   : Updated with server URLs.
+-   : Central logic for all wallet CRUD operations. Heavily modified.
+-   : Modified to fix the multi-tenancy payment forwarding bug.
+-   : Updated with new routes for secure CRUD operations.
+-   : The OpenAPI specification file for wallet endpoints. Significantly cleaned and updated.
+-   : Updated to include .
+-   : Updated to include .
+-   : The schema definition for the primary wallet table.
+
+**Areas that need refactoring**:
+-   **Legacy Wallet System:** The codebase still contains the models, controller logic, and routes for a legacy wallet system (). This should be completely removed to eliminate technical debt, rather than just being hidden from the Swagger UI.
+-   **Controller Size:**  is excessively large and handles logic for two systems. It should be split into smaller, more focused modules.
+
+**key api endpoints**
+-   : Read payment forwarding wallets.
+-   : Initiate adding a new wallet (sends OTP).
+-   : Complete adding a new wallet (verifies OTP).
+-   : Initiate updating a wallet (sends OTP).
+-   : Complete updating a wallet (verifies OTP).
+-   : Initiate deleting a wallet (sends OTP).
+-   : Complete deleting a wallet (verifies OTP).
 
 **Critical Info for New Agent**
--   The user is highly focused on the Swagger UI experience. It must be intuitive, accurate, and reflect the true business logic (e.g., optional/required fields, multi-step operations). Any changes to backend logic must be mirrored in the Swagger documentation.
--   The backend has a pattern of handling  where data can come either as a single  field (as a JSON string) or as individual form fields. The controllers for  and  have been updated to handle both for backward compatibility. New implementations should prefer individual fields for better Swagger UI UX.
--   Wallet address management is a critical multi-tenant feature. All CUD operations require a  and must go through the two-step OTP verification process ( -> ).
+-   The backend stack is **Node.js/Express/TypeScript** with **PostgreSQL**, not FastAPI/MongoDB as stated in the system prompt.
+-   The application has two wallet systems. All development must focus on the primary payment forwarding system, which uses the  (). The legacy system () should be ignored and is a candidate for removal.
+-   All write operations (Create, Update, Delete) on the primary wallet system are now protected by a two-step OTP flow.
 
 **documents and test reports created in this job**
--   
--   
+-   /app/OTP_CURRENCY_FIX_COMPLETE_REPORT.md
+-   /app/WALLET_API_ENDPOINTS_GUIDE.md
+-   /app/WALLET_CRUD_ANALYSIS.md
+-   /app/test_otp_currency_validation.py
+-   /app/test_real_otp_validation.py
+-   /app/test_multitenant_payment_forwarding.py
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**:  - **Resolved**: Agent explained the  field and documented the endpoint.
-2.  **User**:  - **Resolved**: Agent removed the insecure direct-add method and renamed the OTP flow.
-3.  **User**:  - **Resolved**: Agent clarified the endpoint groups.
-4.  **User**:  - **Resolved**: Agent re-enabled the route and cleaned up Swagger to only show merchant-facing CRUD endpoints.
-5.  **User**:  - **Resolved**: This was the last major task. The agent updated Swagger to clearly document the CUD + OTP flow.
-6.  **User**:  - **Resolved**: Agent added  to the wallet creation flow.
-7.  **User**:  - **Resolved (Partially)**: Agent implemented the  requirement for wallets but did not address the  for API keys.
-8.  **User**:  - **Resolved**: Agent implemented this email notification.
-9.  **User**:  - **Resolved**: Agent enforced this for company updates.
-10. **User**:  - **Resolved**: Agent analyzed and documented this entire flow in Swagger.
+1.  **Request:** Remove all legacy wallet CRUD operations from Swagger UI, leaving only the primary payment forwarding wallet system. **Status: In Progress (code edited, verification pending).**
+2.  **Question:** Is  the table used for payment forwarding? **Status: Answered (Yes).**
+3.  **Question:** Is the  multi-tenant? **Status: Answered (Yes, but a critical bug was found and fixed).**
+4.  **Instruction:** A 4-step plan to fix the multi-tenancy bug. **Status: Completed.**
+5.  **Question:** Do we have full, secure CRUD for the multi-tenant wallet model with OTP? **Status: Answered (No, Update/Delete were missing/insecure).**
+6.  **Confirmation:** yes - go ahead and implement full secure CRUD. **Status: Completed.**
+7.  **Question:** Who is the author stdev321? **Status: Answered (No evidence found).**
+8.  **Clarification:** The functionality was part of two merged repos, not built by Emergent. **Status: Acknowledged and clarified.**
+9.  **Question:** Who authored the wallet forwarding mechanism? **Status: Answered (Krushang Chauhan).**
+10. **Instruction:** Clean up delete endpoints in Swagger to only show the primary payment system. **Status: Completed and superseded by the final cleanup request.**
 
 **Project Health Check:**
--   **Running**: Both frontend and backend services are stable and running.
--   **No Known Regressions**: The critical bugs related to data parsing and backend crashes have been resolved. The application is in a much more stable state than at the beginning of the session.
+-   **Broken:** The fundamental discrepancy between the system prompt's description of the tech stack (FastAPI/MongoDB) and the actual codebase (Node.js/PostgreSQL) is a major risk for future work.
+-   **Mocked:** None.
 
 **3rd Party Integrations**
--   **PostgreSQL**: Database
--   **Redis**: Caching and job cooldowns
--   **Brevo**: Email Service (Transactional emails) - requires 
--   **APILayer Tax Data API**: For VAT/tax validation - requires 
--   **Veriff**: For KYC identity verification - requires  and 
--   **Tatum**: Crypto API - requires 
--   **Flutterwave**: Payment Gateway - requires , 
+-   **Tatum:** Crypto node operations (API Key provided)
+-   **Flutterwave:** Payment processing (API Keys provided)
+-   **Brevo (Sendinblue):** Transactional emails (API Key provided)
+-   **Google Cloud KMS:** Key management (Credentials provided)
+-   **Blockchair, BlockBee, Crypto APIs:** Blockchain data (API Keys provided)
+-   **FastForex:** Currency conversion (API Key provided)
+-   **Infobip, Telnyx:** SMS/Verification (API Keys provided)
+-   **APILayer Tax Data:** Tax information (API Key provided)
+-   **Veriff:** KYC (API Keys provided)
+-   **Redis:** Caching/sessions (URL provided)
 
 **Testing status**
--   **Testing agent used after significant changes**: NO
--   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**:
-    -   
-    -   
-    -   
-    -   
-    -   
-    -   
-    -   
-    -   
-    -   
-    -   
-    -   
--   **Known regressions**: None.
+-   **Testing agent used after significant changes:** NO
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:**
+    -   /app/test_otp_currency_validation.py
+    -   /app/test_real_otp_validation.py
+    -   /app/test_multitenant_payment_forwarding.py
+-   **Known regressions:** None.
+
+**Credentials to test flow:**
+-   The user  has been used for testing. The token has expired, but the agent can log in again.
 
 **What agent forgot to execute**
--   The user requested to make  a required field for API key creation, but the agent did not implement this change. The focus shifted to wallet management immediately after. This is captured in Upcoming and Future Tasks.</analysis>
+-   The agent edited the Swagger documentation file () to remove legacy endpoints but did not restart the backend service to apply the change and verify its effect on the live  documentation. This is the immediate next step.</analysis>
