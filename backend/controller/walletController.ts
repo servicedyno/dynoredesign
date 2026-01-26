@@ -3323,6 +3323,32 @@ const deletePaymentWalletWithOTP = async (
       { user_id, wallet_id, company_id }
     );
 
+    // Send confirmation email
+    const companyData = await companyModel.findOne({
+      where: { company_id }
+    });
+    
+    const companyName = companyData?.dataValues.company_name || "Your Company";
+    const maskAddress = (addr: string) => `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}`;
+    
+    await sendEmail(
+      userData.email,
+      userData.name,
+      `Wallet Removed - ${wallet.dataValues.wallet_type}`,
+      `
+        <div style="margin: 24px 0;">
+          <h3 style="color: #dc3545; margin: 0 0 16px 0;">🗑️ Wallet Successfully Removed</h3>
+          <p style="margin: 8px 0;"><strong>Company:</strong> ${companyName}</p>
+          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${wallet.dataValues.wallet_type}</p>
+          <p style="margin: 8px 0;"><strong>Removed Address:</strong> ${maskAddress(wallet.dataValues.wallet_address)}</p>
+          <div style="margin-top: 20px; padding: 12px; background-color: #f8d7da; border-left: 4px solid: #dc3545; border-radius: 4px;">
+            <p style="margin: 0; font-size: 13px; color: #721c24;">🚨 This wallet address has been removed from your account. If you did not perform this action, please contact support immediately.</p>
+          </div>
+        </div>
+      `,
+      false
+    );
+
     return successResponseHelper(res, 200, "Wallet address removed successfully!", {
       removed: true,
       wallet_id: wallet.dataValues.wallet_id,
