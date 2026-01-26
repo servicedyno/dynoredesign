@@ -2037,11 +2037,13 @@ const cryptoVerification = async (address, webhook = true) => {
               commit: false,
             };
           } else if (customerData?.pathType.includes("cryptoPayment") && overPayment) {
-            await customerWalletModel.increment("amount", {
-              by: Number(newAmount[0].amount),
-              where: { customer_id: Number(customerData.customer_id) },
-              transaction,
-            });
+            if (customerData.customer_id) {
+              await customerWalletModel.increment("amount", {
+                by: Number(newAmount[0].amount),
+                where: { customer_id: Number(customerData.customer_id) },
+                transaction,
+              });
+            }
           } else {
             const finalAmount = await currencyConvert({
               sourceCurrency: tempCurrency,
@@ -2049,11 +2051,13 @@ const cryptoVerification = async (address, webhook = true) => {
               amount: totalAmountReceived,
               fixedDecimal: false,
             });
-            await customerWalletModel.increment("amount", {
-              by: Number(finalAmount[0].amount),
-              where: { customer_id: Number(customerData.customer_id) },
-              transaction,
-            });
+            if (customerData.customer_id) {
+              await customerWalletModel.increment("amount", {
+                by: Number(finalAmount[0].amount),
+                where: { customer_id: Number(customerData.customer_id) },
+                transaction,
+              });
+            }
           }
         }
 
