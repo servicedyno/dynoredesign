@@ -87,7 +87,7 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 - **Path Definition Files** created in `/app/backend/swagger/paths/`:
   - `user.ts` - User Management (16 endpoints)
   - `payment.ts` - Payment Processing (17 endpoints) **with realistic request/response examples**
-  - `wallet.ts` - Wallet Management (20 endpoints)
+  - `wallet.ts` - Wallet Management (9 endpoints) **CLEANED - Legacy endpoints removed**
   - `admin.ts` - Admin Operations (15 endpoints)
   - `subscription.ts` - Subscriptions (5 endpoints)
   - `apiKeys.ts` - API Keys Management (15 endpoints)
@@ -102,6 +102,7 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 - **Payment Examples Added**: E-commerce checkout, invoice payment, crypto payment flows with multiple scenarios
 - **Webhook Documentation**: 8 merchant webhook payload examples (payment.completed, pending, confirming, partial, expired, failed, refunded) + 3 Tatum internal webhook examples
 - **New Schemas Added (January 2026)**: Referral, ReferralReward, KBCategory, KBArticle
+- **Swagger Cleanup (January 2026)**: Removed all legacy wallet endpoints (`getWalletAddresses`, etc.), now shows only primary payment forwarding wallet system
 
 ### Phase 14: Referral System ✅ (January 2026)
 - **Controller**: `/app/backend/controller/referralController.ts` (488 lines)
