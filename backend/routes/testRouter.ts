@@ -11,6 +11,8 @@ import { getBlockchainThreshold } from "../utils/feeConfigUtils";
 import { paymentController } from "../controller";
 import { authMiddleware } from "../middleware";
 import sequelize from "../utils/dbInstance";
+import tatumApi from "../apis/tatumApi";
+import { ethers } from "ethers";
 
 const testRouter = express.Router();
 
