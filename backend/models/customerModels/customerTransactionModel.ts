@@ -70,8 +70,9 @@ const customerTransactionModel = sequelize.define(
   }
 );
 
-// customerTransactionModel
-//   .sync({ alter: false })
-//   .then(() => console.log("tbl_customer_transaction created"));
+// Sync to ensure schema matches model (customer_id should be nullable)
+customerTransactionModel
+  .sync({ alter: true })
+  .then(() => console.log("tbl_customer_transaction synced"));
 
 export default customerTransactionModel;
