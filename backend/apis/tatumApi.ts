@@ -836,7 +836,7 @@ const batchFeeEstimation = async ({
           : Math.floor((gasFees?.gasLimit * 25) / 100),
     };
   } else if (currency === "BCH") {
-    const tatumKey = await getTatumKey();
+    const headers = await getTatumHeaders();
     const {
       data: { result },
     } = await axios.post(
@@ -847,11 +847,7 @@ const batchFeeEstimation = async ({
         method: "estimatefee",
         params: [],
       },
-      {
-        headers: {
-          "x-api-key": tatumKey,
-        },
-      }
+      { headers }
     );
     const bytes = ((bchInputs + 1) * 148 + 2 * 34 + 10) / 1000;
     fees = {
