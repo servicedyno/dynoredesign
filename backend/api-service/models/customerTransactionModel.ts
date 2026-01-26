@@ -25,13 +25,8 @@ const customerTransactionModel = sequelize.define(
     },
     customer_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: "tbl_customer",
-        key: "customer_id",
-      },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
+      allowNull: true,  // Allow null for payment links (anonymous customers)
+      // Foreign key removed to allow null values - customer may not exist for payment links
     },
     payment_mode: {
       type: DataTypes.STRING,
