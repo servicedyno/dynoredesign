@@ -25,7 +25,7 @@ const customerTransactionModel = sequelize.define(
     },
     customer_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,  // Allow null for payment links (anonymous customers)
       references: {
         model: "tbl_customer",
         key: "customer_id",
