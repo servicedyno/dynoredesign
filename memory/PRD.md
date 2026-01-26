@@ -164,6 +164,12 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 1. **POST /api/userApi/createPlan** - 500 Error (null pointer when no API for company)
 2. **POST /api/pay/getCurrencyRates** - 500 Error (param validation issue)
 
+### Feature Enhancements (January 2026):
+- **GET /api/dashboard/fee-tiers** - Now returns user's current tier based on transaction volume
+  - Added `is_current` flag to each tier
+  - Added `user_tier` object with: current_tier, monthly_volume, percent_to_next_tier, amount_to_next_tier, next_tier
+  - Supports optional `company_id` filter for company-specific volumes
+
 ---
 
 ## Remaining Work
