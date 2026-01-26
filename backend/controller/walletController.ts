@@ -3190,12 +3190,15 @@ const deletePaymentWalletWithOTP = async (
 
     const user_id = userData.user_id;
 
-    // Verify OTP
+    // Verify OTP - ensure string comparison
+    const otpString = String(otp).trim();
+    
     const user = await userModel.findOne({
-      where: { user_id, verified_otp: otp },
+      where: { user_id, verified_otp: otpString },
     });
 
     if (!user) {
+      walletLogger.warn(`Invalid OTP attempt`, { user_id, otp_provided: otpString });
       return errorResponseHelper(res, 400, "Invalid OTP!");
     }
 
