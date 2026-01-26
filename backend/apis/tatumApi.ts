@@ -168,6 +168,12 @@ const getTatumSDK = async () => {
 
 const getTatumKey = async () => {
   try {
+    // Use testnet key if in testnet mode
+    if (isTestnet() && process.env.TATUM_TESTNET_KEY) {
+      console.log('[getTatumKey] Using TESTNET key');
+      return process.env.TATUM_TESTNET_KEY;
+    }
+    
     let tatumKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
     if (!tatumKey) {
       const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
