@@ -637,6 +637,29 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           where: { wallet_type: data.currency },
         });
 
+        // Send admin fee notification email for card payments
+        try {
+          const adminEmail = process.env.ADMIN_EMAIL;
+          const totalFee = platformCharge + blockchainCharge;
+          if (adminEmail && totalFee > 0) {
+            const merchantAmount = data.amount_settled - platformCharge - blockchainCharge;
+            await sendAdminFeeReceivedEmail(
+              adminEmail,
+              "DynoPay Admin",
+              totalFee.toFixed(2),
+              data.currency,
+              data.transaction_id || data.id,
+              linkData?.company_name || "Unknown Company",
+              merchantAmount.toFixed(2),
+              data.amount_settled.toFixed(2)
+            );
+            
+            console.log(`[Admin Fee Notification - Card] Sent email for ${totalFee} ${data.currency} from Company ${linkData?.company_id || 'N/A'}`);
+          }
+        } catch (emailError) {
+          console.error("[Admin Fee Notification - Card] Email failed:", emailError);
+        }
+
         await userWalletModel.update(
           {
             amount: Number(
