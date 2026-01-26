@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://multi-tenant-pay-1.preview.emergentagent.com
+SERVER_URL=https://repo-env-config.preview.emergentagent.com
 ```
 
 **Impact:**

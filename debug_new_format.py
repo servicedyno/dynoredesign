@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://multi-tenant-pay-1.preview.emergentagent.com"
+backend_url = "https://repo-env-config.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(
