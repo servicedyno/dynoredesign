@@ -3147,6 +3147,7 @@ const sendDeletePaymentWalletOTP = async (
     // Send OTP email
     await sendEmail(
       userData.email,
+      userData.name,
       "Delete Wallet Address - OTP Verification",
       `Your OTP for deleting wallet address is: ${randomNumberOTP}. This action is permanent. Valid for 5 minutes.`
     );
