@@ -1165,9 +1165,14 @@ const Crypto = async (
     const userMnemonic = walletData.mnemonic;
     // Fix: Handle null/undefined/NaN last_index values
     const currentIndex = walletDetails.last_index;
-    const latestIndex = (currentIndex === null || currentIndex === undefined || isNaN(Number(currentIndex))) 
+    let latestIndex = (currentIndex === null || currentIndex === undefined || isNaN(Number(currentIndex))) 
       ? 1 
       : Number(currentIndex) + 1;
+    
+    // Extra safeguard: ensure latestIndex is a valid integer
+    if (isNaN(latestIndex) || !Number.isFinite(latestIndex)) {
+      latestIndex = 1;
+    }
 
     let { address, privateKey } = await tatumApi.generateUserAddress({
       currency,
