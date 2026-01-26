@@ -1716,13 +1716,36 @@ const cryptoVerification = async (address, webhook = true) => {
           where: { temp_id: tempData.temp_id },
         });
       } else {
+        // Multi-tenant fix: Include company_id and user_id to ensure we get the right address
+        const tempAddressWhereClause: any = {
+          wallet_address: address,
+          wallet_type: tempCurrency,
+        };
+        
+        // Add user_id for better isolation
+        if (customerData?.adm_id) {
+          tempAddressWhereClause.user_id = customerData.adm_id;
+        }
+        
+        // Add company_id if present
+        if (customerData?.company_id && customerData.company_id !== '' && 
+            customerData.company_id !== 'undefined' && customerData.company_id !== 'null') {
+          const companyId = parseInt(customerData.company_id);
+          if (!isNaN(companyId)) {
+            tempAddressWhereClause.company_id = companyId;
+          }
+        }
+        
         const tempAddressDataArray = await userTempAddressModel.findAll({
-          where: {
-            wallet_address: address,
-            wallet_type: tempCurrency,
-          },
+          where: tempAddressWhereClause,
+          order: [['created_at', 'DESC']],  // Get the most recent one
         });
-        tempAddressData = tempAddressDataArray[tempAddressDataArray.length - 1].dataValues;
+        
+        if (!tempAddressDataArray || tempAddressDataArray.length === 0) {
+          throw new Error(`No temp address found for ${address}`);
+        }
+        
+        tempAddressData = tempAddressDataArray[0].dataValues;
       }
 
       const isFullPayment = Number(receivedAmount) >= Number(tempData?.amount);
