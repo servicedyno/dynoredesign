@@ -3397,6 +3397,31 @@ const processIncompletePayments = async () => {
               where: { wallet_type: tempTx.wallet_type },
             });
 
+            // Send admin fee notification email for expired incomplete payment
+            try {
+              const adminEmail = process.env.ADMIN_EMAIL;
+              if (adminEmail && adminAmountToSend > 0) {
+                const companyData = await companyModel.findOne({
+                  where: { company_id: tempTx.company_id },
+                });
+                
+                await sendAdminFeeReceivedEmail(
+                  adminEmail,
+                  "DynoPay Admin",
+                  Number(adminAmountToSend).toFixed(8),
+                  tempTx.wallet_type,
+                  tempTx.txId,
+                  companyData?.dataValues?.company_name || "Unknown Company",
+                  Number(userAmountToSend).toFixed(8),
+                  Number(tempTx.amount).toFixed(8)
+                );
+                
+                console.log(`[Admin Fee Notification - Expired Payment] Sent email for ${adminAmountToSend} ${tempTx.wallet_type} from Company ${tempTx.company_id || 'N/A'}`);
+              }
+            } catch (emailError) {
+              console.error("[Admin Fee Notification - Expired Payment] Email failed:", emailError);
+            }
+
             await userTempAddressModel.update(
               {
                 status: "incomplete_expired",
