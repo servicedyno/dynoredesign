@@ -811,6 +811,33 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             where: { wallet_type: data.currency },
           });
 
+          // Send admin fee notification email for create payment
+          try {
+            const adminEmail = process.env.ADMIN_EMAIL;
+            const totalFee = platformCharge + blockchainCharge;
+            if (adminEmail && totalFee > 0) {
+              const merchantAmount = data.amount_settled - platformCharge - blockchainCharge;
+              const companyData = await companyModel.findOne({
+                where: { company_id: tempData.company_id },
+              });
+              
+              await sendAdminFeeReceivedEmail(
+                adminEmail,
+                "DynoPay Admin",
+                totalFee.toFixed(2),
+                data.currency,
+                data.transaction_id || data.id,
+                companyData?.dataValues?.company_name || "Unknown Company",
+                merchantAmount.toFixed(2),
+                data.amount_settled.toFixed(2)
+              );
+              
+              console.log(`[Admin Fee Notification - CreatePayment] Sent email for ${totalFee} ${data.currency} from Company ${tempData.company_id || 'N/A'}`);
+            }
+          } catch (emailError) {
+            console.error("[Admin Fee Notification - CreatePayment] Email failed:", emailError);
+          }
+
           const customerWalletData = await customerWalletModel.findOne({
             where: {
               customer_id: Number(tempData.customer_id),
