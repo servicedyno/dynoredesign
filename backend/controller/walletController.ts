@@ -3169,9 +3169,9 @@ const sendDeletePaymentWalletOTP = async (
 };
 
 // ============================================
-// DELETE WALLET WITH OTP - Step 2: Verify and Delete
+// DELETE WALLET WITH OTP - Step 2: Verify and Delete (For Payment Forwarding Wallets)
 // ============================================
-const deleteWalletWithOTP = async (
+const deletePaymentWalletWithOTP = async (
   req: express.Request,
   res: express.Response
 ) => {
