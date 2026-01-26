@@ -2925,6 +2925,7 @@ const sendUpdateWalletOTP = async (
     // Send OTP email
     await sendEmail(
       userData.email,
+      userData.name,
       "Update Wallet Address - OTP Verification",
       `Your OTP for updating wallet address is: ${randomNumberOTP}. Valid for 5 minutes.`
     );
