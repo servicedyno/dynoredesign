@@ -1236,8 +1236,8 @@ const Crypto = async (
       base_currency: currency,
       transaction_type: "CREDIT",
       status: "pending",
-      customer_id: tokenData.customer_id ? Number(tokenData.customer_id) : null,
-      company_id: tokenData.company_id ? Number(tokenData.company_id) : null,
+      customer_id: (tokenData.customer_id && !isNaN(Number(tokenData.customer_id))) ? Number(tokenData.customer_id) : null,
+      company_id: (tokenData.company_id && !isNaN(Number(tokenData.company_id))) ? Number(tokenData.company_id) : null,
     };
     console.log(userPayload);
 
