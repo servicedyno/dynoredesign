@@ -2761,6 +2761,7 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
         where: {
           user_id,
           wallet_type: currency,
+          company_id: null, // Only update wallets not yet assigned to a company
         },
       }
     );
