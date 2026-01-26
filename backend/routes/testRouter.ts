@@ -10,7 +10,7 @@ import { calculateTransactionFees, getBlockchainConfig } from "../controller/ind
 import { getBlockchainThreshold } from "../utils/feeConfigUtils";
 import { paymentController } from "../controller";
 import { authMiddleware } from "../middleware";
-import sequelize from "../config/database";
+import sequelize from "../utils/dbInstance";
 
 const testRouter = express.Router();
 
