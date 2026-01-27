@@ -3253,6 +3253,13 @@ const checkFeeBalance = async () => {
         );
       }
 
+      // Skip currency conversion if amount is null, undefined, or 0
+      if (amount === null || amount === undefined || amount === 0) {
+        console.log(`[checkFeeBalance] Skipping ${wallet_type} - no balance amount available`);
+        textData += `\n Your ${wallet_type} fee wallet has no balance or amount unavailable.`;
+        continue;
+      }
+
       const tempData = await currencyConvert({
         currency: ["USD"],
         sourceCurrency: wallet_type,
