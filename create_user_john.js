@@ -56,11 +56,11 @@ async function createUser() {
     console.log('🏢 Creating company...');
     const companyResult = await client.query(`
       INSERT INTO tbl_company (
-        user_id, company_name, email, phone, address, 
-        country, state, city, postal_code, status, 
+        user_id, company_name, email, mobile, address_line1, 
+        country, state, city, zip_code, 
         "createdAt", "updatedAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
       RETURNING company_id, company_name
     `, [
       user.user_id, 
@@ -71,8 +71,7 @@ async function createUser() {
       'United States',
       'California',
       'San Francisco',
-      '94102',
-      'active'
+      '94102'
     ]);
     
     const company = companyResult.rows[0];
