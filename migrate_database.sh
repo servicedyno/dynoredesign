@@ -55,7 +55,12 @@ else
 fi
 
 echo "📋 Step 3: Verifying database tables..."
-TABLE_COUNT=$(psql "$NEW_DB" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';")
+TABLE_COUNT=$(PGPASSWORD="JqdkVTjQujJaEOyUJJHmWMYEWgtAXTfO" psql \
+  -h shortline.proxy.rlwy.net \
+  -p 44579 \
+  -U postgres \
+  -d railway \
+  -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';")
 echo "   Tables created: $TABLE_COUNT"
 
 if [ $TABLE_COUNT -gt 0 ]; then
