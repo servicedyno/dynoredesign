@@ -120,7 +120,8 @@ DOGE_THRESHOLD=5
 BCH_THRESHOLD=5
 ```
 
-### **Admin Wallet Addresses**
+### **Admin Wallet Addresses** (Platform Fee Collection - from .env)
+These wallets RECEIVE collected platform fees, transaction fees, and buffer amounts.
 ```
 BTC=1JH5TnZzjYTf1yYwBDLjWoHgkAcCHc1Do7
 ETH=0x9a7221b5e32d5f99e8da95585835442e29afb38f
@@ -129,6 +130,13 @@ DOGE=DEReH1ES1zT8MUtkBQPqLqYGWrJhw2gCUL
 TRX=TTve8v6Y48ChsCTEiCjMRFSbjNtz4mAkxR
 USDT_TRC20=TTve8v6Y48ChsCTEiCjMRFSbjNtz4mAkxR
 USDT_ERC20=0x9a7221b5e32d5f99e8da95585835442e29afb38f
+```
+
+### **Gas Fee Wallet Addresses** (from tbl_admin_fee_wallet)
+These wallets FUND temporary addresses with ETH/TRX gas for USDT token transfers.
+```
+ETH=0x033d2bb052e3d85bfe96fbd86cf876a350ad6b1c  (for USDT-ERC20 transfers)
+TRX=TTXk9SbNj8tnRABdGDM3PZvT5bHqTNtANB        (for USDT-TRC20 transfers)
 ```
 
 ---
