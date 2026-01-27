@@ -166,6 +166,9 @@ async function migrateUser() {
     // ==========================================
     console.log('\n=== STEP 3: Inserting user ===');
     
+    // Helper to quote column names for PostgreSQL
+    const quoteCol = (col) => `"${col}"`;
+    
     // Get column names from source user (excluding any auto-generated ones)
     const userColumns = Object.keys(user).filter(k => user[k] !== null);
     const userValues = userColumns.map(k => user[k]);
@@ -184,13 +187,13 @@ async function migrateUser() {
       const userPlaceholdersNoId = userColumnsNoId.map((_, i) => `$${i + 1}`);
       
       const insertResult = await destClient.query(
-        `INSERT INTO tbl_user (${userColumnsNoId.join(', ')}) VALUES (${userPlaceholdersNoId.join(', ')}) RETURNING user_id`,
+        `INSERT INTO tbl_user (${userColumnsNoId.map(quoteCol).join(', ')}) VALUES (${userPlaceholdersNoId.join(', ')}) RETURNING user_id`,
         userValuesNoId
       );
       var newUserId = insertResult.rows[0].user_id;
     } else {
       await destClient.query(
-        `INSERT INTO tbl_user (${userColumns.join(', ')}) VALUES (${userPlaceholders.join(', ')})`,
+        `INSERT INTO tbl_user (${userColumns.map(quoteCol).join(', ')}) VALUES (${userPlaceholders.join(', ')})`,
         userValues
       );
       var newUserId = sourceUserId;
