@@ -269,7 +269,7 @@ async function migrateUser() {
       const walletPlaceholders = walletColumns.map((_, i) => `$${i + 1}`);
       
       await destClient.query(
-        `INSERT INTO tbl_user_wallet (${walletColumns.join(', ')}) VALUES (${walletPlaceholders.join(', ')})`,
+        `INSERT INTO tbl_user_wallet (${walletColumns.map(quoteCol).join(', ')}) VALUES (${walletPlaceholders.join(', ')})`,
         walletValues
       );
       console.log(`  - Inserted wallet: ${wallet.wallet_type || wallet.currency_type}`);
