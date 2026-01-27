@@ -230,7 +230,7 @@ async function migrateUser() {
         const placeholdersNoId = colsNoId.map((_, i) => `$${i + 1}`);
         
         const result = await destClient.query(
-          `INSERT INTO tbl_company (${colsNoId.join(', ')}) VALUES (${placeholdersNoId.join(', ')}) RETURNING company_id`,
+          `INSERT INTO tbl_company (${colsNoId.map(quoteCol).join(', ')}) VALUES (${placeholdersNoId.join(', ')}) RETURNING company_id`,
           valsNoId
         );
         companyIdMap[oldCompanyId] = result.rows[0].company_id;
@@ -239,7 +239,7 @@ async function migrateUser() {
         const placeholders = companyColumns.map((_, i) => `$${i + 1}`);
         
         await destClient.query(
-          `INSERT INTO tbl_company (${companyColumns.join(', ')}) VALUES (${placeholders.join(', ')})`,
+          `INSERT INTO tbl_company (${companyColumns.map(quoteCol).join(', ')}) VALUES (${placeholders.join(', ')})`,
           vals
         );
         companyIdMap[oldCompanyId] = oldCompanyId;
