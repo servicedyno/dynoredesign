@@ -19,10 +19,22 @@ const userWalletModel = sequelize.define(
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
     },
-    // NOTE: Commented out fields that don't exist in shared database
-    // These may exist in DynoBackend repo but not in our shared DB
-    // company_id: { ... },
-    // wallet_name: { ... },
+    // Phase 1: Company scoping
+    company_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "tbl_company",
+        key: "company_id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    },
+    // Phase 1: Wallet name
+    wallet_name: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
     amount: {
       type: DataTypes.FLOAT,
       defaultValue: 0,
@@ -42,8 +54,6 @@ const userWalletModel = sequelize.define(
   {
     tableName: "tbl_user_wallet",
     timestamps: true,
-    // IMPORTANT: Prevent Sequelize from trying to ALTER the table schema
-    // This repo shares the database with DynoBackend which has different schema
     freezeTableName: true,
   }
 );
