@@ -281,7 +281,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             ...userData,
             adm_id: items.adm_id,
             customer_id: items.customer_id,
-          });
+          }, true);  // Use crypto-specific webhook for proper verification
           console.log("paymentRes=============>", paymentRes, uniqueRef);
           finalRes = { hash: uniqueRef, ...paymentRes };
           await setRedisItem("crypto-" + paymentRes.address, {
