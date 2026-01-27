@@ -364,7 +364,7 @@ async function migrateUser() {
       
       try {
         await destClient.query(
-          `INSERT INTO tbl_notification_preferences (${prefColumns.join(', ')}) VALUES (${prefPlaceholders.join(', ')})`,
+          `INSERT INTO tbl_notification_preferences (${prefColumns.map(quoteCol).join(', ')}) VALUES (${prefPlaceholders.join(', ')})`,
           prefValues
         );
         console.log('  - Inserted notification preferences');
