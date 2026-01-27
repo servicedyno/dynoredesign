@@ -2499,6 +2499,7 @@ const createPaymentLink = async (
       ...payload,
       pathType: "createLink",
       link_id: links.dataValues.link_id,
+      available_currencies: availableCurrencies,  // Phase 11: Store available currencies
     };
 
     console.log(redisPayload);
