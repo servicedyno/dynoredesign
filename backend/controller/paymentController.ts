@@ -441,7 +441,7 @@ const createCryptoPayment = async (
 
       console.log("paymentRes=============>", paymentRes, uniqueRef, {
         mode: paymentTypes.CRYPTO,
-        amount: data.amount,
+        amount: crypto_amount,
         status: "pending",
         ref: uniqueRef,
         currency: data.currency,
@@ -451,11 +451,11 @@ const createCryptoPayment = async (
 
       await setRedisItem("crypto-" + paymentRes.address, {
         mode: paymentTypes.CRYPTO,
-        amount: data.amount,                    // Total amount customer is paying
+        amount: crypto_amount,                  // Crypto amount customer should pay
         merchant_amount: merchant_amount_crypto, // Amount merchant should receive
         total_fees: total_fees_crypto,          // Total fees (if customer pays)
         fee_payer: fee_payer,                   // Who pays fees
-        base_amount_usd: items.base_amount || items.amount,     // Original USD amount
+        base_amount_usd: baseAmountUSD,         // Original USD amount
         status: "pending",
         ref: uniqueRef,
         currency: data.currency,
