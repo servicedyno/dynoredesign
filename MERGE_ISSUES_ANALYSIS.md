@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://cryptoprocessor.preview.emergentagent.com
+SERVER_URL=https://new-setup.preview.emergentagent.com
 ```
 
 **Impact:**

@@ -207,8 +207,8 @@ Test and verify the complete crypto payment flow on Sepolia testnet including:
 - `/app/COMPREHENSIVE_TEST_FIXES_2026-01-25.md` - Recent test fixes
 
 ### API Documentation
-- Swagger UI: `https://cryptoprocessor.preview.emergentagent.com/api/docs`
-- OpenAPI Spec: `https://cryptoprocessor.preview.emergentagent.com/api/docs.json`
+- Swagger UI: `https://new-setup.preview.emergentagent.com/api/docs`
+- OpenAPI Spec: `https://new-setup.preview.emergentagent.com/api/docs.json`
 
 ---
 
@@ -224,7 +224,7 @@ Test and verify the complete crypto payment flow on Sepolia testnet including:
 ## 💡 Development Notes
 
 ### Environment URLs
-- **Backend URL**: `https://cryptoprocessor.preview.emergentagent.com`
+- **Backend URL**: `https://new-setup.preview.emergentagent.com`
 - **Checkout URL**: `https://dynocheckoutfix-production.up.railway.app/`
 - **Database**: `yamanote.proxy.rlwy.net:42097`
 
