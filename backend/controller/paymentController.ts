@@ -469,7 +469,7 @@ const createCryptoPayment = async (
         {
           fee_payer: fee_payer,
           merchant_amount: merchant_amount_crypto,
-          base_amount_usd: items.base_amount || items.amount || 0,
+          base_amount_usd: baseAmountUSD,
         },
         { where: { temp_id: paymentRes.temp_id } }
       );
