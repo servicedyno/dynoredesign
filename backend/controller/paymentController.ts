@@ -290,7 +290,8 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             status: "pending",
             ref: uniqueRef,
             currency: value.currency,
-            unique_tx_id: paymentRes.transaction_id,
+            txId: paymentRes.transaction_id,        // Transaction ID for verification
+            unique_tx_id: paymentRes.transaction_id, // Keep for backward compatibility
             walletType: "customer",
             temp_id: paymentRes.temp_id,
           });
