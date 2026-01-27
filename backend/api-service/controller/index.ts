@@ -211,6 +211,27 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
 
     const data = res.locals.apiKeyData;
 
+    // Phase 11: Validate the requested currency is configured for this company
+    const availableCurrencies = await getAvailableCurrencies(data.adm_id, data.company_id);
+    
+    if (availableCurrencies.length === 0) {
+      return errorResponseHelper(
+        res,
+        400,
+        "No crypto wallet configured. Please add at least one crypto wallet address before creating a crypto payment."
+      );
+    }
+    
+    if (!availableCurrencies.includes(currency)) {
+      return errorResponseHelper(
+        res,
+        400,
+        `${currency} is not available for this company. Available currencies: ${availableCurrencies.join(', ')}`
+      );
+    }
+    
+    console.log(`[Phase 11] Currency ${currency} validated. Available currencies:`, availableCurrencies);
+
     const customerData = await customerModel.findOne({
       where: {
         id: userData.id,
@@ -246,6 +267,7 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
       pathType: topUp ? "addFund" : "cryptoPayment",
       redirect_uri,
       fee_payer: fee_payer || 'company',  // Store fee_payer
+      available_currencies: availableCurrencies,  // Phase 11: Store available currencies
       ...(meta_data && { meta_data: JSON.stringify(meta_data) }),
     };
 
