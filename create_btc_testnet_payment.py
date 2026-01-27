@@ -117,11 +117,14 @@ def create_btc_payment_link(token, company_id):
             print(f"\n{'='*80}")
             print(f"  PAYMENT LINK DETAILS")
             print(f"{'='*80}")
-            print(f"Payment Link ID: {payment_data.get('payment_link_id')}")
-            print(f"Checkout URL: {payment_data.get('checkout_url')}")
-            print(f"Amount: ${payment_data.get('amount')} {payment_data.get('currency')}")
+            print(f"Payment Link ID: {payment_data.get('link_id')}")
+            print(f"Transaction ID: {payment_data.get('transaction_id')}")
+            print(f"Checkout URL: {payment_data.get('payment_link')}")
+            print(f"Amount: ${payment_data.get('base_amount')} {payment_data.get('base_currency')}")
             print(f"Status: {payment_data.get('status')}")
-            print(f"Created: {payment_data.get('created_at')}")
+            print(f"Modes: {payment_data.get('allowedModes')}")
+            print(f"Expires: {payment_data.get('expires_at')}")
+            print(f"Created: {payment_data.get('createdAt')}")
             
             return payment_data
         return data
