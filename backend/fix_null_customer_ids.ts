@@ -26,13 +26,13 @@ async function fixNullCustomerIds() {
     const sampleNullRecords = await customerTransactionModel.findAll({
       where: { customer_id: null },
       limit: 5,
-      attributes: ['id', 'user_id', 'company_id', 'payment_mode', 'base_amount', 'status']
+      attributes: ['id', 'transaction_id', 'company_id', 'payment_mode', 'base_amount', 'status']
     });
     
     console.log('\n📋 Sample NULL customer_id records:');
     sampleNullRecords.forEach((record: any) => {
       const data = record.dataValues;
-      console.log(`  ID: ${data.id}, User: ${data.user_id}, Company: ${data.company_id}, Mode: ${data.payment_mode}, Amount: ${data.base_amount}`);
+      console.log(`  ID: ${data.id}, TX: ${data.transaction_id}, Company: ${data.company_id}, Mode: ${data.payment_mode}, Amount: ${data.base_amount}`);
     });
     
     // Step 3: Offer solutions
