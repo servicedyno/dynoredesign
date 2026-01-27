@@ -191,6 +191,8 @@ class PartialPaymentWebhookTester:
             )
         
         return None
+    
+    def verify_environment_config(self):
         """Verify ETH threshold and admin wallet configuration"""
         print("\n=== Verifying Environment Configuration ===")
         
