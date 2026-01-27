@@ -1,7 +1,7 @@
 # DynoPay Development Session Context
 
-**Last Updated:** January 27, 2025  
-**Development Space:** simple-setup-6.preview.emergentagent.com
+**Last Updated:** January 27, 2026  
+**Development Space:** cryptopay-fix-1.preview.emergentagent.com
 
 ---
 
