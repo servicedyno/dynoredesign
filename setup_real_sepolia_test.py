@@ -34,23 +34,15 @@ print(f"✅ Logged in as user {user_id}")
 # Step 2: Create payment link
 print("\n📋 Step 2: Creating payment link...")
 
-# Ask user what amount they want to test
-print("\nWhat would you like to test?")
-print("1. Above threshold payment (e.g., $10+ USD)")
-print("2. Below threshold payment (e.g., $3 USD)")
-print("3. Custom amount")
+# Default to above threshold test
+print("\n💰 Creating payment link for $10 USD (above $5 threshold)")
+print("   You can send any amount to test different scenarios:")
+print("   - Send $10+ worth: Tests above threshold (fee split)")
+print("   - Send $3-4 worth: Tests below threshold (all to admin)")
+print("   - Send partial: Tests partial payment logic")
 
-choice = input("\nEnter choice (1/2/3): ").strip()
-
-if choice == "1":
-    amount = 10
-    description = "Real Sepolia Test - Above Threshold"
-elif choice == "2":
-    amount = 3
-    description = "Real Sepolia Test - Below Threshold"
-else:
-    amount = float(input("Enter amount in USD: "))
-    description = f"Real Sepolia Test - ${amount}"
+amount = 10
+description = "Real Sepolia Test - Above Threshold"
 
 headers = {"Authorization": f"Bearer {token}"}
 response = requests.post(
