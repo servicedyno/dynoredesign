@@ -306,7 +306,33 @@ tail -f /var/log/supervisor/frontend.out.log
 9. ✅ Admin fee retained: 0.00208573 ETH (pending_sweep)
 10. ✅ Transaction recorded as successful
 11. ✅ Email notifications sent via Brevo
+12. ✅ Admin sweep cron executed (see below)
 ```
+
+---
+
+## 🎉 Admin Fee Sweep Verification (January 27, 2025)
+
+### **Sweep Execution Results**
+| Field | Value |
+|-------|-------|
+| **Temp Address** | `0x10772cFa7444B1E318a30b378B650494e5EE2B26` |
+| **Admin Fee Swept** | 0.00204373 ETH (~$5.96 USD) |
+| **Sweep TX** | `0x406abb34628b7b8179d40080c830043c06400973deff88529fd6cc346f19d5ff` |
+| **Gas Used** | 0.0001 ETH |
+| **admin_status** | `pending_sweep` → `successful` ✅ |
+
+### **Database Records Updated**
+- **tbl_user_temp_address**: `admin_status = 'successful'`, `adminTxId` contains both merchant + sweep TX
+- **tbl_admin_fee_transaction**: New record created with `transaction_type = 'CREDIT'`
+
+### **Cron Job Verified**
+The `sweepNativeAdminFees` cron (every 15 min) successfully:
+- ✅ Queried pending addresses with `admin_status = 'pending_sweep'`
+- ✅ Transferred admin fees to admin wallet
+- ✅ Deducted gas fees (0.0001 ETH)
+- ✅ Updated database records
+- ✅ Logged transaction details
 
 ---
 
