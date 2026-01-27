@@ -85,7 +85,7 @@ async function createUser() {
     const walletResult = await client.query(`
       INSERT INTO tbl_user_wallet (
         user_id, wallet_type, wallet_address, amount, 
-        currency_type, createdAt, updatedAt
+        currency_type, "createdAt", "updatedAt"
       )
       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
       RETURNING wallet_id, wallet_type, wallet_address
@@ -107,7 +107,7 @@ async function createUser() {
     await client.query(`
       INSERT INTO tbl_user_wallet (
         user_id, wallet_type, wallet_address, amount, 
-        currency_type, createdAt, updatedAt
+        currency_type, "createdAt", "updatedAt"
       )
       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
     `, [
