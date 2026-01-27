@@ -76,7 +76,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImpvaG5AZXhhbXB
 
 Open your browser and navigate to:
 ```
-https://repo-env-config.preview.emergentagent.com/api/docs
+https://simple-setup-6.preview.emergentagent.com/api/docs
 ```
 
 ### Step 1: Authorize in Swagger
@@ -137,7 +137,7 @@ Now all authenticated endpoints will automatically include your JWT token in the
 ### Using cURL:
 
 ```bash
-curl -X POST "https://repo-env-config.preview.emergentagent.com/api/company/addCompany" \
+curl -X POST "https://simple-setup-6.preview.emergentagent.com/api/company/addCompany" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
   -F 'data={"company_name":"Acme Corp","email":"contact@acme.com","mobile":"+1234567890","address_line1":"123 Main St","city":"New York","state":"NY","country":"US","zip_code":"10001"}' \
   -F "image=@/path/to/logo.png"
@@ -170,7 +170,7 @@ curl -X POST "https://repo-env-config.preview.emergentagent.com/api/company/addC
 
 1. **Create a new request**
 2. **Set Method:** POST
-3. **Set URL:** `https://repo-env-config.preview.emergentagent.com/api/company/addCompany`
+3. **Set URL:** `https://simple-setup-6.preview.emergentagent.com/api/company/addCompany`
 4. **Headers Tab:**
    - Add: `Authorization: Bearer YOUR_JWT_TOKEN`
 5. **Body Tab:**
