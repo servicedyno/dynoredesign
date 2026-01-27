@@ -3764,6 +3764,7 @@ export default {
   cryptoVerification,
   checkingUSDT,
   sendingLeftover,
+  sweepNativeAdminFees,
   checkFeeBalance,
   checkOnBlockchair,
   removeUnwantedSubscriptions,
