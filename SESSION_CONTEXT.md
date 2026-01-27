@@ -136,7 +136,7 @@ USDT_ERC20=0x9a7221b5e32d5f99e8da95585835442e29afb38f
 
 ### User Account
 ```
-Email: nomadly@moxx.co
+Email: john@dyno.pt
 Password: Katiekendra123@
 ```
 
