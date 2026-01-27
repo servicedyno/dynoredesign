@@ -24,8 +24,7 @@ except FileNotFoundError:
 
 print(f"\n📋 Test Information:")
 print(f"   Address: {test_data['payment_address']}")
-print(f"   Expected: {test_data['expected_amount_eth']} ETH (${test_data['expected_amount_usd']})")
-print(f"   Transaction ID: {test_data['transaction_id']}")
+print(f"   Expected: ${test_data.get('expected_amount_usd', 10)} USD")
 
 # Query database to check status
 print(f"\n🔍 Checking payment status...")
