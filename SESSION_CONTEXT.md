@@ -179,10 +179,13 @@ Test and verify the complete crypto payment flow on Sepolia testnet including:
 
 ## 🔧 Known Issues & Limitations
 
+### Resolved Issues ✅
+1. **Webhook URL**: Fixed - now uses `/api/tatum-crypto-webhook` for crypto payments
+2. **Wallet Lookup**: Fixed - added fallback for multi-tenant wallet queries
+
 ### Current Blockers
 1. **Wallet Validation**: Local validation library may reject valid addresses
 2. **Testnet Simulation**: Real blockchain confirmations take time
-3. **Webhook Testing**: Requires actual Tatum webhook triggers
 
 ### Minor Issues (from PRD.md)
 1. Fee logic defaults (BTC should be $7, currently may be $5)
