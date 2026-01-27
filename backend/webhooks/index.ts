@@ -96,20 +96,36 @@ const tatumCryptoWebHook = async (
   try {
     const payload: ITatumWebHook = req.body;
 
+    console.log("[tatumCryptoWebHook] Received webhook:", {
+      address: payload.address,
+      amount: payload.amount,
+      currency: payload.currency || payload.asset,
+      txId: payload.txId
+    });
+
     let address = payload.address;
     let items = await getRedisItem("crypto-" + address);
 
     if (!items || Object.keys(items).length === 0) {
+      console.log("[tatumCryptoWebHook] No Redis data for primary address, checking counterAddress");
       address = payload.counterAddress;
       items = await getRedisItem("crypto-" + address);
     }
 
     if (!items || Object.keys(items).length === 0) {
+      console.log("[tatumCryptoWebHook] No Redis data found, ignoring webhook");
       return res.status(200).end();
     }
 
+    console.log("[tatumCryptoWebHook] Redis data found:", {
+      currency: items.currency,
+      expectedAmount: items.amount,
+      hasTxId: !!items.txId
+    });
+
     const incomingAmount = Number(payload.amount);
     if (!Number.isFinite(incomingAmount) || incomingAmount <= 0) {
+      console.log("[tatumCryptoWebHook] Invalid amount, ignoring");
       return res.status(200).end();
     }
 
@@ -118,6 +134,8 @@ const tatumCryptoWebHook = async (
     const isFirstTransaction = !items.txId;
 
     if (isFirstTransaction && incomingAmount > 0) {
+      console.log("[tatumCryptoWebHook] First transaction detected, processing...");
+      
       // Send pending notification for first transaction
       const customerData = await getRedisItem(items?.ref);
       if (customerData) {
@@ -139,14 +157,25 @@ const tatumCryptoWebHook = async (
       };
 
       await setRedisItem("crypto-" + address, newPayload);
+      console.log("[tatumCryptoWebHook] Redis updated with txId");
 
-      // Trigger verification only on first transaction
-      paymentController.cryptoVerification(address, true);
+      // Trigger verification only on first transaction - FIXED: Added await
+      console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address);
+      try {
+        await paymentController.cryptoVerification(address, true);
+        console.log("[tatumCryptoWebHook] cryptoVerification completed successfully");
+      } catch (verifyError) {
+        console.error("[tatumCryptoWebHook] Error in cryptoVerification:", verifyError);
+        throw verifyError;
+      }
+    } else {
+      console.log("[tatumCryptoWebHook] Duplicate transaction or txId already exists, ignoring");
     }
     // If txId already exists, this is a duplicate/retry - ignore it
 
     return res.status(200).end();
-  } catch {
+  } catch (error) {
+    console.error("[tatumCryptoWebHook] Webhook error:", error);
     return res.status(200).end();
   }
 };
