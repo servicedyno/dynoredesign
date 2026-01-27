@@ -109,11 +109,17 @@ async function migrateUser() {
         );
         console.log('  - Deleted payment links');
         
-        // Delete transactions
+        // Delete user transactions
         await destClient.query(
-          'DELETE FROM tbl_transaction WHERE company_id = ANY($1)', [companyIds]
+          'DELETE FROM tbl_user_transaction WHERE company_id = ANY($1)', [companyIds]
         );
-        console.log('  - Deleted transactions');
+        console.log('  - Deleted user transactions');
+        
+        // Delete user self transactions
+        await destClient.query(
+          'DELETE FROM tbl_user_self_transaction WHERE company_id = ANY($1)', [companyIds]
+        );
+        console.log('  - Deleted user self transactions');
         
         // Delete invoices
         await destClient.query(
