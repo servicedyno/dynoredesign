@@ -1,159 +1,47 @@
 export const paymentPaths = {
-  "/user/createPayment": {
-    post: {
-      tags: ["Payment"],
-      summary: "Create a payment (redirect to checkout)",
-      description: `
-Creates a payment and returns a redirect URL to the DynoPay checkout page.
-
-**Requires wallet setup:** At least one crypto wallet must be configured for your company before creating payments.
-
-### Flow
-1. Call this endpoint with payment details
-2. Redirect customer to the returned URL
-3. Customer selects payment method on checkout page
-4. Customer completes payment
-5. Customer is redirected to your redirect_uri
-
-### When to use
-Use this when you want customers to choose their payment method on DynoPay's hosted checkout page.
-      `,
-      security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/CreatePaymentRequest" },
-            examples: {
-              simple: {
-                summary: "Simple payment",
-                value: {
-                  amount: 50,
-                  redirect_uri: "https://yoursite.com/payment/success",
-                },
-              },
-              withMetadata: {
-                summary: "Payment with metadata",
-                value: {
-                  amount: 99.99,
-                  redirect_uri: "https://yoursite.com/order/complete",
-                  meta_data: {
-                    product_name: "Premium Plan",
-                    order_id: "ORD-2024-001",
-                  },
-                  fee_payer: "customer",
-                },
-              },
-            },
-          },
-        },
-      },
-      responses: {
-        "200": {
-          description: "Payment created successfully",
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CreatePaymentResponse" },
-              example: {
-                message: "Link Generated!",
-                data: {
-                  redirect_url: "https://checkout.dynopay.com/pay?d=abc123...",
-                  fee_payer: "company",
-                  available_currencies: ["BTC", "ETH", "LTC", "USDT-TRC20"],
-                },
-              },
-            },
-          },
-        },
-        "400": {
-          description: "No wallet configured",
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/ErrorResponse" },
-              example: {
-                success: false,
-                message: "No crypto wallet configured. Please add at least one crypto wallet address before creating a payment.",
-                statusCode: 400,
-              },
-            },
-          },
-        },
-        "403": {
-          description: "Customer account does not exist",
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/ErrorResponse" },
-            },
-          },
-        },
-      },
-    },
-  },
   "/user/cryptoPayment": {
     post: {
-      tags: ["Payment"],
-      summary: "Create direct crypto payment",
-      description: `
-Creates a crypto payment and returns a wallet address for direct payment.
-
-**Requires wallet setup:** The specified cryptocurrency must be configured for your company.
-
-### Flow
-1. Call this endpoint with amount and currency
-2. Display the returned address and QR code to customer
-3. Customer sends crypto to the address
-4. System automatically detects and processes payment
-5. Webhook notification sent (if configured)
-
-### When to use
-Use this when you want to:
-- Build a custom payment UI
-- Allow customers to pay directly with a specific cryptocurrency
-- Skip the hosted checkout page
-
-### Important
-- The \`meta_data.product_name\` field is **required**
-- Only currencies with configured wallets are available
-      `,
+      tags: ["2. Payments"],
+      summary: "Create crypto payment",
+      description: "Get a crypto address for direct payment. Customer sends crypto to this address.",
       security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
       requestBody: {
         required: true,
         content: {
           "application/json": {
-            schema: { $ref: "#/components/schemas/CryptoPaymentRequest" },
-            examples: {
-              ethPayment: {
-                summary: "ETH Payment",
-                value: {
-                  amount: 10,
-                  currency: "ETH",
-                  redirect_uri: "https://yoursite.com/success",
-                  meta_data: {
-                    product_name: "Digital Download",
-                    order_id: "DL-001",
-                  },
-                  fee_payer: "company",
+            schema: {
+              type: "object",
+              required: ["amount", "currency", "meta_data"],
+              properties: {
+                amount: { 
+                  type: "number", 
+                  description: "Amount in your base currency (e.g., USD)",
+                  example: 10 
                 },
-              },
-              btcPayment: {
-                summary: "BTC Payment",
-                value: {
-                  amount: 50,
-                  currency: "BTC",
-                  meta_data: {
-                    product_name: "Service Fee",
+                currency: { 
+                  type: "string", 
+                  enum: ["BTC", "ETH", "LTC", "DOGE", "TRX", "BCH", "USDT-TRC20", "USDT-ERC20"],
+                  description: "Crypto to receive",
+                  example: "ETH" 
+                },
+                meta_data: {
+                  type: "object",
+                  required: ["product_name"],
+                  properties: {
+                    product_name: { type: "string", example: "Premium Plan" },
+                    order_id: { type: "string", example: "ORD-123" },
                   },
                 },
-              },
-              usdtPayment: {
-                summary: "USDT-TRC20 Payment",
-                value: {
-                  amount: 100,
-                  currency: "USDT-TRC20",
-                  meta_data: {
-                    product_name: "Subscription",
-                  },
-                  fee_payer: "customer",
+                redirect_uri: { 
+                  type: "string", 
+                  format: "uri",
+                  example: "https://yoursite.com/success" 
+                },
+                fee_payer: { 
+                  type: "string", 
+                  enum: ["customer", "company"],
+                  default: "company",
+                  description: "Who pays network fees"
                 },
               },
             },
@@ -162,33 +50,38 @@ Use this when you want to:
       },
       responses: {
         "200": {
-          description: "Crypto payment address generated",
+          description: "✅ Payment address generated",
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/CryptoPaymentResponse" },
-              example: {
-                message: "Payment Created!",
-                data: {
-                  transaction_id: "bfb4269c-309f-44e1-9fbe-549d001a7df4",
-                  qr_code: "data:image/png;base64,iVBORw0KGgo...",
-                  address: "0x653982c6f563b7a87272abcea1c65d98b09794c7",
-                  crypto_amount: 0.0033365,
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string", example: "Payment Created!" },
+                  data: {
+                    type: "object",
+                    properties: {
+                      transaction_id: { type: "string", format: "uuid" },
+                      address: { type: "string", description: "Send crypto here", example: "0x653982c6f563b7a87272abcea1c65d98b09794c7" },
+                      crypto_amount: { type: "number", description: "Amount in crypto", example: 0.0033365 },
+                      qr_code: { type: "string", description: "Base64 QR code image" },
+                    },
+                  },
                 },
               },
             },
           },
         },
         "400": {
-          description: "Currency not available or validation error",
+          description: "❌ Currency not available or missing wallet",
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/ErrorResponse" },
+              schema: { $ref: "#/components/schemas/Error" },
               examples: {
                 noWallet: {
                   summary: "No wallet configured",
                   value: {
                     success: false,
-                    message: "No crypto wallet configured. Please add at least one crypto wallet address before creating a crypto payment.",
+                    message: "No crypto wallet configured. Please add at least one crypto wallet address.",
                     statusCode: 400,
                   },
                 },
@@ -196,20 +89,96 @@ Use this when you want to:
                   summary: "Currency not available",
                   value: {
                     success: false,
-                    message: "BCH is not available for this company. Available currencies: BTC, ETH, LTC, DOGE, TRX, USDT-TRC20, USDT-ERC20",
+                    message: "BCH is not available. Available: BTC, ETH, LTC, DOGE, TRX, USDT-TRC20, USDT-ERC20",
                     statusCode: 400,
                   },
                 },
-                missingProductName: {
-                  summary: "Missing product name",
-                  value: {
-                    message: "Please enter proper values!",
-                    errors: [
-                      {
-                        key: "meta_data",
-                        error: "\"meta_data\" must contain at least one of [product_name, product]",
-                      },
-                    ],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/user/createPayment": {
+    post: {
+      tags: ["2. Payments"],
+      summary: "Create checkout link",
+      description: "Get a checkout URL. Redirect customer to this page to complete payment.",
+      security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              required: ["amount"],
+              properties: {
+                amount: { type: "number", example: 50 },
+                redirect_uri: { type: "string", format: "uri", example: "https://yoursite.com/success" },
+                meta_data: {
+                  type: "object",
+                  properties: {
+                    product_name: { type: "string", example: "Order #123" },
+                  },
+                },
+                fee_payer: { type: "string", enum: ["customer", "company"], default: "company" },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "✅ Checkout link generated",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string", example: "Link Generated!" },
+                  data: {
+                    type: "object",
+                    properties: {
+                      redirect_url: { type: "string", description: "Redirect customer here", example: "https://checkout.dynopay.com/pay?d=abc123" },
+                      available_currencies: { type: "array", items: { type: "string" }, example: ["BTC", "ETH", "LTC"] },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        "400": {
+          description: "❌ No wallet configured",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/Error" },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/getSupportedCurrency": {
+    get: {
+      tags: ["2. Payments"],
+      summary: "List supported currencies",
+      description: "Get all supported cryptocurrencies.",
+      security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
+      responses: {
+        "200": {
+          description: "✅ Currency list",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string" },
+                  data: {
+                    type: "array",
+                    items: { type: "string" },
+                    example: ["BTC", "ETH", "LTC", "DOGE", "TRX", "BCH", "USDT-TRC20", "USDT-ERC20"],
                   },
                 },
               },
@@ -221,14 +190,9 @@ Use this when you want to:
   },
   "/user/addFunds": {
     post: {
-      tags: ["Wallet"],
-      summary: "Add funds to customer wallet",
-      description: `
-Creates a payment link for adding funds to the customer's wallet balance.
-
-### Use Case
-Use this when customers want to pre-load their wallet with funds that can be used for future purchases.
-      `,
+      tags: ["3. Status"],
+      summary: "Add funds to wallet",
+      description: "Create a link for customer to add funds to their wallet balance.",
       security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
       requestBody: {
         required: true,
@@ -238,9 +202,8 @@ Use this when customers want to pre-load their wallet with funds that can be use
               type: "object",
               required: ["amount"],
               properties: {
-                amount: { type: "number", description: "Amount to add", example: 100 },
+                amount: { type: "number", example: 100 },
                 redirect_uri: { type: "string", format: "uri" },
-                fee_payer: { type: "string", enum: ["customer", "company"] },
               },
             },
           },
@@ -248,18 +211,21 @@ Use this when customers want to pre-load their wallet with funds that can be use
       },
       responses: {
         "200": {
-          description: "Fund addition link generated",
+          description: "✅ Link generated",
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/CreatePaymentResponse" },
-            },
-          },
-        },
-        "400": {
-          description: "No wallet configured",
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/ErrorResponse" },
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string" },
+                  data: {
+                    type: "object",
+                    properties: {
+                      redirect_url: { type: "string" },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -268,14 +234,9 @@ Use this when customers want to pre-load their wallet with funds that can be use
   },
   "/user/useWallet": {
     post: {
-      tags: ["Wallet"],
-      summary: "Deduct from customer wallet",
-      description: `
-Deducts funds from the customer's wallet balance.
-
-### Use Case
-Use this when a customer wants to pay using their pre-loaded wallet balance.
-      `,
+      tags: ["3. Status"],
+      summary: "Deduct from wallet",
+      description: "Deduct funds from customer's wallet balance.",
       security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
       requestBody: {
         required: true,
@@ -285,7 +246,7 @@ Use this when a customer wants to pay using their pre-loaded wallet balance.
               type: "object",
               required: ["amount"],
               properties: {
-                amount: { type: "number", description: "Amount to deduct", example: 25 },
+                amount: { type: "number", example: 25 },
               },
             },
           },
@@ -293,7 +254,7 @@ Use this when a customer wants to pay using their pre-loaded wallet balance.
       },
       responses: {
         "200": {
-          description: "Amount deducted successfully",
+          description: "✅ Amount deducted",
           content: {
             "application/json": {
               schema: {
@@ -304,7 +265,6 @@ Use this when a customer wants to pay using their pre-loaded wallet balance.
                     type: "object",
                     properties: {
                       new_balance: { type: "string", example: "75.00" },
-                      transaction_id: { type: "string", format: "uuid" },
                     },
                   },
                 },
@@ -313,33 +273,10 @@ Use this when a customer wants to pay using their pre-loaded wallet balance.
           },
         },
         "500": {
-          description: "Insufficient balance",
+          description: "❌ Insufficient balance",
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/ErrorResponse" },
-              example: {
-                success: false,
-                message: "Insufficient Balance!",
-                statusCode: 500,
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-  "/getSupportedCurrency": {
-    get: {
-      tags: ["Payment"],
-      summary: "Get supported cryptocurrencies",
-      description: "Returns a list of all supported cryptocurrencies for payments.",
-      security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
-      responses: {
-        "200": {
-          description: "List of supported currencies",
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/SupportedCurrenciesResponse" },
+              schema: { $ref: "#/components/schemas/Error" },
             },
           },
         },
