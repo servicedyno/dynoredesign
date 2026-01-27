@@ -293,7 +293,7 @@ async function migrateUser() {
       const addrPlaceholders = addrColumns.map((_, i) => `$${i + 1}`);
       
       await destClient.query(
-        `INSERT INTO tbl_user_addresses (${addrColumns.join(', ')}) VALUES (${addrPlaceholders.join(', ')})`,
+        `INSERT INTO tbl_user_addresses (${addrColumns.map(quoteCol).join(', ')}) VALUES (${addrPlaceholders.join(', ')})`,
         addrValues
       );
       console.log(`  - Inserted address: ${addr.currency || addr.label} - ${addr.wallet_address?.substring(0, 20)}...`);
