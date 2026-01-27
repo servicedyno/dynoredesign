@@ -112,6 +112,19 @@ const createPayment = async (req: express.Request, res: express.Response) => {
 
     const data = res.locals.apiKeyData;
 
+    // Phase 11: Check if at least one crypto wallet is configured for this company
+    const availableCurrencies = await getAvailableCurrencies(data.adm_id, data.company_id);
+    
+    if (availableCurrencies.length === 0) {
+      return errorResponseHelper(
+        res,
+        400,
+        "No crypto wallet configured. Please add at least one crypto wallet address before creating a payment."
+      );
+    }
+    
+    console.log(`[Phase 11] Available currencies for company_id ${data.company_id}:`, availableCurrencies);
+
     const customerData = await customerModel.findOne({
       where: {
         id: userData.id,
@@ -128,6 +141,7 @@ const createPayment = async (req: express.Request, res: express.Response) => {
       redirect_uri,
       pathType: "createPayment",
       fee_payer: fee_payer || 'company',  // Who pays fees: 'customer' or 'company'
+      available_currencies: availableCurrencies,  // Phase 11: Store available currencies
       ...(meta_data && { meta_data: JSON.stringify(meta_data) }),
     };
 
@@ -145,7 +159,7 @@ const createPayment = async (req: express.Request, res: express.Response) => {
 
     const redirect_url = process.env.CHECKOUT_URL + "/pay?d=" + transactionId;
 
-    successResponseHelper(res, 200, "Link Generated!", { redirect_url, fee_payer: redisPayload.fee_payer });
+    successResponseHelper(res, 200, "Link Generated!", { redirect_url, fee_payer: redisPayload.fee_payer, available_currencies: availableCurrencies });
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     customerLogger.error(
