@@ -6,6 +6,21 @@
 
 user_problem_statement: "BELOW-THRESHOLD PAYMENT TESTING (< $5 USD) - Tested crypto payment processing when payment amount is BELOW the forwarding threshold ($5 USD for ETH). Verified admin fee handling for small payments. Found multiple transactions below threshold with admin_status='pending', confirming admin fees are held for batch sweep rather than immediate transfer."
 
+  - task: "Below-Threshold Payment Testing (< $5 USD)"
+    implemented: true
+    working: true
+    file: "/app/below_threshold_test_corrected.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test crypto payment processing when payment amount is BELOW the forwarding threshold ($5 USD for ETH). Verify admin fee handling for small payments."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Below-threshold payment handling working correctly. ✅ AUTHENTICATION: Successfully authenticated with test credentials (john@dyno.pt). ✅ ENVIRONMENT CONFIG: ETH_THRESHOLD = $5 USD confirmed in .env, admin wallet configured (0x9a7221b5e32d5f99e8da95585835442e29afb38f). ✅ DATABASE ANALYSIS: Found multiple transactions below $5 threshold (0.00034394 ETH ~$1.00, 0.0003109 ETH ~$0.91, etc.). ✅ ADMIN FEE HANDLING: All below-threshold payments have admin_status='pending' (not 'successful'), confirming fees are held for batch sweep. ✅ SWEEP LOGIC: sweepNativeAdminFees function exists in payment controller. ✅ STATUS DISTRIBUTION: 615 pending vs 443 successful admin addresses, indicating batch processing. ✅ THRESHOLD BEHAVIOR: Below-threshold admin fees are NOT immediately swept but marked as 'pending' for later batch collection via sweepNativeAdminFees cron job. CONCLUSION: System correctly handles payments below $5 USD threshold by holding admin fees for efficient batch sweep rather than immediate individual transfers."
+
   - task: "Comprehensive Backend API Testing - All 12 Phases"
     implemented: true
     working: true
