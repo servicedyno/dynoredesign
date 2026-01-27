@@ -3223,7 +3223,7 @@ const sweepNativeAdminFees = async () => {
 
 const checkFeeBalance = async () => {
   try {
-    const adminFeesWallets = await await adminFeeModel.findAll({
+    const adminFeesWallets = await adminFeeModel.findAll({
       attributes: { exclude: ["privateKey", "mnemonic", "xpub"] },
     });
 
