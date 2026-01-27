@@ -4,7 +4,7 @@
 # Last Updated: 2026-01-25
 #===================================================
 
-user_problem_statement: "COMPREHENSIVE BACKEND TEST SUITE EXECUTION AND FIXES - Executed comprehensive_backend_test.py covering all 12 phases (66 tests) of DynoPay backend API. Fixed all failing tests achieving 100% pass rate. Issues addressed: email validation, API response data structures, payment link field requirements, company update validation, and API key duplicate handling."
+user_problem_statement: "BELOW-THRESHOLD PAYMENT TESTING (< $5 USD) - Tested crypto payment processing when payment amount is BELOW the forwarding threshold ($5 USD for ETH). Verified admin fee handling for small payments. Found multiple transactions below threshold with admin_status='pending', confirming admin fees are held for batch sweep rather than immediate transfer."
 
   - task: "Comprehensive Backend API Testing - All 12 Phases"
     implemented: true
