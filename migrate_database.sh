@@ -17,7 +17,14 @@ NEW_REDIS="redis://default:nGRWpSIBrXftcfgRCQDxtAJGowmXlgUg@turntable.proxy.rlwy
 
 echo "📋 Step 1: Dumping OLD database schema and data..."
 echo "   Source: yamanote.proxy.rlwy.net/db_bozzwallet"
-pg_dump "$OLD_DB" -Fc -f /tmp/dynopay_backup.dump
+PGPASSWORD="oMHQMHfnrFyWgkhYaiXbhjDEMZSWOapc" pg_dump \
+  -h yamanote.proxy.rlwy.net \
+  -p 42097 \
+  -U postgres \
+  -d db_bozzwallet \
+  --no-owner \
+  --no-acl \
+  -f /tmp/dynopay_backup.sql
 
 if [ $? -eq 0 ]; then
     echo "   ✅ Database dump completed: /tmp/dynopay_backup.dump"
