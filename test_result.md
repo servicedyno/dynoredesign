@@ -4,7 +4,7 @@
 # Last Updated: 2026-01-25
 #===================================================
 
-user_problem_statement: "BELOW-THRESHOLD PAYMENT TESTING (< $5 USD) - Tested crypto payment processing when payment amount is BELOW the forwarding threshold ($5 USD for ETH). Verified admin fee handling for small payments. Found multiple transactions below threshold with admin_status='pending', confirming admin fees are held for batch sweep rather than immediate transfer."
+user_problem_statement: "PARTIAL PAYMENT TESTING - ABOVE & BELOW THRESHOLD - Tested partial payment scenarios where customer sends incomplete payment and it expires after 30 minutes. Verified threshold logic is applied to RECEIVED amount (not expected amount). Test 1: $30 received vs $50 expected (above $5 threshold) - fee calculation and merchant split working. Test 2: $3 received vs $15 expected (below $5 threshold) - entire amount to admin logic working. Confirmed 30-minute grace period and processIncompletePayments function implementation."
 
   - task: "Below-Threshold Payment Testing (< $5 USD)"
     implemented: true
