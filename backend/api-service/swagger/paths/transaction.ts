@@ -1,21 +1,26 @@
 export const transactionPaths = {
   "/user/getBalance": {
     get: {
-      tags: ["Wallet"],
-      summary: "Get customer wallet balance",
-      description: "Returns the current balance in the customer's wallet.",
+      tags: ["3. Status"],
+      summary: "Get wallet balance",
+      description: "Check customer's current wallet balance.",
       security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
       responses: {
         "200": {
-          description: "Balance retrieved successfully",
+          description: "✅ Balance retrieved",
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/BalanceResponse" },
-              example: {
-                message: "Balance Fetched Successfully!",
-                data: {
-                  amount: "150.00",
-                  currency: "USD",
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string" },
+                  data: {
+                    type: "object",
+                    properties: {
+                      amount: { type: "string", example: "150.00" },
+                      currency: { type: "string", example: "USD" },
+                    },
+                  },
                 },
               },
             },
@@ -26,22 +31,32 @@ export const transactionPaths = {
   },
   "/user/getTransactions": {
     get: {
-      tags: ["Transaction"],
-      summary: "Get customer transactions",
-      description: "Returns all transactions for the authenticated customer.",
+      tags: ["3. Status"],
+      summary: "List transactions",
+      description: "Get all transactions for the customer.",
       security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
       responses: {
         "200": {
-          description: "Transactions retrieved successfully",
+          description: "✅ Transactions list",
           content: {
             "application/json": {
               schema: {
                 type: "object",
                 properties: {
-                  message: { type: "string", example: "Balance Fetched Successfully!" },
+                  message: { type: "string" },
                   data: {
                     type: "array",
-                    items: { $ref: "#/components/schemas/Transaction" },
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string", format: "uuid" },
+                        payment_mode: { type: "string", enum: ["CRYPTO", "CARD", "WALLET"] },
+                        base_amount: { type: "number" },
+                        base_currency: { type: "string" },
+                        status: { type: "string", enum: ["pending", "successful", "failed"] },
+                        createdAt: { type: "string", format: "date-time" },
+                      },
+                    },
                   },
                 },
               },
@@ -53,80 +68,22 @@ export const transactionPaths = {
   },
   "/user/getSingleTransaction/{id}": {
     get: {
-      tags: ["Transaction"],
-      summary: "Get single transaction details",
-      description: "Returns details of a specific transaction.",
+      tags: ["3. Status"],
+      summary: "Get transaction details",
+      description: "Get details of a specific transaction.",
       security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
       parameters: [
         {
           name: "id",
           in: "path",
           required: true,
-          description: "Transaction ID (UUID)",
+          description: "Transaction ID",
           schema: { type: "string", format: "uuid" },
         },
       ],
       responses: {
         "200": {
-          description: "Transaction details retrieved",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  message: { type: "string" },
-                  data: { $ref: "#/components/schemas/Transaction" },
-                },
-              },
-            },
-          },
-        },
-        "500": {
-          description: "Transaction not found",
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/ErrorResponse" },
-              example: {
-                success: false,
-                message: "Please provide a valid transaction_id!",
-                statusCode: 500,
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-  "/user/getCryptoTransaction/{address}": {
-    get: {
-      tags: ["Transaction"],
-      summary: "Check crypto payment status",
-      description: `
-Checks the status of a crypto payment by wallet address.
-
-### Use Case
-Poll this endpoint to check if a customer has sent payment to the provided address.
-
-### Response Status
-- **pending**: Waiting for payment
-- **confirming**: Payment detected, waiting for confirmations
-- **successful**: Payment confirmed and processed
-- **failed**: Payment failed or expired
-      `,
-      security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
-      parameters: [
-        {
-          name: "address",
-          in: "path",
-          required: true,
-          description: "The crypto wallet address from cryptoPayment response",
-          schema: { type: "string" },
-          example: "0x653982c6f563b7a87272abcea1c65d98b09794c7",
-        },
-      ],
-      responses: {
-        "200": {
-          description: "Transaction status retrieved",
+          description: "✅ Transaction details",
           content: {
             "application/json": {
               schema: {
@@ -136,9 +93,66 @@ Poll this endpoint to check if a customer has sent payment to the provided addre
                   data: {
                     type: "object",
                     properties: {
-                      status: { type: "string", enum: ["pending", "confirming", "successful", "failed"] },
+                      id: { type: "string", format: "uuid" },
+                      payment_mode: { type: "string" },
+                      base_amount: { type: "number" },
+                      base_currency: { type: "string" },
+                      paid_amount: { type: "number" },
+                      paid_currency: { type: "string" },
+                      status: { type: "string" },
+                      createdAt: { type: "string", format: "date-time" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        "500": {
+          description: "❌ Transaction not found",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/Error" },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/user/getCryptoTransaction/{address}": {
+    get: {
+      tags: ["3. Status"],
+      summary: "Check payment status",
+      description: "Check if crypto payment has been received at the given address.",
+      security: [{ ApiKeyAuth: [], CustomerAuth: [] }],
+      parameters: [
+        {
+          name: "address",
+          in: "path",
+          required: true,
+          description: "Crypto address from cryptoPayment response",
+          schema: { type: "string" },
+          example: "0x653982c6f563b7a87272abcea1c65d98b09794c7",
+        },
+      ],
+      responses: {
+        "200": {
+          description: "✅ Payment status",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string" },
+                  data: {
+                    type: "object",
+                    properties: {
+                      status: { 
+                        type: "string", 
+                        enum: ["pending", "confirming", "successful", "failed"],
+                        description: "pending = waiting, confirming = received, successful = confirmed"
+                      },
                       confirmations: { type: "integer" },
-                      required_confirmations: { type: "integer" },
                       amount_received: { type: "number" },
                       transaction_hash: { type: "string" },
                     },
@@ -149,15 +163,10 @@ Poll this endpoint to check if a customer has sent payment to the provided addre
           },
         },
         "500": {
-          description: "Invalid address",
+          description: "❌ Invalid address",
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/ErrorResponse" },
-              example: {
-                success: false,
-                message: "please add valid address!",
-                statusCode: 500,
-              },
+              schema: { $ref: "#/components/schemas/Error" },
             },
           },
         },
