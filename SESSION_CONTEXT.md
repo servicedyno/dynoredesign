@@ -207,8 +207,8 @@ Test and verify the complete crypto payment flow on Sepolia testnet including:
 
 ## 🚀 Next Steps
 
-1. **Immediate**: Test native ETH/TRX sweep cron with real payment
-2. **Short-term**: Complete Sepolia testnet payment flow testing
+1. **Immediate**: Verify admin sweep cron executes for pending 0.00208573 ETH
+2. **Short-term**: Test additional payment scenarios (below threshold, different currencies)
 3. **Medium-term**: Implement remaining P1/P2 features (2FA, Session Management)
 4. **Long-term**: Production deployment preparation
 
