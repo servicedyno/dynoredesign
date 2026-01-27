@@ -1055,7 +1055,8 @@ verifyFinalResults();
             print("❌ Authentication failed - cannot proceed with tests")
             return False
         
-        # Phase 2: Verify Environment Configuration
+        # Phase 2: Get User Company ID and Verify Environment Configuration
+        self.get_user_company_id()
         self.verify_environment_config()
         
         # Phase 3: Run Scenario 1 - Above Threshold
