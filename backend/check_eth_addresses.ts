@@ -7,13 +7,12 @@ async function checkETHWalletAddresses() {
   console.log('\n=== ETH Wallet Addresses Analysis ===\n');
   
   try {
-    // Step 1: Get merchant wallet (user_id 28, company 38)
-    console.log('📋 Merchant Wallet (User ID: 28, Company: 38):');
+    // Step 1: Get merchant wallet (user_id 28)
+    console.log('📋 Merchant Wallet (User ID: 28):');
     const merchantWallet = await userWalletModel.findOne({
       where: {
         user_id: 28,
-        wallet_type: 'ETH',
-        company_id: 38
+        wallet_type: 'ETH'
       }
     });
     
