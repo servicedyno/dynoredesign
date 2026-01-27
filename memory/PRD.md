@@ -201,6 +201,27 @@ Set up a crypto payment gateway backend from GitHub repositories (DynoBackend & 
 
 ---
 
+## Architecture Clarification (January 2026)
+
+### Gas Fee Wallet vs Admin Fee Wallet
+The system has a critical architectural distinction between two wallet types:
+
+1. **Gas Fee Wallet** (`tbl_admin_fee_wallet` database table)
+   - Purpose: Stores ETH/TRX for funding token (ERC20/TRC20) transfers
+   - Used by: `sendingLeftover` function to return residual gas fees
+   - Model: `adminFeeModel`
+
+2. **Admin Fee Wallet** (`.env` file variables: `ETH`, `TRX`, etc.)
+   - Purpose: Collects admin/platform fees from payments
+   - Used by: `sweepNativeAdminFees` function to send collected fees
+   - Utility: `getAdminWalletAddress()` from `/app/backend/utils/adminUtils.ts`
+
+**Code References:**
+- `sendingLeftover` (line ~2958): Returns leftover gas to Gas Fee Wallet ✅
+- `sweepNativeAdminFees` (line ~3057): Sends collected fees to Admin Fee Wallet ✅
+
+---
+
 ## Key Integrations
 - PostgreSQL (external database)
 - Redis (caching/queues)
