@@ -2942,6 +2942,178 @@ const sendingLeftover = async () => {
   }
 };
 
+/**
+ * Sweep native ETH/TRX admin fees from temp addresses to admin wallet
+ * This handles the pending_sweep status for account-based chains
+ * Schedule: Every 45 minutes
+ */
+const sweepNativeAdminFees = async () => {
+  console.log("[sweepNativeAdminFees] Starting native ETH/TRX admin fee sweep...");
+  
+  try {
+    // Find all temp addresses with pending native ETH/TRX admin fees
+    const pendingAddresses: ITemporaryAddress[] = await sequelize.query(
+      `SELECT ut.* FROM tbl_user_temp_address ut
+       WHERE ut.wallet_type IN ('ETH', 'TRX')
+       AND ut.status = 'successful'
+       AND ut.admin_status = 'pending_sweep'
+       AND ut.amount > 0
+       AND ut."createdAt" >= NOW() - INTERVAL '30 days'`,
+      {
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    console.log(`[sweepNativeAdminFees] Found ${pendingAddresses.length} addresses with pending admin fees`);
+
+    for (let i = 0; i < pendingAddresses.length; i++) {
+      try {
+        const currentAddress = pendingAddresses[i];
+        const wallet_type = currentAddress.wallet_type; // ETH or TRX
+        
+        console.log(`[sweepNativeAdminFees] Processing ${wallet_type} address: ${currentAddress.wallet_address}`);
+
+        // Get current balance of temp address
+        const addressBalance = await tatumApi.getAddressBalance(
+          currentAddress.wallet_address,
+          wallet_type
+        );
+
+        // Get admin fee wallet for this chain
+        const adminFeeWallet = await adminFeeModel.findOne({
+          where: { wallet_type },
+        });
+
+        if (!adminFeeWallet) {
+          console.error(`[sweepNativeAdminFees] Admin fee wallet not found for ${wallet_type}`);
+          continue;
+        }
+
+        const adminWalletAddress = adminFeeWallet.dataValues.wallet_address;
+        let balance = Number(addressBalance?.balance ?? 0);
+        
+        // For TRX, convert from SUN to TRX
+        if (wallet_type === "TRX") {
+          balance = balance / 1000000;
+        }
+
+        console.log(`[sweepNativeAdminFees] Address balance: ${balance} ${wallet_type}`);
+
+        if (balance > 0) {
+          let fees, sendAmount;
+
+          if (wallet_type === "ETH") {
+            // Estimate gas fee for ETH transfer
+            fees = await tatumApi.feeEstimation(
+              wallet_type,
+              currentAddress.wallet_address,
+              adminWalletAddress,
+              balance
+            );
+            // Deduct gas fee from send amount
+            sendAmount = Number((balance - Number(fees?.slow ?? 0)).toFixed(8));
+          } else {
+            // TRX - bandwidth fee is minimal, send most of the balance
+            fees = null;
+            // Leave small amount for bandwidth (0.1 TRX should be enough)
+            sendAmount = Number((balance - 0.1).toFixed(6));
+          }
+
+          if (sendAmount > 0) {
+            console.log(`[sweepNativeAdminFees] Sweeping ${sendAmount} ${wallet_type} to admin wallet`);
+
+            // Decrypt private key
+            const privateKey = await tatumApi.decryptSymmetric(
+              currentAddress.privateKey,
+              process.env.TEMP_KEY_ID
+            );
+
+            // Transfer to admin fee wallet
+            const transactionDetails = await tatumApi.assetToOtherAddress({
+              amount: sendAmount,
+              currency: wallet_type,
+              fee: fees,
+              fromAddress: currentAddress.wallet_address,
+              privateKey: privateKey,
+              toAddress: adminWalletAddress,
+            });
+
+            // Convert to USD for logging
+            const finalAmount = await currencyConvert({
+              sourceCurrency: wallet_type,
+              currency: ["USD"],
+              amount: sendAmount,
+              fixedDecimal: false,
+            });
+            const usd = Number(Number(finalAmount[0].amount).toFixed(2));
+
+            // Record the admin fee transaction
+            await adminFeeTransactionModel.create({
+              wallet_address: currentAddress.wallet_address,
+              amount: sendAmount,
+              amount_in_usd: usd,
+              wallet_type,
+              transaction_id: transactionDetails?.txId,
+              status: "successful",
+              blockchain_fee: fees?.slow ?? 0,
+              transaction_type: "CREDIT",
+              amount_to_be_paid: 0,
+            });
+
+            // Update temp address status
+            await userTempAddressModel.update(
+              {
+                adminTxId: currentAddress.adminTxId 
+                  ? currentAddress.adminTxId + "," + transactionDetails?.txId 
+                  : transactionDetails?.txId,
+                admin_status: "successful",
+              },
+              {
+                where: {
+                  temp_id: currentAddress.temp_id,
+                },
+              }
+            );
+
+            // Increment admin wallet fee balance (for tracking)
+            await adminWalletModel.increment("fee", {
+              by: sendAmount,
+              where: { wallet_type },
+            });
+
+            console.log(`[sweepNativeAdminFees] Successfully swept ${sendAmount} ${wallet_type} ($${usd} USD) - TX: ${transactionDetails?.txId}`);
+          } else {
+            console.log(`[sweepNativeAdminFees] Balance too low after gas fees: ${balance} ${wallet_type}`);
+          }
+        } else {
+          // No balance but marked as pending_sweep - might have been swept manually or balance moved
+          console.log(`[sweepNativeAdminFees] No balance found, marking as successful: ${currentAddress.wallet_address}`);
+          await userTempAddressModel.update(
+            {
+              admin_status: "successful",
+            },
+            {
+              where: {
+                temp_id: currentAddress.temp_id,
+              },
+            }
+          );
+        }
+      } catch (e) {
+        console.error(`[sweepNativeAdminFees] Error processing address:`, e);
+        const message = getErrorMessage(e);
+        cronLogger.error(`[sweepNativeAdminFees] ${message}`, new Error(e));
+      }
+    }
+
+    console.log("[sweepNativeAdminFees] Completed native ETH/TRX admin fee sweep");
+  } catch (e) {
+    console.error("[sweepNativeAdminFees] Fatal error:", e);
+    const message = getErrorMessage(e);
+    cronLogger.error(`[sweepNativeAdminFees] ${message}`, new Error(e));
+  }
+};
+
 const checkFeeBalance = async () => {
   try {
     const adminFeesWallets = await await adminFeeModel.findAll({
