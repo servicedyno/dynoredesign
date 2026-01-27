@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://cryptopay-fix-1.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://setup-app.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {

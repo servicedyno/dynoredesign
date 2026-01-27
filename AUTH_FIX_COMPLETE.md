@@ -119,7 +119,7 @@ Company ID: 35 created successfully
 
 **Option A - Register New User:**
 ```bash
-curl -X POST "https://cryptopay-fix-1.preview.emergentagent.com/api/user/registerUser" \
+curl -X POST "https://setup-app.preview.emergentagent.com/api/user/registerUser" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Your Name",
@@ -131,7 +131,7 @@ curl -X POST "https://cryptopay-fix-1.preview.emergentagent.com/api/user/registe
 
 **Option B - Login Existing User:**
 ```bash
-curl -X POST "https://cryptopay-fix-1.preview.emergentagent.com/api/user/login" \
+curl -X POST "https://setup-app.preview.emergentagent.com/api/user/login" \
   -H "Content-Type: application/json" \
   -d '{
     "email": "your@email.com",
@@ -155,7 +155,7 @@ From the response above, copy the `accessToken` value.
 
 ### Step 3: Use Swagger UI
 
-1. **Open Swagger**: https://cryptopay-fix-1.preview.emergentagent.com/api/docs
+1. **Open Swagger**: https://setup-app.preview.emergentagent.com/api/docs
 
 2. **Click "Authorize"** button (🔓 lock icon at top-right)
 
@@ -183,7 +183,7 @@ Using cURL:
 ```bash
 TOKEN="your-jwt-token-here"
 
-curl -X POST "https://cryptopay-fix-1.preview.emergentagent.com/api/company/addCompany" \
+curl -X POST "https://setup-app.preview.emergentagent.com/api/company/addCompany" \
   -H "Authorization: Bearer $TOKEN" \
   -F 'data={"company_name":"Acme Corp","email":"contact@acme.com","mobile":"+1234567890","address_line1":"123 Main St","city":"New York","state":"NY","country":"US","zip_code":"10001"}'
 ```
@@ -299,4 +299,4 @@ The API is now fully functional. You can:
 5. **Generate API Keys**: Create keys for external integrations
 
 For full API documentation, visit:
-https://cryptopay-fix-1.preview.emergentagent.com/api/docs
+https://setup-app.preview.emergentagent.com/api/docs
