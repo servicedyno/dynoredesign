@@ -483,7 +483,8 @@ const createCryptoPayment = async (
         status: "pending",
         ref: uniqueRef,
         currency: data.currency,
-        unique_tx_id: paymentRes.transaction_id,
+        txId: paymentRes.transaction_id,        // Transaction ID for verification
+        unique_tx_id: paymentRes.transaction_id, // Keep for backward compatibility
         walletType: "customer",
         temp_id: paymentRes.temp_id,
       });
