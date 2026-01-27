@@ -30,6 +30,7 @@ class PartialPaymentWebhookTester:
         
         # Test data from review request
         self.test_user_email = "john@dyno.pt"
+        self.test_user_password = "Katiekendra123@"
         self.test_user_id = 28
         self.test_company_id = 3
         
