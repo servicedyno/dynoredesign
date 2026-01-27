@@ -219,17 +219,29 @@ class ComprehensiveBelowThresholdTester:
             )
             return False
         
+        if not self.test_data.get("company_id"):
+            self.log_result(
+                "Create Payment Link", 
+                False, 
+                "No company_id available"
+            )
+            return False
+        
         try:
             headers = {
                 "Authorization": f"Bearer {self.jwt_token}",
                 "Content-Type": "application/json"
             }
             
+            # Use the correct format from comprehensive test
             payload = {
-                "email": self.payment_config["customer_email"],
                 "amount": self.payment_config["amount"],
                 "base_currency": self.payment_config["base_currency"],
-                "modes": self.payment_config["modes"]
+                "company_id": self.test_data["company_id"],
+                "email": self.payment_config["customer_email"],
+                "modes": self.payment_config["modes"],
+                "description": "Below Threshold Test Payment",
+                "expire": "24h"
             }
             
             response = requests.post(
