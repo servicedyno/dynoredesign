@@ -27,7 +27,7 @@ PGPASSWORD="oMHQMHfnrFyWgkhYaiXbhjDEMZSWOapc" pg_dump \
   -f /tmp/dynopay_backup.sql
 
 if [ $? -eq 0 ]; then
-    echo "   ✅ Database dump completed: /tmp/dynopay_backup.dump"
+    echo "   ✅ Database dump completed: /tmp/dynopay_backup.sql"
     echo ""
 else
     echo "   ❌ Database dump failed!"
@@ -38,11 +38,13 @@ echo "📋 Step 2: Restoring to NEW database..."
 echo "   Target: shortline.proxy.rlwy.net/railway"
 echo "   This will drop existing tables and recreate with data"
 
-# Drop all existing tables first (clean slate)
-psql "$NEW_DB" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-
-# Restore the dump
-pg_restore -d "$NEW_DB" --no-owner --no-acl /tmp/dynopay_backup.dump
+# Restore the SQL dump
+PGPASSWORD="JqdkVTjQujJaEOyUJJHmWMYEWgtAXTfO" psql \
+  -h shortline.proxy.rlwy.net \
+  -p 44579 \
+  -U postgres \
+  -d railway \
+  -f /tmp/dynopay_backup.sql
 
 if [ $? -eq 0 ]; then
     echo "   ✅ Database restored successfully!"
