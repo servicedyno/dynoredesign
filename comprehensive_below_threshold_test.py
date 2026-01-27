@@ -45,8 +45,8 @@ class ComprehensiveBelowThresholdTester:
         
         # Payment configuration for below-threshold test
         self.payment_config = {
-            "amount": 0.005,  # ETH - below $5 threshold (~$14.58)
-            "base_currency": "ETH",
+            "amount": 100.00,  # Use USD amount instead of ETH
+            "base_currency": "USD",  # Use USD instead of ETH for now
             "modes": ["CRYPTO"],
             "customer_email": "test@example.com"
         }
