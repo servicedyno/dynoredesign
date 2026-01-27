@@ -332,8 +332,22 @@ const createCryptoPayment = async (
       
       console.log('[DEBUG] Step 4: Redis item retrieved successfully:', { adm_id: items?.adm_id, company_id: items?.company_id });
 
-      // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
+      // Phase 11: Validate requested currency is in available_currencies list
       const requestedCurrency = data.currency;
+      
+      if (items.available_currencies && Array.isArray(items.available_currencies)) {
+        if (!items.available_currencies.includes(requestedCurrency)) {
+          console.log(`[Phase 11] Currency ${requestedCurrency} not in available list:`, items.available_currencies);
+          return errorResponseHelper(
+            res,
+            400,
+            `${requestedCurrency} is not available for this payment. Available currencies: ${items.available_currencies.join(', ')}`
+          );
+        }
+        console.log(`[Phase 11] Currency ${requestedCurrency} validated against available list:`, items.available_currencies);
+      }
+
+      // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
       console.log(`[Phase 10 Validation] Checking wallet for currency: ${requestedCurrency}, user_id: ${items.adm_id}, company_id: ${items.company_id}`);
       
       // Parse user_id safely
