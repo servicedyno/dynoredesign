@@ -142,9 +142,9 @@ Password: Katiekendra123@
 
 ### API Keys (Updated - Valid)
 ```
-VERIFF_API_KEY=7a372667-446f-4860-9634-e27aad20ec03
-VERIFF_API_SECRET=671d951f-32ae-4a0b-a7ad-3be4c2ca39de
-TELNYX_VERIFY_PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
+VERIFF_API_KEY=initial-setup-11
+VERIFF_API_SECRET=initial-setup-11
+TELNYX_VERIFY_PROFILE_ID=initial-setup-11
 ```
 
 **Note**: Currently reverted to placeholders in .env for security. Update when needed for testing.
@@ -200,8 +200,8 @@ Test and verify the complete crypto payment flow on Sepolia testnet including:
 - `/app/COMPREHENSIVE_TEST_FIXES_2026-01-25.md` - Recent test fixes
 
 ### API Documentation
-- Swagger UI: `https://simple-setup-6.preview.emergentagent.com/api/docs`
-- OpenAPI Spec: `https://simple-setup-6.preview.emergentagent.com/api/docs.json`
+- Swagger UI: `https://initial-setup-11.preview.emergentagent.com/api/docs`
+- OpenAPI Spec: `https://initial-setup-11.preview.emergentagent.com/api/docs.json`
 
 ---
 
@@ -217,7 +217,7 @@ Test and verify the complete crypto payment flow on Sepolia testnet including:
 ## 💡 Development Notes
 
 ### Environment URLs
-- **Backend URL**: `https://simple-setup-6.preview.emergentagent.com`
+- **Backend URL**: `https://initial-setup-11.preview.emergentagent.com`
 - **Checkout URL**: `https://dynocheckoutfix-production.up.railway.app/`
 - **Database**: `yamanote.proxy.rlwy.net:42097`
 

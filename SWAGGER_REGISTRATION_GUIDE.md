@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://simple-setup-6.preview.emergentagent.com/api/docs
+Go to: https://initial-setup-11.preview.emergentagent.com/api/docs
 
 ---
 

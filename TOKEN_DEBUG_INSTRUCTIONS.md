@@ -4,7 +4,7 @@
 
 I've added debugging to see what's in your token. Please:
 
-1. **Go to Swagger UI**: https://simple-setup-6.preview.emergentagent.com/api/docs
+1. **Go to Swagger UI**: https://initial-setup-11.preview.emergentagent.com/api/docs
 
 2. **Make sure you're authorized**:
    - Click the "Authorize" button (🔓)
