@@ -50,8 +50,9 @@
 - ✅ Payment link generation
 - ✅ Crypto payment processing with Tatum integration
 - ✅ Automatic fund distribution
-- ✅ Admin fee collection (2%)
+- ✅ Admin fee collection (tiered: 2% + fixed fee + buffer)
 - ✅ Threshold-based payment forwarding
+- ✅ **Native ETH/TRX admin fee sweep (NEW - every 15 min)**
 
 ### Business Features
 - ✅ Tax ID validation (APILayer integration)
