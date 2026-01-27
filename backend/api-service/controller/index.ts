@@ -39,11 +39,6 @@ const getAvailableCurrencies = async (userId: number, companyId: number): Promis
   return wallets.map((w: any) => w.wallet_type);
 };
 
-// Use internal backend URL for service-to-service communication
-const getBackendURL = () => {
-  return process.env.INTERNAL_BACKEND_URL || process.env.SERVER_URL || 'http://localhost:3300';
-};
-
 const createUser = async (req: express.Request, res: express.Response) => {
   try {
     const { name, email, mobile } = req.body;
