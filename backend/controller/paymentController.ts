@@ -2426,6 +2426,37 @@ const createPaymentLink = async (
       }
     }
     
+    // Phase 11: Validate at least one crypto wallet is configured for this company
+    const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20'];
+    
+    const walletWhereClause: any = {
+      user_id: userData.user_id,
+      wallet_type: { [Op.in]: cryptoTypes },
+      wallet_address: { [Op.not]: null },
+    };
+    
+    // If company_id is provided, filter by company_id
+    if (company_id) {
+      walletWhereClause.company_id = company_id;
+    }
+    
+    const configuredWallets = await userWalletModel.findAll({
+      where: walletWhereClause,
+      attributes: ['wallet_type'],
+    });
+    
+    if (configuredWallets.length === 0) {
+      return errorResponseHelper(
+        res,
+        400,
+        "No crypto wallet configured. Please add at least one crypto wallet address before creating a payment link."
+      );
+    }
+    
+    // Get unique list of available currencies
+    const availableCurrencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
+    console.log(`[Phase 11] Available currencies for company_id ${company_id}:`, availableCurrencies);
+    
     const uniqueRef = crypto.randomBytes(24).toString("hex");
     console.log("userData============>", userData);
     
