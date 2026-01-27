@@ -1,5 +1,6 @@
-const { Sequelize } = require('sequelize');
-const { userWalletModel } = require('./backend/models');
+import { userWalletModel } from './backend/models/index.js';
+import dotenv from 'dotenv';
+dotenv.config({ path: './backend/.env' });
 
 async function checkAndFixBTCWallet() {
   console.log('\n=== Checking BTC Wallet Configuration ===\n');
