@@ -217,14 +217,15 @@ class PartialPaymentWebhookTester:
                 "Content-Type": "application/json"
             }
             
-            # Create payment link
+            # Create payment link with correct format
             payment_data = {
                 "amount": scenario["expected_usd"],
                 "base_currency": "USD",
+                "company_id": self.test_company_id,
+                "email": self.test_user_email,
+                "modes": ["CRYPTO"],
                 "description": f"Test Payment Link - {scenario['name']} Scenario",
-                "expire": "24h",
-                "callback_url": f"{self.backend_url}/api/test-callback",
-                "webhook_url": f"{self.backend_url}/api/test-webhook"
+                "expire": "24h"
             }
             
             response = requests.post(
