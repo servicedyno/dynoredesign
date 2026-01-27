@@ -206,9 +206,9 @@ Test and verify the complete crypto payment flow on Sepolia testnet including:
 
 ## 🚀 Next Steps
 
-1. **Immediate**: Complete Sepolia testnet payment flow testing
-2. **Short-term**: Fix any issues discovered during testing
-3. **Medium-term**: Implement remaining P1/P2 features from PRD.md
+1. **Immediate**: Test native ETH/TRX sweep cron with real payment
+2. **Short-term**: Complete Sepolia testnet payment flow testing
+3. **Medium-term**: Implement remaining P1/P2 features (2FA, Session Management)
 4. **Long-term**: Production deployment preparation
 
 ---
