@@ -35,8 +35,9 @@ def login():
     
     if response.status_code == 200:
         data = response.json()
-        token = data.get('token')
-        user_data = data.get('data', {})
+        response_data = data.get('data', {})
+        token = response_data.get('accessToken')
+        user_data = response_data.get('userData', {})
         print(f"✅ Login successful!")
         print(f"User ID: {user_data.get('user_id')}")
         print(f"Name: {user_data.get('name')}")
