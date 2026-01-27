@@ -2976,18 +2976,22 @@ const sendingLeftover = async () => {
         currentAddress?.wallet_address,
         wallet_type
       );
-      const adminFeeWallet = await (
-        await adminFeeModel.findOne({
-          where: { wallet_type },
-        })
-      ).dataValues;
+      
+      // Get admin fee wallet from .env (NOT from tbl_admin_fee_wallet which is for gas funding)
+      const adminWalletAddress = getAdminWalletAddress(wallet_type);
+      
+      if (!adminWalletAddress) {
+        console.error(`[sendingLeftover] Admin fee wallet not configured in .env for ${wallet_type}`);
+        continue;
+      }
+      
       if (addressBalance?.balance && Number(addressBalance?.balance) > 0) {
         let fees, sendAmount;
         if (wallet_type === "ETH") {
           fees = await tatumApi.feeEstimation(
             wallet_type,
             currentAddress?.wallet_address,
-            adminFeeWallet?.wallet_address,
+            adminWalletAddress,
             addressBalance?.balance,
             process.env.ETH_CONTRACT
           );
@@ -3008,7 +3012,7 @@ const sendingLeftover = async () => {
             fee: fees,
             fromAddress: currentAddress?.wallet_address,
             privateKey: privateKey,
-            toAddress: adminFeeWallet?.wallet_address,
+            toAddress: adminWalletAddress,
           });
           const finalAmount = await currencyConvert({
             sourceCurrency: wallet_type,
