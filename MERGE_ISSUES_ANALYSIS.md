@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://finance-backend-5.preview.emergentagent.com
+SERVER_URL=https://cryptopay-fix-1.preview.emergentagent.com
 ```
 
 **Impact:**

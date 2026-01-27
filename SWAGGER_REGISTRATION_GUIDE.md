@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://finance-backend-5.preview.emergentagent.com/api/docs
+Go to: https://cryptopay-fix-1.preview.emergentagent.com/api/docs
 
 ---
 

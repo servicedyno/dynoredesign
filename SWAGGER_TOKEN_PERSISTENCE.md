@@ -15,7 +15,7 @@ Added `persistAuthorization: true` to Swagger UI configuration.
 ## How It Works Now
 
 ### 1. Authorize Once
-1. Open Swagger UI: https://finance-backend-5.preview.emergentagent.com/api/docs
+1. Open Swagger UI: https://cryptopay-fix-1.preview.emergentagent.com/api/docs
 2. Click "Authorize" (🔓)
 3. Paste your JWT token
 4. Click "Authorize" → "Close"
