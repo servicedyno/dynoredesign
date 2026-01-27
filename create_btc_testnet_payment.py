@@ -133,7 +133,7 @@ def create_btc_payment_link(token, company_id):
         print(f"Response: {response.text}")
         return None
 
-def get_crypto_address(token, payment_link_id):
+def get_crypto_address(token, transaction_id):
     """Get BTC testnet address for payment"""
     print_section("STEP 4: Generate BTC Testnet Address")
     
@@ -144,11 +144,11 @@ def get_crypto_address(token, payment_link_id):
     }
     
     payload = {
-        "payment_link_id": payment_link_id,
+        "transaction_id": transaction_id,
         "crypto_type": "BTC"
     }
     
-    print(f"🪙 Requesting BTC testnet address for payment link {payment_link_id}")
+    print(f"🪙 Requesting BTC testnet address for transaction {transaction_id}")
     
     response = requests.post(url, headers=headers, json=payload)
     print(f"Status: {response.status_code}")
