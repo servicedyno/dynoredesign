@@ -379,12 +379,22 @@ class ComprehensiveBelowThresholdTester:
                         {"response": data}
                     )
             else:
-                self.log_result(
-                    "Generate Payment Address", 
-                    False, 
-                    f"API call failed with status {response.status_code}",
-                    {"response": response.text}
-                )
+                # Try to parse error response
+                try:
+                    error_data = response.json()
+                    self.log_result(
+                        "Generate Payment Address", 
+                        False, 
+                        f"API call failed with status {response.status_code}: {error_data.get('message', 'Unknown error')}",
+                        {"response": error_data, "payload_sent": payload}
+                    )
+                except:
+                    self.log_result(
+                        "Generate Payment Address", 
+                        False, 
+                        f"API call failed with status {response.status_code}",
+                        {"response": response.text, "payload_sent": payload}
+                    )
                 
         except Exception as e:
             self.log_result(
