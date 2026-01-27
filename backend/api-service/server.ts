@@ -9,6 +9,7 @@ import { decrypt } from "./helper";
 import { apiMiddleware } from "./middleware";
 import controller from "./controller";
 import { connectRedis } from "./utils/redisInstance";
+import { setupMerchantSwagger } from "./swagger";
 
 // Load .env from parent directory (shared with main backend)
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -17,15 +18,25 @@ const port = process.env.API_SERVICE_PORT || 3301;
 
 app.use(cors());
 app.use(express.json());
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable for Swagger UI
+}));
 
 app.use(express.static("public"));
 app.use("/images", express.static("/images"));
 app.use("/videos", express.static("/videos"));
+
+// Setup Swagger documentation
+setupMerchantSwagger(app);
+
 app.use("/api", apiMiddleware, router);
 
 app.get("/", async (req: express.Request, res: express.Response) => {
-  res.json({ message: "DynoPay API Service", version: "1.0.0" });
+  res.json({ 
+    message: "DynoPay Merchant API Service", 
+    version: "1.0.0",
+    documentation: "/docs"
+  });
 });
 
 const startServer = async () => {
