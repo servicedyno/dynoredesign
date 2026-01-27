@@ -335,16 +335,26 @@ const createCryptoPayment = async (
       // Phase 11: Validate requested currency is in available_currencies list
       const requestedCurrency = data.currency;
       
-      if (items.available_currencies && Array.isArray(items.available_currencies)) {
-        if (!items.available_currencies.includes(requestedCurrency)) {
-          console.log(`[Phase 11] Currency ${requestedCurrency} not in available list:`, items.available_currencies);
+      // Parse available_currencies - could be array or comma-separated string from Redis
+      let availableCurrenciesList: string[] = [];
+      if (items.available_currencies) {
+        if (Array.isArray(items.available_currencies)) {
+          availableCurrenciesList = items.available_currencies;
+        } else if (typeof items.available_currencies === 'string') {
+          availableCurrenciesList = items.available_currencies.split(',').map((c: string) => c.trim());
+        }
+      }
+      
+      if (availableCurrenciesList.length > 0) {
+        if (!availableCurrenciesList.includes(requestedCurrency)) {
+          console.log(`[Phase 11] Currency ${requestedCurrency} not in available list:`, availableCurrenciesList);
           return errorResponseHelper(
             res,
             400,
-            `${requestedCurrency} is not available for this payment. Available currencies: ${items.available_currencies.join(', ')}`
+            `${requestedCurrency} is not available for this payment. Available currencies: ${availableCurrenciesList.join(', ')}`
           );
         }
-        console.log(`[Phase 11] Currency ${requestedCurrency} validated against available list:`, items.available_currencies);
+        console.log(`[Phase 11] Currency ${requestedCurrency} validated against available list:`, availableCurrenciesList);
       }
 
       // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
