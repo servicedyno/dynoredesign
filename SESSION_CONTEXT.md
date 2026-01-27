@@ -258,6 +258,51 @@ tail -f /var/log/supervisor/frontend.out.log
 - ✅ Analyzed admin fee sweep mechanism
 - ✅ **Implemented native ETH/TRX admin fee sweep cron job**
 - ✅ Updated sweep interval to 15 minutes
+- ✅ **Successfully tested Sepolia ETH payment flow end-to-end**
+
+---
+
+## 🎉 Successful Payment Test (January 27, 2025)
+
+### **Test Results**
+| Field | Value |
+|-------|-------|
+| **Payment Address** | `0x10772cFa7444B1E318a30b378B650494e5EE2B26` |
+| **Amount Received** | 0.05 ETH (~$145.83 USD) |
+| **Merchant Received** | 0.04791427 ETH (95.83%) |
+| **Admin Fee Retained** | 0.00208573 ETH (4.17%) |
+| **Merchant TX** | `0xafee3f15a4850834dca9f0df740e99a45d3489cd5ea194ba8a5a4cc0e937a6c4` |
+| **Transaction ID** | `fdfd02f2-e737-4895-9547-2433ee1207df` |
+| **Status** | ✅ Successful |
+
+### **Fee Breakdown**
+- Total Deduction: $6.08 USD (4.17%)
+- Includes: 2% platform fee + $3 fixed fee + 1% buffer (Tier 1)
+
+### **Issues Found & Fixed During Testing**
+
+1. **Webhook URL Issue**
+   - **Problem**: `addPayment` called `Crypto()` without `onlyCrypto=true`, registering webhook to `/api/tatum-webhook` instead of `/api/tatum-crypto-webhook`
+   - **Fix**: Added `onlyCrypto=true` parameter to trigger proper `cryptoVerification`
+
+2. **Wallet Lookup Issue (Multi-tenant)**
+   - **Problem**: Wallet query with `company_id: 3` failed when merchant wallet had `company_id: null`
+   - **Fix**: Added fallback to retry wallet lookup without company_id constraint
+
+### **Payment Flow Verified**
+```
+1. ✅ Payment link created (link_id: 144)
+2. ✅ Crypto payment initiated → Sepolia address generated
+3. ✅ Tatum subscription created for address monitoring
+4. ✅ Customer sent 0.05 ETH to payment address
+5. ✅ Webhook received at /api/tatum-crypto-webhook
+6. ✅ cryptoVerification processed payment
+7. ✅ Fee calculation: $145.83 - $6.08 = $139.75 to merchant
+8. ✅ Merchant transfer executed: 0.04791427 ETH
+9. ✅ Admin fee retained: 0.00208573 ETH (pending_sweep)
+10. ✅ Transaction recorded as successful
+11. ✅ Email notifications sent via Brevo
+```
 
 ---
 
