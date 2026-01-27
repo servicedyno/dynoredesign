@@ -12,6 +12,12 @@ const currencyConvert = async ({
   amount,
   fixedDecimal,
 }) => {
+  // Validate amount parameter to prevent FastForex API errors
+  if (amount === null || amount === undefined || isNaN(Number(amount))) {
+    console.error(`[currencyConvert] Invalid amount: ${amount}`);
+    throw new Error(`Invalid amount parameter: ${amount}`);
+  }
+  
   let source = sourceCurrency.toUpperCase();
   if (source.includes("USDT")) {
     source = "USDT";
