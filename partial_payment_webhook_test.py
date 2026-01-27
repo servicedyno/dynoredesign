@@ -94,7 +94,7 @@ class PartialPaymentWebhookTester:
                 f"{self.backend_url}/api/user/login",
                 json={
                     "email": self.test_user_email,
-                    "password": "testpassword123"
+                    "password": self.test_user_password
                 },
                 headers={"Content-Type": "application/json"},
                 timeout=15
