@@ -317,7 +317,7 @@ async function migrateUser() {
       const apiPlaceholders = apiColumns.map((_, i) => `$${i + 1}`);
       
       await destClient.query(
-        `INSERT INTO tbl_api (${apiColumns.join(', ')}) VALUES (${apiPlaceholders.join(', ')})`,
+        `INSERT INTO tbl_api (${apiColumns.map(quoteCol).join(', ')}) VALUES (${apiPlaceholders.join(', ')})`,
         apiValues
       );
       console.log(`  - Inserted API key: ${api.api_name || 'unnamed'}`);
