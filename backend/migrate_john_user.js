@@ -115,9 +115,9 @@ async function migrateUser() {
         );
         console.log('  - Deleted user transactions');
         
-        // Delete user self transactions
+        // Delete user self transactions (by user_id since no company_id column)
         await destClient.query(
-          'DELETE FROM tbl_user_self_transaction WHERE company_id = ANY($1)', [companyIds]
+          'DELETE FROM tbl_user_self_transaction WHERE user_id = $1', [destUserId]
         );
         console.log('  - Deleted user self transactions');
         
