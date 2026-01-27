@@ -20,15 +20,19 @@ const userWalletModel = sequelize.define(
       onDelete: "CASCADE",
     },
     // Phase 1: Company scoping
-    company_id: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: "tbl_company",
-        key: "company_id",
-      },
-      onUpdate: "CASCADE",
-      onDelete: "SET NULL",
-    },
+    // NOTE: This field exists in model but NOT in actual database table
+    // Commenting out to prevent schema mismatch errors with shared database
+    // The DynoBackend repo may have this column, but this repo's database doesn't
+    // company_id: {
+    //   type: DataTypes.INTEGER,
+    //   allowNull: true,  // Made nullable to prevent errors
+    //   references: {
+    //     model: "tbl_company",
+    //     key: "company_id",
+    //   },
+    //   onUpdate: "CASCADE",
+    //   onDelete: "SET NULL",
+    // },
     // Phase 1: Wallet name
     wallet_name: {
       type: DataTypes.STRING(100),
