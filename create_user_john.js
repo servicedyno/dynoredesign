@@ -58,7 +58,7 @@ async function createUser() {
       INSERT INTO tbl_company (
         user_id, company_name, email, phone, address, 
         country, state, city, postal_code, status, 
-        createdAt, updatedAt
+        "createdAt", "updatedAt"
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING company_id, company_name
