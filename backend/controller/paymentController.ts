@@ -1604,6 +1604,12 @@ const cryptoVerification = async (address, webhook = true) => {
         wallet_address: { [Op.not]: null },
       };
       
+      console.log(`[cryptoVerification] Wallet lookup DEBUG:
+        - user_id (adm_id): ${customerData.adm_id}
+        - wallet_type: ${tempCurrency}
+        - company_id from customerData: ${customerData.company_id}
+      `);
+      
       // Handle company_id: if provided and valid, add to query
       if (customerData.company_id && customerData.company_id !== '' && customerData.company_id !== 'undefined' && customerData.company_id !== 'null') {
         const companyId = parseInt(customerData.company_id);
@@ -1615,11 +1621,13 @@ const cryptoVerification = async (address, webhook = true) => {
         whereClause.company_id = null;
       }
       
+      console.log(`[cryptoVerification] Final whereClause:`, JSON.stringify(whereClause));
+      
       const walletData = await userWalletModel.findOne({
         where: whereClause,
         transaction,
       });
-      console.log(walletData);
+      console.log(`[cryptoVerification] walletData result:`, walletData ? walletData.dataValues : 'NULL');
       const receivedAmount = tempData?.receivedAmount ?? tempData?.amount;
 
       let product_name;
