@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://basic-setup-18.preview.emergentagent.com/api/docs
+Go to: https://cryptoprocessor.preview.emergentagent.com/api/docs
 
 ---
 

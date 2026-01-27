@@ -6,16 +6,16 @@
 
 #### Veriff KYC (Identity Verification)
 ```env
-VERIFF_API_KEY=7a372667-446f-4860-9634-e27aad20ec03
-VERIFF_API_SECRET=671d951f-32ae-4a0b-a7ad-3be4c2ca39de
+VERIFF_API_KEY=cryptoprocessor
+VERIFF_API_SECRET=cryptoprocessor
 ```
 **Status:** ✅ Updated and verified
 
 #### Telnyx SMS Verification
 ```env
 TELNYX_API_KEY=KEY019B6F591AACFAF1451A80C66809193A_TKJeBs8NaHEaqFkEh2HuYe
-TELNYX_VERIFY_PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
-PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
+TELNYX_VERIFY_PROFILE_ID=cryptoprocessor
+PROFILE_ID=cryptoprocessor
 ```
 **Status:** ✅ Updated and verified
 
@@ -125,7 +125,7 @@ curl -X GET http://localhost:8001/api/kyc/status \
   -H "Authorization: Bearer <JWT_TOKEN>"
 
 # 3. Submit KYC (requires document upload)
-# Use Swagger UI: https://basic-setup-18.preview.emergentagent.com/api/docs
+# Use Swagger UI: https://cryptoprocessor.preview.emergentagent.com/api/docs
 ```
 
 ### Scenario 2: SMS OTP Flow

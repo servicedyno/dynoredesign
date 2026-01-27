@@ -144,13 +144,13 @@ Password: Katiekendra123@
 ### API Keys (Updated - January 27, 2026)
 ```
 # Veriff KYC (Real Production Credentials)
-VERIFF_API_KEY=7a372667-446f-4860-9634-e27aad20ec03
-VERIFF_API_SECRET=671d951f-32ae-4a0b-a7ad-3be4c2ca39de
+VERIFF_API_KEY=cryptoprocessor
+VERIFF_API_SECRET=cryptoprocessor
 
 # Telnyx SMS (Real Production Credentials)
 TELNYX_API_KEY=KEY019B6F591AACFAF1451A80C66809193A_TKJeBs8NaHEaqFkEh2HuYe
-TELNYX_VERIFY_PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
-PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
+TELNYX_VERIFY_PROFILE_ID=cryptoprocessor
+PROFILE_ID=cryptoprocessor
 ```
 
 ---
@@ -207,8 +207,8 @@ Test and verify the complete crypto payment flow on Sepolia testnet including:
 - `/app/COMPREHENSIVE_TEST_FIXES_2026-01-25.md` - Recent test fixes
 
 ### API Documentation
-- Swagger UI: `https://basic-setup-18.preview.emergentagent.com/api/docs`
-- OpenAPI Spec: `https://basic-setup-18.preview.emergentagent.com/api/docs.json`
+- Swagger UI: `https://cryptoprocessor.preview.emergentagent.com/api/docs`
+- OpenAPI Spec: `https://cryptoprocessor.preview.emergentagent.com/api/docs.json`
 
 ---
 
@@ -224,7 +224,7 @@ Test and verify the complete crypto payment flow on Sepolia testnet including:
 ## 💡 Development Notes
 
 ### Environment URLs
-- **Backend URL**: `https://basic-setup-18.preview.emergentagent.com`
+- **Backend URL**: `https://cryptoprocessor.preview.emergentagent.com`
 - **Checkout URL**: `https://dynocheckoutfix-production.up.railway.app/`
 - **Database**: `yamanote.proxy.rlwy.net:42097`
 

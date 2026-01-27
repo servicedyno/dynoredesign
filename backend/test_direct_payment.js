@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://basic-setup-18.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://cryptoprocessor.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {
