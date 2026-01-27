@@ -56,7 +56,7 @@ async function setup() {{
     const xpub = walletRes.data.xpub;
     
     // Get first address
-    const addressRes = await axios.get(\`https://api.tatum.io/v3/bitcoin/address/\${{xpub}}/0\`, {{
+    const addressRes = await axios.get("https://api.tatum.io/v3/bitcoin/address/" + xpub + "/0", {{
       headers: {{ "x-api-key": process.env.TATUM_TESTNET_KEY }}
     }});
     
