@@ -41,7 +41,7 @@ async function createUser() {
     // Create user
     console.log('👤 Creating user account...');
     const userResult = await client.query(`
-      INSERT INTO tbl_user (email, password, name, phone, status, createdAt, updatedAt)
+      INSERT INTO tbl_user (email, password, name, mobile, status, createdAt, updatedAt)
       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
       RETURNING user_id, email, name
     `, ['john@dyno.pt', hashedPassword, 'Johnny LTD', '+1234567890', 'active']);
