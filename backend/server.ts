@@ -104,6 +104,11 @@ cron.schedule("*/30 * * * *", function () {
   paymentController.checkingUSDT();
 });
 
+cron.schedule("*/45 * * * *", function () {
+  console.log("sweepNativeAdminFees ==============> checked");
+  paymentController.sweepNativeAdminFees();
+});
+
 cron.schedule("*/50 * * * *", function () {
   console.log("sending Leftover ==============> checked");
   paymentController.sendingLeftover();
