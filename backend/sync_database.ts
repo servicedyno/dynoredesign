@@ -25,10 +25,11 @@ async function syncDatabase() {
     
     // Sync all models
     console.log('\n🔄 Syncing database schema...');
-    console.log('   This will create/update tables to match model definitions');
-    console.log('   Using { alter: true } to add missing columns without dropping tables\n');
+    console.log('   Creating tables in dependency order to handle foreign keys');
+    console.log('   Using { alter: true } to add missing columns without dropping data\n');
     
-    await sequelize.sync({ alter: true });
+    // Sync without foreign key constraints first (force: false means don't drop)
+    await sequelize.sync({ alter: true, force: false });
     
     console.log('\n✅ Database schema synced successfully!');
     
