@@ -382,41 +382,62 @@ const createCryptoPayment = async (
         company_id: items.company_id,  // Include company_id from Redis
       };
       const { paymentRes, uniqueRef } = await Crypto(data, tokenData, true);
-      finalRes = { hash: uniqueRef, ...paymentRes };
       
       // Determine fee_payer mode
       const fee_payer = items.fee_payer || 'company';
       
-      // Calculate merchant's expected amount (base amount in crypto)
+      // Calculate crypto amount using FastForex
+      const baseAmountUSD = items.base_amount || items.amount || 0;
+      let crypto_amount = 0;
       let merchant_amount_crypto = data.amount;
       let total_fees_crypto = 0;
+      let exchange_rate = 0;
       
-      if (fee_payer === 'customer') {
-        // Customer paid total including fees, calculate what merchant should receive
-        const baseAmountUSD = items.base_amount || items.amount || 0;  // Handle both createLink and createPayment
-        const chain = requestedCurrency.replace('-', '_').toUpperCase();
+      try {
+        // Get the crypto amount for the USD value using FastForex
+        const cryptoRates = await currencyConvert({
+          sourceCurrency: items.base_currency || 'USD',
+          currency: [requestedCurrency],
+          amount: baseAmountUSD,
+          fixedDecimal: false,
+        });
+        crypto_amount = parseFloat(cryptoRates[0]?.amount?.toString() || '0');
+        exchange_rate = parseFloat(cryptoRates[0]?.transferRate?.toString() || '0');
         
-        try {
-          // Get the base amount in crypto (what merchant should receive)
-          const baseRates = await currencyConvert({
-            sourceCurrency: items.base_currency || 'USD',
-            currency: [requestedCurrency],
-            amount: baseAmountUSD,
-            fixedDecimal: false,
-          });
-          merchant_amount_crypto = parseFloat(baseRates[0]?.amount?.toString() || data.amount.toString());
+        console.log(`[createCryptoPayment] Crypto amount calculated:
+          - Base amount: ${baseAmountUSD} ${items.base_currency || 'USD'}
+          - Crypto amount: ${crypto_amount} ${requestedCurrency}
+          - Exchange rate: 1 ${items.base_currency || 'USD'} = ${exchange_rate} ${requestedCurrency}`);
+        
+        if (fee_payer === 'customer') {
+          // Customer pays fees, so merchant gets the base crypto amount
+          merchant_amount_crypto = crypto_amount;
           total_fees_crypto = data.amount - merchant_amount_crypto;
           
           console.log(`[createCryptoPayment] Customer pays fees mode:
             - Total paid by customer: ${data.amount} ${requestedCurrency}
             - Merchant receives: ${merchant_amount_crypto} ${requestedCurrency}
             - Fees collected: ${total_fees_crypto} ${requestedCurrency}`);
-        } catch (calcError) {
-          console.error('[createCryptoPayment] Fee calc error:', calcError);
-          // Fallback to standard calculation
-          merchant_amount_crypto = data.amount;
+        } else {
+          // Company pays fees, merchant gets crypto amount minus fees
+          merchant_amount_crypto = crypto_amount;
         }
+      } catch (calcError) {
+        console.error('[createCryptoPayment] Crypto amount calculation error:', calcError);
+        // Fallback to data.amount if conversion fails
+        crypto_amount = data.amount || 0;
+        merchant_amount_crypto = data.amount;
       }
+      
+      // Add crypto amount and rate to response
+      finalRes = { 
+        hash: uniqueRef, 
+        ...paymentRes,
+        amount: crypto_amount,
+        base_amount: baseAmountUSD,
+        base_currency: items.base_currency || 'USD',
+        rate: exchange_rate
+      };
 
       console.log("paymentRes=============>", paymentRes, uniqueRef, {
         mode: paymentTypes.CRYPTO,
