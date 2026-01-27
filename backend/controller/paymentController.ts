@@ -3076,17 +3076,17 @@ const sweepNativeAdminFees = async () => {
           wallet_type
         );
 
-        // Get admin fee wallet for this chain
-        const adminFeeWallet = await adminFeeModel.findOne({
-          where: { wallet_type },
-        });
+        // Get admin fee wallet from .env (NOT from tbl_admin_fee_wallet which is for gas funding)
+        // tbl_admin_fee_wallet is used for funding gas to temp addresses for ERC20/TRC20 transfers
+        // .env wallets (ETH, TRX, etc.) are the destination for collected admin fees
+        const adminWalletAddress = getAdminWalletAddress(wallet_type);
 
-        if (!adminFeeWallet) {
-          console.error(`[sweepNativeAdminFees] Admin fee wallet not found for ${wallet_type}`);
+        if (!adminWalletAddress) {
+          console.error(`[sweepNativeAdminFees] Admin fee wallet not configured in .env for ${wallet_type}`);
           continue;
         }
-
-        const adminWalletAddress = adminFeeWallet.dataValues.wallet_address;
+        
+        console.log(`[sweepNativeAdminFees] Will sweep to admin wallet: ${adminWalletAddress}`);
         let balance = Number(addressBalance?.balance ?? 0);
         
         // For TRX, convert from SUN to TRX
