@@ -341,7 +341,7 @@ async function migrateUser() {
       
       try {
         await destClient.query(
-          `INSERT INTO tbl_notification (${notifColumns.join(', ')}) VALUES (${notifPlaceholders.join(', ')})`,
+          `INSERT INTO tbl_notification (${notifColumns.map(quoteCol).join(', ')}) VALUES (${notifPlaceholders.join(', ')})`,
           notifValues
         );
       } catch (e) {
