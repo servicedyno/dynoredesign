@@ -210,13 +210,14 @@ def main():
         print("\n❌ Test failed: Could not create payment link")
         return
     
-    payment_link_id = payment_data.get('payment_link_id')
-    if not payment_link_id:
-        print("\n❌ Test failed: No payment_link_id in response")
+    payment_link_id = payment_data.get('link_id')
+    transaction_id = payment_data.get('transaction_id')
+    if not transaction_id:
+        print("\n❌ Test failed: No transaction_id in response")
         return
     
-    # Step 4: Get BTC testnet address
-    crypto_data = get_crypto_address(token, payment_link_id)
+    # Step 4: Get BTC testnet address (use transaction_id)
+    crypto_data = get_crypto_address(token, transaction_id)
     
     # Summary
     print_section("TEST SUMMARY")
