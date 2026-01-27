@@ -104,7 +104,7 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.USER_NAME, proc
         FROM tbl_admin_fee_transaction
         WHERE tx_hash = ? OR tx_hash LIKE ?;
       \`, {{ 
-        replacements: [tempAddress[0].adminTxId, '%' + (tempAddress[0].txId || '') + '%'],
+        replacements: [tempAddress[0].\\"adminTxId\\", '%' + (tempAddress[0].txId || '') + '%'],
         type: QueryTypes.SELECT 
       }});
       
