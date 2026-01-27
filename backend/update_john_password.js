@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+const sha256 = require('crypto-js/sha256');
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
@@ -22,12 +22,9 @@ async function updatePassword() {
     console.log('✅ User found:', user.email);
     console.log('Current password hash:', user.password ? user.password.substring(0, 20) + '...' : 'None');
     
-    // Import bcrypt from helper
-    const { hashPassword } = require('./helper/hashing');
-    
-    // Hash new password
+    // Hash password using sha256 (same as registration)
     const newPassword = 'Katiekendra123@';
-    const newHash = await hashPassword(newPassword);
+    const newHash = sha256(newPassword).toString();
     
     console.log('\nUpdating password to:', newPassword);
     console.log('New hash:', newHash.substring(0, 20) + '...');
@@ -39,12 +36,12 @@ async function updatePassword() {
     
     console.log('✅ Password updated successfully');
     
-    // Test login
-    console.log('\nTesting login...');
-    const { verifyPassword } = require('./helper/hashing');
+    // Verify the hash matches
+    console.log('\nVerifying hash...');
     const [updatedUser] = await sequelize.query("SELECT password FROM tbl_user WHERE email = 'john@dyno.pt'");
-    const isValid = await verifyPassword(newPassword, updatedUser[0].password);
-    console.log('Password verification:', isValid ? '✅ Success' : '❌ Failed');
+    console.log('Stored hash:', updatedUser[0].password.substring(0, 20) + '...');
+    console.log('Expected hash:', newHash.substring(0, 20) + '...');
+    console.log('Match:', updatedUser[0].password === newHash ? '✅ Yes' : '❌ No');
     
     await sequelize.close();
     process.exit(0);
