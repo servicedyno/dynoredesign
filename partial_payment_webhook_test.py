@@ -264,7 +264,7 @@ class PartialPaymentWebhookTester:
                     f"Payment Link Creation - {scenario['name']}", 
                     False, 
                     f"API call failed with status {response.status_code}",
-                    {"response": response.text}
+                    {"response": response.text, "request_data": payment_data}
                 )
                 
         except Exception as e:
