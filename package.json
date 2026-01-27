@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "ioredis": "^5.9.2",
     "pg": "^8.17.2"
   }
 }
