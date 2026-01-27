@@ -224,6 +224,7 @@ def main():
     if crypto_data:
         print("✅ Successfully created BTC testnet payment link")
         print(f"✅ Payment Link ID: {payment_link_id}")
+        print(f"✅ Transaction ID: {transaction_id}")
         print(f"✅ BTC Testnet Address: {crypto_data.get('address')}")
         print(f"✅ Amount: {crypto_data.get('crypto_amount')} BTC (${crypto_data.get('base_amount')} USD)")
         print("\n🎉 TEST PASSED - BTC testnet payment link created successfully!")
