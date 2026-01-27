@@ -1,32 +1,21 @@
 export const customerPaths = {
   "/user/createUser": {
     post: {
-      tags: ["Customer"],
-      summary: "Create a new customer",
-      description: `
-Registers a new customer account under your merchant company.
-
-**Important:** This endpoint only requires the API key (x-api-key), not a customer token.
-
-The response includes a JWT token that should be used for all subsequent customer-specific requests.
-
-### Use Case
-Call this endpoint when a new user signs up on your platform and you want to track their payments.
-      `,
+      tags: ["1. Customer"],
+      summary: "Create a customer",
+      description: "Register a new customer. Returns a token for payment requests.",
       security: [{ ApiKeyAuth: [] }],
       requestBody: {
         required: true,
         content: {
           "application/json": {
-            schema: { $ref: "#/components/schemas/CreateCustomerRequest" },
-            examples: {
-              basic: {
-                summary: "Basic customer registration",
-                value: {
-                  name: "John Doe",
-                  email: "john@example.com",
-                  mobile: "+1234567890",
-                },
+            schema: {
+              type: "object",
+              required: ["name", "email"],
+              properties: {
+                name: { type: "string", example: "John Doe" },
+                email: { type: "string", format: "email", example: "john@example.com" },
+                mobile: { type: "string", example: "+1234567890" },
               },
             },
           },
@@ -34,51 +23,38 @@ Call this endpoint when a new user signs up on your platform and you want to tra
       },
       responses: {
         "200": {
-          description: "Customer created successfully",
+          description: "✅ Customer created",
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/CreateCustomerResponse" },
-              example: {
-                message: "Registered Successful!",
-                data: {
-                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                  customer_id: "c94f6d0e-6733-4920-8569-1de0ca1e8d1f",
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string", example: "Registered Successful!" },
+                  data: {
+                    type: "object",
+                    properties: {
+                      token: { type: "string", description: "Use this for payment requests" },
+                      customer_id: { type: "string", format: "uuid" },
+                    },
+                  },
                 },
               },
             },
           },
         },
-        "400": {
-          description: "Validation error",
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/ValidationError" },
-            },
-          },
-        },
         "403": {
-          description: "Invalid API key",
+          description: "❌ Invalid API key",
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/ErrorResponse" },
-              example: {
-                success: false,
-                message: "Invalid API key",
-                statusCode: 403,
-              },
+              schema: { $ref: "#/components/schemas/Error" },
             },
           },
         },
         "503": {
-          description: "Customer already exists",
+          description: "❌ Customer already exists",
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/ErrorResponse" },
-              example: {
-                success: false,
-                message: "Account Already Exists!!!",
-                statusCode: 503,
-              },
+              schema: { $ref: "#/components/schemas/Error" },
             },
           },
         },
