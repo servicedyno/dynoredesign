@@ -251,10 +251,77 @@ tail -f /var/log/supervisor/frontend.out.log
 - Encountered confusion with address generation vs merchant wallets
 - Reverted test changes to maintain clean state
 
-### Current Session
-- Rebuilding context from documentation
-- Preparing for fresh Sepolia testnet testing
-- Focus on proper payment address generation flow
+### Current Session (January 27, 2025)
+- ✅ Updated Veriff KYC credentials (real API keys)
+- ✅ Updated Telnyx SMS verification credentials
+- ✅ Analyzed admin fee sweep mechanism
+- ✅ **Implemented native ETH/TRX admin fee sweep cron job**
+- ✅ Updated sweep interval to 15 minutes
+
+---
+
+## 🔄 Admin Fee Sweep System
+
+### **Fee Structure (Configurable via .env)**
+
+| Component | Description | Env Variable |
+|-----------|-------------|--------------|
+| Transaction Fee | 2% of payment | `TRANSACTION_FEE_PERCENT` |
+| Fixed Fee | USD amount by tier | `FEE_TIER_X_FIXED` |
+| Buffer | % for blockchain volatility | `FEE_TIER_X_BUFFER` |
+
+### **Fee Tiers**
+| Tier | Amount Range | Fixed Fee | Buffer |
+|------|-------------|-----------|--------|
+| 1 | $5 - $100 | $3.00 | 1.0% |
+| 2 | $101 - $500 | $2.00 | 0.8% |
+| 3 | $501 - $1000 | $1.50 | 0.5% |
+| 4 | $1001+ | $1.00 | 0.3% |
+
+### **Cron Job Schedule**
+| Job | Schedule | Function | Chains |
+|-----|----------|----------|--------|
+| `processIncompletePayments` | */10 min | Retry incomplete payments | All |
+| `checkFeeBalance` | */15 min | Alert if fee wallet low | All |
+| `sweepNativeAdminFees` | */15 min | Sweep native admin fees | **ETH, TRX** |
+| `checkingUSDT` | */30 min | Sweep USDT to merchant | USDT-ERC20, USDT-TRC20 |
+| `sendingLeftover` | */50 min | Sweep leftover gas | ETH, TRX (from USDT) |
+
+### **Admin Fee Handling by Chain Type**
+
+| Chain | Type | Handling | Sweep Required |
+|-------|------|----------|----------------|
+| BTC, LTC, DOGE, BCH | UTXO | Immediate (single TX with 2 outputs) | ❌ No |
+| USDT-ERC20 | Token | Pending → cron sweep | ✅ Every 30 min |
+| USDT-TRC20 | Token | Pending → cron sweep | ✅ Every 30 min |
+| ETH | Native | pending_sweep → cron | ✅ Every 15 min (NEW) |
+| TRX | Native | pending_sweep → cron | ✅ Every 15 min (NEW) |
+
+### **Sweep Flow for Native ETH/TRX**
+```
+1. Payment received → Merchant gets (amount - fees)
+2. Admin fee portion stays in temp address
+3. admin_status set to "pending_sweep"
+4. Cron job (every 15 min) queries pending addresses
+5. Transfers admin fee to admin wallet
+6. Updates admin_status to "successful"
+```
+
+---
+
+## 🔐 Wallet Generation & Security
+
+### **Key Management**
+- **Tatum SDK**: Generates wallets (mnemonic + xpub)
+- **Google Cloud KMS**: Encrypts all private keys before DB storage
+- **Key Ring**: `admin-ring` (PROJECT_ID: `newdyno`)
+
+### **Testnet vs Mainnet**
+| Aspect | Testnet (Sepolia) | Mainnet |
+|--------|-------------------|---------|
+| API Key | `TATUM_TESTNET_KEY` | `TATUM_KEY` |
+| ETH Address | Derived from privkey | From xpub |
+| Private Key Storage | Google KMS ✅ | Google KMS ✅ |
 
 ---
 
