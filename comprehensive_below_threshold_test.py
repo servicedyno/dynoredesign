@@ -106,6 +106,10 @@ class ComprehensiveBelowThresholdTester:
                     self.jwt_token = data['data']['accessToken']
                     user_info = data['data'].get('user', {})
                     self.test_data["user_id"] = user_info.get('user_id')
+                    
+                    # Get company_id for payment link creation
+                    self.get_company_id()
+                    
                     self.log_result(
                         "Authentication", 
                         True, 
@@ -136,6 +140,72 @@ class ComprehensiveBelowThresholdTester:
             )
         
         return False
+    
+    def get_company_id(self):
+        """Get company_id for the authenticated user"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/company/getCompany",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and len(data['data']) > 0:
+                    self.test_data["company_id"] = data['data'][0].get('company_id')
+                    print(f"   • Company ID: {self.test_data['company_id']}")
+                else:
+                    # If no company exists, create one
+                    self.create_test_company()
+            else:
+                # If no company exists, create one
+                self.create_test_company()
+                
+        except Exception as e:
+            print(f"   • Warning: Could not get company_id: {str(e)}")
+            # Try to create a company
+            self.create_test_company()
+    
+    def create_test_company(self):
+        """Create a test company for payment link creation"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "multipart/form-data"
+            }
+            
+            # Remove Content-Type to let requests set it automatically for multipart
+            headers.pop("Content-Type")
+            
+            company_data = {
+                "company_name": "Test Company for Below Threshold",
+                "email": "test@dynopay.com",
+                "mobile": "+1234567890"
+            }
+            
+            response = requests.post(
+                f"{self.backend_url}/api/company/addCompany",
+                data={"data": json.dumps(company_data)},
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    self.test_data["company_id"] = data['data'].get('company_id')
+                    print(f"   • Created Company ID: {self.test_data['company_id']}")
+                    
+        except Exception as e:
+            print(f"   • Warning: Could not create company: {str(e)}")
+            # Use a default company_id if available
+            self.test_data["company_id"] = 1
     
     def create_payment_link(self) -> bool:
         """PHASE 1: Create payment link for below-threshold amount"""
