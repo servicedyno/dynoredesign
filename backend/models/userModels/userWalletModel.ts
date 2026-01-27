@@ -55,6 +55,10 @@ const userWalletModel = sequelize.define(
   },
   {
     tableName: "tbl_user_wallet",
+    timestamps: true,
+    // IMPORTANT: Prevent Sequelize from trying to ALTER the table schema
+    // This repo shares the database with DynoBackend which has different schema
+    freezeTableName: true,
   }
 );
 
