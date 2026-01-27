@@ -11,9 +11,33 @@ import Crypto from "crypto";
 import { setRedisItem } from "../utils/redisInstance";
 import customerTransactionModel from "../models/customerTransactionModel";
 import sequelize from "../utils/dbInstance";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Op } from "sequelize";
 import axios from "axios";
 import { Authorization } from "../utils/types";
+
+// Supported crypto types
+const CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20'];
+
+// Use internal backend URL for service-to-service communication
+const getBackendURL = () => {
+  return process.env.INTERNAL_BACKEND_URL || process.env.SERVER_URL || 'http://localhost:3300';
+};
+
+// Phase 11: Helper function to get available crypto currencies for a company
+const getAvailableCurrencies = async (userId: number, companyId: number): Promise<string[]> => {
+  const wallets: any[] = await sequelize.query(
+    `SELECT DISTINCT wallet_type FROM tbl_user_wallet 
+     WHERE user_id = :userId 
+     AND company_id = :companyId 
+     AND wallet_type IN (:cryptoTypes)
+     AND wallet_address IS NOT NULL`,
+    {
+      replacements: { userId, companyId, cryptoTypes: CRYPTO_TYPES },
+      type: QueryTypes.SELECT,
+    }
+  );
+  return wallets.map((w: any) => w.wallet_type);
+};
 
 // Use internal backend URL for service-to-service communication
 const getBackendURL = () => {
