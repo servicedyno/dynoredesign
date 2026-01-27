@@ -259,13 +259,12 @@ tail -f /var/log/supervisor/frontend.out.log
 - Encountered confusion with address generation vs merchant wallets
 - Reverted test changes to maintain clean state
 
-### Current Session (January 27, 2025)
+### Current Session (January 27, 2026)
 - ✅ Updated Veriff KYC credentials (real API keys)
-- ✅ Updated Telnyx SMS verification credentials
-- ✅ Analyzed admin fee sweep mechanism
-- ✅ **Implemented native ETH/TRX admin fee sweep cron job**
-- ✅ Updated sweep interval to 15 minutes
-- ✅ **Successfully tested Sepolia ETH payment flow end-to-end**
+- ✅ Updated Telnyx SMS verification credentials  
+- ✅ Fixed test user credentials (john@dyno.pt password reset)
+- ✅ Verified login working successfully
+- ⏳ Ready for KYC and SMS testing with production credentials
 
 ---
 
