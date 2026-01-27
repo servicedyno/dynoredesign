@@ -33,8 +33,8 @@ class TestnetPaymentFlowTester:
         
         # Test credentials
         self.test_user = {
-            "email": "nomadly@moxx.co",
-            "password": "TestPassword123!"
+            "email": "testnet.flow@example.com",
+            "password": "TestnetFlow123!"
         }
         
         # Test payment parameters
