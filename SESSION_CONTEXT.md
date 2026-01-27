@@ -142,12 +142,11 @@ Password: Katiekendra123@
 
 ### API Keys (Updated - Valid)
 ```
-VERIFF_API_KEY=initial-setup-11
-VERIFF_API_SECRET=initial-setup-11
-TELNYX_VERIFY_PROFILE_ID=initial-setup-11
+VERIFF_API_KEY=7a372667-446f-4860-9634-e27aad20ec03
+VERIFF_API_SECRET=671d951f-32ae-4a0b-a7ad-3be4c2ca39de
+TELNYX_API_KEY=KEY019B6F591AACFAF1451A80C66809193A_TKJeBs8NaHEaqFkEh2HuYe
+TELNYX_VERIFY_PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
 ```
-
-**Note**: Currently reverted to placeholders in .env for security. Update when needed for testing.
 
 ---
 
