@@ -145,7 +145,52 @@ class PartialPaymentWebhookTester:
         
         return False
     
-    def verify_environment_config(self):
+    def get_user_company_id(self):
+        """Get user's company ID from profile"""
+        if not self.jwt_token:
+            return None
+            
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/user/profile",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    user_data = data['data']
+                    company_id = user_data.get('company_id')
+                    if company_id:
+                        self.test_company_id = company_id
+                        self.log_result(
+                            "User Company ID Retrieval", 
+                            True, 
+                            f"Retrieved company_id: {company_id}",
+                            {"company_id": company_id}
+                        )
+                        return company_id
+            
+            self.log_result(
+                "User Company ID Retrieval", 
+                False, 
+                "Could not retrieve company_id from user profile"
+            )
+            
+        except Exception as e:
+            self.log_result(
+                "User Company ID Retrieval", 
+                False, 
+                f"Failed to get company_id: {str(e)}"
+            )
+        
+        return None
         """Verify ETH threshold and admin wallet configuration"""
         print("\n=== Verifying Environment Configuration ===")
         
