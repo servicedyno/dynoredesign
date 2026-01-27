@@ -52,7 +52,7 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.USER_NAME, proc
         amount,
         pending_admin_fee,
         \\"txId\\",
-        adminTxId,
+        \\"adminTxId\\",
         partial_payment_timestamp,
         \\"createdAt\\",
         \\"updatedAt\\"
