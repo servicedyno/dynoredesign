@@ -3240,22 +3240,27 @@ const checkFeeBalance = async () => {
         adminFeesWallets[i]?.dataValues.wallet_type === "TRX"
           ? currentBalance?.balance / 1000000
           : currentBalance?.balance;
-      console.log("newBalance=========>", newBalance);
-      if (newBalance != adminFeesWallets[i]?.dataValues.amount) {
-        amount = newBalance;
-        await adminFeeModel.update(
-          { amount },
-          {
-            where: {
-              fee_wallet_id: adminFeesWallets[i]?.dataValues.fee_wallet_id,
-            },
-          }
-        );
+      
+      console.log(`[checkFeeBalance] ${wallet_type}: currentBalance=${JSON.stringify(currentBalance)}, newBalance=${newBalance}, dbAmount=${amount}`);
+      
+      // Only update if newBalance is a valid number
+      if (newBalance !== undefined && newBalance !== null && !isNaN(newBalance)) {
+        if (newBalance !== adminFeesWallets[i]?.dataValues.amount) {
+          amount = newBalance;
+          await adminFeeModel.update(
+            { amount },
+            {
+              where: {
+                fee_wallet_id: adminFeesWallets[i]?.dataValues.fee_wallet_id,
+              },
+            }
+          );
+        }
       }
 
-      // Skip currency conversion if amount is null, undefined, or 0
-      if (amount === null || amount === undefined || amount === 0) {
-        console.log(`[checkFeeBalance] Skipping ${wallet_type} - no balance amount available`);
+      // Skip currency conversion if amount is null, undefined, 0, or NaN
+      if (amount === null || amount === undefined || amount === 0 || isNaN(Number(amount))) {
+        console.log(`[checkFeeBalance] Skipping ${wallet_type} - no valid balance (amount=${amount})`);
         textData += `\n Your ${wallet_type} fee wallet has no balance or amount unavailable.`;
         continue;
       }
