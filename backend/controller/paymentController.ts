@@ -1611,22 +1611,32 @@ const cryptoVerification = async (address, webhook = true) => {
       `);
       
       // Handle company_id: if provided and valid, add to query
+      // First try with company_id, then fallback to without
       if (customerData.company_id && customerData.company_id !== '' && customerData.company_id !== 'undefined' && customerData.company_id !== 'null') {
         const companyId = parseInt(customerData.company_id);
         if (!isNaN(companyId)) {
           whereClause.company_id = companyId;
         }
-      } else {
-        // If no company_id, look for wallets without company association
-        whereClause.company_id = null;
       }
+      // Note: If company_id not set, we don't add it to whereClause - allowing any wallet for this user
       
       console.log(`[cryptoVerification] Final whereClause:`, JSON.stringify(whereClause));
       
-      const walletData = await userWalletModel.findOne({
+      let walletData = await userWalletModel.findOne({
         where: whereClause,
         transaction,
       });
+      
+      // Fallback: If no wallet found with company_id, try without company_id constraint
+      if (!walletData && whereClause.company_id) {
+        console.log(`[cryptoVerification] No wallet found with company_id ${whereClause.company_id}, trying without company_id constraint`);
+        delete whereClause.company_id;
+        walletData = await userWalletModel.findOne({
+          where: whereClause,
+          transaction,
+        });
+      }
+      
       console.log(`[cryptoVerification] walletData result:`, walletData ? walletData.dataValues : 'NULL');
       const receivedAmount = tempData?.receivedAmount ?? tempData?.amount;
 
