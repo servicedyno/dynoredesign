@@ -491,17 +491,21 @@ const createCryptoPayment = async (
         unique_tx_id: paymentRes.transaction_id, // Keep for backward compatibility
         walletType: "customer",
         temp_id: paymentRes.temp_id,
+        is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",  // CRITICAL: Include merchant pool flag
       });
 
       // Also update the temp address record in database for partial payment handling
-      await userTempAddressModel.update(
-        {
-          fee_payer: fee_payer,
-          merchant_amount: merchant_amount_crypto,
-          base_amount_usd: baseAmountUSD,
-        },
-        { where: { temp_id: paymentRes.temp_id } }
-      );
+      // Note: Only update if NOT a merchant pool address (userTempAddressModel is for legacy addresses)
+      if (!paymentRes.is_merchant_pool) {
+        await userTempAddressModel.update(
+          {
+            fee_payer: fee_payer,
+            merchant_amount: merchant_amount_crypto,
+            base_amount_usd: baseAmountUSD,
+          },
+          { where: { temp_id: paymentRes.temp_id } }
+        );
+      }
 
       successResponseHelper(res, 200, "Payment created successfully", finalRes);
     } else {
