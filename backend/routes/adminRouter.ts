@@ -143,4 +143,49 @@ adminRouter.post(
   }
 );
 
+// Test endpoint: Request an address from pool (auto-expands if all IN_USE)
+adminRouter.post(
+  "/usdtPoolRequestAddress",
+  adminAuthMiddleware,
+  async (req, res) => {
+    try {
+      const { walletType, paymentId } = req.body;
+      if (!["USDT-TRC20", "USDT-ERC20"].includes(walletType)) {
+        return res.status(400).json({ success: false, message: "Invalid wallet type" });
+      }
+      const address = await usdtPoolService.getAvailableAddress(walletType, paymentId);
+      res.json({ 
+        success: true, 
+        message: "Address assigned (auto-created if pool was full)",
+        data: {
+          pool_address_id: address.dataValues.pool_address_id,
+          wallet_address: address.dataValues.wallet_address,
+          status: address.dataValues.status,
+          admin_fee_balance: address.dataValues.admin_fee_balance,
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+// Test endpoint: Release an address back to pool
+adminRouter.post(
+  "/usdtPoolReleaseAddress",
+  adminAuthMiddleware,
+  async (req, res) => {
+    try {
+      const { poolAddressId, adminFeeAmount, gasUsed } = req.body;
+      if (!poolAddressId) {
+        return res.status(400).json({ success: false, message: "poolAddressId required" });
+      }
+      await usdtPoolService.releaseAddress(poolAddressId, adminFeeAmount || 0, gasUsed || 0);
+      res.json({ success: true, message: "Address released back to pool" });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
 export default adminRouter;
