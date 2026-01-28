@@ -1743,3 +1743,15 @@ ports:
   - "3300: Node.js main backend (internal)"
   - "3301: Node.js API service (external merchant API)"
 
+
+  - task: "Per-Merchant Pool System Implementation"
+    implemented: true
+    working: "pending"
+    file: "/app/backend/services/merchantPoolService.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented per-merchant USDT/USDC pool system with lazy xpub generation, address rotation, gas funding optimization, and sweep mechanism. Integration with payment controller and wallet configuration hook added. Supports 9 crypto types: BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20. Key files: /app/backend/services/merchantPoolService.ts, /app/backend/models/merchantPoolModels/index.ts. Tables created: tbl_merchant_wallet, tbl_merchant_temp_address, tbl_merchant_pool_transaction, tbl_merchant_pool_sweep."
