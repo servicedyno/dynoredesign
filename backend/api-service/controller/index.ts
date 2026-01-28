@@ -15,8 +15,8 @@ import { QueryTypes, Op } from "sequelize";
 import axios from "axios";
 import { Authorization } from "../utils/types";
 
-// Supported crypto types
-const CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20'];
+// Supported crypto types (updated to include USDC-ERC20)
+const CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
 
 // Use internal backend URL for service-to-service communication
 const getBackendURL = () => {
