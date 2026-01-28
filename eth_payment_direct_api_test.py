@@ -366,15 +366,18 @@ class ETHPaymentDirectAPITester:
             if response.status_code == 200:
                 data = response.json()
                 
+                # Check if response has data field
+                response_data = data.get('data', data)
+                
                 # Check for expected response fields
                 expected_fields = ['transaction_id', 'address', 'crypto_amount', 'qr_code']
-                missing_fields = [field for field in expected_fields if field not in data]
+                missing_fields = [field for field in expected_fields if field not in response_data]
                 
                 if not missing_fields:
-                    eth_address = data.get('address')
-                    crypto_amount = data.get('crypto_amount')
-                    transaction_id = data.get('transaction_id')
-                    qr_code = data.get('qr_code')
+                    eth_address = response_data.get('address')
+                    crypto_amount = response_data.get('crypto_amount')
+                    transaction_id = response_data.get('transaction_id')
+                    qr_code = response_data.get('qr_code')
                     
                     # Validate ETH address format (should start with 0x and be 42 characters)
                     is_valid_eth_address = (
