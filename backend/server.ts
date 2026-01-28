@@ -33,6 +33,12 @@ import { connectRedis } from "./utils/redisInstance";
 import sequelize from "./utils/dbInstance";
 import { QueryTypes } from "sequelize";
 import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron } from "./utils/cronJobs";
+import usdtPoolService from "./services/usdtPoolService";
+import {
+  usdtPoolAddressModel,
+  usdtPoolTransactionModel,
+  usdtPoolSweepModel,
+} from "./models";
 
 dotenv.config();
 const app = express();
