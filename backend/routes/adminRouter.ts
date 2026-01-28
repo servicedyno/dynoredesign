@@ -99,4 +99,48 @@ adminRouter.get(
 //   adminController.updateFeeTier
 // );
 
+// USDT Pool Management Routes
+adminRouter.get(
+  "/usdtPoolStatus",
+  adminAuthMiddleware,
+  async (req, res) => {
+    try {
+      const status = await usdtPoolService.getPoolStatus();
+      res.json({ success: true, data: status });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+adminRouter.post(
+  "/usdtPoolSweep",
+  adminAuthMiddleware,
+  async (req, res) => {
+    try {
+      await usdtPoolService.sweepAllEligibleAddresses();
+      res.json({ success: true, message: "Sweep initiated" });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+adminRouter.post(
+  "/usdtPoolAddAddress",
+  adminAuthMiddleware,
+  async (req, res) => {
+    try {
+      const { walletType } = req.body;
+      if (!["USDT-TRC20", "USDT-ERC20"].includes(walletType)) {
+        return res.status(400).json({ success: false, message: "Invalid wallet type" });
+      }
+      const newAddress = await usdtPoolService.addAddressToPool(walletType);
+      res.json({ success: true, data: newAddress });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
 export default adminRouter;
