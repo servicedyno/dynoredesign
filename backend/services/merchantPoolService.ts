@@ -806,39 +806,6 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
     throw error;
   }
 };
-      gas_funded: gasFunding.amount,
-      sweep_tx_id: sweepTxId,
-      gas_funding_tx_id: gasFunding.txId,
-      admin_wallet: adminWallet,
-      status: "completed",
-    });
-
-    // Reset and release
-    await poolAddress.update({
-      status: "AVAILABLE",
-      admin_fee_balance: 0,
-      last_swept_at: new Date(),
-    });
-
-    console.log(`[MerchantPool] 🧹 Swept ${actualBalance} ${walletType} to admin wallet`);
-
-    return { success: true, amount: actualBalance, txId: sweepTxId };
-  } catch (error) {
-    await transaction.rollback();
-    const message = getErrorMessage(error);
-    console.error(`[MerchantPool] ❌ Sweep failed:`, message);
-    
-    // Try to reset status
-    try {
-      await merchantTempAddressModel.update(
-        { status: "AVAILABLE" },
-        { where: { temp_address_id: tempAddressId } }
-      );
-    } catch {}
-    
-    throw error;
-  }
-};
 
 /**
  * Sweep all eligible addresses (called by cron)
