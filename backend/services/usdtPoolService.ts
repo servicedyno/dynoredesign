@@ -970,20 +970,26 @@ export const getPoolStatus = async (): Promise<any> => {
       sweepingCount: trc20Stats.filter(a => a.dataValues.status === "SWEEPING").length,
       totalAccumulatedFees: trc20Total,
       sweepThreshold: POOL_CONFIG.SWEEP_THRESHOLD,
-      autoExpands: true, // Pool automatically creates new address when all are IN_USE
+      autoExpands: true,
     },
     "USDT-ERC20": {
       addresses: erc20Stats,
       totalAddresses: erc20Stats.length,
       availableCount: erc20Stats.filter(a => a.dataValues.status === "AVAILABLE").length,
-      inUseCount: erc20Stats.filter(a => a.dataValues.status === "IN_USE").length,
+      reservedCount: erc20Stats.filter(a => a.dataValues.status === "RESERVED").length,
+      processingCount: erc20Stats.filter(a => a.dataValues.status === "PROCESSING").length,
       sweepingCount: erc20Stats.filter(a => a.dataValues.status === "SWEEPING").length,
       totalAccumulatedFees: erc20Total,
       sweepThreshold: POOL_CONFIG.SWEEP_THRESHOLD,
-      autoExpands: true, // Pool automatically creates new address when all are IN_USE
+      autoExpands: true,
     },
     config: POOL_CONFIG,
-    note: "Pool automatically expands when all addresses are IN_USE - new address is created on-demand",
+    stateDescriptions: {
+      AVAILABLE: "Ready for new payment",
+      RESERVED: "Assigned to payment, waiting for customer (30 min timeout)",
+      PROCESSING: "Payment received, transferring to merchant",
+      SWEEPING: "Admin fees being swept to admin wallet",
+    },
   };
 };
 
@@ -991,6 +997,10 @@ export default {
   initializePool,
   addAddressToPool,
   getAvailableAddress,
+  reserveAddress,
+  markPaymentReceived,
+  releaseExpiredReservations,
+  handleLatePayment,
   releaseAddress,
   fundGasIfNeeded,
   cleanupStaleAddresses,
