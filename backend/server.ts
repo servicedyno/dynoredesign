@@ -141,7 +141,13 @@ cron.schedule("*/30 * * * *", function () {
   usdtPoolService.sweepAllEligibleAddresses();
 });
 
-// USDT Pool: Cleanup stale IN_USE addresses every 15 minutes
+// USDT Pool: Release expired reservations every 5 minutes
+cron.schedule("*/5 * * * *", function () {
+  console.log("releaseExpiredReservations ==============> checked");
+  usdtPoolService.releaseExpiredReservations();
+});
+
+// USDT Pool: Cleanup stuck addresses every 15 minutes (safety net)
 cron.schedule("*/15 * * * *", function () {
   console.log("cleanupStalePoolAddresses ==============> checked");
   usdtPoolService.cleanupStaleAddresses();
