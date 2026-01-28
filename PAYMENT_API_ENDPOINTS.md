@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://dotenvfix.preview.emergentagent.com/api
+Development: https://payunstuck.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

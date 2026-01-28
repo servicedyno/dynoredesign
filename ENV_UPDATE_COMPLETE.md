@@ -12,10 +12,10 @@ Successfully updated all environment variables in both backend and frontend .env
 #### 1. **Server URL Updated**
 ```bash
 # OLD:
-SERVER_URL=https://dotenvfix.preview.emergentagent.com
+SERVER_URL=https://payunstuck.preview.emergentagent.com
 
 # NEW:
-SERVER_URL=https://new-setup.preview.emergentagent.com
+SERVER_URL=https://payunstuck.preview.emergentagent.com
 ```
 
 #### 2. **Contract Addresses - Added USDC**
@@ -31,8 +31,8 @@ TELNYX_VERIFY_PROFILE_ID=merchant-crypto-5
 PROFILE_ID=merchant-crypto-5
 
 # NEW:
-TELNYX_VERIFY_PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
-PROFILE_ID=40018496-5934-4297-988d-7ca59824b7c4
+TELNYX_VERIFY_PROFILE_ID=payunstuck
+PROFILE_ID=payunstuck
 ```
 
 #### 4. **Veriff KYC - Updated API Keys**
@@ -42,8 +42,8 @@ VERIFF_API_KEY=merchant-crypto-5
 VERIFF_API_SECRET=merchant-crypto-5
 
 # NEW:
-VERIFF_API_KEY=7a372667-446f-4860-9634-e27aad20ec03
-VERIFF_API_SECRET=671d951f-32ae-4a0b-a7ad-3be4c2ca39de
+VERIFF_API_KEY=payunstuck
+VERIFF_API_SECRET=payunstuck
 ```
 
 #### 5. **Merchant Pool System - Added Sweep Threshold**
@@ -70,10 +70,10 @@ USDT_ERC20_SWEEP=threshold:50
 #### Updated Backend URL
 ```bash
 # OLD:
-REACT_APP_BACKEND_URL=https://dotenvfix.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://payunstuck.preview.emergentagent.com
 
 # NEW:
-REACT_APP_BACKEND_URL=https://new-setup.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://payunstuck.preview.emergentagent.com
 ```
 
 ---
@@ -88,7 +88,7 @@ REACT_APP_BACKEND_URL=https://new-setup.preview.emergentagent.com
 
 ✅ **Frontend Service**: Running on port 3000
 - Status: `RUNNING`
-- Backend URL configured: `https://new-setup.preview.emergentagent.com`
+- Backend URL configured: `https://payunstuck.preview.emergentagent.com`
 
 ✅ **All Services**: Restarted successfully
 - MongoDB: Running
