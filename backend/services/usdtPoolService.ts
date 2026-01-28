@@ -153,7 +153,9 @@ export const addAddressToPool = async (walletType: "USDT-TRC20" | "USDT-ERC20"):
 
 /**
  * Get an available address from the pool
- * Prefers addresses with highest accumulated balance (faster to reach sweep threshold)
+ * Priority: 
+ *   1. Highest accumulated admin fee balance (faster to reach sweep threshold)
+ *   2. Highest transaction count (more active = better)
  * If NO addresses are available, automatically creates a new one
  */
 export const getAvailableAddress = async (
@@ -166,13 +168,18 @@ export const getAvailableAddress = async (
     // First, clean up any stale IN_USE addresses
     await cleanupStaleAddresses(walletType, transaction);
 
-    // Find available address with highest balance
+    // Find available address - prioritize by:
+    // 1. Highest admin_fee_balance (faster to reach sweep threshold)
+    // 2. Highest total_transactions (more proven/active addresses)
     const poolAddress = await usdtPoolAddressModel.findOne({
       where: {
         wallet_type: walletType,
         status: "AVAILABLE",
       },
-      order: [["admin_fee_balance", "DESC"]],
+      order: [
+        ["admin_fee_balance", "DESC"],
+        ["total_transactions", "DESC"],
+      ],
       lock: transaction.LOCK.UPDATE,
       transaction,
     });
