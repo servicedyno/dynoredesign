@@ -1481,7 +1481,7 @@ export const getPoolStatus = async (userId?: number): Promise<any> => {
       processingCount: addrs.filter(a => a.status === "PROCESSING").length,
       sweepingCount: addrs.filter(a => a.status === "SWEEPING").length,
       totalAccumulatedFees: totalFees,
-      sweepThreshold: POOL_CONFIG.SWEEP_THRESHOLD,
+      sweepConfig: getSweepConfig(type),
     };
   }
 
