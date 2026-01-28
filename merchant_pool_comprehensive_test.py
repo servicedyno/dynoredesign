@@ -316,7 +316,7 @@ class MerchantPoolTester:
             "email": "test@example.com",
             "amount": "100",
             "base_currency": "USD",
-            "modes": ["BTC", "ETH"]
+            "modes": ["CRYPTO"]  # Use CRYPTO instead of specific crypto types
         }
         
         try:
