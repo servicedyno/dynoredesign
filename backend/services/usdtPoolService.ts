@@ -272,6 +272,196 @@ export const getAvailableAddress = async (
   // For backward compatibility, use default values
   return reserveAddress(walletType, paymentId || `legacy-${Date.now()}`, 0, 0);
 };
+
+/**
+ * Mark address as PROCESSING when payment is received
+ * This extends the timeout and prevents the address from being released due to reservation expiry
+ */
+export const markPaymentReceived = async (
+  poolAddressId: number,
+  actualAmount: number,
+  incomingTxId: string
+): Promise<void> => {
+  try {
+    const poolAddress = await usdtPoolAddressModel.findByPk(poolAddressId);
+    
+    if (!poolAddress) {
+      throw new Error(`Pool address not found: ${poolAddressId}`);
+    }
+
+    // Extend timeout for processing
+    const processingUntil = new Date();
+    processingUntil.setMinutes(processingUntil.getMinutes() + POOL_CONFIG.PROCESSING_TIMEOUT_MINUTES);
+
+    await poolAddress.update({
+      status: "PROCESSING",
+      reserved_until: processingUntil,  // Extend timeout
+    });
+
+    console.log(`[USDTPool] 💰 Payment received for ${poolAddress.dataValues.wallet_address}`);
+    console.log(`[USDTPool]    - Amount: $${actualAmount} USDT`);
+    console.log(`[USDTPool]    - Expected: $${poolAddress.dataValues.expected_amount} USDT`);
+    console.log(`[USDTPool]    - TX: ${incomingTxId}`);
+    console.log(`[USDTPool]    - Status: PROCESSING (timeout extended to ${processingUntil.toISOString()})`);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[USDTPool] ❌ Failed to mark payment received:`, message);
+    throw error;
+  }
+};
+
+/**
+ * Release expired reservations back to AVAILABLE
+ * Called before selecting a new address to ensure we don't have stuck addresses
+ */
+export const releaseExpiredReservations = async (
+  walletType?: string,
+  transaction?: Transaction
+): Promise<number> => {
+  try {
+    const now = new Date();
+
+    const whereClause: any = {
+      status: "RESERVED",  // Only release RESERVED, not PROCESSING
+      reserved_until: {
+        [Op.lt]: now,
+      },
+    };
+
+    if (walletType) {
+      whereClause.wallet_type = walletType;
+    }
+
+    const expiredAddresses = await usdtPoolAddressModel.findAll({
+      where: whereClause,
+      transaction,
+    });
+
+    for (const address of expiredAddresses) {
+      console.log(`[USDTPool] ⏰ Releasing expired reservation: ${address.dataValues.wallet_address}`);
+      console.log(`[USDTPool]    - Payment ID: ${address.dataValues.current_payment_id}`);
+      console.log(`[USDTPool]    - Reserved until: ${address.dataValues.reserved_until}`);
+      console.log(`[USDTPool]    - Customer did not pay within 30 minutes`);
+    }
+
+    const [affectedCount] = await usdtPoolAddressModel.update(
+      {
+        status: "AVAILABLE",
+        current_payment_id: null,
+        current_company_id: null,
+        expected_amount: null,
+        reserved_until: null,
+        locked_at: null,
+      },
+      {
+        where: whereClause,
+        transaction,
+      }
+    );
+
+    if (affectedCount > 0) {
+      console.log(`[USDTPool] ⏰ Released ${affectedCount} expired reservations back to AVAILABLE`);
+    }
+
+    return affectedCount;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[USDTPool] Failed to release expired reservations:`, message);
+    return 0;
+  }
+};
+
+/**
+ * Handle late payment - when customer pays AFTER reservation expired
+ * The address may have been re-assigned to another payment
+ */
+export const handleLatePayment = async (
+  walletAddress: string,
+  amount: number,
+  txId: string
+): Promise<{ handled: boolean; action: string; details: any }> => {
+  try {
+    const poolAddress = await usdtPoolAddressModel.findOne({
+      where: { wallet_address: walletAddress },
+    });
+
+    if (!poolAddress) {
+      return {
+        handled: false,
+        action: "ADDRESS_NOT_IN_POOL",
+        details: { walletAddress, amount, txId },
+      };
+    }
+
+    const status = poolAddress.dataValues.status;
+    const currentPaymentId = poolAddress.dataValues.current_payment_id;
+
+    console.log(`[USDTPool] 🚨 Late/unexpected payment detected!`);
+    console.log(`[USDTPool]    - Address: ${walletAddress}`);
+    console.log(`[USDTPool]    - Amount: $${amount} USDT`);
+    console.log(`[USDTPool]    - TX: ${txId}`);
+    console.log(`[USDTPool]    - Current status: ${status}`);
+    console.log(`[USDTPool]    - Current payment ID: ${currentPaymentId || 'none'}`);
+
+    if (status === "AVAILABLE") {
+      // Address was released (expired or completed)
+      // This is an orphan payment - needs manual handling
+      return {
+        handled: false,
+        action: "ORPHAN_PAYMENT",
+        details: {
+          walletAddress,
+          amount,
+          txId,
+          message: "Payment received to AVAILABLE address - may be late payment after reservation expired",
+          recommendation: "Check if there's a recently expired payment for this amount",
+        },
+      };
+    }
+
+    if (status === "RESERVED" || status === "PROCESSING") {
+      // Address is assigned to a payment - this is the expected payment
+      return {
+        handled: true,
+        action: "PROCESS_NORMALLY",
+        details: {
+          walletAddress,
+          amount,
+          txId,
+          paymentId: currentPaymentId,
+        },
+      };
+    }
+
+    if (status === "SWEEPING") {
+      // Address is being swept - payment arrived during sweep
+      return {
+        handled: false,
+        action: "PAYMENT_DURING_SWEEP",
+        details: {
+          walletAddress,
+          amount,
+          txId,
+          message: "Payment received while address was being swept",
+          recommendation: "Wait for sweep to complete, then process this payment",
+        },
+      };
+    }
+
+    return {
+      handled: false,
+      action: "UNKNOWN_STATUS",
+      details: { walletAddress, amount, txId, status },
+    };
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[USDTPool] ❌ Failed to handle late payment:`, message);
+    return {
+      handled: false,
+      action: "ERROR",
+      details: { error: message },
+    };
+  }
 };
 
 /**
