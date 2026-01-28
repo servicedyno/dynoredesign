@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://env-manager-8.preview.emergentagent.com"
+backend_url = "https://env-setup-23.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(
