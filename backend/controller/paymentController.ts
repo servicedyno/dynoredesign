@@ -1731,6 +1731,28 @@ const cryptoVerification = async (address, webhook = true) => {
     const transactionId = tempData?.txId;
     const tempCurrency = tempData?.currency;
 
+    // CRITICAL FIX: Check for duplicate transaction processing
+    if (transactionId) {
+      const existingTransaction = await customerTransactionModel.findOne({
+        where: {
+          transaction_reference: transactionId,
+          status: { [Op.in]: ["successful", "completed"] }
+        }
+      });
+
+      if (existingTransaction) {
+        console.warn(`[cryptoVerification] ⚠️  DUPLICATE WEBHOOK DETECTED: ${transactionId}`);
+        console.warn(`[cryptoVerification] Transaction already processed, ignoring webhook`);
+        await transaction.rollback();
+        return {
+          status: 200,
+          message: "Transaction already processed",
+          duplicate: true,
+          txId: transactionId
+        };
+      }
+    }
+
     if (transactionId) {
       // const adminWalletData = await adminWalletModel.findOne({
       //   where: { wallet_type: tempCurrency },
