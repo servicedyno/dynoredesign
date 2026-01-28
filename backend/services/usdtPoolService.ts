@@ -545,8 +545,12 @@ export const releaseExpiredReservations = async (
 };
 
 /**
- * Handle late payment - when customer pays AFTER reservation expired
- * The address may have been re-assigned to another payment
+ * Handle late/unexpected payment - payment arrives to address not expecting it
+ * 
+ * Cases:
+ * 1. AVAILABLE address - Try to auto-match with recent expired reservation
+ * 2. SWEEPING address - Queue for processing after sweep
+ * 3. RESERVED/PROCESSING - Process normally (expected payment)
  */
 export const handleLatePayment = async (
   walletAddress: string,
@@ -568,6 +572,8 @@ export const handleLatePayment = async (
 
     const status = poolAddress.dataValues.status;
     const currentPaymentId = poolAddress.dataValues.current_payment_id;
+    const currentCompanyId = poolAddress.dataValues.current_company_id;
+    const poolAddressId = poolAddress.dataValues.pool_address_id;
 
     console.log(`[USDTPool] 🚨 Late/unexpected payment detected!`);
     console.log(`[USDTPool]    - Address: ${walletAddress}`);
@@ -578,18 +584,41 @@ export const handleLatePayment = async (
 
     if (status === "AVAILABLE") {
       // Address was released (expired or completed)
-      // This is an orphan payment - needs manual handling
-      return {
-        handled: false,
-        action: "ORPHAN_PAYMENT",
-        details: {
-          walletAddress,
-          amount,
-          txId,
-          message: "Payment received to AVAILABLE address - may be late payment after reservation expired",
-          recommendation: "Check if there's a recently expired payment for this amount",
-        },
-      };
+      // Try to auto-match with recent expired reservation
+      console.log(`[USDTPool] 🔍 Attempting to auto-match orphan payment...`);
+      
+      const matchResult = await autoMatchOrphanPayment(poolAddressId, amount, txId);
+      
+      if (matchResult.matched) {
+        console.log(`[USDTPool] ✅ Auto-matched to Company ${matchResult.companyId}, Payment ${matchResult.paymentId}`);
+        return {
+          handled: true,
+          action: "AUTO_MATCHED",
+          details: {
+            walletAddress,
+            amount,
+            txId,
+            matchedPaymentId: matchResult.paymentId,
+            matchedCompanyId: matchResult.companyId,
+            matchedUserId: matchResult.userId,
+            message: "Late payment auto-matched to recent expired reservation",
+          },
+        };
+      } else {
+        console.log(`[USDTPool] ❌ Could not auto-match - holding for manual review`);
+        return {
+          handled: false,
+          action: "ORPHAN_PAYMENT_NO_MATCH",
+          details: {
+            walletAddress,
+            amount,
+            txId,
+            message: "Payment received to AVAILABLE address - could not auto-match to expired reservation",
+            recommendation: "Manual review required - check transaction history",
+            searchedRecords: matchResult.searchedCount,
+          },
+        };
+      }
     }
 
     if (status === "RESERVED" || status === "PROCESSING") {
@@ -602,21 +631,26 @@ export const handleLatePayment = async (
           amount,
           txId,
           paymentId: currentPaymentId,
+          companyId: currentCompanyId,
         },
       };
     }
 
     if (status === "SWEEPING") {
-      // Address is being swept - payment arrived during sweep
+      // Address is being swept - queue payment for processing after sweep
+      console.log(`[USDTPool] ⏳ Payment during sweep - queuing for later processing`);
+      
+      const queueResult = await queuePaymentDuringSweep(poolAddressId, amount, txId);
+      
       return {
-        handled: false,
-        action: "PAYMENT_DURING_SWEEP",
+        handled: true,
+        action: "QUEUED_DURING_SWEEP",
         details: {
           walletAddress,
           amount,
           txId,
-          message: "Payment received while address was being swept",
-          recommendation: "Wait for sweep to complete, then process this payment",
+          queueId: queueResult.queueId,
+          message: "Payment queued for processing after sweep completes",
         },
       };
     }
@@ -628,6 +662,173 @@ export const handleLatePayment = async (
     };
   } catch (error) {
     const message = getErrorMessage(error);
+    console.error(`[USDTPool] ❌ Failed to handle late payment:`, message);
+    return {
+      handled: false,
+      action: "ERROR",
+      details: { error: message },
+    };
+  }
+};
+
+/**
+ * Auto-match orphan payment with recent expired reservations
+ * Looks for expired reservations with matching amount within tolerance
+ */
+const autoMatchOrphanPayment = async (
+  poolAddressId: number,
+  amount: number,
+  txId: string
+): Promise<{ matched: boolean; paymentId?: string; companyId?: number; userId?: number; searchedCount: number }> => {
+  try {
+    // Look for recent transactions (last 2 hours) that:
+    // 1. Used this pool address
+    // 2. Have similar expected amount (within 5% tolerance)
+    // 3. Were not completed (failed/expired)
+    
+    const twoHoursAgo = new Date();
+    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+    
+    const tolerance = 0.05; // 5% tolerance for amount matching
+    const minAmount = amount * (1 - tolerance);
+    const maxAmount = amount * (1 + tolerance);
+    
+    const recentTransactions = await usdtPoolTransactionModel.findAll({
+      where: {
+        pool_address_id: poolAddressId,
+        created_at: {
+          [Op.gte]: twoHoursAgo,
+        },
+        status: {
+          [Op.in]: ['pending', 'failed', 'expired'],
+        },
+        payment_amount: {
+          [Op.between]: [minAmount, maxAmount],
+        },
+      },
+      order: [['created_at', 'DESC']],
+      limit: 5,
+    });
+
+    console.log(`[USDTPool] 🔍 Searching for match: amount=$${amount} (range: $${minAmount.toFixed(2)} - $${maxAmount.toFixed(2)})`);
+    console.log(`[USDTPool]    - Found ${recentTransactions.length} potential matches`);
+
+    if (recentTransactions.length === 0) {
+      return { matched: false, searchedCount: 0 };
+    }
+
+    // Find best match (closest amount)
+    let bestMatch = null;
+    let bestDiff = Infinity;
+    
+    for (const tx of recentTransactions) {
+      const expectedAmount = parseFloat(tx.dataValues.payment_amount);
+      const diff = Math.abs(expectedAmount - amount);
+      
+      console.log(`[USDTPool]    - Candidate: Payment ${tx.dataValues.payment_reference}, Expected $${expectedAmount}, Diff: $${diff.toFixed(4)}`);
+      
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestMatch = tx;
+      }
+    }
+
+    if (bestMatch) {
+      // Update the transaction record to link with actual payment
+      await bestMatch.update({
+        status: 'matched_late',
+        incoming_tx_id: txId,
+      });
+
+      return {
+        matched: true,
+        paymentId: bestMatch.dataValues.payment_reference,
+        companyId: bestMatch.dataValues.company_id,
+        userId: bestMatch.dataValues.user_id,
+        searchedCount: recentTransactions.length,
+      };
+    }
+
+    return { matched: false, searchedCount: recentTransactions.length };
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[USDTPool] Error in autoMatchOrphanPayment:`, message);
+    return { matched: false, searchedCount: 0 };
+  }
+};
+
+/**
+ * Queue a payment that arrived during sweep for later processing
+ */
+const queuePaymentDuringSweep = async (
+  poolAddressId: number,
+  amount: number,
+  txId: string
+): Promise<{ queueId: number }> => {
+  try {
+    // Create a pending transaction record
+    const queuedTx = await usdtPoolTransactionModel.create({
+      pool_address_id: poolAddressId,
+      wallet_type: 'PENDING', // Will be determined when processing
+      payment_amount: amount,
+      merchant_amount: 0,
+      admin_fee_amount: 0,
+      incoming_tx_id: txId,
+      status: 'queued_during_sweep',
+    });
+
+    console.log(`[USDTPool] ⏳ Queued payment for later processing: Queue ID ${queuedTx.dataValues.pool_tx_id}`);
+
+    return { queueId: queuedTx.dataValues.pool_tx_id };
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[USDTPool] Error queuing payment:`, message);
+    throw error;
+  }
+};
+
+/**
+ * Process queued payments after sweep completes
+ * Called after sweepPoolAddress finishes
+ */
+export const processQueuedPayments = async (poolAddressId: number): Promise<void> => {
+  try {
+    const queuedPayments = await usdtPoolTransactionModel.findAll({
+      where: {
+        pool_address_id: poolAddressId,
+        status: 'queued_during_sweep',
+      },
+    });
+
+    if (queuedPayments.length === 0) {
+      return;
+    }
+
+    console.log(`[USDTPool] 📋 Processing ${queuedPayments.length} queued payments for address ${poolAddressId}`);
+
+    for (const payment of queuedPayments) {
+      try {
+        // Get the pool address to determine wallet type
+        const poolAddress = await usdtPoolAddressModel.findByPk(poolAddressId);
+        if (!poolAddress) continue;
+
+        // Update the queued transaction with proper wallet type
+        await payment.update({
+          wallet_type: poolAddress.dataValues.wallet_type,
+          status: 'pending_process',
+        });
+
+        console.log(`[USDTPool] ✅ Queued payment ${payment.dataValues.pool_tx_id} ready for processing`);
+        // Note: Actual processing will be handled by the payment controller webhook
+      } catch (err) {
+        console.error(`[USDTPool] Failed to process queued payment ${payment.dataValues.pool_tx_id}:`, err);
+      }
+    }
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[USDTPool] Error processing queued payments:`, message);
+  }
+};
     console.error(`[USDTPool] ❌ Failed to handle late payment:`, message);
     return {
       handled: false,
