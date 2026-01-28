@@ -843,17 +843,54 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
 };
 
 /**
- * Sweep all eligible addresses (called by cron)
+ * Sweep all eligible addresses by USD threshold (called by cron)
+ * FIXED: Now converts crypto amounts to USD before comparing to threshold
  */
 export const sweepAllEligibleAddresses = async (): Promise<void> => {
-  const eligibleAddresses = await merchantTempAddressModel.findAll({
+  // Get all addresses with accumulated fees
+  const addressesWithFees = await merchantTempAddressModel.findAll({
     where: {
       status: "AVAILABLE",
-      admin_fee_balance: { [Op.gte]: POOL_CONFIG.SWEEP_THRESHOLD },
+      admin_fee_balance: { [Op.gt]: 0 },
     },
   });
 
-  console.log(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for sweep`);
+  console.log(`[MerchantPool] Checking ${addressesWithFees.length} addresses with fees for USD threshold sweep...`);
+
+  const eligibleAddresses = [];
+  
+  // Check each address against USD threshold
+  for (const address of addressesWithFees) {
+    try {
+      const cryptoAmount = parseFloat(address.dataValues.admin_fee_balance);
+      const walletType = address.dataValues.wallet_type;
+      const walletAddress = address.dataValues.wallet_address;
+      
+      // Convert crypto amount to USD
+      const conversionResult = await currencyConvert({
+        from: [walletType],
+        to: ['USD'],
+        amount: [cryptoAmount.toString()],
+      });
+      
+      const usdAmount = parseFloat(conversionResult?.data?.[0] || "0");
+      
+      console.log(`[MerchantPool] ${walletAddress}: ${cryptoAmount} ${walletType} = $${usdAmount.toFixed(2)} USD`);
+      
+      // Compare USD value to threshold
+      if (usdAmount >= POOL_CONFIG.SWEEP_THRESHOLD) {
+        console.log(`[MerchantPool]    ✅ Eligible for sweep (>= $${POOL_CONFIG.SWEEP_THRESHOLD})`);
+        eligibleAddresses.push(address);
+      } else {
+        console.log(`[MerchantPool]    ⏳ Below threshold ($${usdAmount.toFixed(2)} < $${POOL_CONFIG.SWEEP_THRESHOLD})`);
+      }
+    } catch (error) {
+      const message = getErrorMessage(error);
+      console.error(`[MerchantPool] ⚠️  Failed to convert ${address.dataValues.wallet_type} to USD:`, message);
+    }
+  }
+
+  console.log(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for USD threshold sweep`);
 
   for (const address of eligibleAddresses) {
     try {
@@ -862,6 +899,81 @@ export const sweepAllEligibleAddresses = async (): Promise<void> => {
       console.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
     }
   }
+};
+
+/**
+ * Sweep addresses after time threshold (10 minutes after merchant payout)
+ * NEW: Sweeps admin fees X minutes after merchant was paid, regardless of amount
+ */
+export const sweepByTimeThreshold = async (): Promise<void> => {
+  const timeThreshold = new Date();
+  timeThreshold.setMinutes(timeThreshold.getMinutes() - POOL_CONFIG.SWEEP_TIME_MINUTES);
+
+  const eligibleAddresses = await merchantTempAddressModel.findAll({
+    where: {
+      status: "AVAILABLE",
+      admin_fee_balance: { [Op.gt]: 0 },
+      last_merchant_payout: {
+        [Op.ne]: null,
+        [Op.lt]: timeThreshold,
+      },
+    },
+  });
+
+  console.log(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for time-based sweep (>${POOL_CONFIG.SWEEP_TIME_MINUTES} min since merchant payout)`);
+
+  for (const address of eligibleAddresses) {
+    try {
+      const cryptoAmount = parseFloat(address.dataValues.admin_fee_balance);
+      const walletType = address.dataValues.wallet_type;
+      const timeSincePayout = Math.floor((new Date().getTime() - new Date(address.dataValues.last_merchant_payout).getTime()) / 60000);
+      
+      console.log(`[MerchantPool] Time-based sweep: ${address.dataValues.wallet_address}`);
+      console.log(`[MerchantPool]    - Amount: ${cryptoAmount} ${walletType}`);
+      console.log(`[MerchantPool]    - Time since merchant payout: ${timeSincePayout} minutes`);
+      
+      await sweepPoolAddress(address.dataValues.temp_address_id);
+    } catch (error) {
+      console.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
+    }
+  }
+};
+
+/**
+ * Master sweep function that handles both threshold and time-based sweeps
+ * Called by cron job
+ */
+export const performScheduledSweeps = async (): Promise<void> => {
+  console.log(`[MerchantPool] ========================================`);
+  console.log(`[MerchantPool] Starting scheduled sweep (mode: ${POOL_CONFIG.SWEEP_MODE})`);
+  console.log(`[MerchantPool] ========================================`);
+
+  const mode = POOL_CONFIG.SWEEP_MODE.toLowerCase();
+
+  try {
+    if (mode === "threshold" || mode === "both") {
+      console.log(`[MerchantPool] 💰 Running USD threshold sweep ($${POOL_CONFIG.SWEEP_THRESHOLD})...`);
+      await sweepAllEligibleAddresses();
+    }
+
+    if (mode === "time" || mode === "both") {
+      console.log(`[MerchantPool] ⏰ Running time-based sweep (${POOL_CONFIG.SWEEP_TIME_MINUTES} minutes)...`);
+      await sweepByTimeThreshold();
+    }
+
+    if (mode !== "threshold" && mode !== "time" && mode !== "both") {
+      console.warn(`[MerchantPool] ⚠️  Unknown sweep mode: ${POOL_CONFIG.SWEEP_MODE}. Using 'both'.`);
+      await sweepAllEligibleAddresses();
+      await sweepByTimeThreshold();
+    }
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[MerchantPool] ❌ Scheduled sweep failed:`, message);
+  }
+
+  console.log(`[MerchantPool] ========================================`);
+  console.log(`[MerchantPool] Scheduled sweep completed`);
+  console.log(`[MerchantPool] ========================================`);
 };
 
 /**
