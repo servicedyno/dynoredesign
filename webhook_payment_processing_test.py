@@ -64,7 +64,7 @@ class WebhookPaymentProcessor:
         try:
             login_data = {
                 "email": "john@dyno.pt",
-                "password": "123456"
+                "password": "Katiekendra123@"  # Correct password from previous tests
             }
             
             response = requests.post(
