@@ -605,13 +605,22 @@ export const releaseAddress = async (
     throw new Error(`Pool address not found: ${tempAddressId}`);
   }
 
+  const walletType = poolAddress.dataValues.wallet_type;
+  const sweepConfig = getSweepConfig(walletType);
+
+  // For UTXO chains (batch mode), admin fee is already sent in same transaction as merchant
+  // Don't accumulate admin fee, just release address immediately
+  const isUTXOBatchTransfer = sweepConfig.mode === "batch";
+  
   const currentAdminBalance = parseFloat(poolAddress.dataValues.admin_fee_balance) || 0;
   const currentGasBalance = parseFloat(poolAddress.dataValues.gas_balance) || 0;
   const currentTxCount = poolAddress.dataValues.total_transactions || 0;
 
+  const newAdminBalance = isUTXOBatchTransfer ? currentAdminBalance : (currentAdminBalance + adminFeeAmount);
+
   await poolAddress.update({
     status: "AVAILABLE",
-    admin_fee_balance: currentAdminBalance + adminFeeAmount,
+    admin_fee_balance: newAdminBalance,
     gas_balance: Math.max(0, currentGasBalance - gasUsed),
     total_transactions: currentTxCount + 1,
     current_payment_id: null,
@@ -623,17 +632,19 @@ export const releaseAddress = async (
     reserved_until: null,
     locked_at: null,
     last_used_at: new Date(),
-    last_merchant_payout: new Date(), // Track when merchant was paid
+    last_merchant_payout: isUTXOBatchTransfer ? null : new Date(), // Only track for non-UTXO chains
   });
 
-  console.log(`[MerchantPool] ✅ Released address ${poolAddress.dataValues.wallet_address}`);
-  console.log(`[MerchantPool]    - Admin fee added: ${adminFeeAmount}`);
-  console.log(`[MerchantPool]    - New admin balance: ${currentAdminBalance + adminFeeAmount}`);
-  console.log(`[MerchantPool]    - Merchant payout timestamp: ${new Date().toISOString()}`);
-
-  // Check if sweep threshold reached
-  if (currentAdminBalance + adminFeeAmount >= POOL_CONFIG.SWEEP_THRESHOLD) {
-    console.log(`[MerchantPool] 📍 Sweep threshold reached - will be swept by cron`);
+  console.log(`[MerchantPool] ✅ Released address ${poolAddress.dataValues.wallet_address} (${walletType})`);
+  
+  if (isUTXOBatchTransfer) {
+    console.log(`[MerchantPool]    - UTXO batch transfer: Admin fee ${adminFeeAmount} already sent`);
+    console.log(`[MerchantPool]    - No accumulation needed, address ready for reuse`);
+  } else {
+    console.log(`[MerchantPool]    - Admin fee added: ${adminFeeAmount}`);
+    console.log(`[MerchantPool]    - New admin balance: ${newAdminBalance}`);
+    console.log(`[MerchantPool]    - Sweep mode: ${sweepConfig.mode}:${sweepConfig.value || 'N/A'}`);
+    console.log(`[MerchantPool]    - Merchant payout timestamp: ${new Date().toISOString()}`);
   }
 };
 
