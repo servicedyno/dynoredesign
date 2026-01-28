@@ -33,12 +33,6 @@ import { connectRedis } from "./utils/redisInstance";
 import sequelize from "./utils/dbInstance";
 import { QueryTypes } from "sequelize";
 import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron } from "./utils/cronJobs";
-import usdtPoolService from "./services/usdtPoolService";
-import {
-  usdtPoolAddressModel,
-  usdtPoolTransactionModel,
-  usdtPoolSweepModel,
-} from "./models";
 
 dotenv.config();
 const app = express();
@@ -135,30 +129,6 @@ cron.schedule("0 */24 * * *", function () {
   paymentController.removeUnwantedSubscriptions();
 });
 
-// USDT Pool: Sweep accumulated admin fees every 30 minutes (legacy)
-cron.schedule("*/30 * * * *", function () {
-  console.log("sweepUSDTPoolFees ==============> checked");
-  usdtPoolService.sweepAllEligibleAddresses();
-});
-
-// USDT Pool: Release expired reservations every 5 minutes (legacy)
-cron.schedule("*/5 * * * *", function () {
-  console.log("releaseExpiredReservations ==============> checked");
-  usdtPoolService.releaseExpiredReservations();
-});
-
-// USDT Pool: Process expired partial payments every 5 minutes (legacy)
-cron.schedule("*/5 * * * *", function () {
-  console.log("processExpiredPartialPayments ==============> checked");
-  usdtPoolService.processExpiredPartialPayments();
-});
-
-// USDT Pool: Cleanup stuck addresses every 15 minutes (legacy - safety net)
-cron.schedule("*/15 * * * *", function () {
-  console.log("cleanupStalePoolAddresses ==============> checked");
-  usdtPoolService.cleanupStaleAddresses();
-});
-
 // ===========================================
 // MERCHANT POOL: Per-merchant pool cron jobs
 // ===========================================
@@ -205,13 +175,7 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log("PostgreSQL Connection has been established successfully.");
     
-    // Sync USDT Pool models (legacy - to be deprecated)
-    await usdtPoolAddressModel.sync({ alter: true });
-    await usdtPoolTransactionModel.sync({ alter: true });
-    await usdtPoolSweepModel.sync({ alter: true });
-    console.log("USDT Pool tables synced successfully.");
-    
-    // Sync Merchant Pool models (new per-merchant system)
+    // Sync Merchant Pool models (per-merchant system for ALL chains including USDT)
     const {
       merchantWalletModel,
       merchantTempAddressModel,
@@ -234,14 +198,6 @@ const startServer = async () => {
       console.error("❌ Server cannot start with invalid configuration");
       console.error("❌ Error:", validationError.message);
       process.exit(1); // Exit server - don't start with bad config
-    }
-    
-    // Initialize USDT pools if empty (legacy)
-    try {
-      await usdtPoolService.initializePool("USDT-TRC20");
-      await usdtPoolService.initializePool("USDT-ERC20");
-    } catch (poolError) {
-      console.warn("USDT Pool initialization skipped (may already exist or xpub not ready):", poolError.message);
     }
   } catch (error) {
     console.error("PostgreSQL Unable to connect to the database:", error);
