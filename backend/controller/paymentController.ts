@@ -1272,6 +1272,87 @@ const Crypto = async (
 ) => {
   const uniqueRef = "customer-" + tokenData.ref;
   const currency = data.currency;
+  const userId = tokenData.adm_id;
+  const companyId = tokenData.company_id;
+  
+  // Supported merchant pool crypto types
+  const MERCHANT_POOL_CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
+  
+  // Use merchant pool for supported currencies
+  if (MERCHANT_POOL_CRYPTO_TYPES.includes(currency)) {
+    console.log(`[Crypto] Using MERCHANT POOL for ${currency} payment`);
+    console.log(`[Crypto]   - Merchant (user_id): ${userId}`);
+    console.log(`[Crypto]   - Company: ${companyId}`);
+    
+    // Validate IDs
+    if (!userId || isNaN(Number(userId))) {
+      throw { message: "Invalid user ID for payment" };
+    }
+    
+    // Generate unique payment ID
+    const paymentId = crypto.randomUUID();
+    
+    // Reserve address from merchant's pool
+    // This will:
+    // 1. Create merchant's xpub if not exists (lazy initialization)
+    // 2. Initialize pool if empty
+    // 3. Find available address with highest admin_fee_balance
+    // 4. Reserve it for this payment
+    const poolAddress = await merchantPoolService.reserveAddress(
+      currency,
+      paymentId,
+      Number(userId),
+      Number(companyId),
+      Number(data.amount) || 0
+    );
+    
+    const address = poolAddress.dataValues.wallet_address;
+    console.log(`[Crypto] ✅ Reserved merchant pool address: ${address}`);
+    
+    // Generate QR code
+    let qr_code;
+    if (address) {
+      const url = await QR_Code.toDataURL(address, { width: 300 });
+      qr_code = url;
+    }
+    
+    // Create transaction record
+    const walletDetails = await adminWalletModel.findOne({
+      where: { wallet_type: currency },
+    });
+    
+    const walletId = walletDetails?.dataValues.wallet_id;
+    
+    const userPayload = {
+      id: paymentId,
+      wallet_id: walletId ? Number(walletId) : null,
+      user_id: Number(userId),
+      payment_mode: "CRYPTO",
+      base_amount: isNaN(Number(data.amount)) ? 0 : Number(data.amount),
+      base_currency: currency,
+      transaction_type: "CREDIT",
+      status: "pending",
+      customer_id: (tokenData.customer_id && !isNaN(Number(tokenData.customer_id))) ? Number(tokenData.customer_id) : null,
+      company_id: (companyId && !isNaN(Number(companyId))) ? Number(companyId) : null,
+    };
+    console.log("[Crypto] Merchant pool userPayload:", JSON.stringify(userPayload));
+    
+    await userTransactionModel.create({ ...userPayload });
+    
+    const paymentRes = {
+      qr_code,
+      address: address,
+      transaction_id: paymentId,
+      temp_id: poolAddress.dataValues.temp_address_id,
+      is_merchant_pool: true,  // Flag to identify merchant pool address
+    };
+    
+    return { paymentRes, uniqueRef };
+  }
+  
+  // Fallback: Use legacy admin wallet system for unsupported currencies
+  console.log(`[Crypto] Using LEGACY admin wallet for ${currency} payment`);
+  
   const walletDetails = await (
     await adminWalletModel.findOne({
       where: {
