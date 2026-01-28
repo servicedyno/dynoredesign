@@ -174,13 +174,27 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log("PostgreSQL Connection has been established successfully.");
     
-    // Sync USDT Pool models
+    // Sync USDT Pool models (legacy - to be deprecated)
     await usdtPoolAddressModel.sync({ alter: true });
     await usdtPoolTransactionModel.sync({ alter: true });
     await usdtPoolSweepModel.sync({ alter: true });
     console.log("USDT Pool tables synced successfully.");
     
-    // Initialize USDT pools if empty
+    // Sync Merchant Pool models (new per-merchant system)
+    const {
+      merchantWalletModel,
+      merchantTempAddressModel,
+      merchantPoolTransactionModel,
+      merchantPoolSweepModel,
+    } = await import("./models");
+    
+    await merchantWalletModel.sync({ alter: true });
+    await merchantTempAddressModel.sync({ alter: true });
+    await merchantPoolTransactionModel.sync({ alter: true });
+    await merchantPoolSweepModel.sync({ alter: true });
+    console.log("Merchant Pool tables synced successfully.");
+    
+    // Initialize USDT pools if empty (legacy)
     try {
       await usdtPoolService.initializePool("USDT-TRC20");
       await usdtPoolService.initializePool("USDT-ERC20");
