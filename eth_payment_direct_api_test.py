@@ -253,10 +253,12 @@ class ETHPaymentDirectAPITester:
             return False
         
         try:
-            # Customer data for ETH payment test
+            # Customer data for ETH payment test - use timestamp to ensure unique email
+            import time
+            timestamp = int(time.time())
             customer_data = {
                 "name": "ETH Payment Test Customer",
-                "email": "eth.test.customer@dynopay.com",
+                "email": f"eth.test.customer.{timestamp}@dynopay.com",
                 "phone": "+1234567890"
             }
             
