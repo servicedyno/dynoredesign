@@ -269,3 +269,12 @@ The system has a critical architectural distinction between two wallet types:
 ## Configuration
 - Implementation Plan: `/app/backend/DYNOPAY_IMPLEMENTATION_TASKS.txt`
 - Environment: `/app/backend/.env`
+
+---
+
+## Session Log
+
+### December 2025 - Session 6
+- ✅ Found missing checkout endpoint `POST /api/pay/createCryptoPayment`
+- ✅ Updated `/app/PAYMENT_API_ENDPOINTS.md` with full checkout flow (11 endpoints)
+- ✅ Total documented endpoints: 34
