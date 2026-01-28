@@ -112,9 +112,9 @@ export const getOrCreateMerchantWallet = async (
     throw new Error(`Failed to generate ${baseChain} wallet for merchant ${userId}`);
   }
 
-  // Encrypt mnemonic
-  const encryptedMnemonic = await encryptWithKMS(
-    walletData.mnemonic,
+  // Encrypt mnemonic (store both xpub and mnemonic for future reference)
+  const encryptedMnemonic = await tatumApi.encryptSymmetric(
+    JSON.stringify({ xpub: walletData.xpub, mnemonic: walletData.mnemonic }),
     process.env.XPUB_KEY_ID
   );
 
