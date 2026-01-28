@@ -207,7 +207,7 @@ export const addAddressToMerchantPool = async (
     }
 
     // Encrypt private key
-    const encryptedPrivateKey = await encryptWithKMS(
+    const encryptedPrivateKey = await tatumApi.encryptSymmetric(
       privateKeyData.key,
       process.env.TEMP_KEY_ID
     );
