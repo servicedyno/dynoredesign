@@ -53,6 +53,7 @@ import {
   userTransactionModel,
   paymentLinkModel,
   userWalletAddressModel,
+  merchantTempAddressModel,
 } from "../models";
 import QR_Code from "qrcode";
 import tatumApi from "../apis/tatumApi";
@@ -68,6 +69,7 @@ import {
   getAllBlockchainFees, 
   calculateCustomerPaymentAmount 
 } from "../services/blockchainFeeService";
+import * as merchantPoolService from "../services/merchantPoolService";
 
 const getData = async (req: express.Request, res: express.Response) => {
   try {
