@@ -718,21 +718,11 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
     await transaction.commit();
 
     // Get actual balance
-    let actualBalance = 0;
-    if (TOKEN_CHAINS.includes(walletType)) {
-      const tokenBalance = await tatumApi.getTokenBalance(
-        poolAddress.dataValues.wallet_address,
-        walletType,
-        TOKEN_CONTRACTS[walletType]
-      );
-      actualBalance = parseFloat(tokenBalance?.balance || "0");
-    } else {
-      const balanceData = await tatumApi.getAddressBalance(
-        poolAddress.dataValues.wallet_address,
-        walletType
-      );
-      actualBalance = parseFloat(balanceData?.balance || "0");
-    }
+    const balanceData = await tatumApi.getAddressBalance(
+      poolAddress.dataValues.wallet_address,
+      walletType
+    );
+    const actualBalance = parseFloat(balanceData?.balance || "0");
 
     if (actualBalance <= 0) {
       // Reset and release
@@ -753,24 +743,25 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       process.env.TEMP_KEY_ID
     );
 
-    // Transfer to admin wallet
-    let sweepTxId;
-    if (TOKEN_CHAINS.includes(walletType)) {
-      sweepTxId = await tatumApi.transferToken(
-        privateKey,
-        adminWallet,
-        actualBalance.toString(),
-        walletType,
-        TOKEN_CONTRACTS[walletType]
-      );
-    } else {
-      sweepTxId = await tatumApi.transferCrypto(
-        privateKey,
-        adminWallet,
-        actualBalance.toString(),
-        walletType
-      );
-    }
+    // Estimate fees
+    const feeData = await tatumApi.feeEstimation(
+      walletType,
+      poolAddress.dataValues.wallet_address,
+      adminWallet,
+      actualBalance.toString()
+    );
+
+    // Transfer to admin wallet using existing assetToOtherAddress
+    const sweepResult = await tatumApi.assetToOtherAddress({
+      currency: walletType,
+      fromAddress: poolAddress.dataValues.wallet_address,
+      toAddress: adminWallet,
+      privateKey,
+      amount: actualBalance.toString(),
+      fee: feeData,
+    });
+
+    const sweepTxId = sweepResult?.txId;
 
     // Record sweep
     await merchantPoolSweepModel.create({
@@ -778,6 +769,43 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       owner_user_id: poolAddress.dataValues.owner_user_id,
       wallet_type: walletType,
       amount_swept: actualBalance,
+      gas_funded: gasFunding.amount,
+      sweep_tx_id: sweepTxId,
+      gas_funding_tx_id: gasFunding.txId,
+      admin_wallet: adminWallet,
+      status: "completed",
+    });
+
+    // Reset and release
+    await poolAddress.update({
+      status: "AVAILABLE",
+      admin_fee_balance: 0,
+      last_swept_at: new Date(),
+    });
+
+    console.log(`[MerchantPool] 🧹 Swept ${actualBalance} ${walletType} to admin wallet`);
+
+    return { success: true, amount: actualBalance, txId: sweepTxId };
+  } catch (error) {
+    // Rollback transaction if still open
+    try {
+      await transaction.rollback();
+    } catch {}
+    
+    const message = getErrorMessage(error);
+    console.error(`[MerchantPool] ❌ Sweep failed:`, message);
+    
+    // Try to reset status
+    try {
+      await merchantTempAddressModel.update(
+        { status: "AVAILABLE" },
+        { where: { temp_address_id: tempAddressId } }
+      );
+    } catch {}
+    
+    throw error;
+  }
+};
       gas_funded: gasFunding.amount,
       sweep_tx_id: sweepTxId,
       gas_funding_tx_id: gasFunding.txId,
