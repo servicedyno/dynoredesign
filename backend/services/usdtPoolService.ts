@@ -174,6 +174,7 @@ export const reserveAddress = async (
   walletType: "USDT-TRC20" | "USDT-ERC20",
   paymentId: string,
   companyId: number,
+  userId: number,
   expectedAmount: number
 ): Promise<any> => {
   const transaction = await sequelize.transaction();
