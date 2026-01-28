@@ -794,14 +794,18 @@ export const cleanupStaleAddresses = async (
 
 /**
  * Sweep admin fees from pool address to admin wallet
+ * FIXED: Better transaction consistency - blockchain transfer first, then DB update
  */
 export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
-  const transaction = await sequelize.transaction();
+  let dbTransaction;
   
   try {
+    // Phase 1: Lock address and validate
+    dbTransaction = await sequelize.transaction();
+    
     const poolAddress = await merchantTempAddressModel.findByPk(tempAddressId, {
-      lock: transaction.LOCK.UPDATE,
-      transaction,
+      lock: dbTransaction.LOCK.UPDATE,
+      transaction: dbTransaction,
     });
 
     if (!poolAddress) {
@@ -820,10 +824,14 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
     }
 
     // Mark as sweeping
-    await poolAddress.update({ status: "SWEEPING" }, { transaction });
-    await transaction.commit();
+    await poolAddress.update({ status: "SWEEPING" }, { transaction: dbTransaction });
+    await dbTransaction.commit();
+    dbTransaction = null; // Transaction completed
 
-    // Get actual balance
+    // Phase 2: Execute blockchain transfer (outside DB transaction)
+    console.log(`[MerchantPool] 🧹 Starting sweep for ${poolAddress.dataValues.wallet_address}`);
+    
+    // Get actual balance from blockchain
     const balanceData = await tatumApi.getAddressBalance(
       poolAddress.dataValues.wallet_address,
       walletType
@@ -831,7 +839,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
     const actualBalance = parseFloat(balanceData?.balance || "0");
 
     if (actualBalance <= 0) {
-      // Reset and release
+      // No balance to sweep, just reset
       await poolAddress.update({
         status: "AVAILABLE",
         admin_fee_balance: 0,
@@ -857,7 +865,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       actualBalance.toString()
     );
 
-    // Transfer to admin wallet using existing assetToOtherAddress
+    // Execute blockchain transfer
     const sweepResult = await tatumApi.assetToOtherAddress({
       currency: walletType,
       fromAddress: poolAddress.dataValues.wallet_address,
@@ -868,40 +876,89 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
     });
 
     const sweepTxId = sweepResult?.txId;
-
-    // Record sweep
-    await merchantPoolSweepModel.create({
-      temp_address_id: tempAddressId,
-      owner_user_id: poolAddress.dataValues.owner_user_id,
-      wallet_type: walletType,
-      amount_swept: actualBalance,
-      gas_funded: gasFunding.amount,
-      sweep_tx_id: sweepTxId,
-      gas_funding_tx_id: gasFunding.txId,
-      admin_wallet: adminWallet,
-      status: "completed",
-    });
-
-    // Reset and release
-    await poolAddress.update({
-      status: "AVAILABLE",
-      admin_fee_balance: 0,
-      last_swept_at: new Date(),
-    });
-
-    console.log(`[MerchantPool] 🧹 Swept ${actualBalance} ${walletType} to admin wallet`);
-
-    return { success: true, amount: actualBalance, txId: sweepTxId };
-  } catch (error) {
-    // Rollback transaction if still open
-    try {
-      await transaction.rollback();
-    } catch {}
     
+    if (!sweepTxId) {
+      throw new Error("Sweep transaction failed - no txId returned");
+    }
+
+    console.log(`[MerchantPool] ✅ Blockchain sweep successful: ${sweepTxId}`);
+
+    // Phase 3: Update database atomically (blockchain succeeded, now record it)
+    dbTransaction = await sequelize.transaction();
+    
+    try {
+      // Record sweep
+      await merchantPoolSweepModel.create({
+        temp_address_id: tempAddressId,
+        owner_user_id: poolAddress.dataValues.owner_user_id,
+        wallet_type: walletType,
+        amount_swept: actualBalance,
+        gas_funded: gasFunding.amount || 0,
+        sweep_tx_id: sweepTxId,
+        gas_funding_tx_id: gasFunding.txId || null,
+        admin_wallet: adminWallet,
+        status: "completed",
+      }, { transaction: dbTransaction });
+
+      // Reset balance and release address
+      await poolAddress.update({
+        status: "AVAILABLE",
+        admin_fee_balance: 0,
+        last_swept_at: new Date(),
+      }, { transaction: dbTransaction });
+
+      await dbTransaction.commit();
+      dbTransaction = null;
+      
+      console.log(`[MerchantPool] 🎉 Sweep recorded: ${actualBalance} ${walletType} → admin wallet`);
+
+      return { success: true, amount: actualBalance, txId: sweepTxId };
+      
+    } catch (dbError) {
+      // CRITICAL: Blockchain transfer succeeded but DB update failed
+      const message = getErrorMessage(dbError);
+      console.error(`[MerchantPool] 🚨 CRITICAL: Sweep ${sweepTxId} succeeded but DB update failed: ${message}`);
+      console.error(`[MerchantPool] 🚨 Manual intervention needed for address ${poolAddress.dataValues.wallet_address}`);
+      console.error(`[MerchantPool] 🚨 Sweep details: ${actualBalance} ${walletType} sent to ${adminWallet}`);
+      
+      // Try to rollback DB transaction
+      if (dbTransaction) {
+        try {
+          await dbTransaction.rollback();
+        } catch {}
+      }
+      
+      // Reset status (balance won't be updated, will need manual correction)
+      try {
+        await merchantTempAddressModel.update(
+          { status: "AVAILABLE" },
+          { where: { temp_address_id: tempAddressId } }
+        );
+      } catch {}
+      
+      // Return success with warning (blockchain succeeded, DB issue needs manual fix)
+      return { 
+        success: true, 
+        amount: actualBalance, 
+        txId: sweepTxId,
+        warning: "DB update failed, manual verification needed",
+        critical: true
+      };
+    }
+    
+  } catch (error) {
+    // Blockchain transfer failed or validation error
     const message = getErrorMessage(error);
     console.error(`[MerchantPool] ❌ Sweep failed:`, message);
     
-    // Try to reset status
+    // Rollback any open transaction
+    if (dbTransaction) {
+      try {
+        await dbTransaction.rollback();
+      } catch {}
+    }
+    
+    // Try to reset status to AVAILABLE
     try {
       await merchantTempAddressModel.update(
         { status: "AVAILABLE" },
