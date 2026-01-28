@@ -217,17 +217,17 @@ class ETHPaymentCreationTester:
         """Create crypto payment for ETH and get the payment address"""
         print("\n=== Step 3: Create ETH Crypto Payment ===")
         
-        if not self.payment_data or not self.payment_data.get('payment_id'):
+        if not self.payment_data or not self.payment_data.get('transaction_id'):
             self.log_result(
                 "ETH Crypto Payment Creation", 
                 False, 
-                "No payment ID available from previous step"
+                "No transaction ID available from previous step"
             )
             return False
         
         # Request ETH crypto payment
         crypto_request = {
-            "payment_id": self.payment_data['payment_id'],
+            "transaction_id": self.payment_data['transaction_id'],
             "crypto_currency": "ETH"
         }
         
@@ -238,7 +238,7 @@ class ETHPaymentCreationTester:
             }
             
             response = requests.post(
-                f"{self.backend_url}/api/payment/createCryptoPayment",
+                f"{self.backend_url}/api/pay/createCryptoPayment",
                 json=crypto_request,
                 headers=headers,
                 timeout=30
@@ -252,7 +252,7 @@ class ETHPaymentCreationTester:
                     # Extract key information
                     eth_address = crypto_data.get('crypto_address')
                     expected_amount = crypto_data.get('crypto_amount')
-                    payment_id = crypto_data.get('payment_id')
+                    transaction_id = crypto_data.get('transaction_id')
                     
                     if eth_address and expected_amount:
                         self.log_result(
@@ -260,7 +260,7 @@ class ETHPaymentCreationTester:
                             True, 
                             f"ETH payment address generated successfully",
                             {
-                                "payment_id": payment_id,
+                                "transaction_id": transaction_id,
                                 "eth_address": eth_address,
                                 "expected_eth_amount": expected_amount,
                                 "usd_amount": crypto_data.get('usd_amount'),
