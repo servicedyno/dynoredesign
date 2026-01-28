@@ -161,6 +161,20 @@ const startServer = async () => {
   try {
     await sequelize.authenticate();
     console.log("PostgreSQL Connection has been established successfully.");
+    
+    // Sync USDT Pool models
+    await usdtPoolAddressModel.sync({ alter: true });
+    await usdtPoolTransactionModel.sync({ alter: true });
+    await usdtPoolSweepModel.sync({ alter: true });
+    console.log("USDT Pool tables synced successfully.");
+    
+    // Initialize USDT pools if empty
+    try {
+      await usdtPoolService.initializePool("USDT-TRC20");
+      await usdtPoolService.initializePool("USDT-ERC20");
+    } catch (poolError) {
+      console.warn("USDT Pool initialization skipped (may already exist or xpub not ready):", poolError.message);
+    }
   } catch (error) {
     console.error("PostgreSQL Unable to connect to the database:", error);
   }
