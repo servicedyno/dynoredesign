@@ -1,7 +1,6 @@
 import express from "express";
 import adminController from "../controller/adminController";
 import { adminAuthMiddleware } from "../middleware";
-import usdtPoolService from "../services/usdtPoolService";
 
 const adminRouter = express.Router();
 
