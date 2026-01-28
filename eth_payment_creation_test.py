@@ -179,11 +179,12 @@ class ETHPaymentCreationTester:
                         True, 
                         f"Payment link created successfully for ${payment_request['amount']} USD",
                         {
-                            "payment_id": self.payment_data.get('payment_id'),
-                            "amount": self.payment_data.get('amount'),
-                            "currency": self.payment_data.get('currency'),
+                            "transaction_id": self.payment_data.get('transaction_id'),
+                            "link_id": self.payment_data.get('link_id'),
+                            "base_amount": self.payment_data.get('base_amount'),
+                            "base_currency": self.payment_data.get('base_currency'),
                             "status": self.payment_data.get('status'),
-                            "payment_url": self.payment_data.get('payment_url')
+                            "payment_link": self.payment_data.get('payment_link')
                         }
                     )
                     return True
