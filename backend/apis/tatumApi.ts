@@ -482,6 +482,7 @@ const generateUserAddress = async ({
         break;
       case "ETH":
       case "USDT-ERC20":
+      case "USDC-ERC20":
         // Generate private key first
         privateKey = await tatumSdk.blockchain.eth.ethGenerateAddressPrivateKey(
           { mnemonic, index }
