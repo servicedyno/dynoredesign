@@ -1,0 +1,584 @@
+# Complete Payment API Endpoints Documentation
+
+## Base URL Structure
+
+```
+Development: https://new-setup.preview.emergentagent.com/api
+Production: [Your production URL]/api
+```
+
+---
+
+## 1. PAYMENT LINK ENDPOINTS
+
+### 1.1 Create Payment Link
+**Endpoint**: `POST /api/pay/createPaymentLink`
+
+**Authentication**: Required (authMiddleware)
+
+**Description**: Creates a new payment link for customers to make payments
+
+**Request Body**:
+```json
+{
+  "amount": 100,
+  "currency": "USD",
+  "description": "Payment for services",
+  "customer_email": "customer@example.com",
+  "customer_name": "John Doe",
+  "redirect_url": "https://yoursite.com/success",
+  "mode": "CRYPTO" | "FIAT" | "BOTH",
+  "metadata": {
+    "order_id": "ORD-12345",
+    "custom_field": "value"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "payment_link": "https://checkout-url.com/pay/abc123",
+  "payment_id": "pay_abc123def456",
+  "qr_code": "data:image/png;base64,..."
+}
+```
+
+---
+
+### 1.2 Get Payment Links
+**Endpoint**: `GET /api/pay/getPaymentLinks`
+
+**Authentication**: Required
+
+**Description**: Retrieve all payment links for the authenticated user/company
+
+**Query Parameters**:
+- `page` (optional): Page number
+- `limit` (optional): Items per page
+- `status` (optional): Filter by status (active, expired, paid)
+
+**Response**:
+```json
+{
+  "success": true,
+  "payment_links": [
+    {
+      "id": "link_123",
+      "amount": 100,
+      "currency": "USD",
+      "status": "active",
+      "created_at": "2026-01-28T10:00:00Z",
+      "expires_at": "2026-02-28T10:00:00Z"
+    }
+  ],
+  "total": 25,
+  "page": 1,
+  "limit": 10
+}
+```
+
+---
+
+### 1.3 Get Single Payment Link
+**Endpoint**: `GET /api/pay/getPaymentLink/:id`
+
+**Authentication**: Required
+
+**Description**: Get details of a specific payment link
+
+**Response**:
+```json
+{
+  "success": true,
+  "payment_link": {
+    "id": "link_123",
+    "amount": 100,
+    "currency": "USD",
+    "status": "active",
+    "payment_url": "https://checkout.com/pay/abc123",
+    "qr_code": "data:image/png;base64,..."
+  }
+}
+```
+
+---
+
+### 1.4 Update Payment Link
+**Endpoint**: `PUT /api/pay/updatePaymentLink/:id`
+
+**Authentication**: Required
+
+**Description**: Update an existing payment link
+
+**Request Body**:
+```json
+{
+  "amount": 150,
+  "description": "Updated description",
+  "status": "active" | "inactive"
+}
+```
+
+---
+
+### 1.5 Delete Payment Link
+**Endpoint**: `DELETE /api/pay/deletePaymentLink/:id`
+
+**Authentication**: Required
+
+**Description**: Delete a payment link
+
+---
+
+## 2. DIRECT PAYMENT ENDPOINTS (API Integration)
+
+### 2.1 Create Payment (Fiat/Crypto)
+**Endpoint**: `POST /api/pay/user/createPayment`
+
+**Authentication**: Required (API Key via authMiddleware)
+
+**Middleware**: paymentMiddleware
+
+**Description**: Create a direct payment request via API
+
+**Request Body**:
+```json
+{
+  "customer_email": "customer@example.com",
+  "customer_name": "John Doe",
+  "amount": 100,
+  "currency": "USD",
+  "description": "Payment for order #12345",
+  "payment_method": "card" | "bank_transfer" | "crypto",
+  "redirect_url": "https://yoursite.com/callback",
+  "metadata": {
+    "order_id": "12345"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "transaction_id": "txn_abc123",
+  "payment_url": "https://checkout.com/pay/xyz789",
+  "status": "pending",
+  "amount": 100,
+  "currency": "USD"
+}
+```
+
+---
+
+### 2.2 Create Crypto Payment
+**Endpoint**: `POST /api/pay/user/cryptoPayment`
+
+**Authentication**: Required (API Key)
+
+**Middleware**: paymentMiddleware
+
+**Description**: Create a crypto-specific payment
+
+**Request Body**:
+```json
+{
+  "customer_email": "customer@example.com",
+  "amount": 0.001,
+  "currency": "BTC" | "ETH" | "USDT" | "TRX" | etc.,
+  "description": "Crypto payment",
+  "callback_url": "https://yoursite.com/webhook",
+  "metadata": {}
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "payment_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+  "amount": 0.001,
+  "currency": "BTC",
+  "qr_code": "data:image/png;base64,...",
+  "expires_at": "2026-01-28T11:00:00Z"
+}
+```
+
+---
+
+### 2.3 Add Funds (Top-up)
+**Endpoint**: `POST /api/pay/user/addFunds`
+
+**Authentication**: Required
+
+**Middleware**: paymentMiddleware
+
+**Description**: Add funds to user wallet
+
+**Request Body**:
+```json
+{
+  "amount": 100,
+  "currency": "USD",
+  "payment_method": "card" | "bank_transfer" | "crypto"
+}
+```
+
+---
+
+### 2.4 Use Wallet Payment
+**Endpoint**: `POST /api/pay/user/useWallet`
+
+**Authentication**: Required
+
+**Description**: Pay using wallet balance
+
+**Request Body**:
+```json
+{
+  "amount": 50,
+  "currency": "USD",
+  "description": "Payment using wallet",
+  "recipient_id": "user_123"
+}
+```
+
+---
+
+## 3. USER MANAGEMENT ENDPOINTS
+
+### 3.1 Create Customer
+**Endpoint**: `POST /api/pay/user/createUser`
+
+**Middleware**: userMiddleware
+
+**Description**: Create a customer account via API
+
+**Request Body**:
+```json
+{
+  "email": "customer@example.com",
+  "name": "John Doe",
+  "phone": "+1234567890",
+  "metadata": {}
+}
+```
+
+---
+
+## 4. TRANSACTION QUERY ENDPOINTS
+
+### 4.1 Get Transactions
+**Endpoint**: `GET /api/pay/user/getTransactions`
+
+**Authentication**: Required
+
+**Description**: Get all transactions for authenticated user
+
+**Query Parameters**:
+- `page`: Page number
+- `limit`: Items per page
+- `status`: Filter by status
+- `currency`: Filter by currency
+- `from_date`: Start date
+- `to_date`: End date
+
+---
+
+### 4.2 Get Single Transaction
+**Endpoint**: `GET /api/pay/user/getSingleTransaction/:id`
+
+**Authentication**: Required
+
+**Description**: Get details of specific transaction
+
+---
+
+### 4.3 Get Crypto Transaction
+**Endpoint**: `GET /api/pay/user/getCryptoTransaction/:address`
+
+**Authentication**: Required
+
+**Description**: Get crypto transaction by address
+
+---
+
+### 4.4 Get Supported Currencies
+**Endpoint**: `GET /api/pay/getSupportedCurrency`
+
+**Authentication**: Required
+
+**Description**: Get list of supported payment currencies
+
+**Response**:
+```json
+{
+  "success": true,
+  "currencies": {
+    "fiat": ["USD", "EUR", "GBP", "NGN"],
+    "crypto": ["BTC", "ETH", "USDT-TRC20", "USDT-ERC20", "TRX", "LTC", "DOGE", "BCH", "USDC-ERC20"]
+  }
+}
+```
+
+---
+
+### 4.5 Get Balance
+**Endpoint**: `GET /api/pay/user/getBalance`
+
+**Authentication**: Required
+
+**Description**: Get wallet balance
+
+**Response**:
+```json
+{
+  "success": true,
+  "balances": [
+    {
+      "currency": "USD",
+      "available": 1000.50,
+      "pending": 50.00
+    },
+    {
+      "currency": "BTC",
+      "available": 0.001,
+      "pending": 0
+    }
+  ]
+}
+```
+
+---
+
+## 5. WEBHOOK ENDPOINTS (System Use)
+
+### 5.1 Flutterwave Webhook
+**Endpoint**: `POST /api/webhook`
+
+**Description**: Receives payment notifications from Flutterwave
+
+**Authentication**: None (verified via signature)
+
+---
+
+### 5.2 Flutterwave Failed Webhook
+**Endpoint**: `POST /api/failed_webhook`
+
+**Description**: Receives failed payment notifications
+
+---
+
+### 5.3 Tatum Webhook
+**Endpoint**: `POST /api/tatum-webhook`
+
+**Description**: Receives blockchain notifications from Tatum
+
+---
+
+### 5.4 Tatum Crypto Webhook
+**Endpoint**: `POST /api/tatum-crypto-webhook`
+
+**Description**: Receives crypto-specific notifications
+
+---
+
+## 6. INVOICE ENDPOINTS
+
+### 6.1 Get Transaction Invoice
+**Endpoint**: `GET /api/transactions/:id/invoice`
+
+**Authentication**: Required
+
+**Description**: Get invoice for a specific transaction
+
+---
+
+### 6.2 Get All Invoices
+**Endpoint**: `GET /api/invoices`
+
+**Authentication**: Required
+
+**Description**: Get all invoices for user
+
+---
+
+### 6.3 Get Invoice by ID
+**Endpoint**: `GET /api/invoices/:id`
+
+**Authentication**: Required
+
+**Description**: Get specific invoice
+
+---
+
+### 6.4 Download Invoice PDF
+**Endpoint**: `GET /api/invoices/:id/pdf`
+
+**Authentication**: Required
+
+**Description**: Download invoice as PDF
+
+---
+
+## 7. PAYMENT METHODS SUMMARY
+
+### Supported Payment Modes:
+
+#### 7.1 CRYPTO Payments
+- **BTC** (Bitcoin) - UTXO, batch transfer
+- **ETH** (Ethereum) - Account-based
+- **LTC** (Litecoin) - UTXO, batch transfer
+- **DOGE** (Dogecoin) - UTXO, batch transfer
+- **TRX** (Tron) - Account-based
+- **BCH** (Bitcoin Cash) - UTXO, batch transfer
+- **USDT-TRC20** (Tether on Tron) - Token
+- **USDT-ERC20** (Tether on Ethereum) - Token
+- **USDC-ERC20** (USD Coin on Ethereum) - Token
+
+#### 7.2 FIAT Payments
+- **Card Payments** (Visa, Mastercard)
+- **Bank Transfers**
+- **Mobile Money** (NGN support)
+
+---
+
+## 8. AUTHENTICATION METHODS
+
+### 8.1 User Authentication (Dashboard)
+**Header**: `Authorization: Bearer <user_token>`
+
+**Used for**: Payment links, user transactions, wallet operations
+
+---
+
+### 8.2 API Key Authentication (API Integration)
+**Header**: `X-API-Key: <your_api_key>`
+
+**Used for**: Direct API integrations, automated payments
+
+---
+
+## 9. COMPLETE ENDPOINT LIST (Summary)
+
+### Payment Creation (4 endpoints):
+1. `POST /api/pay/createPaymentLink` - Create payment link
+2. `POST /api/pay/user/createPayment` - Direct payment
+3. `POST /api/pay/user/cryptoPayment` - Crypto payment
+4. `POST /api/pay/user/addFunds` - Add funds
+
+### Payment Management (4 endpoints):
+5. `GET /api/pay/getPaymentLinks` - List payment links
+6. `GET /api/pay/getPaymentLink/:id` - Get single link
+7. `PUT /api/pay/updatePaymentLink/:id` - Update link
+8. `DELETE /api/pay/deletePaymentLink/:id` - Delete link
+
+### Transaction Queries (5 endpoints):
+9. `GET /api/pay/user/getTransactions` - List transactions
+10. `GET /api/pay/user/getSingleTransaction/:id` - Get transaction
+11. `GET /api/pay/user/getCryptoTransaction/:address` - Crypto tx
+12. `GET /api/pay/getSupportedCurrency` - Supported currencies
+13. `GET /api/pay/user/getBalance` - Get balance
+
+### Wallet Operations (1 endpoint):
+14. `POST /api/pay/user/useWallet` - Wallet payment
+
+### Invoices (4 endpoints):
+15. `GET /api/transactions/:id/invoice` - Get invoice
+16. `GET /api/invoices` - List invoices
+17. `GET /api/invoices/:id` - Get invoice
+18. `GET /api/invoices/:id/pdf` - Download PDF
+
+### User Management (1 endpoint):
+19. `POST /api/pay/user/createUser` - Create customer
+
+### Webhooks (4 endpoints - system):
+20. `POST /api/webhook` - Flutterwave webhook
+21. `POST /api/failed_webhook` - Failed webhook
+22. `POST /api/tatum-webhook` - Tatum webhook
+23. `POST /api/tatum-crypto-webhook` - Crypto webhook
+
+---
+
+## 10. INTEGRATION EXAMPLES
+
+### Example 1: Create Payment Link
+```bash
+curl -X POST https://your-api.com/api/pay/createPaymentLink \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100,
+    "currency": "USD",
+    "mode": "CRYPTO",
+    "description": "Test payment",
+    "customer_email": "test@example.com"
+  }'
+```
+
+### Example 2: Create Crypto Payment
+```bash
+curl -X POST https://your-api.com/api/pay/user/cryptoPayment \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 0.001,
+    "currency": "BTC",
+    "customer_email": "test@example.com",
+    "description": "Bitcoin payment"
+  }'
+```
+
+### Example 3: Get Transactions
+```bash
+curl -X GET "https://your-api.com/api/pay/user/getTransactions?page=1&limit=10" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## 11. RESPONSE CODES
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 201 | Created |
+| 400 | Bad Request - Invalid parameters |
+| 401 | Unauthorized - Invalid or missing authentication |
+| 403 | Forbidden - Insufficient permissions |
+| 404 | Not Found - Resource doesn't exist |
+| 429 | Too Many Requests - Rate limit exceeded |
+| 500 | Internal Server Error |
+| 503 | Service Unavailable |
+
+---
+
+## 12. RATE LIMITS
+
+Default rate limits (configurable per API key):
+- **Standard**: 100 requests/minute
+- **Premium**: 1000 requests/minute
+- **Enterprise**: Custom limits
+
+---
+
+## 13. TESTING
+
+### Test Endpoints:
+- `POST /api/test/test-webhook` - Test webhook delivery
+
+### Test Cards (for Fiat payments):
+- **Success**: 4242 4242 4242 4242
+- **Decline**: 4000 0000 0000 0002
+
+### Test Crypto Addresses:
+Available on request for development environment
+
+---
+
+**Total Payment Endpoints**: 19 main endpoints + 4 webhooks = 23 endpoints
+
+**Documentation Version**: 1.0
+**Last Updated**: 2026-01-28
