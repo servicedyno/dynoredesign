@@ -1389,6 +1389,7 @@ export default {
   processExpiredPartialPayments,
   releaseExpiredReservations,
   handleLatePayment,
+  processQueuedPayments,
   releaseAddress,
   fundGasIfNeeded,
   cleanupStaleAddresses,
