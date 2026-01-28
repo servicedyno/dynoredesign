@@ -61,4 +61,8 @@ export {
   notificationModel,
   notificationPreferencesModel,
   kycModel,
+  // USDT Pool System models
+  usdtPoolAddressModel,
+  usdtPoolTransactionModel,
+  usdtPoolSweepModel,
 };
