@@ -151,7 +151,7 @@ class ETHPaymentCreationTester:
             "amount": 10.00,
             "currency": "USD",
             "description": "Test ETH Payment - $10 USD",
-            "customer_email": "test.customer@example.com",
+            "email": "test.customer@example.com",
             "modes": ["CRYPTO"],
             "company_id": self.test_credentials["company_id"]
         }
@@ -163,7 +163,7 @@ class ETHPaymentCreationTester:
             }
             
             response = requests.post(
-                f"{self.backend_url}/api/payment/createPaymentLink",
+                f"{self.backend_url}/api/pay/createPaymentLink",
                 json=payment_request,
                 headers=headers,
                 timeout=30
