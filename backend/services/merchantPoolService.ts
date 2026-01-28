@@ -1136,13 +1136,31 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
     
     console.log(`[MerchantPool] ✅ Sweep is profitable: $${profitabilityResult.balanceUSD?.toFixed(2)} balance vs $${profitabilityResult.feeUSD?.toFixed(2)} fee`);
 
+    // For account-based chains (ETH, TRX), deduct gas from the amount to send
+    // For UTXO chains, gas is handled differently (deducted by the API)
+    const isAccountChain = ACCOUNT_CHAINS.includes(walletType);
+    let amountToSend = actualBalance;
+    
+    if (isAccountChain) {
+      const gasFee = parseFloat(feeData?.slow || feeData?.fast || "0");
+      amountToSend = actualBalance - gasFee;
+      
+      if (amountToSend <= 0) {
+        console.warn(`[MerchantPool] ⚠️ Balance too low for sweep after gas: ${actualBalance} - ${gasFee} = ${amountToSend}`);
+        await poolAddress.update({ status: "AVAILABLE" });
+        return { success: false, skipped: true, reason: "Balance too low after gas deduction" };
+      }
+      
+      console.log(`[MerchantPool] Account chain sweep: ${actualBalance} - ${gasFee} (gas) = ${amountToSend} ${walletType}`);
+    }
+
     // Execute blockchain transfer
     const sweepResult = await tatumApi.assetToOtherAddress({
       currency: walletType,
       fromAddress: poolAddress.dataValues.wallet_address,
       toAddress: adminWallet,
       privateKey,
-      amount: actualBalance.toString(),
+      amount: amountToSend.toString(),
       fee: feeData,
     });
 
