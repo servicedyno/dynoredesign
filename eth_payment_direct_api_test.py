@@ -77,7 +77,7 @@ class ETHPaymentDirectAPITester:
                 data = response.json()
                 if 'data' in data and 'accessToken' in data['data']:
                     self.merchant_jwt_token = data['data']['accessToken']
-                    user_data = data['data']
+                    user_data = data['data'].get('userData', {})
                     
                     # Verify user details match expected
                     expected_user_id = self.merchant_credentials["user_id"]
