@@ -296,6 +296,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             unique_tx_id: paymentRes.transaction_id, // Keep for backward compatibility
             walletType: "customer",
             temp_id: paymentRes.temp_id,
+            is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",  // CRITICAL: Include merchant pool flag
           });
         }
         successResponseHelper(res, 200, "Payment created successfully", finalRes);
