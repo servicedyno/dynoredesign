@@ -135,28 +135,51 @@ cron.schedule("0 */24 * * *", function () {
   paymentController.removeUnwantedSubscriptions();
 });
 
-// USDT Pool: Sweep accumulated admin fees every 30 minutes
+// USDT Pool: Sweep accumulated admin fees every 30 minutes (legacy)
 cron.schedule("*/30 * * * *", function () {
   console.log("sweepUSDTPoolFees ==============> checked");
   usdtPoolService.sweepAllEligibleAddresses();
 });
 
-// USDT Pool: Release expired reservations every 5 minutes
+// USDT Pool: Release expired reservations every 5 minutes (legacy)
 cron.schedule("*/5 * * * *", function () {
   console.log("releaseExpiredReservations ==============> checked");
   usdtPoolService.releaseExpiredReservations();
 });
 
-// USDT Pool: Process expired partial payments every 5 minutes
+// USDT Pool: Process expired partial payments every 5 minutes (legacy)
 cron.schedule("*/5 * * * *", function () {
   console.log("processExpiredPartialPayments ==============> checked");
   usdtPoolService.processExpiredPartialPayments();
 });
 
-// USDT Pool: Cleanup stuck addresses every 15 minutes (safety net)
+// USDT Pool: Cleanup stuck addresses every 15 minutes (legacy - safety net)
 cron.schedule("*/15 * * * *", function () {
   console.log("cleanupStalePoolAddresses ==============> checked");
   usdtPoolService.cleanupStaleAddresses();
+});
+
+// ===========================================
+// MERCHANT POOL: Per-merchant pool cron jobs
+// ===========================================
+import * as merchantPoolService from "./services/merchantPoolService";
+
+// Merchant Pool: Sweep accumulated admin fees every 30 minutes
+cron.schedule("*/30 * * * *", function () {
+  console.log("sweepMerchantPoolFees ==============> checked");
+  merchantPoolService.sweepAllEligibleAddresses();
+});
+
+// Merchant Pool: Release expired reservations every 5 minutes
+cron.schedule("*/5 * * * *", function () {
+  console.log("releaseMerchantPoolExpiredReservations ==============> checked");
+  merchantPoolService.releaseExpiredReservations();
+});
+
+// Merchant Pool: Cleanup stuck addresses every 15 minutes (safety net)
+cron.schedule("*/15 * * * *", function () {
+  console.log("cleanupStaleMerchantPoolAddresses ==============> checked");
+  merchantPoolService.cleanupStaleAddresses();
 });
 
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
