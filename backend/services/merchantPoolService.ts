@@ -865,6 +865,33 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       actualBalance.toString()
     );
 
+    // PROFITABILITY CHECK: Ensure sweep is cost-effective
+    const profitabilityResult = await checkSweepProfitability(
+      walletType,
+      actualBalance,
+      feeData
+    );
+    
+    if (!profitabilityResult.profitable) {
+      console.warn(`[MerchantPool] ⚠️ Sweep not profitable for ${poolAddress.dataValues.wallet_address}`);
+      console.warn(`[MerchantPool]    Balance: ${actualBalance} ${walletType} ($${profitabilityResult.balanceUSD?.toFixed(2)})`);
+      console.warn(`[MerchantPool]    Est. Fee: ${profitabilityResult.estimatedFee} ${walletType} ($${profitabilityResult.feeUSD?.toFixed(2)})`);
+      console.warn(`[MerchantPool]    Skipping sweep - will retry when balance is higher`);
+      
+      // Reset status back to AVAILABLE without sweeping
+      await poolAddress.update({ status: "AVAILABLE" });
+      
+      return { 
+        success: false, 
+        skipped: true, 
+        reason: "Not profitable",
+        balanceUSD: profitabilityResult.balanceUSD,
+        feeUSD: profitabilityResult.feeUSD
+      };
+    }
+    
+    console.log(`[MerchantPool] ✅ Sweep is profitable: $${profitabilityResult.balanceUSD?.toFixed(2)} balance vs $${profitabilityResult.feeUSD?.toFixed(2)} fee`);
+
     // Execute blockchain transfer
     const sweepResult = await tatumApi.assetToOtherAddress({
       currency: walletType,
