@@ -633,20 +633,24 @@ export const fundGasIfNeeded = async (
 };
 
 /**
- * Clean up addresses that have been IN_USE for too long
+ * Clean up addresses that are stuck in any non-AVAILABLE state for too long
+ * This is a safety net for edge cases where normal release didn't happen
  */
 export const cleanupStaleAddresses = async (
   walletType?: string,
   transaction?: Transaction
 ): Promise<number> => {
   try {
-    const timeoutDate = new Date();
-    timeoutDate.setMinutes(timeoutDate.getMinutes() - POOL_CONFIG.LOCK_TIMEOUT_MINUTES);
+    // Safety timeout - force release any address stuck for over 2 hours
+    const safetyTimeoutDate = new Date();
+    safetyTimeoutDate.setMinutes(safetyTimeoutDate.getMinutes() - POOL_CONFIG.STALE_LOCK_TIMEOUT_MINUTES);
 
     const whereClause: any = {
-      status: "IN_USE",
+      status: {
+        [Op.in]: ["RESERVED", "PROCESSING"],  // Not SWEEPING - that's handled separately
+      },
       locked_at: {
-        [Op.lt]: timeoutDate,
+        [Op.lt]: safetyTimeoutDate,
       },
     };
 
@@ -654,10 +658,26 @@ export const cleanupStaleAddresses = async (
       whereClause.wallet_type = walletType;
     }
 
+    const stuckAddresses = await usdtPoolAddressModel.findAll({
+      where: whereClause,
+      transaction,
+    });
+
+    for (const address of stuckAddresses) {
+      console.log(`[USDTPool] 🚨 Force-releasing stuck address: ${address.dataValues.wallet_address}`);
+      console.log(`[USDTPool]    - Status: ${address.dataValues.status}`);
+      console.log(`[USDTPool]    - Payment ID: ${address.dataValues.current_payment_id}`);
+      console.log(`[USDTPool]    - Locked at: ${address.dataValues.locked_at}`);
+      console.log(`[USDTPool]    - Stuck for over ${POOL_CONFIG.STALE_LOCK_TIMEOUT_MINUTES} minutes`);
+    }
+
     const [affectedCount] = await usdtPoolAddressModel.update(
       {
         status: "AVAILABLE",
         current_payment_id: null,
+        current_company_id: null,
+        expected_amount: null,
+        reserved_until: null,
         locked_at: null,
       },
       {
@@ -667,7 +687,7 @@ export const cleanupStaleAddresses = async (
     );
 
     if (affectedCount > 0) {
-      console.log(`[USDTPool] Reset ${affectedCount} stale addresses to AVAILABLE`);
+      console.log(`[USDTPool] 🚨 Force-released ${affectedCount} stuck addresses to AVAILABLE`);
     }
 
     return affectedCount;
