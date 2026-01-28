@@ -219,13 +219,17 @@ export const reserveAddress = async (
           last_used_at: new Date(),
           current_payment_id: paymentId,
           current_company_id: companyId,
+          current_user_id: userId,
           expected_amount: expectedAmount,
+          received_amount: 0,
+          is_partial_payment: false,
           reserved_until: reservedUntil,
         }, { transaction: lockTx });
         await lockTx.commit();
         
         console.log(`[USDTPool] ✅ Created and RESERVED new ${walletType} address: ${newAddress.dataValues.wallet_address}`);
         console.log(`[USDTPool]    - Payment ID: ${paymentId}`);
+        console.log(`[USDTPool]    - Company ID: ${companyId}`);
         console.log(`[USDTPool]    - Expected: $${expectedAmount} USDT`);
         console.log(`[USDTPool]    - Expires: ${reservedUntil.toISOString()}`);
         return newAddress;
@@ -242,7 +246,10 @@ export const reserveAddress = async (
       last_used_at: new Date(),
       current_payment_id: paymentId,
       current_company_id: companyId,
+      current_user_id: userId,
       expected_amount: expectedAmount,
+      received_amount: 0,
+      is_partial_payment: false,
       reserved_until: reservedUntil,
     }, { transaction });
 
@@ -250,6 +257,7 @@ export const reserveAddress = async (
     
     console.log(`[USDTPool] ✅ RESERVED ${walletType} address: ${poolAddress.dataValues.wallet_address}`);
     console.log(`[USDTPool]    - Payment ID: ${paymentId}`);
+    console.log(`[USDTPool]    - Company ID: ${companyId}`);
     console.log(`[USDTPool]    - Expected: $${expectedAmount} USDT`);
     console.log(`[USDTPool]    - Accumulated balance: $${poolAddress.dataValues.admin_fee_balance}`);
     console.log(`[USDTPool]    - Expires: ${reservedUntil.toISOString()}`);
