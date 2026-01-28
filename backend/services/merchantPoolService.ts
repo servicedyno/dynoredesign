@@ -33,6 +33,10 @@ const POOL_CONFIG = {
   INITIAL_SIZE: parseInt(process.env.MERCHANT_POOL_INITIAL_SIZE || "2"),
   SWEEP_THRESHOLD: parseFloat(process.env.MERCHANT_POOL_SWEEP_THRESHOLD || "30"),
   
+  // Sweep modes: "threshold", "time", "both"
+  SWEEP_MODE: process.env.MERCHANT_POOL_SWEEP_MODE || "both",
+  SWEEP_TIME_MINUTES: parseInt(process.env.MERCHANT_POOL_SWEEP_TIME_MINUTES || "10"),
+  
   // Timeout settings
   RESERVATION_TIMEOUT_MINUTES: 30,
   PROCESSING_TIMEOUT_MINUTES: 60,
