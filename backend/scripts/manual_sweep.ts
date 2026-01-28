@@ -1,9 +1,9 @@
 // Manually trigger the sweep via the backend API
 // This script calls the internal sweep functions directly
 
-import * as merchantPoolService from "./services/merchantPoolService";
-import { connectRedis } from "./utils/redisInstance";
-import sequelize from "./utils/dbInstance";
+import * as merchantPoolService from "../services/merchantPoolService";
+import { connectRedis } from "../utils/redisInstance";
+import sequelize from "../utils/dbInstance";
 
 async function main() {
   console.log("Initializing...");
