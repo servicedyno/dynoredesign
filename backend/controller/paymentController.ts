@@ -2021,6 +2021,7 @@ const cryptoVerification = async (address, webhook = true) => {
             userAmount: Number(userAmountToSend),
             userAddress: walletData.dataValues.wallet_address,
           }),
+          isMerchantPool: tempData.is_merchant_pool,  // Pass merchant pool flag
         });
         
         console.log(`[cryptoVerification] settleCryptoTransaction result:
@@ -2028,6 +2029,7 @@ const cryptoVerification = async (address, webhook = true) => {
           - Merchant amount sent: ${adminTransferResult.sendAmount} ${tempCurrency}
           - Merchant TX: ${adminTransferResult.transactionDetails?.txId || 'N/A'}
           - Admin fee retained for sweep: ${adminTransferResult.adminFeeRetained || 0} ${tempCurrency}
+          - Is Merchant Pool: ${tempData.is_merchant_pool}
         `);
 
         // For UTXO chains, admin fee is sent in the same transaction
@@ -2072,23 +2074,52 @@ const cryptoVerification = async (address, webhook = true) => {
           ? tempAddressData.txId + "," + transactionId
           : transactionId;
 
-        // Update temp address status
-        // For UTXO chains: Both merchant and admin are transferred in single TX
-        // For account-based chains: Only merchant transferred, admin fee retained for sweep
-        await userTempAddressModel.update(
-          {
-            status: "successful",
-            txId: allTxIds,
-            adminTxId: adminTransferResult.transactionDetails?.txId || null,
-            admin_status: adminFeeStatus,  // "successful" for UTXO, "pending_sweep" for account chains
-            blockchain_fee: adminTransferResult.blockchainFee,
-            amount: isUTXOChain ? 0 : adminAmountToSend,  // Keep admin fee amount for sweep tracking
-            pending_admin_fee: isUTXOChain ? 0 : adminAmountToSend,  // Track pending admin fee
-          },
-          {
-            where: { temp_id: tempAddressData.temp_id },
-          }
-        );
+        // Update address status based on whether it's merchant pool or legacy
+        if (tempData.is_merchant_pool) {
+          // MERCHANT POOL: Release address back to pool with admin fee tracking
+          console.log(`[cryptoVerification] Releasing MERCHANT POOL address back to pool`);
+          
+          await merchantPoolService.releaseAddress(
+            tempAddressData.temp_address_id,
+            adminAmountToSend,
+            adminTransferResult.blockchainFee || 0
+          );
+          
+          // Record pool transaction for audit
+          await merchantPoolService.recordPoolTransaction({
+            tempAddressId: tempAddressData.temp_address_id,
+            ownerUserId: tempAddressData.owner_user_id,
+            companyId: Number(customerData.company_id),
+            customerId: customerData.customer_id ? Number(customerData.customer_id) : undefined,
+            paymentReference: transactionId,
+            walletType: tempCurrency,
+            paymentAmount: Number(totalAmountReceived),
+            merchantAmount: Number(userAmountToSend),
+            adminFeeAmount: Number(adminAmountToSend),
+            gasFunded: adminTransferResult.gasFunded || 0,
+            gasUsed: adminTransferResult.blockchainFee || 0,
+            incomingTxId: transactionId,
+            merchantTxId: adminTransferResult.transactionDetails?.txId,
+            status: "completed",
+          });
+          
+        } else {
+          // LEGACY: Update userTempAddressModel
+          await userTempAddressModel.update(
+            {
+              status: "successful",
+              txId: allTxIds,
+              adminTxId: adminTransferResult.transactionDetails?.txId || null,
+              admin_status: adminFeeStatus,
+              blockchain_fee: adminTransferResult.blockchainFee,
+              amount: isUTXOChain ? 0 : adminAmountToSend,
+              pending_admin_fee: isUTXOChain ? 0 : adminAmountToSend,
+            },
+            {
+              where: { temp_id: tempAddressData.temp_id },
+            }
+          );
+        }
 
         if (userAmountToSend > 0) {
           await userWalletModel.increment("amount", {
