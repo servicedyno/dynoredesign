@@ -183,6 +183,13 @@ cron.schedule("*/15 * * * *", function () {
   merchantPoolService.cleanupStaleAddresses();
 });
 
+// Merchant Pool: Recover stranded gas every hour
+// Handles gas that was funded but token transfer failed
+cron.schedule("0 * * * *", function () {
+  console.log("recoverStrandedGas ==============> checked");
+  merchantPoolService.recoverStrandedGas();
+});
+
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
 setupWeeklySummaryCron();
 
