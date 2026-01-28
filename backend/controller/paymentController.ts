@@ -2453,7 +2453,7 @@ const createPaymentLink = async (
     }
     
     // Phase 11: Validate at least one crypto wallet is configured for this company
-    const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20'];
+    const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
     
     const walletWhereClause: any = {
       user_id: userData.user_id,
