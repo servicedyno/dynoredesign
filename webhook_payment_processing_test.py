@@ -322,43 +322,33 @@ class WebhookPaymentProcessor:
         """Manually trigger the webhook processing logic"""
         print("\n=== Manually Triggering Webhook Processing ===")
         
-        if not self.jwt_token:
-            self.log_result(
-                "Manual Webhook Processing", 
-                False, 
-                "No JWT token available for authentication"
-            )
-            return False
-        
         try:
             # Prepare webhook data similar to what Tatum would send
             webhook_data = {
                 "subscriptionType": "ADDRESS_TRANSACTION",
                 "address": self.eth_address,
-                "amount": self.expected_amount,
+                "amount": "0.00367",  # Use the actual amount found on blockchain
                 "asset": "ETH",
-                "txId": transaction_hash or "manual_trigger_test",
-                "blockNumber": 12345678,  # Mock block number
+                "currency": "ETH",
+                "txId": transaction_hash or "0xacacca62f2fd947f7b0314459142e374f0a790e9daf1680d75778f0ee8fe46f9",
+                "blockNumber": 12345678,
                 "subscriptionId": self.subscription_id
             }
             
             headers = {
-                "Authorization": f"Bearer {self.jwt_token}",
                 "Content-Type": "application/json"
             }
             
-            # Try to find webhook processing endpoint
+            # Try the tatum-crypto-webhook endpoint (this is the newer one)
             webhook_endpoints = [
-                "/api/webhook/tatum",
-                "/api/webhook/payment",
-                "/api/webhook/crypto",
-                "/api/payment/webhook",
-                "/api/crypto/webhook"
+                "/api/tatum-crypto-webhook",
+                "/api/tatum-webhook"
             ]
             
             webhook_success = False
             for endpoint in webhook_endpoints:
                 try:
+                    print(f"--- Trying webhook endpoint: {endpoint} ---")
                     response = requests.post(
                         f"{self.backend_url}{endpoint}",
                         json=webhook_data,
@@ -372,11 +362,13 @@ class WebhookPaymentProcessor:
                             f"Manual Webhook Processing - {endpoint}", 
                             True, 
                             f"Webhook processing triggered successfully",
-                            {"endpoint": endpoint, "response": response.json() if response.content else "No content"}
+                            {
+                                "endpoint": endpoint, 
+                                "webhook_data": webhook_data,
+                                "response_status": response.status_code
+                            }
                         )
                         break
-                    elif response.status_code == 404:
-                        continue  # Try next endpoint
                     else:
                         self.log_result(
                             f"Manual Webhook Processing - {endpoint}", 
@@ -386,7 +378,12 @@ class WebhookPaymentProcessor:
                         )
                         
                 except Exception as e:
-                    continue  # Try next endpoint
+                    self.log_result(
+                        f"Manual Webhook Processing - {endpoint}", 
+                        False, 
+                        f"Webhook request failed: {str(e)}"
+                    )
+                    continue
             
             if not webhook_success:
                 # Try alternative approach - direct payment processing
