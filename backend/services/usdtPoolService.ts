@@ -24,7 +24,11 @@ import { currencyConvert, getErrorMessage } from "../helper";
 const POOL_CONFIG = {
   INITIAL_SIZE: parseInt(process.env.USDT_POOL_INITIAL_SIZE || "2"),
   SWEEP_THRESHOLD: parseFloat(process.env.USDT_POOL_SWEEP_THRESHOLD || "30"),
-  LOCK_TIMEOUT_MINUTES: 120, // Reset IN_USE addresses after 2 hours
+  
+  // Timeout settings
+  RESERVATION_TIMEOUT_MINUTES: 30,  // Release address if no payment within 30 min
+  PROCESSING_TIMEOUT_MINUTES: 60,   // Extend timeout when payment received, processing
+  STALE_LOCK_TIMEOUT_MINUTES: 120,  // Force release stuck addresses after 2 hours (safety)
   
   // Gas funding amounts
   TRC20_GAS_AMOUNT: 60,      // TRX to fund for TRC20 transfer (covers energy burn)
