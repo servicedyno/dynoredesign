@@ -1548,9 +1548,9 @@ const settleCryptoTransaction = async ({
     }
 
     // Calculate fees for merchant transfer
-    if (currency === "USDT-TRC20" || currency === "USDT-ERC20") {
+    if (currency === "USDT-TRC20" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
       // Token transfers (handled separately)
-      const wallet_type = currency === "USDT-ERC20" ? "ETH" : "TRX";
+      const wallet_type = (currency === "USDT-ERC20" || currency === "USDC-ERC20") ? "ETH" : "TRX";
       const adminFeeWallet = await adminFeeModel.findOne({
         where: { wallet_type },
       });
@@ -1559,9 +1559,14 @@ const settleCryptoTransaction = async ({
         throw new Error(`Admin fee wallet not found for ${wallet_type}.`);
       }
 
-      const contractAddress = currency === "USDT-ERC20" 
-        ? process.env.ETH_CONTRACT 
-        : process.env.TRX_CONTRACT;
+      let contractAddress;
+      if (currency === "USDT-ERC20") {
+        contractAddress = process.env.ETH_CONTRACT;
+      } else if (currency === "USDC-ERC20") {
+        contractAddress = process.env.USDC_CONTRACT;
+      } else {
+        contractAddress = process.env.TRX_CONTRACT;
+      }
 
       fees = await tatumApi.feeEstimation(
         currency,
