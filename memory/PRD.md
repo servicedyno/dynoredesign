@@ -222,6 +222,36 @@ The system has a critical architectural distinction between two wallet types:
 
 ---
 
+## Merchant Pool System (January 2026) ✅
+
+### Implementation Complete
+- **Per-Chain Sweep Logic**: Configurable sweep rules for different blockchain types
+  - UTXO Chains (BTC, LTC, DOGE, BCH): Batch transfers with single transaction
+  - Account-based Chains (ETH, TRX): Time or threshold-based sweeps
+  - Tokens (USDT, USDC): Threshold-only to prevent double gas funding
+- **Configuration**: Environment variables in `.env` (e.g., `ETH_SWEEP=threshold:30`)
+- **Documentation**: `/app/PER_CHAIN_SWEEP_IMPLEMENTATION.md`
+
+### Critical Fixes Implemented
+1. ✅ Duplicate transaction detection in webhooks
+2. ✅ Atomic database transactions for sweep operations
+3. ✅ Startup configuration validator (`/app/backend/services/merchantPoolValidator.ts`)
+4. ✅ Automated dependency installation (`/app/setup_dependencies.sh`)
+
+### Pending High-Priority Fixes (from Edge Case Analysis)
+1. ⏳ Currency conversion fallback mechanism
+2. ⏳ Fee wallet balance monitoring with alerts
+3. ⏳ Profitability check before executing sweeps
+4. ⏳ Gas recovery mechanism for stranded funds
+
+### Documentation Created
+- `/app/PAYMENT_API_ENDPOINTS.md` - Complete payment API documentation (34 endpoints)
+- `/app/EDGE_CASE_COMPLETE_ANALYSIS.md` - Vulnerability analysis and fixes
+- `/app/PER_CHAIN_SWEEP_IMPLEMENTATION.md` - Sweep system documentation
+- `/app/FUND_DISTRIBUTION_ANALYSIS.md` - Fund flow analysis
+
+---
+
 ## Key Integrations
 - PostgreSQL (external database)
 - Redis (caching/queues)
