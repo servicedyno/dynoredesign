@@ -164,10 +164,11 @@ cron.schedule("*/15 * * * *", function () {
 // ===========================================
 import * as merchantPoolService from "./services/merchantPoolService";
 
-// Merchant Pool: Sweep accumulated admin fees every 30 minutes
-cron.schedule("*/30 * * * *", function () {
-  console.log("sweepMerchantPoolFees ==============> checked");
-  merchantPoolService.sweepAllEligibleAddresses();
+// Merchant Pool: Sweep accumulated admin fees every 5 minutes
+// Handles both threshold-based ($30 USD) and time-based (10 min) sweeps
+cron.schedule("*/5 * * * *", function () {
+  console.log("performMerchantPoolScheduledSweeps ==============> checked");
+  merchantPoolService.performScheduledSweeps();
 });
 
 // Merchant Pool: Release expired reservations every 5 minutes
