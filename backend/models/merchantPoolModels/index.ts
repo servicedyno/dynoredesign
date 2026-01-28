@@ -227,6 +227,11 @@ const merchantTempAddressModel = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    last_merchant_payout: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: "Timestamp when merchant was last paid (for time-based sweep)",
+    },
   },
   {
     tableName: "tbl_merchant_temp_address",
