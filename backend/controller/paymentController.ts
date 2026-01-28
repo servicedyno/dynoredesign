@@ -1819,42 +1819,67 @@ const cryptoVerification = async (address, webhook = true) => {
       );
 
       let tempAddressData;
+      let isMerchantPoolAddress = false;
+      
       if (tempData.temp_id) {
-        tempAddressData = await userTempAddressModel.findOne({
-          where: { temp_id: tempData.temp_id },
-        });
+        // Check if it's a merchant pool address first
+        if (tempData.is_merchant_pool) {
+          tempAddressData = await merchantTempAddressModel.findOne({
+            where: { temp_address_id: tempData.temp_id },
+          });
+          isMerchantPoolAddress = true;
+          console.log(`[cryptoVerification] Found MERCHANT POOL address: ${address}`);
+        } else {
+          tempAddressData = await userTempAddressModel.findOne({
+            where: { temp_id: tempData.temp_id },
+          });
+        }
       } else {
-        // Multi-tenant fix: Include company_id and user_id to ensure we get the right address
-        const tempAddressWhereClause: any = {
-          wallet_address: address,
-          wallet_type: tempCurrency,
-        };
-        
-        // Add user_id for better isolation
-        if (customerData?.adm_id) {
-          tempAddressWhereClause.user_id = customerData.adm_id;
-        }
-        
-        // Add company_id if present
-        if (customerData?.company_id && customerData.company_id !== '' && 
-            customerData.company_id !== 'undefined' && customerData.company_id !== 'null') {
-          const companyId = parseInt(customerData.company_id);
-          if (!isNaN(companyId)) {
-            tempAddressWhereClause.company_id = companyId;
-          }
-        }
-        
-        const tempAddressDataArray = await userTempAddressModel.findAll({
-          where: tempAddressWhereClause,
-          order: [['created_at', 'DESC']],  // Get the most recent one
+        // Try merchant pool first by wallet address
+        const merchantPoolAddress = await merchantTempAddressModel.findOne({
+          where: { wallet_address: address },
         });
         
-        if (!tempAddressDataArray || tempAddressDataArray.length === 0) {
-          throw new Error(`No temp address found for ${address}`);
+        if (merchantPoolAddress) {
+          tempAddressData = merchantPoolAddress.dataValues;
+          isMerchantPoolAddress = true;
+          console.log(`[cryptoVerification] Found MERCHANT POOL address by wallet: ${address}`);
+        } else {
+          // Fallback to legacy userTempAddressModel
+          const tempAddressWhereClause: any = {
+            wallet_address: address,
+            wallet_type: tempCurrency,
+          };
+          
+          // Add user_id for better isolation
+          if (customerData?.adm_id) {
+            tempAddressWhereClause.user_id = customerData.adm_id;
+          }
+          
+          // Add company_id if present
+          if (customerData?.company_id && customerData.company_id !== '' && 
+              customerData.company_id !== 'undefined' && customerData.company_id !== 'null') {
+            const companyId = parseInt(customerData.company_id);
+            if (!isNaN(companyId)) {
+              tempAddressWhereClause.company_id = companyId;
+            }
+          }
+          
+          const tempAddressDataArray = await userTempAddressModel.findAll({
+            where: tempAddressWhereClause,
+            order: [['created_at', 'DESC']],
+          });
+          
+          if (!tempAddressDataArray || tempAddressDataArray.length === 0) {
+            throw new Error(`No temp address found for ${address}`);
+          }
+          
+          tempAddressData = tempAddressDataArray[0].dataValues;
         }
-        
-        tempAddressData = tempAddressDataArray[0].dataValues;
       }
+      
+      // Store merchant pool flag in tempData for later use
+      tempData.is_merchant_pool = isMerchantPoolAddress;
 
       const isFullPayment = Number(receivedAmount) >= Number(tempData?.amount);
       const isPartialPayment = Number(receivedAmount) < Number(tempData?.amount) && !webhook;
