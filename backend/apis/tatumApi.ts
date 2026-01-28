@@ -910,7 +910,7 @@ const assetToOtherAddress = async ({
       fee,
       changeAddress: fromMaster ? fromAddress : toAddress,
     });
-  } else if (currency === "ETH" || currency === "USDT-ERC20") {
+  } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
     transaction = await tatumSdk.blockchain.eth.ethBlockchainTransfer({
       fromPrivateKey: privateKey,
       to: toAddress,
@@ -919,7 +919,7 @@ const assetToOtherAddress = async ({
         gasPrice: Math.ceil(fee?.gasPrice).toString(),
         gasLimit: fee?.gasLimit.toString(),
       },
-      currency: currency === "ETH" ? "ETH" : "USDT",
+      currency: currency === "ETH" ? "ETH" : (currency === "USDC-ERC20" ? "USDC" : "USDT"),
     });
   } else if (currency === "TRX") {
     transaction = await tatumSdk.blockchain.tron.tronTransfer({
