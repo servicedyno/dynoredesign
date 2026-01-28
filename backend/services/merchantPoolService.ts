@@ -1101,6 +1101,8 @@ export default {
   cleanupStaleAddresses,
   sweepPoolAddress,
   sweepAllEligibleAddresses,
+  sweepByTimeThreshold,
+  performScheduledSweeps,
   recordPoolTransaction,
   getPoolStatus,
   findByWalletAddress,
