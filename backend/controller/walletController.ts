@@ -2796,6 +2796,20 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
     const companyName = companyData?.dataValues.company_name || "Your Company";
     const maskAddress = (addr: string) => `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}`;
     
+    // Initialize merchant pool for this currency type (lazy initialization)
+    // This creates the merchant's xpub if not exists and adds initial pool addresses
+    try {
+      const MERCHANT_POOL_CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
+      if (MERCHANT_POOL_CRYPTO_TYPES.includes(currency)) {
+        console.log(`[verifyOtp] Initializing merchant pool for user ${user_id}, currency ${currency}...`);
+        await merchantPoolService.initializeMerchantPool(user_id, currency);
+        console.log(`[verifyOtp] ✅ Merchant pool initialized for ${currency}`);
+      }
+    } catch (poolError) {
+      // Log but don't fail - pool can be initialized lazily on first payment
+      console.warn(`[verifyOtp] ⚠️ Merchant pool initialization skipped:`, poolError.message);
+    }
+    
     await sendEmail(
       userData.email,
       userData.name,
