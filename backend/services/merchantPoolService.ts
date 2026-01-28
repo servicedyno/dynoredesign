@@ -588,56 +588,85 @@ export const fundGasIfNeeded = async (
     return { funded: false, amount: 0 };
   }
 
-  const feeWallet = FEE_WALLETS[gasToken];
-  if (!feeWallet) {
+  const feeWalletAddress = FEE_WALLETS[gasToken];
+  if (!feeWalletAddress) {
     console.warn(`[MerchantPool] No fee wallet configured for ${gasToken}`);
     return { funded: false, amount: 0 };
   }
 
-  // Determine gas requirements
-  const gasAmount = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_AMOUNT : POOL_CONFIG.ETH_GAS_AMOUNT;
-  const minDeficit = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_MIN_DEFICIT : POOL_CONFIG.ETH_GAS_MIN_DEFICIT;
-
-  // Get current gas balance on-chain
-  let currentBalance = 0;
   try {
-    const balanceData = await tatumApi.getAddressBalance(
+    // Get current gas balance on-chain
+    const balanceResult = await tatumApi.getAddressBalance(
       poolAddress.dataValues.wallet_address,
       gasToken
     );
-    currentBalance = parseFloat(balanceData?.balance || "0");
-  } catch (error) {
-    console.warn(`[MerchantPool] Could not get gas balance, using tracked value`);
-    currentBalance = parseFloat(poolAddress.dataValues.gas_balance) || 0;
-  }
+    
+    let currentBalance = Number(balanceResult?.balance ?? 0);
+    
+    // Convert from SUN to TRX for TRON
+    if (gasToken === "TRX") {
+      currentBalance = currentBalance / 1000000;
+    }
 
-  const deficit = gasAmount - currentBalance;
+    console.log(`[MerchantPool] Current gas balance: ${currentBalance} ${gasToken}`);
 
-  // Only fund if deficit exceeds minimum
-  if (deficit <= minDeficit) {
-    console.log(`[MerchantPool] Gas sufficient (have: ${currentBalance}, need: ${gasAmount}, deficit: ${deficit})`);
-    return { funded: false, amount: 0 };
-  }
+    // Determine gas requirements
+    const gasAmount = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_AMOUNT : POOL_CONFIG.ETH_GAS_AMOUNT;
+    const minDeficit = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_MIN_DEFICIT : POOL_CONFIG.ETH_GAS_MIN_DEFICIT;
 
-  console.log(`[MerchantPool] 🔥 Funding gas: ${deficit} ${gasToken} to ${poolAddress.dataValues.wallet_address}`);
+    const deficit = gasAmount - currentBalance;
 
-  try {
-    // Transfer gas from fee wallet
-    const result = await tatumApi.transferNative(
-      feeWallet,
-      poolAddress.dataValues.wallet_address,
-      deficit.toString(),
-      gasToken
-    );
+    // Only fund if deficit exceeds minimum
+    if (deficit <= minDeficit) {
+      console.log(`[MerchantPool] Gas sufficient (have: ${currentBalance}, need: ${gasAmount})`);
+      await poolAddress.update({ gas_balance: currentBalance });
+      return { funded: false, amount: 0 };
+    }
 
-    // Update gas balance tracker
-    await poolAddress.update({
-      gas_balance: currentBalance + deficit,
+    // Get fee wallet private key from adminFeeModel
+    const { adminFeeModel } = await import("../models");
+    const feeWallet = await adminFeeModel.findOne({
+      where: { wallet_type: gasToken },
     });
 
-    console.log(`[MerchantPool] ✅ Gas funded: ${deficit} ${gasToken} (TX: ${result?.txId})`);
+    if (!feeWallet) {
+      throw new Error(`Fee wallet not found for ${gasToken}`);
+    }
 
-    return { funded: true, amount: deficit, txId: result?.txId };
+    const feeWalletPrivateKey = await tatumApi.decryptSymmetric(
+      feeWallet.dataValues.privateKey,
+      process.env.TEMP_KEY_ID
+    );
+
+    // Estimate fees for gas transfer (only for ETH)
+    let transferFees = null;
+    if (gasToken === "ETH") {
+      transferFees = await tatumApi.feeEstimation(
+        gasToken,
+        feeWalletAddress,
+        poolAddress.dataValues.wallet_address,
+        deficit
+      );
+    }
+
+    console.log(`[MerchantPool] 🔥 Funding ${deficit} ${gasToken} to ${poolAddress.dataValues.wallet_address}`);
+
+    // Transfer gas from fee wallet to pool address
+    const txResult = await tatumApi.assetToOtherAddress({
+      currency: gasToken,
+      fromAddress: feeWalletAddress,
+      toAddress: poolAddress.dataValues.wallet_address,
+      privateKey: feeWalletPrivateKey,
+      amount: deficit,
+      fee: transferFees,
+    });
+
+    // Update gas balance tracker
+    await poolAddress.update({ gas_balance: currentBalance + deficit });
+
+    console.log(`[MerchantPool] ✅ Gas funded: ${deficit} ${gasToken} (TX: ${txResult?.txId})`);
+
+    return { funded: true, amount: deficit, txId: txResult?.txId };
   } catch (error) {
     const message = getErrorMessage(error);
     console.error(`[MerchantPool] ❌ Gas funding failed:`, message);
