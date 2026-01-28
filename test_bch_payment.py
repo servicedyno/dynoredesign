@@ -75,12 +75,18 @@ def test_bch_payment():
     if currencies_response.status_code == 200:
         currencies_data = currencies_response.json()
         configured = currencies_data.get("data", {}).get("configured_currencies", [])
-        print(f"✅ Configured currencies: {', '.join([c['currency'] for c in configured])}")
-        
-        # Check if BCH is configured
-        bch_configured = any(c['currency'] == 'BCH' for c in configured)
-        if not bch_configured:
-            print("⚠️  BCH not in configured currencies - merchant pool will create on-demand")
+        if isinstance(configured, list) and configured:
+            if isinstance(configured[0], dict):
+                print(f"✅ Configured currencies: {', '.join([c['currency'] for c in configured])}")
+                bch_configured = any(c['currency'] == 'BCH' for c in configured)
+            else:
+                print(f"✅ Configured currencies: {', '.join(configured)}")
+                bch_configured = 'BCH' in configured
+            
+            if not bch_configured:
+                print("⚠️  BCH not in configured currencies - merchant pool will create on-demand")
+        else:
+            print("⚠️  No configured currencies - merchant pool will create on-demand")
         print()
     
     # Step 4: Get API Key (needed for payment creation)
