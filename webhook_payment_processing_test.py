@@ -211,131 +211,67 @@ class WebhookPaymentProcessor:
         return None
     
     def check_payment_status_in_database(self):
-        """Check current payment status in database"""
+        """Check current payment status in database using API endpoints"""
         print("\n=== Checking Payment Status in Database ===")
         
-        # Create a Node.js script to check payment status
-        check_script = f'''
-const {{ Sequelize, QueryTypes }} = require('sequelize');
-require('dotenv').config();
-
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.USER_NAME,
-  process.env.PASSWORD,
-  {{
-    host: process.env.HOST,
-    port: Number(process.env.DB_PORT),
-    dialect: "postgres",
-    logging: false
-  }}
-);
-
-async function checkPaymentStatus() {{
-  try {{
-    await sequelize.authenticate();
-    
-    // Check payment link status
-    const paymentLinks = await sequelize.query(
-      `SELECT link_id, transaction_id, base_amount, base_currency, status, created_at, updated_at
-       FROM tbl_payment_link 
-       WHERE transaction_id = '{self.payment_id}'
-       ORDER BY created_at DESC`,
-      {{ type: QueryTypes.SELECT }}
-    );
-    
-    // Check crypto payment status
-    const cryptoPayments = await sequelize.query(
-      `SELECT * FROM tbl_crypto_payment 
-       WHERE transaction_id = '{self.payment_id}'
-       ORDER BY created_at DESC`,
-      {{ type: QueryTypes.SELECT }}
-    );
-    
-    // Check merchant temp addresses
-    const tempAddresses = await sequelize.query(
-      `SELECT * FROM tbl_merchant_temp_address 
-       WHERE address = '{self.eth_address}'
-       ORDER BY created_at DESC`,
-      {{ type: QueryTypes.SELECT }}
-    );
-    
-    // Check subscription status
-    const subscriptions = await sequelize.query(
-      `SELECT * FROM tbl_tatum_subscription 
-       WHERE subscription_id = '{self.subscription_id}'
-       ORDER BY created_at DESC`,
-      {{ type: QueryTypes.SELECT }}
-    );
-    
-    console.log(JSON.stringify({{
-      payment_links: paymentLinks,
-      crypto_payments: cryptoPayments,
-      temp_addresses: tempAddresses,
-      subscriptions: subscriptions
-    }}, null, 2));
-    
-    process.exit(0);
-    
-  }} catch (error) {{
-    console.error('Database check failed:', error.message);
-    process.exit(1);
-  }}
-}}
-
-checkPaymentStatus();
-'''
+        if not self.jwt_token:
+            self.log_result(
+                "Payment Status Database Check", 
+                False, 
+                "No JWT token available for authentication"
+            )
+            return None
         
         try:
-            # Write and run the check script
-            with open('/tmp/check_payment_status.js', 'w') as f:
-                f.write(check_script)
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
             
-            import subprocess
-            result = subprocess.run(
-                ["node", "/tmp/check_payment_status.js"],
-                cwd="/app/backend",
-                capture_output=True,
-                text=True,
-                timeout=30
+            # Check payment links
+            payment_links_response = requests.get(
+                f"{self.backend_url}/api/payment/getPaymentLinks",
+                headers=headers,
+                timeout=15
             )
             
-            if result.returncode == 0:
-                try:
-                    payment_data = json.loads(result.stdout)
-                    
-                    payment_links = payment_data.get('payment_links', [])
-                    crypto_payments = payment_data.get('crypto_payments', [])
-                    temp_addresses = payment_data.get('temp_addresses', [])
-                    subscriptions = payment_data.get('subscriptions', [])
-                    
+            payment_data = {}
+            
+            if payment_links_response.status_code == 200:
+                payment_links_data = payment_links_response.json()
+                payment_data['payment_links'] = payment_links_data.get('data', [])
+                
+                # Look for our specific payment ID
+                matching_payments = []
+                for payment in payment_data['payment_links']:
+                    if payment.get('transaction_id') == self.payment_id:
+                        matching_payments.append(payment)
+                
+                if matching_payments:
                     self.log_result(
                         "Payment Status Database Check", 
                         True, 
-                        f"Found: {len(payment_links)} payment links, {len(crypto_payments)} crypto payments, {len(temp_addresses)} temp addresses, {len(subscriptions)} subscriptions",
+                        f"Found {len(matching_payments)} payment(s) with transaction_id {self.payment_id}",
                         {
-                            "payment_links": payment_links,
-                            "crypto_payments": crypto_payments,
-                            "temp_addresses": temp_addresses,
-                            "subscriptions": subscriptions
+                            "matching_payments": matching_payments,
+                            "current_status": matching_payments[0].get('status') if matching_payments else None
                         }
                     )
-                    return payment_data
-                    
-                except json.JSONDecodeError:
+                    return {"payment_links": matching_payments}
+                else:
                     self.log_result(
                         "Payment Status Database Check", 
                         False, 
-                        "Failed to parse database check results",
-                        {"stdout": result.stdout, "stderr": result.stderr}
+                        f"No payments found with transaction_id {self.payment_id}",
+                        {"total_payments": len(payment_data['payment_links'])}
                     )
-                    return None
+                    return {"payment_links": []}
             else:
                 self.log_result(
                     "Payment Status Database Check", 
                     False, 
-                    "Database check script failed",
-                    {"stdout": result.stdout, "stderr": result.stderr}
+                    f"Failed to retrieve payment links: {payment_links_response.status_code}",
+                    {"response": payment_links_response.text}
                 )
                 return None
                 
