@@ -154,9 +154,11 @@ export const addAddressToPool = async (walletType: "USDT-TRC20" | "USDT-ERC20"):
 /**
  * Get an available address from the pool
  * Prefers addresses with highest accumulated balance (faster to reach sweep threshold)
+ * If NO addresses are available, automatically creates a new one
  */
 export const getAvailableAddress = async (
-  walletType: "USDT-TRC20" | "USDT-ERC20"
+  walletType: "USDT-TRC20" | "USDT-ERC20",
+  paymentId?: string
 ): Promise<any> => {
   const transaction = await sequelize.transaction();
   
@@ -176,21 +178,24 @@ export const getAvailableAddress = async (
     });
 
     if (!poolAddress) {
-      // No available address - create new one
-      console.log(`[USDTPool] No available ${walletType} address, creating new one`);
+      // No available address - automatically create new one
+      console.log(`[USDTPool] ⚠️ All ${walletType} addresses are IN_USE, creating new one automatically`);
       await transaction.commit();
       
       const newAddress = await addAddressToPool(walletType);
       
-      // Mark new address as IN_USE
+      // Mark new address as IN_USE immediately
       const lockTx = await sequelize.transaction();
       try {
         await newAddress.update({
           status: "IN_USE",
           locked_at: new Date(),
           last_used_at: new Date(),
+          current_payment_id: paymentId || null,
         }, { transaction: lockTx });
         await lockTx.commit();
+        
+        console.log(`[USDTPool] ✅ Created and assigned NEW ${walletType} address: ${newAddress.dataValues.wallet_address}`);
         return newAddress;
       } catch (e) {
         await lockTx.rollback();
@@ -198,22 +203,23 @@ export const getAvailableAddress = async (
       }
     }
 
-    // Mark as IN_USE
+    // Mark existing address as IN_USE
     await poolAddress.update({
       status: "IN_USE",
       locked_at: new Date(),
       last_used_at: new Date(),
+      current_payment_id: paymentId || null,
     }, { transaction });
 
     await transaction.commit();
     
-    console.log(`[USDTPool] Assigned ${walletType} address: ${poolAddress.dataValues.wallet_address} (balance: $${poolAddress.dataValues.admin_fee_balance})`);
+    console.log(`[USDTPool] ✅ Assigned existing ${walletType} address: ${poolAddress.dataValues.wallet_address} (accumulated: $${poolAddress.dataValues.admin_fee_balance})`);
     
     return poolAddress;
   } catch (error) {
     await transaction.rollback();
     const message = getErrorMessage(error);
-    console.error(`[USDTPool] Failed to get available address:`, message);
+    console.error(`[USDTPool] ❌ Failed to get available address:`, message);
     throw error;
   }
 };
