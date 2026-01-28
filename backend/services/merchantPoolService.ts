@@ -563,11 +563,13 @@ export const releaseAddress = async (
     reserved_until: null,
     locked_at: null,
     last_used_at: new Date(),
+    last_merchant_payout: new Date(), // Track when merchant was paid
   });
 
   console.log(`[MerchantPool] ✅ Released address ${poolAddress.dataValues.wallet_address}`);
   console.log(`[MerchantPool]    - Admin fee added: ${adminFeeAmount}`);
   console.log(`[MerchantPool]    - New admin balance: ${currentAdminBalance + adminFeeAmount}`);
+  console.log(`[MerchantPool]    - Merchant payout timestamp: ${new Date().toISOString()}`);
 
   // Check if sweep threshold reached
   if (currentAdminBalance + adminFeeAmount >= POOL_CONFIG.SWEEP_THRESHOLD) {
