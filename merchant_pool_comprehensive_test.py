@@ -101,11 +101,11 @@ class MerchantPoolTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if 'token' in data:
-                    self.jwt_token = data['token']
+                if 'data' in data and 'accessToken' in data['data']:
+                    self.jwt_token = data['data']['accessToken']
                     # Extract user info from response
-                    if 'user' in data:
-                        self.test_user_id = data['user'].get('user_id')
+                    if 'userData' in data['data']:
+                        self.test_user_id = data['data']['userData'].get('user_id')
                     
                     self.log_result(
                         "Authentication", 
