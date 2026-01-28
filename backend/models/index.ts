@@ -28,6 +28,13 @@ import notificationModel from "./notificationModel";
 import notificationPreferencesModel from "./notificationPreferencesModel";
 import kycModel from "./kycModel";
 
+// USDT Pool System models
+import {
+  usdtPoolAddressModel,
+  usdtPoolTransactionModel,
+  usdtPoolSweepModel,
+} from "./usdtPoolModels";
+
 export {
   apiModel,
   adminFeeModel,
