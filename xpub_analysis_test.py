@@ -66,7 +66,7 @@ class XPubAnalysisTester:
         # Test credentials from review request
         test_credentials = {
             "email": "john@dyno.pt",
-            "password": "password123"  # Common test password
+            "password": "Katiekendra123@"  # Correct password from merchant pool test
         }
         
         try:
