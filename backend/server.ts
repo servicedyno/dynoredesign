@@ -218,6 +218,17 @@ const startServer = async () => {
     await merchantPoolSweepModel.sync({ alter: true });
     console.log("Merchant Pool tables synced successfully.");
     
+    // Validate Merchant Pool Configuration (CRITICAL STARTUP CHECK)
+    try {
+      const validateMerchantPoolConfiguration = (await import("./services/merchantPoolValidator")).default;
+      await validateMerchantPoolConfiguration();
+    } catch (validationError: any) {
+      console.error("❌ MERCHANT POOL CONFIGURATION VALIDATION FAILED");
+      console.error("❌ Server cannot start with invalid configuration");
+      console.error("❌ Error:", validationError.message);
+      process.exit(1); // Exit server - don't start with bad config
+    }
+    
     // Initialize USDT pools if empty (legacy)
     try {
       await usdtPoolService.initializePool("USDT-TRC20");
