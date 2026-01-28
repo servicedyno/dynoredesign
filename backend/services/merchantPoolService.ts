@@ -183,52 +183,34 @@ export const addAddressToMerchantPool = async (
     // Get next derivation index
     const derivationIndex = await getNextDerivationIndex(userId, walletType, transaction);
     
-    // Derive address from xpub
-    const baseChain = CHAIN_XPUB_MAPPING[walletType] || walletType;
-    const addressData = await tatumApi.generateAddressFromXpub(
-      baseChain,
+    // Generate address and private key using existing tatumApi function
+    // Note: For tokens, we use the base chain but pass the actual wallet type for correct handling
+    const addressData = await tatumApi.generateUserAddress({
+      currency: walletType,  // Pass actual type (e.g., USDT-ERC20) for correct handling
       xpub,
-      derivationIndex
-    );
+      mnemonic,
+      index: derivationIndex,
+    });
 
     if (!addressData || !addressData.address) {
-      throw new Error(`Failed to derive address for ${walletType} at index ${derivationIndex}`);
-    }
-
-    // Get private key for this address
-    const privateKeyData = await tatumApi.generatePrivateKeyFromMnemonic(
-      baseChain,
-      mnemonic,
-      derivationIndex
-    );
-
-    if (!privateKeyData || !privateKeyData.key) {
-      throw new Error(`Failed to generate private key for ${walletType} at index ${derivationIndex}`);
+      throw new Error(`Failed to generate address for ${walletType} at index ${derivationIndex}`);
     }
 
     // Encrypt private key
     const encryptedPrivateKey = await tatumApi.encryptSymmetric(
-      privateKeyData.key,
+      addressData.privateKey,
       process.env.TEMP_KEY_ID
     );
 
     // Create Tatum subscription for webhook
     let subscriptionId = null;
     try {
-      // For tokens, subscribe to the token transfers
-      if (TOKEN_CHAINS.includes(walletType)) {
-        const contractAddress = TOKEN_CONTRACTS[walletType];
-        subscriptionId = await tatumApi.subscribeToAddressWithContract(
-          addressData.address,
-          walletType,
-          contractAddress
-        );
-      } else {
-        subscriptionId = await tatumApi.subscribeToAddress(
-          addressData.address,
-          walletType
-        );
-      }
+      const subResult = await tatumApi.createSubscription(
+        addressData.address,
+        walletType,
+        true  // onlyCrypto = true
+      );
+      subscriptionId = subResult?.id;
     } catch (subError) {
       console.error(`[MerchantPool] Warning: Failed to create subscription for ${addressData.address}:`, subError);
     }
