@@ -327,16 +327,29 @@ class ETHPaymentDirectAPITester:
             )
             return False
         
+        if not self.api_key:
+            self.log_result(
+                "Create ETH Payment", 
+                False, 
+                "No API key available for payment creation"
+            )
+            return False
+        
         try:
             # Payment data as specified in review request
             payment_data = {
                 "amount": 10,
                 "currency": "ETH",
-                "fee_payer": "company"
+                "fee_payer": "company",
+                "redirect_uri": "https://example.com/success",
+                "meta_data": {
+                    "product_name": "ETH Payment Test"
+                }
             }
             
             headers = {
                 "Authorization": f"Bearer {self.customer_token}",
+                "x-api-key": self.api_key,  # API key required for all API service endpoints
                 "Content-Type": "application/json"
             }
             
