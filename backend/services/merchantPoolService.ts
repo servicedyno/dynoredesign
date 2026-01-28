@@ -31,11 +31,6 @@ import { currencyConvert, getErrorMessage } from "../helper";
 // Configuration
 const POOL_CONFIG = {
   INITIAL_SIZE: parseInt(process.env.MERCHANT_POOL_INITIAL_SIZE || "2"),
-  SWEEP_THRESHOLD: parseFloat(process.env.MERCHANT_POOL_SWEEP_THRESHOLD || "30"),
-  
-  // Sweep modes: "threshold", "time", "both"
-  SWEEP_MODE: process.env.MERCHANT_POOL_SWEEP_MODE || "both",
-  SWEEP_TIME_MINUTES: parseInt(process.env.MERCHANT_POOL_SWEEP_TIME_MINUTES || "10"),
   
   // Timeout settings
   RESERVATION_TIMEOUT_MINUTES: 30,
@@ -47,6 +42,71 @@ const POOL_CONFIG = {
   TRX_GAS_MIN_DEFICIT: 10,
   ETH_GAS_AMOUNT: 0.004,
   ETH_GAS_MIN_DEFICIT: 0.001,
+};
+
+// UTXO chains that support batch transfers (merchant + admin in one transaction)
+const UTXO_CHAINS = ["BTC", "LTC", "DOGE", "BCH"];
+
+// Native currencies that can use both threshold and time-based sweep
+const NATIVE_CURRENCIES = ["TRX", "ETH"];
+
+// Tokens that can only use threshold-based sweep (not time-based)
+const TOKEN_CHAINS = ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20"];
+
+/**
+ * Parse per-chain sweep configuration from environment
+ * Format: CHAIN_SWEEP=mode:value
+ * Example: ETH_SWEEP=threshold:30 or TRX_SWEEP=time:10
+ */
+interface SweepConfig {
+  mode: "threshold" | "time" | "batch";
+  value?: number;
+}
+
+const parseSweepConfig = (walletType: string): SweepConfig => {
+  // UTXO chains always use batch transfer
+  if (UTXO_CHAINS.includes(walletType)) {
+    return { mode: "batch" };
+  }
+
+  // Get config from environment (e.g., TRX_SWEEP, USDT_TRC20_SWEEP)
+  const envKey = `${walletType.replace(/-/g, "_")}_SWEEP`;
+  const configValue = process.env[envKey];
+
+  if (!configValue) {
+    // Default: threshold:30 for all non-UTXO chains
+    console.warn(`[MerchantPool] No sweep config for ${walletType}, using default: threshold:30`);
+    return { mode: "threshold", value: 30 };
+  }
+
+  const [mode, valueStr] = configValue.split(":");
+
+  if (mode !== "threshold" && mode !== "time") {
+    console.error(`[MerchantPool] Invalid sweep mode for ${walletType}: ${mode}. Using threshold:30`);
+    return { mode: "threshold", value: 30 };
+  }
+
+  // Validate tokens can only use threshold mode
+  if (TOKEN_CHAINS.includes(walletType) && mode === "time") {
+    console.error(`[MerchantPool] Tokens cannot use time-based sweep! ${walletType} must use threshold. Using threshold:30`);
+    return { mode: "threshold", value: 30 };
+  }
+
+  const value = valueStr ? parseInt(valueStr) : (mode === "threshold" ? 30 : 10);
+
+  if (isNaN(value) || value <= 0) {
+    console.error(`[MerchantPool] Invalid sweep value for ${walletType}: ${valueStr}. Using default.`);
+    return { mode, value: mode === "threshold" ? 30 : 10 };
+  }
+
+  return { mode, value };
+};
+
+/**
+ * Get sweep configuration for a wallet type
+ */
+export const getSweepConfig = (walletType: string): SweepConfig => {
+  return parseSweepConfig(walletType);
 };
 
 // Fee wallet addresses (for gas funding)
