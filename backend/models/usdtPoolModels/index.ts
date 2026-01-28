@@ -70,7 +70,22 @@ const usdtPoolAddressModel = sequelize.define(
     current_payment_id: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      comment: "Current payment using this address (when IN_USE)",
+      comment: "Current payment using this address (when RESERVED/IN_USE)",
+    },
+    current_company_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "Merchant company ID for current payment",
+    },
+    expected_amount: {
+      type: DataTypes.DECIMAL(20, 8),
+      allowNull: true,
+      comment: "Expected USDT amount for current payment",
+    },
+    reserved_until: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: "Reservation expires at this time if no payment received",
     },
     subscription_id: {
       type: DataTypes.STRING(100),
