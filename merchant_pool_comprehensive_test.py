@@ -800,7 +800,7 @@ class MerchantPoolTester:
                 "email": "customer@example.com",
                 "amount": "50",
                 "base_currency": "USD",
-                "modes": ["BTC", "ETH", "USDT-TRC20"]
+                "modes": ["CRYPTO"]  # Use CRYPTO instead of specific types
             }
             
             response = requests.post(
