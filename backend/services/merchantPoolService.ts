@@ -18,9 +18,9 @@ import {
   merchantPoolSweepModel,
   MERCHANT_POOL_CRYPTO_TYPES,
   CHAIN_XPUB_MAPPING,
-  UTXO_CHAINS,
+  UTXO_CHAINS as MODEL_UTXO_CHAINS,
   ACCOUNT_CHAINS,
-  TOKEN_CHAINS,
+  TOKEN_CHAINS as MODEL_TOKEN_CHAINS,
   GAS_TOKEN_MAPPING,
 } from "../models";
 import tatumApi from "../apis/tatumApi";
@@ -45,13 +45,13 @@ const POOL_CONFIG = {
 };
 
 // UTXO chains that support batch transfers (merchant + admin in one transaction)
-const UTXO_CHAINS = ["BTC", "LTC", "DOGE", "BCH"];
+const UTXO_CHAINS = MODEL_UTXO_CHAINS || ["BTC", "LTC", "DOGE", "BCH"];
 
 // Native currencies that can use both threshold and time-based sweep
 const NATIVE_CURRENCIES = ["TRX", "ETH"];
 
 // Tokens that can only use threshold-based sweep (not time-based)
-const TOKEN_CHAINS = ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20"];
+const TOKEN_CHAINS = MODEL_TOKEN_CHAINS || ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20"];
 
 /**
  * Parse per-chain sweep configuration from environment
