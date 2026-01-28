@@ -31,12 +31,12 @@ const FALLBACK_RATES: Record<string, Record<string, number>> = {
 const getCachedRate = async (from: string, to: string): Promise<number | null> => {
   try {
     const cacheKey = `rate_cache:${from}:${to}`;
-    const cached = await getRedisItem(cacheKey);
+    const cached: any = await getRedisItem(cacheKey);
     if (cached && cached.rate && cached.timestamp) {
-      const age = (Date.now() - cached.timestamp) / 1000;
+      const age = (Date.now() - Number(cached.timestamp)) / 1000;
       if (age < RATE_CACHE_TTL) {
         console.log(`[currencyConvert] Using cached rate for ${from}→${to}: ${cached.rate} (age: ${Math.floor(age)}s)`);
-        return cached.rate;
+        return Number(cached.rate);
       }
     }
   } catch (e) {
