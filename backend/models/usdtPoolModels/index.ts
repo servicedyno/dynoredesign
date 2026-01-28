@@ -50,8 +50,9 @@ const usdtPoolAddressModel = sequelize.define(
       type: DataTypes.STRING(20),
       defaultValue: "AVAILABLE",
       validate: {
-        isIn: [['AVAILABLE', 'IN_USE', 'SWEEPING', 'DISABLED']],
+        isIn: [['AVAILABLE', 'RESERVED', 'PROCESSING', 'SWEEPING', 'DISABLED']],
       },
+      comment: "AVAILABLE=ready, RESERVED=waiting for payment (30min timeout), PROCESSING=payment received, SWEEPING=being swept",
     },
     admin_fee_balance: {
       type: DataTypes.DECIMAL(20, 8),
