@@ -355,7 +355,61 @@ Production: [Your production URL]/api
 
 ## 5. CHECKOUT ENDPOINTS (Customer-Facing)
 
-### 5.1 Create Crypto Payment (Checkout Address Generation)
+These endpoints are used by the checkout page for customer payment flows. They use `customerAuthMiddleware` which validates a customer session token.
+
+### 5.1 Get Payment Data
+**Endpoint**: `POST /api/pay/getData`
+
+**Authentication**: None (public, but requires valid payment reference)
+
+**Description**: Retrieves payment session data from Redis to initialize the checkout page. Called when customer lands on a payment link.
+
+**Request Body**:
+```json
+{
+  "data": "abc123xyz"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "amount": 100,
+    "base_currency": "USD",
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "payment_mode": "createLink",
+    "allowedModes": ["CRYPTO", "FIAT"],
+    "fee_payer": "company" | "customer"
+  }
+}
+```
+
+---
+
+### 5.2 Add Payment (Initiate Fiat Payment)
+**Endpoint**: `POST /api/pay/addPayment`
+
+**Authentication**: Required (customerAuthMiddleware)
+
+**Description**: Initiates a fiat payment (card, bank transfer, mobile money) from the checkout page.
+
+**Request Body**:
+```json
+{
+  "uniqueRef": "customer-abc123xyz",
+  "currency": "NGN",
+  "amount": 50000,
+  "payment_type": "CARD" | "BANK_TRANSFER" | "MOBILE_MONEY",
+  "mobile": "+2341234567890",
+  "network": "MTN"
+}
+```
+
+---
+
+### 5.3 Create Crypto Payment (Checkout Address Generation)
 **Endpoint**: `POST /api/pay/createCryptoPayment`
 
 **Authentication**: Required (customerAuthMiddleware - customer session token)
@@ -421,6 +475,98 @@ Production: [Your production URL]/api
 - `400`: No wallet address configured for the requested currency
 - `401`: Invalid or expired customer session token
 - `500`: Internal server error
+
+---
+
+### 5.4 Verify Payment
+**Endpoint**: `POST /api/pay/verifyPayment`
+
+**Authentication**: Required (customerAuthMiddleware)
+
+**Description**: Verifies the status of a fiat payment after redirect from payment provider.
+
+---
+
+### 5.5 Verify Crypto Payment
+**Endpoint**: `POST /api/pay/verifyCryptoPayment`
+
+**Authentication**: Required (customerAuthMiddleware)
+
+**Description**: Checks the status of a crypto payment by querying the blockchain.
+
+---
+
+### 5.6 Confirm Payment
+**Endpoint**: `POST /api/pay/confirmPayment`
+
+**Authentication**: Required (customerAuthMiddleware)
+
+**Description**: Finalizes a payment after successful verification. Updates transaction status.
+
+---
+
+### 5.7 Auth Step
+**Endpoint**: `POST /api/pay/authStep`
+
+**Authentication**: Required (customerAuthMiddleware)
+
+**Description**: Handles additional authentication steps (OTP, PIN) for certain payment methods.
+
+---
+
+### 5.8 Get Currency Rates
+**Endpoint**: `POST /api/pay/getCurrencyRates`
+
+**Authentication**: Required (customerAuthMiddleware)
+
+**Description**: Gets real-time exchange rates for crypto currencies. Used to display conversion rates on checkout page.
+
+**Request Body**:
+```json
+{
+  "sourceCurrency": "USD",
+  "currencies": ["BTC", "ETH", "TRX", "USDT-TRC20"],
+  "amount": 100
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "rates": [
+    { "currency": "BTC", "amount": 0.00154, "transferRate": 64935.06 },
+    { "currency": "ETH", "amount": 0.0312, "transferRate": 3205.12 }
+  ]
+}
+```
+
+---
+
+### 5.9 Get Network Fees (Public)
+**Endpoint**: `GET /api/pay/network-fees`
+
+**Authentication**: None (public)
+
+**Description**: Returns current blockchain network fees for supported cryptocurrencies. Used by checkout page to display expected fees.
+
+---
+
+### 5.10 Calculate Payment Amount
+**Endpoint**: `POST /api/pay/calculate-payment`
+
+**Authentication**: None (public)
+
+**Description**: Calculates the total payment amount including fees based on fee_payer mode.
+
+---
+
+### 5.11 Get Balance
+**Endpoint**: `GET /api/pay/getBalance`
+
+**Authentication**: Required (customerAuthMiddleware)
+
+**Description**: Gets the customer's wallet balance for use in checkout.
 
 ---
 
