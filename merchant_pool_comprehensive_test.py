@@ -40,8 +40,8 @@ class MerchantPoolTester:
         self.errors = []
         self.jwt_token = None
         self.test_user_credentials = {
-            "email": "nomadly@moxx.co",
-            "password": "123456"
+            "email": "john@dyno.pt",
+            "password": "Katiekendra123@"
         }
         self.test_user_id = None
         self.test_company_id = None
