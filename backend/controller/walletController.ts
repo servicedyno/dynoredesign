@@ -45,6 +45,7 @@ import { getTransactionFee, getBlockchainFee } from ".";
 import mailTransporter from "../utils/mailTransporter";
 import { getAdminWalletAddress } from "../utils/adminUtils";
 import WAValidator from "wallet-address-validator";
+import * as merchantPoolService from "../services/merchantPoolService";
 import { 
   getBlockchainNetworkFee, 
   getAllBlockchainFees, 
