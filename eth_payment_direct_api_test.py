@@ -37,23 +37,12 @@ class ETHPaymentDirectAPITester:
         }
         
     def get_backend_url(self):
-        """Get backend URL from frontend .env file"""
-        try:
-            with open('/app/frontend/.env', 'r') as f:
-                for line in f:
-                    if line.startswith('REACT_APP_BACKEND_URL='):
-                        return line.split('=', 1)[1].strip()
-        except:
-            pass
-        return "http://localhost:8001"
+        """Get backend URL - use direct Node.js backend on port 3300"""
+        return "http://localhost:3300"
     
     def get_api_service_url(self):
-        """Get API service URL - should be backend_url with port 3301"""
-        base_url = self.backend_url.replace(':8001', ':3301')
-        if 'localhost' in base_url:
-            return "http://localhost:3301"
-        # For production, use the same domain but different port
-        return base_url.replace('new-setup.preview.emergentagent.com', 'new-setup.preview.emergentagent.com:3301')
+        """Get API service URL - direct API service on port 3301"""
+        return "http://localhost:3301"
         
     def log_result(self, test_name: str, success: bool, message: str, details: Dict = None):
         """Log test result"""
