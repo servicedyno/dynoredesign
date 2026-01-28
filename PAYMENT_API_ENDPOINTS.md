@@ -353,7 +353,78 @@ Production: [Your production URL]/api
 
 ---
 
-## 5. WEBHOOK ENDPOINTS (System Use)
+## 5. CHECKOUT ENDPOINTS (Customer-Facing)
+
+### 5.1 Create Crypto Payment (Checkout Address Generation)
+**Endpoint**: `POST /api/pay/createCryptoPayment`
+
+**Authentication**: Required (customerAuthMiddleware - customer session token)
+
+**Description**: **This is the primary endpoint used by the checkout page to generate a cryptocurrency address when a customer selects crypto as their payment method.** It reserves an address from the merchant's pool, calculates the required crypto amount based on current exchange rates, and returns the payment address with QR code.
+
+**Request Body**:
+```json
+{
+  "uniqueRef": "customer-abc123xyz",
+  "currency": "BTC" | "ETH" | "TRX" | "USDT-TRC20" | "USDT-ERC20" | "LTC" | "DOGE" | "BCH" | "USDC-ERC20",
+  "amount": 0.0015
+}
+```
+
+**Request Fields**:
+- `uniqueRef`: The unique reference from the payment session (stored in Redis)
+- `currency`: The cryptocurrency selected by the customer
+- `amount`: The calculated crypto amount (including fees if customer pays)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "qr_code": "data:image/png;base64,...",
+    "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    "transaction_id": "550e8400-e29b-41d4-a716-446655440000",
+    "temp_id": 12345,
+    "is_merchant_pool": true,
+    "crypto_amount": 0.0015,
+    "merchant_amount_crypto": 0.00145,
+    "total_fees_crypto": 0.00005,
+    "exchange_rate": 65234.50,
+    "fee_payer": "customer" | "company"
+  }
+}
+```
+
+**Response Fields**:
+- `qr_code`: Base64 encoded QR code image for the payment address
+- `address`: The cryptocurrency address for the customer to send funds to
+- `transaction_id`: Unique identifier for tracking this payment
+- `temp_id`: Internal ID of the reserved pool address
+- `is_merchant_pool`: Flag indicating this is a merchant pool address
+- `crypto_amount`: Total crypto amount for the payment
+- `merchant_amount_crypto`: Amount the merchant will receive
+- `total_fees_crypto`: Fee amount in crypto
+- `exchange_rate`: Current exchange rate used for conversion
+- `fee_payer`: Who pays the transaction fees
+
+**Flow**:
+1. Customer session token is validated via `customerAuthMiddleware`
+2. Payment session data is retrieved from Redis using `uniqueRef`
+3. Requested currency is validated against merchant's configured wallets
+4. An address is reserved from the merchant's pool (`merchantPoolService.reserveAddress`)
+5. Crypto amount is calculated using current exchange rates
+6. QR code is generated for the address
+7. Transaction record is created in the database
+
+**Error Responses**:
+- `400`: Currency not available for this payment
+- `400`: No wallet address configured for the requested currency
+- `401`: Invalid or expired customer session token
+- `500`: Internal server error
+
+---
+
+## 6. WEBHOOK ENDPOINTS (System Use)
 
 ### 5.1 Flutterwave Webhook
 **Endpoint**: `POST /api/webhook`
