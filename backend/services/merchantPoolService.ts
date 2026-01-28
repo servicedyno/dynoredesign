@@ -1176,13 +1176,14 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
     dbTransaction = await sequelize.transaction();
     
     try {
-      // Record sweep
+      // Record sweep - use amountToSend (actual amount sent to admin)
       await merchantPoolSweepModel.create({
         temp_address_id: tempAddressId,
         owner_user_id: poolAddress.dataValues.owner_user_id,
         wallet_type: walletType,
-        amount_swept: actualBalance,
+        amount_swept: amountToSend,
         gas_funded: gasFunding.amount || 0,
+        gas_used: isAccountChain ? (actualBalance - amountToSend) : 0,
         sweep_tx_id: sweepTxId,
         gas_funding_tx_id: gasFunding.txId || null,
         admin_wallet: adminWallet,
@@ -1193,15 +1194,16 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       await poolAddress.update({
         status: "AVAILABLE",
         admin_fee_balance: 0,
+        gas_balance: 0,
         last_swept_at: new Date(),
       }, { transaction: dbTransaction });
 
       await dbTransaction.commit();
       dbTransaction = null;
       
-      console.log(`[MerchantPool] 🎉 Sweep recorded: ${actualBalance} ${walletType} → admin wallet`);
+      console.log(`[MerchantPool] 🎉 Sweep recorded: ${amountToSend} ${walletType} → admin wallet`);
 
-      return { success: true, amount: actualBalance, txId: sweepTxId };
+      return { success: true, amount: amountToSend, txId: sweepTxId };
       
     } catch (dbError) {
       // CRITICAL: Blockchain transfer succeeded but DB update failed
