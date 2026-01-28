@@ -689,18 +689,23 @@ export const getPoolStatus = async (): Promise<any> => {
       totalAddresses: trc20Stats.length,
       availableCount: trc20Stats.filter(a => a.dataValues.status === "AVAILABLE").length,
       inUseCount: trc20Stats.filter(a => a.dataValues.status === "IN_USE").length,
+      sweepingCount: trc20Stats.filter(a => a.dataValues.status === "SWEEPING").length,
       totalAccumulatedFees: trc20Total,
       sweepThreshold: POOL_CONFIG.SWEEP_THRESHOLD,
+      autoExpands: true, // Pool automatically creates new address when all are IN_USE
     },
     "USDT-ERC20": {
       addresses: erc20Stats,
       totalAddresses: erc20Stats.length,
       availableCount: erc20Stats.filter(a => a.dataValues.status === "AVAILABLE").length,
       inUseCount: erc20Stats.filter(a => a.dataValues.status === "IN_USE").length,
+      sweepingCount: erc20Stats.filter(a => a.dataValues.status === "SWEEPING").length,
       totalAccumulatedFees: erc20Total,
       sweepThreshold: POOL_CONFIG.SWEEP_THRESHOLD,
+      autoExpands: true, // Pool automatically creates new address when all are IN_USE
     },
     config: POOL_CONFIG,
+    note: "Pool automatically expands when all addresses are IN_USE - new address is created on-demand",
   };
 };
 
