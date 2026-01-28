@@ -4,7 +4,22 @@
 # Last Updated: 2026-01-25
 #===================================================
 
-user_problem_statement: "XPUB ANALYSIS FOR john@dyno.pt - Comprehensive analysis of merchant xpub wallet creation status as requested in review. Analyzed user verification (john@dyno.pt, user_id: 28), merchant wallet status, pool address configuration, transaction history, and overall initialization status. Found 7 active wallet addresses across 7 currencies (BTC, ETH, LTC, DOGE, TRX, USDT-ERC20, USDT-TRC20), 5 completed transactions, and confirmed merchant pool system is initialized and operational. System ready for crypto payments with proper pool health status."
+user_problem_statement: "DETAILED POOL ADDRESS CREATION ANALYSIS FOR john@dyno.pt - Comprehensive database analysis to determine WHEN and HOW pool addresses were created. Executed SQL queries against tbl_merchant_temp_address, tbl_merchant_wallet, tbl_user_wallet, and tbl_merchant_pool_transaction tables. CRITICAL FINDING: NO pool addresses exist in the entire system (0 pool addresses for all users). However, john@dyno.pt (user_id: 28) has 18 regular user wallets created in two batches: 16 wallets on 2026-01-25 18:17:47-48 (fiat + crypto), and 2 additional crypto wallets on 2026-01-26. CONCLUSION: Pool system has NOT been initialized - addresses would be created on-demand when first payment request is made, not pre-created during wallet configuration. The merchant pool system exists in code but has never been triggered for any user."
+
+  - task: "Pool Address Creation Analysis for john@dyno.pt - Database Timeline Investigation"
+    implemented: true
+    working: true
+    file: "/app/backend/pool_address_analysis.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Detailed analysis of pool address creation timeline for john@dyno.pt as requested in review. Execute SQL queries to determine if pool addresses were pre-created during wallet configuration or created lazily on payment requests. Analyze timestamps, correlations, and creation patterns."
+      - working: true
+        agent: "testing"
+        comment: "✅ POOL ADDRESS ANALYSIS COMPLETED: 100% database query success. ✅ USER VERIFICATION: Confirmed john@dyno.pt exists as user_id 28 (Johnny LTD, username: johnny_test, created 2026-01-25). ✅ CRITICAL FINDING: NO pool addresses exist in entire system (0 addresses across all users in tbl_merchant_temp_address). ✅ NO merchant wallets exist (0 entries in tbl_merchant_wallet for any user). ✅ NO pool transactions exist (0 entries in tbl_merchant_pool_transaction). ✅ USER WALLETS FOUND: 18 regular wallets in tbl_user_wallet created in 2 batches - Batch 1: 16 wallets (fiat + crypto) on 2026-01-25 18:17:47-48, Batch 2: 2 crypto wallets (BTC, ETH) on 2026-01-26. ✅ TIMELINE ANALYSIS: User wallet creation shows bulk initialization pattern (16 wallets in 1 second), followed by individual additions. CONCLUSION: Pool addresses were NOT pre-created during wallet configuration. The merchant pool system (initializeMerchantPool) has never been triggered for any user. Pool addresses would be created ON-DEMAND when first crypto payment request is made (reserveAddress function). The system uses regular user wallets currently, not the merchant pool system."
 
   - task: "XPUB Analysis for john@dyno.pt - Merchant Wallet Status Review"
     implemented: true
