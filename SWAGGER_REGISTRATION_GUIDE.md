@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://env-setup-23.preview.emergentagent.com/api/docs
+Go to: https://merchant-crypto-5.preview.emergentagent.com/api/docs
 
 ---
 

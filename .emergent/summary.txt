@@ -1,173 +1,367 @@
-<analysis>An analysis of the conversation and work history has been completed. Here is the summary to assist the next agent.
+<analysis>**original_problem_statement:**
+The initial task was to set up and update missing environment variables in the  file for the DynoPay backend. The request evolved to include:
+1.  Testing the newly implemented merchant pool system.
+2.  Analyzing the admin fee sweep logic and identifying a critical bug.
+3.  Implementing a highly flexible, per-chain sweep configuration system with different rules for UTXO chains, native account-based chains, and tokens.
+4.  Ensuring all project dependencies are automatically installed on boot to prevent startup failures.
+5.  Performing a comprehensive edge case analysis of the merchant pool system and fixing critical issues.
+6.  Documenting all payment-related API endpoints.
+7.  Identifying a missing API endpoint responsible for generating crypto addresses at checkout.
 
-**original_problem_statement**: The user wants to continue testing and debugging a multi-tenant payment processing application called DynoPay. The initial task was to set up the backend environment using a provided list of environment variables. The core of the request involves identifying and fixing bugs in the payment processing flow, ensuring multi-tenant data isolation is respected, and implementing missing features like admin notifications. The user has been actively involved in testing, reporting bugs, and guiding the development process.
-
-PRODUCT REQUIREMENTS:
-1.  The payment application must support multi-tenancy, ensuring that data and funds for different companies are strictly isolated.
-2.  The system must handle cryptocurrency payments (ETH, BTC, etc.) and card payments.
-3.  A fee model based on transaction tiers must be applied, with fees being routed to an admin wallet.
-4.  The system must send email notifications to merchants and admins at various stages of the payment process (payment detected, payment received, fees collected).
-5.  Payment links should be creatable for anonymous users who are not yet registered customers.
-
-**User's preferred language**: english
+**User's preferred language**: English
 
 **what currently exists?**
-The project is a full-stack application with a React frontend and a NodeJS/TypeScript backend using PostgreSQL. The environment is fully configured, and all services are running. The application features multi-tenancy, user/wallet management, and payment processing via Tatum (crypto) and Flutterwave (cards). The agent has recently implemented an admin fee notification system and fixed several critical bugs related to multi-tenancy, JWT generation, and fee calculation logic.
+The project is a full-stack application with a Node.js/TypeScript backend and a React frontend. The backend, named DynoPay, is a complex payment gateway using a PostgreSQL database. A merchant pool system for managing cryptocurrency payments is in place and was significantly enhanced during this session. A robust, automated dependency installation script (================================================
+🔧 DynoPay - Dependency Setup & Verification
+================================================
+
+Starting dependency setup at Wed Jan 28 21:09:08 UTC 2026
+
+[0;34m📦 Checking Backend dependencies...[0m
+[0;32m   ✅ Dependencies already installed[0m
+
+[0;34m📦 Checking Frontend dependencies...[0m
+[0;32m   ✅ Dependencies already installed[0m
+
+[0;34m🐍 Checking Python dependencies...[0m
+[0;32m   ✅ Python dependencies already installed[0m
+
+[0;34m🔍 Verifying critical packages...[0m
+[0;32m   ✅ Backend: express[0m
+[0;32m   ✅ Backend: sequelize[0m
+[0;32m   ✅ Backend: pg[0m
+[0;32m   ✅ Backend: ts-node[0m
+[0;32m   ✅ Backend: typescript[0m
+[0;32m   ✅ Frontend: react[0m
+[0;32m   ✅ Frontend: react-dom[0m
+[0;32m   ✅ Frontend: react-scripts[0m
+[0;32m   ✅ Python: uvicorn[0m
+[0;32m   ✅ Python: starlette[0m
+[0;32m   ✅ Python: httpx[0m
+
+[0;32m✅ All critical packages verified![0m
+================================================
+[0;32m✅ Dependency setup completed in 4s[0m
+================================================
+
+Services are ready to start!) now runs at boot via Supervisor, ensuring a stable environment. The admin fee sweep mechanism has been completely refactored to support per-chain rules, and several critical bugs and edge cases have been addressed.
 
 **Last working item**:
-*   **Last item agent was working**: The agent was debugging a failed payment transaction. After the user sent a payment, logs showed a . The agent identified and fixed two root causes: 1) A  constraint on  for anonymous payments, and 2) A fee calculation error where the crypto amount was passed instead of its USD equivalent. The user then reported the payment was successful, but the agent's analysis of logs and the database showed a contradiction: an insufficient gas error and a zero balance in the merchant's DB wallet.
-*   **Status**: BLOCKED
-*   **Agent Testing Done**: N
-*   **Which testing method agent to use?**: backend testing agent
-*   **User Testing Done**: Y
+    - Last item agent was working: The agent was about to begin a search for a missing API endpoint that the user pointed out. This endpoint is responsible for generating a cryptocurrency address on the checkout page when a customer selects a crypto payment option.
+    - Status: NOT STARTED
+    - Agent Testing Done: N
+    - Which testing method agent to use? backend testing agent
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1**: Reconcile payment distribution discrepancy (P0)
-*   **Issue 2**: Insufficient gas error breaks fund forwarding (P1)
-*   **Issue 3**: Shared ETH address for merchant and admin (P1)
+  - Issue 1: Find the missing payment endpoint for checkout address generation (Priority: P0)
+  - Issue 2: Implement remaining high-priority fixes from edge case analysis (Priority: P1)
 
-**Issues Detail**:
-*   **Issue 1: Reconcile payment distribution discrepancy**
-    *   **Attempted fixes**: The agent identified the discrepancy but has not attempted a fix. The user claims a payment was distributed, but logs show an insufficient gas error, and the database shows the merchant wallet balance is still zero.
-    *   **Next debug checklist**:
-        1.  Ask the user for the transaction hash of the payment they claim was successful.
-        2.  Trace the hash on a public blockchain explorer to verify the final destinations of the funds.
-        3.  Query the  and  tables directly to check the current ETH balances.
-        4.  Inspect the  record for this payment to see its final status in the database.
-    *   **Why fix this issue and what will be achieved with the fix?**: To establish a ground truth for the payment system's state. If the automated flow is broken, we need to understand why and fix it.
-    *   **Status**: IN PROGRESS
-    *   **Is recurring issue?**: N
-    *   **Should Test frontend/backend/both after fix?**: backend
-    *   **Blocked on other issue**: None
+  **Issues Detail:**
+  - **Issue 1:**
+     - **Description:** The user has identified that the list of payment endpoints is incomplete. The endpoint that gets called from the checkout page to generate a new crypto address for a payment is missing from the documentation.
+     - **Attempted fixes:** None. The agent acknowledged the issue right before the session ended.
+     - **Next debug checklist:**
+        1.  Use  to search the backend codebase for terms like generate address, crypto address, get payment address, and routes that interact with  to reserve an address.
+        2.  Analyze  and  for any unlisted routes that fit the description.
+        3.  Once found, update the documentation file .
+     - **Why fix this issue and what will be achieved with the fix?** To provide the user with complete API documentation, which is essential for frontend integration and understanding the full payment flow.
+     - **Status:** NOT STARTED
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?** backend
+     - **Blocked on other issue:** None
 
-*   **Issue 2: Insufficient gas error breaks fund forwarding**
-    *   **Attempted fixes**: None. This error appeared in the logs after other bugs were fixed.
-    *   **Next debug checklist**:
-        1.  Review the fund forwarding logic within the  function in .
-        2.  Investigate the log message Sending low fee balance alert, as this suggests a mechanism to handle gas funding might exist or be intended.
-        3.  Propose a robust solution, such as using part of the received funds to cover gas or implementing a separate gas funding mechanism.
-    *   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker for the entire crypto payment flow. Without a fix, funds will be permanently stuck in temporary addresses.
-    *   **Status**: NOT STARTED
-    *   **Is recurring issue?**: Y
-    *   **Should Test frontend/backend/both after fix?**: backend
-    *   **Blocked on other issue**: None
-
-*   **Issue 3: Shared ETH address for merchant and admin**
-    *   **Attempted fixes**: The issue was identified and reported to the user. No fix has been implemented.
-    *   **Next debug checklist**:
-        1.  Proactively ask the user to provide a unique ETH address for the merchant (Company 38).
-        2.  Once the address is provided, implement a change in the  for that company.
-        3.  Verify that new wallet creation logic assigns unique addresses by default.
-    *   **Why fix this issue and what will be achieved with the fix?**: To ensure proper fund segregation, which is a fundamental requirement for a financial application. It prevents mixing of platform fees and merchant revenue.
-    *   **Status**: BLOCKED
-    *   **Is recurring issue?**: N
-    *   **Should Test frontend/backend/both after fix?**: backend
-    *   **Blocked on other issue**: Waiting for user input (new ETH address).
+  - **Issue 2:**
+     - **Description:** The edge case analysis () identified four high-priority issues that have a plan but have not been implemented yet.
+     - **Attempted fixes:** The agent created a plan and a status file () but did not write the implementation code.
+     - **Next debug checklist:**
+        1.  **Currency conversion fallback:** Modify  in  to include a fallback mechanism using hardcoded rates or a secondary API if the primary one fails.
+        2.  **Fee wallet balance monitoring:** Create a new cron job in  that periodically checks the balance of  and  and sends a notification (e.g., Telegram) if it falls below a threshold.
+        3.  **Profitability check for sweeps:** Before executing a sweep in , estimate the network fee and compare it against the . Only proceed if the fee is significantly lower than the balance.
+        4.  **Gas recovery mechanism:** Implement a new service function to find pool addresses with stranded gas (small amounts of ETH/TRX left after payments) and sweep it back to the main fee wallet.
+     - **Why fix this issue and what will be achieved with the fix?** To make the payment system more robust, resilient to external service failures, and cost-effective.
+     - **Status:** NOT STARTED
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?** backend
+     - **Blocked on other issue:** None
 
 **In progress Task List**:
-There are no in-progress development tasks; the current focus is entirely on bug fixing.
+  - None
 
 **Upcoming and Future Tasks**
-There are no upcoming features requested by the user. The priority is to stabilize the existing payment flow.
+- **Upcoming Tasks:**
+    - **Task 1 (P1):** Conduct thorough testing of the new per-chain sweep logic. This should include creating test cases for  and  based sweeps for account-based chains, and verifying the batch transfer for UTXO chains.
+- **Future Tasks:**
+    - **Task 2 (P2):** Implement the Medium and Low priority fixes outlined in the edge case analysis document .
 
 **Completed work in this session**
-- **Environment Setup**: Successfully configured the backend and frontend environments with all provided credentials and URLs.
-- **Bug Fix (JWT)**: Resolved an Invalid payment link token error by correcting the field name in the JWT payload from uid=0(root) gid=0(root) groups=0(root) to  in .
-- **Multi-Tenancy Hardening**: Conducted a full audit and fixed multiple bugs where  was missing from database queries in , ensuring data isolation.
-- **Feature (Admin Notifications)**: Implemented a new email notification system to alert the admin when platform fees are collected. This includes custom templates for normal and under-threshold payments, integrated across all payment flows ().
-- **Bug Fix (DB Schema)**: Resolved a  constraint violation on  for anonymous payments by updating the Sequelize model and running a manual database migration via a temporary test endpoint.
-- **Bug Fix (Fee Calculation)**: Fixed a critical bug where the fee calculation logic was failing because it received a crypto amount (e.g., 0.004 ETH) instead of the required USD amount. The fix involved adding a currency conversion step before the calculation in .
+- **Environment & Dependencies:**
+    - Updated and consolidated all necessary keys in .
+    - Created an automated dependency installation script (================================================
+🔧 DynoPay - Dependency Setup & Verification
+================================================
+
+Starting dependency setup at Wed Jan 28 21:09:15 UTC 2026
+
+[0;34m📦 Checking Backend dependencies...[0m
+[0;32m   ✅ Dependencies already installed[0m
+
+[0;34m📦 Checking Frontend dependencies...[0m
+[0;32m   ✅ Dependencies already installed[0m
+
+[0;34m🐍 Checking Python dependencies...[0m
+[0;32m   ✅ Python dependencies already installed[0m
+
+[0;34m🔍 Verifying critical packages...[0m
+[0;32m   ✅ Backend: express[0m
+[0;32m   ✅ Backend: sequelize[0m
+[0;32m   ✅ Backend: pg[0m
+[0;32m   ✅ Backend: ts-node[0m
+[0;32m   ✅ Backend: typescript[0m
+[0;32m   ✅ Frontend: react[0m
+[0;32m   ✅ Frontend: react-dom[0m
+[0;32m   ✅ Frontend: react-scripts[0m
+[0;32m   ✅ Python: uvicorn[0m
+[0;32m   ✅ Python: starlette[0m
+[0;32m   ✅ Python: httpx[0m
+
+[0;32m✅ All critical packages verified![0m
+================================================
+[0;32m✅ Dependency setup completed in 3s[0m
+================================================
+
+Services are ready to start!) and configured it to run on boot via Supervisor, eliminating missing package errors.
+
+- **Merchant Pool Sweep System Refactor:**
+    - Identified and fixed a critical bug where sweep logic incorrectly compared crypto amounts to a USD threshold.
+    - Implemented a flexible, per-chain sweep configuration using environment variables.
+    - **UTXO Chains (BTC, LTC, etc.):** Implemented a batch transfer in  () to send merchant funds and admin fees in a single, cost-effective transaction.
+    - **Native Account Chains (ETH, TRX):** Enabled both  and  based sweep modes.
+    - **Tokens (USDT, USDC):** Restricted to  mode only to prevent double gas funding costs.
+    - Updated  to parse and apply these new per-chain rules.
+
+- **Database:**
+    - Added the  column to the  model () and verified its existence in the database.
+
+- **Critical Fixes & Edge Cases:**
+    - Implemented duplicate transaction detection in  to prevent processing the same webhook twice.
+    - Refactored the sweep logic in  to use database transactions for atomicity.
+    - Created a startup configuration validator () to check for missing settings before the server starts.
+
+- **Documentation:**
+    - Created a comprehensive list of all identified payment API endpoints in .
 
 **Earlier issues found/mentioned but not fixed**
-All identified issues are listed in the **All Pending/In progress Issue list** section.
+- The high-priority, medium-priority, and low-priority fixes from the edge case analysis are pending implementation (listed in the pending/future tasks). The agent created a plan and a status file for the high-priority ones but has not implemented them yet. These are:
+  - **Issue 1:** Currency conversion fallback.
+  - **Issue 2:** Fee wallet balance monitoring.
+  - **Issue 3:** Profitability check for sweeps.
+  - **Issue 4:** Gas recovery mechanism.
 
 **Known issue recurrence from previous fork**
-N/A
+- None
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Backend**: NodeJS, Express.js, TypeScript
-*   **Database**: PostgreSQL with Sequelize as the ORM.
-*   **Architecture**: Multi-tenant SaaS platform for payment processing.
-*   **Core Flows**: Payment Link creation, Webhook-driven Crypto Payment Verification, Tier-based Fee Calculation, Fund Forwarding, and Email Notifications.
-*   **Third-Party Integrations**: Tatum for crypto operations, Flutterwave for card payments, and various communication APIs (Brevo, Infobip).
+- **Merchant Pool System:** Manages temporary cryptocurrency addresses for receiving payments on behalf of merchants.
+- **Per-Chain Sweep Logic:** A configurable system that defines how and when admin fees are collected from pool addresses, with different strategies for different types of blockchains.
+- **UTXO Batch Transfer:** A cost-saving technique for Bitcoin-like chains where merchant payout and admin fee collection happen in a single transaction with multiple outputs.
+- **Supervisor:** A process control system used to manage backend/frontend services and run the dependency installation script on boot.
+- **Sequelize:** A Node.js ORM used for interacting with the PostgreSQL database.
 
 **key DB schema**
-*   : Stores records of each transaction. Key columns include  (PK), uid=0(root) gid=0(root) groups=0(root) (UUID), , and a now-nullable .
-*   : Manages wallets for each user within a company. Key columns include , , , .
-*   : Tracks admin fees.
-*   : Stores temporary crypto addresses generated for payments.
+- **tbl_merchant_temp_address:**  - Tracks temporary payment addresses.
+- **tbl_merchant_wallet:**  - Stores the merchant's master HD wallets.
+- **tbl_customer_transaction:**  - Records all processed transactions, with a unique constraint on  to prevent duplicates.
 
 **changes in tech stack**
-None.
+- The project uses a Node.js/TypeScript backend, which differs from the FastAPI mentioned in the system prompt template. The database is PostgreSQL, not MongoDB.
 
 **All files of reference**
-*   ****: The most heavily modified file, containing fixes for multi-tenancy, fee calculation, and data type errors.
-*   ****: Updated with new email templates for the admin notification system.
-*   ****: Modified to allow  to be .
-*   ****: Temporarily modified to add a manual database migration endpoint. This should be cleaned up.
-*   ** / **: Updated with correct URLs and credentials.
-*   Multiple  files were created to document analyses and fixes, such as  and .
+- **/app/backend/services/merchantPoolService.ts:** Contains the core logic for the merchant pool, including address management, gas funding, and the newly refactored per-chain sweep system.
+- **/app/backend/controller/paymentController.ts:** Handles payment webhooks, transaction settlement, and initiates the UTXO batch transfers.
+- **/app/backend/.env:** Contains all secrets and the new per-chain sweep configurations (e.g., ).
+- **/app/setup_dependencies.sh:** A new, critical script that ensures all backend and frontend dependencies are installed on boot.
+- **/etc/supervisor/conf.d/dependency-setup.conf:** A new Supervisor configuration file that runs the dependency script with high priority before starting other services.
+- **/app/backend/services/merchantPoolValidator.ts:** A new validation service that runs on startup to ensure all sweep configurations and wallets are correctly set.
+- **/app/EDGE_CASE_COMPLETE_ANALYSIS.md:** Important document detailing identified vulnerabilities and areas for improvement in the merchant pool system.
 
 **Areas that need refactoring**:
-*   The temporary migration endpoint  inside  is a technical debt and should be removed. A proper migration strategy using a tool like Sequelize CLI should be established for future schema changes.
+- The  and  files will need further modifications to implement the remaining high-priority fixes from the edge case analysis (e.g., profitability checks, fee wallet monitoring).
 
 **key api endpoints**
-*   : Creates a public payment link.
-*   : Retrieves data associated with a payment link.
-*   : Entry point for all incoming crypto payment notifications from Tatum.
-*   : (Temporary) An endpoint created to run a raw SQL query to alter a table schema.
+- : Creates a shareable payment link.
+- : Creates a one-time direct charge.
+- : An external API endpoint to start a payment flow.
+- : Creates and sends an invoice.
+- **[PENDING]** The endpoint for generating a crypto address on the checkout page needs to be identified and documented.
 
 **Critical Info for New Agent**
-*   **Payment Flow Discrepancy**: Your immediate priority is to resolve the conflict between the user's claim of a successful payment and the system's logs, which indicate failure. Do not assume the user is correct; verify everything against the blockchain and the database.
-*   **Critical Bugs**: The automated payment flow is currently non-functional due to two critical bugs: 1) insufficient gas for forwarding funds, and 2) a shared ETH address between the admin and a merchant. These must be addressed to make the system viable.
-*   **Multi-Tenancy is Key**: This is a multi-tenant application. Every database query that handles user or company-specific data **must** be filtered by . Previous work fixed many omissions, but you must remain vigilant.
-*   **Manual Migration**: A database schema change was applied using a temporary, insecure test endpoint. Do not use this method again. Propose using a standard migration tool if further schema changes are needed.
+- The backend is a Node.js/TypeScript application using Sequelize and PostgreSQL, not FastAPI/Mongo.
+- A major refactoring of the admin fee sweep system is complete. You must understand the new per-chain logic: batch transfers for UTXO chains (no config needed) and configurable sweeps (/) for account-based chains. The configuration resides in .
+- A robust dependency installation script now runs on boot via Supervisor. You should not need to manually install npm <command>
+
+Usage:
+
+npm install        install all the dependencies in your project
+npm install <foo>  add the <foo> dependency to your project
+npm test           run this project's tests
+npm run <foo>      run the script named <foo>
+npm <command> -h   quick help on <command>
+npm -l             display usage info for all commands
+npm help <term>    search for help on <term>
+npm help npm       more involved overview
+
+All commands:
+
+    access, adduser, audit, bugs, cache, ci, completion,
+    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
+    edit, exec, explain, explore, find-dupes, fund, get, help,
+    help-search, hook, init, install, install-ci-test,
+    install-test, link, ll, login, logout, ls, org, outdated,
+    owner, pack, ping, pkg, prefix, profile, prune, publish,
+    query, rebuild, repo, restart, root, run-script, sbom,
+    search, set, shrinkwrap, star, stars, start, stop, team,
+    test, token, uninstall, unpublish, unstar, update, version,
+    view, whoami
+
+Specify configs in the ini-formatted file:
+    /root/.npmrc
+or on the command line via: npm <command> --key=value
+
+More configuration info: npm help config
+Configuration fields: npm help 7 config
+
+npm@10.8.2 /usr/lib/node_modules/npm or 
+Usage:   
+  pip <command> [options]
+
+Commands:
+  install                     Install packages.
+  lock                        Generate a lock file.
+  download                    Download packages.
+  uninstall                   Uninstall packages.
+  freeze                      Output installed packages in requirements format.
+  inspect                     Inspect the python environment.
+  list                        List installed packages.
+  show                        Show information about installed packages.
+  check                       Verify installed packages have compatible dependencies.
+  config                      Manage local and global configuration.
+  search                      Search PyPI for packages.
+  cache                       Inspect and manage pip's wheel cache.
+  index                       Inspect information available from package indexes.
+  wheel                       Build wheels from your requirements.
+  hash                        Compute hashes of package archives.
+  completion                  A helper command used for command completion.
+  debug                       Show information useful for debugging.
+  help                        Show help for commands.
+
+General Options:
+  -h, --help                  Show help.
+  --debug                     Let unhandled exceptions propagate outside the
+                              main subroutine, instead of logging them to
+                              stderr.
+  --isolated                  Run pip in an isolated mode, ignoring
+                              environment variables and user configuration.
+  --require-virtualenv        Allow pip to only run in a virtual environment;
+                              exit with an error otherwise.
+  --python <python>           Run pip with the specified Python interpreter.
+  -v, --verbose               Give more output. Option is additive, and can be
+                              used up to 3 times.
+  -V, --version               Show version and exit.
+  -q, --quiet                 Give less output. Option is additive, and can be
+                              used up to 3 times (corresponding to WARNING,
+                              ERROR, and CRITICAL logging levels).
+  --log <path>                Path to a verbose appending log.
+  --no-input                  Disable prompting for input.
+  --keyring-provider <keyring_provider>
+                              Enable the credential lookup via the keyring
+                              library if user input is allowed. Specify which
+                              mechanism to use [auto, disabled, import,
+                              subprocess]. (default: auto)
+  --proxy <proxy>             Specify a proxy in the form
+                              scheme://[user:passwd@]proxy.server:port.
+  --retries <retries>         Maximum attempts to establish a new HTTP
+                              connection. (default: 5)
+  --timeout <sec>             Set the socket timeout (default 15 seconds).
+  --exists-action <action>    Default action when a path already exists:
+                              (s)witch, (i)gnore, (w)ipe, (b)ackup, (a)bort.
+  --trusted-host <hostname>   Mark this host or host:port pair as trusted,
+                              even though it does not have valid or any HTTPS.
+  --cert <path>               Path to PEM-encoded CA certificate bundle. If
+                              provided, overrides the default. See 'SSL
+                              Certificate Verification' in pip documentation
+                              for more information.
+  --client-cert <path>        Path to SSL client certificate, a single file
+                              containing the private key and the certificate
+                              in PEM format.
+  --cache-dir <dir>           Store the cache data in <dir>.
+  --no-cache-dir              Disable the cache.
+  --disable-pip-version-check
+                              Don't periodically check PyPI to determine
+                              whether a new version of pip is available for
+                              download. Implied with --no-index.
+  --no-color                  Suppress colored output.
+  --use-feature <feature>     Enable new functionality, that may be backward
+                              incompatible.
+  --use-deprecated <feature>  Enable deprecated functionality, that will be
+                              removed in the future.
+  --resume-retries <resume_retries>
+                              Maximum attempts to resume or restart an
+                              incomplete download. (default: 5) packages.
+- Three critical edge cases have been fixed, but four high-priority ones are pending implementation. Refer to the  document and the Pending Issues section above before making changes.
+- Your immediate first task is to find the missing checkout API endpoint as requested by the user.
 
 **documents and test reports created in this job**
-*   /app/FINAL_MULTI_TENANT_AUDIT_REPORT.md
-*   /app/ADMIN_FEE_NOTIFICATION_IMPLEMENTATION.md
-*   /app/UNDER_THRESHOLD_NOTIFICATION_ENHANCEMENT.md
-*   /app/PAYMENT_ADDRESS_NOTIFICATION_ANALYSIS.md
-*   /app/FEE_CALCULATION_ANALYSIS_10USD.md
-*   ...and several other analysis/summary documents.
+- /app/PAYMENT_API_ENDPOINTS.md
+- /app/EDGE_CASE_COMPLETE_ANALYSIS.md
+- /app/PER_CHAIN_SWEEP_IMPLEMENTATION.md
+- /app/FUND_DISTRIBUTION_ANALYSIS.md
+- /app/MIGRATION_VERIFICATION_REPORT.md
+- /app/BOOT_SETUP_COMPLETE.md
+- /app/setup_dependencies.sh
+- /app/backend/services/merchantPoolValidator.ts
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User**: create new payment link for 0 - Request completed.
-9.  **User**: if i send the 0 ETH, based on current admin fee model... - Asked for an analysis of the fee calculation. Request completed.
-8.  **User**: which eth address will payment be forwarded to... - Asked for an analysis of fund routing and notifications. Request completed; led to bug discoveries.
-7.  **User**: implement the admin notification system - Feature request. Request completed.
-6.  **User**: how about if it was an under threshold payment... - Requested an enhancement to the notification system. Request completed.
-5.  **User**: create 0 crypto payment link - Request completed.
-4.  **User**: see logs, i sent the payment - User initiated a test payment. This led to the discovery of the  and fee calculation bugs.
-3.  **User**: i got the payment pending notification... we need to manually trigger this and fix the bug - User reported a stuck payment. The underlying bugs have since been fixed, but the transaction's state is contested.
-2.  **User**: CONTINUE THE FIX - Instruction to proceed with a bug fix. Request completed.
-1.  **User**: the funds have distributed to admin and merchant wallet. i got them. see log and trace it - The most recent message, claiming a payment was successful, which contradicts the agent's findings. This is the main point of contention to be resolved.
+1.  **User:** Is a DB migration still needed for the new system?
+    -   **Status:** Completed. Agent verified the column  was added and exists.
+2.  **User:** Verify Database Column.
+    -   **Status:** Completed. Agent ran a script and confirmed the column exists.
+3.  **User:** analyze all possible edge cases.
+    -   **Status:** Completed. Agent produced a detailed analysis document with prioritized issues.
+4.  **User:** okay lets address all issues identified.
+    -   **Status:** Partially Completed. Agent implemented the 3 *critical* issues but left the 4 *high-priority* ones for later.
+5.  **User:** okay list out all payment creation API endpoints.
+    -   **Status:** Completed. Agent generated a markdown file with the list.
+6.  **User:** i think one payment endpoint is missing... the one that generates address on checkout page.
+    -   **Status:** Pending. This is the current highest-priority task for the next agent.
 
 **Project Health Check:**
-*   **Broken**:
-    *   Automated crypto fund forwarding is non-functional due to insufficient gas errors.
-    *   Fund segregation is compromised for ETH because the admin and at least one merchant share the same wallet address.
-*   **Mocked**: None.
+- **Broken:** None. The services are running with the latest changes.
+- **Mocked:** None.
 
 **3rd Party Integrations**
-*   **Tatum**: Used for crypto wallet management and webhooks. Requires API Key.
-*   **Flutterwave**: Used for card payments. Requires User API Key.
-*   **Google Cloud KMS**: Used for key security. Requires User-provided service account credentials.
-*   **Brevo / Infobip / Telnyx**: Used for email and SMS notifications. Require User API Keys.
-*   **Redis / PostgreSQL**: Core infrastructure. Credentials are in .
-*No Emergent LLM Key integrations are used.*
+- **Database:** PostgreSQL on Railway
+- **Cache:** Redis on Railway
+- **Payments:** Flutterwave, Tatum
+- **Crypto APIs:** BlockBee, Blockchair
+- **Cloud KMS:** Google Cloud KMS
+- **Forex:** FastForex
+- **Communications:** Brevo (Email), Infobip (SMS), Telegram, Telnyx
+- **Identity:** Veriff (KYC)
+- **Tax:** APILayer Tax Data API
 
 **Testing status**
-*   **Testing agent used after significant changes**: NO
-*   **Troubleshoot agent used after agent stuck in loop**: NO
-*   **Test files created**: None. All testing was done via  commands.
-*   **Known regressions**: None.
+- **Testing agent used after significant changes:** YES (used for initial merchant pool analysis).
+- **Troubleshoot agent used after agent stuck in loop:** NO.
+- **Test files created:** None.
+- **Known regressions:** None identified.
 
 **Credentials to test flow:**
-*   **JWT Token (User 28, Company 38)**: 
+All required credentials for third-party services and the database are located in .
 
 **What agent forgot to execute**
-*   The agent did not remove the temporary and insecure migration endpoint () from  after its use.</analysis>
+- The agent did not implement the four high-priority fixes identified during the edge case analysis, despite creating a plan to do so. These include adding a currency conversion fallback, monitoring fee wallet balances, implementing a profitability check for sweeps, and creating a gas recovery mechanism.
+- The agent did not find the missing checkout API endpoint, as the session ended right after the user requested it.</analysis>
