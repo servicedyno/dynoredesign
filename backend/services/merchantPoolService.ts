@@ -793,6 +793,250 @@ export const cleanupStaleAddresses = async (
 };
 
 /**
+ * Check if sweep is profitable (fee < balance * threshold)
+ * Returns profitability status and USD values
+ */
+interface ProfitabilityResult {
+  profitable: boolean;
+  balanceUSD?: number;
+  feeUSD?: number;
+  estimatedFee?: number;
+  profitMargin?: number;
+}
+
+const checkSweepProfitability = async (
+  walletType: string,
+  balance: number,
+  feeData: any
+): Promise<ProfitabilityResult> => {
+  try {
+    // Get fee amount from feeData
+    let estimatedFee = 0;
+    if (typeof feeData === "number") {
+      estimatedFee = feeData;
+    } else if (feeData?.gasPrice && feeData?.gasLimit) {
+      // ETH-style fee
+      estimatedFee = (parseFloat(feeData.gasPrice) * parseInt(feeData.gasLimit)) / 1e18;
+    } else if (feeData?.fee) {
+      estimatedFee = parseFloat(feeData.fee);
+    } else if (feeData?.slow) {
+      estimatedFee = parseFloat(feeData.slow);
+    }
+    
+    // Convert balance to USD
+    let balanceUSD = 0;
+    let feeUSD = 0;
+    
+    try {
+      const balanceConversion = await currencyConvert({
+        currency: ["USD"],
+        sourceCurrency: walletType,
+        amount: balance,
+        fixedDecimal: true,
+      });
+      balanceUSD = parseFloat(balanceConversion[0]?.amount || "0");
+      
+      const feeConversion = await currencyConvert({
+        currency: ["USD"],
+        sourceCurrency: walletType,
+        amount: estimatedFee,
+        fixedDecimal: true,
+      });
+      feeUSD = parseFloat(feeConversion[0]?.amount || "0");
+    } catch (convError) {
+      console.warn(`[MerchantPool] Could not convert to USD for profitability check:`, convError);
+      // If conversion fails, assume profitable to avoid blocking legitimate sweeps
+      return { profitable: true, estimatedFee };
+    }
+    
+    // Profitability threshold: fee should be less than 50% of balance
+    // This ensures we're not losing money on the sweep
+    const PROFITABILITY_THRESHOLD = 0.5;
+    const profitable = feeUSD < (balanceUSD * PROFITABILITY_THRESHOLD);
+    const profitMargin = balanceUSD > 0 ? ((balanceUSD - feeUSD) / balanceUSD) * 100 : 0;
+    
+    return {
+      profitable,
+      balanceUSD,
+      feeUSD,
+      estimatedFee,
+      profitMargin,
+    };
+  } catch (error) {
+    console.error(`[MerchantPool] Profitability check error:`, error);
+    // If check fails, assume profitable to avoid blocking legitimate sweeps
+    return { profitable: true };
+  }
+};
+
+/**
+ * Recover stranded gas from pool addresses
+ * This handles cases where gas was funded but token transfer failed
+ * leaving small amounts of ETH/TRX in pool addresses
+ */
+export const recoverStrandedGas = async (): Promise<{
+  recovered: number;
+  totalRecovered: Record<string, number>;
+  errors: string[];
+}> => {
+  console.log(`[MerchantPool] ========================================`);
+  console.log(`[MerchantPool] Starting stranded gas recovery`);
+  console.log(`[MerchantPool] ========================================`);
+  
+  const result = {
+    recovered: 0,
+    totalRecovered: {} as Record<string, number>,
+    errors: [] as string[],
+  };
+  
+  try {
+    // Find addresses with gas balance but no admin fee balance
+    // These are likely "stranded" - gas was sent but token transfer failed
+    const strandedAddresses = await merchantTempAddressModel.findAll({
+      where: {
+        status: "AVAILABLE",
+        gas_balance: { [Op.gt]: 0 },
+        admin_fee_balance: { [Op.lte]: 0 },
+      },
+    });
+    
+    console.log(`[MerchantPool] Found ${strandedAddresses.length} addresses with potential stranded gas`);
+    
+    // Also check for addresses with native currency where the actual blockchain balance
+    // is significantly different from admin_fee_balance (indicates stranded funds)
+    const nativeAddresses = await merchantTempAddressModel.findAll({
+      where: {
+        status: "AVAILABLE",
+        wallet_type: { [Op.in]: NATIVE_CURRENCIES },
+        admin_fee_balance: { [Op.eq]: 0 },
+      },
+    });
+    
+    console.log(`[MerchantPool] Checking ${nativeAddresses.length} native currency addresses for stranded balance`);
+    
+    const addressesToProcess = [...strandedAddresses, ...nativeAddresses];
+    const processedAddresses = new Set<string>();
+    
+    for (const address of addressesToProcess) {
+      const walletAddress = address.dataValues.wallet_address;
+      
+      // Skip if already processed
+      if (processedAddresses.has(walletAddress)) continue;
+      processedAddresses.add(walletAddress);
+      
+      const walletType = address.dataValues.wallet_type;
+      
+      try {
+        // Get actual blockchain balance
+        const balanceData = await tatumApi.getAddressBalance(walletAddress, walletType);
+        const actualBalance = parseFloat(balanceData?.balance || "0");
+        
+        // Skip if no actual balance
+        if (actualBalance <= 0) {
+          continue;
+        }
+        
+        // For native currencies, check if balance is just gas leftovers
+        // (small amount, less than $5 USD)
+        const conversionResult = await currencyConvert({
+          currency: ["USD"],
+          sourceCurrency: walletType,
+          amount: actualBalance,
+          fixedDecimal: true,
+        });
+        const balanceUSD = parseFloat(conversionResult[0]?.amount || "0");
+        
+        // Skip if balance is too small to be worth recovering (< $1)
+        // or too large (might be legitimate funds, not stranded gas)
+        if (balanceUSD < 1 || balanceUSD > 10) {
+          if (balanceUSD > 10) {
+            console.log(`[MerchantPool] Skipping ${walletAddress} - balance $${balanceUSD.toFixed(2)} may be legitimate funds`);
+          }
+          continue;
+        }
+        
+        console.log(`[MerchantPool] 🔄 Recovering stranded gas from ${walletAddress}: ${actualBalance} ${walletType} ($${balanceUSD.toFixed(2)})`);
+        
+        // Get fee wallet to send recovered gas to
+        const gasToken = GAS_TOKEN_MAPPING[walletType] || walletType;
+        const feeWalletAddress = FEE_WALLETS[gasToken];
+        
+        if (!feeWalletAddress) {
+          console.warn(`[MerchantPool] No fee wallet for ${gasToken}, skipping recovery`);
+          continue;
+        }
+        
+        // Estimate fee
+        const feeData = await tatumApi.feeEstimation(
+          walletType,
+          walletAddress,
+          feeWalletAddress,
+          actualBalance.toString()
+        );
+        
+        // Calculate send amount (balance - fee)
+        let sendAmount = actualBalance;
+        if (feeData?.slow) {
+          sendAmount = actualBalance - parseFloat(feeData.slow);
+        }
+        
+        if (sendAmount <= 0) {
+          console.log(`[MerchantPool] Balance too low to recover after fees: ${walletAddress}`);
+          continue;
+        }
+        
+        // Decrypt private key and execute transfer
+        const privateKey = await tatumApi.decryptSymmetric(
+          address.dataValues.private_key,
+          process.env.TEMP_KEY_ID
+        );
+        
+        const transferResult = await tatumApi.assetToOtherAddress({
+          currency: walletType,
+          fromAddress: walletAddress,
+          toAddress: feeWalletAddress,
+          privateKey,
+          amount: sendAmount.toString(),
+          fee: feeData,
+        });
+        
+        if (transferResult?.txId) {
+          console.log(`[MerchantPool] ✅ Recovered ${sendAmount} ${walletType} from ${walletAddress}`);
+          result.recovered++;
+          result.totalRecovered[walletType] = (result.totalRecovered[walletType] || 0) + sendAmount;
+          
+          // Update gas_balance in database
+          await address.update({ gas_balance: 0 });
+        } else {
+          throw new Error("No txId returned from transfer");
+        }
+        
+      } catch (error) {
+        const message = getErrorMessage(error);
+        console.error(`[MerchantPool] Failed to recover gas from ${walletAddress}:`, message);
+        result.errors.push(`${walletAddress}: ${message}`);
+      }
+    }
+    
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[MerchantPool] Gas recovery failed:`, message);
+    result.errors.push(`General error: ${message}`);
+  }
+  
+  console.log(`[MerchantPool] ========================================`);
+  console.log(`[MerchantPool] Gas recovery completed`);
+  console.log(`[MerchantPool]   Recovered: ${result.recovered} addresses`);
+  console.log(`[MerchantPool]   Totals:`, result.totalRecovered);
+  if (result.errors.length > 0) {
+    console.log(`[MerchantPool]   Errors: ${result.errors.length}`);
+  }
+  console.log(`[MerchantPool] ========================================`);
+  
+  return result;
+};
+
+/**
  * Sweep admin fees from pool address to admin wallet
  * FIXED: Better transaction consistency - blockchain transfer first, then DB update
  */
