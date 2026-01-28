@@ -1526,6 +1526,7 @@ export default {
   sweepByThreshold,
   sweepByTime,
   performScheduledSweeps,
+  recoverStrandedGas,
   getSweepConfig,
   recordPoolTransaction,
   getPoolStatus,
