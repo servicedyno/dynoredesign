@@ -834,7 +834,7 @@ const checkSweepProfitability = async (
         amount: balance,
         fixedDecimal: true,
       });
-      balanceUSD = parseFloat(balanceConversion[0]?.amount || "0");
+      balanceUSD = parseFloat(String(balanceConversion[0]?.amount || "0"));
       
       const feeConversion = await currencyConvert({
         currency: ["USD"],
@@ -842,7 +842,7 @@ const checkSweepProfitability = async (
         amount: estimatedFee,
         fixedDecimal: true,
       });
-      feeUSD = parseFloat(feeConversion[0]?.amount || "0");
+      feeUSD = parseFloat(String(feeConversion[0]?.amount || "0"));
     } catch (convError) {
       console.warn(`[MerchantPool] Could not convert to USD for profitability check:`, convError);
       // If conversion fails, assume profitable to avoid blocking legitimate sweeps
