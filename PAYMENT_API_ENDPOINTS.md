@@ -532,44 +532,45 @@ Production: [Your production URL]/api
 
 ---
 
-## 9. COMPLETE ENDPOINT LIST (Summary)
+## 10. COMPLETE ENDPOINT LIST (Summary)
 
-### Payment Creation (4 endpoints):
+### Payment Creation (5 endpoints):
 1. `POST /api/pay/createPaymentLink` - Create payment link
 2. `POST /api/pay/user/createPayment` - Direct payment
-3. `POST /api/pay/user/cryptoPayment` - Crypto payment
+3. `POST /api/pay/user/cryptoPayment` - Crypto payment (API)
 4. `POST /api/pay/user/addFunds` - Add funds
+5. `POST /api/pay/createCryptoPayment` - **Checkout crypto address generation** ⭐
 
 ### Payment Management (4 endpoints):
-5. `GET /api/pay/getPaymentLinks` - List payment links
-6. `GET /api/pay/getPaymentLink/:id` - Get single link
-7. `PUT /api/pay/updatePaymentLink/:id` - Update link
-8. `DELETE /api/pay/deletePaymentLink/:id` - Delete link
+6. `GET /api/pay/getPaymentLinks` - List payment links
+7. `GET /api/pay/getPaymentLink/:id` - Get single link
+8. `PUT /api/pay/updatePaymentLink/:id` - Update link
+9. `DELETE /api/pay/deletePaymentLink/:id` - Delete link
 
 ### Transaction Queries (5 endpoints):
-9. `GET /api/pay/user/getTransactions` - List transactions
-10. `GET /api/pay/user/getSingleTransaction/:id` - Get transaction
-11. `GET /api/pay/user/getCryptoTransaction/:address` - Crypto tx
-12. `GET /api/pay/getSupportedCurrency` - Supported currencies
-13. `GET /api/pay/user/getBalance` - Get balance
+10. `GET /api/pay/user/getTransactions` - List transactions
+11. `GET /api/pay/user/getSingleTransaction/:id` - Get transaction
+12. `GET /api/pay/user/getCryptoTransaction/:address` - Crypto tx
+13. `GET /api/pay/getSupportedCurrency` - Supported currencies
+14. `GET /api/pay/user/getBalance` - Get balance
 
 ### Wallet Operations (1 endpoint):
-14. `POST /api/pay/user/useWallet` - Wallet payment
+15. `POST /api/pay/user/useWallet` - Wallet payment
 
 ### Invoices (4 endpoints):
-15. `GET /api/transactions/:id/invoice` - Get invoice
-16. `GET /api/invoices` - List invoices
-17. `GET /api/invoices/:id` - Get invoice
-18. `GET /api/invoices/:id/pdf` - Download PDF
+16. `GET /api/transactions/:id/invoice` - Get invoice
+17. `GET /api/invoices` - List invoices
+18. `GET /api/invoices/:id` - Get invoice
+19. `GET /api/invoices/:id/pdf` - Download PDF
 
 ### User Management (1 endpoint):
-19. `POST /api/pay/user/createUser` - Create customer
+20. `POST /api/pay/user/createUser` - Create customer
 
 ### Webhooks (4 endpoints - system):
-20. `POST /api/webhook` - Flutterwave webhook
-21. `POST /api/failed_webhook` - Failed webhook
-22. `POST /api/tatum-webhook` - Tatum webhook
-23. `POST /api/tatum-crypto-webhook` - Crypto webhook
+21. `POST /api/webhook` - Flutterwave webhook
+22. `POST /api/failed_webhook` - Failed webhook
+23. `POST /api/tatum-webhook` - Tatum webhook
+24. `POST /api/tatum-crypto-webhook` - Crypto webhook
 
 ---
 
@@ -649,7 +650,7 @@ Available on request for development environment
 
 ---
 
-**Total Payment Endpoints**: 19 main endpoints + 4 webhooks = 23 endpoints
+**Total Payment Endpoints**: 20 main endpoints + 4 webhooks = 24 endpoints
 
 **Documentation Version**: 1.0
 **Last Updated**: 2026-01-28
