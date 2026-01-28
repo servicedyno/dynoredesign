@@ -766,7 +766,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
     const gasFunding = await fundGasIfNeeded(poolAddress, walletType);
 
     // Decrypt private key
-    const privateKey = await decryptWithKMS(
+    const privateKey = await tatumApi.decryptSymmetric(
       poolAddress.dataValues.private_key,
       process.env.TEMP_KEY_ID
     );
