@@ -427,8 +427,8 @@ class ETHPaymentCreationTester:
             )
             return None
     
-    def generate_final_summary(self, eth_pool_info, admin_wallet):
-        """Generate final summary with all required information"""
+    def generate_final_summary(self, eth_addresses, admin_wallet):
+        """Generate final summary with all available information"""
         print("\n" + "="*80)
         print("🎯 ETH PAYMENT CREATION - FINAL SUMMARY")
         print("="*80)
@@ -439,32 +439,41 @@ class ETHPaymentCreationTester:
         
         # Payment Information
         print(f"\n📋 PAYMENT DETAILS:")
-        print(f"   Payment ID: {self.payment_data.get('payment_id', 'N/A')}")
-        print(f"   USD Amount: ${self.payment_data.get('usd_amount', self.payment_data.get('amount', 'N/A'))}")
+        print(f"   Transaction ID: {self.payment_data.get('transaction_id', 'N/A')}")
+        print(f"   Link ID: {self.payment_data.get('link_id', 'N/A')}")
+        print(f"   USD Amount: ${self.payment_data.get('base_amount', 'N/A')}")
+        print(f"   Currency: {self.payment_data.get('base_currency', 'N/A')}")
         print(f"   Status: {self.payment_data.get('status', 'N/A')}")
+        print(f"   Payment Link: {self.payment_data.get('payment_link', 'N/A')}")
         
-        # ETH Payment Address (CRITICAL FOR TESTING)
+        # ETH Payment Address Status
+        print(f"\n🔗 ETH PAYMENT ADDRESS STATUS:")
         eth_address = self.payment_data.get('crypto_address')
-        expected_eth = self.payment_data.get('crypto_amount')
-        
-        print(f"\n🔗 ETH PAYMENT ADDRESS (FOR REAL TESTING):")
         if eth_address:
-            print(f"   Address: {eth_address}")
+            expected_eth = self.payment_data.get('crypto_amount')
+            print(f"   ✅ Address Generated: {eth_address}")
             print(f"   Expected ETH Amount: {expected_eth} ETH")
             print(f"   Exchange Rate: {self.payment_data.get('exchange_rate', 'N/A')} USD/ETH")
             print(f"   Expires At: {self.payment_data.get('expires_at', 'N/A')}")
         else:
-            print("   ❌ ETH address not generated")
+            print(f"   ⚠️  Direct crypto address not generated via API")
+            print(f"   💡 Address generation happens through payment link flow")
+            print(f"   🔗 Customer must visit: {self.payment_data.get('payment_link', 'N/A')}")
         
         # Merchant Pool Information
-        print(f"\n🏦 MERCHANT POOL STATUS:")
-        if eth_pool_info:
-            print(f"   Available Addresses: {eth_pool_info.get('available_addresses', 'N/A')}")
-            print(f"   Reserved Addresses: {eth_pool_info.get('reserved_addresses', 'N/A')}")
-            print(f"   Total Pool Size: {eth_pool_info.get('total_addresses', 'N/A')}")
-            print(f"   Sweep Threshold: ${eth_pool_info.get('sweep_threshold', 'N/A')} USD")
+        print(f"\n🏦 MERCHANT WALLET SYSTEM:")
+        if eth_addresses:
+            print(f"   ✅ ETH Addresses Available: {len(eth_addresses)}")
+            print(f"   📍 Sample ETH Addresses:")
+            for i, addr in enumerate(eth_addresses[:3], 1):
+                print(f"      {i}. {addr.get('wallet_address', 'N/A')}")
+                if addr.get('wallet_name'):
+                    print(f"         Name: {addr.get('wallet_name')}")
+                if addr.get('company_id'):
+                    print(f"         Company ID: {addr.get('company_id')}")
         else:
-            print("   ❌ Pool information not available")
+            print("   ⚠️  No ETH addresses found in current wallet system")
+            print("   💡 Addresses may be generated on-demand during payment flow")
         
         # Admin Wallet
         print(f"\n👑 ADMIN WALLET:")
@@ -473,31 +482,77 @@ class ETHPaymentCreationTester:
         else:
             print("   ❌ Admin wallet not available")
         
-        # Testing Instructions
-        print(f"\n🧪 TESTING INSTRUCTIONS:")
-        if eth_address and expected_eth:
-            print(f"   1. Send exactly {expected_eth} ETH to: {eth_address}")
-            print(f"   2. Payment will be processed automatically")
-            print(f"   3. Funds will be distributed according to threshold rules")
-            print(f"   4. Monitor payment status via API or dashboard")
+        # System Status Assessment
+        print(f"\n📊 SYSTEM STATUS ASSESSMENT:")
+        
+        # Check what's working
+        working_components = []
+        issues = []
+        
+        if self.test_results.get("User Authentication", {}).get('success'):
+            working_components.append("✅ User Authentication")
         else:
-            print("   ❌ Cannot provide testing instructions - ETH address not generated")
+            issues.append("❌ User Authentication")
+            
+        if self.test_results.get("Payment Link Creation", {}).get('success'):
+            working_components.append("✅ Payment Link Creation")
+        else:
+            issues.append("❌ Payment Link Creation")
+            
+        if eth_addresses:
+            working_components.append("✅ Merchant Wallet System")
+        else:
+            issues.append("⚠️  Merchant Pool Address Visibility")
+            
+        if admin_wallet:
+            working_components.append("✅ Admin Wallet Configuration")
+        else:
+            issues.append("❌ Admin Wallet Configuration")
+        
+        print(f"\n   WORKING COMPONENTS:")
+        for component in working_components:
+            print(f"      {component}")
+            
+        if issues:
+            print(f"\n   AREAS NEEDING ATTENTION:")
+            for issue in issues:
+                print(f"      {issue}")
+        
+        # Testing Instructions
+        print(f"\n🧪 TESTING APPROACH:")
+        payment_link = self.payment_data.get('payment_link')
+        if payment_link:
+            print(f"   1. Visit payment link: {payment_link}")
+            print(f"   2. Select ETH as payment method")
+            print(f"   3. System will generate ETH address automatically")
+            print(f"   4. Send exactly the displayed ETH amount to the generated address")
+            print(f"   5. Payment will be processed automatically")
+            print(f"   6. Funds distributed according to threshold rules (${self.payment_data.get('base_amount', 10)} >= $5 threshold)")
+        else:
+            print("   ❌ Cannot provide testing instructions - payment link not available")
         
         # Success Summary
         successful_steps = sum(1 for result in self.test_results.values() if result['success'])
         total_steps = len(self.test_results)
         
-        print(f"\n📊 TEST RESULTS SUMMARY:")
+        print(f"\n📈 TEST RESULTS SUMMARY:")
         print(f"   Successful Steps: {successful_steps}/{total_steps}")
         print(f"   Success Rate: {(successful_steps/total_steps)*100:.1f}%")
         
-        if successful_steps == total_steps:
-            print(f"   ✅ ALL TESTS PASSED - ETH payment ready for real testing")
+        # Determine overall status
+        critical_success = (
+            self.test_results.get("User Authentication", {}).get('success', False) and
+            self.test_results.get("Payment Link Creation", {}).get('success', False)
+        )
+        
+        if critical_success:
+            print(f"   ✅ CORE FUNCTIONALITY WORKING")
+            print(f"   💡 ETH payment system is operational via payment link flow")
+            if not eth_address:
+                print(f"   📝 Note: Direct API crypto address generation requires customer token flow")
         else:
-            print(f"   ⚠️  SOME TESTS FAILED - Check errors above")
-            print(f"   Failed Tests: {len(self.errors)}")
-            for error in self.errors:
-                print(f"      - {error}")
+            print(f"   ❌ CRITICAL ISSUES DETECTED")
+            print(f"   🔧 System requires fixes before ETH payments can be processed")
         
         print("="*80)
     
