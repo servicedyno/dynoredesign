@@ -261,7 +261,7 @@ class ETHPaymentDirectAPITester:
             }
             
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
+                "x-api-key": self.api_key,  # Use encrypted API key in x-api-key header
                 "Content-Type": "application/json"
             }
             
@@ -276,9 +276,9 @@ class ETHPaymentDirectAPITester:
                 data = response.json()
                 
                 # Extract customer token from response
-                if 'token' in data:
-                    self.customer_token = data['token']
-                    customer_info = data.get('customer', {})
+                if 'data' in data and 'token' in data['data']:
+                    self.customer_token = data['data']['token']
+                    customer_info = data.get('data', {})
                     
                     self.log_result(
                         "Create Customer", 
@@ -286,8 +286,6 @@ class ETHPaymentDirectAPITester:
                         f"Successfully created/retrieved customer",
                         {
                             "customer_id": customer_info.get('customer_id'),
-                            "name": customer_info.get('name'),
-                            "email": customer_info.get('email'),
                             "has_token": bool(self.customer_token)
                         }
                     )
