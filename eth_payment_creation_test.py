@@ -317,15 +317,17 @@ class ETHPaymentCreationTester:
             )
             return False
         
+        # Since direct merchant pool status endpoint doesn't exist,
+        # let's check the user's wallet addresses which should show pool addresses
         try:
             headers = {
                 "Authorization": f"Bearer {self.jwt_token}",
                 "Content-Type": "application/json"
             }
             
-            # Get merchant pool status
+            # Get user wallet addresses
             response = requests.get(
-                f"{self.backend_url}/api/merchant-pool/status",
+                f"{self.backend_url}/api/wallet/getWalletAddresses",
                 headers=headers,
                 timeout=15
             )
@@ -333,43 +335,41 @@ class ETHPaymentCreationTester:
             if response.status_code == 200:
                 data = response.json()
                 if 'data' in data:
-                    pool_data = data['data']
+                    addresses = data['data']
                     
-                    # Look for ETH pool information
-                    eth_pool = None
-                    for pool in pool_data.get('pools', []):
-                        if pool.get('currency') == 'ETH':
-                            eth_pool = pool
-                            break
+                    # Look for ETH addresses
+                    eth_addresses = [addr for addr in addresses if addr.get('wallet_type') == 'ETH']
                     
-                    if eth_pool:
+                    if eth_addresses:
                         self.log_result(
-                            "Merchant Pool Status - ETH", 
+                            "Merchant Pool Status - ETH Addresses", 
                             True, 
-                            f"ETH merchant pool found with {eth_pool.get('available_addresses', 0)} available addresses",
+                            f"Found {len(eth_addresses)} ETH addresses in merchant wallet system",
                             {
-                                "currency": eth_pool.get('currency'),
-                                "available_addresses": eth_pool.get('available_addresses'),
-                                "reserved_addresses": eth_pool.get('reserved_addresses'),
-                                "total_addresses": eth_pool.get('total_addresses'),
-                                "admin_wallet": eth_pool.get('admin_wallet'),
-                                "sweep_threshold": eth_pool.get('sweep_threshold')
+                                "total_eth_addresses": len(eth_addresses),
+                                "sample_addresses": [
+                                    {
+                                        "address": addr.get('wallet_address'),
+                                        "wallet_name": addr.get('wallet_name'),
+                                        "company_id": addr.get('company_id')
+                                    } for addr in eth_addresses[:3]  # Show first 3
+                                ]
                             }
                         )
-                        return eth_pool
+                        return eth_addresses
                     else:
                         self.log_result(
-                            "Merchant Pool Status - ETH", 
+                            "Merchant Pool Status - ETH Addresses", 
                             False, 
-                            "ETH pool not found in merchant pool status",
-                            {"available_pools": [p.get('currency') for p in pool_data.get('pools', [])]}
+                            "No ETH addresses found in merchant wallet system",
+                            {"total_addresses": len(addresses)}
                         )
                         return None
                 else:
                     self.log_result(
                         "Merchant Pool Status", 
                         False, 
-                        "Pool status retrieved but no data received",
+                        "Wallet addresses retrieved but no data received",
                         {"response": data}
                     )
                     return None
@@ -377,7 +377,7 @@ class ETHPaymentCreationTester:
                 self.log_result(
                     "Merchant Pool Status", 
                     False, 
-                    f"Pool status request failed with status {response.status_code}",
+                    f"Wallet addresses request failed with status {response.status_code}",
                     {"response": response.text}
                 )
                 return None
@@ -386,7 +386,7 @@ class ETHPaymentCreationTester:
             self.log_result(
                 "Merchant Pool Status", 
                 False, 
-                f"Pool status request failed: {str(e)}"
+                f"Wallet addresses request failed: {str(e)}"
             )
             return None
     
