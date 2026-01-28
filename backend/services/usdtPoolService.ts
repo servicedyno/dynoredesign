@@ -667,7 +667,11 @@ export const releaseAddress = async (
       total_transactions: currentTxCount + 1,
       current_payment_id: null,
       current_company_id: null,
+      current_user_id: null,
       expected_amount: null,
+      received_amount: null,
+      is_partial_payment: false,
+      partial_payment_timestamp: null,
       reserved_until: null,
       locked_at: null,
     });
