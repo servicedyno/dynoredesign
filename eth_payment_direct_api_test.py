@@ -156,7 +156,7 @@ class ETHPaymentDirectAPITester:
             
             if response.status_code == 200:
                 data = response.json()
-                api_keys = data.get('data', [])
+                api_keys = data.get('data', {}).get('all', [])
                 
                 if api_keys:
                     # Use first available API key
