@@ -944,7 +944,7 @@ export const recoverStrandedGas = async (): Promise<{
           amount: actualBalance,
           fixedDecimal: true,
         });
-        const balanceUSD = parseFloat(conversionResult[0]?.amount || "0");
+        const balanceUSD = parseFloat(String(conversionResult[0]?.amount || "0"));
         
         // Skip if balance is too small to be worth recovering (< $1)
         // or too large (might be legitimate funds, not stranded gas)
