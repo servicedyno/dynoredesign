@@ -135,6 +135,18 @@ cron.schedule("0 */24 * * *", function () {
   paymentController.removeUnwantedSubscriptions();
 });
 
+// USDT Pool: Sweep accumulated admin fees every 30 minutes
+cron.schedule("*/30 * * * *", function () {
+  console.log("sweepUSDTPoolFees ==============> checked");
+  usdtPoolService.sweepAllEligibleAddresses();
+});
+
+// USDT Pool: Cleanup stale IN_USE addresses every 15 minutes
+cron.schedule("*/15 * * * *", function () {
+  console.log("cleanupStalePoolAddresses ==============> checked");
+  usdtPoolService.cleanupStaleAddresses();
+});
+
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
 setupWeeklySummaryCron();
 
