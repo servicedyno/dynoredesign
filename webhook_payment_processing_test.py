@@ -265,7 +265,7 @@ class WebhookPaymentProcessor:
             
             # Check payment links
             payment_links_response = requests.get(
-                f"{self.backend_url}/api/payment/getPaymentLinks",
+                f"{self.backend_url}/api/pay/getPaymentLinks",
                 headers=headers,
                 timeout=15
             )
