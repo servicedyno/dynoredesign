@@ -9,7 +9,7 @@ user_problem_statement: "ETH PAYMENT CREATION TEST FOR john@dyno.pt - Create a $
   - task: "ETH Payment Creation Test for john@dyno.pt - $10 USD Payment with Real Testing Address"
     implemented: true
     working: true
-    file: "/app/eth_payment_creation_test.py"
+    file: "/app/eth_payment_direct_api_test.py"
     stuck_count: 0
     priority: "critical"
     needs_retesting: false
@@ -20,6 +20,9 @@ user_problem_statement: "ETH PAYMENT CREATION TEST FOR john@dyno.pt - Create a $
       - working: true
         agent: "testing"
         comment: "✅ ETH PAYMENT CREATION TEST COMPLETED: 60% success rate (3/5 tests passed) with CORE FUNCTIONALITY WORKING. ✅ USER AUTHENTICATION: Successfully authenticated john@dyno.pt (user_id: 28, name: Johnny LTD, username: johnny_test, status: active). ✅ PAYMENT LINK CREATION: Successfully created $10 USD payment link (transaction_id: 2fd6fc66-189a-451d-bf57-afe16f82a5dd, link_id: 16, status: pending) with CRYPTO mode enabled. ✅ ADMIN WALLET CONFIGURATION: Retrieved admin ETH wallet address (0x9a7221b5e32d5f99e8da95585835442e29afb38f). ⚠️ CRYPTO ADDRESS GENERATION: Direct API crypto address generation failed due to customer authentication requirements - this is expected behavior as the createCryptoPayment endpoint uses customerAuthMiddleware requiring customer tokens from payment link flow. ⚠️ MERCHANT POOL VISIBILITY: No ETH addresses found in current wallet system via getWalletAddresses endpoint - addresses are generated on-demand during payment flow. 🔗 PAYMENT LINK FOR REAL TESTING: https://dynocheckoutfix-production.up.railway.app//pay?d=ae7852a31d5d0da5c13b54f6ed5be148b30d9ec26dd5e974. TESTING APPROACH: (1) Visit payment link, (2) Select ETH as payment method, (3) System auto-generates ETH address, (4) Send displayed ETH amount to generated address, (5) Payment processed automatically with $10 >= $5 threshold rules. CONCLUSION: ETH payment system is fully operational via payment link customer flow. Core merchant functionality (authentication, payment link creation, admin wallet configuration) working correctly. Real ETH testing can proceed immediately using the provided payment link."
+      - working: true
+        agent: "testing"
+        comment: "🎉 COMPLETE SUCCESS - ETH PAYMENT DIRECT API TEST: 100% success rate (6/6 tests passed). ✅ MERCHANT AUTHENTICATION: Successfully authenticated john@dyno.pt (user_id: 28, company_id: 38) via POST /api/user/login. ✅ API KEY RETRIEVAL: Retrieved and properly used encrypted API key for API service authentication. ✅ CUSTOMER CREATION: Successfully created customer via POST /api/user/createUser endpoint with proper x-api-key header authentication. ✅ DIRECT ETH PAYMENT CREATION: Successfully called POST /api/user/cryptoPayment endpoint returning immediate ETH address generation. 🎯 ETH PAYMENT DETAILS: Address: 0xf6dc2d96fa94a4de7fe78aff63e3e2a1fe7cba51, Amount: 0.00332151 ETH ($10 USD), Transaction ID: ef76c171-07d0-4643-80da-1e07e1e4393d, QR Code: Generated. ✅ MERCHANT POOL SYSTEM: Verified 1 ETH address in merchant pool, system operational. ✅ ADMIN WALLET: Confirmed admin ETH wallet configuration (0x9a7221b5e32d5f99e8da95585835442e29afb38f). 🔧 TECHNICAL FIX: Added INTERNAL_BACKEND_URL=http://localhost:3300 to backend .env for proper API service to backend communication. CONCLUSION: The direct ETH payment API endpoint POST /api/user/cryptoPayment is fully operational and returns ETH addresses immediately as requested. Complete flow from merchant authentication to ETH address generation works seamlessly."
 
   - task: "Pool Address Creation Analysis for john@dyno.pt - Database Timeline Investigation"
     implemented: true
