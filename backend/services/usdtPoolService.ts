@@ -468,7 +468,7 @@ export const handleLatePayment = async (
  * Release an address back to the pool after MERCHANT PAYMENT is sent
  * 
  * IMPORTANT FLOW:
- * 1. Customer sends USDT to pool address (address is IN_USE)
+ * 1. Customer sends USDT to pool address (address is RESERVED → PROCESSING)
  * 2. Gas is funded from fee wallet
  * 3. Merchant portion is transferred to merchant wallet
  * 4. Admin fee STAYS in the pool address (accumulates)
@@ -495,13 +495,16 @@ export const releaseAddress = async (
     const currentGas = parseFloat(poolAddress.dataValues.gas_balance) || 0;
     const currentTxCount = poolAddress.dataValues.total_transactions || 0;
 
-    // Release address back to AVAILABLE - admin fee stays in address
+    // Release address back to AVAILABLE - clear all payment-specific fields
     await poolAddress.update({
       status: "AVAILABLE",  // Ready for next payment immediately
       admin_fee_balance: currentBalance + adminFeeAmount,  // Accumulate admin fee
       gas_balance: Math.max(0, currentGas - gasUsed),
       total_transactions: currentTxCount + 1,
       current_payment_id: null,
+      current_company_id: null,
+      expected_amount: null,
+      reserved_until: null,
       locked_at: null,
     });
 
