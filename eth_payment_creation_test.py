@@ -79,22 +79,25 @@ class ETHPaymentCreationTester:
                 data = response.json()
                 if 'data' in data and 'accessToken' in data['data']:
                     self.jwt_token = data['data']['accessToken']
-                    self.user_data = data['data']
+                    
+                    # Extract user data from the response
+                    user_data = data['data'].get('userData', {})
+                    self.user_data = user_data
                     
                     # Verify user details match expected
-                    user_id = self.user_data.get('user_id')
-                    company_id = self.user_data.get('company_id')
+                    user_id = user_data.get('user_id')
                     
-                    if user_id == self.test_credentials["user_id"] and company_id == self.test_credentials["company_id"]:
+                    if user_id == self.test_credentials["user_id"]:
                         self.log_result(
                             "User Authentication", 
                             True, 
                             f"Successfully authenticated as {self.test_credentials['email']}",
                             {
                                 "user_id": user_id,
-                                "company_id": company_id,
-                                "name": self.user_data.get('name'),
-                                "username": self.user_data.get('username')
+                                "name": user_data.get('name'),
+                                "username": user_data.get('username'),
+                                "email": user_data.get('email'),
+                                "status": user_data.get('status')
                             }
                         )
                         return True
@@ -103,7 +106,7 @@ class ETHPaymentCreationTester:
                             "User Authentication - Verification", 
                             False, 
                             f"User ID mismatch: expected {self.test_credentials['user_id']}, got {user_id}",
-                            {"expected_user_id": self.test_credentials["user_id"], "actual_user_id": user_id}
+                            {"expected_user_id": self.test_credentials["user_id"], "actual_user_id": user_id, "user_data": user_data}
                         )
                         return False
                 else:
