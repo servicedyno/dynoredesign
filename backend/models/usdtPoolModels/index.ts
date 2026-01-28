@@ -71,17 +71,38 @@ const usdtPoolAddressModel = sequelize.define(
     current_payment_id: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      comment: "Current payment using this address (when RESERVED/IN_USE)",
+      comment: "Current payment using this address (when RESERVED/PROCESSING)",
     },
     current_company_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
       comment: "Merchant company ID for current payment",
     },
+    current_user_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "Merchant user ID for current payment",
+    },
     expected_amount: {
       type: DataTypes.DECIMAL(20, 8),
       allowNull: true,
       comment: "Expected USDT amount for current payment",
+    },
+    received_amount: {
+      type: DataTypes.DECIMAL(20, 8),
+      allowNull: true,
+      defaultValue: 0,
+      comment: "Amount received so far (for partial payment tracking)",
+    },
+    is_partial_payment: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: "True if partial payment received, waiting for more",
+    },
+    partial_payment_timestamp: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: "When partial payment was received (30 min grace period starts)",
     },
     reserved_until: {
       type: DataTypes.DATE,
