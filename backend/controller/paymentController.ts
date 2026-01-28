@@ -1499,6 +1499,7 @@ const settleCryptoTransaction = async ({
   transactionId,
   userAmount,
   userAddress,
+  isMerchantPool,
 }: {
   tempAddressData: any;
   receivedAmount: number;  // This is the admin fee amount
@@ -1506,6 +1507,7 @@ const settleCryptoTransaction = async ({
   transactionId: string;
   userAmount?: number;     // This is the merchant amount
   userAddress?: string;    // Merchant wallet address
+  isMerchantPool?: boolean; // Whether this is a merchant pool address
 }) => {
   try {
     const adminWalletAddress = getAdminWalletAddress(currency);
@@ -1516,8 +1518,10 @@ const settleCryptoTransaction = async ({
       );
     }
 
+    // Get private key - merchant pool addresses use different field names
+    const privateKeyField = isMerchantPool ? tempAddressData.private_key : tempAddressData.privateKey;
     const privateKey = await tatumApi.decryptSymmetric(
-      tempAddressData.privateKey,
+      privateKeyField,
       process.env.TEMP_KEY_ID
     );
 
