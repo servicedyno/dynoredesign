@@ -279,7 +279,7 @@ export const getAvailableAddress = async (
   paymentId?: string
 ): Promise<any> => {
   // For backward compatibility, use default values
-  return reserveAddress(walletType, paymentId || `legacy-${Date.now()}`, 0, 0);
+  return reserveAddress(walletType, paymentId || `legacy-${Date.now()}`, 0, 0, 0);
 };
 
 /**
