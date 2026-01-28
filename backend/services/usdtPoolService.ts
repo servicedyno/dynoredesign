@@ -1201,6 +1201,9 @@ export const sweepPoolAddress = async (poolAddressId: number): Promise<any> => {
 
     console.log(`[USDTPool] Sweep completed: ${actualBalance} USDT ($${usdValue[0]?.amount}) - TX: ${txResult?.txId}`);
 
+    // Process any payments that were queued during the sweep
+    await processQueuedPayments(poolAddressId);
+
     return {
       amount: actualBalance,
       txId: txResult?.txId,
@@ -1215,6 +1218,9 @@ export const sweepPoolAddress = async (poolAddressId: number): Promise<any> => {
         { status: "AVAILABLE" },
         { where: { pool_address_id: poolAddressId } }
       );
+      
+      // Still try to process queued payments even if sweep failed
+      await processQueuedPayments(poolAddressId);
     } catch (e) {
       // Ignore
     }
