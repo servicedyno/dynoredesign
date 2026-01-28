@@ -232,7 +232,19 @@ export const getAvailableAddress = async (
 };
 
 /**
- * Release an address back to the pool after payment is processed
+ * Release an address back to the pool after MERCHANT PAYMENT is sent
+ * 
+ * IMPORTANT FLOW:
+ * 1. Customer sends USDT to pool address (address is IN_USE)
+ * 2. Gas is funded from fee wallet
+ * 3. Merchant portion is transferred to merchant wallet
+ * 4. Admin fee STAYS in the pool address (accumulates)
+ * 5. Address is released back to AVAILABLE immediately
+ * 6. Admin fee will be swept later by cron when threshold reached
+ * 
+ * The address becomes AVAILABLE right after merchant payment - it does NOT
+ * wait for admin fee sweep. This allows the address to be reused quickly
+ * while admin fees accumulate.
  */
 export const releaseAddress = async (
   poolAddressId: number,
@@ -250,25 +262,28 @@ export const releaseAddress = async (
     const currentGas = parseFloat(poolAddress.dataValues.gas_balance) || 0;
     const currentTxCount = poolAddress.dataValues.total_transactions || 0;
 
+    // Release address back to AVAILABLE - admin fee stays in address
     await poolAddress.update({
-      status: "AVAILABLE",
-      admin_fee_balance: currentBalance + adminFeeAmount,
+      status: "AVAILABLE",  // Ready for next payment immediately
+      admin_fee_balance: currentBalance + adminFeeAmount,  // Accumulate admin fee
       gas_balance: Math.max(0, currentGas - gasUsed),
       total_transactions: currentTxCount + 1,
       current_payment_id: null,
       locked_at: null,
     });
 
-    console.log(`[USDTPool] Released address ${poolAddress.dataValues.wallet_address}, new balance: $${currentBalance + adminFeeAmount}`);
+    console.log(`[USDTPool] ✅ Released address ${poolAddress.dataValues.wallet_address} back to AVAILABLE`);
+    console.log(`[USDTPool]    - Admin fee added: $${adminFeeAmount}`);
+    console.log(`[USDTPool]    - Total accumulated: $${currentBalance + adminFeeAmount}`);
+    console.log(`[USDTPool]    - Total transactions: ${currentTxCount + 1}`);
 
     // Check if sweep threshold reached
     if (currentBalance + adminFeeAmount >= POOL_CONFIG.SWEEP_THRESHOLD) {
-      console.log(`[USDTPool] Address ${poolAddress.dataValues.wallet_address} reached sweep threshold ($${POOL_CONFIG.SWEEP_THRESHOLD})`);
-      // Sweep will be handled by cron job
+      console.log(`[USDTPool] 📍 Address reached sweep threshold ($${POOL_CONFIG.SWEEP_THRESHOLD}) - will be swept by cron`);
     }
   } catch (error) {
     const message = getErrorMessage(error);
-    console.error(`[USDTPool] Failed to release address:`, message);
+    console.error(`[USDTPool] ❌ Failed to release address:`, message);
     throw error;
   }
 };
