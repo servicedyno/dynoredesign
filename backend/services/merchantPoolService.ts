@@ -1275,12 +1275,13 @@ export const sweepByThreshold = async (): Promise<void> => {
       
       // Convert crypto amount to USD
       const conversionResult = await currencyConvert({
-        from: [walletType],
-        to: ['USD'],
-        amount: [cryptoAmount.toString()],
+        currency: ['USD'],
+        sourceCurrency: walletType,
+        amount: cryptoAmount,
+        fixedDecimal: true,
       });
       
-      const usdAmount = parseFloat(conversionResult?.data?.[0] || "0");
+      const usdAmount = parseFloat(String(conversionResult?.[0]?.amount || "0"));
       
       console.log(`[MerchantPool] ${walletAddress} (${walletType}): ${cryptoAmount} = $${usdAmount.toFixed(2)} USD (threshold: $${sweepConfig.value})`);
       
