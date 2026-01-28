@@ -156,21 +156,31 @@ export const addAddressToPool = async (walletType: "USDT-TRC20" | "USDT-ERC20"):
 };
 
 /**
- * Get an available address from the pool
- * Priority: 
+ * Reserve an address from the pool for a payment
+ * 
+ * STATES:
+ * - AVAILABLE: Ready to be assigned
+ * - RESERVED: Assigned to payment, waiting for customer to pay (30 min timeout)
+ * - PROCESSING: Payment received, transferring to merchant
+ * - SWEEPING: Being swept to admin wallet
+ * 
+ * Priority selection:
  *   1. Highest accumulated admin fee balance (faster to reach sweep threshold)
  *   2. Highest transaction count (more active = better)
+ * 
  * If NO addresses are available, automatically creates a new one
  */
-export const getAvailableAddress = async (
+export const reserveAddress = async (
   walletType: "USDT-TRC20" | "USDT-ERC20",
-  paymentId?: string
+  paymentId: string,
+  companyId: number,
+  expectedAmount: number
 ): Promise<any> => {
   const transaction = await sequelize.transaction();
   
   try {
-    // First, clean up any stale IN_USE addresses
-    await cleanupStaleAddresses(walletType, transaction);
+    // First, release any expired reservations
+    await releaseExpiredReservations(walletType, transaction);
 
     // Find available address - prioritize by:
     // 1. Highest admin_fee_balance (faster to reach sweep threshold)
@@ -188,25 +198,35 @@ export const getAvailableAddress = async (
       transaction,
     });
 
+    // Calculate reservation expiry (30 minutes from now)
+    const reservedUntil = new Date();
+    reservedUntil.setMinutes(reservedUntil.getMinutes() + POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES);
+
     if (!poolAddress) {
       // No available address - automatically create new one
-      console.log(`[USDTPool] ⚠️ All ${walletType} addresses are IN_USE, creating new one automatically`);
+      console.log(`[USDTPool] ⚠️ All ${walletType} addresses are in use, creating new one automatically`);
       await transaction.commit();
       
       const newAddress = await addAddressToPool(walletType);
       
-      // Mark new address as IN_USE immediately
+      // Reserve new address immediately
       const lockTx = await sequelize.transaction();
       try {
         await newAddress.update({
-          status: "IN_USE",
+          status: "RESERVED",
           locked_at: new Date(),
           last_used_at: new Date(),
-          current_payment_id: paymentId || null,
+          current_payment_id: paymentId,
+          current_company_id: companyId,
+          expected_amount: expectedAmount,
+          reserved_until: reservedUntil,
         }, { transaction: lockTx });
         await lockTx.commit();
         
-        console.log(`[USDTPool] ✅ Created and assigned NEW ${walletType} address: ${newAddress.dataValues.wallet_address}`);
+        console.log(`[USDTPool] ✅ Created and RESERVED new ${walletType} address: ${newAddress.dataValues.wallet_address}`);
+        console.log(`[USDTPool]    - Payment ID: ${paymentId}`);
+        console.log(`[USDTPool]    - Expected: $${expectedAmount} USDT`);
+        console.log(`[USDTPool]    - Expires: ${reservedUntil.toISOString()}`);
         return newAddress;
       } catch (e) {
         await lockTx.rollback();
@@ -214,25 +234,44 @@ export const getAvailableAddress = async (
       }
     }
 
-    // Mark existing address as IN_USE
+    // Reserve existing address
     await poolAddress.update({
-      status: "IN_USE",
+      status: "RESERVED",
       locked_at: new Date(),
       last_used_at: new Date(),
-      current_payment_id: paymentId || null,
+      current_payment_id: paymentId,
+      current_company_id: companyId,
+      expected_amount: expectedAmount,
+      reserved_until: reservedUntil,
     }, { transaction });
 
     await transaction.commit();
     
-    console.log(`[USDTPool] ✅ Assigned existing ${walletType} address: ${poolAddress.dataValues.wallet_address} (accumulated: $${poolAddress.dataValues.admin_fee_balance})`);
+    console.log(`[USDTPool] ✅ RESERVED ${walletType} address: ${poolAddress.dataValues.wallet_address}`);
+    console.log(`[USDTPool]    - Payment ID: ${paymentId}`);
+    console.log(`[USDTPool]    - Expected: $${expectedAmount} USDT`);
+    console.log(`[USDTPool]    - Accumulated balance: $${poolAddress.dataValues.admin_fee_balance}`);
+    console.log(`[USDTPool]    - Expires: ${reservedUntil.toISOString()}`);
     
     return poolAddress;
   } catch (error) {
     await transaction.rollback();
     const message = getErrorMessage(error);
-    console.error(`[USDTPool] ❌ Failed to get available address:`, message);
+    console.error(`[USDTPool] ❌ Failed to reserve address:`, message);
     throw error;
   }
+};
+
+/**
+ * Legacy function - wraps reserveAddress for backward compatibility
+ */
+export const getAvailableAddress = async (
+  walletType: "USDT-TRC20" | "USDT-ERC20",
+  paymentId?: string
+): Promise<any> => {
+  // For backward compatibility, use default values
+  return reserveAddress(walletType, paymentId || `legacy-${Date.now()}`, 0, 0);
+};
 };
 
 /**
