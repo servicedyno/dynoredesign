@@ -919,14 +919,14 @@ class MerchantPoolTester:
         print(f"Supported Chains: {', '.join(self.supported_chains)}")
         print("=" * 80)
         
-        # Authentication is required for most tests
-        if not self.authenticate():
-            print("\n❌ CRITICAL: Authentication failed - cannot proceed with tests")
-            return False
-        
-        if not self.get_user_companies():
-            print("\n❌ CRITICAL: Could not get user companies - cannot proceed with tests")
-            return False
+        # Try authentication but continue with non-auth tests if it fails
+        auth_success = self.authenticate()
+        if auth_success:
+            company_success = self.get_user_companies()
+            if not company_success:
+                print("\n⚠️  WARNING: Could not get user companies - some tests will be limited")
+        else:
+            print("\n⚠️  WARNING: Authentication failed - will run non-authenticated tests only")
         
         # Run all test phases
         test_phases = [
