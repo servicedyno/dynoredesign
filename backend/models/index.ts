@@ -28,12 +28,26 @@ import notificationModel from "./notificationModel";
 import notificationPreferencesModel from "./notificationPreferencesModel";
 import kycModel from "./kycModel";
 
-// USDT Pool System models
+// USDT Pool System models (legacy - to be deprecated)
 import {
   usdtPoolAddressModel,
   usdtPoolTransactionModel,
   usdtPoolSweepModel,
 } from "./usdtPoolModels";
+
+// Merchant Pool System models (new per-merchant pool)
+import {
+  merchantWalletModel,
+  merchantTempAddressModel,
+  merchantPoolTransactionModel,
+  merchantPoolSweepModel,
+  MERCHANT_POOL_CRYPTO_TYPES,
+  CHAIN_XPUB_MAPPING,
+  UTXO_CHAINS,
+  ACCOUNT_CHAINS,
+  TOKEN_CHAINS,
+  GAS_TOKEN_MAPPING,
+} from "./merchantPoolModels";
 
 export {
   apiModel,
@@ -61,8 +75,19 @@ export {
   notificationModel,
   notificationPreferencesModel,
   kycModel,
-  // USDT Pool System models
+  // USDT Pool System models (legacy)
   usdtPoolAddressModel,
   usdtPoolTransactionModel,
   usdtPoolSweepModel,
+  // Merchant Pool System models (new)
+  merchantWalletModel,
+  merchantTempAddressModel,
+  merchantPoolTransactionModel,
+  merchantPoolSweepModel,
+  MERCHANT_POOL_CRYPTO_TYPES,
+  CHAIN_XPUB_MAPPING,
+  UTXO_CHAINS,
+  ACCOUNT_CHAINS,
+  TOKEN_CHAINS,
+  GAS_TOKEN_MAPPING,
 };
