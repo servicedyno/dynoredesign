@@ -92,13 +92,14 @@ export const getOrCreateMerchantWallet = async (
 
   if (merchantWallet) {
     // Decrypt and return existing
-    const decryptedMnemonic = await decryptWithKMS(
+    const decryptedData = await tatumApi.decryptSymmetric(
       merchantWallet.dataValues.mnemonic,
       process.env.XPUB_KEY_ID
     );
+    const walletData = JSON.parse(decryptedData);
     return {
       xpub: merchantWallet.dataValues.xpub,
-      mnemonic: decryptedMnemonic,
+      mnemonic: walletData.mnemonic,
     };
   }
 
