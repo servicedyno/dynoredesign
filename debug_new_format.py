@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://merchant-crypto-5.preview.emergentagent.com"
+backend_url = "https://dotenvfix.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(

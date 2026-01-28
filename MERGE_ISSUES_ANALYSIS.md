@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://merchant-crypto-5.preview.emergentagent.com
+SERVER_URL=https://dotenvfix.preview.emergentagent.com
 ```
 
 **Impact:**
