@@ -311,6 +311,170 @@ export const markPaymentReceived = async (
 };
 
 /**
+ * Handle partial payment - customer paid less than expected
+ * Address stays RESERVED with 30-minute grace period for additional payment
+ */
+export const handlePartialPayment = async (
+  poolAddressId: number,
+  receivedAmount: number,
+  incomingTxId: string
+): Promise<{ pendingAmount: number; graceDeadline: Date }> => {
+  try {
+    const poolAddress = await usdtPoolAddressModel.findByPk(poolAddressId);
+    
+    if (!poolAddress) {
+      throw new Error(`Pool address not found: ${poolAddressId}`);
+    }
+
+    const expectedAmount = parseFloat(poolAddress.dataValues.expected_amount) || 0;
+    const previousReceived = parseFloat(poolAddress.dataValues.received_amount) || 0;
+    const totalReceived = previousReceived + receivedAmount;
+    const pendingAmount = Math.max(0, expectedAmount - totalReceived);
+
+    // Set 30-minute grace period from first partial payment
+    const graceDeadline = new Date();
+    graceDeadline.setMinutes(graceDeadline.getMinutes() + 30);
+
+    await poolAddress.update({
+      status: "RESERVED",  // Stay reserved, waiting for more
+      received_amount: totalReceived,
+      is_partial_payment: true,
+      partial_payment_timestamp: poolAddress.dataValues.partial_payment_timestamp || new Date(),
+      reserved_until: graceDeadline,  // Extend reservation for grace period
+    });
+
+    console.log(`[USDTPool] ⚠️ PARTIAL PAYMENT received for ${poolAddress.dataValues.wallet_address}`);
+    console.log(`[USDTPool]    - Received now: $${receivedAmount} USDT`);
+    console.log(`[USDTPool]    - Total received: $${totalReceived} USDT`);
+    console.log(`[USDTPool]    - Expected: $${expectedAmount} USDT`);
+    console.log(`[USDTPool]    - Pending: $${pendingAmount} USDT`);
+    console.log(`[USDTPool]    - Grace period until: ${graceDeadline.toISOString()}`);
+    console.log(`[USDTPool]    - Address stays RESERVED waiting for more payment`);
+
+    return { pendingAmount, graceDeadline };
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[USDTPool] ❌ Failed to handle partial payment:`, message);
+    throw error;
+  }
+};
+
+/**
+ * Handle below-threshold payment - amount too small to forward
+ * 100% goes to admin fee (accumulates in pool), no merchant transfer
+ */
+export const handleBelowThresholdPayment = async (
+  poolAddressId: number,
+  receivedAmount: number,
+  incomingTxId: string
+): Promise<void> => {
+  try {
+    const poolAddress = await usdtPoolAddressModel.findByPk(poolAddressId);
+    
+    if (!poolAddress) {
+      throw new Error(`Pool address not found: ${poolAddressId}`);
+    }
+
+    const currentAdminBalance = parseFloat(poolAddress.dataValues.admin_fee_balance) || 0;
+    const currentTxCount = poolAddress.dataValues.total_transactions || 0;
+
+    // 100% goes to admin fee - no merchant transfer
+    await poolAddress.update({
+      status: "AVAILABLE",  // Release immediately
+      admin_fee_balance: currentAdminBalance + receivedAmount,  // All to admin
+      total_transactions: currentTxCount + 1,
+      current_payment_id: null,
+      current_company_id: null,
+      current_user_id: null,
+      expected_amount: null,
+      received_amount: null,
+      is_partial_payment: false,
+      partial_payment_timestamp: null,
+      reserved_until: null,
+      locked_at: null,
+    });
+
+    console.log(`[USDTPool] 📉 BELOW THRESHOLD payment for ${poolAddress.dataValues.wallet_address}`);
+    console.log(`[USDTPool]    - Amount: $${receivedAmount} USDT`);
+    console.log(`[USDTPool]    - 100% goes to admin fee (no merchant transfer)`);
+    console.log(`[USDTPool]    - New admin balance: $${currentAdminBalance + receivedAmount}`);
+    console.log(`[USDTPool]    - Address released to AVAILABLE`);
+
+    // Check if sweep threshold reached
+    if (currentAdminBalance + receivedAmount >= POOL_CONFIG.SWEEP_THRESHOLD) {
+      console.log(`[USDTPool] 📍 Address reached sweep threshold ($${POOL_CONFIG.SWEEP_THRESHOLD}) - will be swept by cron`);
+    }
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[USDTPool] ❌ Failed to handle below-threshold payment:`, message);
+    throw error;
+  }
+};
+
+/**
+ * Process expired partial payments (after 30-min grace period)
+ * Called by cron to handle partial payments that weren't completed
+ */
+export const processExpiredPartialPayments = async (): Promise<void> => {
+  try {
+    const now = new Date();
+
+    // Find addresses with expired partial payments
+    const expiredPartials = await usdtPoolAddressModel.findAll({
+      where: {
+        status: "RESERVED",
+        is_partial_payment: true,
+        reserved_until: {
+          [Op.lt]: now,
+        },
+      },
+    });
+
+    console.log(`[USDTPool] Processing ${expiredPartials.length} expired partial payments...`);
+
+    for (const address of expiredPartials) {
+      try {
+        const receivedAmount = parseFloat(address.dataValues.received_amount) || 0;
+        const walletType = address.dataValues.wallet_type;
+        
+        // Get forwarding threshold for this currency
+        const thresholdKey = walletType === "USDT-TRC20" ? "USDT_TRC20_THRESHOLD" : "USDT_ERC20_THRESHOLD";
+        const threshold = parseFloat(process.env[thresholdKey] || "3");
+
+        console.log(`[USDTPool] ⏰ Expired partial payment: ${address.dataValues.wallet_address}`);
+        console.log(`[USDTPool]    - Payment ID: ${address.dataValues.current_payment_id}`);
+        console.log(`[USDTPool]    - Received: $${receivedAmount} USDT`);
+        console.log(`[USDTPool]    - Threshold: $${threshold}`);
+
+        if (receivedAmount < threshold) {
+          // Below threshold - all goes to admin
+          console.log(`[USDTPool]    - Below threshold: 100% to admin fee`);
+          await handleBelowThresholdPayment(
+            address.dataValues.pool_address_id,
+            receivedAmount,
+            "expired-partial"
+          );
+        } else {
+          // Above threshold - needs to be forwarded to merchant
+          // This will be handled by the payment controller's processIncompletePayments
+          console.log(`[USDTPool]    - Above threshold: Marking for merchant forwarding`);
+          await address.update({
+            status: "PROCESSING",
+            reserved_until: new Date(Date.now() + 60 * 60 * 1000), // 1 hour to process
+          });
+        }
+      } catch (error) {
+        const message = getErrorMessage(error);
+        console.error(`[USDTPool] Failed to process expired partial for ${address.dataValues.wallet_address}:`, message);
+      }
+    }
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error(`[USDTPool] Fatal error in processExpiredPartialPayments:`, message);
+  }
+};
+
+/**
  * Release expired reservations back to AVAILABLE
  * Called before selecting a new address to ensure we don't have stuck addresses
  */
