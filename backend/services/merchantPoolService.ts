@@ -27,7 +27,6 @@ import tatumApi from "../apis/tatumApi";
 import sequelize from "../utils/dbInstance";
 import { cronLogger } from "../utils/loggers";
 import { currencyConvert, getErrorMessage } from "../helper";
-import { encryptWithKMS, decryptWithKMS } from "../utils/kmsHelper";
 
 // Configuration
 const POOL_CONFIG = {
