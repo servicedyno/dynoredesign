@@ -221,29 +221,40 @@ async def proxy_request(scope, receive, send):
             'body': f'{{"error": "Proxy error: {str(e)}"}}'.encode(),
         })
 
+# Flag to track if services are started
+SERVICES_STARTED = False
+
+async def ensure_services_started():
+    """Ensure Node.js services are started (lazy initialization)."""
+    global HTTP_CLIENT, SERVICES_STARTED
+    
+    if not SERVICES_STARTED:
+        # Start Node.js services
+        start_node_backend()
+        start_api_service()
+        
+        # Start monitoring thread
+        threading.Thread(target=monitor_services, daemon=True).start()
+        
+        # Create HTTP client for proxying
+        HTTP_CLIENT = httpx.AsyncClient(
+            base_url=f"http://127.0.0.1:{NODE_PORT}",
+            timeout=httpx.Timeout(60.0, connect=10.0)
+        )
+        
+        print("✅ Proxy ready on port 8001 → Node.js on port 3300", flush=True)
+        SERVICES_STARTED = True
+
 # ASGI application
 async def app(scope, receive, send):
     """Main ASGI app - handles lifespan and proxies HTTP requests."""
-    global HTTP_CLIENT
+    global HTTP_CLIENT, SERVICES_STARTED
     
     if scope['type'] == 'lifespan':
         while True:
             message = await receive()
             if message['type'] == 'lifespan.startup':
-                # Start Node.js services
-                start_node_backend()
-                start_api_service()
-                
-                # Start monitoring thread
-                threading.Thread(target=monitor_services, daemon=True).start()
-                
-                # Create HTTP client for proxying
-                HTTP_CLIENT = httpx.AsyncClient(
-                    base_url=f"http://127.0.0.1:{NODE_PORT}",
-                    timeout=httpx.Timeout(60.0, connect=10.0)
-                )
-                
-                print("✅ Proxy ready on port 8001 → Node.js on port 3300", flush=True)
+                await ensure_services_started()
                 await send({'type': 'lifespan.startup.complete'})
                 
             elif message['type'] == 'lifespan.shutdown':
@@ -254,4 +265,6 @@ async def app(scope, receive, send):
                 break
             
     elif scope['type'] == 'http':
+        # Lazy initialization if lifespan wasn't supported
+        await ensure_services_started()
         await proxy_request(scope, receive, send)
