@@ -4,13 +4,33 @@
  * Prevents runtime errors from missing configurations
  */
 
-import { ADMIN_WALLETS, FEE_WALLETS, UTXO_CHAINS, NATIVE_CURRENCIES, TOKEN_CHAINS } from "./merchantPoolService";
-
 export async function validateMerchantPoolConfiguration(): Promise<void> {
   console.log("[MerchantPool] 🔍 Validating configuration...");
 
   const errors: string[] = [];
   const warnings: string[] = [];
+
+  // Import constants locally to avoid circular dependency
+  const UTXO_CHAINS = ["BTC", "LTC", "DOGE", "BCH"];
+  const NATIVE_CURRENCIES = ["TRX", "ETH"];
+  const TOKEN_CHAINS = ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20"];
+  
+  const ADMIN_WALLETS: Record<string, string> = {
+    BTC: process.env.BTC || "",
+    ETH: process.env.ETH || "",
+    LTC: process.env.LTC || "",
+    DOGE: process.env.DOGE || "",
+    TRX: process.env.TRX || "",
+    BCH: process.env.BCH || "",
+    "USDT-TRC20": process.env.USDT_TRC20 || "",
+    "USDT-ERC20": process.env.USDT_ERC20 || "",
+    "USDC-ERC20": process.env.USDC_ERC20 || "",
+  };
+  
+  const FEE_WALLETS = {
+    TRX: process.env.TRX_FEE_WALLET || "",
+    ETH: process.env.ETH_FEE_WALLET || "",
+  };
 
   // 1. Validate Admin Wallets
   const allChains = [...UTXO_CHAINS, ...NATIVE_CURRENCIES, ...TOKEN_CHAINS];
