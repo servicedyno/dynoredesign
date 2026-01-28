@@ -59,7 +59,7 @@ class PoolAddressAnalyzer:
         # Credentials for john@dyno.pt (user_id: 28)
         credentials = {
             "email": "john@dyno.pt",
-            "password": "password123"  # Standard test password
+            "password": "Katiekendra123@"  # Correct password from existing tests
         }
         
         try:
