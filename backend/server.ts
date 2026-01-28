@@ -147,6 +147,12 @@ cron.schedule("*/5 * * * *", function () {
   usdtPoolService.releaseExpiredReservations();
 });
 
+// USDT Pool: Process expired partial payments every 5 minutes
+cron.schedule("*/5 * * * *", function () {
+  console.log("processExpiredPartialPayments ==============> checked");
+  usdtPoolService.processExpiredPartialPayments();
+});
+
 // USDT Pool: Cleanup stuck addresses every 15 minutes (safety net)
 cron.schedule("*/15 * * * *", function () {
   console.log("cleanupStalePoolAddresses ==============> checked");
