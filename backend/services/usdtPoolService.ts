@@ -829,14 +829,6 @@ export const processQueuedPayments = async (poolAddressId: number): Promise<void
     console.error(`[USDTPool] Error processing queued payments:`, message);
   }
 };
-    console.error(`[USDTPool] ❌ Failed to handle late payment:`, message);
-    return {
-      handled: false,
-      action: "ERROR",
-      details: { error: message },
-    };
-  }
-};
 
 /**
  * Release an address back to the pool after MERCHANT PAYMENT is sent
