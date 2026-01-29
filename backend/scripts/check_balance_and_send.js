@@ -1,6 +1,14 @@
 require('dotenv').config();
-require('ts-node').register({ transpileOnly: true, compilerOptions: { module: 'commonjs', moduleResolution: 'node' } });
-const tatumApi = require('./apis/tatumApi').default;
+process.chdir('/app/backend');
+require('ts-node').register({ 
+  transpileOnly: true, 
+  compilerOptions: { 
+    module: 'commonjs', 
+    moduleResolution: 'node',
+    esModuleInterop: true
+  } 
+});
+
 const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.USER_NAME, process.env.PASSWORD, {
@@ -11,8 +19,11 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.USER_NAME, proc
 });
 
 async function checkAndSend() {
+  // Import tatumApi after ts-node is registered
+  const tatumApi = require('/app/backend/apis/tatumApi').default;
+  
   const tempAddress = '0x5c8282c96a89f002b908668bab6d5d30c68b610e';
-  const merchantAddress = '0x9a7221b5e32d5f99e8da95585835442e29afb38f';  // From user_wallet
+  const merchantAddress = '0x9a7221b5e32d5f99e8da95585835442e29afb38f';
   const merchantAmount = 0.00340299;
   
   console.log('=== CHECKING BALANCE AND SENDING TO MERCHANT ===');
@@ -22,16 +33,18 @@ async function checkAndSend() {
   
   try {
     // 1. Check current balance
+    console.log('\n1. Checking balance...');
     const balance = await tatumApi.getAddressBalance(tempAddress, 'ETH');
-    console.log('\n1. Current balance on temp address:', balance);
+    console.log('   Balance:', JSON.stringify(balance));
     
     const currentBalance = parseFloat(balance?.balance || 0);
     if (currentBalance < merchantAmount) {
-      console.log('ERROR: Insufficient balance!');
+      console.log('ERROR: Insufficient balance! Have:', currentBalance, 'Need:', merchantAmount);
       process.exit(1);
     }
     
     // 2. Get temp address private key
+    console.log('\n2. Getting private key...');
     const [addr] = await sequelize.query(`
       SELECT private_key FROM tbl_merchant_temp_address WHERE wallet_address = '${tempAddress}'
     `);
@@ -41,14 +54,12 @@ async function checkAndSend() {
       process.exit(1);
     }
     
-    console.log('\n2. Got private key from DB');
-    
     // 3. Decrypt private key
+    console.log('3. Decrypting key...');
     const decryptedKey = await tatumApi.decryptSymmetric(
       addr[0].private_key,
       process.env.TEMP_KEY_ID
     );
-    console.log('3. Decrypted private key');
     
     // 4. Estimate fees
     console.log('\n4. Estimating fees...');
@@ -58,12 +69,9 @@ async function checkAndSend() {
       merchantAddress,
       merchantAmount
     );
-    console.log('   Fees:', fees);
+    console.log('   Fees:', JSON.stringify(fees));
     
-    const gasFee = parseFloat(fees?.gasLimit || 21000) * parseFloat(fees?.gasPrice || 0.000000001) / 1e9;
-    console.log('   Estimated gas fee:', gasFee, 'ETH');
-    
-    // 5. Send to merchant (merchant gets full amount, gas from remaining)
+    // 5. Send to merchant
     console.log('\n5. Sending', merchantAmount, 'ETH to merchant...');
     
     const txResult = await tatumApi.assetToOtherAddress({
@@ -79,13 +87,21 @@ async function checkAndSend() {
     console.log(JSON.stringify(txResult, null, 2));
     
     if (txResult?.txId) {
-      // Update pool transaction with merchant_tx_id
+      // Update pool transaction
       await sequelize.query(`
         UPDATE tbl_merchant_pool_transaction 
         SET merchant_tx_id = '${txResult.txId}', status = 'completed'
         WHERE temp_address_id = 2 AND status = 'pending'
       `);
-      console.log('\n✅ Updated pool transaction record with txId');
+      console.log('\n✅ Updated pool transaction record');
+      
+      // Update temp address - set last_merchant_payout for sweep timing
+      await sequelize.query(`
+        UPDATE tbl_merchant_temp_address 
+        SET last_merchant_payout = NOW()
+        WHERE temp_address_id = 2
+      `);
+      console.log('✅ Updated temp address last_merchant_payout');
     }
     
   } catch (error) {
