@@ -8,8 +8,7 @@ require('ts-node').register({
 const { Sequelize } = require('sequelize');
 const crypto = require('crypto');
 const merchantPoolService = require('/app/backend/services/merchantPoolService');
-const tatumApi = require('/app/backend/apis/tatumApi').default;
-const QRCode = require('qrcode');
+const redis = require('redis');
 
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.USER_NAME, process.env.PASSWORD, {
   host: process.env.HOST,
@@ -19,14 +18,13 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.USER_NAME, proc
 });
 
 async function createTestPayment() {
-  const userId = 28;  // john@dyno.pt
+  const userId = 28;
   const companyId = 38;
   const currency = 'ETH';
-  const amountUSD = 10;  // $10 USD
+  const amountUSD = 10;
   
   console.log('=== CREATING TEST PAYMENT ===');
   console.log('User ID:', userId);
-  console.log('Company ID:', companyId);
   console.log('Currency:', currency);
   console.log('Amount: $', amountUSD, 'USD');
   
@@ -35,8 +33,15 @@ async function createTestPayment() {
     const paymentId = crypto.randomUUID();
     console.log('\n1. Payment ID:', paymentId);
     
-    // 2. Get crypto amount (convert USD to ETH)
-    const ethPrice = await getEthPrice();
+    // 2. Get crypto amount
+    const axios = require('axios');
+    let ethPrice;
+    try {
+      const response = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+      ethPrice = response.data.ethereum.usd;
+    } catch (e) {
+      ethPrice = 2930;
+    }
     const cryptoAmount = (amountUSD / ethPrice).toFixed(8);
     console.log('2. ETH Price: $', ethPrice);
     console.log('   Crypto amount:', cryptoAmount, 'ETH');
@@ -59,7 +64,7 @@ async function createTestPayment() {
     const { userTransactionModel } = require('/app/backend/models');
     await userTransactionModel.create({
       id: paymentId,
-      wallet_id: 370,  // ETH wallet
+      wallet_id: 370,
       user_id: userId,
       payment_mode: 'CRYPTO',
       base_amount: parseFloat(cryptoAmount),
@@ -71,13 +76,11 @@ async function createTestPayment() {
     console.log('4. Created user transaction record');
     
     // 5. Store in Redis
-    const redis = require('redis');
     const client = redis.createClient({ url: process.env.REDIS_PUBLIC_URL });
     await client.connect();
     
     const customerRef = 'customer-test-' + Date.now();
     
-    // Store customer data
     await client.hSet(customerRef, {
       adm_id: String(userId),
       company_id: String(companyId),
@@ -85,8 +88,7 @@ async function createTestPayment() {
       pathType: 'createPayment',
     });
     
-    // Store payment data for address
-    await client.del('crypto-' + address);  // Clear any old data
+    await client.del('crypto-' + address);
     await client.hSet('crypto-' + address, {
       mode: 'CRYPTO',
       amount: cryptoAmount,
@@ -94,7 +96,7 @@ async function createTestPayment() {
       ref: customerRef,
       currency: currency,
       payment_id: paymentId,
-      unique_tx_id: paymentId,  // Add both for compatibility
+      unique_tx_id: paymentId,
       walletType: 'customer',
       temp_id: String(poolAddress.dataValues.temp_address_id),
       is_merchant_pool: 'true',
@@ -106,9 +108,6 @@ async function createTestPayment() {
     await client.quit();
     console.log('5. Stored payment data in Redis');
     
-    // 6. Generate QR code
-    const qrCode = await QRCode.toDataURL(address, { width: 300 });
-    
     console.log('\n========================================');
     console.log('✅ TEST PAYMENT CREATED SUCCESSFULLY');
     console.log('========================================');
@@ -118,12 +117,8 @@ async function createTestPayment() {
     console.log('  Amount:', cryptoAmount, 'ETH (~$' + amountUSD + ' USD)');
     console.log('\n📋 Send', cryptoAmount, 'ETH to:');
     console.log('   ', address);
-    console.log('\n⏰ Reservation expires in 30 minutes');
-    console.log('\nAfter sending, the webhook should automatically:');
-    console.log('  1. Detect the payment');
-    console.log('  2. Update user_transaction to successful');
-    console.log('  3. Transfer merchant amount to their wallet');
-    console.log('  4. Mark address as IN_USE for sweep');
+    console.log('\n⏰ Sweep time reduced to 3 minutes');
+    console.log('   After payment, admin sweep will happen in ~3 min');
     
   } catch (error) {
     console.error('ERROR:', error.message || error);
@@ -131,17 +126,6 @@ async function createTestPayment() {
   }
   
   process.exit(0);
-}
-
-async function getEthPrice() {
-  try {
-    const axios = require('axios');
-    const response = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-    return response.data.ethereum.usd;
-  } catch (e) {
-    console.log('Could not fetch ETH price, using estimate');
-    return 3300;  // Fallback
-  }
 }
 
 createTestPayment();
