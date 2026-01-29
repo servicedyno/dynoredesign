@@ -8,7 +8,9 @@ Update the checkout page to only show cryptocurrencies that the merchant has con
 
 ## Backend API
 
-**Endpoint:** `GET /api/wallet/configured-currencies`
+**Endpoint:** `GET /api/pay/configured-currencies`
+
+> **Note:** This endpoint requires customer authentication (the token received during checkout session initialization).
 
 **Response:**
 ```json
