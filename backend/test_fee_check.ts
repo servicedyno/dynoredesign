@@ -1,4 +1,4 @@
-import * as paymentController from './controller/paymentController';
+import paymentController from './controller/paymentController';
 import { connectRedis } from './utils/redisInstance';
 
 async function testFeeBalance() {
