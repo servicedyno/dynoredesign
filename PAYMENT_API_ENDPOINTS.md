@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://env-checker-1.preview.emergentagent.com/api
+Development: https://project-setup-33.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

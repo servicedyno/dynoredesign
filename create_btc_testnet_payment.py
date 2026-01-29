@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://env-checker-1.preview.emergentagent.com/api"
+BASE_URL = "https://project-setup-33.preview.emergentagent.com/api"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 
