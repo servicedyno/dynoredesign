@@ -2532,7 +2532,13 @@ const cryptoVerification = async (address, webhook = true) => {
           if (customerData?.pathType.includes("createPayment") && overPayment) {
             await tatumApi.deleteSubscription(tempAddressData.subscription_id);
             await transaction.commit();
-            await deleteRedisItem("crypto-" + address);
+            // FIXED: Use soft delete with TTL for checkout status polling
+            await setRedisItem("crypto-" + address, {
+              ...tempData,
+              status: "overpayment",
+              completedAt: new Date().toISOString(),
+            });
+            await softDeleteRedisItem("crypto-" + address, 1800);
             throw {
               status: 200,
               paymentStatus: "overpayment",
