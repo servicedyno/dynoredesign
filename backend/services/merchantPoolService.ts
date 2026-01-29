@@ -627,7 +627,8 @@ export const releaseAddress = async (
   const sweepConfig = getSweepConfig(walletType);
 
   // For UTXO chains (batch mode), admin fee is already sent in same transaction as merchant
-  // Don't accumulate admin fee, just release address immediately
+  // Address can go directly to AVAILABLE
+  // For non-UTXO chains, admin fee is pending sweep, so status = IN_USE
   const isUTXOBatchTransfer = sweepConfig.mode === "batch";
   
   const currentAdminBalance = parseFloat(poolAddress.dataValues.admin_fee_balance) || 0;
@@ -635,9 +636,14 @@ export const releaseAddress = async (
   const currentTxCount = poolAddress.dataValues.total_transactions || 0;
 
   const newAdminBalance = isUTXOBatchTransfer ? currentAdminBalance : (currentAdminBalance + adminFeeAmount);
+  
+  // UTXO chains: AVAILABLE (no pending sweep)
+  // Non-UTXO chains with admin fee: IN_USE (pending sweep)
+  // Non-UTXO chains without admin fee: AVAILABLE
+  const newStatus = isUTXOBatchTransfer ? "AVAILABLE" : (newAdminBalance > 0 ? "IN_USE" : "AVAILABLE");
 
   await poolAddress.update({
-    status: "AVAILABLE",
+    status: newStatus,
     admin_fee_balance: newAdminBalance,
     gas_balance: Math.max(0, currentGasBalance - gasUsed),
     total_transactions: currentTxCount + 1,
@@ -654,6 +660,7 @@ export const releaseAddress = async (
   });
 
   console.log(`[MerchantPool] ✅ Released address ${poolAddress.dataValues.wallet_address} (${walletType})`);
+  console.log(`[MerchantPool]    - New status: ${newStatus}`);
   
   if (isUTXOBatchTransfer) {
     console.log(`[MerchantPool]    - UTXO batch transfer: Admin fee ${adminFeeAmount} already sent`);
