@@ -67,6 +67,17 @@ const companyModel = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    // Webhook configuration
+    webhook_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      comment: "URL to receive payment webhook notifications",
+    },
+    webhook_secret: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: "Secret key for webhook signature verification",
+    },
   },
   {
     tableName: "tbl_company",
