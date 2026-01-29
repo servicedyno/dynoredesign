@@ -2304,7 +2304,7 @@ const cryptoVerification = async (address, webhook = true) => {
             userAmount: Number(userAmountToSend),
             userAddress: walletData.dataValues.wallet_address,
           }),
-          isMerchantPool: tempData.is_merchant_pool,  // Pass merchant pool flag
+          isMerchantPool: String(tempData.is_merchant_pool) === "true",  // Pass merchant pool flag as boolean
         });
         
         console.log(`[cryptoVerification] settleCryptoTransaction result:
