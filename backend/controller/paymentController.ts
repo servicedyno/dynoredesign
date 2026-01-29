@@ -4298,6 +4298,70 @@ const getCryptoPriceForPayment = async (symbol: string): Promise<number> => {
   }
 };
 
+/**
+ * Get Configured Currencies for Checkout
+ * Returns only wallets configured for the company (from customer token)
+ * Used by checkout page to filter available payment currencies
+ * GET /api/pay/configured-currencies
+ */
+const getConfiguredCurrenciesForCheckout = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  try {
+    // Get company_id from customer token (set by customerAuthMiddleware)
+    const customerData = res.locals.customerData;
+    
+    if (!customerData || !customerData.company_id) {
+      return errorResponseHelper(res, 400, "Invalid customer session");
+    }
+    
+    const companyId = customerData.company_id;
+    
+    // Get the company to find the user_id (merchant)
+    const company = await companyModel.findOne({
+      where: { company_id: companyId },
+      attributes: ['company_id', 'user_id'],
+    });
+    
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found");
+    }
+    
+    // Get configured wallets for this company's merchant
+    const configuredWallets = await userWalletModel.findAll({
+      where: {
+        user_id: (company as any).user_id,
+        company_id: companyId,
+        wallet_address: { [Op.not]: null },
+      },
+      attributes: ['wallet_type', 'wallet_address', 'wallet_name'],
+    });
+    
+    // Extract unique currencies
+    const currencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
+    
+    const response = {
+      configured_currencies: currencies,
+      wallet_count: configuredWallets.length,
+      wallets: configuredWallets.map((w: any) => ({
+        currency: w.wallet_type,
+        label: w.wallet_name,
+        address_masked: w.wallet_address ? 
+          `${w.wallet_address.substring(0, 6)}...${w.wallet_address.substring(w.wallet_address.length - 4)}` : 
+          null
+      })),
+      skip_selection: currencies.length === 1,
+    };
+    
+    successResponseHelper(res, 200, "Configured currencies retrieved successfully", response);
+  } catch (e) {
+    const message = getErrorMessage(e);
+    apiLogger.error(message, {}, new Error(e));
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   getData,
   addPayment,
@@ -4323,5 +4387,6 @@ export default {
   processIncompletePayments,
   getNetworkFees,
   calculatePaymentAmount,
+  getConfiguredCurrenciesForCheckout,
 };
 
