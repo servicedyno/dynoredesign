@@ -170,8 +170,30 @@ const tatumCryptoWebHook = async (
           txId: payload.txId,  // MUST be set before cryptoVerification
         });
 
-        await paymentController.cryptoVerification(address, true);
-        console.log("[tatumCryptoWebHook] cryptoVerification completed successfully");
+        // Retry cryptoVerification up to 3 times with exponential backoff
+        let lastError: Error | null = null;
+        const maxRetries = 3;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            await paymentController.cryptoVerification(address, true);
+            console.log("[tatumCryptoWebHook] cryptoVerification completed successfully");
+            lastError = null;
+            break;
+          } catch (retryError: any) {
+            lastError = retryError;
+            if (attempt < maxRetries) {
+              const waitTime = 2000 * Math.pow(2, attempt - 1);
+              console.warn(`[tatumCryptoWebHook] cryptoVerification failed (attempt ${attempt}/${maxRetries}): ${retryError.message}`);
+              console.warn(`[tatumCryptoWebHook] Retrying in ${waitTime}ms...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+          }
+        }
+        
+        if (lastError) {
+          throw lastError;
+        }
 
         // SUCCESS: Mark as processed (txId already set above)
         await setRedisItem("crypto-" + address, {
@@ -193,7 +215,7 @@ const tatumCryptoWebHook = async (
         console.log("[tatumCryptoWebHook] Redis updated with txId after successful processing");
 
       } catch (verifyError) {
-        console.error("[tatumCryptoWebHook] Error in cryptoVerification:", verifyError);
+        console.error("[tatumCryptoWebHook] Error in cryptoVerification after retries:", verifyError);
         // IMPORTANT: Don't set txId on failure - allow webhook retry
         // Reset status to pending so it can be retried
         await setRedisItem("crypto-" + address, {
