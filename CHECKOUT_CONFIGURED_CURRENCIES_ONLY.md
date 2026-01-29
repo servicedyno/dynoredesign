@@ -52,6 +52,13 @@ const [availableCryptos, setAvailableCryptos] = useState<string[]>([]);
 const [availableUSDTNetworks, setAvailableUSDTNetworks] = useState<('TRC20' | 'ERC20')[]>([]);
 const [loadingCurrencies, setLoadingCurrencies] = useState(true);
 const [skipSelection, setSkipSelection] = useState(false);
+
+// Fee information
+const [feeInfo, setFeeInfo] = useState<{
+  fee_payer: 'customer' | 'company';
+  fee_percent: number;
+  fee_display: string;
+} | null>(null);
 ```
 
 ---
