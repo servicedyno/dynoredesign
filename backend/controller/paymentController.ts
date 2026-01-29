@@ -4341,22 +4341,62 @@ const getConfiguredCurrenciesForCheckout = async (
     // Extract unique currencies
     const currencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
     
-    // Get fee information from Redis (payment session) if available
+    // Get fee and transaction information from Redis (payment session)
     const paymentRef = customerData.ref;
+    const transactionId = customerData.transaction_id;
+    
     let feeInfo = {
       fee_payer: (company as any).fee_payer || 'company',
       transaction_fee_percent: parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0'),
     };
     
-    // Try to get fee_payer from payment link data
+    let transactionAmount = 0;
+    let transactionCurrency = 'USD';
+    let linkId: string | null = null;
+    
+    // Try to get fee_payer and amount from payment link data
     if (paymentRef) {
       const paymentData = await getRedisItem(`customer-${paymentRef}`);
-      if (paymentData && paymentData.fee_payer) {
-        feeInfo.fee_payer = paymentData.fee_payer;
+      if (paymentData) {
+        if (paymentData.fee_payer) {
+          feeInfo.fee_payer = paymentData.fee_payer;
+        }
+        if (paymentData.amount) {
+          transactionAmount = parseFloat(paymentData.amount);
+        }
+        if (paymentData.currency || paymentData.base_currency) {
+          transactionCurrency = paymentData.currency || paymentData.base_currency;
+        }
+        if (paymentData.link_id || paymentData.payment_link_id) {
+          linkId = paymentData.link_id || paymentData.payment_link_id;
+        }
       }
     }
     
-    const response = {
+    // If no link_id from Redis, try to get from transaction record
+    if (!linkId && transactionId) {
+      const transaction = await transactionModel.findOne({
+        where: { transaction_id: transactionId },
+        attributes: ['transaction_id', 'link_id', 'amount', 'currency'],
+      });
+      if (transaction) {
+        linkId = (transaction as any).link_id;
+        if (!transactionAmount && (transaction as any).amount) {
+          transactionAmount = parseFloat((transaction as any).amount);
+        }
+        if ((transaction as any).currency) {
+          transactionCurrency = (transaction as any).currency;
+        }
+      }
+    }
+    
+    // Calculate fee amount if customer pays fees
+    let feeAmount = 0;
+    if (feeInfo.fee_payer === 'customer' && transactionAmount > 0) {
+      feeAmount = transactionAmount * (feeInfo.transaction_fee_percent / 100);
+    }
+    
+    const response: any = {
       configured_currencies: currencies,
       wallet_count: configuredWallets.length,
       wallets: configuredWallets.map((w: any) => ({
@@ -4367,6 +4407,11 @@ const getConfiguredCurrenciesForCheckout = async (
           null
       })),
       skip_selection: currencies.length === 1,
+      // Payment link ID
+      link_id: linkId,
+      // Transaction info
+      transaction_amount: transactionAmount,
+      transaction_currency: transactionCurrency,
       // Fee information for checkout display
       fee_payer: feeInfo.fee_payer,
       fee_percent: feeInfo.transaction_fee_percent,
@@ -4375,9 +4420,23 @@ const getConfiguredCurrenciesForCheckout = async (
         : 'No additional fees',
     };
     
+    // Include fee amount breakdown if customer pays fees
+    if (feeInfo.fee_payer === 'customer' && transactionAmount > 0) {
+      response.fee_breakdown = {
+        base_amount: transactionAmount,
+        fee_amount: parseFloat(feeAmount.toFixed(2)),
+        total_amount: parseFloat((transactionAmount + feeAmount).toFixed(2)),
+        currency: transactionCurrency,
+      };
+    }
+    
     successResponseHelper(res, 200, "Configured currencies retrieved successfully", response);
   } catch (e) {
     const message = getErrorMessage(e);
+    apiLogger.error(message, {}, new Error(e));
+    errorResponseHelper(res, 500, message);
+  }
+};
     apiLogger.error(message, {}, new Error(e));
     errorResponseHelper(res, 500, message);
   }
