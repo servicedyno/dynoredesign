@@ -42,6 +42,43 @@ const POOL_CONFIG = {
   TRX_GAS_MIN_DEFICIT: 10,
   ETH_GAS_AMOUNT: 0.004,
   ETH_GAS_MIN_DEFICIT: 0.001,
+  
+  // Retry settings
+  MAX_RETRIES: 3,
+  RETRY_DELAY_MS: 2000,
+  SWEEP_RETRY_DELAY_MS: 5000,
+};
+
+/**
+ * Retry helper with exponential backoff
+ */
+const withRetry = async <T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  maxRetries: number = POOL_CONFIG.MAX_RETRIES,
+  delayMs: number = POOL_CONFIG.RETRY_DELAY_MS
+): Promise<T> => {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      const message = getErrorMessage(error);
+      
+      if (attempt < maxRetries) {
+        const waitTime = delayMs * Math.pow(2, attempt - 1); // Exponential backoff
+        console.warn(`[MerchantPool] ⚠️ ${operationName} failed (attempt ${attempt}/${maxRetries}): ${message}`);
+        console.warn(`[MerchantPool] Retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      } else {
+        console.error(`[MerchantPool] ❌ ${operationName} failed after ${maxRetries} attempts: ${message}`);
+      }
+    }
+  }
+  
+  throw lastError;
 };
 
 // UTXO chains that support batch transfers (merchant + admin in one transaction)
