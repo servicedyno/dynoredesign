@@ -18,45 +18,30 @@ login_response = requests.post(f"{BASE_URL}/user/login", json={
     "password": password
 })
 
-print(f"   Login response status: {login_response.status_code}")
 login_data = login_response.json()
-print(f"   Response keys: {login_data.keys()}")
 
 if login_response.status_code != 200:
     print(f"❌ Login failed: {login_response.status_code}")
-    print(json.dumps(login_data, indent=2))
     exit(1)
 
-# Extract token - check different possible structures
-token = None
-if "token" in login_data:
-    token = login_data["token"]
-elif "data" in login_data and isinstance(login_data["data"], dict):
-    token = login_data["data"].get("token")
-
-user_data = login_data.get("data", login_data)
-if isinstance(user_data, str):
-    user_data = login_data
+# Extract token from data.accessToken
+token = login_data.get("data", {}).get("accessToken")
+user_data = login_data.get("data", {}).get("userData", {})
 
 print(f"✅ Logged in as: {user_data.get('name', 'N/A')} (user_id: {user_data.get('user_id', 'N/A')})")
-print(f"   Company ID: {user_data.get('company_id', 'N/A')}")
-print(f"   Token found: {'Yes' if token else 'No'}")
-
-if not token:
-    print("Full response:")
-    print(json.dumps(login_data, indent=2))
-    exit(1)
+print(f"   Email: {user_data.get('email', 'N/A')}")
+print(f"   Status: {user_data.get('status', 'N/A')}")
 
 headers = {"Authorization": f"Bearer {token}"}
 
-# Step 2: Get wallet addresses
-print("\n2. Fetching wallet addresses...")
+# Step 2: Get wallet addresses (pool addresses)
+print("\n2. Fetching pool wallet addresses...")
 wallet_response = requests.get(f"{BASE_URL}/wallet/getWalletAddresses", headers=headers)
 
 if wallet_response.status_code == 200:
     wallet_data = wallet_response.json()
     addresses = wallet_data.get("data", [])
-    print(f"✅ Found {len(addresses)} wallet addresses")
+    print(f"✅ Found {len(addresses)} pool addresses")
     
     if addresses:
         # Group by currency
@@ -67,54 +52,58 @@ if wallet_response.status_code == 200:
                 by_currency[currency] = []
             by_currency[currency].append(addr)
         
-        print("\n   Addresses by currency:")
+        print("\n   Pool Addresses by Currency:")
+        print("   " + "-" * 50)
         for currency, addrs in sorted(by_currency.items()):
-            print(f"   - {currency}: {len(addrs)} address(es)")
+            print(f"\n   {currency}: {len(addrs)} address(es)")
             for a in addrs:
                 addr_str = a.get("address", "N/A")
                 status = a.get("status", "N/A")
-                print(f"     • {addr_str[:45]}... (status: {status})")
+                print(f"     • {addr_str[:50]}...")
+                print(f"       Status: {status}")
     else:
-        print("   No wallet addresses found in pool")
+        print("   ⚠️ No pool addresses found - pool may not be initialized")
 else:
     print(f"❌ Failed to get wallet addresses: {wallet_response.status_code}")
     print(wallet_response.text)
 
-# Step 3: Get wallets (merchant wallets/xpubs)
+# Step 3: Get wallets (merchant xpub wallets)
 print("\n3. Fetching merchant wallets (xpubs)...")
 wallets_response = requests.get(f"{BASE_URL}/wallet/getWallet", headers=headers)
 
 if wallets_response.status_code == 200:
     wallets_data = wallets_response.json()
     wallets = wallets_data.get("data", [])
-    print(f"✅ Found {len(wallets)} merchant wallets")
+    print(f"✅ Found {len(wallets)} total wallets")
     
-    # Filter crypto wallets
-    crypto_wallets = [w for w in wallets if w.get("wallet_type") not in ["USD", "EUR", "GBP", "NGN"]]
-    fiat_wallets = [w for w in wallets if w.get("wallet_type") in ["USD", "EUR", "GBP", "NGN"]]
+    # Filter crypto vs fiat wallets
+    fiat_types = ["USD", "EUR", "GBP", "NGN", "CAD", "AUD"]
+    crypto_wallets = [w for w in wallets if w.get("wallet_type") not in fiat_types]
+    fiat_wallets = [w for w in wallets if w.get("wallet_type") in fiat_types]
     
     print(f"   - Crypto wallets: {len(crypto_wallets)}")
     print(f"   - Fiat wallets: {len(fiat_wallets)}")
     
     if crypto_wallets:
-        print("\n   Crypto wallet types configured:")
+        print("\n   Configured Crypto Wallets (xpubs):")
+        print("   " + "-" * 50)
         for w in crypto_wallets:
             wtype = w.get('wallet_type', 'N/A')
             addr = w.get('address', 'N/A')
-            if addr and len(addr) > 50:
-                addr = addr[:50] + "..."
-            print(f"   - {wtype}: {addr}")
+            if addr and len(addr) > 60:
+                addr = addr[:60] + "..."
+            print(f"   • {wtype}: {addr}")
 else:
     print(f"❌ Failed to get wallets: {wallets_response.status_code}")
 
-# Step 4: Check dashboard for pool status
-print("\n4. Checking dashboard for pool status...")
+# Step 4: Check dashboard
+print("\n4. Dashboard Overview...")
 dashboard_response = requests.get(f"{BASE_URL}/dashboard", headers=headers)
 
 if dashboard_response.status_code == 200:
     dashboard_data = dashboard_response.json()
     data = dashboard_data.get("data", {})
-    print(f"✅ Dashboard data retrieved")
+    print(f"✅ Dashboard data:")
     print(f"   - Active wallets: {data.get('active_wallets', 'N/A')}")
     print(f"   - Total transactions: {data.get('total_transactions', {}).get('count', 'N/A')}")
     print(f"   - Fee tier: {data.get('fee_tier', {}).get('current_tier', 'N/A')}")
@@ -122,5 +111,5 @@ else:
     print(f"❌ Failed to get dashboard: {dashboard_response.status_code}")
 
 print("\n" + "=" * 60)
-print("SUMMARY")
+print("POOL SUMMARY")
 print("=" * 60)
