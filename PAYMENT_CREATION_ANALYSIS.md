@@ -206,7 +206,7 @@ const { id } = await tatumApi.createSubscription(
 
 **Current SERVER_URL:**
 ```env
-SERVER_URL=https://crypto-sweep-retry.preview.emergentagent.com
+SERVER_URL=https://dynopay-env-1.preview.emergentagent.com
 ```
 
 ---
