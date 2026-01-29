@@ -1394,6 +1394,12 @@ const Crypto = async (
       throw { message: "Invalid user ID for payment" };
     }
     
+    // Validate and parse company_id - it can be null but not NaN
+    const parsedCompanyId = companyId ? parseInt(String(companyId)) : null;
+    if (companyId && isNaN(parsedCompanyId as number)) {
+      throw { message: "Invalid company ID for payment" };
+    }
+    
     // Generate unique payment ID
     const paymentId = crypto.randomUUID();
     
@@ -1407,7 +1413,7 @@ const Crypto = async (
       currency,
       paymentId,
       Number(userId),
-      Number(companyId),
+      parsedCompanyId || 0,  // Pass 0 if no company_id (will be treated as null in DB)
       Number(data.amount) || 0
     );
     
