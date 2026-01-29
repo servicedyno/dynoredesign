@@ -1,4 +1,311 @@
 export const userPaths = {
+  '/api/user/registerUser': {
+    post: {
+      tags: ['User Management'],
+      summary: 'Register with email',
+      description: `Create a new user account using email and password.
+      
+**Features:**
+- Creates user profile with default avatar
+- Generates unique referral code for the user
+- Creates default fiat and crypto wallets
+- Sends welcome email
+- If referral_code is provided, links accounts for rewards`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['name', 'email', 'password'],
+              properties: {
+                name: { 
+                  type: 'string', 
+                  description: '✅ REQUIRED: Full name',
+                  example: 'John Doe' 
+                },
+                email: { 
+                  type: 'string', 
+                  format: 'email',
+                  description: '✅ REQUIRED: Email address',
+                  example: 'john@example.com' 
+                },
+                password: { 
+                  type: 'string', 
+                  minLength: 6,
+                  description: '✅ REQUIRED: Password (min 6 characters)',
+                  example: 'SecurePass123@' 
+                },
+                referral_code: { 
+                  type: 'string',
+                  description: '📝 OPTIONAL: Referral code from another user',
+                  example: 'DYNO2025USR8A2B3C4D5'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Registration successful',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Registered Successful!' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      userData: { $ref: '#/components/schemas/User' },
+                      accessToken: { type: 'string', description: 'JWT access token (7 days expiry)' },
+                      referral_code: { type: 'string', description: 'User\'s unique referral code' },
+                      referred_by: { type: 'string', nullable: true, description: 'Referral code used during signup' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        503: { description: 'Account already exists with this email' },
+        500: { description: 'Server error' }
+      }
+    }
+  },
+  '/api/user/login': {
+    post: {
+      tags: ['User Management'],
+      summary: 'Login with email and password',
+      description: `Authenticate user with email and password credentials.
+      
+**Returns:**
+- User profile data
+- JWT access token (valid for 7 days)
+- Company and wallet information`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['email', 'password'],
+              properties: {
+                email: { 
+                  type: 'string', 
+                  format: 'email',
+                  description: '✅ REQUIRED: Registered email address',
+                  example: 'john@example.com' 
+                },
+                password: { 
+                  type: 'string',
+                  description: '✅ REQUIRED: Account password',
+                  example: 'SecurePass123@' 
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Login successful',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Login Successful!' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      userData: { $ref: '#/components/schemas/User' },
+                      accessToken: { type: 'string', description: 'JWT access token' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Email and password are required' },
+        401: { description: 'Invalid email or password' },
+        500: { description: 'Server error' }
+      }
+    }
+  },
+  '/api/user/forgot-password': {
+    post: {
+      tags: ['User Management'],
+      summary: 'Request password reset',
+      description: `Send password reset email with secure token link.
+      
+**Security Notes:**
+- Response is always success (doesn't reveal if email exists)
+- Reset token valid for 1 hour
+- Link sent to registered email address`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['email'],
+              properties: {
+                email: { 
+                  type: 'string', 
+                  format: 'email',
+                  description: '✅ REQUIRED: Registered email address',
+                  example: 'john@example.com' 
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Reset email sent (if email exists)',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'If the email exists, a reset link has been sent' },
+                  data: { type: 'object' }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Email is required' },
+        500: { description: 'Server error' }
+      }
+    }
+  },
+  '/api/user/reset-password': {
+    post: {
+      tags: ['User Management'],
+      summary: 'Reset password with token',
+      description: `Reset password using the token received via email.
+      
+**Requirements:**
+- Valid reset token (from email link)
+- Token not expired (1 hour validity)
+- New password minimum 6 characters`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['token', 'email', 'newPassword'],
+              properties: {
+                token: { 
+                  type: 'string',
+                  description: '✅ REQUIRED: Reset token from email link',
+                  example: 'a1b2c3d4e5f6...'
+                },
+                email: { 
+                  type: 'string', 
+                  format: 'email',
+                  description: '✅ REQUIRED: Email address',
+                  example: 'john@example.com' 
+                },
+                newPassword: { 
+                  type: 'string',
+                  minLength: 6,
+                  description: '✅ REQUIRED: New password (min 6 characters)',
+                  example: 'NewSecurePass123@' 
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Password reset successful',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Password has been reset successfully' },
+                  data: { type: 'object' }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid or expired reset token' },
+        500: { description: 'Server error' }
+      }
+    }
+  },
+  '/api/user/google-signin': {
+    post: {
+      tags: ['User Management'],
+      summary: 'Google OAuth login',
+      description: `Authenticate or register using Google OAuth.
+      
+**Accepts either:**
+- \`idToken\` - Google ID token from Sign-In
+- \`accessToken\` - Google OAuth access token
+
+**Behavior:**
+- If user exists: Returns existing user data
+- If new user: Creates account and wallets automatically`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                idToken: { 
+                  type: 'string',
+                  description: '📝 Google ID token (preferred)',
+                  example: 'eyJhbGciOiJS...'
+                },
+                accessToken: { 
+                  type: 'string',
+                  description: '📝 Google OAuth access token (alternative)',
+                  example: 'ya29.a0AfH6SM...'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Login/Registration successful',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Login Successful!' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      userData: { $ref: '#/components/schemas/User' },
+                      accessToken: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Google ID token or access token is required' },
+        401: { description: 'Invalid Google token' },
+        500: { description: 'Server error' }
+      }
+    }
+  },
   '/api/user/registerPhone': {
     post: {
       tags: ['User Management'],
