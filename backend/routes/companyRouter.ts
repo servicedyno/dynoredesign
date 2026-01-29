@@ -27,4 +27,9 @@ companyRouter.delete("/deleteCompany/:id", authMiddleware, companyController.del
 // TAX ID Validation endpoint
 companyRouter.post("/validateTaxId", authMiddleware, companyController.validateTaxId);
 
+// Webhook configuration endpoints
+companyRouter.put("/webhook-settings/:id", authMiddleware, companyController.updateWebhookSettings);
+companyRouter.get("/webhook-settings/:id", authMiddleware, companyController.getWebhookSettings);
+companyRouter.post("/webhook-test/:id", authMiddleware, companyController.testWebhook);
+
 export default companyRouter;
