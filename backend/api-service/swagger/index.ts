@@ -145,19 +145,17 @@ const customCss = `
 `;
 
 export const setupMerchantSwagger = (app: Express) => {
-  app.use(
-    "/docs",
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec, {
-      customCss,
-      customSiteTitle: "DynoPay Merchant API",
-      customfavIcon: "https://dynopay.com/favicon.ico",
-      swaggerOptions: {
-        docExpansion: 'list',
-        filter: true,
-        showRequestDuration: true,
-        persistAuthorization: true,
-      },
+  app.use("/docs", swaggerUi.serve);
+  app.get("/docs", swaggerUi.setup(swaggerSpec, {
+    customCss,
+    customSiteTitle: "DynoPay Merchant API",
+    customfavIcon: "https://dynopay.com/favicon.ico",
+    swaggerOptions: {
+      docExpansion: 'list',
+      filter: true,
+      showRequestDuration: true,
+      persistAuthorization: true,
+    },
     })
   );
 
