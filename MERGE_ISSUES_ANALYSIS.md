@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://dynopay-env-1.preview.emergentagent.com
+SERVER_URL=https://checkout-repair-19.preview.emergentagent.com
 ```
 
 **Impact:**

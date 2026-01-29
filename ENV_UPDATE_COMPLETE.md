@@ -12,10 +12,10 @@ Successfully updated all environment variables in both backend and frontend .env
 #### 1. **Server URL Updated**
 ```bash
 # OLD:
-SERVER_URL=https://dynopay-env-1.preview.emergentagent.com
+SERVER_URL=https://checkout-repair-19.preview.emergentagent.com
 
 # NEW:
-SERVER_URL=https://dynopay-env-1.preview.emergentagent.com
+SERVER_URL=https://checkout-repair-19.preview.emergentagent.com
 ```
 
 #### 2. **Contract Addresses - Added USDC**
@@ -70,10 +70,10 @@ USDT_ERC20_SWEEP=threshold:50
 #### Updated Backend URL
 ```bash
 # OLD:
-REACT_APP_BACKEND_URL=https://dynopay-env-1.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://checkout-repair-19.preview.emergentagent.com
 
 # NEW:
-REACT_APP_BACKEND_URL=https://dynopay-env-1.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://checkout-repair-19.preview.emergentagent.com
 ```
 
 ---
@@ -88,7 +88,7 @@ REACT_APP_BACKEND_URL=https://dynopay-env-1.preview.emergentagent.com
 
 ✅ **Frontend Service**: Running on port 3000
 - Status: `RUNNING`
-- Backend URL configured: `https://dynopay-env-1.preview.emergentagent.com`
+- Backend URL configured: `https://checkout-repair-19.preview.emergentagent.com`
 
 ✅ **All Services**: Restarted successfully
 - MongoDB: Running

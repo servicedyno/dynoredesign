@@ -329,5 +329,5 @@ The system demonstrates:
 
 **Report Generated:** January 25, 2026  
 **Test Credentials:** nomadly@moxx.co  
-**Backend URL:** https://dynopay-env-1.preview.emergentagent.com  
+**Backend URL:** https://checkout-repair-19.preview.emergentagent.com  
 **Tester:** Main Development Agent

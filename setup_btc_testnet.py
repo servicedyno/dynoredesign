@@ -76,7 +76,7 @@ async function setup() {{
     console.log("✅ Address registered in database");
     
     // Create webhook
-    const webhookUrl = "https://dynopay-env-1.preview.emergentagent.com/api/tatum-crypto-webhook";
+    const webhookUrl = "https://checkout-repair-19.preview.emergentagent.com/api/tatum-crypto-webhook";
     const subRes = await axios.post(
       "https://api.tatum.io/v3/subscription",
       {{
