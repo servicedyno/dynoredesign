@@ -76,7 +76,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 email: {
                   type: 'string',
                   format: 'email',
-                  description: '✅ REQUIRED: Customer email for notifications and payment link access',
+                  description: '📧 OPTIONAL: Customer email for payment notifications and receipts',
                   example: 'customer@example.com'
                 },
                 modes: {
