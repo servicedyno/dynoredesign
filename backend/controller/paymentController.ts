@@ -1833,6 +1833,29 @@ const verifyCryptoPayment = async (
     }
     
     const redisStatus = tempData?.status;
+    const expectedAmount = parseFloat(tempData?.amount || '0');
+    const receivedAmount = parseFloat(tempData?.receivedAmount || '0');
+    const previousAmount = parseFloat(tempData?.previousAmount || '0');
+    const currency = tempData?.currency;
+    
+    // Check if this is a partial payment scenario (incomplete flag set)
+    if (tempData?.incomplete === "true" || tempData?.incomplete === true) {
+      const totalPaid = previousAmount;
+      const originalExpected = expectedAmount + previousAmount; // amount is now the remaining
+      const remainingAmount = expectedAmount;
+      
+      return successResponseHelper(res, 200, "Partial payment received", {
+        status: "partial",
+        message: "Partial payment received. Please pay the remaining amount.",
+        paid_amount: totalPaid.toFixed(6),
+        expected_amount: originalExpected.toFixed(6),
+        remaining_amount: remainingAmount.toFixed(6),
+        currency: currency,
+        txId: tempData?.previousTxId,
+        grace_period_minutes: 30,
+        partial_payment_timestamp: tempData?.partialPaymentTimestamp
+      });
+    }
     
     // Return status based on Redis state
     // Status flow: pending -> processing -> successful OR failed
@@ -1840,7 +1863,9 @@ const verifyCryptoPayment = async (
       // Payment initiated but no transaction detected yet
       return successResponseHelper(res, 200, "Waiting for payment", {
         status: "waiting",
-        message: "Payment address generated, waiting for transaction"
+        message: "Payment address generated, waiting for transaction",
+        expected_amount: expectedAmount.toFixed(6),
+        currency: currency
       });
     }
     
@@ -1851,7 +1876,8 @@ const verifyCryptoPayment = async (
         message: "Payment detected, awaiting confirmation",
         txId: tempData.txId,
         amount: tempData.receivedAmount || tempData.amount,
-        currency: tempData.currency
+        expected_amount: expectedAmount.toFixed(6),
+        currency: currency
       });
     }
     
@@ -1862,12 +1888,19 @@ const verifyCryptoPayment = async (
         message: "Payment detected, awaiting confirmation",
         txId: tempData.txId,
         amount: tempData.receivedAmount || tempData.amount,
-        currency: tempData.currency
+        expected_amount: expectedAmount.toFixed(6),
+        currency: currency
       });
     }
     
     if (redisStatus === "successful") {
-      // Payment confirmed - call cryptoVerification to get redirect URL
+      // Payment confirmed - check for overpayment
+      const totalReceived = receivedAmount > 0 ? receivedAmount : parseFloat(tempData?.amount || '0');
+      const originalExpected = tempData?.originalExpectedAmount ? parseFloat(tempData.originalExpectedAmount) : expectedAmount;
+      const isOverpayment = totalReceived > originalExpected && originalExpected > 0;
+      const overpaymentAmount = isOverpayment ? (totalReceived - originalExpected) : 0;
+      
+      // Call cryptoVerification to get redirect URL
       const result = await cryptoVerification(address, false);
       console.log("result===========>", result, address);
       const { message, status } = result;
@@ -1880,15 +1913,27 @@ const verifyCryptoPayment = async (
             ? (result as any).resData
             : result;
         
-        // Return confirmed status with redirect URL
-        return successResponseHelper(res, 200, "Payment confirmed", {
-          status: "confirmed",
-          message: "Payment confirmed",
+        // Build response based on overpayment status
+        const responseData: any = {
+          status: isOverpayment ? "overpayment" : "confirmed",
+          message: isOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
           redirect: returnData,
           txId: tempData.txId,
-          amount: tempData.receivedAmount || tempData.amount,
-          currency: tempData.currency
-        });
+          paid_amount: totalReceived.toFixed(6),
+          expected_amount: originalExpected.toFixed(6),
+          currency: currency
+        };
+        
+        if (isOverpayment) {
+          responseData.overpayment = {
+            detected: true,
+            excess_amount: overpaymentAmount.toFixed(6),
+            currency: currency,
+            refund_message: "Excess amount will be refunded to your wallet"
+          };
+        }
+        
+        return successResponseHelper(res, 200, responseData.message, responseData);
       }
       return;
     }
