@@ -345,24 +345,26 @@ Webhook notifications now include overpayment information:
 
 ```json
 {
-  "event": "payment.completed",
-  "transaction_id": "uuid-123-456",
-  "status": "successful",
-  "amount": {
-    "expected": "0.05",
-    "received": "0.06",
-    "currency": "BTC",
-    "base_currency": "USD",
-    "base_amount": "120.00"
-  },
+  "event": "payment.confirmed",
+  "webhook_id": "uuid-webhook-123",
+  "sent_at": "2025-01-25T10:30:45.123Z",
+  "address": "0x1234...5678",
+  "txId": "0xabcd...ef01",
+  "amount": "0.06",
+  "currency": "BTC",
+  "payment_id": "uuid-123-456",
+  "merchant_amount": "0.0588",
+  "fees": "0.0012",
+  "fee_payer": "company",
+  "status": "confirmed",
+  "timestamp": "2025-01-25T10:30:45.123Z",
   "overpayment": {
     "detected": true,
     "amount_crypto": "0.01",
     "currency_crypto": "BTC",
     "amount_base": 20.00,
     "currency_base": "USD"
-  },
-  "timestamp": "2025-01-25T10:30:45.123Z"
+  }
 }
 ```
 
