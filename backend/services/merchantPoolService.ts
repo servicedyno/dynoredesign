@@ -1281,12 +1281,10 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
         } catch {}
       }
       
-      // Reset status (balance won't be updated, will need manual correction)
-      // Restore to previous status if was RESERVED
+      // Reset status to IN_USE (sweep failed, still has admin fee)
       try {
-        const restoreStatus = previousStatus === "RESERVED" ? "RESERVED" : "AVAILABLE";
         await merchantTempAddressModel.update(
-          { status: restoreStatus },
+          { status: "IN_USE" },
           { where: { temp_address_id: tempAddressId } }
         );
       } catch {}
@@ -1313,10 +1311,10 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       } catch {}
     }
     
-    // Try to reset status to AVAILABLE
+    // Try to reset status to IN_USE (still has admin fee pending)
     try {
       await merchantTempAddressModel.update(
-        { status: "AVAILABLE" },
+        { status: "IN_USE" },
         { where: { temp_address_id: tempAddressId } }
       );
     } catch {}
