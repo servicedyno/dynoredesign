@@ -1820,6 +1820,88 @@ const verifyCryptoPayment = async (
 ) => {
   try {
     const { address } = req.body;
+    
+    // First check Redis for current payment status
+    const tempData = await getRedisItem("crypto-" + address);
+    
+    if (!tempData || Object.keys(tempData).length === 0) {
+      // No payment data found - payment hasn't been initiated or address is invalid
+      return successResponseHelper(res, 200, "Waiting for payment", {
+        status: "waiting",
+        message: "No payment detected yet"
+      });
+    }
+    
+    const redisStatus = tempData?.status;
+    
+    // Return status based on Redis state
+    // Status flow: pending -> processing -> successful OR failed
+    if (redisStatus === "pending" && !tempData?.txId) {
+      // Payment initiated but no transaction detected yet
+      return successResponseHelper(res, 200, "Waiting for payment", {
+        status: "waiting",
+        message: "Payment address generated, waiting for transaction"
+      });
+    }
+    
+    if (redisStatus === "pending" && tempData?.txId) {
+      // Transaction detected but not yet processed (legacy state)
+      return successResponseHelper(res, 200, "Payment pending", {
+        status: "pending",
+        message: "Payment detected, awaiting confirmation",
+        txId: tempData.txId,
+        amount: tempData.receivedAmount || tempData.amount,
+        currency: tempData.currency
+      });
+    }
+    
+    if (redisStatus === "processing" || redisStatus === "retrying") {
+      // Transaction detected and being processed
+      return successResponseHelper(res, 200, "Payment pending", {
+        status: "pending",
+        message: "Payment detected, awaiting confirmation",
+        txId: tempData.txId,
+        amount: tempData.receivedAmount || tempData.amount,
+        currency: tempData.currency
+      });
+    }
+    
+    if (redisStatus === "successful") {
+      // Payment confirmed - call cryptoVerification to get redirect URL
+      const result = await cryptoVerification(address, false);
+      console.log("result===========>", result, address);
+      const { message, status } = result;
+      
+      if (status === 500) {
+        errorResponseHelper(res, status, message);
+      } else {
+        const returnData =
+          typeof result === "object" && result !== null && "resData" in result
+            ? (result as any).resData
+            : result;
+        
+        // Return confirmed status with redirect URL
+        return successResponseHelper(res, 200, "Payment confirmed", {
+          status: "confirmed",
+          message: "Payment confirmed",
+          redirect: returnData,
+          txId: tempData.txId,
+          amount: tempData.receivedAmount || tempData.amount,
+          currency: tempData.currency
+        });
+      }
+      return;
+    }
+    
+    if (redisStatus === "failed") {
+      return successResponseHelper(res, 200, "Payment failed", {
+        status: "failed",
+        message: tempData.lastError || "Payment processing failed",
+        txId: tempData.txId
+      });
+    }
+    
+    // Fallback - try original verification
     const result = await cryptoVerification(address, false);
     console.log("result===========>", result, address);
     const { message, status } = result;
