@@ -2946,7 +2946,7 @@ const createPaymentLink = async (
       user_id: userData.user_id,
       adm_id: userData.user_id,  // Add adm_id for crypto payment compatibility
       company_id: company_id || null,  // Phase 10 Fix: Include company_id
-      payment_link: process.env.CHECKOUT_URL + "/pay?d=" + uniqueRef,
+      payment_link: (process.env.CHECKOUT_URL || '').replace(/\/$/, '') + "/pay?d=" + uniqueRef,
       description: description || null,
       expires_at: expires_at,
       callback_url: callback_url || null,
