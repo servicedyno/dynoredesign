@@ -160,17 +160,36 @@ const tatumCryptoWebHook = async (
       // RACE CONDITION FIX: Process payment FIRST, then mark as processed in Redis
       // If cryptoVerification fails, webhook can be safely retried
       console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address);
+      
+      // Hard failures that should NOT be retried
+      const NON_RETRYABLE_ERRORS = [
+        'invalid address',
+        'invalid private key', 
+        'insufficient balance',
+        'nonce too low',
+        'already known',
+        'bad request',
+        '400', '401', '403', '404',
+      ];
+      
+      const isRetryable = (error: Error): boolean => {
+        const message = error.message?.toLowerCase() || '';
+        return !NON_RETRYABLE_ERRORS.some(pattern => message.includes(pattern.toLowerCase()));
+      };
+      
       try {
-        // CRITICAL: Store txId BEFORE calling cryptoVerification so it can use it
-        // cryptoVerification reads txId from Redis to process the payment
+        // PERSISTENCE: Store complete payment state BEFORE processing
+        // This ensures payment isn't lost if server crashes during processing
         await setRedisItem("crypto-" + address, {
           ...items,
           status: "processing",
           receivedAmount: incomingAmount,
           txId: payload.txId,  // MUST be set before cryptoVerification
+          retryCount: "0",
+          lastAttempt: new Date().toISOString(),
         });
 
-        // Retry cryptoVerification up to 3 times with exponential backoff
+        // Retry cryptoVerification with SMART retries (exponential backoff + error filtering)
         let lastError: Error | null = null;
         const maxRetries = 3;
         
@@ -182,10 +201,29 @@ const tatumCryptoWebHook = async (
             break;
           } catch (retryError: any) {
             lastError = retryError;
+            
+            // SMART RETRY: Check if error is retryable
+            if (!isRetryable(retryError)) {
+              console.error(`[tatumCryptoWebHook] Non-retryable error, stopping: ${retryError.message}`);
+              break; // Don't retry hard failures
+            }
+            
             if (attempt < maxRetries) {
-              const waitTime = 2000 * Math.pow(2, attempt - 1);
+              const waitTime = 2000 * Math.pow(2, attempt - 1); // Exponential backoff: 2s, 4s, 8s
               console.warn(`[tatumCryptoWebHook] cryptoVerification failed (attempt ${attempt}/${maxRetries}): ${retryError.message}`);
               console.warn(`[tatumCryptoWebHook] Retrying in ${waitTime}ms...`);
+              
+              // Update retry state in Redis (persistence)
+              await setRedisItem("crypto-" + address, {
+                ...items,
+                status: "retrying",
+                receivedAmount: incomingAmount,
+                txId: payload.txId,
+                retryCount: String(attempt),
+                lastAttempt: new Date().toISOString(),
+                lastError: retryError.message,
+              });
+              
               await new Promise(resolve => setTimeout(resolve, waitTime));
             }
           }
@@ -201,6 +239,7 @@ const tatumCryptoWebHook = async (
           status: "successful",
           txId: payload.txId,
           receivedAmount: incomingAmount,
+          completedAt: new Date().toISOString(),
         });
         
         // Store processed txId with 48-hour TTL to prevent duplicate processing
@@ -214,15 +253,29 @@ const tatumCryptoWebHook = async (
         
         console.log("[tatumCryptoWebHook] Redis updated with txId after successful processing");
 
-      } catch (verifyError) {
+      } catch (verifyError: any) {
         console.error("[tatumCryptoWebHook] Error in cryptoVerification after retries:", verifyError);
-        // IMPORTANT: Don't set txId on failure - allow webhook retry
-        // Reset status to pending so it can be retried
+        
+        // PERSISTENCE: Store failed state for manual recovery or cron retry
         await setRedisItem("crypto-" + address, {
           ...items,
-          status: "pending",
+          status: "failed",
           receivedAmount: incomingAmount,
+          txId: payload.txId,
+          failedAt: new Date().toISOString(),
+          lastError: verifyError.message,
         });
+        
+        // Store in failed payments list for monitoring/retry
+        await setRedisItem(`failed-payment-${payload.txId}`, {
+          address: address,
+          payment_id: items.payment_id || items.ref,
+          amount: incomingAmount,
+          txId: payload.txId,
+          error: verifyError.message,
+          failed_at: new Date().toISOString(),
+        });
+        
         throw verifyError;
       }
     } else {
