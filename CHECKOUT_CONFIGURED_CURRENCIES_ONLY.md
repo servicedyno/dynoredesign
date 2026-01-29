@@ -23,10 +23,20 @@ Update the checkout page to only show cryptocurrencies that the merchant has con
       { "currency": "BTC", "label": "Bitcoin Wallet", "address_masked": "bc1q...xyz" },
       { "currency": "ETH", "label": "Ethereum Wallet", "address_masked": "0x12...89" }
     ],
-    "skip_selection": false
+    "skip_selection": false,
+    "fee_payer": "customer",
+    "fee_percent": 2.0,
+    "fee_display": "2% fee applies"
   }
 }
 ```
+
+### Fee Information Fields:
+| Field | Description |
+|-------|-------------|
+| `fee_payer` | Who pays the transaction fee: `"customer"` or `"company"` |
+| `fee_percent` | Transaction fee percentage (e.g., `2.0` for 2%) |
+| `fee_display` | Human-readable fee message for UI display |
 
 ---
 
