@@ -331,7 +331,7 @@ Replace the existing network selection section with:
 
 ### Step 6: Display Fee Information
 
-Add this UI component after the network selection to show who pays fees:
+Add this UI component after the network selection to show who pays fees and the fee amount:
 
 ```tsx
 {/* Fee Information Display */}
@@ -357,11 +357,26 @@ Add this UI component after the network selection to show who pays fees:
         color={feeInfo.fee_payer === 'customer' ? '#92400E' : '#059669'}
       >
         {feeInfo.fee_payer === 'customer' 
-          ? `You will pay ${feeInfo.fee_percent}% transaction fee`
+          ? `Transaction fee: ${feeInfo.fee_percent}%`
           : 'No additional fees - merchant covers transaction costs'
         }
       </Typography>
     </Box>
+    
+    {/* Show fee breakdown if customer pays */}
+    {feeInfo.fee_payer === 'customer' && feeInfo.fee_breakdown && (
+      <Box mt={1} pl={3}>
+        <Typography fontSize={12} color="#92400E" fontFamily="Space Grotesk">
+          Base amount: {feeInfo.fee_breakdown.base_amount.toFixed(2)} {feeInfo.fee_breakdown.currency}
+        </Typography>
+        <Typography fontSize={12} color="#92400E" fontFamily="Space Grotesk">
+          Fee ({feeInfo.fee_percent}%): {feeInfo.fee_breakdown.fee_amount.toFixed(2)} {feeInfo.fee_breakdown.currency}
+        </Typography>
+        <Typography fontSize={13} color="#92400E" fontFamily="Space Grotesk" fontWeight={600} mt={0.5}>
+          Total: {feeInfo.fee_breakdown.total_amount.toFixed(2)} {feeInfo.fee_breakdown.currency}
+        </Typography>
+      </Box>
+    )}
   </Box>
 )}
 ```
