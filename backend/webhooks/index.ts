@@ -145,16 +145,62 @@ const tatumCryptoWebHook = async (
     if (isFirstTransaction && incomingAmount > 0) {
       console.log("[tatumCryptoWebHook] First transaction detected, processing...");
       
+      // Get customer data - try from Redis first, then fallback to temp_id lookup
+      let customerData = await getRedisItem(items?.ref);
+      
+      // If customerData is empty, try to reconstruct from temp address
+      if (!customerData || Object.keys(customerData).length === 0) {
+        console.log("[tatumCryptoWebHook] CustomerData empty from Redis, fetching from DB...");
+        try {
+          const tempId = items?.temp_id;
+          if (tempId) {
+            const { Sequelize } = require('sequelize');
+            const sequelize = require('../utils/dbInstance').default;
+            const [tempAddr] = await sequelize.query(
+              `SELECT owner_user_id, current_company_id FROM tbl_merchant_temp_address WHERE temp_address_id = :tempId`,
+              { replacements: { tempId }, type: Sequelize.QueryTypes.SELECT }
+            );
+            if (tempAddr) {
+              customerData = {
+                adm_id: tempAddr.owner_user_id,
+                company_id: tempAddr.current_company_id,
+              };
+              console.log("[tatumCryptoWebHook] Reconstructed customerData from temp address:", customerData);
+            }
+          }
+        } catch (dbErr) {
+          console.error("[tatumCryptoWebHook] Error fetching customerData from DB:", dbErr);
+        }
+      }
+      
       // Send pending notification for first transaction
-      const customerData = await getRedisItem(items?.ref);
-      if (customerData) {
-        await sendPendingPaymentNotification(
-          address,
-          payload.txId,
-          incomingAmount,
-          items?.currency || payload.asset,
-          customerData
-        );
+      if (customerData && customerData.adm_id) {
+        try {
+          await sendPendingPaymentNotification(
+            address,
+            payload.txId,
+            incomingAmount,
+            items?.currency || payload.asset,
+            customerData
+          );
+          console.log("[tatumCryptoWebHook] Pending notification sent successfully");
+          
+          // Call merchant webhook if configured (for pending state)
+          await callMerchantWebhook(customerData, {
+            event: 'payment.pending',
+            address: address,
+            txId: payload.txId,
+            amount: incomingAmount,
+            currency: items?.currency || payload.asset,
+            payment_id: items?.payment_id || items?.unique_tx_id,
+            status: 'pending',
+            timestamp: new Date().toISOString(),
+          });
+        } catch (notifError) {
+          console.error("[tatumCryptoWebHook] Error sending pending notification:", notifError);
+        }
+      } else {
+        console.warn("[tatumCryptoWebHook] No customerData available, skipping pending notification");
       }
 
       // RACE CONDITION FIX: Process payment FIRST, then mark as processed in Redis
