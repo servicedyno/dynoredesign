@@ -71,6 +71,43 @@ import {
 } from "../services/blockchainFeeService";
 import * as merchantPoolService from "../services/merchantPoolService";
 
+// Retry configuration
+const RETRY_CONFIG = {
+  MAX_RETRIES: 3,
+  INITIAL_DELAY_MS: 2000,
+};
+
+/**
+ * Retry helper with exponential backoff for blockchain operations
+ */
+const withRetry = async <T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  maxRetries: number = RETRY_CONFIG.MAX_RETRIES
+): Promise<T> => {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+      const message = getErrorMessage(error);
+      
+      if (attempt < maxRetries) {
+        const waitTime = RETRY_CONFIG.INITIAL_DELAY_MS * Math.pow(2, attempt - 1);
+        console.warn(`[PaymentController] ⚠️ ${operationName} failed (attempt ${attempt}/${maxRetries}): ${message}`);
+        console.warn(`[PaymentController] Retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      } else {
+        console.error(`[PaymentController] ❌ ${operationName} failed after ${maxRetries} attempts: ${message}`);
+      }
+    }
+  }
+  
+  throw lastError;
+};
+
 const getData = async (req: express.Request, res: express.Response) => {
   try {
     const { data } = req.body;
