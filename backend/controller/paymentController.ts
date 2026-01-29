@@ -2747,6 +2747,46 @@ const getCurrencyRates = async (
       const enhancedRates = await Promise.all(
         currencyRateList.map(async (rate: any) => {
           try {
+            // Check if this is a fiat currency (not crypto)
+            const fiatCurrencies = ['USD', 'EUR', 'GBP', 'NGN', 'KES', 'UGX', 'RWF'];
+            if (fiatCurrencies.includes(rate.currency.toUpperCase())) {
+              // For fiat currencies, use a default crypto (ETH) to calculate fees
+              // This gives us the USD equivalent fees to display
+              const chain = 'ETH';
+              console.log(`[getCurrencyRates] Processing fiat ${rate.currency} - using ${chain} for fee calculation`);
+              
+              const networkFee = await getBlockchainNetworkFee(chain);
+              const feeResult = await calculateTransactionFees(chain, amount);
+              
+              const fixedFee = Number(feeResult.fixedFee) || 0;
+              const transactionFee = Number(feeResult.transactionFee) || 0;
+              const blockchainBuffer = Number(feeResult.blockchainBuffer) || 0;
+              const networkFeeUSD = Number(networkFee.feeInUSD) || 0;
+              
+              const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
+              const totalAmountUSD = amount + totalFeesUSD;
+              
+              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=$${amount}, fees=$${totalFeesUSD.toFixed(2)}, total=$${totalAmountUSD.toFixed(2)}`);
+              
+              return {
+                ...rate,
+                fee_payer: 'customer',
+                base_amount: amount,
+                base_amount_usd: amount,
+                fees: {
+                  transaction_fee_usd: transactionFee,
+                  fixed_fee_usd: fixedFee,
+                  buffer_fee_usd: blockchainBuffer,
+                  network_fee_usd: networkFeeUSD,
+                  total_fees_usd: totalFeesUSD,
+                },
+                total_amount: totalAmountUSD,
+                total_amount_usd: totalAmountUSD,
+                total_amount_source: totalAmountUSD,
+                amount: totalAmountUSD, // Override with total for display
+              };
+            }
+            
             // Map currency to chain name for fee calculation
             let chain = rate.currency.replace('-', '_').toUpperCase();
             
