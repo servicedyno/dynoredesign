@@ -556,6 +556,228 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Update webhook settings for a company
+ * PUT /api/company/webhook-settings/:id
+ */
+const updateWebhookSettings = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const company_id = req.params.id;
+    const { webhook_url, webhook_secret } = req.body;
+
+    // Verify company belongs to user
+    const company = await companyModel.findOne({
+      where: { company_id, user_id: userData.user_id },
+    });
+
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found or unauthorized");
+    }
+
+    // Validate webhook URL format if provided
+    if (webhook_url) {
+      try {
+        const url = new URL(webhook_url);
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          return errorResponseHelper(res, 400, "Webhook URL must use HTTP or HTTPS protocol");
+        }
+      } catch {
+        return errorResponseHelper(res, 400, "Invalid webhook URL format");
+      }
+    }
+
+    // Generate new secret if requested (send "generate" as webhook_secret)
+    let newSecret = webhook_secret;
+    if (webhook_secret === 'generate') {
+      const crypto = require('crypto');
+      newSecret = 'whsec_' + crypto.randomBytes(24).toString('hex');
+    }
+
+    // Update webhook settings
+    await companyModel.update(
+      {
+        webhook_url: webhook_url || null,
+        webhook_secret: newSecret || null,
+      },
+      { where: { company_id } }
+    );
+
+    companyLogger.info(
+      `Webhook settings updated for company ${company_id}`,
+      { user_id: userData.user_id, email: userData.email }
+    );
+
+    successResponseHelper(res, 200, "Webhook settings updated successfully", {
+      company_id,
+      webhook_url: webhook_url || null,
+      webhook_secret_set: !!newSecret,
+      // Only show full secret on generation, otherwise mask it
+      webhook_secret: webhook_secret === 'generate' ? newSecret : (newSecret ? '***' + newSecret.slice(-8) : null),
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    companyLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Get webhook settings for a company
+ * GET /api/company/webhook-settings/:id
+ */
+const getWebhookSettings = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const company_id = req.params.id;
+
+    const [result] = await sequelize.query(
+      `SELECT webhook_url, webhook_secret FROM tbl_company WHERE company_id = :company_id AND user_id = :user_id`,
+      {
+        replacements: { company_id, user_id: userData.user_id },
+        type: QueryTypes.SELECT,
+      }
+    ) as any[];
+
+    if (!result) {
+      return errorResponseHelper(res, 404, "Company not found or unauthorized");
+    }
+
+    successResponseHelper(res, 200, "Webhook settings retrieved", {
+      company_id,
+      webhook_url: result.webhook_url || null,
+      webhook_secret_set: !!result.webhook_secret,
+      webhook_secret_preview: result.webhook_secret ? '***' + result.webhook_secret.slice(-8) : null,
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    companyLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Send a test webhook to verify configuration
+ * POST /api/company/webhook-test/:id
+ */
+const testWebhook = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const company_id = req.params.id;
+    const crypto = require('crypto');
+    const axios = require('axios');
+
+    // Get company webhook settings
+    const [result] = await sequelize.query(
+      `SELECT webhook_url, webhook_secret, company_name FROM tbl_company WHERE company_id = :company_id AND user_id = :user_id`,
+      {
+        replacements: { company_id, user_id: userData.user_id },
+        type: QueryTypes.SELECT,
+      }
+    ) as any[];
+
+    if (!result) {
+      return errorResponseHelper(res, 404, "Company not found or unauthorized");
+    }
+
+    if (!result.webhook_url) {
+      return errorResponseHelper(res, 400, "No webhook URL configured. Please set a webhook URL first.");
+    }
+
+    // Create test payload
+    const timestamp = Math.floor(Date.now() / 1000);
+    const testPayload = {
+      event: 'webhook.test',
+      webhook_id: crypto.randomUUID(),
+      sent_at: new Date().toISOString(),
+      data: {
+        message: 'This is a test webhook from DynoPay',
+        company_id,
+        company_name: result.company_name,
+        test_id: crypto.randomBytes(8).toString('hex'),
+      },
+    };
+
+    // Generate signature
+    let signature = 'no-secret-configured';
+    if (result.webhook_secret) {
+      const signaturePayload = { ...testPayload, timestamp };
+      const hmac = crypto.createHmac('sha256', result.webhook_secret);
+      hmac.update(JSON.stringify(signaturePayload));
+      signature = hmac.digest('hex');
+    }
+
+    companyLogger.info(
+      `Sending test webhook to ${result.webhook_url}`,
+      { user_id: userData.user_id, company_id }
+    );
+
+    // Send test webhook
+    const startTime = Date.now();
+    try {
+      const response = await axios.post(result.webhook_url, testPayload, {
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-DynoPay-Event': 'webhook.test',
+          'X-DynoPay-Signature': signature,
+          'X-DynoPay-Timestamp': timestamp.toString(),
+          'X-DynoPay-Webhook-Id': testPayload.webhook_id,
+          'User-Agent': 'DynoPay-Webhook/1.0',
+        },
+      });
+
+      const responseTime = Date.now() - startTime;
+
+      successResponseHelper(res, 200, "Test webhook sent successfully", {
+        status: 'success',
+        webhook_url: result.webhook_url,
+        response_status: response.status,
+        response_time_ms: responseTime,
+        payload_sent: testPayload,
+        signature_included: !!result.webhook_secret,
+      });
+
+    } catch (webhookError: any) {
+      const responseTime = Date.now() - startTime;
+      const errorDetails = {
+        status: 'failed',
+        webhook_url: result.webhook_url,
+        error: webhookError.message,
+        response_status: webhookError.response?.status || null,
+        response_time_ms: responseTime,
+        payload_attempted: testPayload,
+      };
+
+      companyLogger.error(
+        `Test webhook failed: ${webhookError.message}`,
+        { user_id: userData.user_id, company_id, ...errorDetails }
+      );
+
+      return successResponseHelper(res, 200, "Test webhook failed", errorDetails);
+    }
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    companyLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   addCompany,
   getCompany,
@@ -564,4 +786,7 @@ export default {
   updateCompany,
   getTransactions,
   validateTaxId,
+  updateWebhookSettings,
+  getWebhookSettings,
+  testWebhook,
 };
