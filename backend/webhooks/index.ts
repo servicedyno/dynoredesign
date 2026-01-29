@@ -148,24 +148,38 @@ const tatumCryptoWebHook = async (
         );
       }
 
-      // Set status and amount ONLY on first transaction
-      const newPayload = {
-        ...items,
-        status: "successful",
-        txId: payload.txId,
-        receivedAmount: incomingAmount,  // Set once, don't accumulate
-      };
-
-      await setRedisItem("crypto-" + address, newPayload);
-      console.log("[tatumCryptoWebHook] Redis updated with txId");
-
-      // Trigger verification only on first transaction - FIXED: Added await
+      // RACE CONDITION FIX: Process payment FIRST, then mark as processed in Redis
+      // If cryptoVerification fails, webhook can be safely retried
       console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address);
       try {
+        // Temporarily store received amount for cryptoVerification to use
+        await setRedisItem("crypto-" + address, {
+          ...items,
+          status: "processing",
+          receivedAmount: incomingAmount,
+        });
+
         await paymentController.cryptoVerification(address, true);
         console.log("[tatumCryptoWebHook] cryptoVerification completed successfully");
+
+        // SUCCESS: Now mark as processed with txId to prevent duplicate processing
+        await setRedisItem("crypto-" + address, {
+          ...items,
+          status: "successful",
+          txId: payload.txId,
+          receivedAmount: incomingAmount,
+        });
+        console.log("[tatumCryptoWebHook] Redis updated with txId after successful processing");
+
       } catch (verifyError) {
         console.error("[tatumCryptoWebHook] Error in cryptoVerification:", verifyError);
+        // IMPORTANT: Don't set txId on failure - allow webhook retry
+        // Reset status to pending so it can be retried
+        await setRedisItem("crypto-" + address, {
+          ...items,
+          status: "pending",
+          receivedAmount: incomingAmount,
+        });
         throw verifyError;
       }
     } else {
