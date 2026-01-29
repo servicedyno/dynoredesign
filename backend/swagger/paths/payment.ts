@@ -611,20 +611,31 @@ Modes must be provided in **UPPERCASE**. Valid modes:
     post: {
       tags: ['Payment Processing'],
       summary: 'Verify crypto payment status',
-      description: 'Check the status of a cryptocurrency payment. Poll this endpoint to show payment progress to customers.',
+      description: `Check the status of a cryptocurrency payment. Poll this endpoint to show payment progress to customers.
+      
+**Status Flow:**
+- \`waiting\` - No payment detected yet on blockchain
+- \`pending\` - Payment detected, awaiting blockchain confirmations
+- \`confirmed\` - Payment fully confirmed and processed
+- \`failed\` - Payment processing failed
+
+**Recommended Polling Interval:** 10-15 seconds`,
       requestBody: {
         required: true,
         content: {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['transaction_id'],
+              required: ['address'],
               properties: {
-                transaction_id: { type: 'string', format: 'uuid' }
+                address: { 
+                  type: 'string',
+                  description: 'The cryptocurrency deposit address to check'
+                }
               }
             },
             example: {
-              transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+              address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh'
             }
           }
         }
@@ -635,60 +646,51 @@ Modes must be provided in **UPPERCASE**. Valid modes:
           content: {
             'application/json': {
               examples: {
-                'Awaiting Payment': {
-                  summary: 'No payment received yet',
+                'Waiting for Payment': {
+                  summary: '🕐 No payment detected yet',
                   value: {
-                    message: 'Payment status',
+                    message: 'Waiting for payment',
                     data: {
-                      status: 'awaiting_payment',
-                      deposit_address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
-                      expected_amount: 0.00456789,
-                      received_amount: 0,
-                      crypto_currency: 'BTC',
-                      expires_at: '2024-01-15T11:30:00Z'
+                      status: 'waiting',
+                      message: 'No payment detected yet'
                     }
                   }
                 },
-                'Confirming': {
-                  summary: 'Payment received, awaiting confirmations',
+                'Payment Pending': {
+                  summary: '⏳ Payment detected, awaiting confirmation',
                   value: {
-                    message: 'Payment status',
+                    message: 'Payment pending',
                     data: {
-                      status: 'confirming',
-                      confirmations: 1,
-                      confirmations_required: 3,
-                      tx_hash: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
-                      received_amount: 0.00456789,
-                      crypto_currency: 'BTC'
+                      status: 'pending',
+                      message: 'Payment detected, awaiting confirmation',
+                      txId: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
+                      amount: '0.00456789',
+                      currency: 'BTC'
                     }
                   }
                 },
-                'Completed': {
-                  summary: 'Payment confirmed and completed',
+                'Payment Confirmed': {
+                  summary: '✅ Payment confirmed and completed',
                   value: {
-                    message: 'Payment status',
+                    message: 'Payment confirmed',
                     data: {
-                      status: 'completed',
-                      confirmations: 3,
-                      tx_hash: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
-                      received_amount: 0.00456789,
-                      crypto_currency: 'BTC',
-                      completed_at: '2024-01-15T11:15:00Z',
-                      redirect_url: 'https://mystore.com/order/12345/success'
+                      status: 'confirmed',
+                      message: 'Payment confirmed',
+                      redirect: 'https://mystore.com/order/12345/success',
+                      txId: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
+                      amount: '0.00456789',
+                      currency: 'BTC'
                     }
                   }
                 },
-                'Partial Payment': {
-                  summary: 'Insufficient amount received',
+                'Payment Failed': {
+                  summary: '❌ Payment processing failed',
                   value: {
-                    message: 'Payment status',
+                    message: 'Payment failed',
                     data: {
-                      status: 'partial',
-                      expected_amount: 0.00456789,
-                      received_amount: 0.00400000,
-                      remaining_amount: 0.00056789,
-                      crypto_currency: 'BTC',
-                      grace_period_ends: '2024-01-15T11:45:00Z'
+                      status: 'failed',
+                      message: 'Transaction verification failed',
+                      txId: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0'
                     }
                   }
                 }
