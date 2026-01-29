@@ -353,6 +353,24 @@ const tatumCryptoWebHook = async (
         // Note: Redis TTL should be set separately if needed (48 hours = 172800 seconds)
         
         console.log("[tatumCryptoWebHook] Redis updated with txId after successful processing");
+        
+        // Send payment confirmed webhook to merchant
+        if (customerData && customerData.company_id) {
+          await callMerchantWebhook(customerData, {
+            event: 'payment.confirmed',
+            address: address,
+            txId: payload.txId,
+            amount: incomingAmount,
+            currency: items?.currency || payload.asset,
+            payment_id: items?.payment_id || items?.unique_tx_id,
+            merchant_amount: items?.merchant_amount,
+            fees: items?.total_fees,
+            fee_payer: items?.fee_payer || 'company',
+            status: 'confirmed',
+            timestamp: new Date().toISOString(),
+          });
+          console.log("[tatumCryptoWebHook] Payment confirmed webhook sent");
+        }
 
       } catch (verifyError: any) {
         console.error("[tatumCryptoWebHook] Error in cryptoVerification after retries:", verifyError);
