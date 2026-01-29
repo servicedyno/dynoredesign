@@ -980,7 +980,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
                 "DynoPay Admin",
                 totalFee.toFixed(2),
                 data.currency,
-                data.transaction_id || data.id,
+                (data as any).transaction_id || String(data.id),
                 companyData?.dataValues?.company_name || "Unknown Company",
                 merchantAmount.toFixed(2),
                 data.amount_settled.toFixed(2)
