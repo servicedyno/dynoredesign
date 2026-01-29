@@ -27,6 +27,7 @@ import invoiceModel from "./invoiceModel";
 import notificationModel from "./notificationModel";
 import notificationPreferencesModel from "./notificationPreferencesModel";
 import kycModel from "./kycModel";
+import webhookDeliveryLogModel from "./webhookDeliveryLogModel";
 
 // USDT Pool System models (legacy - to be deprecated)
 import {
