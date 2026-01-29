@@ -2161,8 +2161,8 @@ const cryptoVerification = async (address, webhook = true) => {
         }
       }
       
-      // Store merchant pool flag in tempData for later use
-      tempData.is_merchant_pool = isMerchantPoolAddress;
+      // Store merchant pool flag in tempData for later use (as string for Redis compatibility)
+      tempData.is_merchant_pool = String(isMerchantPoolAddress);
 
       const isFullPayment = Number(receivedAmount) >= Number(tempData?.amount);
       const isPartialPayment = Number(receivedAmount) < Number(tempData?.amount) && !webhook;
