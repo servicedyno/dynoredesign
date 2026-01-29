@@ -3606,8 +3606,8 @@ const sweepNativeAdminFees = async () => {
             // Update temp address status
             await userTempAddressModel.update(
               {
-                adminTxId: currentAddress.adminTxId 
-                  ? currentAddress.adminTxId + "," + transactionDetails?.txId 
+                adminTxId: (currentAddress as any).adminTxId 
+                  ? (currentAddress as any).adminTxId + "," + transactionDetails?.txId 
                   : transactionDetails?.txId,
                 admin_status: "successful",
               },
