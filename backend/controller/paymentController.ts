@@ -4376,17 +4376,17 @@ const getConfiguredCurrenciesForCheckout = async (
     
     // If no link_id from Redis, try to get from transaction record
     if (!linkId && transactionId) {
-      const transaction = await transactionModel.findOne({
-        where: { transaction_id: transactionId },
-        attributes: ['transaction_id', 'link_id', 'amount', 'currency'],
+      const transaction = await userTransactionModel.findOne({
+        where: { id: transactionId },
+        attributes: ['id', 'link_id', 'base_amount', 'base_currency'],
       });
       if (transaction) {
         linkId = (transaction as any).link_id;
-        if (!transactionAmount && (transaction as any).amount) {
-          transactionAmount = parseFloat((transaction as any).amount);
+        if (!transactionAmount && (transaction as any).base_amount) {
+          transactionAmount = parseFloat((transaction as any).base_amount);
         }
-        if ((transaction as any).currency) {
-          transactionCurrency = (transaction as any).currency;
+        if ((transaction as any).base_currency) {
+          transactionCurrency = (transaction as any).base_currency;
         }
       }
     }
