@@ -548,7 +548,8 @@ const updateUser = async (req: express.Request, res: express.Response) => {
     const userData = jwt.decode(res.locals.token) as IUserType;
     let photo;
     if (file) {
-      photo = process.env.SERVER_URL + "images/" + file.filename;
+      const serverUrl = process.env.SERVER_URL?.endsWith('/') ? process.env.SERVER_URL : process.env.SERVER_URL + '/';
+      photo = serverUrl + "images/" + file.filename;
     }
     await userModel.update(
       {
