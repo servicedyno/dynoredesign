@@ -121,10 +121,9 @@ const addCompany = async (req: express.Request, res: express.Response) => {
     
     let photo;
     if (file) {
-      photo = process.env.SERVER_URL + "images/" + file.filename;
+      const serverUrl = process.env.SERVER_URL?.endsWith('/') ? process.env.SERVER_URL : process.env.SERVER_URL + '/';
+      photo = serverUrl + "images/" + file.filename;
     }
-    
-    // Validate TAX ID if provided
     let taxValidation = null;
     if (data.vat_number && data.vat_number.trim() !== "" && data.country && data.country.trim() !== "") {
       companyLogger.info(
