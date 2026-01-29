@@ -679,6 +679,8 @@ export const releaseAddress = async (
   adminFeeAmount: number,
   gasUsed: number = 0
 ): Promise<void> => {
+  console.log(`[releaseAddress] Called with tempAddressId=${tempAddressId}, adminFeeAmount=${adminFeeAmount}, gasUsed=${gasUsed}`);
+  
   const poolAddress = await merchantTempAddressModel.findByPk(tempAddressId);
   
   if (!poolAddress) {
@@ -689,6 +691,8 @@ export const releaseAddress = async (
   const sweepConfig = getSweepConfig(walletType);
   const isUTXO = UTXO_CHAINS.includes(walletType);
   const isToken = TOKEN_CHAINS.includes(walletType);
+
+  console.log(`[releaseAddress] walletType=${walletType}, isUTXO=${isUTXO}, isToken=${isToken}`);
 
   const currentAdminBalance = parseFloat(poolAddress.dataValues.admin_fee_balance) || 0;
   const currentGasBalance = parseFloat(poolAddress.dataValues.gas_balance) || 0;
@@ -711,6 +715,8 @@ export const releaseAddress = async (
     // Native chains (ETH, TRX) - time-based sweep
     newStatus = newAdminBalance > 0 ? "IN_USE" : "AVAILABLE";
   }
+
+  console.log(`[releaseAddress] Setting newStatus=${newStatus}, newAdminBalance=${newAdminBalance}`);
 
   await poolAddress.update({
     status: newStatus,
