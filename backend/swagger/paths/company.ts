@@ -362,6 +362,467 @@
  *         description: Authentication required
  *       404:
  *         description: Company not found
+ * 
+ * /api/company/webhook-settings/{id}:
+ *   get:
+ *     tags:
+ *       - Webhooks
+ *     summary: Get webhook settings
+ *     description: |
+ *       Retrieve webhook configuration for a company.
+ *       Returns the webhook URL and whether a secret is configured (secret value is masked).
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Company ID
+ *         example: 38
+ *     responses:
+ *       200:
+ *         description: Webhook settings retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Webhook settings retrieved
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     company_id:
+ *                       type: string
+ *                     webhook_url:
+ *                       type: string
+ *                       nullable: true
+ *                       example: https://your-domain.com/webhook
+ *                     webhook_secret_set:
+ *                       type: boolean
+ *                       example: true
+ *                     webhook_secret_preview:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "***a1b2c3d4"
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Company not found
+ *   put:
+ *     tags:
+ *       - Webhooks
+ *     summary: Update webhook settings
+ *     description: |
+ *       Configure webhook URL and secret for a company.
+ *       
+ *       **Webhook Secret (Optional):**
+ *       - Set to `"generate"` to create a new secret
+ *       - Set to `null` or omit to disable signature verification
+ *       - The secret is only shown once when generated
+ *       
+ *       **Webhook Events:**
+ *       - `payment.pending` - Payment detected, awaiting confirmations
+ *       - `payment.confirmed` - Payment fully confirmed
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Company ID
+ *         example: 38
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               webhook_url:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL to receive webhook notifications (HTTPS recommended)
+ *                 example: https://your-domain.com/webhook
+ *               webhook_secret:
+ *                 type: string
+ *                 nullable: true
+ *                 description: |
+ *                   Set to "generate" to create new secret, null to disable
+ *                 example: generate
+ *     responses:
+ *       200:
+ *         description: Webhook settings updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     company_id:
+ *                       type: string
+ *                     webhook_url:
+ *                       type: string
+ *                     webhook_secret_set:
+ *                       type: boolean
+ *                     webhook_secret:
+ *                       type: string
+ *                       description: Full secret (only shown on generation)
+ *       400:
+ *         description: Invalid webhook URL format
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Company not found
+ * 
+ * /api/company/webhook-test/{id}:
+ *   post:
+ *     tags:
+ *       - Webhooks
+ *     summary: Send test webhook
+ *     description: |
+ *       Send a test webhook to verify your endpoint configuration.
+ *       
+ *       The test webhook will include:
+ *       - Event type: `webhook.test`
+ *       - Sample payload with company info
+ *       - Signature header (if secret is configured)
+ *       
+ *       **Response includes:**
+ *       - Delivery status (success/failed)
+ *       - Response status code from your endpoint
+ *       - Response time in milliseconds
+ *       - The exact payload that was sent
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Company ID
+ *         example: 38
+ *     responses:
+ *       200:
+ *         description: Test webhook result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Test webhook sent successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [success, failed]
+ *                     webhook_url:
+ *                       type: string
+ *                     response_status:
+ *                       type: integer
+ *                       example: 200
+ *                     response_time_ms:
+ *                       type: integer
+ *                       example: 150
+ *                     payload_sent:
+ *                       type: object
+ *                     signature_included:
+ *                       type: boolean
+ *       400:
+ *         description: No webhook URL configured
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Company not found
+ * 
+ * /api/company/webhook-history/{id}:
+ *   get:
+ *     tags:
+ *       - Webhooks
+ *     summary: Get webhook delivery history
+ *     description: |
+ *       Retrieve paginated webhook delivery history with optional filters.
+ *       
+ *       **Filters:**
+ *       - `status`: Filter by delivery status (success/failed)
+ *       - `event_type`: Filter by event type (payment.pending, payment.confirmed, webhook.test)
+ *       
+ *       **Pagination:**
+ *       - Default: 20 items per page (max 100)
+ *       - Use `page` and `limit` query parameters
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Company ID
+ *         example: 38
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Items per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [success, failed]
+ *         description: Filter by delivery status
+ *       - in: query
+ *         name: event_type
+ *         schema:
+ *           type: string
+ *           enum: [payment.pending, payment.confirmed, webhook.test]
+ *         description: Filter by event type
+ *     responses:
+ *       200:
+ *         description: Webhook history retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     company_id:
+ *                       type: string
+ *                     logs:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           log_id:
+ *                             type: integer
+ *                           event_type:
+ *                             type: string
+ *                           webhook_id:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                           response_status:
+ *                             type: integer
+ *                           response_time_ms:
+ *                             type: integer
+ *                           error_message:
+ *                             type: string
+ *                             nullable: true
+ *                           retry_count:
+ *                             type: integer
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         total_pages:
+ *                           type: integer
+ *                         has_more:
+ *                           type: boolean
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Company not found
+ * 
+ * /api/company/webhook-history/{id}/detail/{logId}:
+ *   get:
+ *     tags:
+ *       - Webhooks
+ *     summary: Get webhook delivery detail
+ *     description: |
+ *       Retrieve full details of a specific webhook delivery, including the complete payload.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Company ID
+ *         example: 38
+ *       - in: path
+ *         name: logId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Webhook log ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Webhook detail retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     log_id:
+ *                       type: integer
+ *                     company_id:
+ *                       type: integer
+ *                     webhook_url:
+ *                       type: string
+ *                     event_type:
+ *                       type: string
+ *                     webhook_id:
+ *                       type: string
+ *                     payload:
+ *                       type: object
+ *                       description: Full webhook payload that was sent
+ *                     status:
+ *                       type: string
+ *                     response_status:
+ *                       type: integer
+ *                     response_time_ms:
+ *                       type: integer
+ *                     error_message:
+ *                       type: string
+ *                       nullable: true
+ *                     retry_count:
+ *                       type: integer
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     completed_at:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Company or webhook log not found
+ * 
+ * /api/company/webhook-stats/{id}:
+ *   get:
+ *     tags:
+ *       - Webhooks
+ *     summary: Get webhook statistics
+ *     description: |
+ *       Retrieve webhook delivery statistics for a company.
+ *       
+ *       **Includes:**
+ *       - Overall success rate
+ *       - Average response time
+ *       - Breakdown by event type
+ *       - Daily delivery counts
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Company ID
+ *         example: 38
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 7
+ *           maximum: 30
+ *         description: Number of days to include in statistics
+ *     responses:
+ *       200:
+ *         description: Webhook statistics retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     company_id:
+ *                       type: string
+ *                     period_days:
+ *                       type: integer
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         total_deliveries:
+ *                           type: integer
+ *                         successful:
+ *                           type: integer
+ *                         failed:
+ *                           type: integer
+ *                         success_rate:
+ *                           type: string
+ *                           example: "95.5%"
+ *                         avg_response_time_ms:
+ *                           type: integer
+ *                         last_delivery:
+ *                           type: string
+ *                           format: date-time
+ *                     by_event_type:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           event_type:
+ *                             type: string
+ *                           total:
+ *                             type: string
+ *                           successful:
+ *                             type: string
+ *                           failed:
+ *                             type: string
+ *                     daily_breakdown:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           date:
+ *                             type: string
+ *                             format: date
+ *                           total:
+ *                             type: string
+ *                           successful:
+ *                             type: string
+ *                           failed:
+ *                             type: string
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Company not found
  */
 
 export const companyPaths = {};
