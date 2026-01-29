@@ -38,16 +38,58 @@ export const verifyWebhookSignature = (payload: string, signature: string, secre
 };
 
 /**
+ * Log webhook delivery to database for history/dashboard
+ */
+const logWebhookDelivery = async (
+  companyId: number,
+  webhookUrl: string,
+  eventType: string,
+  webhookId: string,
+  payload: any,
+  status: 'success' | 'failed',
+  responseStatus: number | null,
+  responseTimeMs: number,
+  errorMessage: string | null,
+  retryCount: number
+): Promise<void> => {
+  try {
+    const sequelize = require('../utils/dbInstance').default;
+    await sequelize.query(
+      `INSERT INTO tbl_webhook_delivery_log 
+       (company_id, webhook_url, event_type, webhook_id, payload, status, response_status, response_time_ms, error_message, retry_count, completed_at)
+       VALUES (:companyId, :webhookUrl, :eventType, :webhookId, :payload, :status, :responseStatus, :responseTimeMs, :errorMessage, :retryCount, CURRENT_TIMESTAMP)`,
+      {
+        replacements: {
+          companyId,
+          webhookUrl,
+          eventType,
+          webhookId,
+          payload: JSON.stringify(payload),
+          status,
+          responseStatus,
+          responseTimeMs,
+          errorMessage,
+          retryCount,
+        },
+        type: QueryTypes.INSERT,
+      }
+    );
+  } catch (err: any) {
+    console.error(`[logWebhookDelivery] Failed to log webhook: ${err.message}`);
+  }
+};
+
+/**
  * Call merchant's webhook URL with payment event
  * Merchants can configure webhook_url when creating payment links
  * 
  * Webhook Headers:
  * - Content-Type: application/json
  * - X-DynoPay-Event: payment.pending | payment.confirmed
- * - X-DynoPay-Signature: HMAC-SHA256 signature of the payload
+ * - X-DynoPay-Signature: HMAC-SHA256 signature (only if webhook_secret is configured)
  * - X-DynoPay-Timestamp: Unix timestamp of when webhook was sent
  * 
- * Merchants should verify the signature using their webhook_secret
+ * Note: webhook_secret is OPTIONAL. If not configured, X-DynoPay-Signature will not be included.
  */
 const callMerchantWebhook = async (customerData: any, eventData: any): Promise<void> => {
   try {
@@ -56,6 +98,7 @@ const callMerchantWebhook = async (customerData: any, eventData: any): Promise<v
     
     let webhookUrl = null;
     let webhookSecret = null;
+    let companyId = customerData?.company_id;
     
     // First try to get from payment link
     if (customerData?.payment_link_id) {
@@ -67,10 +110,10 @@ const callMerchantWebhook = async (customerData: any, eventData: any): Promise<v
     }
     
     // If no webhook on link, try company settings
-    if (!webhookUrl && customerData?.company_id) {
+    if (!webhookUrl && companyId) {
       const [companyResult] = await sequelize.query(
         `SELECT webhook_url, webhook_secret FROM tbl_company WHERE company_id = :companyId`,
-        { replacements: { companyId: customerData.company_id }, type: QueryTypes.SELECT }
+        { replacements: { companyId }, type: QueryTypes.SELECT }
       );
       webhookUrl = companyResult?.webhook_url;
       webhookSecret = companyResult?.webhook_secret;
@@ -89,48 +132,69 @@ const callMerchantWebhook = async (customerData: any, eventData: any): Promise<v
       sent_at: new Date().toISOString(),
     };
     
-    // Generate signature if secret is available
-    let signature = 'no-secret-configured';
+    // Build headers - signature is optional
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-DynoPay-Event': eventData.event,
+      'X-DynoPay-Timestamp': timestamp.toString(),
+      'X-DynoPay-Webhook-Id': webhookPayload.webhook_id,
+      'User-Agent': 'DynoPay-Webhook/1.0',
+    };
+    
+    // Only add signature header if secret is configured
     if (webhookSecret) {
-      // Include timestamp in signature to prevent replay attacks
-      const signaturePayload = {
-        ...webhookPayload,
-        timestamp,
-      };
-      signature = generateWebhookSignature(signaturePayload, webhookSecret);
+      const signaturePayload = { ...webhookPayload, timestamp };
+      headers['X-DynoPay-Signature'] = generateWebhookSignature(signaturePayload, webhookSecret);
     }
     
     console.log(`[callMerchantWebhook] Sending ${eventData.event} to ${webhookUrl}`);
-    console.log(`[callMerchantWebhook] Payload:`, JSON.stringify(webhookPayload, null, 2));
+    console.log(`[callMerchantWebhook] Signature included: ${!!webhookSecret}`);
     
     // Send webhook with timeout and retry
     const maxRetries = 3;
     let lastError: Error | null = null;
+    let finalResponseStatus: number | null = null;
+    let totalRetries = 0;
+    const startTime = Date.now();
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const response = await axios.post(webhookUrl, webhookPayload, {
           timeout: 10000,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-DynoPay-Event': eventData.event,
-            'X-DynoPay-Signature': signature,
-            'X-DynoPay-Timestamp': timestamp.toString(),
-            'X-DynoPay-Webhook-Id': webhookPayload.webhook_id,
-            'User-Agent': 'DynoPay-Webhook/1.0',
-          },
+          headers,
         });
         
+        const responseTimeMs = Date.now() - startTime;
+        finalResponseStatus = response.status;
+        
         console.log(`[callMerchantWebhook] ✅ Webhook sent successfully, status: ${response.status}`);
+        
+        // Log successful delivery
+        if (companyId) {
+          await logWebhookDelivery(
+            companyId,
+            webhookUrl,
+            eventData.event,
+            webhookPayload.webhook_id,
+            webhookPayload,
+            'success',
+            response.status,
+            responseTimeMs,
+            null,
+            totalRetries
+          );
+        }
+        
         return; // Success, exit
         
       } catch (err: any) {
         lastError = err;
-        const status = err.response?.status;
+        totalRetries = attempt;
+        finalResponseStatus = err.response?.status || null;
         
         // Don't retry on client errors (4xx) except 429 (rate limit)
-        if (status && status >= 400 && status < 500 && status !== 429) {
-          console.error(`[callMerchantWebhook] ❌ Client error ${status}, not retrying: ${err.message}`);
+        if (finalResponseStatus && finalResponseStatus >= 400 && finalResponseStatus < 500 && finalResponseStatus !== 429) {
+          console.error(`[callMerchantWebhook] ❌ Client error ${finalResponseStatus}, not retrying: ${err.message}`);
           break;
         }
         
@@ -142,8 +206,24 @@ const callMerchantWebhook = async (customerData: any, eventData: any): Promise<v
       }
     }
     
-    // All retries failed
+    // All retries failed - log the failure
+    const responseTimeMs = Date.now() - startTime;
     console.error(`[callMerchantWebhook] ❌ Failed after ${maxRetries} attempts: ${lastError?.message}`);
+    
+    if (companyId) {
+      await logWebhookDelivery(
+        companyId,
+        webhookUrl,
+        eventData.event,
+        webhookPayload.webhook_id,
+        webhookPayload,
+        'failed',
+        finalResponseStatus,
+        responseTimeMs,
+        lastError?.message || 'Unknown error',
+        totalRetries
+      );
+    }
     
   } catch (error: any) {
     // Log but don't throw - webhook failure shouldn't block payment processing
