@@ -4385,13 +4385,13 @@ const getConfiguredCurrenciesForCheckout = async (
     const currencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
     
     let feeInfo = {
-      fee_payer: (company as any).fee_payer || 'company',
+      fee_payer: feePayerFromCompany,
       transaction_fee_percent: parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0'),
     };
     
     let transactionAmount = 0;
     let transactionCurrency = 'USD';
-    let linkId: string | null = null;
+    let linkId: string | number | null = null;
     
     // Try to get fee_payer and amount from payment link data
     if (paymentRef) {
@@ -4400,31 +4400,38 @@ const getConfiguredCurrenciesForCheckout = async (
         if (paymentData.fee_payer) {
           feeInfo.fee_payer = paymentData.fee_payer;
         }
-        if (paymentData.amount) {
+        if (paymentData.base_amount) {
+          transactionAmount = parseFloat(paymentData.base_amount);
+        } else if (paymentData.amount) {
           transactionAmount = parseFloat(paymentData.amount);
         }
-        if (paymentData.currency || paymentData.base_currency) {
-          transactionCurrency = paymentData.currency || paymentData.base_currency;
+        if (paymentData.base_currency) {
+          transactionCurrency = paymentData.base_currency;
+        } else if (paymentData.currency) {
+          transactionCurrency = paymentData.currency;
         }
-        if (paymentData.link_id || paymentData.payment_link_id) {
-          linkId = paymentData.link_id || paymentData.payment_link_id;
+        if (paymentData.link_id) {
+          linkId = paymentData.link_id;
         }
       }
     }
     
-    // If no link_id from Redis, try to get from transaction record
+    // If no link_id from Redis, try to get from payment link record
     if (!linkId && transactionId) {
-      const transaction = await userTransactionModel.findOne({
-        where: { id: transactionId },
-        attributes: ['id', 'link_id', 'base_amount', 'base_currency'],
+      const paymentLink = await paymentLinkModel.findOne({
+        where: { transaction_id: transactionId },
+        attributes: ['link_id', 'base_amount', 'base_currency', 'fee_payer'],
       });
-      if (transaction) {
-        linkId = (transaction as any).link_id;
-        if (!transactionAmount && (transaction as any).base_amount) {
-          transactionAmount = parseFloat((transaction as any).base_amount);
+      if (paymentLink) {
+        linkId = (paymentLink as any).link_id;
+        if (!transactionAmount && (paymentLink as any).base_amount) {
+          transactionAmount = parseFloat((paymentLink as any).base_amount);
         }
-        if ((transaction as any).base_currency) {
-          transactionCurrency = (transaction as any).base_currency;
+        if ((paymentLink as any).base_currency) {
+          transactionCurrency = (paymentLink as any).base_currency;
+        }
+        if ((paymentLink as any).fee_payer) {
+          feeInfo.fee_payer = (paymentLink as any).fee_payer;
         }
       }
     }
