@@ -1262,9 +1262,11 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       }
       
       // Reset status (balance won't be updated, will need manual correction)
+      // Restore to previous status if was RESERVED
       try {
+        const restoreStatus = previousStatus === "RESERVED" ? "RESERVED" : "AVAILABLE";
         await merchantTempAddressModel.update(
-          { status: "AVAILABLE" },
+          { status: restoreStatus },
           { where: { temp_address_id: tempAddressId } }
         );
       } catch {}
