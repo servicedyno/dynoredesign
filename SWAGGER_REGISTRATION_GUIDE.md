@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://checkout-repair-19.preview.emergentagent.com/api/docs
+Go to: https://dependinstall.preview.emergentagent.com/api/docs
 
 ---
 

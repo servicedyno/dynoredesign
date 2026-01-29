@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://checkout-repair-19.preview.emergentagent.com
+SERVER_URL=https://dependinstall.preview.emergentagent.com
 ```
 
 **Impact:**
