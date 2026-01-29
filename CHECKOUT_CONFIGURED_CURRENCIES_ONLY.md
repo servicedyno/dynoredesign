@@ -24,19 +24,46 @@ Update the checkout page to only show cryptocurrencies that the merchant has con
       { "currency": "ETH", "label": "Ethereum Wallet", "address_masked": "0x12...89" }
     ],
     "skip_selection": false,
+    "link_id": "abc123-def456-ghi789",
+    "transaction_amount": 100.00,
+    "transaction_currency": "USD",
     "fee_payer": "customer",
     "fee_percent": 2.0,
-    "fee_display": "2% fee applies"
+    "fee_display": "2% fee applies",
+    "fee_breakdown": {
+      "base_amount": 100.00,
+      "fee_amount": 2.00,
+      "total_amount": 102.00,
+      "currency": "USD"
+    }
   }
 }
 ```
 
-### Fee Information Fields:
+### Response Fields:
+
 | Field | Description |
 |-------|-------------|
+| `configured_currencies` | Array of configured crypto currencies |
+| `wallet_count` | Number of configured wallets |
+| `wallets` | Array of wallet details with masked addresses |
+| `skip_selection` | `true` if only one currency (auto-select) |
+| `link_id` | Payment link ID |
+| `transaction_amount` | Original transaction amount |
+| `transaction_currency` | Transaction currency (e.g., USD) |
 | `fee_payer` | Who pays the transaction fee: `"customer"` or `"company"` |
 | `fee_percent` | Transaction fee percentage (e.g., `2.0` for 2%) |
 | `fee_display` | Human-readable fee message for UI display |
+| `fee_breakdown` | **(Only when `fee_payer: "customer"`)** Detailed fee breakdown |
+
+### Fee Breakdown (when customer pays):
+
+| Field | Description |
+|-------|-------------|
+| `base_amount` | Original amount before fees |
+| `fee_amount` | Calculated fee amount |
+| `total_amount` | Total amount customer pays (base + fee) |
+| `currency` | Currency of the amounts |
 
 ---
 
