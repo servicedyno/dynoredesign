@@ -592,5 +592,927 @@ Wallet address is saved and ready to receive payments!`,
         404: { description: 'Wallet not found' }
       }
     }
+  },
+
+  // ============================================
+  // SECONDARY WALLET ADDRESS MANAGEMENT
+  // For additional receiving addresses (tbl_user_wallet_addresses)
+  // ============================================
+
+  '/api/wallet/getWalletAddresses': {
+    get: {
+      tags: ['Secondary Wallet Addresses'],
+      summary: '📖 Get Secondary Wallet Addresses',
+      description: `Retrieve additional wallet addresses configured for receiving payments.
+
+**Table:** tbl_user_wallet_addresses (Secondary receiving addresses)
+
+**Note:** These are separate from the main payment forwarding wallets in /api/wallet/getWallet`,
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'query',
+        name: 'company_id',
+        schema: { type: 'integer' },
+        description: 'Filter by company ID',
+        example: 38
+      }],
+      responses: {
+        200: {
+          description: 'Wallet addresses retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                  data: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        address_id: { type: 'integer' },
+                        currency: { type: 'string' },
+                        address: { type: 'string' },
+                        label: { type: 'string' },
+                        status: { type: 'string' },
+                        created_at: { type: 'string', format: 'date-time' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized' }
+      }
+    }
+  },
+
+  '/api/wallet/addWalletAddress': {
+    post: {
+      tags: ['Secondary Wallet Addresses'],
+      summary: '➕ Add Secondary Wallet Address',
+      description: `Add a new secondary wallet address directly (no OTP required).
+
+**Table:** tbl_user_wallet_addresses`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['address', 'currency', 'company_id'],
+              properties: {
+                address: { type: 'string', example: '0x9a7221b5e32d5f99e8da95585835442e29afb38f' },
+                currency: { type: 'string', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'] },
+                company_id: { type: 'integer', example: 38 },
+                label: { type: 'string', example: 'My ETH Address' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: { description: 'Address added successfully' },
+        400: { description: 'Invalid address or duplicate' },
+        401: { description: 'Unauthorized' }
+      }
+    }
+  },
+
+  // ============================================
+  // TRANSACTIONS
+  // ============================================
+
+  '/api/wallet/getWalletTransactions/{id}': {
+    post: {
+      tags: ['Transactions'],
+      summary: '📖 Get Wallet Transactions',
+      description: `Retrieve transactions for a specific wallet with pagination and filters.`,
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'path',
+        name: 'id',
+        required: true,
+        schema: { type: 'string' },
+        description: 'Wallet ID'
+      }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                page: { type: 'integer', default: 1 },
+                rowsPerPage: { type: 'integer', default: 10 },
+                filters: {
+                  type: 'object',
+                  properties: {
+                    column: { type: 'string', default: 'createdAt' },
+                    asc: { type: 'boolean', default: false }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Transactions retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      transactions: { type: 'array', items: { $ref: '#/components/schemas/Transaction' } },
+                      pagination: { $ref: '#/components/schemas/Pagination' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized' }
+      }
+    }
+  },
+
+  '/api/wallet/getAllTransactions': {
+    post: {
+      tags: ['Transactions'],
+      summary: '📖 Get All Transactions',
+      description: `Retrieve all transactions across wallets with pagination and filters.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                page: { type: 'integer', default: 1 },
+                rowsPerPage: { type: 'integer', default: 10 },
+                status: { type: 'string', enum: ['pending', 'done', 'failed', 'expired'] },
+                currency: { type: 'string' },
+                startDate: { type: 'string', format: 'date' },
+                endDate: { type: 'string', format: 'date' },
+                company_id: { type: 'integer' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Transactions retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      transactions: { type: 'array', items: { $ref: '#/components/schemas/Transaction' } },
+                      pagination: { $ref: '#/components/schemas/Pagination' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized' }
+      }
+    }
+  },
+
+  '/api/wallet/transaction/{id}': {
+    get: {
+      tags: ['Transactions'],
+      summary: '📖 Get Transaction Details',
+      description: `Retrieve detailed information about a specific transaction.`,
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'path',
+        name: 'id',
+        required: true,
+        schema: { type: 'string' },
+        description: 'Transaction ID'
+      }],
+      responses: {
+        200: {
+          description: 'Transaction details retrieved',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Transaction' }
+            }
+          }
+        },
+        404: { description: 'Transaction not found' }
+      }
+    }
+  },
+
+  '/api/wallet/transactions/export': {
+    post: {
+      tags: ['Transactions'],
+      summary: '📥 Export Transactions to CSV',
+      description: `Export transactions to CSV file with optional date and status filters.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                startDate: { type: 'string', format: 'date' },
+                endDate: { type: 'string', format: 'date' },
+                status: { type: 'string' },
+                company_id: { type: 'integer' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'CSV file',
+          content: {
+            'text/csv': {
+              schema: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  // ============================================
+  // CURRENCY & FEES
+  // ============================================
+
+  '/api/wallet/getCurrencyRates': {
+    post: {
+      tags: ['Currency & Fees'],
+      summary: '💱 Get Currency Conversion Rates',
+      description: `Get current cryptocurrency to fiat conversion rates.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                currencies: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['BTC', 'ETH', 'USDT-TRC20']
+                },
+                baseCurrency: { type: 'string', default: 'USD', example: 'USD' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Currency rates retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        currency: { type: 'string' },
+                        rate: { type: 'number' },
+                        usdValue: { type: 'number' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/wallet/estimateFees': {
+    post: {
+      tags: ['Currency & Fees'],
+      summary: '💰 Estimate Transaction Fees',
+      description: `Calculate estimated fees for a transaction before execution.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['amount', 'currency'],
+              properties: {
+                amount: { type: 'number', example: 100 },
+                currency: { type: 'string', example: 'BTC' },
+                type: { type: 'string', enum: ['send', 'receive', 'exchange'] }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Fee estimate',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      networkFee: { type: 'number' },
+                      platformFee: { type: 'number' },
+                      totalFee: { type: 'number' },
+                      finalAmount: { type: 'number' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/wallet/network-fees': {
+    get: {
+      tags: ['Currency & Fees'],
+      summary: '⛽ Get Network Fees',
+      description: `Get current blockchain network fees for all supported currencies.`,
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'Network fees retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        currency: { type: 'string' },
+                        fast: { type: 'number' },
+                        medium: { type: 'number' },
+                        slow: { type: 'number' },
+                        unit: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/wallet/calculate-payment': {
+    post: {
+      tags: ['Currency & Fees'],
+      summary: '🧮 Calculate Payment Amount',
+      description: `Calculate the exact payment amount including fees for a customer.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['amount', 'currency'],
+              properties: {
+                amount: { type: 'number', description: 'Amount in base currency', example: 100 },
+                currency: { type: 'string', description: 'Payment currency', example: 'BTC' },
+                baseCurrency: { type: 'string', default: 'USD' },
+                feePayer: { type: 'string', enum: ['customer', 'merchant'], default: 'customer' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Payment calculation',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      baseAmount: { type: 'number' },
+                      cryptoAmount: { type: 'number' },
+                      networkFee: { type: 'number' },
+                      platformFee: { type: 'number' },
+                      totalAmount: { type: 'number' },
+                      rate: { type: 'number' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/wallet/configured-currencies': {
+    get: {
+      tags: ['Currency & Fees'],
+      summary: '📋 Get Configured Currencies',
+      description: `Get list of currencies configured for the merchant.`,
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'Configured currencies',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        currency: { type: 'string' },
+                        name: { type: 'string' },
+                        type: { type: 'string', enum: ['CRYPTO', 'FIAT'] },
+                        enabled: { type: 'boolean' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  // ============================================
+  // PAYMENTS & VERIFICATION
+  // ============================================
+
+  '/api/wallet/addFunds': {
+    post: {
+      tags: ['Payments'],
+      summary: '💵 Add Funds to Wallet',
+      description: `Initiate adding funds to a fiat wallet via card or bank transfer.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['amount', 'currency', 'payment_method'],
+              properties: {
+                amount: { type: 'number', example: 100 },
+                currency: { type: 'string', enum: ['USD', 'EUR', 'NGN', 'GBP'] },
+                payment_method: { type: 'string', enum: ['card', 'bank_transfer'] },
+                card_details: {
+                  type: 'object',
+                  properties: {
+                    number: { type: 'string' },
+                    expiry: { type: 'string' },
+                    cvv: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: { description: 'Payment initiated' },
+        400: { description: 'Invalid payment details' }
+      }
+    }
+  },
+
+  '/api/wallet/authStep': {
+    post: {
+      tags: ['Payments'],
+      summary: '🔐 3D Secure Authentication Step',
+      description: `Handle 3D Secure authentication for card payments.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['transaction_ref', 'otp'],
+              properties: {
+                transaction_ref: { type: 'string' },
+                otp: { type: 'string' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: { description: 'Authentication successful' },
+        400: { description: 'Authentication failed' }
+      }
+    }
+  },
+
+  '/api/wallet/verifyPayment': {
+    post: {
+      tags: ['Payments'],
+      summary: '✅ Verify Payment',
+      description: `Verify payment status after completion.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['transaction_ref'],
+              properties: {
+                transaction_ref: { type: 'string' },
+                payment_id: { type: 'string' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Payment status',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  status: { type: 'string', enum: ['pending', 'success', 'failed'] },
+                  data: { type: 'object' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/wallet/confirmPayment': {
+    post: {
+      tags: ['Payments'],
+      summary: '✅ Confirm Payment',
+      description: `Confirm and finalize a pending payment.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['payment_id'],
+              properties: {
+                payment_id: { type: 'string' },
+                confirmation_code: { type: 'string' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: { description: 'Payment confirmed' },
+        400: { description: 'Confirmation failed' }
+      }
+    }
+  },
+
+  '/api/wallet/verifyCryptoPayment': {
+    post: {
+      tags: ['Payments'],
+      summary: '₿ Verify Crypto Payment',
+      description: `Verify cryptocurrency payment on blockchain.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['payment_id'],
+              properties: {
+                payment_id: { type: 'string' },
+                tx_hash: { type: 'string', description: 'Blockchain transaction hash' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Crypto payment status',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  status: { type: 'string' },
+                  confirmations: { type: 'integer' },
+                  required_confirmations: { type: 'integer' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  // ============================================
+  // WITHDRAWALS & TRANSFERS
+  // ============================================
+
+  '/api/wallet/sendConfirmationOTP': {
+    post: {
+      tags: ['Withdrawals'],
+      summary: '📧 Send Withdrawal OTP',
+      description: `Send OTP for withdrawal confirmation.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['wallet_id', 'amount', 'destination'],
+              properties: {
+                wallet_id: { type: 'integer' },
+                amount: { type: 'number' },
+                destination: { type: 'string', description: 'Destination wallet address' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: { description: 'OTP sent to email' },
+        400: { description: 'Invalid withdrawal request' }
+      }
+    }
+  },
+
+  '/api/wallet/withdrawAssets': {
+    post: {
+      tags: ['Withdrawals'],
+      summary: '💸 Withdraw Assets',
+      description: `Withdraw cryptocurrency to external wallet address.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['wallet_id', 'amount', 'destination', 'otp'],
+              properties: {
+                wallet_id: { type: 'integer' },
+                amount: { type: 'number' },
+                destination: { type: 'string' },
+                otp: { type: 'string', description: '6-digit OTP from email' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Withdrawal initiated',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      tx_id: { type: 'string' },
+                      status: { type: 'string' },
+                      amount: { type: 'number' },
+                      fee: { type: 'number' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid OTP or insufficient balance' }
+      }
+    }
+  },
+
+  // ============================================
+  // EXCHANGE
+  // ============================================
+
+  '/api/wallet/exchangeCreate': {
+    post: {
+      tags: ['Exchange'],
+      summary: '🔄 Create Exchange Order',
+      description: `Create a new currency exchange order.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['from_currency', 'to_currency', 'amount'],
+              properties: {
+                from_currency: { type: 'string', example: 'BTC' },
+                to_currency: { type: 'string', example: 'ETH' },
+                amount: { type: 'number', example: 0.1 }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Exchange order created',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      exchange_id: { type: 'string' },
+                      from_amount: { type: 'number' },
+                      to_amount: { type: 'number' },
+                      rate: { type: 'number' },
+                      fee: { type: 'number' },
+                      expires_at: { type: 'string', format: 'date-time' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid exchange request' }
+      }
+    }
+  },
+
+  '/api/wallet/confirmExchange': {
+    post: {
+      tags: ['Exchange'],
+      summary: '✅ Confirm Exchange Order',
+      description: `Confirm and execute a pending exchange order.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['exchange_id'],
+              properties: {
+                exchange_id: { type: 'string' },
+                otp: { type: 'string', description: 'OTP if required' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: { description: 'Exchange executed successfully' },
+        400: { description: 'Exchange expired or invalid' }
+      }
+    }
+  },
+
+  '/api/wallet/getExchange': {
+    get: {
+      tags: ['Exchange'],
+      summary: '📖 Get Exchange History',
+      description: `Get exchange order history.`,
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+        { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } }
+      ],
+      responses: {
+        200: {
+          description: 'Exchange history',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        exchange_id: { type: 'string' },
+                        from_currency: { type: 'string' },
+                        to_currency: { type: 'string' },
+                        from_amount: { type: 'number' },
+                        to_amount: { type: 'number' },
+                        status: { type: 'string' },
+                        created_at: { type: 'string', format: 'date-time' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  // ============================================
+  // ANALYTICS
+  // ============================================
+
+  '/api/wallet/getUserAnalytics': {
+    post: {
+      tags: ['Analytics'],
+      summary: '📊 Get User Analytics',
+      description: `Get analytics and statistics for the user's wallet activity.`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                period: { type: 'string', enum: ['7d', '30d', '90d', '1y'], default: '30d' },
+                company_id: { type: 'integer' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Analytics data',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      total_transactions: { type: 'integer' },
+                      total_volume: { type: 'number' },
+                      total_fees_paid: { type: 'number' },
+                      currency_breakdown: { type: 'object' },
+                      daily_stats: { type: 'array', items: { type: 'object' } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 };
