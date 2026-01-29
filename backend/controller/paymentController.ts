@@ -484,47 +484,68 @@ const createCryptoPayment = async (
       // Determine fee_payer mode
       const fee_payer = items.fee_payer || 'company';
       
+      // Fee percentage (33% admin fee)
+      const ADMIN_FEE_PERCENT = 0.33;
+      
       // Calculate crypto amount using FastForex
       const baseAmountUSD = items.base_amount || items.amount || 0;
-      let crypto_amount = 0;
-      let merchant_amount_crypto = data.amount;
-      let total_fees_crypto = 0;
+      let crypto_amount = 0;           // What customer should pay
+      let merchant_amount_crypto = 0;  // What merchant receives
+      let total_fees_crypto = 0;       // Admin fees
       let exchange_rate = 0;
       
       try {
-        // Get the crypto amount for the USD value using FastForex
+        // Get the crypto amount for the USD base value using FastForex
         const cryptoRates = await currencyConvert({
           sourceCurrency: items.base_currency || 'USD',
           currency: [requestedCurrency],
           amount: baseAmountUSD,
           fixedDecimal: false,
         });
-        crypto_amount = parseFloat(cryptoRates[0]?.amount?.toString() || '0');
+        const base_crypto_amount = parseFloat(cryptoRates[0]?.amount?.toString() || '0');
         exchange_rate = parseFloat(cryptoRates[0]?.transferRate?.toString() || '0');
         
-        console.log(`[createCryptoPayment] Crypto amount calculated:
+        console.log(`[createCryptoPayment] Base crypto amount calculated:
           - Base amount: ${baseAmountUSD} ${items.base_currency || 'USD'}
-          - Crypto amount: ${crypto_amount} ${requestedCurrency}
+          - Base crypto: ${base_crypto_amount} ${requestedCurrency}
           - Exchange rate: 1 ${items.base_currency || 'USD'} = ${exchange_rate} ${requestedCurrency}`);
         
         if (fee_payer === 'customer') {
-          // Customer pays fees, so merchant gets the base crypto amount
-          merchant_amount_crypto = crypto_amount;
-          total_fees_crypto = data.amount - merchant_amount_crypto;
+          // CUSTOMER PAYS FEES:
+          // - Customer pays: base_amount + fees = base_amount / (1 - fee_percent)
+          // - Merchant receives: full base_amount (what they requested)
+          // - Admin receives: fees (swept from temp wallet)
           
-          console.log(`[createCryptoPayment] Customer pays fees mode:
-            - Total paid by customer: ${data.amount} ${requestedCurrency}
-            - Merchant receives: ${merchant_amount_crypto} ${requestedCurrency}
-            - Fees collected: ${total_fees_crypto} ${requestedCurrency}`);
+          merchant_amount_crypto = base_crypto_amount;  // Merchant gets full base amount
+          total_fees_crypto = base_crypto_amount * ADMIN_FEE_PERCENT / (1 - ADMIN_FEE_PERCENT);  // Calculate fees on top
+          crypto_amount = merchant_amount_crypto + total_fees_crypto;  // Customer pays base + fees
+          
+          console.log(`[createCryptoPayment] CUSTOMER PAYS FEES mode:
+            - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base + fees)
+            - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (full base)
+            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (swept later)`);
+            
         } else {
-          // Company pays fees, merchant gets crypto amount minus fees
-          merchant_amount_crypto = crypto_amount;
+          // COMPANY (MERCHANT) PAYS FEES:
+          // - Customer pays: base_amount only
+          // - Merchant receives: base_amount * (1 - fee_percent) = 67%
+          // - Admin receives: base_amount * fee_percent = 33% (swept from temp wallet)
+          
+          crypto_amount = base_crypto_amount;  // Customer pays just the base
+          merchant_amount_crypto = base_crypto_amount * (1 - ADMIN_FEE_PERCENT);  // Merchant gets 67%
+          total_fees_crypto = base_crypto_amount * ADMIN_FEE_PERCENT;  // Admin gets 33%
+          
+          console.log(`[createCryptoPayment] COMPANY PAYS FEES mode:
+            - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base only)
+            - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (67%)
+            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (33%, swept later)`);
         }
       } catch (calcError) {
         console.error('[createCryptoPayment] Crypto amount calculation error:', calcError);
         // Fallback to data.amount if conversion fails
         crypto_amount = data.amount || 0;
-        merchant_amount_crypto = data.amount;
+        merchant_amount_crypto = crypto_amount * (1 - ADMIN_FEE_PERCENT);
+        total_fees_crypto = crypto_amount * ADMIN_FEE_PERCENT;
       }
       
       // Add crypto amount and rate to response
@@ -532,6 +553,9 @@ const createCryptoPayment = async (
         hash: uniqueRef, 
         ...paymentRes,
         amount: crypto_amount,
+        merchant_amount: merchant_amount_crypto,
+        fees: total_fees_crypto,
+        fee_payer: fee_payer,
         base_amount: baseAmountUSD,
         base_currency: items.base_currency || 'USD',
         rate: exchange_rate
@@ -540,6 +564,8 @@ const createCryptoPayment = async (
       console.log("paymentRes=============>", paymentRes, uniqueRef, {
         mode: paymentTypes.CRYPTO,
         amount: crypto_amount,
+        merchant_amount: merchant_amount_crypto,
+        fees: total_fees_crypto,
         status: "pending",
         ref: uniqueRef,
         currency: data.currency,
@@ -555,7 +581,7 @@ const createCryptoPayment = async (
         mode: paymentTypes.CRYPTO,
         amount: crypto_amount,                  // Crypto amount customer should pay
         merchant_amount: merchant_amount_crypto, // Amount merchant should receive
-        total_fees: total_fees_crypto,          // Total fees (if customer pays)
+        total_fees: total_fees_crypto,          // Total fees (admin's portion)
         fee_payer: fee_payer,                   // Who pays fees
         base_amount_usd: baseAmountUSD,         // Original USD amount
         status: "pending",
