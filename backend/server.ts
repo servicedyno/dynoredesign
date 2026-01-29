@@ -134,17 +134,22 @@ cron.schedule("0 */24 * * *", function () {
 // ===========================================
 import * as merchantPoolService from "./services/merchantPoolService";
 
-// Merchant Pool: Sweep accumulated admin fees every 5 minutes
-// Handles both threshold-based ($30 USD) and time-based (10 min) sweeps
-cron.schedule("*/5 * * * *", function () {
+// Merchant Pool: Sweep accumulated admin fees every 1 minute
+// Handles both threshold-based ($30 USD) and time-based (3 min for ETH/TRX) sweeps
+// Running every 1 min ensures sweeps happen promptly after time threshold is met
+cron.schedule("* * * * *", function () {
   console.log("performMerchantPoolScheduledSweeps ==============> checked");
-  merchantPoolService.performScheduledSweeps();
+  merchantPoolService.performScheduledSweeps().catch(err => {
+    console.error("[Cron] Sweep failed, will retry next cycle:", err.message);
+  });
 });
 
-// Merchant Pool: Release expired reservations every 5 minutes
-cron.schedule("*/5 * * * *", function () {
+// Merchant Pool: Release expired reservations every 2 minutes
+cron.schedule("*/2 * * * *", function () {
   console.log("releaseMerchantPoolExpiredReservations ==============> checked");
-  merchantPoolService.releaseExpiredReservations();
+  merchantPoolService.releaseExpiredReservations().catch(err => {
+    console.error("[Cron] Release expired failed, will retry next cycle:", err.message);
+  });
 });
 
 // Merchant Pool: Cleanup stuck addresses every 15 minutes (safety net)
