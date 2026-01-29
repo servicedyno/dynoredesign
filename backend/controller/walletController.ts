@@ -578,8 +578,8 @@ const addFunds = async (req: express.Request, res: express.Response) => {
             ref: uniqueRef,
             currency: value.currency,
             walletType: "user",
-            temp_id: paymentRes.temp_id,
-            is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",  // Include merchant pool flag
+            temp_id: (paymentRes as any).temp_id,
+            is_merchant_pool: (paymentRes as any).is_merchant_pool ? "true" : "false",  // Include merchant pool flag
           });
         }
 
