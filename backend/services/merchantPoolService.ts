@@ -1090,6 +1090,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
 
     const walletType = poolAddress.dataValues.wallet_type;
     const adminWallet = ADMIN_WALLETS[walletType];
+    const previousStatus = status; // Remember status to restore if RESERVED
     
     if (!adminWallet) {
       throw new Error(`No admin wallet configured for ${walletType}`);
