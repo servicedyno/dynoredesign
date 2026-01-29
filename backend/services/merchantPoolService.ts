@@ -1399,16 +1399,16 @@ export const sweepByThreshold = async (): Promise<void> => {
  * Only for chains configured with time mode
  */
 export const sweepByTime = async (): Promise<void> => {
-  // Get all addresses with accumulated fees and merchant payout timestamp
+  // Get all IN_USE addresses with accumulated fees and merchant payout timestamp
   const addressesWithFees = await merchantTempAddressModel.findAll({
     where: {
-      status: "AVAILABLE",
+      status: "IN_USE",
       admin_fee_balance: { [Op.gt]: 0 },
       last_merchant_payout: { [Op.ne]: null },
     },
   });
 
-  console.log(`[MerchantPool] Checking ${addressesWithFees.length} addresses for time-based sweep...`);
+  console.log(`[MerchantPool] Checking ${addressesWithFees.length} IN_USE addresses for time-based sweep...`);
 
   const eligibleAddresses = [];
 
