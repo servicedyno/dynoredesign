@@ -616,7 +616,9 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 **Status Flow:**
 - \`waiting\` - No payment detected yet on blockchain
 - \`pending\` - Payment detected, awaiting blockchain confirmations
+- \`partial\` - Partial payment received, waiting for remaining amount
 - \`confirmed\` - Payment fully confirmed and processed
+- \`overpayment\` - Payment confirmed but customer paid more than required
 - \`failed\` - Payment processing failed
 
 **Recommended Polling Interval:** 10-15 seconds`,
@@ -652,7 +654,9 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                     message: 'Waiting for payment',
                     data: {
                       status: 'waiting',
-                      message: 'No payment detected yet'
+                      message: 'No payment detected yet',
+                      expected_amount: '35.000000',
+                      currency: 'USDT'
                     }
                   }
                 },
@@ -663,9 +667,27 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                     data: {
                       status: 'pending',
                       message: 'Payment detected, awaiting confirmation',
-                      txId: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
-                      amount: '0.00456789',
-                      currency: 'BTC'
+                      txId: '7a91f8b2c3d4e5f6...',
+                      amount: '35.000000',
+                      expected_amount: '35.000000',
+                      currency: 'USDT'
+                    }
+                  }
+                },
+                'Partial Payment': {
+                  summary: '⚠️ Partial payment received (UNDERPAYMENT)',
+                  value: {
+                    message: 'Partial payment received',
+                    data: {
+                      status: 'partial',
+                      message: 'Partial payment received. Please pay the remaining amount.',
+                      paid_amount: '20.000000',
+                      expected_amount: '35.000000',
+                      remaining_amount: '15.000000',
+                      currency: 'USDT',
+                      txId: '7a91f8b2c3d4e5f6...',
+                      grace_period_minutes: 30,
+                      partial_payment_timestamp: '2025-01-29T10:30:00.000Z'
                     }
                   }
                 },
@@ -677,9 +699,31 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                       status: 'confirmed',
                       message: 'Payment confirmed',
                       redirect: 'https://mystore.com/order/12345/success',
-                      txId: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
-                      amount: '0.00456789',
-                      currency: 'BTC'
+                      txId: '7a91f8b2c3d4e5f6...',
+                      paid_amount: '35.000000',
+                      expected_amount: '35.000000',
+                      currency: 'USDT'
+                    }
+                  }
+                },
+                'Overpayment': {
+                  summary: '💰 Payment confirmed with excess (OVERPAYMENT)',
+                  value: {
+                    message: 'Payment confirmed with overpayment',
+                    data: {
+                      status: 'overpayment',
+                      message: 'Payment confirmed with overpayment',
+                      redirect: 'https://mystore.com/order/12345/success',
+                      txId: '7a91f8b2c3d4e5f6...',
+                      paid_amount: '42.000000',
+                      expected_amount: '35.000000',
+                      currency: 'USDT',
+                      overpayment: {
+                        detected: true,
+                        excess_amount: '7.000000',
+                        currency: 'USDT',
+                        refund_message: 'Excess amount will be refunded to your wallet'
+                      }
                     }
                   }
                 },
@@ -690,7 +734,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                     data: {
                       status: 'failed',
                       message: 'Transaction verification failed',
-                      txId: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0'
+                      txId: '7a91f8b2c3d4e5f6...'
                     }
                   }
                 }
