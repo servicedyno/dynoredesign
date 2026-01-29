@@ -146,6 +146,12 @@ const getData = async (req: express.Request, res: express.Response) => {
     const item = await getRedisItem("customer-" + data);
 
     console.log("item=======>", item, data);
+    
+    // Check if item exists
+    if (!item || Object.keys(item).length === 0) {
+      return errorResponseHelper(res, 404, "Payment link not found or expired");
+    }
+    
     let payload;
     if (item.pathType === "createLink") {
       payload = {
@@ -162,13 +168,31 @@ const getData = async (req: express.Request, res: express.Response) => {
         fee_payer: item.fee_payer || 'company',  // Include fee_payer for checkout
       };
     } else {
-      payload = {
-        amount: item.amount,
-        base_currency: item.base_currency,
-        token: await getAccessToken(item.customer_id, data),
-        payment_mode: item.pathType,
-        fee_payer: item.fee_payer || 'company',
-      };
+      // Validate customer_id exists before calling getAccessToken
+      if (!item.customer_id) {
+        console.warn(`[getData] Missing customer_id for non-createLink payment:`, item);
+        // Try to use link-style token generation as fallback
+        payload = {
+          amount: item.amount || item.base_amount,
+          base_currency: item.base_currency,
+          token: await getLinkAccessToken(
+            item.email,
+            data,
+            item.pathType || 'payment',
+            item.transaction_id
+          ),
+          payment_mode: item.pathType,
+          fee_payer: item.fee_payer || 'company',
+        };
+      } else {
+        payload = {
+          amount: item.amount,
+          base_currency: item.base_currency,
+          token: await getAccessToken(item.customer_id, data),
+          payment_mode: item.pathType,
+          fee_payer: item.fee_payer || 'company',
+        };
+      }
     }
 
     console.log(payload);
