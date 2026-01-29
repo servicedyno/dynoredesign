@@ -145,8 +145,8 @@ const customCss = `
 `;
 
 export const setupMerchantSwagger = (app: Express) => {
-  app.use("/docs", swaggerUi.serve);
-  app.get("/docs", swaggerUi.setup(swaggerSpec, {
+  // Setup swagger UI
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customCss,
     customSiteTitle: "DynoPay Merchant API",
     customfavIcon: "https://dynopay.com/favicon.ico",
