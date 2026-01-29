@@ -38,14 +38,16 @@ DynoPay sends webhook notifications for payment events to your configured webhoo
 |--------|-------------|
 | `Content-Type` | `application/json` |
 | `X-DynoPay-Event` | Event type (e.g., `payment.confirmed`) |
-| `X-DynoPay-Signature` | HMAC-SHA256 signature for verification |
+| `X-DynoPay-Signature` | HMAC-SHA256 signature (only if `webhook_secret` configured) |
 | `X-DynoPay-Timestamp` | Unix timestamp when webhook was sent |
 | `X-DynoPay-Webhook-Id` | Unique ID for this webhook delivery |
 | `User-Agent` | `DynoPay-Webhook/1.0` |
 
-## Signature Verification
+## Signature Verification (Optional)
 
-To verify webhook authenticity, compute the HMAC-SHA256 signature and compare it with the `X-DynoPay-Signature` header.
+The `webhook_secret` is **optional**. If you don't configure a secret, webhooks will still be sent but without the `X-DynoPay-Signature` header.
+
+To verify webhook authenticity when a secret is configured, compute the HMAC-SHA256 signature and compare it with the `X-DynoPay-Signature` header.
 
 ### Node.js Example
 
@@ -82,7 +84,8 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   const timestamp = req.headers['x-dynopay-timestamp'];
   const payload = req.body.toString();
   
-  if (!verifyWebhookSignature(payload, signature, timestamp, WEBHOOK_SECRET)) {
+  // Only verify if signature header is present
+  if (signature && !verifyWebhookSignature(payload, signature, timestamp, WEBHOOK_SECRET)) {
     return res.status(401).send('Invalid signature');
   }
   
@@ -94,52 +97,26 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
 });
 ```
 
-### Python Example
-
-```python
-import hmac
-import hashlib
-import json
-
-def verify_webhook_signature(payload: str, signature: str, timestamp: str, secret: str) -> bool:
-    payload_obj = json.loads(payload)
-    signature_payload = {**payload_obj, 'timestamp': int(timestamp)}
-    
-    expected_signature = hmac.new(
-        secret.encode(),
-        json.dumps(signature_payload, separators=(',', ':')).encode(),
-        hashlib.sha256
-    ).hexdigest()
-    
-    return hmac.compare_digest(signature, expected_signature)
-
-# Flask example
-@app.route('/webhook', methods=['POST'])
-def handle_webhook():
-    signature = request.headers.get('X-DynoPay-Signature')
-    timestamp = request.headers.get('X-DynoPay-Timestamp')
-    payload = request.get_data(as_text=True)
-    
-    if not verify_webhook_signature(payload, signature, timestamp, WEBHOOK_SECRET):
-        return 'Invalid signature', 401
-    
-    event = json.loads(payload)
-    print(f"Received event: {event['event']}")
-    
-    return 'OK', 200
-```
-
-## Configuration
+## API Endpoints
 
 ### Set Webhook URL
 
 ```bash
+# With signature verification (recommended)
 curl -X PUT "https://api.dynopay.com/api/company/webhook-settings/{company_id}" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "webhook_url": "https://your-domain.com/webhook",
     "webhook_secret": "generate"
+  }'
+
+# Without signature verification
+curl -X PUT "https://api.dynopay.com/api/company/webhook-settings/{company_id}" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "webhook_url": "https://your-domain.com/webhook"
   }'
 ```
 
@@ -157,13 +134,49 @@ curl -X POST "https://api.dynopay.com/api/company/webhook-test/{company_id}" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
+### View Webhook History
+
+```bash
+# Get all webhooks (paginated)
+curl -X GET "https://api.dynopay.com/api/company/webhook-history/{company_id}" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Filter by status
+curl -X GET "https://api.dynopay.com/api/company/webhook-history/{company_id}?status=failed" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Filter by event type
+curl -X GET "https://api.dynopay.com/api/company/webhook-history/{company_id}?event_type=payment.confirmed" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Get Webhook Detail
+
+```bash
+curl -X GET "https://api.dynopay.com/api/company/webhook-history/{company_id}/detail/{log_id}" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Get Webhook Statistics
+
+```bash
+# Last 7 days (default)
+curl -X GET "https://api.dynopay.com/api/company/webhook-stats/{company_id}" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Custom period (up to 30 days)
+curl -X GET "https://api.dynopay.com/api/company/webhook-stats/{company_id}?days=14" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
 ## Best Practices
 
-1. **Always verify signatures** - Never trust webhook data without signature verification
+1. **Verify signatures (if configured)** - When using webhook secrets, always verify the signature
 2. **Respond quickly** - Return 200 OK within 10 seconds; process asynchronously if needed
 3. **Handle duplicates** - Use `webhook_id` for idempotency
 4. **Check timestamps** - Reject webhooks with timestamps older than 5 minutes to prevent replay attacks
 5. **Use HTTPS** - Only configure HTTPS webhook URLs in production
+6. **Monitor delivery** - Use the webhook history and stats APIs to monitor delivery success rates
 
 ## Retry Policy
 
