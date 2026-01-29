@@ -87,12 +87,43 @@ const withRetry = async <T>(
 ): Promise<T> => {
   let lastError: Error | null = null;
   
+  // Hard failures that should NOT be retried (invalid data, auth issues, permanent errors)
+  const NON_RETRYABLE_ERRORS = [
+    'invalid address',
+    'invalid private key',
+    'insufficient balance',
+    'insufficient funds',
+    'nonce too low',
+    'replacement transaction underpriced',
+    'already known',
+    'invalid signature',
+    'bad request',
+    'unauthorized',
+    'forbidden',
+    'not found',
+    '400',
+    '401', 
+    '403',
+    '404',
+  ];
+  
+  const isRetryable = (error: Error): boolean => {
+    const message = error.message?.toLowerCase() || '';
+    return !NON_RETRYABLE_ERRORS.some(pattern => message.includes(pattern.toLowerCase()));
+  };
+  
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
     } catch (error: any) {
       lastError = error;
       const message = getErrorMessage(error);
+      
+      // Check if error is retryable (soft failure like network timeout, rate limit)
+      if (!isRetryable(lastError)) {
+        console.error(`[PaymentController] ❌ ${operationName} failed with non-retryable error: ${message}`);
+        throw lastError; // Don't retry hard failures
+      }
       
       if (attempt < maxRetries) {
         const waitTime = RETRY_CONFIG.INITIAL_DELAY_MS * Math.pow(2, attempt - 1);
