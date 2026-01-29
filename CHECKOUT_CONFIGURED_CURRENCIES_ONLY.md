@@ -85,7 +85,16 @@ const [feeInfo, setFeeInfo] = useState<{
   fee_payer: 'customer' | 'company';
   fee_percent: number;
   fee_display: string;
+  fee_breakdown?: {
+    base_amount: number;
+    fee_amount: number;
+    total_amount: number;
+    currency: string;
+  };
 } | null>(null);
+
+// Payment link info
+const [linkId, setLinkId] = useState<string | null>(null);
 ```
 
 ---
