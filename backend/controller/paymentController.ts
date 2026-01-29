@@ -2763,13 +2763,19 @@ const getCurrencyRates = async (
             
             // Get fee breakdown
             const networkFee = await getBlockchainNetworkFee(chain);
-            const { fixedFee, transactionFee, blockchainBuffer } = await calculateTransactionFees(
+            const feeResult = await calculateTransactionFees(
               chain,
               amount
             );
             
+            // Ensure all fee values are valid numbers (protection against NaN/undefined)
+            const fixedFee = Number(feeResult.fixedFee) || 0;
+            const transactionFee = Number(feeResult.transactionFee) || 0;
+            const blockchainBuffer = Number(feeResult.blockchainBuffer) || 0;
+            const networkFeeUSD = Number(networkFee.feeInUSD) || 0;
+            
             // Calculate totals
-            const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFee.feeInUSD;
+            const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
             const totalAmountUSD = amount + totalFeesUSD;
             const totalAmountCrypto = cryptoPrice > 0 ? totalAmountUSD / cryptoPrice : 0;
             
