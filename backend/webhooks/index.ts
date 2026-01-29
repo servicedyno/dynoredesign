@@ -103,6 +103,14 @@ const tatumCryptoWebHook = async (
       txId: payload.txId
     });
 
+    // Check for duplicate txId (prevent processing same blockchain tx twice)
+    const processedTxKey = `processed-tx-${payload.txId}`;
+    const alreadyProcessed = await getRedisItem(processedTxKey);
+    if (alreadyProcessed) {
+      console.log("[tatumCryptoWebHook] Transaction already processed, ignoring duplicate:", payload.txId);
+      return res.status(200).end();
+    }
+
     let address = payload.address;
     let items = await getRedisItem("crypto-" + address);
 
@@ -120,6 +128,7 @@ const tatumCryptoWebHook = async (
     console.log("[tatumCryptoWebHook] Redis data found:", {
       currency: items.currency,
       expectedAmount: items.amount,
+      payment_id: items.payment_id,
       hasTxId: !!items.txId
     });
 
