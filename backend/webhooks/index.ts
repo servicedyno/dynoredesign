@@ -512,6 +512,24 @@ const tatumCryptoWebHook = async (
           completedAt: new Date().toISOString(),
         });
         
+        // FIXED: Set TTL on crypto address key for checkout polling (30 minutes)
+        await setRedisTTL("crypto-" + address, 1800);
+        
+        // Also update customer ref key with successful status if it exists
+        if (items?.ref) {
+          const customerData = await getRedisItem(items.ref);
+          if (customerData && Object.keys(customerData).length > 0) {
+            await setRedisItem(items.ref, {
+              ...customerData,
+              status: "successful",
+              txId: payload.txId,
+              receivedAmount: incomingAmount,
+              completedAt: new Date().toISOString(),
+            });
+            await setRedisTTL(items.ref, 1800); // 30 minutes TTL
+          }
+        }
+        
         // Store processed txId with 48-hour TTL to prevent duplicate processing
         await setRedisItem(`processed-tx-${payload.txId}`, {
           address: address,
@@ -519,7 +537,7 @@ const tatumCryptoWebHook = async (
           amount: incomingAmount,
           processed_at: new Date().toISOString(),
         });
-        // Note: Redis TTL should be set separately if needed (48 hours = 172800 seconds)
+        await setRedisTTL(`processed-tx-${payload.txId}`, 172800); // 48 hours TTL
         
         console.log("[tatumCryptoWebHook] Redis updated with txId after successful processing");
         
