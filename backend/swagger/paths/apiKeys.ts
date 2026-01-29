@@ -528,5 +528,198 @@ export const apiKeyPaths = {
         404: { description: 'Customer not found' }
       }
     }
+  },
+  '/api/userApi/deleteApi/{id}': {
+    delete: {
+      tags: ['API Keys'],
+      summary: 'Delete API key',
+      description: 'Permanently delete an API key. This action cannot be undone.',
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'path',
+        name: 'id',
+        required: true,
+        schema: { type: 'integer' },
+        description: 'API key ID to delete'
+      }],
+      responses: {
+        200: { description: 'API key deleted successfully' },
+        404: { description: 'API key not found' }
+      }
+    }
+  },
+  '/api/userApi/usage/{id}': {
+    get: {
+      tags: ['API Keys'],
+      summary: 'Get API usage statistics',
+      description: `Retrieve usage statistics for a specific API key including:
+- Request counts by endpoint
+- Error rates
+- Rate limit status
+- Usage over time`,
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'path',
+        name: 'id',
+        required: true,
+        schema: { type: 'integer' },
+        description: 'API key ID'
+      }, {
+        in: 'query',
+        name: 'period',
+        schema: { type: 'string', enum: ['24h', '7d', '30d'], default: '7d' },
+        description: 'Time period for statistics'
+      }],
+      responses: {
+        200: {
+          description: 'Usage statistics retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      total_requests: { type: 'integer' },
+                      successful_requests: { type: 'integer' },
+                      failed_requests: { type: 'integer' },
+                      rate_limit_hits: { type: 'integer' },
+                      average_response_time: { type: 'number' },
+                      daily_breakdown: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            date: { type: 'string', format: 'date' },
+                            requests: { type: 'integer' },
+                            errors: { type: 'integer' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: { description: 'API key not found' }
+      }
+    }
+  },
+  '/api/userApi/logs/{id}': {
+    get: {
+      tags: ['API Keys'],
+      summary: 'Get API request logs',
+      description: `Retrieve recent request logs for debugging and monitoring.
+      
+**Includes:**
+- Request timestamp
+- Endpoint called
+- Response status
+- Response time
+- IP address`,
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'path',
+        name: 'id',
+        required: true,
+        schema: { type: 'integer' },
+        description: 'API key ID'
+      }, {
+        in: 'query',
+        name: 'page',
+        schema: { type: 'integer', default: 1 }
+      }, {
+        in: 'query',
+        name: 'limit',
+        schema: { type: 'integer', default: 50 }
+      }, {
+        in: 'query',
+        name: 'status',
+        schema: { type: 'string', enum: ['success', 'error', 'all'], default: 'all' }
+      }],
+      responses: {
+        200: {
+          description: 'Logs retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      logs: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            timestamp: { type: 'string', format: 'date-time' },
+                            endpoint: { type: 'string' },
+                            method: { type: 'string' },
+                            status_code: { type: 'integer' },
+                            response_time_ms: { type: 'number' },
+                            ip_address: { type: 'string' },
+                            error_message: { type: 'string', nullable: true }
+                          }
+                        }
+                      },
+                      pagination: { $ref: '#/components/schemas/Pagination' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: { description: 'API key not found' }
+      }
+    }
+  },
+  '/api/userApi/rateLimit/{id}': {
+    put: {
+      tags: ['API Keys'],
+      summary: 'Update rate limit',
+      description: 'Update rate limiting configuration for an API key.',
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'path',
+        name: 'id',
+        required: true,
+        schema: { type: 'integer' },
+        description: 'API key ID'
+      }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                rate_limit: {
+                  type: 'integer',
+                  description: 'Requests per minute',
+                  example: 100,
+                  minimum: 1,
+                  maximum: 10000
+                },
+                burst_limit: {
+                  type: 'integer',
+                  description: 'Maximum burst requests',
+                  example: 200
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: { description: 'Rate limit updated' },
+        400: { description: 'Invalid rate limit configuration' },
+        404: { description: 'API key not found' }
+      }
+    }
   }
 };
