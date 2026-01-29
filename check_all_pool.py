@@ -11,62 +11,80 @@ conn = psycopg2.connect(
 cursor = conn.cursor()
 
 print("=" * 80)
-print("COMPLETE POOL STATUS CHECK")
+print("TEMPORARY ADDRESS POOL FOR MERCHANT john@dyno.pt (owner_user_id: 28)")
 print("=" * 80)
 
-# Total count
-cursor.execute("SELECT COUNT(*) FROM tbl_merchant_temp_address;")
-total = cursor.fetchone()[0]
-print(f"\n📊 Total addresses in tbl_merchant_temp_address: {total}")
+# Get all addresses owned by user 28
+cursor.execute("""
+    SELECT 
+        temp_address_id,
+        wallet_type,
+        wallet_address,
+        status,
+        current_company_id,
+        derivation_index,
+        total_transactions,
+        admin_fee_balance
+    FROM tbl_merchant_temp_address
+    WHERE owner_user_id = 28
+    ORDER BY wallet_type, temp_address_id;
+""")
 
-if total > 0:
-    # Get all addresses
-    cursor.execute("""
-        SELECT 
-            temp_address_id,
-            wallet_type,
-            wallet_address,
-            status,
-            current_company_id,
-            owner_user_id
-        FROM tbl_merchant_temp_address
-        ORDER BY wallet_type;
-    """)
+addresses = cursor.fetchall()
+
+print(f"\n✅ Total pool addresses for merchant: {len(addresses)}")
+
+# Group by currency
+by_currency = {}
+for addr in addresses:
+    currency = addr[1]
+    if currency not in by_currency:
+        by_currency[currency] = []
+    by_currency[currency].append({
+        'id': addr[0],
+        'address': addr[2],
+        'status': addr[3],
+        'company': addr[4],
+        'index': addr[5],
+        'tx_count': addr[6],
+        'admin_fee': addr[7]
+    })
+
+print("\n" + "-" * 80)
+print("POOL ADDRESSES BY CURRENCY")
+print("-" * 80)
+
+for currency in sorted(by_currency.keys()):
+    addrs = by_currency[currency]
+    available = len([a for a in addrs if a['status'] == 'AVAILABLE'])
+    reserved = len([a for a in addrs if a['status'] == 'RESERVED'])
+    processing = len([a for a in addrs if a['status'] == 'PROCESSING'])
     
-    for row in cursor.fetchall():
-        print(f"\n  ID: {row[0]}")
-        print(f"  Type: {row[1]}")
-        print(f"  Address: {row[2][:50]}..." if row[2] and len(row[2]) > 50 else f"  Address: {row[2]}")
-        print(f"  Status: {row[3]}")
-        print(f"  Company: {row[4]}")
-        print(f"  Owner: {row[5]}")
-else:
-    print("\n⚠️ The temporary address pool is EMPTY!")
-    print("   No addresses have been generated yet.")
+    print(f"\n📦 {currency}: {len(addrs)} address(es)")
+    print(f"   ✅ Available: {available} | 🔒 Reserved: {reserved} | ⏳ Processing: {processing}")
+    
+    for a in addrs:
+        addr_display = a['address'][:55] if a['address'] else 'N/A'
+        status_icon = "✅" if a['status'] == 'AVAILABLE' else "🔒" if a['status'] == 'RESERVED' else "⏳"
+        print(f"\n   {status_icon} Address #{a['id']}:")
+        print(f"      {addr_display}")
+        print(f"      Status: {a['status']} | Index: {a['index']} | Txs: {a['tx_count'] or 0}")
 
-# Check merchant wallet (xpub) table
+# Summary
 print("\n" + "=" * 80)
-print("MERCHANT WALLET (XPUB) TABLE CHECK")
+print("SUMMARY")
 print("=" * 80)
 
-cursor.execute("SELECT COUNT(*) FROM tbl_merchant_wallet;")
-wallet_count = cursor.fetchone()[0]
-print(f"\n📊 Total entries in tbl_merchant_wallet: {wallet_count}")
+total_available = sum(1 for c in by_currency.values() for a in c if a['status'] == 'AVAILABLE')
+total_reserved = sum(1 for c in by_currency.values() for a in c if a['status'] == 'RESERVED')
+total_processing = sum(1 for c in by_currency.values() for a in c if a['status'] == 'PROCESSING')
 
-if wallet_count > 0:
-    cursor.execute("""
-        SELECT company_id, wallet_type, xpub, current_index
-        FROM tbl_merchant_wallet
-        WHERE company_id = 38;
-    """)
-    wallets = cursor.fetchall()
-    
-    print(f"\nMerchant wallets for company_id=38: {len(wallets)}")
-    for w in wallets:
-        xpub_short = w[2][:50] + "..." if w[2] and len(w[2]) > 50 else w[2]
-        print(f"  • {w[1]}: index={w[3]}, xpub={xpub_short}")
-else:
-    print("\n⚠️ No merchant wallets (xpubs) configured!")
-    print("   Merchant pool system has not been initialized.")
+print(f"\n🏦 Merchant: john@dyno.pt (user_id: 28)")
+print(f"\n📊 Pool Statistics:")
+print(f"   • Total addresses: {len(addresses)}")
+print(f"   • Available for new payments: {total_available}")
+print(f"   • Currently reserved: {total_reserved}")
+print(f"   • Processing payments: {total_processing}")
+print(f"\n💰 Currencies covered: {', '.join(sorted(by_currency.keys()))}")
 
 conn.close()
