@@ -1228,9 +1228,12 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
         status: "completed",
       }, { transaction: dbTransaction });
 
-      // Reset balance and release address
+      // Reset balance and restore appropriate status
+      // If was RESERVED (new payment pending), keep RESERVED; otherwise AVAILABLE
+      const newStatus = previousStatus === "RESERVED" ? "RESERVED" : "AVAILABLE";
+      
       await poolAddress.update({
-        status: "AVAILABLE",
+        status: newStatus,
         admin_fee_balance: 0,
         gas_balance: 0,
         last_swept_at: new Date(),
@@ -1240,6 +1243,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       dbTransaction = null;
       
       console.log(`[MerchantPool] 🎉 Sweep recorded: ${amountToSend} ${walletType} → admin wallet`);
+      console.log(`[MerchantPool]    Status restored to: ${newStatus}`);
 
       return { success: true, amount: amountToSend, txId: sweepTxId };
       
