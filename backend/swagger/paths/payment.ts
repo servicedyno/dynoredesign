@@ -42,7 +42,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
           'application/json': {
             schema: {
               type: 'object',
-              required: ['company_id', 'email', 'modes'],
+              required: ['company_id', 'modes'],
               properties: {
                 amount: { 
                   type: 'number', 
