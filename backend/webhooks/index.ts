@@ -527,7 +527,7 @@ const tatumCryptoWebHook = async (
         if (customerData && customerData.company_id) {
           // Calculate overpayment if any
           const expectedAmount = parseFloat(items?.amount || '0');
-          const receivedAmountNum = parseFloat(incomingAmount || '0');
+          const receivedAmountNum = parseFloat(String(incomingAmount) || '0');
           const overpaymentAmount = receivedAmountNum - expectedAmount;
           const hasOverpayment = overpaymentAmount > 0;
           
