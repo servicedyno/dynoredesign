@@ -367,7 +367,7 @@ export const reserveAddress = async (
     await releaseExpiredReservations(userId, walletType, transaction);
 
     // Find available address from merchant's pool
-    // Priority: highest admin_fee_balance, then most active
+    // Priority: most active first, then highest balance (for threshold-based sweeps like USDT/USDC)
     let poolAddress = await merchantTempAddressModel.findOne({
       where: {
         owner_user_id: userId,
@@ -375,8 +375,8 @@ export const reserveAddress = async (
         status: "AVAILABLE",
       },
       order: [
-        ["admin_fee_balance", "DESC"],
         ["total_transactions", "DESC"],
+        ["admin_fee_balance", "DESC"],
       ],
       lock: transaction.LOCK.UPDATE,
       transaction,
