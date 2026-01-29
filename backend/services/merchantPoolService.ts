@@ -1344,18 +1344,19 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
 
 /**
  * Sweep addresses by USD threshold (per-chain configuration)
- * Only for chains configured with threshold mode
+ * For token chains (USDT/USDC) that accumulate fees while AVAILABLE
+ * When threshold is met, set to IN_USE and sweep
  */
 export const sweepByThreshold = async (): Promise<void> => {
-  // Get all IN_USE addresses with accumulated fees (pending sweep)
+  // Get all AVAILABLE addresses with accumulated fees (token chains accumulate while available)
   const addressesWithFees = await merchantTempAddressModel.findAll({
     where: {
-      status: "IN_USE",
+      status: "AVAILABLE",
       admin_fee_balance: { [Op.gt]: 0 },
     },
   });
 
-  console.log(`[MerchantPool] Checking ${addressesWithFees.length} IN_USE addresses for threshold-based sweep...`);
+  console.log(`[MerchantPool] Checking ${addressesWithFees.length} AVAILABLE addresses for threshold-based sweep...`);
 
   const eligibleAddresses = [];
   
@@ -1369,7 +1370,7 @@ export const sweepByThreshold = async (): Promise<void> => {
       // Get sweep config for this chain
       const sweepConfig = getSweepConfig(walletType);
       
-      // Skip if not threshold mode
+      // Skip if not threshold mode (only process token chains here)
       if (sweepConfig.mode !== "threshold") {
         continue;
       }
@@ -1388,10 +1389,12 @@ export const sweepByThreshold = async (): Promise<void> => {
       
       // Compare USD value to chain-specific threshold
       if (usdAmount >= (sweepConfig.value || 30)) {
-        console.log(`[MerchantPool]    ✅ Eligible for sweep`);
+        console.log(`[MerchantPool]    ✅ Threshold met - marking for sweep`);
+        // Set to IN_USE before sweeping (prevents new payments while sweeping)
+        await address.update({ status: "IN_USE" });
         eligibleAddresses.push(address);
       } else {
-        console.log(`[MerchantPool]    ⏳ Below threshold`);
+        console.log(`[MerchantPool]    ⏳ Below threshold - continuing to accumulate`);
       }
     } catch (error) {
       const message = getErrorMessage(error);
