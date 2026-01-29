@@ -2708,6 +2708,8 @@ const getCurrencyRates = async (
   try {
     const { source, amount, currencyList, fixedDecimal = true, fee_payer = 'company' } = req.body;
 
+    console.log(`[getCurrencyRates] Request params: amount=${amount}, source=${source}, fee_payer=${fee_payer}`);
+
     const currencyRateList = await currencyConvert({
       sourceCurrency: source,
       currency: currencyList,
@@ -2717,6 +2719,7 @@ const getCurrencyRates = async (
     
     // If customer pays fees, calculate total amounts including all fees
     if (fee_payer === 'customer') {
+      console.log(`[getCurrencyRates] Customer pays fees - calculating enhanced rates with fees`);
       const enhancedRates = await Promise.all(
         currencyRateList.map(async (rate: any) => {
           try {
