@@ -4318,10 +4318,10 @@ const getConfiguredCurrenciesForCheckout = async (
     
     const companyId = customerData.company_id;
     
-    // Get the company to find the user_id (merchant)
+    // Get the company to find the user_id (merchant) and fee settings
     const company = await companyModel.findOne({
       where: { company_id: companyId },
-      attributes: ['company_id', 'user_id'],
+      attributes: ['company_id', 'user_id', 'fee_payer'],
     });
     
     if (!company) {
@@ -4341,6 +4341,21 @@ const getConfiguredCurrenciesForCheckout = async (
     // Extract unique currencies
     const currencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
     
+    // Get fee information from Redis (payment session) if available
+    const paymentRef = customerData.ref;
+    let feeInfo = {
+      fee_payer: (company as any).fee_payer || 'company',
+      transaction_fee_percent: parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0'),
+    };
+    
+    // Try to get fee_payer from payment link data
+    if (paymentRef) {
+      const paymentData = await getRedisItem(`customer-${paymentRef}`);
+      if (paymentData && paymentData.fee_payer) {
+        feeInfo.fee_payer = paymentData.fee_payer;
+      }
+    }
+    
     const response = {
       configured_currencies: currencies,
       wallet_count: configuredWallets.length,
@@ -4352,6 +4367,12 @@ const getConfiguredCurrenciesForCheckout = async (
           null
       })),
       skip_selection: currencies.length === 1,
+      // Fee information for checkout display
+      fee_payer: feeInfo.fee_payer,
+      fee_percent: feeInfo.transaction_fee_percent,
+      fee_display: feeInfo.fee_payer === 'customer' 
+        ? `${feeInfo.transaction_fee_percent}% fee applies` 
+        : 'No additional fees',
     };
     
     successResponseHelper(res, 200, "Configured currencies retrieved successfully", response);
