@@ -2379,7 +2379,7 @@ const cryptoVerification = async (address, webhook = true) => {
             paymentAmount: Number(totalAmountReceived),
             merchantAmount: Number(userAmountToSend),
             adminFeeAmount: Number(adminAmountToSend),
-            gasFunded: adminTransferResult.gasFunded || 0,
+            gasFunded: 0,  // Gas funded amount (if applicable)
             gasUsed: adminTransferResult.blockchainFee || 0,
             incomingTxId: transactionId,
             merchantTxId: adminTransferResult.transactionDetails?.txId,
