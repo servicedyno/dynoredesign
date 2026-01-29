@@ -2189,16 +2189,29 @@ const cryptoVerification = async (address, webhook = true) => {
             customer_id: customerData.customer_id ? Number(customerData.customer_id) : null,
           };
 
-          if (tempData?.incomplete) {
-            await userTransactionModel.create({
-              ...userPayload,
-              id: tempData.unique_tx_id,
-            }, { transaction });
+          // FIX: Use payment_id if unique_tx_id is not available (for merchant pool payments)
+          const transactionRecordId = tempData.unique_tx_id || tempData.payment_id;
+          
+          if (!transactionRecordId) {
+            console.error(`[cryptoVerification] ⚠️  No transaction ID found in tempData - cannot update user transaction`);
           } else {
-            await userTransactionModel.update(
-              { ...userPayload },
-              { where: { id: tempData.unique_tx_id }, transaction }
-            );
+            if (tempData?.incomplete) {
+              await userTransactionModel.create({
+                ...userPayload,
+                id: transactionRecordId,
+              }, { transaction });
+            } else {
+              const updateResult = await userTransactionModel.update(
+                { ...userPayload },
+                { where: { id: transactionRecordId }, transaction }
+              );
+              console.log(`[cryptoVerification] Updated user transaction ${transactionRecordId}, affected rows: ${updateResult[0]}`);
+              
+              // If no rows affected, log warning - transaction record may not exist
+              if (updateResult[0] === 0) {
+                console.warn(`[cryptoVerification] ⚠️  No user transaction updated for ID ${transactionRecordId} - record may not exist`);
+              }
+            }
           }
         }
 
