@@ -525,11 +525,18 @@ const tatumCryptoWebHook = async (
         
         // Send payment confirmed webhook to merchant
         if (customerData && customerData.company_id) {
-          await callMerchantWebhook(customerData, {
+          // Calculate overpayment if any
+          const expectedAmount = parseFloat(items?.amount || '0');
+          const receivedAmountNum = parseFloat(incomingAmount || '0');
+          const overpaymentAmount = receivedAmountNum - expectedAmount;
+          const hasOverpayment = overpaymentAmount > 0;
+          
+          const webhookPayload: any = {
             event: 'payment.confirmed',
             address: address,
             txId: payload.txId,
             amount: incomingAmount,
+            expected_amount: items?.amount,
             currency: items?.currency || payload.asset,
             payment_id: items?.payment_id || items?.unique_tx_id,
             merchant_amount: items?.merchant_amount,
@@ -537,7 +544,20 @@ const tatumCryptoWebHook = async (
             fee_payer: items?.fee_payer || 'company',
             status: 'confirmed',
             timestamp: new Date().toISOString(),
-          });
+          };
+          
+          // Include overpayment info if detected
+          if (hasOverpayment) {
+            webhookPayload.overpayment = {
+              detected: true,
+              amount_crypto: overpaymentAmount.toString(),
+              currency_crypto: items?.currency || payload.asset,
+              // Note: base currency conversion would require async call, so we include crypto amount only
+              // Merchant can convert using their own rates or check dashboard for base currency amount
+            };
+          }
+          
+          await callMerchantWebhook(customerData, webhookPayload);
           console.log("[tatumCryptoWebHook] Payment confirmed webhook sent");
         }
 
