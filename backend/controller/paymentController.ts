@@ -1643,6 +1643,7 @@ const settleCryptoTransaction = async ({
 
       } else {
         // Account-based chains (ETH, TRX, BSC): Single transfer to merchant only
+        // Gas comes from admin's portion (33%), NOT from merchant's portion (67%)
         // Admin fee stays in temp address for batch sweep later
         fees = await tatumApi.feeEstimation(
           currency,
@@ -1652,14 +1653,17 @@ const settleCryptoTransaction = async ({
         );
 
         const gasFee = Number(fees?.slow ?? 0);
-        merchantSendAmount = Number((Number(userAmount) - gasFee).toFixed(8));
+        // Merchant gets FULL amount - gas is paid from admin's portion (remaining balance)
+        merchantSendAmount = Number(Number(userAmount).toFixed(8));
 
-        if (merchantSendAmount <= 0) {
-          throw new Error(`Insufficient balance for merchant transfer after gas. Amount: ${userAmount}, Gas: ${gasFee}`);
+        // Verify there's enough in admin portion to cover gas
+        const adminPortion = Number(receivedAmount);
+        if (adminPortion < gasFee) {
+          throw new Error(`Admin portion insufficient for gas. Admin: ${adminPortion}, Gas: ${gasFee}`);
         }
 
-        console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant transfer ${merchantSendAmount} ${currency} (gas: ${gasFee})`);
-        console.log(`[settleCryptoTransaction] Admin fee ${receivedAmount} ${currency} retained in temp address for sweep`);
+        console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets FULL ${merchantSendAmount} ${currency}`);
+        console.log(`[settleCryptoTransaction] Gas (${gasFee} ${currency}) paid from admin's ${adminPortion} ${currency}`);
 
         merchantTransactionDetails = await tatumApi.assetToOtherAddress({
           currency,
