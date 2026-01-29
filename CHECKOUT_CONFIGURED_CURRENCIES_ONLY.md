@@ -56,7 +56,7 @@ useEffect(() => {
   const fetchConfiguredCurrencies = async () => {
     try {
       setLoadingCurrencies(true);
-      const response = await axiosBaseApi.get("/wallet/configured-currencies");
+      const response = await axiosBaseApi.get("/pay/configured-currencies");
       const { configured_currencies, skip_selection } = response.data.data;
       
       // Separate base currencies and USDT networks
