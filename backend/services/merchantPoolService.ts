@@ -1352,21 +1352,28 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       console.log(`[MerchantPool] Account chain sweep: ${actualBalance} - ${gasFee} (gas) = ${amountToSend} ${walletType}`);
     }
 
-    // Execute blockchain transfer
-    const sweepResult = await tatumApi.assetToOtherAddress({
-      currency: walletType,
-      fromAddress: poolAddress.dataValues.wallet_address,
-      toAddress: adminWallet,
-      privateKey,
-      amount: amountToSend.toString(),
-      fee: feeData,
-    });
+    // Execute blockchain transfer with retry
+    const sweepResult = await withRetry(
+      async () => {
+        const result = await tatumApi.assetToOtherAddress({
+          currency: walletType,
+          fromAddress: poolAddress.dataValues.wallet_address,
+          toAddress: adminWallet,
+          privateKey,
+          amount: amountToSend.toString(),
+          fee: feeData,
+        });
+        if (!result?.txId) {
+          throw new Error("Sweep transaction failed - no txId returned");
+        }
+        return result;
+      },
+      `Sweep transfer for ${poolAddress.dataValues.wallet_address}`,
+      POOL_CONFIG.MAX_RETRIES,
+      POOL_CONFIG.SWEEP_RETRY_DELAY_MS
+    );
 
     const sweepTxId = sweepResult?.txId;
-    
-    if (!sweepTxId) {
-      throw new Error("Sweep transaction failed - no txId returned");
-    }
 
     console.log(`[MerchantPool] ✅ Blockchain sweep successful: ${sweepTxId}`);
 
