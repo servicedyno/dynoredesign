@@ -76,10 +76,17 @@ TRX_SWEEP=time:3      # Time-based sweep, 3 minutes
 ## Pending Tasks (P0/P1)
 - None currently
 
+## Recently Completed (January 2026)
+1. ✅ Added `webhook_url` and `webhook_secret` columns to `tbl_company`
+2. ✅ Implemented HMAC-SHA256 webhook signature verification
+3. ✅ Added webhook management APIs (GET/PUT settings, POST test)
+4. ✅ Added retry logic with exponential backoff for webhook delivery
+5. ✅ Created merchant integration documentation
+
 ## Backlog (P2+)
-1. Test webhook delivery with webhook.site
-2. Add webhook signature verification using webhook_secret
-3. Implement webhook retry queue for failed deliveries
+1. Webhook delivery logs/history in dashboard
+2. Failed webhook queue with manual retry option
+3. Webhook event filtering (subscribe to specific events only)
 4. Add dashboard for monitoring sweep status
 5. Add admin fee recovery for stranded gas
 
