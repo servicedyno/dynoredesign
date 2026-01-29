@@ -2790,7 +2790,7 @@ const getCurrencyRates = async (
                 transaction_fee_usd: transactionFee,
                 fixed_fee_usd: fixedFee,
                 buffer_fee_usd: blockchainBuffer,
-                network_fee_usd: networkFee.feeInUSD,
+                network_fee_usd: networkFeeUSD,
                 total_fees_usd: totalFeesUSD,
               },
               total_amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto,
