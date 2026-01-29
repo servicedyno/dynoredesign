@@ -163,26 +163,24 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   expire: '24h'
                 }
               },
+              'Minimal Required Fields': {
+                summary: '⚡ MINIMAL: Only required fields (no email)',
+                value: {
+                  amount: 50.00,
+                  currency: 'USD',
+                  company_id: 1,
+                  modes: ['CRYPTO']
+                }
+              },
               'Alternative Field Names': {
                 summary: '🔄 ALTERNATIVE: Using base_* field names (works identically)',
                 value: {
                   base_amount: 100.00,
                   base_currency: 'USD',
                   company_id: 1,
-                  email: 'customer@example.com',
                   modes: ['CRYPTO', 'CARD'],
                   description: 'Test payment for production',
                   expire: '24h'
-                }
-              },
-              'Minimal Required Fields': {
-                summary: '⚡ MINIMAL: Only required fields',
-                value: {
-                  amount: 50.00,
-                  currency: 'USD',
-                  company_id: 1,
-                  email: 'customer@example.com',
-                  modes: ['CRYPTO']
                 }
               },
               'Crypto Only Payment': {
@@ -218,7 +216,6 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   amount: 999.99,
                   currency: 'EUR',
                   company_id: 1,
-                  email: 'customer@example.com',
                   modes: ['CARD', 'BANK_TRANSFER'],
                   description: 'Lifetime Membership',
                   expire: 'No'
