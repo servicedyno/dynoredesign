@@ -1054,11 +1054,11 @@ When you create a payment link with a \`webhook_url\`, DynoPay will POST to YOUR
         content: {
           'application/json': {
             examples: {
-              'payment.completed': {
-                summary: '✅ Payment Completed (Crypto)',
+              'payment.confirmed': {
+                summary: '✅ Payment Confirmed (Crypto)',
                 description: 'Sent when crypto payment is fully confirmed on blockchain',
                 value: {
-                  event: 'payment.completed',
+                  event: 'payment.confirmed',
                   timestamp: '2024-01-15T10:45:00Z',
                   data: {
                     transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
