@@ -32,4 +32,9 @@ companyRouter.put("/webhook-settings/:id", authMiddleware, companyController.upd
 companyRouter.get("/webhook-settings/:id", authMiddleware, companyController.getWebhookSettings);
 companyRouter.post("/webhook-test/:id", authMiddleware, companyController.testWebhook);
 
+// Webhook history and stats endpoints
+companyRouter.get("/webhook-history/:id", authMiddleware, companyController.getWebhookHistory);
+companyRouter.get("/webhook-history/:id/detail/:logId", authMiddleware, companyController.getWebhookDetail);
+companyRouter.get("/webhook-stats/:id", authMiddleware, companyController.getWebhookStats);
+
 export default companyRouter;
