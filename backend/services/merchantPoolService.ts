@@ -425,12 +425,15 @@ export const reserveAddress = async (
   walletType: string,
   paymentId: string,
   userId: number,
-  companyId: number,
+  companyId: number | null,
   expectedAmount: number
 ): Promise<any> => {
   const transaction = await sequelize.transaction();
 
   try {
+    // Handle companyId - convert 0 to null for database
+    const effectiveCompanyId = companyId && companyId > 0 ? companyId : null;
+    
     // First, release any expired reservations
     await releaseExpiredReservations(userId, walletType, transaction);
 
