@@ -45,8 +45,8 @@ const linkMiddleware = (
   ];
 
   const schema = {
-    email: Joi.string().required().email().messages({
-      "string.empty": "Email is Required",
+    email: Joi.string().optional().email().allow('', null).messages({
+      "string.email": "Please provide a valid email address",
     }),
 
     amount: Joi.number()
