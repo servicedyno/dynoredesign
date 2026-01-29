@@ -277,7 +277,8 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
     const company_id = req.params.id;
     let photo;
     if (file) {
-      photo = process.env.SERVER_URL + "images/" + file.filename;
+      const serverUrl = process.env.SERVER_URL?.endsWith('/') ? process.env.SERVER_URL : process.env.SERVER_URL + '/';
+      photo = serverUrl + "images/" + file.filename;
     }
     const resData = await companyModel.update(
       {
