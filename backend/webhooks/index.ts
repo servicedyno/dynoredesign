@@ -171,13 +171,23 @@ const tatumCryptoWebHook = async (
         await paymentController.cryptoVerification(address, true);
         console.log("[tatumCryptoWebHook] cryptoVerification completed successfully");
 
-        // SUCCESS: Now mark as processed with txId to prevent duplicate processing
+        // SUCCESS: Mark as processed with txId to prevent duplicate processing
         await setRedisItem("crypto-" + address, {
           ...items,
           status: "successful",
           txId: payload.txId,
           receivedAmount: incomingAmount,
         });
+        
+        // Store processed txId with 48-hour TTL to prevent duplicate processing
+        await setRedisItem(`processed-tx-${payload.txId}`, {
+          address: address,
+          payment_id: items.payment_id || items.ref,
+          amount: incomingAmount,
+          processed_at: new Date().toISOString(),
+        });
+        // Note: Redis TTL should be set separately if needed (48 hours = 172800 seconds)
+        
         console.log("[tatumCryptoWebHook] Redis updated with txId after successful processing");
 
       } catch (verifyError) {
