@@ -70,13 +70,11 @@ async function manualProcessPayment() {
     console.log('   Currency: ETH');
     console.log();
     
-    const result = await merchantPoolService.processIncomingPayment(
+    // Mark payment as received using the correct function
+    const result = await merchantPoolService.markPaymentReceived(
       poolAddress.temp_address_id,
       receivedAmount,
-      'ETH',
-      '0xacacca62f2fd947f7b0314459142e374f0a790e9daf1680d75778f0ee8fe46f9', // TX hash
-      poolAddress.owner_user_id,
-      poolAddress.current_company_id
+      '0xacacca62f2fd947f7b0314459142e374f0a790e9daf1680d75778f0ee8fe46f9' // TX hash
     );
     
     console.log('='.repeat(80));
