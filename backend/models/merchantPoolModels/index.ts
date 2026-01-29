@@ -159,9 +159,9 @@ const merchantTempAddressModel = sequelize.define(
       type: DataTypes.STRING(20),
       defaultValue: "AVAILABLE",
       validate: {
-        isIn: [['AVAILABLE', 'RESERVED', 'PROCESSING', 'SWEEPING', 'DISABLED']],
+        isIn: [['AVAILABLE', 'RESERVED', 'IN_USE', 'PROCESSING', 'SWEEPING', 'DISABLED']],
       },
-      comment: "AVAILABLE=ready, RESERVED=waiting (30min), PROCESSING=received, SWEEPING=being swept",
+      comment: "AVAILABLE=ready, RESERVED=waiting (30min), IN_USE=payment done waiting sweep, PROCESSING=received, SWEEPING=being swept",
     },
     admin_fee_balance: {
       type: DataTypes.DECIMAL(20, 8),
