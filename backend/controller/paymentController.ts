@@ -15,6 +15,8 @@ import {
   deleteRedisItem,
   getRedisItem,
   setRedisItem,
+  softDeleteRedisItem,
+  setRedisTTL,
 } from "../utils/redisInstance";
 import sequelize from "../utils/dbInstance";
 import { Op, QueryTypes } from "sequelize";
