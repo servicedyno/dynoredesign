@@ -1074,8 +1074,18 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       throw new Error(`Pool address not found: ${tempAddressId}`);
     }
 
-    if (poolAddress.dataValues.status !== "AVAILABLE") {
-      throw new Error(`Cannot sweep address in ${poolAddress.dataValues.status} status`);
+    // Allow sweeping in AVAILABLE or RESERVED status
+    // RESERVED with admin_fee_balance > 0 means there's leftover from a previous payment
+    const status = poolAddress.dataValues.status;
+    const adminBalance = parseFloat(poolAddress.dataValues.admin_fee_balance || "0");
+    
+    if (status !== "AVAILABLE" && status !== "RESERVED") {
+      throw new Error(`Cannot sweep address in ${status} status`);
+    }
+    
+    if (adminBalance <= 0) {
+      console.log(`[MerchantPool] No admin fee to sweep for address ${tempAddressId}`);
+      return { success: true, amount: 0, message: "No admin fee balance" };
     }
 
     const walletType = poolAddress.dataValues.wallet_type;
