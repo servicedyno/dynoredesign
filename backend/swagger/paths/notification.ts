@@ -39,6 +39,150 @@ export const notificationPaths = {
       }
     }
   },
+  '/api/notifications/preferences': {
+    get: {
+      tags: ['Notifications'],
+      summary: 'Get notification preferences',
+      description: 'Retrieve user\'s notification settings and preferences.',
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'Preferences retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      email_notifications: { type: 'boolean' },
+                      push_notifications: { type: 'boolean' },
+                      sms_notifications: { type: 'boolean' },
+                      payment_alerts: { type: 'boolean' },
+                      security_alerts: { type: 'boolean' },
+                      marketing_emails: { type: 'boolean' },
+                      weekly_summary: { type: 'boolean' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized' }
+      }
+    },
+    put: {
+      tags: ['Notifications'],
+      summary: 'Update notification preferences',
+      description: 'Update user\'s notification settings.',
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                email_notifications: { type: 'boolean' },
+                push_notifications: { type: 'boolean' },
+                sms_notifications: { type: 'boolean' },
+                payment_alerts: { type: 'boolean' },
+                security_alerts: { type: 'boolean' },
+                marketing_emails: { type: 'boolean' },
+                weekly_summary: { type: 'boolean' }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: { description: 'Preferences updated successfully' },
+        401: { description: 'Unauthorized' }
+      }
+    }
+  },
+  '/api/notifications/unread-count': {
+    get: {
+      tags: ['Notifications'],
+      summary: 'Get unread notification count',
+      description: 'Get the count of unread notifications for badge display.',
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'Unread count retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      unread_count: { type: 'integer', example: 5 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized' }
+      }
+    }
+  },
+  '/api/notifications/read-all': {
+    put: {
+      tags: ['Notifications'],
+      summary: 'Mark all notifications as read',
+      description: 'Mark all user notifications as read.',
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'All notifications marked as read',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'All notifications marked as read' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      updated_count: { type: 'integer' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized' }
+      }
+    }
+  },
+  '/api/notifications/{id}/read': {
+    put: {
+      tags: ['Notifications'],
+      summary: 'Mark notification as read',
+      description: 'Mark a single notification as read.',
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'path',
+        name: 'id',
+        required: true,
+        schema: { type: 'integer' },
+        description: 'Notification ID'
+      }],
+      responses: {
+        200: { description: 'Notification marked as read' },
+        404: { description: 'Notification not found' }
+      }
+    }
+  },
   '/api/notifications/types': {
     get: {
       tags: ['Notifications'],
