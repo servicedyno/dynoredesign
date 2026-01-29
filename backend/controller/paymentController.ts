@@ -1626,15 +1626,19 @@ const settleCryptoTransaction = async ({
 
       merchantSendAmount = Number(userAmount);
       
-      merchantTransactionDetails = await tatumApi.assetToOtherAddress({
-        currency,
-        fromAddress: tempAddressData.wallet_address,
-        toAddress: userAddress,
-        privateKey: privateKey,
-        amount: merchantSendAmount,
-        fee: fees,
-        contractAddress,
-      });
+      // Retry merchant transfer for token transfers
+      merchantTransactionDetails = await withRetry(
+        () => tatumApi.assetToOtherAddress({
+          currency,
+          fromAddress: tempAddressData.wallet_address,
+          toAddress: userAddress,
+          privateKey: privateKey,
+          amount: merchantSendAmount,
+          fee: fees,
+          contractAddress,
+        }),
+        `Token merchant transfer (${currency})`
+      );
 
       totalBlockchainFee = Number(fees?.fast ?? 0);
 
@@ -1655,30 +1659,34 @@ const settleCryptoTransaction = async ({
         const adminAmount = Number(receivedAmount);
         merchantSendAmount = Number(userAmount) - Number(feeToDeduct);
 
-        merchantTransactionDetails = await tatumApi.assetToOtherAddress({
-          currency,
-          fromAddress: tempAddressData.wallet_address,
-          toAddress: userAddress,  // Primary recipient is merchant
-          privateKey: privateKey,
-          amount: merchantSendAmount,
-          fee: String(fees.fast),
-          fromUTXO: [
-            {
-              txHash: transactionId,
-              index: 0,
-            },
-          ],
-          toUTXO: [
-            {
-              address: userAddress,
-              value: Number(merchantSendAmount),
-            },
-            {
-              address: adminWalletAddress,
-              value: Number(adminAmount),
-            },
-          ],
-        });
+        // Retry merchant transfer for UTXO chains
+        merchantTransactionDetails = await withRetry(
+          () => tatumApi.assetToOtherAddress({
+            currency,
+            fromAddress: tempAddressData.wallet_address,
+            toAddress: userAddress,  // Primary recipient is merchant
+            privateKey: privateKey,
+            amount: merchantSendAmount,
+            fee: String(fees.fast),
+            fromUTXO: [
+              {
+                txHash: transactionId,
+                index: 0,
+              },
+            ],
+            toUTXO: [
+              {
+                address: userAddress,
+                value: Number(merchantSendAmount),
+              },
+              {
+                address: adminWalletAddress,
+                value: Number(adminAmount),
+              },
+            ],
+          }),
+          `UTXO merchant transfer (${currency})`
+        );
 
         totalBlockchainFee = feeToDeduct;
         
@@ -1708,14 +1716,18 @@ const settleCryptoTransaction = async ({
         console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets FULL ${merchantSendAmount} ${currency}`);
         console.log(`[settleCryptoTransaction] Gas (${gasFee} ${currency}) paid from admin's ${adminPortion} ${currency}`);
 
-        merchantTransactionDetails = await tatumApi.assetToOtherAddress({
-          currency,
-          fromAddress: tempAddressData.wallet_address,
-          toAddress: userAddress,
-          privateKey: privateKey,
-          amount: merchantSendAmount,
-          fee: fees,
-        });
+        // Retry merchant transfer for account chains (ETH, TRX)
+        merchantTransactionDetails = await withRetry(
+          () => tatumApi.assetToOtherAddress({
+            currency,
+            fromAddress: tempAddressData.wallet_address,
+            toAddress: userAddress,
+            privateKey: privateKey,
+            amount: merchantSendAmount,
+            fee: fees,
+          }),
+          `Account chain merchant transfer (${currency})`
+        );
 
         totalBlockchainFee = gasFee;
       }
