@@ -1,4 +1,110 @@
 export const apiKeyPaths = {
+  '/api/userApi/addApi': {
+    post: {
+      tags: ['API Keys'],
+      summary: 'Create new API key',
+      description: `Create a new API key for programmatic access to DynoPay services.
+      
+**Features:**
+- Auto-generates secure API key
+- Configurable rate limits
+- Webhook URL for notifications
+- Withdrawal whitelist for security`,
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['api_name'],
+              properties: {
+                api_name: {
+                  type: 'string',
+                  description: '✅ REQUIRED: Friendly name for the API key',
+                  example: 'Production API'
+                },
+                base_currency: {
+                  type: 'string',
+                  enum: ['USD', 'EUR', 'NGN', 'GBP'],
+                  description: '📝 OPTIONAL: Default currency for transactions',
+                  default: 'USD'
+                },
+                webhook_url: {
+                  type: 'string',
+                  format: 'uri',
+                  description: '📝 OPTIONAL: URL for payment notifications',
+                  example: 'https://yourapp.com/webhooks/dynopay'
+                },
+                withdrawal_whitelist: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: '📝 OPTIONAL: Approved withdrawal addresses',
+                  example: ['1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa']
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'API key created successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      api_id: { type: 'integer' },
+                      api_key: { type: 'string', description: '⚠️ SAVE THIS - Only shown once!' },
+                      api_name: { type: 'string' },
+                      is_active: { type: 'boolean' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid API configuration' },
+        401: { description: 'Unauthorized' }
+      }
+    }
+  },
+  '/api/userApi/getApi': {
+    get: {
+      tags: ['API Keys'],
+      summary: 'Get all API keys',
+      description: `Retrieve all API keys for the authenticated user.
+      
+**Note:** API key values are masked for security.`,
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'API keys retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                  data: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/ApiKey' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized' }
+      }
+    }
+  },
   '/api/userApi/getApi/{id}': {
     get: {
       tags: ['API Keys'],
