@@ -4,7 +4,7 @@
 
 I've added debugging to see what's in your token. Please:
 
-1. **Go to Swagger UI**: https://paycycle-2.preview.emergentagent.com/api/docs
+1. **Go to Swagger UI**: https://crypto-sweep-retry.preview.emergentagent.com/api/docs
 
 2. **Make sure you're authorized**:
    - Click the "Authorize" button (🔓)
