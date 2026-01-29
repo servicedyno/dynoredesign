@@ -778,6 +778,230 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Get webhook delivery history for a company
+ * GET /api/company/webhook-history/:id
+ */
+const getWebhookHistory = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const company_id = req.params.id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const offset = (page - 1) * limit;
+    const status = req.query.status as string; // 'success' | 'failed' | undefined (all)
+    const event_type = req.query.event_type as string; // 'payment.pending' | 'payment.confirmed' | 'webhook.test' | undefined
+
+    // Verify company belongs to user
+    const company = await companyModel.findOne({
+      where: { company_id, user_id: userData.user_id },
+    });
+
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found or unauthorized");
+    }
+
+    // Build WHERE clause
+    let whereClause = 'WHERE company_id = :company_id';
+    const replacements: any = { company_id, limit, offset };
+    
+    if (status && ['success', 'failed'].includes(status)) {
+      whereClause += ' AND status = :status';
+      replacements.status = status;
+    }
+    
+    if (event_type) {
+      whereClause += ' AND event_type = :event_type';
+      replacements.event_type = event_type;
+    }
+
+    // Get total count
+    const [countResult] = await sequelize.query(
+      `SELECT COUNT(*) as total FROM tbl_webhook_delivery_log ${whereClause}`,
+      { replacements, type: QueryTypes.SELECT }
+    ) as any[];
+
+    // Get paginated results
+    const logs = await sequelize.query(
+      `SELECT 
+        log_id,
+        event_type,
+        webhook_id,
+        status,
+        response_status,
+        response_time_ms,
+        error_message,
+        retry_count,
+        created_at,
+        completed_at
+       FROM tbl_webhook_delivery_log 
+       ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT :limit OFFSET :offset`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const total = parseInt(countResult.total);
+    const totalPages = Math.ceil(total / limit);
+
+    successResponseHelper(res, 200, "Webhook history retrieved", {
+      company_id,
+      logs,
+      pagination: {
+        page,
+        limit,
+        total,
+        total_pages: totalPages,
+        has_more: page < totalPages,
+      },
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    companyLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Get details of a specific webhook delivery
+ * GET /api/company/webhook-history/:id/detail/:logId
+ */
+const getWebhookDetail = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const company_id = req.params.id;
+    const log_id = req.params.logId;
+
+    // Verify company belongs to user
+    const company = await companyModel.findOne({
+      where: { company_id, user_id: userData.user_id },
+    });
+
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found or unauthorized");
+    }
+
+    // Get webhook log detail
+    const [log] = await sequelize.query(
+      `SELECT * FROM tbl_webhook_delivery_log 
+       WHERE log_id = :log_id AND company_id = :company_id`,
+      { replacements: { log_id, company_id }, type: QueryTypes.SELECT }
+    ) as any[];
+
+    if (!log) {
+      return errorResponseHelper(res, 404, "Webhook log not found");
+    }
+
+    successResponseHelper(res, 200, "Webhook detail retrieved", log);
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    companyLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Get webhook delivery statistics for a company
+ * GET /api/company/webhook-stats/:id
+ */
+const getWebhookStats = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const company_id = req.params.id;
+    const days = Math.min(parseInt(req.query.days as string) || 7, 30);
+
+    // Verify company belongs to user
+    const company = await companyModel.findOne({
+      where: { company_id, user_id: userData.user_id },
+    });
+
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found or unauthorized");
+    }
+
+    // Get overall stats
+    const [overallStats] = await sequelize.query(
+      `SELECT 
+        COUNT(*) as total_deliveries,
+        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+        ROUND(AVG(response_time_ms)) as avg_response_time_ms,
+        MAX(created_at) as last_delivery
+       FROM tbl_webhook_delivery_log 
+       WHERE company_id = :company_id 
+         AND created_at >= NOW() - INTERVAL '${days} days'`,
+      { replacements: { company_id }, type: QueryTypes.SELECT }
+    ) as any[];
+
+    // Get stats by event type
+    const eventStats = await sequelize.query(
+      `SELECT 
+        event_type,
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
+       FROM tbl_webhook_delivery_log 
+       WHERE company_id = :company_id 
+         AND created_at >= NOW() - INTERVAL '${days} days'
+       GROUP BY event_type`,
+      { replacements: { company_id }, type: QueryTypes.SELECT }
+    );
+
+    // Get daily breakdown
+    const dailyStats = await sequelize.query(
+      `SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
+       FROM tbl_webhook_delivery_log 
+       WHERE company_id = :company_id 
+         AND created_at >= NOW() - INTERVAL '${days} days'
+       GROUP BY DATE(created_at)
+       ORDER BY date DESC`,
+      { replacements: { company_id }, type: QueryTypes.SELECT }
+    );
+
+    const total = parseInt(overallStats.total_deliveries) || 0;
+    const successful = parseInt(overallStats.successful) || 0;
+    const successRate = total > 0 ? ((successful / total) * 100).toFixed(1) : '0';
+
+    successResponseHelper(res, 200, "Webhook statistics retrieved", {
+      company_id,
+      period_days: days,
+      summary: {
+        total_deliveries: total,
+        successful,
+        failed: parseInt(overallStats.failed) || 0,
+        success_rate: `${successRate}%`,
+        avg_response_time_ms: parseInt(overallStats.avg_response_time_ms) || 0,
+        last_delivery: overallStats.last_delivery,
+      },
+      by_event_type: eventStats,
+      daily_breakdown: dailyStats,
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    companyLogger.error(
+      message,
+      { user_id: userData.user_id, email: userData.email },
+      new Error(e)
+    );
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   addCompany,
   getCompany,
@@ -789,4 +1013,7 @@ export default {
   updateWebhookSettings,
   getWebhookSettings,
   testWebhook,
+  getWebhookHistory,
+  getWebhookDetail,
+  getWebhookStats,
 };
