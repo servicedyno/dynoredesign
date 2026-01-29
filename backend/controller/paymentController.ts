@@ -4330,6 +4330,7 @@ const getConfiguredCurrenciesForCheckout = async (
     let userId: number | null = null;
     let paymentRef = userData.ref;
     let transactionId = userData.transaction_id;
+    let feePayerFromLink = 'company';
     
     // First try to get company_id from payment link using transaction_id
     if (userData.pathType === 'createLink' && userData.transaction_id) {
@@ -4341,15 +4342,17 @@ const getConfiguredCurrenciesForCheckout = async (
       if (paymentLink) {
         companyId = (paymentLink as any).company_id;
         userId = (paymentLink as any).user_id;
+        feePayerFromLink = (paymentLink as any).fee_payer || 'company';
       }
     }
     
     // Fallback: try to get from Redis data
-    if (!companyId && paymentRef) {
+    if (!userId && paymentRef) {
       const redisData = await getRedisItem(`customer-${paymentRef}`);
       if (redisData) {
         companyId = redisData.company_id ? parseInt(redisData.company_id) : null;
         userId = redisData.adm_id ? parseInt(redisData.adm_id) : (redisData.user_id ? parseInt(redisData.user_id) : null);
+        feePayerFromLink = redisData.fee_payer || 'company';
       }
     }
     
@@ -4357,17 +4360,7 @@ const getConfiguredCurrenciesForCheckout = async (
       return errorResponseHelper(res, 400, "Invalid payment session - merchant not found");
     }
     
-    // Get the company to find fee settings (if company_id exists)
-    let feePayerFromCompany = 'company';
-    if (companyId) {
-      const company = await companyModel.findOne({
-        where: { company_id: companyId },
-        attributes: ['company_id', 'fee_payer'],
-      });
-      if (company) {
-        feePayerFromCompany = (company as any).fee_payer || 'company';
-      }
-    }
+    console.log(`[getConfiguredCurrenciesForCheckout] Looking up wallets for user_id: ${userId}, company_id: ${companyId}`);
     
     // Get configured wallets for this merchant
     // IMPORTANT: Only return wallets that have a wallet_address configured
