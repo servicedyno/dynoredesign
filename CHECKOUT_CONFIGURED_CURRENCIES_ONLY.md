@@ -330,11 +330,12 @@ Add this UI component after the network selection to show who pays fees:
 
 | Line | Action | Code |
 |------|--------|------|
-| ~85 | Add states | `availableCryptos`, `availableUSDTNetworks`, `loadingCurrencies`, `skipSelection` |
-| ~90 | Add useEffect | Fetch `/wallet/configured-currencies` on mount |
+| ~85 | Add states | `availableCryptos`, `availableUSDTNetworks`, `loadingCurrencies`, `skipSelection`, `feeInfo` |
+| ~90 | Add useEffect | Fetch `/pay/configured-currencies` on mount |
 | ~130 | Add filter | `filteredCryptoOptions` computed from `availableCryptos` |
 | ~200 | Update Select | Show loading/error/filtered dropdown |
 | ~280 | Update Networks | Only show configured USDT networks |
+| ~300 | Add Fee Display | Show who pays fees (customer/company) |
 
 ---
 
