@@ -476,6 +476,10 @@ const createCryptoPayment = async (
         fee_payer,
       });
 
+      // Clear any existing data for this address before setting new payment data
+      // This is important when an address is reused for a new payment
+      await deleteRedisItem("crypto-" + paymentRes.address);
+      
       await setRedisItem("crypto-" + paymentRes.address, {
         mode: paymentTypes.CRYPTO,
         amount: crypto_amount,                  // Crypto amount customer should pay
