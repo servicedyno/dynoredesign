@@ -2795,6 +2795,7 @@ const getCurrencyRates = async (
               },
               total_amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto,
               total_amount_usd: totalAmountUSD,
+              total_amount_source: totalAmountUSD, // Total in source currency (USD) for display
               amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto, // Override amount with total
             };
           } catch (feeError: any) {
