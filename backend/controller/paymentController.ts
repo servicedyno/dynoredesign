@@ -4437,10 +4437,6 @@ const getConfiguredCurrenciesForCheckout = async (
     errorResponseHelper(res, 500, message);
   }
 };
-    apiLogger.error(message, {}, new Error(e));
-    errorResponseHelper(res, 500, message);
-  }
-};
 
 export default {
   getData,
