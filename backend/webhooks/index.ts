@@ -323,7 +323,7 @@ const tatumCryptoWebHook = async (
     console.log("[tatumCryptoWebHook] Received webhook:", {
       address: payload.address,
       amount: payload.amount,
-      currency: payload.currency || payload.asset,
+      currency: (payload as any).currency || payload.asset,
       txId: payload.txId
     });
 
