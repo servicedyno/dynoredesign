@@ -1331,15 +1331,15 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
  * Only for chains configured with threshold mode
  */
 export const sweepByThreshold = async (): Promise<void> => {
-  // Get all addresses with accumulated fees
+  // Get all IN_USE addresses with accumulated fees (pending sweep)
   const addressesWithFees = await merchantTempAddressModel.findAll({
     where: {
-      status: "AVAILABLE",
+      status: "IN_USE",
       admin_fee_balance: { [Op.gt]: 0 },
     },
   });
 
-  console.log(`[MerchantPool] Checking ${addressesWithFees.length} addresses for threshold-based sweep...`);
+  console.log(`[MerchantPool] Checking ${addressesWithFees.length} IN_USE addresses for threshold-based sweep...`);
 
   const eligibleAddresses = [];
   
