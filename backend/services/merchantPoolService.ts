@@ -388,6 +388,22 @@ export const reserveAddress = async (
       poolAddress = await addAddressToMerchantPool(userId, walletType, transaction);
     }
 
+    // Ensure Tatum subscription exists for webhook notifications
+    // This is critical for receiving payment notifications
+    let subscriptionId = poolAddress.dataValues.subscription_id;
+    try {
+      const subResult = await tatumApi.createSubscription(
+        poolAddress.dataValues.wallet_address,
+        walletType,
+        true  // onlyCrypto = true for payment webhooks
+      );
+      subscriptionId = subResult?.id || subscriptionId;
+      console.log(`[MerchantPool] ✅ Subscription ensured for ${poolAddress.dataValues.wallet_address}: ${subscriptionId}`);
+    } catch (subError) {
+      console.error(`[MerchantPool] ⚠️ Failed to ensure subscription for ${poolAddress.dataValues.wallet_address}:`, subError);
+      // Continue anyway - payment can still be processed manually via webhook retry
+    }
+
     // Reserve the address
     const reservedUntil = new Date();
     reservedUntil.setMinutes(reservedUntil.getMinutes() + POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES);
@@ -403,6 +419,7 @@ export const reserveAddress = async (
         partial_payment_timestamp: null,
         reserved_until: reservedUntil,
         locked_at: new Date(),
+        subscription_id: subscriptionId,  // Update subscription ID
       },
       { transaction }
     );
@@ -415,6 +432,7 @@ export const reserveAddress = async (
     console.log(`[MerchantPool]    - Address: ${poolAddress.dataValues.wallet_address}`);
     console.log(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
     console.log(`[MerchantPool]    - Reserved until: ${reservedUntil}`);
+    console.log(`[MerchantPool]    - Subscription: ${subscriptionId}`);
 
     return poolAddress;
   } catch (error) {
