@@ -483,7 +483,7 @@ export const reserveAddress = async (
       {
         status: "RESERVED",
         current_payment_id: paymentId,
-        current_company_id: companyId,
+        current_company_id: effectiveCompanyId,
         expected_amount: expectedAmount,
         received_amount: 0,
         is_partial_payment: false,
@@ -499,7 +499,7 @@ export const reserveAddress = async (
 
     console.log(`[MerchantPool] ✅ Reserved ${walletType} address for payment ${paymentId}`);
     console.log(`[MerchantPool]    - Merchant: ${userId}`);
-    console.log(`[MerchantPool]    - Company: ${companyId}`);
+    console.log(`[MerchantPool]    - Company: ${effectiveCompanyId}`);
     console.log(`[MerchantPool]    - Address: ${poolAddress.dataValues.wallet_address}`);
     console.log(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
     console.log(`[MerchantPool]    - Reserved until: ${reservedUntil}`);
