@@ -459,20 +459,39 @@ export const reserveAddress = async (
       poolAddress = await addAddressToMerchantPool(userId, walletType, transaction);
     }
 
-    // Ensure Tatum subscription exists for webhook notifications
-    // This is critical for receiving payment notifications
+    // PERFORMANCE OPTIMIZATION: Only create subscription if one doesn't exist
+    // Existing subscriptions don't need to be recreated - they persist
     let subscriptionId = poolAddress.dataValues.subscription_id;
-    try {
-      const subResult = await tatumApi.createSubscription(
-        poolAddress.dataValues.wallet_address,
-        walletType,
-        true  // onlyCrypto = true for payment webhooks
-      );
-      subscriptionId = subResult?.id || subscriptionId;
-      console.log(`[MerchantPool] ✅ Subscription ensured for ${poolAddress.dataValues.wallet_address}: ${subscriptionId}`);
-    } catch (subError) {
-      console.error(`[MerchantPool] ⚠️ Failed to ensure subscription for ${poolAddress.dataValues.wallet_address}:`, subError);
-      // Continue anyway - payment can still be processed manually via webhook retry
+    
+    if (!subscriptionId) {
+      // Create subscription asynchronously - don't block the payment flow
+      // This saves 1-3 seconds per payment
+      console.log(`[MerchantPool] 🔄 Creating subscription in background for ${poolAddress.dataValues.wallet_address}`);
+      
+      const addressToSubscribe = poolAddress.dataValues.wallet_address;
+      const addressId = poolAddress.dataValues.temp_address_id;
+      
+      // Fire and forget - subscription creation happens in background
+      tatumApi.createSubscription(addressToSubscribe, walletType, true)
+        .then(subResult => {
+          if (subResult?.id) {
+            // Update the subscription ID in database (outside transaction)
+            merchantTempAddressModel.update(
+              { subscription_id: subResult.id },
+              { where: { temp_address_id: addressId } }
+            ).then(() => {
+              console.log(`[MerchantPool] ✅ Background subscription created for ${addressToSubscribe}: ${subResult.id}`);
+            }).catch(updateErr => {
+              console.error(`[MerchantPool] ⚠️ Failed to save subscription ID:`, updateErr.message);
+            });
+          }
+        })
+        .catch(subError => {
+          console.error(`[MerchantPool] ⚠️ Background subscription failed for ${addressToSubscribe}:`, subError.message);
+          // Not critical - webhook can still work if subscription exists from previous attempt
+        });
+    } else {
+      console.log(`[MerchantPool] ✅ Using existing subscription for ${poolAddress.dataValues.wallet_address}: ${subscriptionId}`);
     }
 
     // Reserve the address
