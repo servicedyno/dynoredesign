@@ -351,6 +351,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             ...userData,
             adm_id: items.adm_id,
             customer_id: items.customer_id,
+            company_id: items.company_id,  // Pass company_id for proper wallet filtering
           }, true);  // Use crypto-specific webhook for proper verification
           console.log("paymentRes=============>", paymentRes, uniqueRef);
           finalRes = { hash: uniqueRef, ...paymentRes };
