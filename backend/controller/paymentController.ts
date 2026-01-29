@@ -1962,7 +1962,7 @@ const cryptoVerification = async (address, webhook = true) => {
           previousAmount: receivedAmount,
           previousTxId: transactionId,
           customerInternalRef: customerPayload.id,
-          userInternalRef: tempData.unique_tx_id,
+          userInternalRef: tempData.unique_tx_id || tempData.payment_id,  // FIX: Support both field names
           incomplete: "true",
           partialPaymentTimestamp: new Date().toISOString(),
         };
