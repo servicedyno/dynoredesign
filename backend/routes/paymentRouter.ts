@@ -69,6 +69,13 @@ paymentRouter.post(
   paymentController.calculatePaymentAmount
 );
 
+// Get configured currencies for checkout (customer auth required)
+paymentRouter.get(
+  "/configured-currencies",
+  customerAuthMiddleware,
+  paymentController.getConfiguredCurrenciesForCheckout
+);
+
 paymentRouter.get(
   "/getBalance",
   customerAuthMiddleware,
