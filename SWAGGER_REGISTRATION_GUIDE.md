@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://dependinstall.preview.emergentagent.com/api/docs
+Go to: https://env-checker-1.preview.emergentagent.com/api/docs
 
 ---
 

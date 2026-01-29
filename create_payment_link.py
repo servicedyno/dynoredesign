@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://dependinstall.preview.emergentagent.com/api"
+BASE_URL = "https://env-checker-1.preview.emergentagent.com/api"
 
 # Login
 print("1. Logging in as john@dyno.pt...")
