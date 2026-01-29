@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://payunstuck.preview.emergentagent.com"
+backend_url = "https://paycycle-2.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(

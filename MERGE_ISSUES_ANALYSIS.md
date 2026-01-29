@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://payunstuck.preview.emergentagent.com
+SERVER_URL=https://paycycle-2.preview.emergentagent.com
 ```
 
 **Impact:**

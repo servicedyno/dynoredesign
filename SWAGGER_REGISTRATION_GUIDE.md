@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://payunstuck.preview.emergentagent.com/api/docs
+Go to: https://paycycle-2.preview.emergentagent.com/api/docs
 
 ---
 
