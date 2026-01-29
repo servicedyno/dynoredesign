@@ -106,7 +106,7 @@ const tatumCryptoWebHook = async (
     // Check for duplicate txId (prevent processing same blockchain tx twice)
     const processedTxKey = `processed-tx-${payload.txId}`;
     const alreadyProcessed = await getRedisItem(processedTxKey);
-    if (alreadyProcessed) {
+    if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
       console.log("[tatumCryptoWebHook] Transaction already processed, ignoring duplicate:", payload.txId);
       return res.status(200).end();
     }
