@@ -287,6 +287,45 @@ Replace the existing network selection section with:
 
 ---
 
+### Step 6: Display Fee Information
+
+Add this UI component after the network selection to show who pays fees:
+
+```tsx
+{/* Fee Information Display */}
+{feeInfo && selectedCrypto && (
+  <Box 
+    mt={2} 
+    p={2} 
+    bgcolor={feeInfo.fee_payer === 'customer' ? '#FEF3C7' : '#ECFDF5'} 
+    borderRadius={2}
+    border={`1px solid ${feeInfo.fee_payer === 'customer' ? '#F59E0B' : '#10B981'}`}
+  >
+    <Box display="flex" alignItems="center" gap={1}>
+      <InfoOutlinedIcon 
+        sx={{ 
+          fontSize: 18, 
+          color: feeInfo.fee_payer === 'customer' ? '#92400E' : '#059669' 
+        }} 
+      />
+      <Typography 
+        fontSize={14} 
+        fontFamily="Space Grotesk" 
+        fontWeight={500}
+        color={feeInfo.fee_payer === 'customer' ? '#92400E' : '#059669'}
+      >
+        {feeInfo.fee_payer === 'customer' 
+          ? `You will pay ${feeInfo.fee_percent}% transaction fee`
+          : 'No additional fees - merchant covers transaction costs'
+        }
+      </Typography>
+    </Box>
+  </Box>
+)}
+```
+
+---
+
 ## Complete Changes Summary
 
 | Line | Action | Code |
