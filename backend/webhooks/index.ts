@@ -6,6 +6,61 @@ import { getRedisItem, setRedisItem } from "../utils/redisInstance";
 import axios from "axios";
 import { paymentController } from "../controller";
 import { sendPendingPaymentNotification } from "../services/pendingPaymentService";
+import { QueryTypes } from "sequelize";
+
+/**
+ * Call merchant's webhook URL with payment event
+ * Merchants can configure webhook_url when creating payment links
+ */
+const callMerchantWebhook = async (customerData: any, eventData: any): Promise<void> => {
+  try {
+    // Get webhook URL from payment link or company settings
+    const sequelize = require('../utils/dbInstance').default;
+    
+    // First try to get from payment link
+    let webhookUrl = null;
+    
+    if (customerData?.payment_link_id) {
+      const [linkResult] = await sequelize.query(
+        `SELECT webhook_url FROM tbl_payment_link WHERE payment_link_id = :linkId`,
+        { replacements: { linkId: customerData.payment_link_id }, type: QueryTypes.SELECT }
+      );
+      webhookUrl = linkResult?.webhook_url;
+    }
+    
+    // If no webhook on link, try company settings
+    if (!webhookUrl && customerData?.company_id) {
+      const [companyResult] = await sequelize.query(
+        `SELECT webhook_url FROM tbl_company WHERE company_id = :companyId`,
+        { replacements: { companyId: customerData.company_id }, type: QueryTypes.SELECT }
+      );
+      webhookUrl = companyResult?.webhook_url;
+    }
+    
+    if (!webhookUrl) {
+      console.log("[callMerchantWebhook] No webhook URL configured, skipping");
+      return;
+    }
+    
+    console.log(`[callMerchantWebhook] Sending ${eventData.event} to ${webhookUrl}`);
+    
+    // Send webhook with timeout
+    const response = await axios.post(webhookUrl, eventData, {
+      timeout: 10000,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-DynoPay-Event': eventData.event,
+        'X-DynoPay-Signature': 'webhook-signature-placeholder', // TODO: Add proper HMAC signature
+      },
+    });
+    
+    console.log(`[callMerchantWebhook] Webhook sent successfully, status: ${response.status}`);
+    
+  } catch (error: any) {
+    // Log but don't throw - webhook failure shouldn't block payment processing
+    console.error(`[callMerchantWebhook] Failed to send webhook: ${error.message}`);
+  }
+};
 
 const flutterwaveWebHook = async (
   req: express.Request,
