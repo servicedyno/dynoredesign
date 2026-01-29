@@ -156,8 +156,7 @@ export const setupMerchantSwagger = (app: Express) => {
       showRequestDuration: true,
       persistAuthorization: true,
     },
-    })
-  );
+  }));
 
   // Serve OpenAPI spec as JSON
   app.get("/docs.json", (req, res) => {
