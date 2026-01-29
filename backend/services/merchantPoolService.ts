@@ -909,36 +909,64 @@ export const cleanupStaleAddresses = async (
   const safetyTimeout = new Date();
   safetyTimeout.setMinutes(safetyTimeout.getMinutes() - POOL_CONFIG.STALE_LOCK_TIMEOUT_MINUTES);
 
+  // Also recover stuck SWEEPING addresses (stuck for more than 10 minutes)
+  const sweepingTimeout = new Date();
+  sweepingTimeout.setMinutes(sweepingTimeout.getMinutes() - 10);
+
   const whereClause: any = {
-    status: { [Op.in]: ["RESERVED", "PROCESSING"] },
-    locked_at: { [Op.lt]: safetyTimeout },
+    [Op.or]: [
+      // Stuck RESERVED or PROCESSING
+      {
+        status: { [Op.in]: ["RESERVED", "PROCESSING"] },
+        locked_at: { [Op.lt]: safetyTimeout },
+      },
+      // Stuck SWEEPING - reset to IN_USE so sweep can retry
+      {
+        status: "SWEEPING",
+        updated_at: { [Op.lt]: sweepingTimeout },
+      },
+    ],
   };
 
   if (walletType) whereClause.wallet_type = walletType;
 
   const stuckAddresses = await merchantTempAddressModel.findAll({ where: whereClause });
 
+  let releasedCount = 0;
+  let retryCount = 0;
+
   for (const address of stuckAddresses) {
-    console.log(`[MerchantPool] 🚨 Force-releasing stuck address: ${address.dataValues.wallet_address}`);
+    const status = address.dataValues.status;
+    const addrStr = address.dataValues.wallet_address;
+    
+    if (status === "SWEEPING") {
+      // Reset to IN_USE so sweep will retry
+      console.log(`[MerchantPool] 🔄 Resetting stuck SWEEPING address for retry: ${addrStr}`);
+      await address.update({ status: "IN_USE" });
+      retryCount++;
+    } else {
+      // Release stuck RESERVED/PROCESSING
+      console.log(`[MerchantPool] 🚨 Force-releasing stuck address: ${addrStr}`);
+      await address.update({
+        status: "AVAILABLE",
+        current_payment_id: null,
+        current_company_id: null,
+        expected_amount: null,
+        reserved_until: null,
+        locked_at: null,
+      });
+      releasedCount++;
+    }
   }
 
-  const [affectedCount] = await merchantTempAddressModel.update(
-    {
-      status: "AVAILABLE",
-      current_payment_id: null,
-      current_company_id: null,
-      expected_amount: null,
-      reserved_until: null,
-      locked_at: null,
-    },
-    { where: whereClause }
-  );
-
-  if (affectedCount > 0) {
-    console.log(`[MerchantPool] 🚨 Force-released ${affectedCount} stuck addresses`);
+  if (releasedCount > 0) {
+    console.log(`[MerchantPool] 🚨 Force-released ${releasedCount} stuck addresses`);
+  }
+  if (retryCount > 0) {
+    console.log(`[MerchantPool] 🔄 Reset ${retryCount} stuck SWEEPING addresses for retry`);
   }
 
-  return affectedCount;
+  return releasedCount + retryCount;
 };
 
 /**
