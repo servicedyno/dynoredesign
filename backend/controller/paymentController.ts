@@ -1840,7 +1840,8 @@ const verifyCryptoPayment = async (
     const currency = tempData?.currency;
     
     // Check if this is a partial payment scenario (incomplete flag set)
-    if (tempData?.incomplete === "true" || tempData?.incomplete === true) {
+    // Redis stores values as strings, so convert to string for comparison
+    if (String(tempData?.incomplete) === "true") {
       const totalPaid = previousAmount;
       const originalExpected = expectedAmount + previousAmount; // amount is now the remaining
       const remainingAmount = expectedAmount;
