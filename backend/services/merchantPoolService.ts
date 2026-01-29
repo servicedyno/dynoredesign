@@ -1112,11 +1112,12 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
 
     // Fund gas if needed - ONLY for tokens (USDT, USDC), NOT for native currencies
     // Native currencies (ETH, TRX) already have gas in the remaining balance (admin's portion)
-    let gasFunding = { funded: false, amount: 0, txId: undefined };
+    let gasFunding: { funded: boolean; amount: number; txId: string | null } = { funded: false, amount: 0, txId: null };
     const isToken = TOKEN_CHAINS.includes(walletType);
     
     if (isToken) {
-      gasFunding = await fundGasIfNeeded(poolAddress, walletType);
+      const fundResult = await fundGasIfNeeded(poolAddress, walletType);
+      gasFunding = { ...fundResult, txId: fundResult.txId || null };
     } else {
       console.log(`[MerchantPool] Native ${walletType} - gas comes from remaining balance, no external funding needed`);
     }
