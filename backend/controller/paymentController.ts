@@ -2104,8 +2104,8 @@ const cryptoVerification = async (address, webhook = true) => {
       
       if (tempData.temp_id) {
         // Check if it's a merchant pool address first
-        // Redis stores values as strings, so check for both boolean and string "true"
-        const isMerchantPoolFlag = tempData.is_merchant_pool === true || tempData.is_merchant_pool === "true";
+        // Redis stores values as strings, so convert to string for comparison
+        const isMerchantPoolFlag = String(tempData.is_merchant_pool) === "true";
         if (isMerchantPoolFlag) {
           tempAddressData = await merchantTempAddressModel.findOne({
             where: { temp_address_id: tempData.temp_id },
