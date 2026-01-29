@@ -1237,12 +1237,9 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
         status: "completed",
       }, { transaction: dbTransaction });
 
-      // Reset balance and restore appropriate status
-      // If was RESERVED (new payment pending), keep RESERVED; otherwise AVAILABLE
-      const newStatus = previousStatus === "RESERVED" ? "RESERVED" : "AVAILABLE";
-      
+      // After successful sweep, set status to AVAILABLE and renew subscription
       await poolAddress.update({
-        status: newStatus,
+        status: "AVAILABLE",
         admin_fee_balance: 0,
         gas_balance: 0,
         last_swept_at: new Date(),
@@ -1252,7 +1249,22 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       dbTransaction = null;
       
       console.log(`[MerchantPool] 🎉 Sweep recorded: ${amountToSend} ${walletType} → admin wallet`);
-      console.log(`[MerchantPool]    Status restored to: ${newStatus}`);
+      console.log(`[MerchantPool]    Status set to: AVAILABLE`);
+
+      // Renew subscription for the address so it's ready for next payment
+      try {
+        const subResult = await tatumApi.createSubscription(
+          poolAddress.dataValues.wallet_address,
+          walletType,
+          true
+        );
+        if (subResult?.id) {
+          await poolAddress.update({ subscription_id: subResult.id });
+          console.log(`[MerchantPool]    Subscription renewed: ${subResult.id}`);
+        }
+      } catch (subError) {
+        console.warn(`[MerchantPool]    ⚠️ Failed to renew subscription (will retry on next reserve)`);
+      }
 
       return { success: true, amount: amountToSend, txId: sweepTxId };
       
