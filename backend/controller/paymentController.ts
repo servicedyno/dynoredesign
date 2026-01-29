@@ -295,6 +295,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             ref: uniqueRef,
             currency: value.currency,
             payment_id: paymentRes.transaction_id,  // Internal payment ID (NOT blockchain txId)
+            unique_tx_id: paymentRes.transaction_id,  // Alias for backward compatibility with cryptoVerification
             walletType: "customer",
             temp_id: paymentRes.temp_id,
             is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",  // CRITICAL: Include merchant pool flag
