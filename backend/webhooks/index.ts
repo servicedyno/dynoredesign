@@ -161,17 +161,19 @@ const tatumCryptoWebHook = async (
       // If cryptoVerification fails, webhook can be safely retried
       console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address);
       try {
-        // Temporarily store received amount for cryptoVerification to use
+        // CRITICAL: Store txId BEFORE calling cryptoVerification so it can use it
+        // cryptoVerification reads txId from Redis to process the payment
         await setRedisItem("crypto-" + address, {
           ...items,
           status: "processing",
           receivedAmount: incomingAmount,
+          txId: payload.txId,  // MUST be set before cryptoVerification
         });
 
         await paymentController.cryptoVerification(address, true);
         console.log("[tatumCryptoWebHook] cryptoVerification completed successfully");
 
-        // SUCCESS: Mark as processed with txId to prevent duplicate processing
+        // SUCCESS: Mark as processed (txId already set above)
         await setRedisItem("crypto-" + address, {
           ...items,
           status: "successful",
