@@ -1092,8 +1092,16 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
       return { success: true, amount: 0, message: "No balance to sweep" };
     }
 
-    // Fund gas if needed
-    const gasFunding = await fundGasIfNeeded(poolAddress, walletType);
+    // Fund gas if needed - ONLY for tokens (USDT, USDC), NOT for native currencies
+    // Native currencies (ETH, TRX) already have gas in the remaining balance (admin's portion)
+    let gasFunding = { funded: false, amount: 0, txId: undefined };
+    const isToken = TOKEN_CHAINS.includes(walletType);
+    
+    if (isToken) {
+      gasFunding = await fundGasIfNeeded(poolAddress, walletType);
+    } else {
+      console.log(`[MerchantPool] Native ${walletType} - gas comes from remaining balance, no external funding needed`);
+    }
 
     // Decrypt private key
     const privateKey = await tatumApi.decryptSymmetric(
