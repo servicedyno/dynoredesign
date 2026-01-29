@@ -625,22 +625,30 @@ export const releaseAddress = async (
 
   const walletType = poolAddress.dataValues.wallet_type;
   const sweepConfig = getSweepConfig(walletType);
+  const isUTXO = UTXO_CHAINS.includes(walletType);
+  const isToken = TOKEN_CHAINS.includes(walletType);
 
-  // For UTXO chains (batch mode), admin fee is already sent in same transaction as merchant
-  // Address can go directly to AVAILABLE
-  // For non-UTXO chains, admin fee is pending sweep, so status = IN_USE
-  const isUTXOBatchTransfer = sweepConfig.mode === "batch";
-  
   const currentAdminBalance = parseFloat(poolAddress.dataValues.admin_fee_balance) || 0;
   const currentGasBalance = parseFloat(poolAddress.dataValues.gas_balance) || 0;
   const currentTxCount = poolAddress.dataValues.total_transactions || 0;
 
-  const newAdminBalance = isUTXOBatchTransfer ? currentAdminBalance : (currentAdminBalance + adminFeeAmount);
+  // UTXO: admin fee sent in same tx, no accumulation
+  // Token/Native: accumulate admin fee
+  const newAdminBalance = isUTXO ? currentAdminBalance : (currentAdminBalance + adminFeeAmount);
   
-  // UTXO chains: AVAILABLE (no pending sweep)
-  // Non-UTXO chains with admin fee: IN_USE (pending sweep)
-  // Non-UTXO chains without admin fee: AVAILABLE
-  const newStatus = isUTXOBatchTransfer ? "AVAILABLE" : (newAdminBalance > 0 ? "IN_USE" : "AVAILABLE");
+  // Determine new status based on chain type:
+  // - UTXO (batch): AVAILABLE immediately (admin fee already sent)
+  // - Token (threshold): AVAILABLE (accumulate fees, reuse until threshold)
+  // - Native (time): IN_USE (wait for time-based sweep)
+  let newStatus: string;
+  if (isUTXO) {
+    newStatus = "AVAILABLE";
+  } else if (isToken) {
+    newStatus = "AVAILABLE"; // Accumulate fees, reuse address
+  } else {
+    // Native chains (ETH, TRX) - time-based sweep
+    newStatus = newAdminBalance > 0 ? "IN_USE" : "AVAILABLE";
+  }
 
   await poolAddress.update({
     status: newStatus,
@@ -656,20 +664,31 @@ export const releaseAddress = async (
     reserved_until: null,
     locked_at: null,
     last_used_at: new Date(),
-    last_merchant_payout: isUTXOBatchTransfer ? null : new Date(), // Only track for non-UTXO chains
+    last_merchant_payout: isUTXO ? null : new Date(),
   });
 
   console.log(`[MerchantPool] ✅ Released address ${poolAddress.dataValues.wallet_address} (${walletType})`);
+  console.log(`[MerchantPool]    - Chain type: ${isUTXO ? 'UTXO' : isToken ? 'Token' : 'Native'}`);
   console.log(`[MerchantPool]    - New status: ${newStatus}`);
+  console.log(`[MerchantPool]    - Admin fee balance: ${newAdminBalance}`);
   
-  if (isUTXOBatchTransfer) {
-    console.log(`[MerchantPool]    - UTXO batch transfer: Admin fee ${adminFeeAmount} already sent`);
-    console.log(`[MerchantPool]    - No accumulation needed, address ready for reuse`);
+  // Create/renew subscription for addresses that are now AVAILABLE
+  if (newStatus === "AVAILABLE") {
+    try {
+      const subResult = await tatumApi.createSubscription(
+        poolAddress.dataValues.wallet_address,
+        walletType,
+        true
+      );
+      if (subResult?.id) {
+        await poolAddress.update({ subscription_id: subResult.id });
+        console.log(`[MerchantPool]    - Subscription renewed: ${subResult.id}`);
+      }
+    } catch (subError) {
+      console.warn(`[MerchantPool]    - ⚠️ Failed to renew subscription (will retry on next reserve)`);
+    }
   } else {
-    console.log(`[MerchantPool]    - Admin fee added: ${adminFeeAmount}`);
-    console.log(`[MerchantPool]    - New admin balance: ${newAdminBalance}`);
     console.log(`[MerchantPool]    - Sweep mode: ${sweepConfig.mode}:${sweepConfig.value || 'N/A'}`);
-    console.log(`[MerchantPool]    - Merchant payout timestamp: ${new Date().toISOString()}`);
   }
 };
 
