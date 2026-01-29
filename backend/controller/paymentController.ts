@@ -913,7 +913,8 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           }
         }
         
-        await deleteRedisItem(uniqueRef);
+        // FIXED: Use soft delete with TTL for checkout status polling
+        await softDeleteRedisItem(uniqueRef, 1800); // 30 minutes TTL
         successResponseHelper(res, 200, "Payment confirmed successfully", returnData);
       } else {
         const company_data = (
