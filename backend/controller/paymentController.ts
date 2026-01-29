@@ -2011,9 +2011,32 @@ const cryptoVerification = async (address, webhook = true) => {
     }
 
     if (transactionId) {
-      // const adminWalletData = await adminWalletModel.findOne({
-      //   where: { wallet_type: tempCurrency },
-      // });
+      // Validate customerData exists and has required fields
+      if (!customerData || !customerData.adm_id) {
+        console.warn(`[cryptoVerification] ⚠️  Missing customerData or adm_id for address: ${address}`);
+        console.warn(`[cryptoVerification] customerData:`, JSON.stringify(customerData));
+        console.warn(`[cryptoVerification] tempData:`, JSON.stringify(tempData));
+        
+        // Try to find payment info from merchant pool address
+        const poolAddress = await merchantTempAddressModel.findOne({
+          where: { wallet_address: address },
+          transaction,
+        });
+        
+        if (poolAddress && poolAddress.dataValues.owner_user_id) {
+          console.log(`[cryptoVerification] Found pool address, using owner_user_id: ${poolAddress.dataValues.owner_user_id}`);
+          customerData = customerData || {};
+          customerData.adm_id = poolAddress.dataValues.owner_user_id;
+          customerData.company_id = poolAddress.dataValues.current_company_id;
+        } else {
+          await transaction.rollback();
+          return {
+            status: 400,
+            message: "Payment session expired or invalid. Customer data not found.",
+            address: address
+          };
+        }
+      }
 
       // Multi-tenant fix: Include company_id in wallet lookup to ensure funds go to correct company
       const whereClause: any = {
