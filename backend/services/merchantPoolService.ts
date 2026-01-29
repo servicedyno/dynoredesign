@@ -655,11 +655,17 @@ export const releaseExpiredReservations = async (
   transaction?: Transaction
 ): Promise<number> => {
   // Find all expired reservations WITHOUT partial payments
+  // Note: received_amount might be stored as DECIMAL string, so we check for '0', 0, null, and '0.00000000'
   const expiredNoPayment = await merchantTempAddressModel.findAll({
     where: {
       status: "RESERVED",
       is_partial_payment: false,
-      received_amount: { [Op.or]: [{ [Op.eq]: 0 }, { [Op.eq]: null }] },
+      [Op.or]: [
+        { received_amount: 0 },
+        { received_amount: null },
+        { received_amount: '0' },
+        { received_amount: '0.00000000' },
+      ],
       reserved_until: { [Op.lt]: new Date() },
       ...(userId && { owner_user_id: userId }),
       ...(walletType && { wallet_type: walletType }),
