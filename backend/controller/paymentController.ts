@@ -2747,7 +2747,18 @@ const getCurrencyRates = async (
       const enhancedRates = await Promise.all(
         currencyRateList.map(async (rate: any) => {
           try {
-            const chain = rate.currency.replace('-', '_').toUpperCase();
+            // Map currency to chain name for fee calculation
+            let chain = rate.currency.replace('-', '_').toUpperCase();
+            
+            // Handle special cases where currency name differs from chain name
+            const chainMapping: Record<string, string> = {
+              'USDT': 'USDT_TRC20',  // Default USDT to TRC20
+              'USDC': 'USDC_ERC20',  // Default USDC to ERC20
+            };
+            chain = chainMapping[chain] || chain;
+            
+            console.log(`[getCurrencyRates] Processing ${rate.currency} -> chain: ${chain}`);
+            
             const cryptoPrice = parseFloat(rate.amount) > 0 ? amount / parseFloat(rate.amount) : 0;
             
             // Get fee breakdown
@@ -2762,23 +2773,25 @@ const getCurrencyRates = async (
             const totalAmountUSD = amount + totalFeesUSD;
             const totalAmountCrypto = cryptoPrice > 0 ? totalAmountUSD / cryptoPrice : 0;
             
+            console.log(`[getCurrencyRates] ${rate.currency}: base=$${amount}, fees=$${totalFeesUSD.toFixed(2)}, total=$${totalAmountUSD.toFixed(2)}`);
+            
             return {
               ...rate,
               fee_payer: 'customer',
               base_amount: parseFloat(rate.amount),
               base_amount_usd: amount,
               fees: {
-                transaction_fee: transactionFee,
-                fixed_fee: fixedFee,
-                blockchain_buffer: blockchainBuffer,
-                network_fee: networkFee.feeInUSD,
+                transaction_fee_usd: transactionFee,
+                fixed_fee_usd: fixedFee,
+                buffer_fee_usd: blockchainBuffer,
+                network_fee_usd: networkFee.feeInUSD,
                 total_fees_usd: totalFeesUSD,
               },
               total_amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto,
               total_amount_usd: totalAmountUSD,
               amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto, // Override amount with total
             };
-          } catch (feeError) {
+          } catch (feeError: any) {
             console.error(`[getCurrencyRates] Fee calc error for ${rate.currency}:`, feeError.message);
             return {
               ...rate,
