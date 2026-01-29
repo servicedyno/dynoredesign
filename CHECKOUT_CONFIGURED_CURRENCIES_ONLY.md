@@ -96,6 +96,13 @@ useEffect(() => {
       setAvailableUSDTNetworks(usdtNetworks);
       setSkipSelection(skip_selection);
       
+      // Store fee information
+      setFeeInfo({
+        fee_payer: response.data.data.fee_payer || 'company',
+        fee_percent: response.data.data.fee_percent || 2.0,
+        fee_display: response.data.data.fee_display || 'No additional fees',
+      });
+      
       // Auto-select if only one currency
       if (skip_selection && baseCurrencies.length === 1) {
         const currency = baseCurrencies[0];
