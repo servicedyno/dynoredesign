@@ -4383,8 +4383,10 @@ const getConfiguredCurrenciesForCheckout = async (
     // Extract unique currencies (only those with actual addresses)
     const currencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
     
+    console.log(`[getConfiguredCurrenciesForCheckout] Found ${currencies.length} currencies: ${currencies.join(', ')}`);
+    
     let feeInfo = {
-      fee_payer: feePayerFromCompany,
+      fee_payer: feePayerFromLink,
       transaction_fee_percent: parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0'),
     };
     
