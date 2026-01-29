@@ -2569,8 +2569,21 @@ const cryptoVerification = async (address, webhook = true) => {
 
         await tatumApi.deleteSubscription(tempAddressData.subscription_id);
         await transaction.commit();
-        await deleteRedisItem(tempData.ref);
-        await deleteRedisItem("crypto-" + address);
+        
+        // FIXED: Use soft delete with 30-min TTL to allow checkout polling for status
+        // Update status to successful before soft delete
+        await setRedisItem(tempData.ref, {
+          ...tempData,
+          status: "successful",
+          completedAt: new Date().toISOString(),
+        });
+        await setRedisItem("crypto-" + address, {
+          ...tempData,
+          status: "successful",
+          completedAt: new Date().toISOString(),
+        });
+        await softDeleteRedisItem(tempData.ref, 1800); // 30 minutes TTL
+        await softDeleteRedisItem("crypto-" + address, 1800); // 30 minutes TTL
 
         if (webhook) {
           const { company_id, customer_id, ...transferDetails } = customerPayload;
