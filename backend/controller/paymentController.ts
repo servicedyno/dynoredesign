@@ -1589,6 +1589,7 @@ const Crypto = async (
       address: address,
       transaction_id: userPayload.id,
       temp_id: tempData.dataValues.temp_id,
+      is_merchant_pool: false,  // Legacy admin wallet system
     };
 
     return { paymentRes, uniqueRef };
