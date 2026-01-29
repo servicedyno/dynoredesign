@@ -76,6 +76,7 @@ export {
   notificationModel,
   notificationPreferencesModel,
   kycModel,
+  webhookDeliveryLogModel,
   // USDT Pool System models (legacy)
   usdtPoolAddressModel,
   usdtPoolTransactionModel,
