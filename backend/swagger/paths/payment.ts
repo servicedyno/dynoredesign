@@ -116,13 +116,35 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 webhook_url: { 
                   type: 'string', 
                   format: 'uri', 
-                  description: '📡 OPTIONAL: URL to receive payment status webhooks',
+                  description: `📡 OPTIONAL: URL to receive payment status webhooks (per-link override).
+                  
+**Webhook Events:**
+- \`payment.pending\` - Payment detected on blockchain, awaiting confirmations
+- \`payment.confirmed\` - Payment fully confirmed and processed
+
+**Note:** If not set, webhooks will be sent to the company's default webhook URL (configured via /api/company/webhook-settings).
+
+**Headers Included:**
+- \`X-DynoPay-Event\` - Event type
+- \`X-DynoPay-Signature\` - HMAC signature (if webhook_secret configured)
+- \`X-DynoPay-Timestamp\` - Unix timestamp
+- \`X-DynoPay-Webhook-Id\` - Unique delivery ID`,
                   example: 'https://example.com/webhook'
                 },
                 fee_payer: {
                   type: 'string',
                   enum: ['customer', 'company'],
-                  description: '💰 OPTIONAL: Who pays blockchain fees. Defaults to "company"',
+                  description: `💰 OPTIONAL: Who pays blockchain/network fees.
+
+**Options:**
+- \`company\` (default) - Fees deducted from merchant's portion
+- \`customer\` - Customer pays additional amount to cover fees
+
+**Example (customer pays fees):**
+- Base amount: $10.00
+- Admin fee (33%): $3.30  
+- Customer total: $13.30
+- Merchant receives: $10.00 (full base amount)`,
                   example: 'company',
                   default: 'company'
                 }
