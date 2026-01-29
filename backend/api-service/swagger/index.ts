@@ -158,7 +158,8 @@ export const setupMerchantSwagger = (app: Express) => {
     },
   };
   
-  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOptions) as any);
+  // @ts-ignore - swagger-ui-express types are incompatible with express 5.x
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOptions));
 
   // Serve OpenAPI spec as JSON
   app.get("/docs.json", (req, res) => {
