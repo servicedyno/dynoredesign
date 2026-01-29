@@ -3321,9 +3321,10 @@ const checkingUSDT = async () => {
         user_id: currentAddress.user_id,
       };
       
-      // Add company_id filter if present
-      if (currentAddress.company_id && currentAddress.company_id !== '' && currentAddress.company_id !== 'undefined' && currentAddress.company_id !== 'null') {
-        const companyId = parseInt(currentAddress.company_id);
+      // Add company_id filter if present (cast to any since company_id may be added dynamically)
+      const addressCompanyId = (currentAddress as any).company_id;
+      if (addressCompanyId && addressCompanyId !== '' && addressCompanyId !== 'undefined' && addressCompanyId !== 'null') {
+        const companyId = parseInt(addressCompanyId);
         if (!isNaN(companyId)) {
           forwardingWalletWhere.company_id = companyId;
         }
