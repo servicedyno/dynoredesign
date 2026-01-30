@@ -152,10 +152,34 @@ POST /api/pay/verifyCryptoPayment
   "success": true,
   "data": {
     "status": "pending",
-    "confirmations": 0,
-    "confirmations_required": 1,
-    "transaction_hash": null,
-    "message": "Waiting for payment..."
+    "message": "Payment detected, awaiting confirmation",
+    "txId": "0x7a91f8b2c3d4e5f6...",
+    "amount": "0.00547",
+    "expected_amount": "0.00547",
+    "currency": "ETH"
+  }
+}
+```
+
+**Response (Underpaid - Partial Payment):**
+```json
+{
+  "message": "Partial payment received",
+  "data": {
+    "status": "underpaid",
+    "message": "Partial payment received. Please pay the remaining amount.",
+    "paidAmount": 0.002,
+    "expectedAmount": 0.00547,
+    "remainingAmount": 0.00347,
+    "currency": "ETH",
+    "paidAmountUsd": 5.48,
+    "expectedAmountUsd": 15.00,
+    "remainingAmountUsd": 9.52,
+    "baseCurrency": "USD",
+    "txId": "0x7a91f8b2c3d4e5f6...",
+    "address": "0x5c8282c96a89f002b908668bab6d5d30c68b610e",
+    "grace_period_minutes": 30,
+    "partial_payment_timestamp": "2026-01-30T12:39:35.104Z"
   }
 }
 ```
@@ -166,11 +190,38 @@ POST /api/pay/verifyCryptoPayment
   "success": true,
   "data": {
     "status": "confirmed",
-    "confirmations": 3,
-    "confirmations_required": 1,
-    "transaction_hash": "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890",
-    "amount_received": 0.00456789,
-    "message": "Payment confirmed!"
+    "message": "Payment confirmed",
+    "redirect": "https://mystore.com/success",
+    "txId": "0x7a91f8b2c3d4e5f6...",
+    "paidAmount": 0.00547,
+    "expectedAmount": 0.00547,
+    "currency": "ETH",
+    "paidAmountUsd": 15.00,
+    "expectedAmountUsd": 15.00,
+    "baseCurrency": "USD",
+    "completedAt": "2026-01-30T12:45:00.000Z"
+  }
+}
+```
+
+**Response (Overpaid):**
+```json
+{
+  "message": "Payment confirmed with overpayment",
+  "data": {
+    "status": "overpaid",
+    "message": "Payment confirmed with overpayment",
+    "redirect": "https://mystore.com/success",
+    "txId": "0x7a91f8b2c3d4e5f6...",
+    "paidAmount": 0.00647,
+    "expectedAmount": 0.00547,
+    "excessAmount": 0.001,
+    "currency": "ETH",
+    "paidAmountUsd": 17.74,
+    "expectedAmountUsd": 15.00,
+    "excessAmountUsd": 2.74,
+    "baseCurrency": "USD",
+    "completedAt": "2026-01-30T12:45:00.000Z"
   }
 }
 ```
