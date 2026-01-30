@@ -630,38 +630,9 @@ const tatumCryptoWebHook = async (
         
         console.log("[tatumCryptoWebHook] Redis updated with txId after successful processing");
         
-        // Send payment confirmed webhook to merchant
-        if (customerData && customerData.company_id) {
-          // Calculate overpayment if any
-          const overpaymentAmount = isOverpayment ? (incomingAmount - expectedAmount) : 0;
-          
-          const webhookPayload: any = {
-            event: 'payment.confirmed',
-            address: address,
-            txId: payload.txId,
-            amount: incomingAmount,
-            expected_amount: expectedAmount,
-            currency: items?.currency || payload.asset,
-            payment_id: items?.payment_id || items?.unique_tx_id,
-            merchant_amount: items?.merchant_amount,
-            fees: items?.total_fees,
-            fee_payer: items?.fee_payer || 'company',
-            status: isOverpayment ? 'overpaid' : 'confirmed',
-            timestamp: new Date().toISOString(),
-          };
-          
-          // Include overpayment info if detected
-          if (isOverpayment) {
-            webhookPayload.overpayment = {
-              detected: true,
-              amount_crypto: overpaymentAmount.toString(),
-              currency_crypto: items?.currency || payload.asset,
-            };
-          }
-          
-          await callMerchantWebhook(customerData, webhookPayload);
-          console.log("[tatumCryptoWebHook] Payment confirmed webhook sent");
-        }
+        // NOTE: Merchant webhook is sent by cryptoVerification, NOT here
+        // This prevents duplicate webhook delivery
+        console.log("[tatumCryptoWebHook] Payment confirmed - webhook handled by cryptoVerification");
 
       } catch (verifyError: any) {
         console.error("[tatumCryptoWebHook] Error in cryptoVerification after retries:", verifyError);
