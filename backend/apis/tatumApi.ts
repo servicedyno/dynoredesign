@@ -1608,6 +1608,7 @@ export default {
   deleteUserAddress,
   sendFeeToAdmin,
   deleteSubscription,
+  listAllSubscriptions,
   feeEstimation,
   batchFeeEstimation,
   generatePrivatekey,
