@@ -2020,6 +2020,59 @@ const verifyCryptoPayment = async (
     const previousAmount = parseFloat(tempData?.previousAmount || '0');
     const currency = tempData?.currency;
     
+    // Get customer data for payment link info
+    const customerData = await getRedisItem(tempData?.ref);
+    
+    // Calculate remaining seconds from payment link expiry or partial payment timestamp
+    let remainingSeconds = 15 * 60; // Default 15 minutes
+    const GRACE_PERIOD_MINUTES = 30; // Grace period for underpayment completion
+    
+    // Default merchant settings (until merchant configures their own)
+    const merchantSettings = {
+      overpayment_threshold_usd: 5, // $5 default threshold
+      grace_period_minutes: GRACE_PERIOD_MINUTES,
+    };
+    
+    // Try to get payment link expiry
+    if (customerData?.payment_link_id || tempData?.payment_id) {
+      try {
+        const paymentLink = await paymentLinkModel.findOne({
+          where: {
+            [Op.or]: [
+              { link_id: customerData?.payment_link_id },
+              { transaction_id: tempData?.payment_id },
+            ]
+          }
+        });
+        
+        if (paymentLink) {
+          const linkData = paymentLink.dataValues;
+          if (linkData.expires_at) {
+            const expiresAt = new Date(linkData.expires_at);
+            const now = new Date();
+            remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
+          } else {
+            // No explicit expiry - use created_at + default expiry (15 min for initial, 30 min for grace)
+            const createdAt = new Date(linkData.createdAt);
+            const defaultExpiryMinutes = String(tempData?.incomplete) === "true" ? GRACE_PERIOD_MINUTES : 15;
+            const expiresAt = new Date(createdAt.getTime() + defaultExpiryMinutes * 60 * 1000);
+            const now = new Date();
+            remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
+          }
+        }
+      } catch (e) {
+        console.log("[verifyCryptoPayment] Could not fetch payment link expiry:", e);
+      }
+    }
+    
+    // For partial payments, calculate remaining time from partial payment timestamp
+    if (String(tempData?.incomplete) === "true" && tempData?.partialPaymentTimestamp) {
+      const partialTimestamp = new Date(tempData.partialPaymentTimestamp);
+      const graceExpiresAt = new Date(partialTimestamp.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000);
+      const now = new Date();
+      remainingSeconds = Math.max(0, Math.floor((graceExpiresAt.getTime() - now.getTime()) / 1000));
+    }
+    
     // Get base currency info for USD conversion
     const baseCurrency = tempData?.base_currency || "USD";
     const baseAmount = parseFloat(tempData?.base_amount || "0");
