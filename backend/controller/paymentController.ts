@@ -1955,25 +1955,21 @@ const verifyCryptoPayment = async (
           `?transaction_id=${tempData.payment_id || tempData.unique_tx_id}&status=successful&payment_type=CRYPTO`;
       }
       
-      // Build response based on overpayment status
+      // Build response matching checkout page expected format
+      // Checkout expects: status, redirect (for redirect URL), paidAmount, expectedAmount, excessAmount
       const responseData: any = {
-        status: isOverpayment ? "overpayment" : "confirmed",
+        status: isOverpayment ? "overpaid" : "confirmed",  // FIXED: Use "overpaid" not "overpayment" to match checkout
         message: isOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
-        redirect_url: redirectUrl,
+        redirect: redirectUrl,  // FIXED: Use "redirect" not "redirect_url" to match checkout
         txId: tempData.txId,
-        paid_amount: totalReceived.toFixed(6),
-        expected_amount: originalExpected.toFixed(6),
+        paidAmount: parseFloat(totalReceived.toFixed(6)),  // FIXED: Use camelCase to match checkout
+        expectedAmount: parseFloat(originalExpected.toFixed(6)),  // FIXED: Use camelCase to match checkout
         currency: currency,
         completedAt: tempData.completedAt,
       };
       
       if (isOverpayment) {
-        responseData.overpayment = {
-          detected: true,
-          excess_amount: overpaymentAmount.toFixed(6),
-          currency: currency,
-          refund_message: "Excess amount will be refunded to your wallet"
-        };
+        responseData.excessAmount = parseFloat(overpaymentAmount.toFixed(6));  // FIXED: Add excessAmount for overpayment
       }
       
       return successResponseHelper(res, 200, responseData.message, responseData);
