@@ -350,3 +350,7 @@ services/frontend-checkout/node_modules/@next/swc-linux-arm64-gnu/next-swc.linux
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
