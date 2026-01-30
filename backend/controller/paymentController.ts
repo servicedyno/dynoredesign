@@ -4776,6 +4776,63 @@ const getConfiguredCurrenciesForCheckout = async (
   }
 };
 
+/**
+ * Get fee preview with user's referral discount applied
+ * GET /api/pay/fee-preview
+ */
+const getFeePreview = async (req: express.Request, res: express.Response) => {
+  try {
+    const userData = jwt.decode(res.locals.token) as any;
+    const { amount, currency } = req.query;
+
+    if (!amount) {
+      return errorResponseHelper(res, 400, "Amount is required");
+    }
+
+    const amountNum = parseFloat(amount as string);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return errorResponseHelper(res, 400, "Invalid amount");
+    }
+
+    // Get discounted fee info for user
+    const discountInfo = await getDiscountedTransactionFee(userData.user_id);
+
+    // Calculate fees
+    const baseFeePercent = Number(discountInfo.base_fee);
+    const finalFeePercent = Number(discountInfo.final_fee);
+    
+    const baseFeeAmount = (amountNum * baseFeePercent) / 100;
+    const discountedFeeAmount = (amountNum * finalFeePercent) / 100;
+    const savings = baseFeeAmount - discountedFeeAmount;
+
+    return successResponseHelper(res, 200, "Fee preview retrieved successfully", {
+      amount: amountNum,
+      currency: currency || 'USD',
+      fee_info: {
+        base_fee_percent: baseFeePercent,
+        final_fee_percent: finalFeePercent,
+        base_fee_amount: parseFloat(baseFeeAmount.toFixed(2)),
+        discounted_fee_amount: parseFloat(discountedFeeAmount.toFixed(2)),
+        savings: parseFloat(savings.toFixed(2)),
+        you_receive: parseFloat((amountNum - discountedFeeAmount).toFixed(2)),
+      },
+      discount_info: {
+        has_discount: discountInfo.discount_percent > 0,
+        discount_percent: discountInfo.discount_percent,
+        discount_reason: discountInfo.discount_reason,
+        expires_at: discountInfo.discount_expires_at,
+        days_remaining: discountInfo.discount_expires_at 
+          ? Math.ceil((new Date(discountInfo.discount_expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          : 0,
+      },
+    });
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    apiLogger.error(errorMessage, {}, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 export default {
   getData,
   addPayment,
@@ -4802,5 +4859,6 @@ export default {
   getNetworkFees,
   calculatePaymentAmount,
   getConfiguredCurrenciesForCheckout,
+  getFeePreview,
 };
 
