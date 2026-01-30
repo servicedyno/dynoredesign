@@ -4,6 +4,10 @@ import sequelize from "../utils/dbInstance";
 import { QueryTypes } from "sequelize";
 import monitoringService from "../services/monitoringService";
 import serviceHealthModel from "../models/serviceHealthModel";
+import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
+
+// Cache TTL for status data (60 seconds - health checks run in background)
+const STATUS_CACHE_TTL = 60;
 
 /**
  * Status Controller for DynoPay Status Page
