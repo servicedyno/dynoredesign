@@ -72,6 +72,7 @@ import {
   calculateCustomerPaymentAmount 
 } from "../services/blockchainFeeService";
 import * as merchantPoolService from "../services/merchantPoolService";
+import { callMerchantWebhook } from "../webhooks";
 
 // Retry configuration
 const RETRY_CONFIG = {
