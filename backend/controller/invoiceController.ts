@@ -13,6 +13,7 @@ import { userTransactionModel, companyModel, userModel } from "../models";
 import { apiLogger } from "../utils/loggers";
 import { generateInvoicePDF } from "../services/pdfService";
 import { sendInvoiceGeneratedEmail } from "../services/emailService";
+import { getFeeTiers, getTransactionFeePercent } from "../utils/feeConfigUtils";
 
 /**
  * Generate invoice number
