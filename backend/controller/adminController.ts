@@ -53,14 +53,13 @@ const getTransactionFee = async (
     });
 
     const transaction_fee = fee;
-    await setRedisItem("admin_fee", { transaction_fee: transaction_fee });
-    await setRedisItem("admin_fee", {
-      blockchain_fee: blockchainData.dataValues.fee,
-    });
+    const blockchain_fee = blockchainData.dataValues.fee;
+    // Fix: Combine both fees in single Redis call to prevent overwrite
+    await setRedisItem("admin_fee", { transaction_fee, blockchain_fee });
 
     successResponseHelper(res, 200, "", {
       transaction_fee,
-      blockchain_fee: blockchainData.dataValues.fee,
+      blockchain_fee,
     });
   } catch (e) {
     const message = getErrorMessage(e);
