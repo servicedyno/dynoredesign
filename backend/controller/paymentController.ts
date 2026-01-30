@@ -474,22 +474,38 @@ const createCryptoPayment = async (
         wallet_address: { [Op.not]: null },
       };
       
-      // Handle company_id: if provided and valid, add to query; otherwise check for NULL
+      // Handle company_id: if provided and valid, add to query; otherwise search flexibly
+      let hasWallet;
       if (items.company_id && items.company_id !== '' && items.company_id !== 'undefined' && items.company_id !== 'null') {
         const companyId = parseInt(items.company_id);
         if (!isNaN(companyId)) {
           whereClause.company_id = companyId;
         }
+        console.log('[Phase 10 Validation] Where clause (with company_id):', JSON.stringify(whereClause));
+        hasWallet = await userWalletModel.findOne({ where: whereClause });
       } else {
-        // If company_id not provided, check for NULL company_id wallets
+        // If company_id not provided, try to find ANY wallet for this user and currency
+        // This allows payment links without company_id to still work
+        console.log('[Phase 10 Validation] No company_id, searching flexibly');
+        
+        // First try with null company_id
         whereClause.company_id = null;
+        console.log('[Phase 10 Validation] Where clause (null company_id):', JSON.stringify(whereClause));
+        hasWallet = await userWalletModel.findOne({ where: whereClause });
+        
+        // If not found, try without company_id constraint
+        if (!hasWallet) {
+          delete whereClause.company_id;
+          console.log('[Phase 10 Validation] Where clause (any company_id):', JSON.stringify(whereClause));
+          hasWallet = await userWalletModel.findOne({ where: whereClause });
+          
+          // If wallet found, use its company_id
+          if (hasWallet) {
+            items.company_id = hasWallet.dataValues.company_id;
+            console.log('[Phase 10 Validation] Found wallet with company_id:', items.company_id);
+          }
+        }
       }
-      
-      console.log('[Phase 10 Validation] Where clause:', JSON.stringify(whereClause));
-      
-      const hasWallet = await userWalletModel.findOne({
-        where: whereClause,
-      });
       
       console.log('[Phase 10 Validation] Wallet found:', hasWallet ? 'YES' : 'NO');
 
@@ -505,7 +521,7 @@ const createCryptoPayment = async (
         ref: data.uniqueRef,
         adm_id: items.adm_id,
         customer_id: items.customer_id,
-        company_id: items.company_id,  // Include company_id from Redis
+        company_id: items.company_id || hasWallet.dataValues.company_id,  // Include company_id from Redis or wallet
       };
       const { paymentRes, uniqueRef } = await Crypto(data, tokenData, true);
       
