@@ -1317,7 +1317,7 @@ const sendConfirmationOTP = async (
 
       successResponseHelper(res, 200, "OTP sent successfully!");
     } else {
-      errorResponseHelper(res, 500, "Please enter a registered email!");
+      errorResponseHelper(res, 404, "Please enter a registered email!");
     }
   } catch (e) {
     const message = getErrorMessage(e);
