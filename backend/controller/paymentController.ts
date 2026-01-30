@@ -532,7 +532,7 @@ const createCryptoPayment = async (
       const ADMIN_FEE_PERCENT = 0.33;
       
       // Calculate crypto amount using FastForex
-      const baseAmountUSD = items.base_amount || items.amount || 0;
+      const baseAmountUSD = Number(items.base_amount || items.amount || 0);
       let crypto_amount = 0;           // What customer should pay
       let merchant_amount_crypto = 0;  // What merchant receives
       let total_fees_crypto = 0;       // Admin fees
@@ -2181,7 +2181,7 @@ const cryptoVerification = async (address, webhook = true) => {
       }
       
       console.log(`[cryptoVerification] walletData result:`, walletData ? walletData.dataValues : 'NULL');
-      const receivedAmount = tempData?.receivedAmount ?? tempData?.amount;
+      const receivedAmount = Number(tempData?.receivedAmount ?? tempData?.amount ?? 0);
 
       let product_name;
 
