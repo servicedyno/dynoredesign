@@ -2615,18 +2615,26 @@ const cryptoVerification = async (address, webhook = true) => {
         await softDeleteRedisItem("crypto-" + address, 1800); // 30 minutes TTL
 
         if (webhook) {
+          // FIXED: Use callMerchantWebhook instead of legacy callWebHook
+          // callMerchantWebhook properly looks up webhook_url from payment_link or company
           const { company_id, customer_id, ...transferDetails } = customerPayload;
-          let count = 0, success = false;
-          while (count < 3 && !success) {
-            count += 1;
-            try {
-              await callWebHook(customerData, transferDetails);
-              await timer(2500);
-              success = true;
-            } catch (e) {
-              const message = getErrorMessage(e);
-              webhookLogs.error(message, { customerData, transferDetails }, new Error(e));
-            }
+          try {
+            await callMerchantWebhook(customerData, {
+              event: "payment.confirmed",
+              payment_id: customerPayload.id,
+              transaction_reference: transactionId,
+              status: customerPayload.status,
+              amount: userAmountToSend,
+              currency: tempCurrency,
+              base_amount: customerData?.base_amount,
+              base_currency: customerData?.base_currency,
+              meta_data: customerData?.meta_data ? JSON.parse(customerData.meta_data) : null,
+              completed_at: new Date().toISOString(),
+            });
+            console.log("[cryptoVerification] Merchant webhook sent successfully");
+          } catch (webhookError) {
+            console.error("[cryptoVerification] Merchant webhook failed:", webhookError.message);
+            // Don't fail the transaction if webhook fails
           }
         } else {
           let resData;
