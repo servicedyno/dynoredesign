@@ -97,8 +97,8 @@ const newTransactionFee = async (
     );
     const transaction_fee = fee;
     const blockchain_fee = blockchainFeeInput ?? 0;
-    await setRedisItem("admin_fee", { transaction_fee });
-    await setRedisItem("admin_fee", { blockchain_fee });
+    // Fix: Combine both fees in single Redis call to prevent overwrite
+    await setRedisItem("admin_fee", { transaction_fee, blockchain_fee });
     successResponseHelper(res, 200, "Admin fees retrieved successfully", { transaction_fee, blockchain_fee });
   } catch (e) {
     const message = getErrorMessage(e);
