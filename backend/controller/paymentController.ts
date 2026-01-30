@@ -1887,12 +1887,13 @@ const verifyCryptoPayment = async (
       const originalExpected = expectedAmount + previousAmount; // amount is now the remaining
       const remainingAmount = expectedAmount;
       
+      // FIXED: Use "underpaid" status and camelCase fields to match checkout page expectations
       return successResponseHelper(res, 200, "Partial payment received", {
-        status: "partial",
+        status: "underpaid",  // FIXED: Use "underpaid" not "partial" to match checkout
         message: "Partial payment received. Please pay the remaining amount.",
-        paid_amount: totalPaid.toFixed(6),
-        expected_amount: originalExpected.toFixed(6),
-        remaining_amount: remainingAmount.toFixed(6),
+        paidAmount: parseFloat(totalPaid.toFixed(6)),  // FIXED: Use camelCase
+        expectedAmount: parseFloat(originalExpected.toFixed(6)),  // FIXED: Use camelCase
+        remainingAmount: parseFloat(remainingAmount.toFixed(6)),  // FIXED: Use camelCase
         currency: currency,
         txId: tempData?.previousTxId,
         grace_period_minutes: 30,
