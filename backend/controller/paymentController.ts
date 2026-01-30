@@ -2140,7 +2140,11 @@ const verifyCryptoPayment = async (
         status: "waiting",
         message: "Payment address generated, waiting for transaction",
         expected_amount: expectedAmount.toFixed(6),
-        currency: currency
+        currency: currency,
+        // NEW: Timer and settings
+        remaining_seconds: remainingSeconds,
+        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        merchant_settings: merchantSettings
       });
     }
     
