@@ -649,6 +649,39 @@ const deleteSubscription = async (id) => {
   }
 };
 
+/**
+ * List all active subscriptions from Tatum
+ * Cost: ~2 credits per call
+ */
+const listAllSubscriptions = async (): Promise<any[]> => {
+  try {
+    const headers = await getTatumHeaders();
+    const allSubscriptions: any[] = [];
+    let offset = 0;
+    const pageSize = 50;
+    
+    // Paginate through all subscriptions
+    while (true) {
+      const { data } = await axios.get(
+        `https://api.tatum.io/v4/subscription?pageSize=${pageSize}&offset=${offset}`,
+        { headers }
+      );
+      
+      if (!data || data.length === 0) break;
+      
+      allSubscriptions.push(...data);
+      
+      if (data.length < pageSize) break;
+      offset += pageSize;
+    }
+    
+    return allSubscriptions;
+  } catch (e: any) {
+    console.error("Failed to list subscriptions:", e.response?.data || e.message);
+    throw e;
+  }
+};
+
 const sendFeeToAdmin = async (userId, adminID, amount) => {
   try {
     const tatumSdk = await getTatumSDK();
