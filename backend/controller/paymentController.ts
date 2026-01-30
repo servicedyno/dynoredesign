@@ -2025,7 +2025,7 @@ const verifyCryptoPayment = async (
     
     // Calculate remaining seconds from payment link expiry or partial payment timestamp
     let remainingSeconds = 15 * 60; // Default 15 minutes
-    const GRACE_PERIOD_MINUTES = 30; // Grace period for underpayment completion
+    let gracePeriodMinutes = 30; // Default grace period for underpayment completion
     
     // Default merchant settings - $5 overpayment threshold if merchant didn't set it
     let merchantOverpaymentThreshold = 5; // Default $5
@@ -2040,6 +2040,10 @@ const verifyCryptoPayment = async (
             company?.dataValues?.overpayment_threshold_usd !== null) {
           merchantOverpaymentThreshold = parseFloat(company.dataValues.overpayment_threshold_usd);
         }
+        if (company?.dataValues?.grace_period_minutes !== undefined && 
+            company?.dataValues?.grace_period_minutes !== null) {
+          gracePeriodMinutes = parseInt(company.dataValues.grace_period_minutes);
+        }
       } catch (e) {
         console.log("[verifyCryptoPayment] Could not fetch merchant settings:", e);
       }
@@ -2047,7 +2051,7 @@ const verifyCryptoPayment = async (
     
     const merchantSettings = {
       overpayment_threshold_usd: merchantOverpaymentThreshold,
-      grace_period_minutes: GRACE_PERIOD_MINUTES,
+      grace_period_minutes: gracePeriodMinutes,
     };
     
     // Try to get payment link expiry
