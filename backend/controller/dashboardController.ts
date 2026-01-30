@@ -180,6 +180,14 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     const { period = '30d', company_id } = req.query;
     const userId = userData.user_id;
 
+    // Check cache first (60 second TTL for chart data)
+    const cacheKey = `chart:${userId}:${company_id || 'all'}:${period}`;
+    const cached = await getRedisItem(cacheKey);
+    if (cached && Object.keys(cached).length > 0) {
+      console.log(`[Chart] Cache hit for user ${userId}`);
+      return successResponseHelper(res, 200, "Chart data retrieved successfully", cached);
+    }
+
     // Determine date range based on period
     let days = 30;
     let groupBy = 'day';
