@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://crypto-checkout-21.preview.emergentagent.com/api"
+BASE_URL = "https://setup-deps.preview.emergentagent.com/api"
 
 # Login credentials
 email = "john@dyno.pt"
