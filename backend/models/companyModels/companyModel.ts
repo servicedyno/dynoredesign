@@ -78,6 +78,19 @@ const companyModel = sequelize.define(
       allowNull: true,
       comment: "Secret key for webhook signature verification",
     },
+    // Payment settings
+    overpayment_threshold_usd: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      defaultValue: null,
+      comment: "Minimum overpayment amount in USD to trigger overpayment handling. Default $5 if not set.",
+    },
+    grace_period_minutes: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+      comment: "Grace period in minutes for partial payment completion. Default 30 if not set.",
+    },
   },
   {
     tableName: "tbl_company",
