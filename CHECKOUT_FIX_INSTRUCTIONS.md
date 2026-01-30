@@ -1,244 +1,423 @@
-# DynoPay Checkout Page Fix Instructions
+# DynoCheckoutFIX - Comprehensive Bug Fixes & Improvements
 
-## Repository: https://github.com/Moxxcompany/DynoCheckoutFIX/tree/Payment-Status-Fix
-
----
-
-## Issue 1: Overpayment Display Shows Wrong Data
-
-### Problem
-The OverPayment component displays amounts with `.toFixed(2)` which is incorrect for crypto amounts:
-- Shows "Paid: 0.01 ETH" instead of "Paid: 0.00584 ETH"  
-- Shows "Excess: 0.00 ETH" instead of "Excess: 0.000389 ETH"
-
-### File to Fix
-`Components/UI/OverPayment/Index.tsx`
-
-### Fix
-Replace all `.toFixed(2)` with dynamic decimal formatting:
-
-```tsx
-// Add helper function at top of file
-const formatCryptoAmount = (amount: number, currency: string): string => {
-  // Crypto currencies need more decimal places
-  const cryptoCurrencies = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
-  if (cryptoCurrencies.includes(currency.toUpperCase())) {
-    // Use 6 decimal places for crypto, remove trailing zeros
-    return amount.toFixed(6).replace(/\.?0+$/, '');
-  }
-  // Fiat currencies use 2 decimal places
-  return amount.toFixed(2);
-};
-
-// Update line 126:
-{formatCryptoAmount(paidAmount, currency)} {currency}
-
-// Update line 166:
-{formatCryptoAmount(expectedAmount, currency)} {currency}
-
-// Update line 207:
-{formatCryptoAmount(excessAmount, currency)} {currency}
-```
+## Repository: https://github.com/Moxxcompany/DynoCheckoutFIX
+## Branch: Checkout-Fixes2
 
 ---
 
-## Issue 2: UnderPayment Display Missing/Incorrect Data
+## 🔴 CRITICAL BUG FIXES
 
-### Problem
-The UnderPayment component may show incorrect or missing amounts.
+### Issue 1: Checkout Page Doesn't Move to Confirmation After Completion Payment
 
-### File to Fix
-`Components/UI/UnderPayment/Index.tsx`
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`
 
-### Fix
-Apply same `formatCryptoAmount` helper function as Issue 1.
+**Root Cause:** When underpayment is detected, `clearInterval(pollInterval)` is called at line 547. When user clicks "Pay with Crypto" to complete the remaining payment, the polling doesn't properly restart because:
+1. The `handlePayRemaining` function sets states but doesn't trigger a new poll
+2. The polling `useEffect` depends on `[selectedCrypto, cryptoDetails?.address, dispatch, selectedNetwork, walletState?.currency]`
+3. None of these change when continuing with crypto, so polling never restarts
 
-Also ensure the component receives all required props:
-```tsx
-interface UnderPaymentProps {
-  paidAmount: number;
-  expectedAmount: number;
-  remainingAmount: number;
-  currency: string;
-  onPayRemaining: (method: "bank" | "crypto") => void;
-  graceMinutes?: number;  // Add grace period display
-  partialTimestamp?: string;  // Add time of partial payment
-}
-```
+**Fix Required:**
 
----
-
-## Issue 3: Ensure Same Temporary Address for Partial Payments
-
-### Backend Behavior (Already Implemented)
-The backend already handles this correctly:
-- When partial payment is detected, the temp address status is set to "partial"
-- The same address is retained with updated `incomplete: "true"` flag in Redis
-- Customer can send remaining amount to the same address
-
-### Frontend Fix Required
-In `cryptoTransfer.tsx`, ensure the address is NOT regenerated after partial payment:
+Add a `pollingTrigger` state and restart polling mechanism:
 
 ```tsx
-// Around line 516-528, update handlePayRemaining:
+// Line ~170 - Add new state
+const [pollingTrigger, setPollingTrigger] = useState(0);
+
+// Line ~677 - In handlePayRemaining, after clearing states
 const handlePayRemaining = (method: "bank" | "crypto") => {
   if (method === "crypto") {
-    // IMPORTANT: Do NOT reset the address - keep using same temp address
+    // ... existing code ...
+    
     setPaymentStatus("waiting");
-    // Keep cryptoDetails unchanged so same address is used
-    setIsStart(true);  // Show QR code again
+    setIsStart(false);
     setIsReceived(false);
+    setPartialPaymentData(null);
+    
+    // ADD THIS: Force polling to restart
+    setPollingTrigger(prev => prev + 1);
   } else {
-    setActiveStep(1);
+    // ... bank transfer code
+  }
+};
+
+// Line ~615 - Add pollingTrigger to useEffect dependencies
+}, [selectedCrypto, cryptoDetails?.address, dispatch, selectedNetwork, walletState?.currency, pollingTrigger]);
+```
+
+**Alternative Fix (Simpler):** Create a ref for the interval and manually restart:
+
+```tsx
+// Line ~145 - Add ref
+const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+// Line ~487 - Store interval in ref
+pollIntervalRef.current = setInterval(async () => {
+  // ... polling logic
+}, 15000);
+
+// Line ~613 - Cleanup
+return () => {
+  if (pollIntervalRef.current) {
+    clearInterval(pollIntervalRef.current);
+  }
+};
+
+// Line ~677 - In handlePayRemaining, manually trigger immediate poll
+const handlePayRemaining = (method: "bank" | "crypto") => {
+  if (method === "crypto") {
+    // ... existing state updates ...
+    
+    // Immediately do one poll, then let the interval continue
+    setTimeout(async () => {
+      try {
+        const response = await axiosBaseApi.post("/pay/verifyCryptoPayment", {
+          address: cryptoDetails?.address,
+        });
+        // Handle response same as in polling logic
+        const data = response?.data?.data;
+        const status = data?.status;
+        setPaymentStatus(status);
+        // ... handle status switch cases
+      } catch (e) {
+        console.error("Manual poll error:", e);
+      }
+    }, 1000);
   }
 };
 ```
 
 ---
 
-## Issue 4: Backend Response Field Names
+### Issue 2: Timer Not Resetting for 30-Minute Grace Period
 
-### Current Backend Response (Correct)
-```json
-{
-  "status": "overpaid",
-  "paidAmount": 0.00584,
-  "expectedAmount": 0.005451,
-  "excessAmount": 0.000389,
-  "currency": "ETH"
-}
-```
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`
 
-### Frontend Mapping (Already Correct in cryptoTransfer.tsx lines 442-447)
+**Root Cause:** Timer is initialized once at line 162 with `useState(14 * 60 + 21)` and never reset when underpayment occurs or when continuing to pay.
+
+**Fix Required:**
+
 ```tsx
-setOverpaymentData({
-  paidAmount: data?.paidAmount || 0,
-  expectedAmount: data?.expectedAmount || 0,
-  excessAmount: data?.excessAmount || 0,
-  currency: data?.currency || walletState?.currency || "USD",
-});
+// Line ~677 - In handlePayRemaining function
+const handlePayRemaining = (method: "bank" | "crypto") => {
+  if (method === "crypto") {
+    // IMPORTANT: Keep the same address for partial payment completion
+    
+    if (partialPaymentData) {
+      // Store remaining payment info for display
+      setRemainingPaymentInfo({
+        remainingAmount: partialPaymentData.remainingAmount,
+        remainingAmountUsd: partialPaymentData.remainingAmountUsd || 0,
+        currency: partialPaymentData.currency,
+      });
+      
+      // ... existing selectedCurrency update ...
+      
+      setIsPartialPaymentMode(true);
+    }
+    
+    // ADD THIS: Reset timer to 30 minutes for grace period
+    setTimeLeft(30 * 60); // 30 minutes = 1800 seconds
+    
+    setPaymentStatus("waiting");
+    setIsStart(false);
+    setIsReceived(false);
+    setPartialPaymentData(null);
+  } else {
+    // Bank transfer - also reset timer
+    setTimeLeft(30 * 60);
+    // ... existing code
+  }
+};
 ```
 
 ---
 
-## Issue 5: Missing transactionId in OverPayment Display
+## 🟡 HARDCODED VALUES THAT SHOULD BE DYNAMIC
 
-### Problem
-The OverPayment component has a default `transactionId = "ABC123456"` but should use actual transaction ID.
+### 1. Initial Timer Value
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`, Line 162
 
-### Fix in cryptoTransfer.tsx (around line 551)
+**Current:** `const [timeLeft, setTimeLeft] = useState(14 * 60 + 21);` (14:21)
+
+**Problem:** The timer starts at 14:21 which seems arbitrary. Should come from backend.
+
+**Fix:**
 ```tsx
-<OverPayment
-  paidAmount={overpaymentData.paidAmount}
-  expectedAmount={overpaymentData.expectedAmount}
-  excessAmount={overpaymentData.excessAmount}
-  currency={overpaymentData.currency}
-  onGoToWebsite={handleOverpaymentGoToWebsite}
-  transactionId={overpaymentData.txId || ""}  // Add this line
-/>
+// Should get from payment link data or props
+const [timeLeft, setTimeLeft] = useState(() => {
+  // Get from payment data if available
+  return walletState?.expirySeconds || 15 * 60; // Default 15 minutes
+});
 ```
 
-### Update overpaymentData state type
-```tsx
-// Update interface (around line 148-154)
-interface OverpaymentData {
-  paidAmount: number;
-  expectedAmount: number;
-  excessAmount: number;
-  currency: string;
-  txId?: string;  // Add this
-}
+### 2. Polling Interval
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`, Line 611
 
-// Update setOverpaymentData (around line 442)
-setOverpaymentData({
-  paidAmount: data?.paidAmount || 0,
-  expectedAmount: data?.expectedAmount || 0,
-  excessAmount: data?.excessAmount || 0,
-  currency: data?.currency || walletState?.currency || "USD",
-  txId: data?.txId || "",  // Add this
-});
+**Current:** `}, 15000);` (15 seconds hardcoded)
+
+**Problem:** Polling interval should be configurable based on network/chain.
+
+**Fix:**
+```tsx
+// Add constant at top of file
+const POLLING_INTERVALS = {
+  BTC: 30000,  // 30 seconds for BTC (slower confirmations)
+  ETH: 15000,  // 15 seconds for ETH
+  TRX: 10000,  // 10 seconds for TRX (faster)
+  DEFAULT: 15000,
+};
+
+// In useEffect
+const pollingInterval = POLLING_INTERVALS[selectedCrypto as keyof typeof POLLING_INTERVALS] 
+  || POLLING_INTERVALS.DEFAULT;
+
+const pollInterval = setInterval(async () => {
+  // ... polling logic
+}, pollingInterval);
+```
+
+### 3. Rate Cache Duration
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`, Line 87
+
+**Current:** `const RATE_CACHE_DURATION_MS = 30000; // 30 seconds`
+
+**Recommendation:** This is okay as constant but should be documented.
+
+### 4. Bank Transfer Timer
+**File:** `Components/Page/Pay3Components/bankTransferCompo.tsx`, Line 52
+
+**Current:** `const [timeLeft, setTimeLeft] = useState(30 * 60);`
+
+**Recommendation:** Should be consistent with crypto timer and come from backend.
+
+### 5. Overpayment Threshold
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`, Lines 556-557
+
+**Current:** 
+```tsx
+const excessUsd = data?.excessAmountUsd || 0;
+const OVERPAYMENT_THRESHOLD_USD = 5;
+```
+
+**Recommendation:** Should come from merchant settings via backend.
+
+```tsx
+// Get from payment config
+const OVERPAYMENT_THRESHOLD_USD = walletState?.overpaymentThreshold || 5;
+```
+
+### 6. Grace Period Message
+**File:** `Components/UI/UnderPayment/Index.tsx`, Line 143
+
+**Current:** `⏰ Please complete payment within 30 minutes to use the same address.`
+
+**Fix:** Should use dynamic value:
+```tsx
+// Add prop to UnderPayment component
+graceMinutes?: number;
+
+// Use in message
+`⏰ Please complete payment within ${graceMinutes || 30} minutes to use the same address.`
 ```
 
 ---
 
-## Issue 6: Pending Status Not Shown
+## 🟢 UX IMPROVEMENTS
 
-### Problem
-When webhook is received but processing, user should see "Payment Detected - Processing"
+### 1. Add Loading State During Poll
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`
 
-### Backend Response for Pending
-```json
-{
-  "status": "pending",
-  "message": "Payment detected, awaiting confirmation",
-  "receivedAmount": 0.00584,
-  "expectedAmount": 0.00545
-}
+```tsx
+// Add state
+const [isPolling, setIsPolling] = useState(false);
+
+// In polling useEffect
+const pollInterval = setInterval(async () => {
+  setIsPolling(true);
+  try {
+    // ... existing code
+  } finally {
+    setIsPolling(false);
+  }
+}, 15000);
+
+// Show subtle indicator in UI
+{isPolling && <CircularProgress size={12} sx={{ ml: 1 }} />}
 ```
 
-### Fix in cryptoTransfer.tsx (add case around line 420)
+### 2. Add Countdown Warning When Timer < 5 Minutes
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`
+
 ```tsx
-case "pending":
-  // Payment detected but not yet confirmed
-  setIsStart(true);
-  setIsReceived(true);  // Show "Payment Received" indicator
-  // Optionally show processing message
+// In timer display section
+const isLowTime = timeLeft < 5 * 60; // Less than 5 minutes
+
+<Typography
+  color={isLowTime ? "error" : "inherit"}
+  sx={{ 
+    animation: isLowTime ? 'pulse 1s infinite' : 'none',
+    fontWeight: isLowTime ? 'bold' : 'normal'
+  }}
+>
+  {formatTime(timeLeft)}
+</Typography>
+```
+
+### 3. Add Visual Progress for Partial Payments
+**File:** `Components/UI/UnderPayment/Index.tsx`
+
+```tsx
+// Add progress bar showing payment completion
+import LinearProgress from '@mui/material/LinearProgress';
+
+const progressPercent = (paidAmount / expectedAmount) * 100;
+
+<Box sx={{ width: '100%', mb: 2 }}>
+  <LinearProgress 
+    variant="determinate" 
+    value={progressPercent} 
+    sx={{ 
+      height: 10, 
+      borderRadius: 5,
+      backgroundColor: '#E5E7EB',
+      '& .MuiLinearProgress-bar': {
+        backgroundColor: '#10B981',
+      }
+    }}
+  />
+  <Typography variant="caption" sx={{ mt: 0.5 }}>
+    {progressPercent.toFixed(0)}% paid
+  </Typography>
+</Box>
+```
+
+### 4. Add Copy Feedback Toast
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`
+
+**Current:** Only sets `setCopied(true)` which may not be visible.
+
+**Fix:**
+```tsx
+const handleCopy = () => {
+  navigator.clipboard.writeText(cryptoDetails.address);
+  setCopied(true);
   dispatch({
     type: TOAST_SHOW,
     payload: {
-      message: "Payment detected! Confirming on blockchain...",
-      severity: "info",
+      message: "Address copied to clipboard!",
+      severity: "success",
     },
   });
-  // DON'T clear interval - keep polling until confirmed
+  setTimeout(() => setCopied(false), 2000);
+};
+```
+
+### 5. Add Network Fee Warning for Small Payments
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`
+
+```tsx
+// Before showing payment amount
+const networkFeeEstimate = selectedCrypto === 'ETH' ? 0.0001 : 
+                           selectedCrypto === 'BTC' ? 0.00001 : 0;
+const isSmallPayment = selectedCurrency?.amount < networkFeeEstimate * 10;
+
+{isSmallPayment && (
+  <Alert severity="warning" sx={{ mb: 2 }}>
+    Note: Network fees may be significant for this payment amount.
+  </Alert>
+)}
+```
+
+### 6. Improve Error Handling in Polling
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`, Line 601-609
+
+**Current:** Errors are silently caught (commented out toast).
+
+**Fix:**
+```tsx
+} catch (e: any) {
+  const message = e?.response?.data?.message ?? e?.message;
+  console.error("Payment verification error:", message);
+  
+  // Only show error toast after multiple failures
+  pollErrorCount.current = (pollErrorCount.current || 0) + 1;
+  
+  if (pollErrorCount.current >= 3) {
+    dispatch({
+      type: TOAST_SHOW,
+      payload: {
+        message: "Having trouble verifying payment. Please wait...",
+        severity: 'warning'
+      }
+    });
+    pollErrorCount.current = 0;
+  }
+}
+```
+
+### 7. Add Retry Button for Failed Payments
+**File:** `Components/Page/Pay3Components/cryptoTransfer.tsx`
+
+After the `failed` status case, add a retry mechanism:
+
+```tsx
+case "failed":
+  setIsStart(true);
+  setIsReceived(false);
+  setPaymentStatus("failed");
+  clearInterval(pollInterval);
   break;
+
+// In render, add retry button
+{paymentStatus === "failed" && (
+  <Box textAlign="center" mt={2}>
+    <Button 
+      variant="outlined" 
+      onClick={() => {
+        setPaymentStatus("waiting");
+        setPollingTrigger(prev => prev + 1);
+      }}
+    >
+      Retry Verification
+    </Button>
+  </Box>
+)}
 ```
 
 ---
 
-## Summary of Files to Modify
+## 📋 SUMMARY OF ALL AFFECTED FILES
 
-1. **Components/UI/OverPayment/Index.tsx**
-   - Add `formatCryptoAmount` helper
-   - Update amount displays to use helper
-   - Accept and display `transactionId` prop
-
-2. **Components/UI/UnderPayment/Index.tsx**
-   - Add `formatCryptoAmount` helper
-   - Update amount displays to use helper
-   - Add grace period and timestamp display
-
-3. **Components/Page/Pay3Components/cryptoTransfer.tsx**
-   - Update OverpaymentData interface to include txId
-   - Pass txId to OverPayment component
-   - Fix handlePayRemaining to retain same address
-   - Add "pending" status case handling
+| File | Changes Required | Priority |
+|------|-----------------|----------|
+| `Components/Page/Pay3Components/cryptoTransfer.tsx` | Timer reset, Polling restart, Multiple UX improvements | 🔴 Critical |
+| `Components/UI/UnderPayment/Index.tsx` | Dynamic grace period, Progress bar | 🟡 Medium |
+| `Components/Page/Pay3Components/bankTransferCompo.tsx` | Timer consistency | 🟢 Low |
+| `axiosConfig.ts` | No changes needed | - |
 
 ---
 
-## Testing Checklist
+## 🔧 IMPLEMENTATION ORDER
 
-- [ ] Overpayment shows correct decimal amounts (6 decimals for crypto)
-- [ ] Underpayment shows correct amounts and remaining balance
-- [ ] Same address is used for completing partial payment
-- [ ] Pending status shows "Payment Detected" message
-- [ ] Transaction ID is displayed correctly
-- [ ] Confirmed status shows redirect button
+1. **First:** Fix Issue 1 (Polling restart) - Critical for payment flow
+2. **Second:** Fix Issue 2 (Timer reset) - Critical for user experience
+3. **Third:** Add dynamic values for timers and thresholds
+4. **Fourth:** UX improvements (progress bar, warnings, etc.)
 
 ---
 
-## Notes on Backend Behavior
+## 🧪 TESTING CHECKLIST
 
-### Overpayment Handling
-- **Overpaid amount IS included in merchant payout** - the full received amount is distributed
-- Merchant receives: `paidAmount * (1 - feePercentage)`
-- Admin receives: `paidAmount * feePercentage`
-- No separate "excess refund" transaction occurs
+After implementing fixes, test these scenarios:
 
-### Sweep Timing
-- ETH/TRX: Time-based sweep (currently 3 minutes after merchant payout)
-- USDT/USDC: Threshold-based sweep ($30-50 minimum)
+- [ ] Normal full payment → Confirmation screen appears
+- [ ] Partial payment → Underpayment screen appears  
+- [ ] Complete remaining via crypto → Timer resets to 30 min
+- [ ] Complete remaining via crypto → Polling restarts immediately
+- [ ] Complete remaining → Confirmation screen appears
+- [ ] Timer expires → Appropriate message shown
+- [ ] Multiple partial payments → Each accumulates correctly
+- [ ] Overpayment → Overpayment screen appears (if > $5)
+- [ ] Network switch during payment → Handles gracefully
 
-### Address Reuse
-- Temp addresses are reused after admin fee sweep completes
-- Status flow: AVAILABLE → IN_USE → (sweep) → AVAILABLE
