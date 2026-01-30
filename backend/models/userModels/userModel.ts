@@ -99,6 +99,28 @@ const userModel = sequelize.define(
       type: DataTypes.STRING(50),
       allowNull: true,
     },
+    referred_by_referee_code: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: "Referee code from payment link email",
+    },
+    // Fee Discount fields
+    fee_discount_percent: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0,
+      allowNull: true,
+      comment: "Current fee discount percentage",
+    },
+    fee_discount_expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: "When the fee discount expires",
+    },
+    fee_discount_reason: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: "referee_code, user_referral_referee, user_referral_referrer, referrer_reward, promo",
+    },
   },
   {
     tableName: "tbl_user",
