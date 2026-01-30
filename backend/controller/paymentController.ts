@@ -3130,8 +3130,8 @@ const getCurrencyRates = async (
             
             const cryptoPrice = parseFloat(rate.amount) > 0 ? amount / parseFloat(rate.amount) : 0;
             
-            // Get fee breakdown
-            const networkFee = await getBlockchainNetworkFee(chain);
+            // Use pre-fetched network fee if available, fallback to individual fetch
+            const networkFee = allBlockchainFees[chain] || await getBlockchainNetworkFee(chain);
             const feeResult = await calculateTransactionFees(
               chain,
               amount
