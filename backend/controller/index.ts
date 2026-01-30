@@ -168,6 +168,71 @@ export const calculateTransactionFees = async (
   };
 };
 
+/**
+ * Calculate transaction fees with user's referral discount applied
+ */
+export const calculateTransactionFeesWithDiscount = async (
+  blockchain: string,
+  amount: number,
+  userId: number
+) => {
+  const config: any = await getBlockchainConfig(blockchain);
+  if (!config) {
+    throw new Error(`Blockchain ${blockchain} configuration not found`);
+  }
+
+  // Find the matching tier based on amount
+  const tiers = config.tiers || [];
+  const matchingTier = tiers.find(
+    (tier: any) =>
+      amount >= tier.min_amount &&
+      (tier.max_amount === null || amount <= tier.max_amount)
+  );
+
+  if (!matchingTier) {
+    throw new Error(`No fee tier found for amount ${amount}`);
+  }
+
+  // Get user's discount
+  const discountInfo = await getDiscountedTransactionFee(userId);
+  const discountPercent = discountInfo.discount_percent || 0;
+
+  // Calculate fees directly in native currency
+  const fixedFee = matchingTier.fixed_fee;
+  const baseTransactionFeePercent = config.transaction_fee_percent;
+  
+  // Apply discount to transaction fee percentage
+  const discountedFeePercent = discountPercent > 0 
+    ? baseTransactionFeePercent * (1 - discountPercent / 100)
+    : baseTransactionFeePercent;
+  
+  const transactionFee = (amount * discountedFeePercent) / 100;
+  const blockchainBuffer =
+    (amount * matchingTier.blockchain_buffer_percent) / 100;
+
+  const totalDeduction = fixedFee + transactionFee + blockchainBuffer;
+  const userReceives = amount - totalDeduction;
+
+  return {
+    fixedFee,
+    transactionFee,
+    transactionFeeOriginal: (amount * baseTransactionFeePercent) / 100,
+    blockchainBuffer,
+    totalDeduction,
+    userReceives,
+    tierId: matchingTier.id || 0,
+    minForwarding: config.min_forwarding_amount,
+    // Discount info
+    discountApplied: discountPercent > 0,
+    discountPercent,
+    discountReason: discountInfo.discount_reason,
+    discountExpiresAt: discountInfo.discount_expires_at,
+    savings: discountPercent > 0 
+      ? (amount * baseTransactionFeePercent / 100) - transactionFee
+      : 0,
+  };
+};
+
 export {
   userController,
   companyController,
