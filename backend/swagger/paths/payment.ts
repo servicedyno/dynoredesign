@@ -468,13 +468,13 @@ Modes must be provided in **UPPERCASE**. Valid modes:
           'application/json': {
             schema: {
               type: 'object',
-              required: ['transaction_id'],
+              required: ['data'],
               properties: {
-                transaction_id: { type: 'string', format: 'uuid' }
+                data: { type: 'string', description: 'Payment link reference (from URL parameter d)' }
               }
             },
             example: {
-              transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+              data: 'a1b2c3d4e5f67890abcdef1234567890abcdef12'
             }
           }
         }
@@ -485,19 +485,38 @@ Modes must be provided in **UPPERCASE**. Valid modes:
           content: {
             'application/json': {
               example: {
-                message: 'Payment data retrieved',
+                message: 'Payment link details retrieved successfully',
                 data: {
+                  amount: 50,
+                  base_currency: 'USD',
+                  token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                  payment_mode: 'createLink',
+                  allowedModes: 'CRYPTO',
+                  fee_payer: 'customer',
                   transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-                  amount: 199.99,
-                  currency: 'USD',
+                  order_reference: 'INV-2026-123',
                   description: 'Order #12345 - Premium Subscription',
-                  company: {
-                    name: 'My Online Store',
-                    logo: 'https://mystore.com/logo.png'
+                  merchant: {
+                    company_name: 'My Online Store',
+                    company_logo: 'https://mystore.com/logo.png'
                   },
-                  supported_currencies: ['BTC', 'ETH', 'USDT-TRC20', 'USDT-ERC20', 'TRX', 'LTC'],
-                  status: 'pending',
-                  expires_at: '2024-01-16T10:30:00Z'
+                  fee_info: {
+                    fee_payer: 'customer',
+                    processing_fee: 4.5,
+                    total_amount: 54.5
+                  },
+                  expiry: {
+                    expires_at: '2026-01-16T10:30:00Z',
+                    is_expired: false,
+                    countdown: {
+                      days: 6,
+                      hours: 23,
+                      minutes: 45,
+                      seconds: 30,
+                      formatted: '6d : 23h : 45m : 30s'
+                    }
+                  },
+                  created_at: '2026-01-09T10:30:00Z'
                 }
               }
             }
@@ -507,7 +526,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
           description: 'Payment not found or expired',
           content: {
             'application/json': {
-              example: { message: 'Payment link not found or has expired', error: true }
+              example: { message: 'Payment link not found or expired', error: true }
             }
           }
         }
