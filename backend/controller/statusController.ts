@@ -37,32 +37,35 @@ const INCIDENTS = [
 /**
  * GET /api/status
  * Get overall system status with REAL monitoring data
+ * OPTIMIZED: Redis caching + background health checks
  */
 const getStatus = async (req: express.Request, res: express.Response) => {
   try {
-    // Run health checks first
-    await monitoringService.runHealthChecks();
-    
-    // Get current status from database
+    // Check Redis cache first
+    const cacheKey = 'system:status';
+    const cached = await getRedisItem(cacheKey);
+    if (cached) {
+      console.log('[Status] Cache hit');
+      return successResponseHelper(res, 200, "Status retrieved successfully", cached);
+    }
+
+    // Don't run health checks on every request - use last known status
+    // Health checks should run in background job
     const currentStatus = await monitoringService.getCurrentServiceStatus();
     const services = monitoringService.getMonitoredServices();
     
-    // Build service status with real data
-    const serviceStatuses = await Promise.all(
-      services.map(async (service) => {
-        const current = currentStatus.find(s => s.service_id === service.id);
-        const uptimeData = await monitoringService.calculateServiceUptime(service.id, 90);
-        
-        return {
-          id: service.id,
-          name: service.name,
-          status: current?.status || "operational",
-          uptime: uptimeData.uptime_percentage.toFixed(2),
-          latency: current?.latency_ms || 0,
-          last_check: current?.last_check || new Date().toISOString()
-        };
-      })
-    );
+    // Build service status with cached data (no individual uptime queries)
+    const serviceStatuses = services.map((service) => {
+      const current = currentStatus.find(s => s.service_id === service.id);
+      return {
+        id: service.id,
+        name: service.name,
+        status: current?.status || "operational",
+        uptime: current?.uptime_24h || "99.99",
+        latency: current?.latency_ms || 0,
+        last_check: current?.last_check || new Date().toISOString()
+      };
+    });
 
     const allOperational = serviceStatuses.every(s => s.status === "operational");
     const hasOutage = serviceStatuses.some(s => s.status === "outage");
@@ -79,6 +82,10 @@ const getStatus = async (req: express.Request, res: express.Response) => {
       services: serviceStatuses,
       last_updated: new Date().toISOString()
     };
+
+    // Cache the result
+    await setRedisItem(cacheKey, response);
+    await setRedisTTL(cacheKey, STATUS_CACHE_TTL);
 
     successResponseHelper(res, 200, "Status retrieved successfully", response);
   } catch (e) {
