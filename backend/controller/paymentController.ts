@@ -4841,10 +4841,22 @@ const getConfiguredCurrenciesForCheckout = async (
       }
     }
     
-    // Calculate fee amount if customer pays fees
-    let feeAmount = 0;
+    // Calculate total processing fee if customer pays fees (internal calculation - not exposed in detail)
+    let totalProcessingFee = 0;
     if (feeInfo.fee_payer === 'customer' && transactionAmount > 0) {
-      feeAmount = transactionAmount * (feeInfo.transaction_fee_percent / 100);
+      const feeTiers = (await import("../utils/feeConfigUtils")).getFeeTiers();
+      let fixedFee = 0;
+      let blockchainBuffer = 0;
+      for (const tier of feeTiers) {
+        if (transactionAmount >= tier.min && (tier.max === null || transactionAmount <= tier.max)) {
+          fixedFee = tier.fixed;
+          blockchainBuffer = tier.buffer || 0;
+          break;
+        }
+      }
+      const percentageFee = transactionAmount * (feeInfo.transaction_fee_percent / 100);
+      const bufferFee = transactionAmount * (blockchainBuffer / 100);
+      totalProcessingFee = percentageFee + fixedFee + bufferFee;
     }
     
     const response: any = {
@@ -4863,22 +4875,14 @@ const getConfiguredCurrenciesForCheckout = async (
       // Transaction info
       transaction_amount: transactionAmount,
       transaction_currency: transactionCurrency,
-      // Fee information for checkout display
+      // Simplified fee info - no internal breakdown exposed
       fee_payer: feeInfo.fee_payer,
-      fee_percent: feeInfo.transaction_fee_percent,
-      fee_display: feeInfo.fee_payer === 'customer' 
-        ? `${feeInfo.transaction_fee_percent}% fee applies` 
-        : 'No additional fees',
     };
     
-    // Include fee amount breakdown if customer pays fees
+    // Include only total processing fee if customer pays fees
     if (feeInfo.fee_payer === 'customer' && transactionAmount > 0) {
-      response.fee_breakdown = {
-        base_amount: transactionAmount,
-        fee_amount: parseFloat(feeAmount.toFixed(2)),
-        total_amount: parseFloat((transactionAmount + feeAmount).toFixed(2)),
-        currency: transactionCurrency,
-      };
+      response.processing_fee = parseFloat(totalProcessingFee.toFixed(2));
+      response.total_amount = parseFloat((transactionAmount + totalProcessingFee).toFixed(2));
     }
     
     successResponseHelper(res, 200, "Configured currencies retrieved successfully", response);
