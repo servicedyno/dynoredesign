@@ -133,50 +133,25 @@ export const generateInvoicePDF = (invoiceData: InvoiceData): Readable => {
 
   yPosition += 25;
 
-  // --- Fee Breakdown ---
+  // --- Processing Fee (Combined - no internal breakdown) ---
   doc.fontSize(8).font("Helvetica-Oblique");
 
-  if (invoiceData.fixed_fee > 0) {
-    doc.text(`Fixed Fee`, 50, yPosition, { width: 240 }).text(
-      formatCurrency(invoiceData.fixed_fee),
+  // Calculate total processing fee (fixed + transaction % + buffer %)
+  const txFeeAmount = invoiceData.transaction_fee_percent > 0 
+    ? (invoiceData.unit_price * invoiceData.transaction_fee_percent) / 100 
+    : 0;
+  const bufferAmount = invoiceData.blockchain_buffer_percent > 0 
+    ? (invoiceData.unit_price * invoiceData.blockchain_buffer_percent) / 100 
+    : 0;
+  const totalProcessingFee = (invoiceData.fixed_fee || 0) + txFeeAmount + bufferAmount;
+
+  if (totalProcessingFee > 0) {
+    doc.text(`Processing Fee`, 50, yPosition, { width: 240 }).text(
+      formatCurrency(totalProcessingFee),
       450,
       yPosition,
       { width: 100, align: "right" }
     );
-    yPosition += 15;
-  }
-
-  if (invoiceData.transaction_fee_percent > 0) {
-    const txFeeAmount =
-      (invoiceData.unit_price * invoiceData.transaction_fee_percent) / 100;
-    doc
-      .text(
-        `Transaction Fee (${invoiceData.transaction_fee_percent}%)`,
-        50,
-        yPosition,
-        { width: 240 }
-      )
-      .text(formatCurrency(txFeeAmount), 450, yPosition, {
-        width: 100,
-        align: "right",
-      });
-    yPosition += 15;
-  }
-
-  if (invoiceData.blockchain_buffer_percent > 0) {
-    const bufferAmount =
-      (invoiceData.unit_price * invoiceData.blockchain_buffer_percent) / 100;
-    doc
-      .text(
-        `Blockchain Buffer (${invoiceData.blockchain_buffer_percent}%)`,
-        50,
-        yPosition,
-        { width: 240 }
-      )
-      .text(formatCurrency(bufferAmount), 450, yPosition, {
-        width: 100,
-        align: "right",
-      });
     yPosition += 15;
   }
 
