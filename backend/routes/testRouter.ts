@@ -349,8 +349,9 @@ testRouter.post("/full-payment-flow", authMiddleware, async (req, res) => {
 /**
  * POST /api/test/diagnose-temp-address
  * Diagnose a temp address - check private key decryption and derived address
+ * Protected: Requires authentication
  */
-testRouter.post("/diagnose-temp-address", async (req, res) => {
+testRouter.post("/diagnose-temp-address", authMiddleware, async (req, res) => {
   try {
     const { temp_id } = req.body;
     
