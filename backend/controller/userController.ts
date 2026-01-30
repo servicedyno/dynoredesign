@@ -840,9 +840,11 @@ const forgotPassword = async (req: express.Request, res: express.Response) => {
       }
     );
 
-    // Build reset URL
-    const checkoutUrl = process.env.CHECKOUT_URL || "https://checkout.dynopay.com";
-    const resetUrl = `${checkoutUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email.toLowerCase())}`;
+    // Build reset URL - use FRONTEND_URL for dashboard/merchant login pages
+    const frontendUrl = process.env.FRONTEND_URL || process.env.SERVER_URL || "https://dashboard.dynopay.com";
+    // Remove trailing slash if present to avoid double slashes
+    const baseUrl = frontendUrl.replace(/\/$/, '');
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email.toLowerCase())}`;
 
     // Send reset email
     const emailMessage = `You requested a password reset for your Dynocash account.
