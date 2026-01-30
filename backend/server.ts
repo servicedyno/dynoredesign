@@ -203,6 +203,11 @@ const startServer = async () => {
     await referralRewardModel.sync({ alter: true });
     console.log("Referral tables synced successfully.");
     
+    // Sync Referee Code model
+    const { refereeCodeModel } = await import("./models");
+    await refereeCodeModel.sync({ alter: true });
+    console.log("Referee Code table synced successfully.");
+    
     // Sync Knowledge Base models
     await kbCategoryModel.sync({ alter: true });
     await kbArticleModel.sync({ alter: true });
