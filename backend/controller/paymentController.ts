@@ -2265,7 +2265,11 @@ const verifyCryptoPayment = async (
       return successResponseHelper(res, 200, "Payment failed", {
         status: "failed",
         message: tempData.lastError || "Payment processing failed",
-        txId: tempData.txId
+        txId: tempData.txId,
+        // Timer and settings (for consistency)
+        remaining_seconds: 0,
+        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        merchant_settings: merchantSettings
       });
     }
     
