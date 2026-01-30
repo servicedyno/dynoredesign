@@ -2075,7 +2075,7 @@ const verifyCryptoPayment = async (
           } else {
             // No explicit expiry - use created_at + default expiry (15 min for initial, 30 min for grace)
             const createdAt = new Date(linkData.createdAt);
-            const defaultExpiryMinutes = String(tempData?.incomplete) === "true" ? GRACE_PERIOD_MINUTES : 15;
+            const defaultExpiryMinutes = String(tempData?.incomplete) === "true" ? gracePeriodMinutes : 15;
             const expiresAt = new Date(createdAt.getTime() + defaultExpiryMinutes * 60 * 1000);
             const now = new Date();
             remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
@@ -2089,7 +2089,7 @@ const verifyCryptoPayment = async (
     // For partial payments, calculate remaining time from partial payment timestamp
     if (String(tempData?.incomplete) === "true" && tempData?.partialPaymentTimestamp) {
       const partialTimestamp = new Date(tempData.partialPaymentTimestamp);
-      const graceExpiresAt = new Date(partialTimestamp.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000);
+      const graceExpiresAt = new Date(partialTimestamp.getTime() + gracePeriodMinutes * 60 * 1000);
       const now = new Date();
       remainingSeconds = Math.max(0, Math.floor((graceExpiresAt.getTime() - now.getTime()) / 1000));
     }
