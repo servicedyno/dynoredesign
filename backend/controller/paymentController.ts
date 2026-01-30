@@ -1943,42 +1943,40 @@ const verifyCryptoPayment = async (
       const isOverpayment = totalReceived > originalExpected && originalExpected > 0;
       const overpaymentAmount = isOverpayment ? (totalReceived - originalExpected) : 0;
       
-      // Call cryptoVerification to get redirect URL
-      const result = await cryptoVerification(address, false);
-      console.log("result===========>", result, address);
-      const { message, status } = result;
+      // FIXED: Don't re-call cryptoVerification if already processed - just return the status
+      // The payment was already distributed when status became "successful"
+      console.log("[verifyCryptoPayment] Payment already successful, returning confirmed status");
       
-      if (status === 500) {
-        errorResponseHelper(res, status, message);
-      } else {
-        const returnData =
-          typeof result === "object" && result !== null && "resData" in result
-            ? (result as any).resData
-            : result;
-        
-        // Build response based on overpayment status
-        const responseData: any = {
-          status: isOverpayment ? "overpayment" : "confirmed",
-          message: isOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
-          redirect: returnData,
-          txId: tempData.txId,
-          paid_amount: totalReceived.toFixed(6),
-          expected_amount: originalExpected.toFixed(6),
-          currency: currency
-        };
-        
-        if (isOverpayment) {
-          responseData.overpayment = {
-            detected: true,
-            excess_amount: overpaymentAmount.toFixed(6),
-            currency: currency,
-            refund_message: "Excess amount will be refunded to your wallet"
-          };
-        }
-        
-        return successResponseHelper(res, 200, responseData.message, responseData);
+      // Get redirect URL from customerData if available
+      let redirectUrl = null;
+      const customerData = await getRedisItem(tempData?.ref);
+      if (customerData?.redirect_uri) {
+        redirectUrl = customerData.redirect_uri + 
+          `?transaction_id=${tempData.payment_id || tempData.unique_tx_id}&status=successful&payment_type=CRYPTO`;
       }
-      return;
+      
+      // Build response based on overpayment status
+      const responseData: any = {
+        status: isOverpayment ? "overpayment" : "confirmed",
+        message: isOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
+        redirect_url: redirectUrl,
+        txId: tempData.txId,
+        paid_amount: totalReceived.toFixed(6),
+        expected_amount: originalExpected.toFixed(6),
+        currency: currency,
+        completedAt: tempData.completedAt,
+      };
+      
+      if (isOverpayment) {
+        responseData.overpayment = {
+          detected: true,
+          excess_amount: overpaymentAmount.toFixed(6),
+          currency: currency,
+          refund_message: "Excess amount will be refunded to your wallet"
+        };
+      }
+      
+      return successResponseHelper(res, 200, responseData.message, responseData);
     }
     
     if (redisStatus === "failed") {
