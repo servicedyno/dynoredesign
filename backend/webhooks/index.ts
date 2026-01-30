@@ -617,4 +617,4 @@ const tatumCryptoWebHook = async (
 };
 
 
-export { flutterwaveWebHook, tatumWebHook, tatumCryptoWebHook };
+export { flutterwaveWebHook, tatumWebHook, tatumCryptoWebHook, callMerchantWebhook };
