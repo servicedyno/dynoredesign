@@ -10,7 +10,7 @@ import hashlib
 import time
 
 # Configuration
-BASE_URL = "https://setup-wizard-77.preview.emergentagent.com/api"
+BASE_URL = "https://install-deps-4.preview.emergentagent.com/api"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 TRANSACTION_ID = "ac550fea-3303-4bd2-b874-b2d47e957b41"
