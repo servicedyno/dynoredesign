@@ -308,6 +308,7 @@ const getData = async (req: express.Request, res: express.Response) => {
           fee_info: {
             fee_payer: item.fee_payer || 'company',
             fee_percent: feePercent,
+            blockchain_buffer_percent: blockchainBuffer,
             fixed_fee: fixedFee,
             fee_display: feeDisplayString,
           },
@@ -328,6 +329,7 @@ const getData = async (req: express.Request, res: express.Response) => {
           fee_info: {
             fee_payer: item.fee_payer || 'company',
             fee_percent: feePercent,
+            blockchain_buffer_percent: blockchainBuffer,
             fixed_fee: fixedFee,
             fee_display: feeDisplayString,
           },
