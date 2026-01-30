@@ -64,6 +64,7 @@ import { getAdminWalletAddress } from "../utils/adminUtils";
 import {
   getTransactionFee,
   getBlockchainFee,
+  getDiscountedTransactionFee,
   calculateTransactionFees,
 } from ".";
 import { 
