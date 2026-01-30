@@ -478,6 +478,175 @@ export const getReferralLeaderboard = async (req: Request, res: Response) => {
   }
 };
 
+// ============================================
+// REFEREE CODE ENDPOINTS (Type 2)
+// ============================================
+
+/**
+ * Validate referee code (from payment link email)
+ * POST /api/referral/referee/validate
+ */
+const validateRefereeCode = async (req: Request, res: Response) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        message: "Referee code is required",
+        valid: false,
+      });
+    }
+
+    // Import referee code model
+    const RefereeCode = (await import('../models/referralModels/refereeCodeModel')).default;
+
+    const refereeCode = await RefereeCode.findOne({
+      where: { code: code.toUpperCase() },
+    });
+
+    if (!refereeCode) {
+      return res.status(404).json({
+        message: "Invalid referee code",
+        valid: false,
+      });
+    }
+
+    // Check if expired
+    if (new Date() > refereeCode.expires_at) {
+      return res.status(400).json({
+        message: "Referee code has expired",
+        valid: false,
+      });
+    }
+
+    // Check if already used
+    if (refereeCode.status === 'used') {
+      return res.status(400).json({
+        message: "Referee code has already been used",
+        valid: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Valid referee code",
+      valid: true,
+      data: {
+        discount_percent: refereeCode.discount_percent,
+        discount_duration_days: refereeCode.discount_duration_days,
+        expires_at: refereeCode.expires_at,
+      },
+    });
+  } catch (error) {
+    console.error("Error in validateRefereeCode:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Redeem referee code (called during/after signup)
+ * POST /api/referral/referee/redeem
+ */
+const redeemRefereeCode = async (req: Request, res: Response) => {
+  try {
+    const { code, user_id, email } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: "Referee code is required",
+      });
+    }
+
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required",
+      });
+    }
+
+    // Import referee code service
+    const { redeemRefereeCode: redeemCode } = await import('../services/referralService');
+
+    const result = await redeemCode({
+      code,
+      userEmail: email || '',
+      userId: user_id,
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in redeemRefereeCode:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get current user's discount status
+ * GET /api/referral/discount-status
+ */
+const getDiscountStatus = async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ message: "Authorization required" });
+    }
+
+    const decoded = jwt.verify(token, process.env.TOKEN_SECRET || '') as any;
+    const userId = decoded.user_id;
+
+    const user = await User.findByPk(userId, {
+      attributes: [
+        'fee_discount_percent',
+        'fee_discount_expires_at',
+        'fee_discount_reason',
+        'referred_by_code',
+        'referred_by_referee_code',
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const discountPercent = (user as any).fee_discount_percent || 0;
+    const expiresAt = (user as any).fee_discount_expires_at;
+    const reason = (user as any).fee_discount_reason;
+
+    // Check if discount is still active
+    const isActive = expiresAt && new Date() < expiresAt && discountPercent > 0;
+
+    return res.status(200).json({
+      message: "Discount status retrieved successfully",
+      data: {
+        has_discount: isActive,
+        discount_percent: isActive ? discountPercent : 0,
+        expires_at: isActive ? expiresAt : null,
+        reason: isActive ? reason : null,
+        days_remaining: isActive
+          ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          : 0,
+      },
+    });
+  } catch (error) {
+    console.error("Error in getDiscountStatus:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 export default {
   getMyReferralCode,
   listMyReferrals,
@@ -487,4 +656,8 @@ export default {
   processReferralReward,
   getReferralLeaderboard,
   generateReferralCode,
+  // Referee Code (Type 2)
+  validateRefereeCode,
+  redeemRefereeCode,
+  getDiscountStatus,
 };
