@@ -156,6 +156,86 @@ const getData = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 404, "Payment link not found or expired");
     }
     
+    // Get company info if company_id exists
+    let companyInfo: any = null;
+    if (item.company_id) {
+      try {
+        const company = await companyModel.findByPk(item.company_id);
+        if (company) {
+          const companyData = (company as any).dataValues;
+          companyInfo = {
+            company_name: companyData.company_name || null,
+            company_logo: companyData.photo || null,  // Only include if available
+          };
+        }
+      } catch (companyError) {
+        console.warn(`[getData] Failed to fetch company info:`, companyError);
+      }
+    }
+    
+    // Get fee configuration
+    const transactionFeePercent = Number(process.env.TRANSACTION_FEE_PERCENT) || 2.0;
+    const feeTiers = (await import("../utils/feeConfigUtils")).getFeeTiers();
+    const amount = item.base_amount || item.amount || 0;
+    
+    // Find applicable fee tier based on amount
+    let fixedFee = 0;
+    for (const tier of feeTiers) {
+      if (amount >= tier.min && (tier.max === null || amount <= tier.max)) {
+        fixedFee = tier.fixed;
+        break;
+      }
+    }
+    
+    // Calculate fee breakdown for customer-pays scenario
+    const feePercent = transactionFeePercent;
+    const feeAmountPercent = (amount * feePercent) / 100;
+    const totalFeeAmount = feeAmountPercent + fixedFee;
+    const totalWithFees = amount + totalFeeAmount;
+    
+    // Format fee display string (e.g., "2.99% + $0.49")
+    const feeDisplayString = fixedFee > 0 
+      ? `${feePercent}% + $${fixedFee.toFixed(2)}`
+      : `${feePercent}%`;
+    
+    // Calculate expiry countdown
+    let expiryInfo: any = null;
+    if (item.expires_at) {
+      const expiresAt = new Date(item.expires_at);
+      const now = new Date();
+      const diffMs = expiresAt.getTime() - now.getTime();
+      
+      if (diffMs > 0) {
+        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+        
+        expiryInfo = {
+          expires_at: item.expires_at,
+          is_expired: false,
+          countdown: {
+            days,
+            hours,
+            minutes,
+            seconds,
+            formatted: `${days}d : ${hours.toString().padStart(2, '0')}h : ${minutes.toString().padStart(2, '0')}m : ${seconds.toString().padStart(2, '0')}s`
+          }
+        };
+      } else {
+        expiryInfo = {
+          expires_at: item.expires_at,
+          is_expired: true,
+          countdown: null
+        };
+      }
+    }
+    
+    // Generate order reference (format: PREFIX-YEAR-SEQUENCE)
+    const orderReference = item.transaction_id 
+      ? `INV-${new Date().getFullYear()}-${item.link_id || item.transaction_id.substring(0, 8).toUpperCase()}`
+      : null;
+    
     let payload;
     if (item.pathType === "createLink") {
       payload = {
@@ -169,7 +249,30 @@ const getData = async (req: express.Request, res: express.Response) => {
         ),
         payment_mode: item.pathType,
         allowedModes: item.allowedModes,
-        fee_payer: item.fee_payer || 'company',  // Include fee_payer for checkout
+        fee_payer: item.fee_payer || 'company',
+        // Enhanced checkout data
+        transaction_id: item.transaction_id,
+        order_reference: orderReference,
+        description: item.description || null,
+        merchant: companyInfo,
+        fee_info: {
+          fee_payer: item.fee_payer || 'company',
+          fee_percent: feePercent,
+          fixed_fee: fixedFee,
+          fee_display: feeDisplayString,
+          // Only include breakdown if customer pays fees
+          ...(item.fee_payer === 'customer' && {
+            fee_breakdown: {
+              base_amount: amount,
+              percentage_fee: parseFloat(feeAmountPercent.toFixed(2)),
+              fixed_fee: fixedFee,
+              total_fee: parseFloat(totalFeeAmount.toFixed(2)),
+              total_amount: parseFloat(totalWithFees.toFixed(2)),
+            }
+          })
+        },
+        expiry: expiryInfo,
+        created_at: item.createdAt || new Date().toISOString(),
       };
     } else {
       // Validate customer_id exists before calling getAccessToken
@@ -187,6 +290,18 @@ const getData = async (req: express.Request, res: express.Response) => {
           ),
           payment_mode: item.pathType,
           fee_payer: item.fee_payer || 'company',
+          // Enhanced checkout data
+          transaction_id: item.transaction_id,
+          order_reference: orderReference,
+          description: item.description || null,
+          merchant: companyInfo,
+          fee_info: {
+            fee_payer: item.fee_payer || 'company',
+            fee_percent: feePercent,
+            fixed_fee: fixedFee,
+            fee_display: feeDisplayString,
+          },
+          expiry: expiryInfo,
         };
       } else {
         payload = {
@@ -195,6 +310,18 @@ const getData = async (req: express.Request, res: express.Response) => {
           token: await getAccessToken(item.customer_id, data),
           payment_mode: item.pathType,
           fee_payer: item.fee_payer || 'company',
+          // Enhanced checkout data
+          transaction_id: item.transaction_id,
+          order_reference: orderReference,
+          description: item.description || null,
+          merchant: companyInfo,
+          fee_info: {
+            fee_payer: item.fee_payer || 'company',
+            fee_percent: feePercent,
+            fixed_fee: fixedFee,
+            fee_display: feeDisplayString,
+          },
+          expiry: expiryInfo,
         };
       }
     }
