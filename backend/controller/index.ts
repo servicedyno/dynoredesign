@@ -12,6 +12,7 @@ import dashboardController from "./dashboardController";
 import notificationController, { createNotification, NOTIFICATION_TYPES } from "./notificationController";
 import subscriptionController from "./subscriptionController";
 import { getBlockchainThreshold, getTransactionFeePercent, getFeeTiers } from "../utils/feeConfigUtils";
+import User from "../models/userModels/userModel";
 
 export const getTransactionFee = async () => {
   const envFee = getTransactionFeePercent();
@@ -33,6 +34,59 @@ export const getTransactionFee = async () => {
     transaction_fee = admin_fee?.transaction_fee;
   }
   return transaction_fee;
+};
+
+/**
+ * Get transaction fee with user's referral discount applied
+ * @param userId - User ID to check for discount
+ * @returns Object with original fee, discount info, and final fee
+ */
+export const getDiscountedTransactionFee = async (userId: number) => {
+  const baseFee = await getTransactionFee();
+  
+  // Get user's discount status
+  const user = await User.findByPk(userId, {
+    attributes: ['fee_discount_percent', 'fee_discount_expires_at', 'fee_discount_reason'],
+  });
+
+  if (!user) {
+    return {
+      base_fee: baseFee,
+      discount_percent: 0,
+      discount_reason: null,
+      final_fee: baseFee,
+      discount_expires_at: null,
+    };
+  }
+
+  const discountPercent = Number((user as any).fee_discount_percent) || 0;
+  const expiresAt = (user as any).fee_discount_expires_at;
+  const reason = (user as any).fee_discount_reason;
+
+  // Check if discount is still active
+  const isActive = expiresAt && new Date() < expiresAt && discountPercent > 0;
+
+  if (!isActive) {
+    return {
+      base_fee: baseFee,
+      discount_percent: 0,
+      discount_reason: null,
+      final_fee: baseFee,
+      discount_expires_at: null,
+    };
+  }
+
+  // Calculate discounted fee
+  const discountAmount = (Number(baseFee) * discountPercent) / 100;
+  const finalFee = Math.max(0, Number(baseFee) - discountAmount);
+
+  return {
+    base_fee: baseFee,
+    discount_percent: discountPercent,
+    discount_reason: reason,
+    final_fee: parseFloat(finalFee.toFixed(2)),
+    discount_expires_at: expiresAt,
+  };
 };
 
 export const getBlockchainFee = async () => {
