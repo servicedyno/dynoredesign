@@ -2247,6 +2247,10 @@ const verifyCryptoPayment = async (
         expectedAmountUsd: parseFloat(expectedAmountUsd.toFixed(2)),
         baseCurrency: baseCurrency,
         completedAt: tempData.completedAt,
+        // Timer and settings (for consistency across all responses)
+        remaining_seconds: 0, // Payment complete, no time remaining
+        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        merchant_settings: merchantSettings,
       };
       
       if (isOverpayment) {
