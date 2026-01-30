@@ -1082,7 +1082,7 @@ const getProfile = async (req: express.Request, res: express.Response) => {
     // Check Redis cache first
     const cacheKey = `profile:${userData.user_id}`;
     const cached = await getRedisItem(cacheKey);
-    if (cached) {
+    if (cached && Object.keys(cached).length > 0) {
       console.log(`[Profile] Cache hit for user ${userData.user_id}`);
       return successResponseHelper(res, 200, "Profile retrieved successfully", cached);
     }
