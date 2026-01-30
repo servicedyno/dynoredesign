@@ -1413,5 +1413,144 @@ When you create a payment link with a \`webhook_url\`, DynoPay will POST to YOUR
         400: { description: 'Invalid OTP' }
       }
     }
+  },
+
+  // ==================== FEE PREVIEW ====================
+  '/api/pay/fee-preview': {
+    get: {
+      tags: ['Payments'],
+      summary: 'Get fee preview with referral discount',
+      description: `Preview transaction fees with the user's referral discount applied.
+
+**Use Cases:**
+- Show users their discounted fees before creating payment links
+- Display savings from referral discounts
+- Help users understand their fee structure
+
+**Discount Sources:**
+- \`referee_code\` - From payment link email (50% off for 90 days)
+- \`user_referral_referee\` - From user referral code (50% off for 30 days)
+- \`user_referral_referrer\` - Reward for successful referral (50% off for 30 days)
+- \`referrer_reward\` - Reward when customer signs up (10% off for 30 days)`,
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'amount',
+          required: true,
+          schema: { type: 'number', minimum: 1 },
+          description: 'Transaction amount to calculate fees for',
+          example: 1000
+        },
+        {
+          in: 'query',
+          name: 'currency',
+          schema: { type: 'string', default: 'USD' },
+          description: 'Currency code',
+          example: 'USD'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'Fee preview retrieved successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Fee preview retrieved successfully' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      amount: { type: 'number', example: 1000 },
+                      currency: { type: 'string', example: 'USD' },
+                      fee_info: {
+                        type: 'object',
+                        properties: {
+                          base_fee_percent: { type: 'number', example: 2, description: 'Standard fee percentage before discount' },
+                          final_fee_percent: { type: 'number', example: 1, description: 'Fee percentage after discount applied' },
+                          base_fee_amount: { type: 'number', example: 20, description: 'Fee amount before discount' },
+                          discounted_fee_amount: { type: 'number', example: 10, description: 'Fee amount after discount' },
+                          savings: { type: 'number', example: 10, description: 'Amount saved due to discount' },
+                          you_receive: { type: 'number', example: 990, description: 'Net amount after fees' }
+                        }
+                      },
+                      discount_info: {
+                        type: 'object',
+                        properties: {
+                          has_discount: { type: 'boolean', example: true },
+                          discount_percent: { type: 'number', example: 50 },
+                          discount_reason: { 
+                            type: 'string', 
+                            enum: ['referee_code', 'user_referral_referee', 'user_referral_referrer', 'referrer_reward', 'promo'],
+                            example: 'referee_code' 
+                          },
+                          expires_at: { type: 'string', format: 'date-time', example: '2026-04-01T00:00:00.000Z' },
+                          days_remaining: { type: 'integer', example: 45 }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              examples: {
+                'With 50% Discount': {
+                  summary: 'User with active referral discount',
+                  value: {
+                    message: 'Fee preview retrieved successfully',
+                    data: {
+                      amount: 1000,
+                      currency: 'USD',
+                      fee_info: {
+                        base_fee_percent: 2,
+                        final_fee_percent: 1,
+                        base_fee_amount: 20,
+                        discounted_fee_amount: 10,
+                        savings: 10,
+                        you_receive: 990
+                      },
+                      discount_info: {
+                        has_discount: true,
+                        discount_percent: 50,
+                        discount_reason: 'referee_code',
+                        expires_at: '2026-04-01T00:00:00.000Z',
+                        days_remaining: 45
+                      }
+                    }
+                  }
+                },
+                'No Discount': {
+                  summary: 'User without active discount',
+                  value: {
+                    message: 'Fee preview retrieved successfully',
+                    data: {
+                      amount: 1000,
+                      currency: 'USD',
+                      fee_info: {
+                        base_fee_percent: 2,
+                        final_fee_percent: 2,
+                        base_fee_amount: 20,
+                        discounted_fee_amount: 20,
+                        savings: 0,
+                        you_receive: 980
+                      },
+                      discount_info: {
+                        has_discount: false,
+                        discount_percent: 0,
+                        discount_reason: null,
+                        expires_at: null,
+                        days_remaining: 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid amount' },
+        401: { description: 'Unauthorized' }
+      }
+    }
   }
 };
