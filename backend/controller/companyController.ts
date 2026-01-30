@@ -499,7 +499,7 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
 
     // Return appropriate response based on validation status
     if (validationResult.query_status === "api_key_missing") {
-      return errorResponseHelper(res, 500, "Tax validation service not configured");
+      return errorResponseHelper(res, 503, "Tax validation service not configured");
     }
 
     if (validationResult.query_status === "invalid_format") {
