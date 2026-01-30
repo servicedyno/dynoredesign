@@ -485,7 +485,7 @@ const confirmOTP = async (req: express.Request, res: express.Response) => {
           const resData = await getAccessToken(userData.dataValues.user_id);
           successResponseHelper(res, 200, "Login Successful!", resData);
         } else {
-          errorResponseHelper(res, 500, "OTP did not match!");
+          errorResponseHelper(res, 400, "OTP did not match!");
         }
       } else {
         const item = await localStorage.getData("/" + email);
@@ -502,14 +502,14 @@ const confirmOTP = async (req: express.Request, res: express.Response) => {
             const resData = await getAccessToken(userData.dataValues.user_id);
             successResponseHelper(res, 200, "Login Successful!", resData);
           } else {
-            errorResponseHelper(res, 500, "OTP did not match!");
+            errorResponseHelper(res, 400, "OTP did not match!");
           }
         } else {
-          errorResponseHelper(res, 500, "OTP expired!");
+          errorResponseHelper(res, 400, "OTP expired!");
         }
       }
     } else {
-      errorResponseHelper(res, 500, "Please add OTP!");
+      errorResponseHelper(res, 400, "Please add OTP!");
     }
   } catch (e) {
     const message = getErrorMessage(e);
@@ -594,7 +594,7 @@ const changePassword = async (req: express.Request, res: express.Response) => {
       );
       successResponseHelper(res, 200, "Password updated successfully!", null);
     } else {
-      errorResponseHelper(res, 500, "Old password not recognized!");
+      errorResponseHelper(res, 401, "Old password not recognized!");
     }
   } catch (e) {
     const errorMessage = getErrorMessage(e);
