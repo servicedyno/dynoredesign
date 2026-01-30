@@ -3,12 +3,12 @@ import { QueryTypes } from 'sequelize';
 
 async function main() {
   try {
-    // Check payment link ID 57
+    // Check payment link with transaction_id = 57
     const paymentLinks = await sequelize.query(
-      `SELECT * FROM tbl_payment_link WHERE payment_link_id = 57`,
+      `SELECT * FROM tbl_payment_link WHERE transaction_id = '57'`,
       { type: QueryTypes.SELECT }
     );
-    console.log('=== PAYMENT LINK 57 ===');
+    console.log('=== PAYMENT LINK TRANSACTION_ID=57 ===');
     console.log(JSON.stringify(paymentLinks[0], null, 2));
 
     // Check merchant temp address for this address
@@ -19,9 +19,9 @@ async function main() {
     console.log('\n=== MERCHANT TEMP ADDRESS ===');
     console.log(JSON.stringify(tempAddresses[0], null, 2));
 
-    // Check user transactions for payment ID
+    // Check user transactions 
     const transactions = await sequelize.query(
-      `SELECT * FROM tbl_user_transaction ORDER BY created_at DESC LIMIT 5`,
+      `SELECT * FROM tbl_user_transaction ORDER BY "createdAt" DESC LIMIT 5`,
       { type: QueryTypes.SELECT }
     );
     console.log('\n=== RECENT USER TRANSACTIONS ===');
