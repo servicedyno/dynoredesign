@@ -3313,6 +3313,7 @@ const createPaymentLink = async (
       pathType: "createLink",
       link_id: links.dataValues.link_id,
       available_currencies: availableCurrencies,  // Phase 11: Store available currencies
+      createdAt: new Date().toISOString(),  // Include creation timestamp for checkout
     };
 
     console.log(redisPayload);
