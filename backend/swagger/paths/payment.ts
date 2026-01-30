@@ -613,12 +613,16 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 **Status Flow:**
 - \`waiting\` - No payment detected yet on blockchain
 - \`pending\` - Payment detected, awaiting blockchain confirmations
-- \`partial\` - Partial payment received, waiting for remaining amount
-- \`confirmed\` - Payment fully confirmed and processed
-- \`overpayment\` - Payment confirmed but customer paid more than required
+- \`underpaid\` - Partial payment received, waiting for remaining amount (customer sent less than expected)
+- \`confirmed\` - Payment fully confirmed and processed (exact amount)
+- \`overpaid\` - Payment confirmed but customer paid more than required
 - \`failed\` - Payment processing failed
 
-**Recommended Polling Interval:** 10-15 seconds`,
+**USD Amounts:** All responses include USD-equivalent amounts for display purposes.
+
+**Underpayment Handling:** When status is \`underpaid\`, the \`address\` field is returned so customer can send remaining payment to the SAME address within the grace period.
+
+**Recommended Polling Interval:** 5-10 seconds`,
       requestBody: {
         required: true,
         content: {
@@ -634,7 +638,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
               }
             },
             example: {
-              address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh'
+              address: '0x5c8282c96a89f002b908668bab6d5d30c68b610e'
             }
           }
         }
@@ -651,9 +655,9 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                     message: 'Waiting for payment',
                     data: {
                       status: 'waiting',
-                      message: 'No payment detected yet',
-                      expected_amount: '35.000000',
-                      currency: 'USDT'
+                      message: 'Payment address generated, waiting for transaction',
+                      expected_amount: '0.005470',
+                      currency: 'ETH'
                     }
                   }
                 },
@@ -664,63 +668,72 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                     data: {
                       status: 'pending',
                       message: 'Payment detected, awaiting confirmation',
-                      txId: '7a91f8b2c3d4e5f6...',
-                      amount: '35.000000',
-                      expected_amount: '35.000000',
-                      currency: 'USDT'
+                      txId: '0x7a91f8b2c3d4e5f6...',
+                      amount: '0.005470',
+                      expected_amount: '0.005470',
+                      currency: 'ETH'
                     }
                   }
                 },
-                'Partial Payment': {
-                  summary: '⚠️ Partial payment received (UNDERPAYMENT)',
+                'Underpaid (Partial Payment)': {
+                  summary: '⚠️ Partial payment received - customer needs to pay more',
                   value: {
                     message: 'Partial payment received',
                     data: {
-                      status: 'partial',
+                      status: 'underpaid',
                       message: 'Partial payment received. Please pay the remaining amount.',
-                      paid_amount: '20.000000',
-                      expected_amount: '35.000000',
-                      remaining_amount: '15.000000',
-                      currency: 'USDT',
-                      txId: '7a91f8b2c3d4e5f6...',
+                      paidAmount: 0.002,
+                      expectedAmount: 0.00547,
+                      remainingAmount: 0.00347,
+                      currency: 'ETH',
+                      paidAmountUsd: 5.48,
+                      expectedAmountUsd: 15.00,
+                      remainingAmountUsd: 9.52,
+                      baseCurrency: 'USD',
+                      txId: '0x7a91f8b2c3d4e5f6...',
+                      address: '0x5c8282c96a89f002b908668bab6d5d30c68b610e',
                       grace_period_minutes: 30,
-                      partial_payment_timestamp: '2025-01-29T10:30:00.000Z'
+                      partial_payment_timestamp: '2026-01-30T12:39:35.104Z'
                     }
                   }
                 },
                 'Payment Confirmed': {
-                  summary: '✅ Payment confirmed and completed',
+                  summary: '✅ Payment confirmed and completed (exact amount)',
                   value: {
                     message: 'Payment confirmed',
                     data: {
                       status: 'confirmed',
                       message: 'Payment confirmed',
                       redirect: 'https://mystore.com/order/12345/success',
-                      txId: '7a91f8b2c3d4e5f6...',
-                      paid_amount: '35.000000',
-                      expected_amount: '35.000000',
-                      currency: 'USDT'
+                      txId: '0x7a91f8b2c3d4e5f6...',
+                      paidAmount: 0.00547,
+                      expectedAmount: 0.00547,
+                      currency: 'ETH',
+                      paidAmountUsd: 15.00,
+                      expectedAmountUsd: 15.00,
+                      baseCurrency: 'USD',
+                      completedAt: '2026-01-30T12:45:00.000Z'
                     }
                   }
                 },
-                'Overpayment': {
-                  summary: '💰 Payment confirmed with excess (OVERPAYMENT)',
+                'Overpaid': {
+                  summary: '💰 Payment confirmed with excess - customer paid more than required',
                   value: {
                     message: 'Payment confirmed with overpayment',
                     data: {
-                      status: 'overpayment',
+                      status: 'overpaid',
                       message: 'Payment confirmed with overpayment',
                       redirect: 'https://mystore.com/order/12345/success',
-                      txId: '7a91f8b2c3d4e5f6...',
-                      paid_amount: '42.000000',
-                      expected_amount: '35.000000',
-                      currency: 'USDT',
-                      overpayment: {
-                        detected: true,
-                        excess_amount: '7.000000',
-                        currency: 'USDT',
-                        refund_message: 'Excess amount will be refunded to your wallet'
-                      }
+                      txId: '0x7a91f8b2c3d4e5f6...',
+                      paidAmount: 0.00647,
+                      expectedAmount: 0.00547,
+                      excessAmount: 0.001,
+                      currency: 'ETH',
+                      paidAmountUsd: 17.74,
+                      expectedAmountUsd: 15.00,
+                      excessAmountUsd: 2.74,
+                      baseCurrency: 'USD',
+                      completedAt: '2026-01-30T12:45:00.000Z'
                     }
                   }
                 },
@@ -731,7 +744,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                     data: {
                       status: 'failed',
                       message: 'Transaction verification failed',
-                      txId: '7a91f8b2c3d4e5f6...'
+                      txId: '0x7a91f8b2c3d4e5f6...'
                     }
                   }
                 }
