@@ -1858,11 +1858,16 @@ const verifyCryptoPayment = async (
   try {
     const { address } = req.body;
     
+    console.log("[verifyCryptoPayment] Checking address:", address);
+    
     // First check Redis for current payment status
     const tempData = await getRedisItem("crypto-" + address);
     
+    console.log("[verifyCryptoPayment] Redis data:", tempData?.status, tempData?.txId ? "has txId" : "no txId");
+    
     if (!tempData || Object.keys(tempData).length === 0) {
       // No payment data found - payment hasn't been initiated or address is invalid
+      console.log("[verifyCryptoPayment] No Redis data found for address");
       return successResponseHelper(res, 200, "Waiting for payment", {
         status: "waiting",
         message: "No payment detected yet"
