@@ -186,6 +186,10 @@ const startServer = async () => {
       merchantTempAddressModel,
       merchantPoolTransactionModel,
       merchantPoolSweepModel,
+      referralModel,
+      referralRewardModel,
+      kbCategoryModel,
+      kbArticleModel,
     } = await import("./models");
     
     await merchantWalletModel.sync({ alter: true });
@@ -193,6 +197,16 @@ const startServer = async () => {
     await merchantPoolTransactionModel.sync({ alter: true });
     await merchantPoolSweepModel.sync({ alter: true });
     console.log("Merchant Pool tables synced successfully.");
+    
+    // Sync Referral models
+    await referralModel.sync({ alter: true });
+    await referralRewardModel.sync({ alter: true });
+    console.log("Referral tables synced successfully.");
+    
+    // Sync Knowledge Base models
+    await kbCategoryModel.sync({ alter: true });
+    await kbArticleModel.sync({ alter: true });
+    console.log("Knowledge Base tables synced successfully.");
     
     // Validate Merchant Pool Configuration (CRITICAL STARTUP CHECK)
     try {
