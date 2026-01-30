@@ -3003,13 +3003,8 @@ const getCurrencyRates = async (
                 fee_payer: 'customer',
                 base_amount: amount,
                 base_amount_usd: amount,
-                fees: {
-                  transaction_fee_usd: transactionFee,
-                  fixed_fee_usd: fixedFee,
-                  buffer_fee_usd: blockchainBuffer,
-                  network_fee_usd: networkFeeUSD,
-                  total_fees_usd: totalFeesUSD,
-                },
+                // Simplified - only show total processing fee, no breakdown
+                processing_fee: parseFloat(totalFeesUSD.toFixed(2)),
                 total_amount: totalAmountUSD,
                 total_amount_usd: totalAmountUSD,
                 total_amount_source: totalAmountUSD,
