@@ -1885,23 +1885,37 @@ const verifyCryptoPayment = async (
     const baseCurrency = tempData?.base_currency || "USD";
     const baseAmount = parseFloat(tempData?.base_amount || "0");
     
-    // Check if this is a partial payment scenario (incomplete flag set)
+    // Check if this is a partial payment scenario (incomplete flag set OR underpaid status)
     // Redis stores values as strings, so convert to string for comparison
-    if (String(tempData?.incomplete) === "true") {
-      const totalPaid = previousAmount;
-      const originalExpected = expectedAmount + previousAmount; // amount is now the remaining
-      const remainingAmount = expectedAmount;
+    if (String(tempData?.incomplete) === "true" || redisStatus === "underpaid") {
+      // Use originalExpectedAmount if available (set by webhook), otherwise calculate from previousAmount
+      const originalExpected = parseFloat(tempData?.originalExpectedAmount || '0') || (expectedAmount + previousAmount);
+      const totalPaid = previousAmount > 0 ? previousAmount : receivedAmount;
+      const remainingAmount = originalExpected - totalPaid;
       
       // Calculate USD amounts for underpayment
       let paidAmountUsd = 0;
       let expectedAmountUsd = baseAmount;
       let remainingAmountUsd = 0;
       
-      if (totalPaid > 0 && originalExpected > 0) {
+      // Try to get base amounts from customerData if not available in tempData
+      const customerData = await getRedisItem(tempData?.ref);
+      const actualBaseAmount = baseAmount > 0 ? baseAmount : parseFloat(customerData?.base_amount || "0");
+      
+      if (totalPaid > 0 && originalExpected > 0 && actualBaseAmount > 0) {
         const paidRatio = totalPaid / originalExpected;
-        paidAmountUsd = baseAmount * paidRatio;
-        remainingAmountUsd = baseAmount - paidAmountUsd;
+        paidAmountUsd = actualBaseAmount * paidRatio;
+        expectedAmountUsd = actualBaseAmount;
+        remainingAmountUsd = actualBaseAmount - paidAmountUsd;
       }
+      
+      console.log(`[verifyCryptoPayment] Underpayment detected:
+        - Total Paid: ${totalPaid} ${currency}
+        - Original Expected: ${originalExpected} ${currency}
+        - Remaining: ${remainingAmount} ${currency}
+        - Paid USD: $${paidAmountUsd.toFixed(2)}
+        - Expected USD: $${expectedAmountUsd.toFixed(2)}
+        - Remaining USD: $${remainingAmountUsd.toFixed(2)}`);
       
       // FIXED: Use "underpaid" status and camelCase fields to match checkout page expectations
       return successResponseHelper(res, 200, "Partial payment received", {
@@ -1915,8 +1929,9 @@ const verifyCryptoPayment = async (
         paidAmountUsd: parseFloat(paidAmountUsd.toFixed(2)),
         expectedAmountUsd: parseFloat(expectedAmountUsd.toFixed(2)),
         remainingAmountUsd: parseFloat(remainingAmountUsd.toFixed(2)),
-        baseCurrency: baseCurrency,
-        txId: tempData?.previousTxId,
+        baseCurrency: baseCurrency || customerData?.base_currency || "USD",
+        txId: tempData?.previousTxId || tempData?.txId,
+        address: address, // Include address so user can send remaining payment
         grace_period_minutes: 30,
         partial_payment_timestamp: tempData?.partialPaymentTimestamp
       });
