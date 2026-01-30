@@ -15,11 +15,11 @@ async function main() {
         last_swept_at,
         current_company_id,
         owner_user_id,
-        "createdAt",
-        "updatedAt"
+        created_at,
+        updated_at
        FROM tbl_merchant_temp_address 
        WHERE current_company_id = 38 OR owner_user_id = 28
-       ORDER BY "updatedAt" DESC`,
+       ORDER BY updated_at DESC`,
       { type: QueryTypes.SELECT }
     ) as any[];
     
@@ -40,7 +40,7 @@ async function main() {
       console.log(`  Admin Fee Balance: ${addr.admin_fee_balance || '0'} ETH`);
       console.log(`  Received Amount: ${addr.received_amount || '0'}`);
       console.log(`  Last Swept: ${addr.last_swept_at || 'Never'}`);
-      console.log(`  Updated: ${addr.updatedAt}`);
+      console.log(`  Updated: ${addr.updated_at}`);
       console.log('');
     }
     
