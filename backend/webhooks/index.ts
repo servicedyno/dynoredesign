@@ -534,12 +534,14 @@ const tatumCryptoWebHook = async (
       try {
         // PERSISTENCE: Store complete payment state BEFORE processing
         // This ensures payment isn't lost if server crashes during processing
+        // For completion payments, clear the incomplete flag
         await setRedisItem("crypto-" + address, {
           ...items,
           status: "processing",
-          receivedAmount: incomingAmount,
+          receivedAmount: finalReceivedAmount,  // Use cumulative amount for completion payments
           txId: payload.txId,  // MUST be set before cryptoVerification
           originalExpectedAmount: expectedAmount,  // Store for overpayment calculation
+          incomplete: isCompletionPayment ? "false" : items.incomplete,  // Clear incomplete flag
           retryCount: "0",
           lastAttempt: new Date().toISOString(),
         });
