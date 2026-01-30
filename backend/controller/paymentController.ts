@@ -176,7 +176,7 @@ const getData = async (req: express.Request, res: express.Response) => {
     // Get fee configuration
     const transactionFeePercent = Number(process.env.TRANSACTION_FEE_PERCENT) || 2.0;
     const feeTiers = (await import("../utils/feeConfigUtils")).getFeeTiers();
-    const amount = item.base_amount || item.amount || 0;
+    const amount = Number(item.base_amount || item.amount || 0);
     
     // Find applicable fee tier based on amount
     let fixedFee = 0;
