@@ -1079,36 +1079,43 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
 const getProfile = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const user = await userModel.findOne({
-      where: { user_id: userData.user_id },
-      attributes: { exclude: ['password', 'reset_token', 'reset_token_expiry', 'verified_otp', 'otp_expired'] }
-    });
+    // Check Redis cache first
+    const cacheKey = `profile:${userData.user_id}`;
+    const cached = await getRedisItem(cacheKey);
+    if (cached) {
+      console.log(`[Profile] Cache hit for user ${userData.user_id}`);
+      return successResponseHelper(res, 200, "Profile retrieved successfully", cached);
+    }
+
+    // OPTIMIZED: Run all queries in parallel
+    const [user, companiesCount, walletsCount, apiKeysCount] = await Promise.all([
+      userModel.findOne({
+        where: { user_id: userData.user_id },
+        attributes: { exclude: ['password', 'reset_token', 'reset_token_expiry', 'verified_otp', 'otp_expired'] }
+      }),
+      companyModel.count({ where: { user_id: userData.user_id } }),
+      userWalletAddressModel.count({ where: { user_id: userData.user_id } }),
+      apiModel.count({ where: { user_id: userData.user_id } })
+    ]);
 
     if (!user) {
       return errorResponseHelper(res, 404, "User not found");
     }
 
-    // Get additional stats
-    const companiesCount = await companyModel.count({
-      where: { user_id: userData.user_id }
-    });
-
-    const walletsCount = await userWalletAddressModel.count({
-      where: { user_id: userData.user_id }
-    });
-
-    const apiKeysCount = await apiModel.count({
-      where: { user_id: userData.user_id }
-    });
-
-    return successResponseHelper(res, 200, "Profile retrieved successfully", {
+    const profileData = {
       ...user.dataValues,
       stats: {
         companies: companiesCount,
         wallets: walletsCount,
         api_keys: apiKeysCount,
       }
-    });
+    };
+
+    // Cache the result
+    await setRedisItem(cacheKey, profileData);
+    await setRedisTTL(cacheKey, PROFILE_CACHE_TTL);
+
+    return successResponseHelper(res, 200, "Profile retrieved successfully", profileData);
 
   } catch (e) {
     const errorMessage = getErrorMessage(e);
