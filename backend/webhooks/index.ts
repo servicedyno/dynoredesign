@@ -436,13 +436,30 @@ const tatumCryptoWebHook = async (
       }
 
       // Check if this is an underpayment BEFORE processing
-      const expectedAmount = parseFloat(items?.amount || '0');
-      const isUnderpayment = incomingAmount < expectedAmount && expectedAmount > 0;
-      const isOverpayment = incomingAmount > expectedAmount && expectedAmount > 0;
+      // For completion payments, we need to check if cumulative amount is now sufficient
+      let expectedAmount = parseFloat(items?.amount || '0');
+      let totalReceivedAmount = incomingAmount;
+      
+      // For completion payments on underpayments, add to previous amount
+      if (isCompletionPayment) {
+        const previousAmount = parseFloat(items?.previousAmount || '0');
+        totalReceivedAmount = previousAmount + incomingAmount;
+        // Use original expected amount for comparison (since items.amount is now the remaining)
+        expectedAmount = parseFloat(items?.originalExpectedAmount || '0') || (expectedAmount + previousAmount);
+        console.log(`[tatumCryptoWebHook] Completion payment cumulative: 
+          - Previous: ${previousAmount} ${items?.currency || payload.asset}
+          - New: ${incomingAmount} ${items?.currency || payload.asset}
+          - Total: ${totalReceivedAmount} ${items?.currency || payload.asset}
+          - Original Expected: ${expectedAmount} ${items?.currency || payload.asset}`);
+      }
+      
+      const isUnderpayment = totalReceivedAmount < expectedAmount && expectedAmount > 0;
+      const isOverpayment = totalReceivedAmount > expectedAmount && expectedAmount > 0;
       
       console.log(`[tatumCryptoWebHook] Payment analysis:
         - Expected: ${expectedAmount} ${items?.currency || payload.asset}
-        - Received: ${incomingAmount} ${items?.currency || payload.asset}
+        - Received (this payment): ${incomingAmount} ${items?.currency || payload.asset}
+        - Total Received: ${totalReceivedAmount} ${items?.currency || payload.asset}
         - Is Underpayment: ${isUnderpayment}
         - Is Overpayment: ${isOverpayment}`);
       
@@ -451,7 +468,7 @@ const tatumCryptoWebHook = async (
       if (isUnderpayment) {
         console.log("[tatumCryptoWebHook] UNDERPAYMENT detected - setting incomplete flag");
         
-        const remainingAmount = expectedAmount - incomingAmount;
+        const remainingAmount = expectedAmount - totalReceivedAmount;
         
         // Set Redis state for underpayment - this allows verifyCryptoPayment to return underpaid status
         await setRedisItem("crypto-" + address, {
@@ -459,12 +476,12 @@ const tatumCryptoWebHook = async (
           status: "underpaid",
           incomplete: "true",
           txId: payload.txId,
-          receivedAmount: incomingAmount,
-          previousAmount: incomingAmount,
+          receivedAmount: totalReceivedAmount,  // Total cumulative amount
+          previousAmount: totalReceivedAmount,  // For next completion payment
           previousTxId: payload.txId,
           amount: remainingAmount,  // Now amount is the REMAINING amount
           originalExpectedAmount: expectedAmount,  // Store original for reference
-          partialPaymentTimestamp: new Date().toISOString(),
+          partialPaymentTimestamp: items?.partialPaymentTimestamp || new Date().toISOString(),
           lastAttempt: new Date().toISOString(),
         });
         
@@ -477,7 +494,7 @@ const tatumCryptoWebHook = async (
             event: 'payment.underpaid',
             address: address,
             txId: payload.txId,
-            amount_received: incomingAmount,
+            amount_received: totalReceivedAmount,
             amount_expected: expectedAmount,
             amount_remaining: remainingAmount,
             currency: items?.currency || payload.asset,
@@ -494,7 +511,9 @@ const tatumCryptoWebHook = async (
       }
       
       // FULL or OVERPAYMENT: Process normally
-      console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address);
+      // For completion payments, store the cumulative amount
+      const finalReceivedAmount = isCompletionPayment ? totalReceivedAmount : incomingAmount;
+      console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address, "final amount:", finalReceivedAmount);
       
       // Hard failures that should NOT be retried
       const NON_RETRYABLE_ERRORS = [
