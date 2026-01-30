@@ -1954,6 +1954,7 @@ export default {
   getPoolStatus,
   findByWalletAddress,
   processQueuedPayments,
+  ensurePoolSubscriptions,
   POOL_CONFIG,
   UTXO_CHAINS,
   NATIVE_CURRENCIES,
