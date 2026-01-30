@@ -400,8 +400,9 @@ testRouter.post("/diagnose-temp-address", authMiddleware, async (req, res) => {
 /**
  * POST /api/test/manual-transfer
  * Manually trigger a transfer from a temp address (for debugging)
+ * Protected: Requires authentication
  */
-testRouter.post("/manual-transfer", async (req, res) => {
+testRouter.post("/manual-transfer", authMiddleware, async (req, res) => {
   try {
     const { temp_id, to_address, amount } = req.body;
     
