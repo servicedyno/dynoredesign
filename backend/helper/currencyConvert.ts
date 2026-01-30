@@ -159,38 +159,6 @@ const getCryptoRateViaCoinGecko = async (from: string, to: string): Promise<numb
 };
 
 /**
- * Get fallback rate from hardcoded values
- * Returns null if no fallback available
- */
-const getFallbackRate = (from: string, to: string): number | null => {
-  // Direct lookup
-  if (FALLBACK_RATES[from] && FALLBACK_RATES[from][to]) {
-    console.warn(`[currencyConvert] ⚠️ Using FALLBACK rate for ${from}→${to}: ${FALLBACK_RATES[from][to]}`);
-    return FALLBACK_RATES[from][to];
-  }
-
-  // Try inverse lookup
-  if (FALLBACK_RATES[to] && FALLBACK_RATES[to][from]) {
-    const rate = 1 / FALLBACK_RATES[to][from];
-    console.warn(`[currencyConvert] ⚠️ Using FALLBACK inverse rate for ${from}→${to}: ${rate}`);
-    return rate;
-  }
-
-  // Try via USD pivot for crypto
-  if (from !== "USD" && to !== "USD") {
-    const fromToUSD = FALLBACK_RATES[from]?.USD;
-    const toToUSD = FALLBACK_RATES[to]?.USD;
-    if (fromToUSD && toToUSD) {
-      const rate = fromToUSD / toToUSD;
-      console.warn(`[currencyConvert] ⚠️ Using FALLBACK USD-pivot rate for ${from}→${to}: ${rate}`);
-      return rate;
-    }
-  }
-
-  return null;
-};
-
-/**
  * Normalize currency code (handle variants like USDT-TRC20, USDT-ERC20, etc.)
  */
 const normalizeCurrency = (currency: string): string => {
@@ -208,7 +176,7 @@ const normalizeCurrency = (currency: string): string => {
  * 1. Check Redis cache
  * 2. Try FastForex API (supports both crypto and fiat)
  * 3. Try CoinGecko API (fallback for crypto)
- * 4. Use hardcoded fallback rates
+ * 4. Fail with error (no hardcoded rates - too dangerous)
  */
 const currencyConvert = async ({
   currency,
