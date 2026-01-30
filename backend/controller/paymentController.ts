@@ -173,7 +173,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       }
     }
     
-    // Get fee configuration
+    // Get fee configuration (internal calculation - not exposed to public)
     const transactionFeePercent = Number(process.env.TRANSACTION_FEE_PERCENT) || 2.0;
     const feeTiers = (await import("../utils/feeConfigUtils")).getFeeTiers();
     const amount = Number(item.base_amount || item.amount || 0);
@@ -189,22 +189,12 @@ const getData = async (req: express.Request, res: express.Response) => {
       }
     }
     
-    // Calculate fee breakdown for customer-pays scenario
+    // Calculate total processing fee (internal - details not exposed)
     // Total fees = transaction fee % + fixed fee + blockchain buffer %
-    const feePercent = transactionFeePercent;
-    const feeAmountPercent = (amount * feePercent) / 100;
+    const feeAmountPercent = (amount * transactionFeePercent) / 100;
     const bufferAmount = (amount * blockchainBuffer) / 100;
-    const totalFeeAmount = feeAmountPercent + fixedFee + bufferAmount;
-    const totalWithFees = amount + totalFeeAmount;
-    
-    // Format fee display string (e.g., "2% + 1% buffer + $3.00")
-    let feeDisplayString = `${feePercent}%`;
-    if (blockchainBuffer > 0) {
-      feeDisplayString += ` + ${blockchainBuffer}% buffer`;
-    }
-    if (fixedFee > 0) {
-      feeDisplayString += ` + $${fixedFee.toFixed(2)}`;
-    }
+    const totalProcessingFee = feeAmountPercent + fixedFee + bufferAmount;
+    const totalWithFees = amount + totalProcessingFee;
     
     // Calculate expiry countdown
     let expiryInfo: any = null;
