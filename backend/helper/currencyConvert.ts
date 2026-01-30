@@ -171,12 +171,91 @@ const normalizeCurrency = (currency: string): string => {
 };
 
 /**
+ * Process a single currency conversion
+ * Returns the rate data or throws an error
+ */
+const processSingleCurrency = async (
+  source: string,
+  defaultCurrency: string,
+  amount: number,
+  fixedDecimal: boolean
+): Promise<CurrencyRateList> => {
+  const currentCurrency = normalizeCurrency(defaultCurrency);
+
+  // Same currency - no conversion needed
+  if (source === currentCurrency) {
+    return {
+      currency: defaultCurrency.toUpperCase(),
+      amount: amount,
+      transferRate: 1,
+    };
+  }
+
+  let rate: number | null = null;
+  let convertedAmount: number | null = null;
+
+  // Strategy 1: Try cached rate first
+  rate = await getCachedRate(source, currentCurrency);
+
+  if (!rate) {
+    // Strategy 2: Try FastForex API (primary)
+    const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
+    if (fastForexResult) {
+      rate = fastForexResult.rate;
+      convertedAmount = fastForexResult.converted;
+      await setCachedRate(source, currentCurrency, rate);
+    }
+  }
+
+  if (!rate) {
+    // Strategy 3: Try CoinGecko API (fallback for crypto)
+    const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
+    if (isCryptoConversion) {
+      rate = await getCryptoRateViaCoinGecko(source, currentCurrency);
+      if (rate) {
+        console.log(`[currencyConvert] Using CoinGecko fallback for ${source}→${currentCurrency}: ${rate}`);
+        await setCachedRate(source, currentCurrency, rate);
+      }
+    }
+  }
+
+  if (!rate) {
+    // No rate available from any API - fail safely
+    console.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - both FastForex and CoinGecko failed`);
+    throw new Error(`Currency conversion failed for ${source}→${currentCurrency}. Please try again later.`);
+  }
+
+  // Calculate converted amount if not already set by FastForex
+  if (convertedAmount === null) {
+    convertedAmount = amount * rate;
+  }
+
+  // Format the values based on magnitude
+  const transferRate = fixedDecimal
+    ? rate.toFixed(2)
+    : rate > 1
+    ? rate.toFixed(2)
+    : Number(rate).toFixed(8);
+
+  const formattedAmount = fixedDecimal
+    ? convertedAmount.toFixed(2)
+    : convertedAmount > 1
+    ? convertedAmount.toFixed(2)
+    : Number(convertedAmount).toFixed(8);
+
+  return {
+    currency: defaultCurrency.toUpperCase(),
+    amount: Number(formattedAmount),
+    transferRate: Number(transferRate),
+  };
+};
+
+/**
  * Main currency conversion function
- * Strategy:
- * 1. Check Redis cache
- * 2. Try FastForex API (supports both crypto and fiat)
- * 3. Try CoinGecko API (fallback for crypto)
- * 4. Fail with error (no hardcoded rates - too dangerous)
+ * Supports crypto-to-crypto, crypto-to-fiat, and fiat-to-fiat conversions
+ * Uses FastForex as primary, CoinGecko as fallback for crypto
+ * 
+ * OPTIMIZED: Uses Promise.all for parallel API calls instead of sequential
  */
 const currencyConvert = async ({
   currency,
@@ -196,82 +275,19 @@ const currencyConvert = async ({
   }
 
   const source = normalizeCurrency(sourceCurrency);
-  const currencyRateList: CurrencyRateList[] = [];
+  
+  console.log(`[currencyConvert] Processing ${currency.length} currencies in parallel...`);
+  const startTime = Date.now();
 
-  for (let i = 0; i < currency.length; i++) {
-    const defaultCurrency: string = currency[i];
-    const currentCurrency = normalizeCurrency(currency[i]);
+  // Process all currencies in parallel using Promise.all
+  const currencyRateList = await Promise.all(
+    currency.map((curr) => processSingleCurrency(source, curr, amount, fixedDecimal))
+  );
 
-    if (source === currentCurrency) {
-      // Same currency - no conversion needed
-      currencyRateList.push({
-        currency: defaultCurrency.toUpperCase(),
-        amount: amount,
-        transferRate: 1,
-      });
-      continue;
-    }
-
-    let rate: number | null = null;
-    let convertedAmount: number | null = null;
-
-    // Strategy 1: Try cached rate first
-    rate = await getCachedRate(source, currentCurrency);
-
-    if (!rate) {
-      // Strategy 2: Try FastForex API (primary)
-      const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
-      if (fastForexResult) {
-        rate = fastForexResult.rate;
-        convertedAmount = fastForexResult.converted;
-        await setCachedRate(source, currentCurrency, rate);
-      }
-    }
-
-    if (!rate) {
-      // Strategy 3: Try CoinGecko API (fallback for crypto)
-      const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
-      if (isCryptoConversion) {
-        rate = await getCryptoRateViaCoinGecko(source, currentCurrency);
-        if (rate) {
-          console.log(`[currencyConvert] Using CoinGecko fallback for ${source}→${currentCurrency}: ${rate}`);
-          await setCachedRate(source, currentCurrency, rate);
-        }
-      }
-    }
-
-    if (rate) {
-      // Calculate converted amount if not already set by FastForex
-      if (convertedAmount === null) {
-        convertedAmount = amount * rate;
-      }
-
-      // Format the values based on magnitude
-      const transferRate = fixedDecimal
-        ? rate.toFixed(2)
-        : rate > 1
-        ? rate.toFixed(2)
-        : Number(rate).toFixed(8);
-
-      const formattedAmount = fixedDecimal
-        ? convertedAmount.toFixed(2)
-        : convertedAmount > 1
-        ? convertedAmount.toFixed(2)
-        : Number(convertedAmount).toFixed(8);
-
-      currencyRateList.push({
-        currency: defaultCurrency.toUpperCase(),
-        amount: Number(formattedAmount),
-        transferRate: Number(transferRate),
-      });
-    } else {
-      // No rate available from any API - fail safely
-      console.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - both FastForex and CoinGecko failed`);
-      throw new Error(`Currency conversion failed for ${source}→${currentCurrency}. Please try again later.`);
-    }
-  }
-
+  const elapsed = Date.now() - startTime;
+  console.log(`[currencyConvert] Completed ${currency.length} currencies in ${elapsed}ms`);
   console.log(`[currencyConvert] Results:`, currencyRateList);
+  
   return currencyRateList;
 };
 
