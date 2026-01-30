@@ -1039,39 +1039,33 @@ Modes must be provided in **UPPERCASE**. Valid modes:
     post: {
       tags: ['Payment Processing'],
       summary: 'Calculate payment amount',
-      description: 'Calculate total payment including platform fees and network fees',
+      description: 'Calculate total payment amount including processing fees',
       requestBody: {
         required: true,
         content: {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['amount', 'currency'],
+              required: ['amount_usd', 'chain'],
               properties: {
-                amount: { type: 'number' },
-                currency: { type: 'string' },
-                payment_method: { type: 'string', enum: ['CARD', 'CRYPTO'] },
-                crypto_currency: { type: 'string' },
-                fee_payer: { type: 'string', enum: ['customer', 'merchant'], default: 'merchant' }
+                amount_usd: { type: 'number', description: 'Amount in USD' },
+                chain: { type: 'string', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT_TRC20', 'USDT_ERC20'] },
+                fee_payer: { type: 'string', enum: ['customer', 'company'], default: 'customer' }
               }
             },
             examples: {
               'Customer Pays Fees': {
                 value: {
-                  amount: 100,
-                  currency: 'USD',
-                  payment_method: 'CRYPTO',
-                  crypto_currency: 'BTC',
+                  amount_usd: 100,
+                  chain: 'ETH',
                   fee_payer: 'customer'
                 }
               },
-              'Merchant Absorbs Fees': {
+              'Company Absorbs Fees': {
                 value: {
-                  amount: 100,
-                  currency: 'USD',
-                  payment_method: 'CRYPTO',
-                  crypto_currency: 'USDT-TRC20',
-                  fee_payer: 'merchant'
+                  amount_usd: 100,
+                  chain: 'BTC',
+                  fee_payer: 'company'
                 }
               }
             }
@@ -1084,15 +1078,16 @@ Modes must be provided in **UPPERCASE**. Valid modes:
           content: {
             'application/json': {
               example: {
+                message: 'Payment amount calculated',
                 data: {
-                  subtotal: 100.00,
-                  platform_fee: 1.50,
-                  network_fee: 2.50,
-                  total: 104.00,
-                  merchant_receives: 98.50,
-                  currency: 'USD',
-                  crypto_amount: 0.00237,
-                  crypto_currency: 'BTC'
+                  fee_payer: 'customer',
+                  base_amount_usd: 100,
+                  base_amount_crypto: 0.0303,
+                  processing_fee: 5.0,
+                  total_amount_crypto: 0.0318,
+                  total_amount_usd: 105.0,
+                  crypto_currency: 'ETH',
+                  crypto_price_usd: 3300
                 }
               }
             }
