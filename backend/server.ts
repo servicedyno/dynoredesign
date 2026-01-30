@@ -22,8 +22,6 @@ import {
   feesModel,
   userTempAddressModel,
 } from "./models";
-// Import associations to set up model relationships
-import "./models/associations";
 import jwt from "jsonwebtoken";
 import { currencyConvert, encrypt, getErrorMessage, sendEmail } from "./helper";
 import axios from "axios";
