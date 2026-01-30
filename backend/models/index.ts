@@ -32,6 +32,7 @@ import webhookDeliveryLogModel from "./webhookDeliveryLogModel";
 // Referral models
 import referralModel from "./referralModels/referralModel";
 import referralRewardModel from "./referralModels/referralRewardModel";
+import refereeCodeModel from "./referralModels/refereeCodeModel";
 
 // Knowledge Base models
 import kbCategoryModel from "./knowledgeBaseModels/kbCategoryModel";
