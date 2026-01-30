@@ -12,8 +12,9 @@ async function main() {
         admin_fee_balance,
         received_amount,
         expected_amount,
-        last_sweep_at,
+        last_swept_at,
         current_company_id,
+        owner_user_id,
         "createdAt",
         "updatedAt"
        FROM tbl_merchant_temp_address 
@@ -24,21 +25,21 @@ async function main() {
     
     console.log('=== MERCHANT POOL ADDRESSES (Company 38 / User 28) ===\n');
     
-    let totalUnssweptFees = 0;
+    let totalUnsweptFees = 0;
     let addressesWithFees = 0;
     
     for (const addr of addresses) {
       const feeBalance = parseFloat(addr.admin_fee_balance || '0');
       if (feeBalance > 0) {
         addressesWithFees++;
-        totalUnssweptFees += feeBalance;
+        totalUnsweptFees += feeBalance;
       }
       
       console.log(`Address: ${addr.wallet_address}`);
       console.log(`  Status: ${addr.status}`);
       console.log(`  Admin Fee Balance: ${addr.admin_fee_balance || '0'} ETH`);
       console.log(`  Received Amount: ${addr.received_amount || '0'}`);
-      console.log(`  Last Sweep: ${addr.last_sweep_at || 'Never'}`);
+      console.log(`  Last Swept: ${addr.last_swept_at || 'Never'}`);
       console.log(`  Updated: ${addr.updatedAt}`);
       console.log('');
     }
@@ -46,7 +47,7 @@ async function main() {
     console.log('=== SUMMARY ===');
     console.log(`Total addresses: ${addresses.length}`);
     console.log(`Addresses with unswept fees: ${addressesWithFees}`);
-    console.log(`Total unswept admin fees: ${totalUnssweptFees.toFixed(8)} ETH`);
+    console.log(`Total unswept admin fees: ${totalUnsweptFees.toFixed(8)} ETH`);
     
     // Also check actual on-chain balances using Tatum
     console.log('\n=== CHECKING ON-CHAIN BALANCES ===\n');
@@ -62,11 +63,9 @@ async function main() {
             { headers: { 'x-api-key': TATUM_KEY } }
           );
           const onChainBalance = parseFloat(response.data.balance || '0');
-          if (onChainBalance > 0) {
-            console.log(`${addr.wallet_address}: ${onChainBalance} ETH ON-CHAIN`);
-          }
-        } catch (e) {
-          // Skip errors
+          console.log(`${addr.wallet_address.substring(0,20)}...: ${onChainBalance.toFixed(8)} ETH on-chain (DB fee: ${addr.admin_fee_balance || '0'})`);
+        } catch (e: any) {
+          console.log(`${addr.wallet_address.substring(0,20)}...: Error fetching balance`);
         }
       }
     }
