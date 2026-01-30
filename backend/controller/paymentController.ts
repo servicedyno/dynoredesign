@@ -2173,7 +2173,11 @@ const verifyCryptoPayment = async (
         txId: tempData.txId,
         amount: tempData.receivedAmount || tempData.amount,
         expected_amount: expectedAmount.toFixed(6),
-        currency: currency
+        currency: currency,
+        // Timer and settings
+        remaining_seconds: remainingSeconds,
+        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        merchant_settings: merchantSettings
       });
     }
     
@@ -2185,7 +2189,11 @@ const verifyCryptoPayment = async (
         txId: tempData.txId,
         amount: tempData.receivedAmount || tempData.amount,
         expected_amount: expectedAmount.toFixed(6),
-        currency: currency
+        currency: currency,
+        // Timer and settings
+        remaining_seconds: remainingSeconds,
+        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        merchant_settings: merchantSettings
       });
     }
     
