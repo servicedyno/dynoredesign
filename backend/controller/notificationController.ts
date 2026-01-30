@@ -9,6 +9,10 @@ import {
 import { IUserType } from "../utils/types";
 import { notificationModel, notificationPreferencesModel } from "../models";
 import sequelize from "../utils/dbInstance";
+import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
+
+// Cache TTL for notifications (15 seconds - shorter because notifications change often)
+const NOTIFICATION_CACHE_TTL = 15;
 
 // Notification types
 export const NOTIFICATION_TYPES = {
