@@ -240,11 +240,6 @@ const currencyConvert = async ({
       }
     }
 
-    if (!rate) {
-      // Strategy 4: Use hardcoded fallback rates
-      rate = getFallbackRate(source, currentCurrency);
-    }
-
     if (rate) {
       // Calculate converted amount if not already set by FastForex
       if (convertedAmount === null) {
@@ -270,9 +265,9 @@ const currencyConvert = async ({
         transferRate: Number(transferRate),
       });
     } else {
-      // No rate available - throw error
-      console.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency}`);
-      throw new Error(`Currency conversion failed for ${source}→${currentCurrency}`);
+      // No rate available from any API - fail safely
+      console.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - both FastForex and CoinGecko failed`);
+      throw new Error(`Currency conversion failed for ${source}→${currentCurrency}. Please try again later.`);
     }
   }
 
