@@ -253,22 +253,13 @@ const getData = async (req: express.Request, res: express.Response) => {
         order_reference: orderReference,
         description: item.description || null,
         merchant: companyInfo,
+        // Simplified fee info - no internal breakdown exposed
         fee_info: {
           fee_payer: item.fee_payer || 'company',
-          fee_percent: feePercent,
-          blockchain_buffer_percent: blockchainBuffer,
-          fixed_fee: fixedFee,
-          fee_display: feeDisplayString,
-          // Only include breakdown if customer pays fees
+          // Only show totals if customer pays fees
           ...(item.fee_payer === 'customer' && {
-            fee_breakdown: {
-              base_amount: amount,
-              percentage_fee: parseFloat(feeAmountPercent.toFixed(2)),
-              blockchain_buffer_fee: parseFloat(bufferAmount.toFixed(2)),
-              fixed_fee: fixedFee,
-              total_fee: parseFloat(totalFeeAmount.toFixed(2)),
-              total_amount: parseFloat(totalWithFees.toFixed(2)),
-            }
+            processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
+            total_amount: parseFloat(totalWithFees.toFixed(2)),
           })
         },
         expiry: expiryInfo,
