@@ -675,8 +675,9 @@ class ArchitectureFixesTester:
                 "fee_payer": "customer"
             }
             
+            # Use the correct endpoint
             response = requests.post(
-                f"{self.backend_url}/api/user/createPaymentLink",
+                f"{self.backend_url}/api/pay/createPaymentLink",
                 json=payment_data,
                 headers=headers,
                 timeout=15
@@ -694,9 +695,41 @@ class ArchitectureFixesTester:
                     return reference
                 elif 'reference' in link_data:
                     return link_data['reference']
+                elif 'link_id' in link_data:
+                    # If we get link_id, we can use it to get the reference
+                    return self.get_payment_reference_from_link_id(link_data['link_id'])
+            else:
+                print(f"Payment link creation failed: {response.status_code} - {response.text}")
             
         except Exception as e:
             print(f"Failed to create test payment link with customer fees: {str(e)}")
+        
+        return None
+    
+    def get_payment_reference_from_link_id(self, link_id):
+        """Get payment reference from link_id"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.jwt_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.backend_url}/api/pay/links/{link_id}",
+                headers=headers,
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                link_data = data.get('data', {})
+                payment_link = link_data.get('payment_link', '')
+                
+                if '?d=' in payment_link:
+                    return payment_link.split('?d=')[1]
+                    
+        except Exception as e:
+            print(f"Failed to get reference from link_id {link_id}: {str(e)}")
         
         return None
     
