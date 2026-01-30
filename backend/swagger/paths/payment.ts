@@ -6,6 +6,17 @@ export const paymentPaths = {
       summary: 'Create payment link',
       description: `Create a new payment link for accepting crypto or fiat payments. The link can be shared with customers to collect payments.
 
+**🎁 REFEREE CODE FEATURE:**
+When you provide a customer email, the system will automatically:
+- Check if the email already has a DynoPay account (skips if yes)
+- Check if a referee code was already sent to this email (skips if yes)
+- Generate a unique one-time referee code (REF-XXXXXXXX)
+- Include the code in the payment notification email
+
+**Referee Code Benefits:**
+- Customer who signs up gets **50% off fees for 90 days**
+- You (the merchant) get **10% off fees for 30 days**
+
 **FIELD NAME COMPATIBILITY:**
 The API supports flexible field naming for backward compatibility. You only need to provide **ONE** currency field and **ONE** amount field:
 
