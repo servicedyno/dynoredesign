@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://project-setup-33.preview.emergentagent.com/api/docs/
+**URL:** https://crypto-checkout-21.preview.emergentagent.com/api/docs/
 
 ---
 

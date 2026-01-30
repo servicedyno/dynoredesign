@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://project-setup-33.preview.emergentagent.com"
+backend_url = "https://crypto-checkout-21.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(
