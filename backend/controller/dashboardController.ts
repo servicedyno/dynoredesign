@@ -9,6 +9,10 @@ import {
 import { IUserType } from "../utils/types";
 import { userTransactionModel, userWalletModel, companyModel } from "../models";
 import sequelize from "../utils/dbInstance";
+import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
+
+// Cache TTL for dashboard data (30 seconds)
+const DASHBOARD_CACHE_TTL = 30;
 
 // Fee Tiers Configuration
 const FEE_TIERS = [
