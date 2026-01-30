@@ -1881,6 +1881,10 @@ const verifyCryptoPayment = async (
     const previousAmount = parseFloat(tempData?.previousAmount || '0');
     const currency = tempData?.currency;
     
+    // Get base currency info for USD conversion
+    const baseCurrency = tempData?.base_currency || "USD";
+    const baseAmount = parseFloat(tempData?.base_amount || "0");
+    
     // Check if this is a partial payment scenario (incomplete flag set)
     // Redis stores values as strings, so convert to string for comparison
     if (String(tempData?.incomplete) === "true") {
@@ -1888,14 +1892,30 @@ const verifyCryptoPayment = async (
       const originalExpected = expectedAmount + previousAmount; // amount is now the remaining
       const remainingAmount = expectedAmount;
       
+      // Calculate USD amounts for underpayment
+      let paidAmountUsd = 0;
+      let expectedAmountUsd = baseAmount;
+      let remainingAmountUsd = 0;
+      
+      if (totalPaid > 0 && originalExpected > 0) {
+        const paidRatio = totalPaid / originalExpected;
+        paidAmountUsd = baseAmount * paidRatio;
+        remainingAmountUsd = baseAmount - paidAmountUsd;
+      }
+      
       // FIXED: Use "underpaid" status and camelCase fields to match checkout page expectations
       return successResponseHelper(res, 200, "Partial payment received", {
-        status: "underpaid",  // FIXED: Use "underpaid" not "partial" to match checkout
+        status: "underpaid",
         message: "Partial payment received. Please pay the remaining amount.",
-        paidAmount: parseFloat(totalPaid.toFixed(6)),  // FIXED: Use camelCase
-        expectedAmount: parseFloat(originalExpected.toFixed(6)),  // FIXED: Use camelCase
-        remainingAmount: parseFloat(remainingAmount.toFixed(6)),  // FIXED: Use camelCase
+        paidAmount: parseFloat(totalPaid.toFixed(6)),
+        expectedAmount: parseFloat(originalExpected.toFixed(6)),
+        remainingAmount: parseFloat(remainingAmount.toFixed(6)),
         currency: currency,
+        // USD amounts
+        paidAmountUsd: parseFloat(paidAmountUsd.toFixed(2)),
+        expectedAmountUsd: parseFloat(expectedAmountUsd.toFixed(2)),
+        remainingAmountUsd: parseFloat(remainingAmountUsd.toFixed(2)),
+        baseCurrency: baseCurrency,
         txId: tempData?.previousTxId,
         grace_period_minutes: 30,
         partial_payment_timestamp: tempData?.partialPaymentTimestamp
