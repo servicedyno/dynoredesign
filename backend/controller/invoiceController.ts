@@ -420,11 +420,39 @@ const getInvoiceById = async (
       return errorResponseHelper(res, 403, "Access denied");
     }
 
+    // Sanitize response - hide internal fee breakdown details
+    const sanitizedInvoice = {
+      invoice_id: invoiceData.invoice_id,
+      invoice_number: invoiceData.invoice_number,
+      transaction_id: invoiceData.transaction_id,
+      company_id: invoiceData.company_id,
+      provider_name: invoiceData.provider_name,
+      provider_address: invoiceData.provider_address,
+      provider_tax_id: invoiceData.provider_tax_id,
+      customer_name: invoiceData.customer_name,
+      customer_address: invoiceData.customer_address,
+      customer_tax_id: invoiceData.customer_tax_id,
+      description: invoiceData.description,
+      unit_price: invoiceData.unit_price,
+      quantity: invoiceData.quantity,
+      vat_rate: invoiceData.vat_rate,
+      vat_amount: invoiceData.vat_amount,
+      // Only show total processing fee, not breakdown
+      processing_fee: parseFloat((invoiceData.fixed_fee || 0).toFixed(2)),
+      total_usd: invoiceData.total_usd,
+      total_crypto: invoiceData.total_crypto,
+      crypto_currency: invoiceData.crypto_currency,
+      payment_terms: invoiceData.payment_terms,
+      invoice_date: invoiceData.invoice_date,
+      status: invoiceData.status,
+      createdAt: invoiceData.createdAt,
+    };
+
     successResponseHelper(
       res,
       200,
       "Invoice retrieved successfully",
-      invoiceData
+      sanitizedInvoice
     );
   } catch (e) {
     const errorMessage = getErrorMessage(e);
