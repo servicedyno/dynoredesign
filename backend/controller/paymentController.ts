@@ -239,7 +239,7 @@ const getData = async (req: express.Request, res: express.Response) => {
     let payload;
     if (item.pathType === "createLink") {
       payload = {
-        amount: item.base_amount,
+        amount: amount, // Use the converted number instead of item.base_amount
         base_currency: item.base_currency,
         token: await getLinkAccessToken(
           item.email,
