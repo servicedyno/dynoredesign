@@ -444,10 +444,10 @@ const generateOTP = async (req: express.Request, res: express.Response) => {
           });
           successResponseHelper(res, 200, "OTP sent successfully!");
         } else {
-          errorResponseHelper(res, 500, "Please enter a registered email!");
+          errorResponseHelper(res, 404, "Please enter a registered email!");
         }
       } else {
-        errorResponseHelper(res, 500, "Please add any number or email!");
+        errorResponseHelper(res, 400, "Please add any number or email!");
       }
     }
   } catch (e) {
@@ -634,7 +634,7 @@ const connectSocial = async (req: express.Request, res: express.Response) => {
         },
       });
       if (!userData) {
-        errorResponseHelper(res, 500, "Please enter a valid password!");
+        errorResponseHelper(res, 404, "User not found!");
       } else {
         const resData = await getAccessToken(userData.dataValues.user_id);
         successResponseHelper(res, 200, "Login Successful!", resData);

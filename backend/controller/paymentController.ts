@@ -203,7 +203,7 @@ const getData = async (req: express.Request, res: express.Response) => {
   } catch (e) {
     const message = getErrorMessage(e);
     apiLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, "Sorry! No transaction found");
+    errorResponseHelper(res, 404, "Sorry! No transaction found");
   }
 };
 

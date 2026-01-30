@@ -105,7 +105,7 @@ const addApi = async (req: express.Request, res: express.Response) => {
       .then((isExists) => isExists);
 
     if (!companyExists) {
-      return errorResponseHelper(res, 500, "Company does not exist!");
+      return errorResponseHelper(res, 404, "Company does not exist!");
     }
     
     const company_data = await companyModel.findOne({
