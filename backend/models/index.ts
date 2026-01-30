@@ -89,6 +89,7 @@ export {
   // Referral models
   referralModel,
   referralRewardModel,
+  refereeCodeModel,
   // Knowledge Base models
   kbCategoryModel,
   kbArticleModel,
