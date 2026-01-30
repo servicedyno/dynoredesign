@@ -208,6 +208,11 @@ const startServer = async () => {
     await kbArticleModel.sync({ alter: true });
     console.log("Knowledge Base tables synced successfully.");
     
+    // Sync user model to add referral columns
+    const { userModel } = await import("./models");
+    await userModel.sync({ alter: true });
+    console.log("User model synced with referral columns.");
+    
     // Validate Merchant Pool Configuration (CRITICAL STARTUP CHECK)
     try {
       const validateMerchantPoolConfiguration = (await import("./services/merchantPoolValidator")).default;
