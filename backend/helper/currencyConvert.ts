@@ -7,14 +7,14 @@ interface CurrencyRateList {
   transferRate: number;
 }
 
-// Cache TTL in seconds (5 minutes for crypto rates)
+// Cache TTL in seconds (5 minutes for rates)
 const RATE_CACHE_TTL = 300;
 
 // Fallback rates (updated periodically - last update: Jan 2026)
 // These are used ONLY when both API and cache fail
 const FALLBACK_RATES: Record<string, Record<string, number>> = {
   BTC: { USD: 95000, EUR: 88000, GBP: 76000 },
-  ETH: { USD: 2824, EUR: 2615, GBP: 2250 },  // Updated based on recent transactions
+  ETH: { USD: 2734, EUR: 2530, GBP: 2180 },
   TRX: { USD: 0.25, EUR: 0.23, GBP: 0.20 },
   LTC: { USD: 105, EUR: 97, GBP: 84 },
   DOGE: { USD: 0.38, EUR: 0.35, GBP: 0.30 },
@@ -22,11 +22,8 @@ const FALLBACK_RATES: Record<string, Record<string, number>> = {
   USDT: { USD: 1, EUR: 0.93, GBP: 0.80 },
   USDC: { USD: 1, EUR: 0.93, GBP: 0.80 },
   BNB: { USD: 700, EUR: 650, GBP: 560 },
-  USD: { BTC: 0.0000105, ETH: 0.000354, TRX: 4.0, LTC: 0.0095, DOGE: 2.63, BCH: 0.00208, USDT: 1, USDC: 1 },
+  USD: { BTC: 0.0000105, ETH: 0.000366, TRX: 4.0, LTC: 0.0095, DOGE: 2.63, BCH: 0.00208, USDT: 1, USDC: 1 },
 };
-
-// List of crypto currencies that need special handling
-const CRYPTO_CURRENCIES = ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT', 'USDC', 'BNB'];
 
 /**
  * Get cached exchange rate from Redis
@@ -59,49 +56,6 @@ const setCachedRate = async (from: string, to: string, rate: number): Promise<vo
   } catch (e) {
     console.warn(`[currencyConvert] Cache write failed for ${from}→${to}`);
   }
-};
-
-/**
- * Get crypto rate from CoinGecko (free, no API key required)
- */
-const getCryptoRate = async (crypto: string, fiat: string): Promise<number | null> => {
-  try {
-    // Map our currency codes to CoinGecko IDs
-    const coinGeckoIds: Record<string, string> = {
-      BTC: 'bitcoin',
-      ETH: 'ethereum',
-      TRX: 'tron',
-      LTC: 'litecoin',
-      DOGE: 'dogecoin',
-      BCH: 'bitcoin-cash',
-      BNB: 'binancecoin',
-      USDT: 'tether',
-      USDC: 'usd-coin',
-    };
-
-    const coinId = coinGeckoIds[crypto.toUpperCase()];
-    if (!coinId) return null;
-
-    const response = await axios.get(
-      `https://api.coingecko.com/api/v3/simple/price`,
-      {
-        params: {
-          ids: coinId,
-          vs_currencies: fiat.toLowerCase(),
-        },
-        timeout: 5000,
-      }
-    );
-
-    const rate = response.data[coinId]?.[fiat.toLowerCase()];
-    if (rate) {
-      console.log(`[currencyConvert] CoinGecko rate for ${crypto}→${fiat}: ${rate}`);
-      return rate;
-    }
-  } catch (error) {
-    console.warn(`[currencyConvert] CoinGecko API failed for ${crypto}→${fiat}:`, error.message);
-  }
-  return null;
 };
 
 /**
@@ -142,7 +96,7 @@ const currencyConvert = async ({
   amount,
   fixedDecimal,
 }) => {
-  // Validate amount parameter to prevent API errors
+  // Validate amount parameter
   if (amount === null || amount === undefined || isNaN(Number(amount))) {
     console.error(`[currencyConvert] Invalid amount: ${amount}`);
     throw new Error(`Invalid amount parameter: ${amount}`);
@@ -176,59 +130,50 @@ const currencyConvert = async ({
       rate = await getCachedRate(source, currentCurrency);
       
       if (!rate) {
-        // Strategy 2: Check if this involves crypto - use CoinGecko
-        const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
-        
-        if (isCryptoConversion) {
-          // For crypto conversions, try CoinGecko first
-          if (CRYPTO_CURRENCIES.includes(source) && !CRYPTO_CURRENCIES.includes(currentCurrency)) {
-            // Crypto to fiat (e.g., ETH → USD)
-            rate = await getCryptoRate(source, currentCurrency);
-          } else if (!CRYPTO_CURRENCIES.includes(source) && CRYPTO_CURRENCIES.includes(currentCurrency)) {
-            // Fiat to crypto (e.g., USD → ETH)
-            const inverseRate = await getCryptoRate(currentCurrency, source);
-            if (inverseRate) {
-              rate = 1 / inverseRate;
-            }
-          } else {
-            // Crypto to crypto - convert via USD
-            const sourceToUSD = await getCryptoRate(source, 'USD');
-            const targetToUSD = await getCryptoRate(currentCurrency, 'USD');
-            if (sourceToUSD && targetToUSD) {
-              rate = sourceToUSD / targetToUSD;
-            }
-          }
+        // Strategy 2: Try FastForex API (supports both crypto and fiat)
+        try {
+          const { data } = await axios.get(`https://api.fastforex.io/convert`, {
+            params: {
+              api_key: process.env.FAST_FOREX_KEY,
+              from: source,
+              to: currentCurrency,
+              amount: amount,
+            },
+            timeout: 10000,
+          });
           
-          // Cache the rate if we got one
-          if (rate) {
-            await setCachedRate(source, currentCurrency, rate);
-          }
-        }
-        
-        // Strategy 3: Try FastForex for fiat-to-fiat
-        if (!rate && !isCryptoConversion) {
-          try {
-            const { data: { result } } = await axios.get(`https://api.fastforex.io/convert`, {
-              params: {
-                api_key: process.env.FAST_FOREX_KEY,
-                from: source,
-                to: currentCurrency,
-                amount: amount,
-              },
-              timeout: 10000,
-            });
+          if (data.result && data.result.rate) {
+            rate = data.result.rate;
+            console.log(`[currencyConvert] FastForex rate for ${source}→${currentCurrency}: ${rate}`);
             
-            rate = result.rate;
+            // Cache the successful rate
             await setCachedRate(source, currentCurrency, rate);
-          } catch (apiError) {
-            console.warn(`[currencyConvert] FastForex API failed for ${source}→${currentCurrency}:`, apiError.message);
+            
+            const convertedAmount = data.result[currentCurrency];
+            const transferRate = fixedDecimal
+              ? rate.toFixed(2)
+              : rate > 1
+              ? rate.toFixed(2)
+              : Number(rate).toFixed(8);
+            const currentCurrencyAmount = fixedDecimal
+              ? convertedAmount.toFixed(2)
+              : convertedAmount > 1
+              ? convertedAmount.toFixed(2)
+              : Number(convertedAmount).toFixed(8);
+
+            currencyRateList.push({
+              currency: defaultCurrency.toUpperCase(),
+              amount: Number(currentCurrencyAmount),
+              transferRate: Number(transferRate),
+            });
+            continue; // Move to next currency
           }
+        } catch (apiError) {
+          console.warn(`[currencyConvert] FastForex API failed for ${source}→${currentCurrency}:`, apiError.message);
         }
         
-        // Strategy 4: Use fallback rates
-        if (!rate) {
-          rate = getFallbackRate(source, currentCurrency);
-        }
+        // Strategy 3: Use fallback rates
+        rate = getFallbackRate(source, currentCurrency);
       }
       
       if (rate) {
