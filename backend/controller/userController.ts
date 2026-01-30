@@ -25,6 +25,10 @@ import localStorage from "../utils/localStorage";
 import axios from "axios";
 import tatumApi from "../apis/tatumApi";
 import { userLogger } from "../utils/loggers";
+import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
+
+// Cache TTL for profile data (60 seconds)
+const PROFILE_CACHE_TTL = 60;
 
 const registerUser = async (req: express.Request, res: express.Response) => {
   try {
