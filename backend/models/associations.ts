@@ -1,4 +1,5 @@
 // Model associations for referral and knowledge base models
+// Using a flag to ensure associations are only set up once
 import User from './userModels/userModel';
 import Referral from './referralModels/referralModel';
 import ReferralReward from './referralModels/referralRewardModel';
@@ -10,43 +11,50 @@ import UserSession from './securityModels/userSessionModel';
 import LoginHistory from './securityModels/loginHistoryModel';
 import SecurityLog from './securityModels/securityLogModel';
 
-// Referral associations
-Referral.belongsTo(User, { foreignKey: 'referrer_user_id', as: 'referrer' });
-Referral.belongsTo(User, { foreignKey: 'referred_user_id', as: 'referred_user' });
+// Check if associations have already been set up
+const associationsSetUp = (User as any).associations && Object.keys((User as any).associations).length > 5;
 
-User.hasMany(Referral, { foreignKey: 'referrer_user_id', as: 'referrals_made' });
-User.hasMany(Referral, { foreignKey: 'referred_user_id', as: 'referrals_received' });
+if (!associationsSetUp) {
+  // Referral associations
+  Referral.belongsTo(User, { foreignKey: 'referrer_user_id', as: 'referrer' });
+  Referral.belongsTo(User, { foreignKey: 'referred_user_id', as: 'referred_user' });
 
-ReferralReward.belongsTo(Referral, { foreignKey: 'referral_id', as: 'referral' });
-ReferralReward.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+  User.hasMany(Referral, { foreignKey: 'referrer_user_id', as: 'referrals_made' });
+  User.hasMany(Referral, { foreignKey: 'referred_user_id', as: 'referrals_received' });
 
-Referral.hasMany(ReferralReward, { foreignKey: 'referral_id', as: 'rewards' });
-User.hasMany(ReferralReward, { foreignKey: 'user_id', as: 'referral_rewards' });
+  ReferralReward.belongsTo(Referral, { foreignKey: 'referral_id', as: 'referral' });
+  ReferralReward.belongsTo(User, { foreignKey: 'user_id', as: 'reward_user' });
 
-// Knowledge Base associations
-KBArticle.belongsTo(KBCategory, { foreignKey: 'category_id', as: 'category' });
-KBArticle.belongsTo(User, { foreignKey: 'author_id', as: 'author' });
+  Referral.hasMany(ReferralReward, { foreignKey: 'referral_id', as: 'rewards' });
+  User.hasMany(ReferralReward, { foreignKey: 'user_id', as: 'referral_rewards' });
 
-KBCategory.hasMany(KBArticle, { foreignKey: 'category_id', as: 'articles' });
-User.hasMany(KBArticle, { foreignKey: 'author_id', as: 'kb_articles' });
+  // Knowledge Base associations
+  KBArticle.belongsTo(KBCategory, { foreignKey: 'category_id', as: 'category' });
+  KBArticle.belongsTo(User, { foreignKey: 'author_id', as: 'author' });
 
-KBArticleFeedback.belongsTo(KBArticle, { foreignKey: 'article_id', as: 'article' });
-KBArticleFeedback.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+  KBCategory.hasMany(KBArticle, { foreignKey: 'category_id', as: 'articles' });
+  User.hasMany(KBArticle, { foreignKey: 'author_id', as: 'kb_articles' });
 
-KBArticle.hasMany(KBArticleFeedback, { foreignKey: 'article_id', as: 'feedbacks' });
+  KBArticleFeedback.belongsTo(KBArticle, { foreignKey: 'article_id', as: 'article' });
+  KBArticleFeedback.belongsTo(User, { foreignKey: 'user_id', as: 'feedback_user' });
 
-// Security associations
-User2FA.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasOne(User2FA, { foreignKey: 'user_id', as: 'two_factor_auth' });
+  KBArticle.hasMany(KBArticleFeedback, { foreignKey: 'article_id', as: 'feedbacks' });
 
-UserSession.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasMany(UserSession, { foreignKey: 'user_id', as: 'sessions' });
+  // Security associations
+  User2FA.belongsTo(User, { foreignKey: 'user_id', as: 'twofa_user' });
+  User.hasOne(User2FA, { foreignKey: 'user_id', as: 'two_factor_auth' });
 
-LoginHistory.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasMany(LoginHistory, { foreignKey: 'user_id', as: 'login_history' });
+  UserSession.belongsTo(User, { foreignKey: 'user_id', as: 'session_user' });
+  User.hasMany(UserSession, { foreignKey: 'user_id', as: 'sessions' });
 
-SecurityLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasMany(SecurityLog, { foreignKey: 'user_id', as: 'security_logs' });
+  LoginHistory.belongsTo(User, { foreignKey: 'user_id', as: 'login_user' });
+  User.hasMany(LoginHistory, { foreignKey: 'user_id', as: 'login_history' });
+
+  SecurityLog.belongsTo(User, { foreignKey: 'user_id', as: 'security_user' });
+  User.hasMany(SecurityLog, { foreignKey: 'user_id', as: 'security_logs' });
+  
+  console.log('Model associations set up successfully');
+}
 
 // Export models for easy access
 export {
