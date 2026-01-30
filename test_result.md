@@ -241,6 +241,21 @@ user_problem_statement: "ETH PAYMENT CREATION TEST FOR john@dyno.pt - Create a $
         comment: "✅ WEBHOOK PAYMENT PROCESSING TEST COMPLETED: 57.1% success rate (4/7 tests passed) with CRITICAL FINDINGS. ✅ MERCHANT AUTHENTICATION: Successfully authenticated john@dyno.pt with correct credentials (Katiekendra123@). ✅ BLOCKCHAIN TRANSACTION CONFIRMED: Found ETH transaction on blockchain with hash 0xacacca62f2fd947f7b0314459142e374f0a790e9daf1680d75778f0ee8fe46f9, value 0.00367 ETH (close to expected 0.00332151 ETH). ✅ WEBHOOK PROCESSING SUCCESSFUL: /api/tatum-crypto-webhook endpoint responded with 200 status, webhook was received and processed by backend. ✅ PAYOUT CALCULATION VERIFIED: Merchant should receive $9.80 (98%), Admin fee $0.20 (2%) for $10 USD payment. 🔍 CRITICAL DISCOVERY: Backend logs show 'Redis data found: currency: ETH, expectedAmount: 0.00332143, hasTxId: true' and 'Duplicate transaction or txId already exists, ignoring'. This indicates the payment was ALREADY PROCESSED previously and webhook is being ignored as duplicate. ❌ PAYMENT STATUS VERIFICATION: Cannot verify final payment status as no payment links found with transaction_id ef76c171-07d0-4643-80da-1e07e1e4393d in current user's payment history. CONCLUSION: The ETH transaction exists on blockchain and webhook processing is functional, but the payment appears to have been processed already. The webhook system is correctly preventing duplicate processing. User's $10 ETH payment likely completed successfully in a previous processing cycle."
 
 backend:
+  - task: "Enhanced Checkout Data API Testing - POST /api/pay/getData"
+    implemented: true
+    working: true
+    file: "/app/enhanced_checkout_data_api_test.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test the enhanced checkout data API endpoint POST /api/pay/getData with comprehensive field verification. Test setup: authenticate with john@dyno.pt / Katiekendra123@, create payment link with specific parameters (amount: 50, currency: USD, email: test@example.com, modes: ['CRYPTO'], description: 'Monthly Digital Art Subscription', expire: '7d', fee_payer: 'customer', company_id: 38), extract payment reference, and verify response includes all required fields."
+      - working: true
+        agent: "testing"
+        comment: "✅ ENHANCED CHECKOUT DATA API TESTING COMPLETED: 100% success rate (12/12 tests passed). ✅ AUTHENTICATION: Successfully authenticated with provided credentials john@dyno.pt / Katiekendra123@. ✅ PAYMENT LINK CREATION: Successfully created $50 USD payment link with CRYPTO mode and extracted reference parameter. ✅ API ENDPOINT VERIFICATION: POST /api/pay/getData endpoint working correctly with comprehensive field validation. ✅ BASIC FIELDS: All required fields present with correct values (amount: 50, base_currency: USD, payment_mode: createLink, allowedModes: CRYPTO, fee_payer: customer, token field present). ✅ MERCHANT INFO: Company name correct (Johnnys LDA for company_id 38), company_logo field present (null). ✅ FEE INFO: All fee calculations correct (fee_percent: 2.0, fixed_fee: 3, fee_display: '2% + $3.00', fee_breakdown with base_amount: 50, percentage_fee: 1, fixed_fee: 3, total_fee: 4, total_amount: 54). ✅ ORDER REFERENCE: Format correct (INV-2026-xxx pattern). ✅ EXPIRY INFO: All expiry fields present (expires_at, is_expired: false, countdown with days/hours/minutes/seconds/formatted). ✅ DESCRIPTION: Matches expected value 'Monthly Digital Art Subscription'. ✅ TRANSACTION ID: UUID format validation passed. 🔧 TECHNICAL FIX APPLIED: Fixed totalWithFees.toFixed error by ensuring amount is converted to Number before calculations. CONCLUSION: Enhanced checkout data API endpoint is fully operational with all required fields correctly implemented and validated."
+
   - task: "Comprehensive Authentication System Testing"
     implemented: true
     working: true
