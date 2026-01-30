@@ -2147,7 +2147,7 @@ const verifyCryptoPayment = async (
         address: address, // Include address so user can send remaining payment
         // NEW: Timer and settings
         remaining_seconds: remainingSeconds,
-        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        grace_period_minutes: gracePeriodMinutes,
         merchant_settings: merchantSettings,
         partial_payment_timestamp: tempData?.partialPaymentTimestamp
       });
@@ -2164,7 +2164,7 @@ const verifyCryptoPayment = async (
         currency: currency,
         // NEW: Timer and settings
         remaining_seconds: remainingSeconds,
-        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        grace_period_minutes: gracePeriodMinutes,
         merchant_settings: merchantSettings
       });
     }
@@ -2180,7 +2180,7 @@ const verifyCryptoPayment = async (
         currency: currency,
         // Timer and settings
         remaining_seconds: remainingSeconds,
-        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        grace_period_minutes: gracePeriodMinutes,
         merchant_settings: merchantSettings
       });
     }
@@ -2196,7 +2196,7 @@ const verifyCryptoPayment = async (
         currency: currency,
         // Timer and settings
         remaining_seconds: remainingSeconds,
-        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        grace_period_minutes: gracePeriodMinutes,
         merchant_settings: merchantSettings
       });
     }
@@ -2253,7 +2253,7 @@ const verifyCryptoPayment = async (
         completedAt: tempData.completedAt,
         // Timer and settings (for consistency across all responses)
         remaining_seconds: 0, // Payment complete, no time remaining
-        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        grace_period_minutes: gracePeriodMinutes,
         merchant_settings: merchantSettings,
       };
       
@@ -2272,7 +2272,7 @@ const verifyCryptoPayment = async (
         txId: tempData.txId,
         // Timer and settings (for consistency)
         remaining_seconds: 0,
-        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        grace_period_minutes: gracePeriodMinutes,
         merchant_settings: merchantSettings
       });
     }
