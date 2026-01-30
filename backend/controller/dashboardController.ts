@@ -64,7 +64,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     // Check Redis cache first
     const cacheKey = `dashboard:${userId}:${company_id || 'all'}`;
     const cached = await getRedisItem(cacheKey);
-    if (cached) {
+    if (cached && Object.keys(cached).length > 0) {
       console.log(`[Dashboard] Cache hit for user ${userId}`);
       return successResponseHelper(res, 200, "Dashboard data retrieved successfully", cached);
     }
