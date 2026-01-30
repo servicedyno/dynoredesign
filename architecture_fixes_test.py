@@ -530,7 +530,7 @@ class ArchitectureFixesTester:
         try:
             response = requests.post(
                 f"{self.backend_url}/api/pay/getData",
-                json={"reference": payment_reference},
+                json={"data": payment_reference},
                 headers={"Content-Type": "application/json"},
                 timeout=15
             )
