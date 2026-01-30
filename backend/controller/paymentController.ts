@@ -286,12 +286,13 @@ const getData = async (req: express.Request, res: express.Response) => {
           order_reference: orderReference,
           description: item.description || null,
           merchant: companyInfo,
+          // Simplified fee info - no internal breakdown exposed
           fee_info: {
             fee_payer: item.fee_payer || 'company',
-            fee_percent: feePercent,
-            blockchain_buffer_percent: blockchainBuffer,
-            fixed_fee: fixedFee,
-            fee_display: feeDisplayString,
+            ...(item.fee_payer === 'customer' && {
+              processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
+              total_amount: parseFloat(totalWithFees.toFixed(2)),
+            })
           },
           expiry: expiryInfo,
         };
@@ -307,12 +308,13 @@ const getData = async (req: express.Request, res: express.Response) => {
           order_reference: orderReference,
           description: item.description || null,
           merchant: companyInfo,
+          // Simplified fee info - no internal breakdown exposed
           fee_info: {
             fee_payer: item.fee_payer || 'company',
-            fee_percent: feePercent,
-            blockchain_buffer_percent: blockchainBuffer,
-            fixed_fee: fixedFee,
-            fee_display: feeDisplayString,
+            ...(item.fee_payer === 'customer' && {
+              processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
+              total_amount: parseFloat(totalWithFees.toFixed(2)),
+            })
           },
           expiry: expiryInfo,
         };
