@@ -108,29 +108,22 @@ export const autoGenerateInvoice = async (
       .filter(Boolean)
       .join("\n");
 
-    // Calculate fees
+    // Calculate fees using centralized fee configuration
     const baseAmount = parseFloat(txData.base_amount || 0);
-    const transactionFeePercent = parseFloat(process.env.TRANSACTION_FEE_PERCENT || "2.0");
-    const blockchainBufferPercent = 0.5; // Default blockchain buffer
+    const transactionFeePercent = getTransactionFeePercent();
+    const feeTiers = getFeeTiers();
 
-    // Get fee tier configuration
+    // Find applicable fee tier based on amount
     const amount = baseAmount;
     let fixedFee = 0;
-    let bufferPercent = blockchainBufferPercent;
+    let bufferPercent = 0.5; // Default fallback
 
-    // Apply fee tiers
-    if (amount >= 5 && amount <= 100) {
-      fixedFee = parseFloat(process.env.FEE_TIER_1_FIXED || "3");
-      bufferPercent = parseFloat(process.env.FEE_TIER_1_BUFFER || "1.0");
-    } else if (amount >= 101 && amount <= 500) {
-      fixedFee = parseFloat(process.env.FEE_TIER_2_FIXED || "2");
-      bufferPercent = parseFloat(process.env.FEE_TIER_2_BUFFER || "0.8");
-    } else if (amount >= 501 && amount <= 1000) {
-      fixedFee = parseFloat(process.env.FEE_TIER_3_FIXED || "1.5");
-      bufferPercent = parseFloat(process.env.FEE_TIER_3_BUFFER || "0.5");
-    } else if (amount >= 1001) {
-      fixedFee = parseFloat(process.env.FEE_TIER_4_FIXED || "1");
-      bufferPercent = parseFloat(process.env.FEE_TIER_4_BUFFER || "0.3");
+    for (const tier of feeTiers) {
+      if (amount >= tier.min && (tier.max === null || amount <= tier.max)) {
+        fixedFee = tier.fixed;
+        bufferPercent = tier.buffer || 0.5;
+        break;
+      }
     }
 
     // Calculate VAT (if applicable)
