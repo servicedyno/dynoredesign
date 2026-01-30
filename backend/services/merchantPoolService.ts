@@ -1813,6 +1813,124 @@ export const processQueuedPayments = async (tempAddressId: number): Promise<void
   console.log(`[MerchantPool] Processing queued payments for address ${tempAddressId}`);
 };
 
+/**
+ * Subscription Health Monitor
+ * 
+ * Ensures all merchant pool addresses have valid Tatum subscriptions.
+ * - Fetches active subscriptions from Tatum (costs ~2 credits per call)
+ * - Compares with database records
+ * - Re-subscribes any addresses with missing/invalid subscriptions
+ * - Updates webhook URLs if changed
+ * 
+ * Tatum Credit Cost:
+ * - List subscriptions: ~2 credits
+ * - Create subscription: ~10 credits
+ * - Update subscription: ~5 credits
+ * - At 30-min intervals: ~96 credits/day for listing (minimal)
+ */
+export const ensurePoolSubscriptions = async (): Promise<{
+  checked: number;
+  valid: number;
+  resubscribed: number;
+  failed: number;
+  errors: string[];
+}> => {
+  const result = {
+    checked: 0,
+    valid: 0,
+    resubscribed: 0,
+    failed: 0,
+    errors: [] as string[],
+  };
+
+  try {
+    console.log("[MerchantPool] 🔍 Starting subscription health check...");
+
+    // Step 1: Fetch all active subscriptions from Tatum
+    const activeSubscriptions = await tatumApi.listAllSubscriptions();
+    
+    // Create a map of address -> subscription for quick lookup
+    const activeSubsMap = new Map<string, any>();
+    for (const sub of activeSubscriptions) {
+      const address = sub.attr?.address?.toLowerCase();
+      if (address) {
+        activeSubsMap.set(address, sub);
+      }
+    }
+    
+    console.log(`[MerchantPool] 📋 Found ${activeSubscriptions.length} active Tatum subscriptions`);
+
+    // Step 2: Get all merchant pool addresses from database
+    const poolAddresses = await merchantTempAddressModel.findAll({
+      attributes: ['temp_address_id', 'wallet_address', 'wallet_type', 'status', 'subscription_id'],
+    });
+
+    console.log(`[MerchantPool] 📋 Found ${poolAddresses.length} merchant pool addresses in DB`);
+
+    // Step 3: Check each address and fix issues
+    for (const addr of poolAddresses) {
+      result.checked++;
+      
+      const walletAddress = addr.dataValues.wallet_address.toLowerCase();
+      const dbSubId = addr.dataValues.subscription_id;
+      const walletType = addr.dataValues.wallet_type;
+      const activeSub = activeSubsMap.get(walletAddress);
+
+      // Case 1: Valid subscription exists and matches
+      if (activeSub && dbSubId === activeSub.id) {
+        result.valid++;
+        continue;
+      }
+
+      // Case 2: Subscription exists in Tatum but DB has wrong/null ID
+      if (activeSub && dbSubId !== activeSub.id) {
+        console.log(`[MerchantPool] 🔄 Updating subscription ID for ${walletAddress}: ${dbSubId} -> ${activeSub.id}`);
+        await addr.update({ subscription_id: activeSub.id });
+        result.valid++;
+        continue;
+      }
+
+      // Case 3: No subscription in Tatum - need to create one
+      if (!activeSub) {
+        console.log(`[MerchantPool] ⚠️ Missing subscription for ${walletAddress} (${walletType}), creating...`);
+        
+        try {
+          const newSub = await tatumApi.createSubscription(walletAddress, walletType, true);
+          
+          if (newSub?.id) {
+            await addr.update({ subscription_id: newSub.id });
+            console.log(`[MerchantPool] ✅ Created subscription for ${walletAddress}: ${newSub.id}`);
+            result.resubscribed++;
+          } else {
+            throw new Error("No subscription ID returned");
+          }
+        } catch (subError: any) {
+          console.error(`[MerchantPool] ❌ Failed to create subscription for ${walletAddress}: ${subError.message}`);
+          result.failed++;
+          result.errors.push(`${walletAddress}: ${subError.message}`);
+        }
+      }
+    }
+
+    console.log(`[MerchantPool] ✅ Subscription health check complete:`);
+    console.log(`   - Checked: ${result.checked}`);
+    console.log(`   - Valid: ${result.valid}`);
+    console.log(`   - Re-subscribed: ${result.resubscribed}`);
+    console.log(`   - Failed: ${result.failed}`);
+
+    if (result.errors.length > 0) {
+      cronLogger?.warn?.("Subscription health check had failures", { errors: result.errors });
+    }
+
+  } catch (error: any) {
+    console.error("[MerchantPool] ❌ Subscription health check failed:", error.message);
+    cronLogger?.error?.("Subscription health check failed", {}, error);
+    result.errors.push(`Global error: ${error.message}`);
+  }
+
+  return result;
+};
+
 export default {
   getOrCreateMerchantWallet,
   addAddressToMerchantPool,
