@@ -362,12 +362,20 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
-    // FIXED: Only process on FIRST transaction (when txId is not set)
-    // This matches the working DynoBackend behavior
+    // FIXED: Process when:
+    // 1. First transaction (no txId set)
+    // 2. OR this is a completion payment for an underpayment (incomplete=true and this is a NEW txId)
     const isFirstTransaction = !items.txId;
+    const isCompletionPayment = String(items.incomplete) === "true" && 
+                                items.txId !== payload.txId;  // New transaction for underpayment completion
 
-    if (isFirstTransaction && incomingAmount > 0) {
-      console.log("[tatumCryptoWebHook] First transaction detected, processing...");
+    if ((isFirstTransaction || isCompletionPayment) && incomingAmount > 0) {
+      if (isCompletionPayment) {
+        console.log("[tatumCryptoWebHook] COMPLETION payment detected for underpayment!");
+        console.log(`[tatumCryptoWebHook] Previous txId: ${items.txId}, New txId: ${payload.txId}`);
+      } else {
+        console.log("[tatumCryptoWebHook] First transaction detected, processing...");
+      }
       
       // Get customer data - try from Redis first, then fallback to temp_id lookup
       let customerData = await getRedisItem(items?.ref);
