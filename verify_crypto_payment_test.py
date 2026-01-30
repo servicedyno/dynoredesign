@@ -108,7 +108,7 @@ class VerifyCryptoPaymentTester:
                 "Content-Type": "application/json"
             }
             
-            # Create payment link with CRYPTO mode
+            # Create payment link with CRYPTO mode - use correct endpoint
             payment_data = {
                 "amount": 50,
                 "currency": "USD",
@@ -161,6 +161,42 @@ class VerifyCryptoPaymentTester:
                         "Invalid response format",
                         {"response": data}
                     )
+            elif response.status_code == 404:
+                # Try alternative endpoint structure
+                response2 = requests.post(
+                    f"{self.backend_url}/api/payment/links",
+                    json=payment_data,
+                    headers=headers,
+                    timeout=15
+                )
+                
+                if response2.status_code == 200:
+                    data = response2.json()
+                    if 'data' in data:
+                        payment_info = data['data']
+                        payment_link = payment_info.get('payment_link', '')
+                        if '?d=' in payment_link:
+                            self.payment_reference = payment_link.split('?d=')[1]
+                            self.log_result(
+                                "Payment Link Creation", 
+                                True, 
+                                f"Successfully created payment link (alternative endpoint)",
+                                {
+                                    "transaction_id": payment_info.get('transaction_id'),
+                                    "link_id": payment_info.get('link_id'),
+                                    "amount": payment_info.get('amount'),
+                                    "currency": payment_info.get('currency'),
+                                    "payment_reference": self.payment_reference
+                                }
+                            )
+                            return True
+                
+                self.log_result(
+                    "Payment Link Creation", 
+                    False, 
+                    f"Both endpoints failed. Status: {response.status_code}, Alt Status: {response2.status_code}",
+                    {"response1": response.text, "response2": response2.text}
+                )
             else:
                 self.log_result(
                     "Payment Link Creation", 
