@@ -52,6 +52,7 @@ const calculateChange = (current: number, previous: number): number => {
 /**
  * Get all dashboard statistics
  * GET /api/dashboard
+ * OPTIMIZED: Combined single query + Redis caching (30s TTL)
  */
 const getDashboard = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
@@ -59,6 +60,14 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
   try {
     const { company_id } = req.query;
     const userId = userData.user_id;
+    
+    // Check Redis cache first
+    const cacheKey = `dashboard:${userId}:${company_id || 'all'}`;
+    const cached = await getRedisItem(cacheKey);
+    if (cached) {
+      console.log(`[Dashboard] Cache hit for user ${userId}`);
+      return successResponseHelper(res, 200, "Dashboard data retrieved successfully", cached);
+    }
 
     // Date ranges
     const now = new Date();
@@ -66,93 +75,57 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    // Build where clause
-    const baseWhere: any = { user_id: userId };
-    if (company_id) {
-      baseWhere.company_id = company_id;
-    }
+    // OPTIMIZED: Single combined query for all transaction stats
+    const companyJoin = company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : '';
+    const companyFilter = company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : '';
+    
+    const combinedQuery = `
+      SELECT 
+        -- Current month stats
+        COUNT(*) FILTER (WHERE ut.status = 'done' AND ut."createdAt" >= :startOfMonth) as current_month_count,
+        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status = 'done' AND ut."createdAt" >= :startOfMonth), 0) as current_month_volume,
+        -- Last month stats
+        COUNT(*) FILTER (WHERE ut.status = 'done' AND ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth) as last_month_count,
+        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status = 'done' AND ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_volume,
+        -- All-time stats
+        COUNT(*) FILTER (WHERE ut.status = 'done') as total_count,
+        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status = 'done'), 0) as total_volume,
+        -- Pending count
+        COUNT(*) FILTER (WHERE ut.status = 'pending') as pending_count
+      FROM tbl_user_transaction ut
+      ${companyJoin}
+      WHERE ut.user_id = :userId ${companyFilter}
+    `;
 
-    // Get current month transactions
-    const currentMonthTransactions = await sequelize.query(
-      `SELECT COUNT(*) as count, COALESCE(SUM(ut.base_amount), 0) as volume
-       FROM tbl_user_transaction ut
-       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
-       WHERE ut.user_id = :userId 
-       AND ut.status = 'done'
-       AND ut."createdAt" >= :startOfMonth
-       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
-      {
-        replacements: { userId, startOfMonth, companyId: company_id },
+    // Run both queries in parallel
+    const [transactionStats, activeWallets] = await Promise.all([
+      sequelize.query(combinedQuery, {
+        replacements: { userId, startOfMonth, startOfLastMonth, endOfLastMonth, companyId: company_id },
         type: QueryTypes.SELECT,
-      }
-    ) as any[];
+      }),
+      sequelize.query(
+        `SELECT DISTINCT wallet_type, wallet_name, company_id
+         FROM tbl_user_wallet 
+         WHERE user_id = :userId 
+         AND currency_type = 'CRYPTO'
+         AND wallet_address IS NOT NULL
+         ${company_id ? 'AND company_id = :companyId' : ''}`,
+        {
+          replacements: { userId, companyId: company_id },
+          type: QueryTypes.SELECT,
+        }
+      )
+    ]) as [any[], any[]];
 
-    // Get last month transactions
-    const lastMonthTransactions = await sequelize.query(
-      `SELECT COUNT(*) as count, COALESCE(SUM(ut.base_amount), 0) as volume
-       FROM tbl_user_transaction ut
-       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
-       WHERE ut.user_id = :userId 
-       AND ut.status = 'done'
-       AND ut."createdAt" >= :startOfLastMonth
-       AND ut."createdAt" <= :endOfLastMonth
-       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
-      {
-        replacements: { userId, startOfLastMonth, endOfLastMonth, companyId: company_id },
-        type: QueryTypes.SELECT,
-      }
-    ) as any[];
-
-    // Get all-time totals
-    const allTimeTransactions = await sequelize.query(
-      `SELECT COUNT(*) as count, COALESCE(SUM(ut.base_amount), 0) as volume
-       FROM tbl_user_transaction ut
-       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
-       WHERE ut.user_id = :userId 
-       AND ut.status = 'done'
-       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
-      {
-        replacements: { userId, companyId: company_id },
-        type: QueryTypes.SELECT,
-      }
-    ) as any[];
-
-    // Get active wallets
-    const activeWallets = await sequelize.query(
-      `SELECT DISTINCT wallet_type, wallet_name, company_id
-       FROM tbl_user_wallet 
-       WHERE user_id = :userId 
-       AND currency_type = 'CRYPTO'
-       AND wallet_address IS NOT NULL
-       ${company_id ? 'AND company_id = :companyId' : ''}`,
-      {
-        replacements: { userId, companyId: company_id },
-        type: QueryTypes.SELECT,
-      }
-    ) as any[];
-
-    // Get pending transactions count
-    const pendingTransactions = await sequelize.query(
-      `SELECT COUNT(*) as count
-       FROM tbl_user_transaction ut
-       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
-       WHERE ut.user_id = :userId 
-       AND ut.status = 'pending'
-       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
-      {
-        replacements: { userId, companyId: company_id },
-        type: QueryTypes.SELECT,
-      }
-    ) as any[];
-
-    // Parse results
-    const currentCount = parseInt(currentMonthTransactions[0]?.count || '0');
-    const currentVolume = parseFloat(currentMonthTransactions[0]?.volume || '0');
-    const lastCount = parseInt(lastMonthTransactions[0]?.count || '0');
-    const lastVolume = parseFloat(lastMonthTransactions[0]?.volume || '0');
-    const totalCount = parseInt(allTimeTransactions[0]?.count || '0');
-    const totalVolume = parseFloat(allTimeTransactions[0]?.volume || '0');
-    const pendingCount = parseInt(pendingTransactions[0]?.count || '0');
+    // Parse results from combined query
+    const stats = transactionStats[0] || {};
+    const currentCount = parseInt(stats.current_month_count || '0');
+    const currentVolume = parseFloat(stats.current_month_volume || '0');
+    const lastCount = parseInt(stats.last_month_count || '0');
+    const lastVolume = parseFloat(stats.last_month_volume || '0');
+    const totalCount = parseInt(stats.total_count || '0');
+    const totalVolume = parseFloat(stats.total_volume || '0');
+    const pendingCount = parseInt(stats.pending_count || '0');
 
     // Calculate fee tier
     const feeTier = getFeeTier(currentVolume);
@@ -182,6 +155,10 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       },
       fee_tier: feeTier,
     };
+
+    // Cache the result
+    await setRedisItem(cacheKey, dashboardData);
+    await setRedisTTL(cacheKey, DASHBOARD_CACHE_TTL);
 
     return successResponseHelper(res, 200, "Dashboard data retrieved successfully", dashboardData);
 
