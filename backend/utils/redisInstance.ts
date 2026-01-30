@@ -22,16 +22,72 @@ export const connectRedis = async () => {
   }
 };
 
+// ============================================
+// IN-MEMORY CACHE LAYER (for hot data - <1ms)
+// ============================================
+interface CacheEntry {
+  value: any;
+  expires: number;
+}
+
+const memoryCache = new Map<string, CacheEntry>();
+
+// Set item in memory cache with TTL
+const setMemoryCache = (key: string, value: any, ttlSeconds: number) => {
+  memoryCache.set(key, {
+    value,
+    expires: Date.now() + (ttlSeconds * 1000)
+  });
+};
+
+// Get item from memory cache
+const getMemoryCache = (key: string): any | null => {
+  const entry = memoryCache.get(key);
+  if (!entry) return null;
+  
+  if (Date.now() > entry.expires) {
+    memoryCache.delete(key);
+    return null;
+  }
+  
+  return entry.value;
+};
+
+// Clear expired entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of memoryCache.entries()) {
+    if (now > entry.expires) {
+      memoryCache.delete(key);
+    }
+  }
+}, 60000); // Clean up every minute
+
+// ============================================
+// REDIS OPERATIONS (for distributed caching)
+// ============================================
+
 const setRedisItem = async (key: string, value: any) => {
-  for (const [field, val] of Object.entries(value)) {
-    if (val !== undefined && val !== null) {
-      await redisClient.hSet(key, field, val.toString());
+  // Also store in memory cache for fast access
+  setMemoryCache(key, value, 30);
+  
+  // Store as JSON string for complex objects
+  if (typeof value === 'object') {
+    await redisClient.set(key + ':json', JSON.stringify(value));
+  } else {
+    for (const [field, val] of Object.entries(value)) {
+      if (val !== undefined && val !== null) {
+        await redisClient.hSet(key, field, val.toString());
+      }
     }
   }
 };
 
 // Set Redis item with TTL (time-to-live in seconds)
 const setRedisItemWithTTL = async (key: string, value: any, ttlSeconds: number) => {
+  // Also store in memory cache
+  setMemoryCache(key, value, ttlSeconds);
+  
   for (const [field, val] of Object.entries(value)) {
     if (val !== undefined && val !== null) {
       await redisClient.hSet(key, field, val.toString());
@@ -46,11 +102,37 @@ const setRedisTTL = async (key: string, ttlSeconds: number) => {
 };
 
 const getRedisItem = async (key: string) => {
-  return await redisClient.hGetAll(key);
+  // Check memory cache first (< 1ms)
+  const memCached = getMemoryCache(key);
+  if (memCached && Object.keys(memCached).length > 0) {
+    console.log(`[Cache] Memory hit for ${key}`);
+    return memCached;
+  }
+  
+  // Check for JSON stored object
+  const jsonValue = await redisClient.get(key + ':json');
+  if (jsonValue) {
+    try {
+      const parsed = JSON.parse(jsonValue);
+      setMemoryCache(key, parsed, 30); // Cache in memory
+      return parsed;
+    } catch (e) {
+      // Not JSON, fall through to hash
+    }
+  }
+  
+  // Fall back to hash storage
+  const hashValue = await redisClient.hGetAll(key);
+  if (hashValue && Object.keys(hashValue).length > 0) {
+    setMemoryCache(key, hashValue, 30); // Cache in memory
+  }
+  return hashValue;
 };
 
 const deleteRedisItem = async (key: string) => {
+  memoryCache.delete(key);
   await redisClient.del(key);
+  await redisClient.del(key + ':json');
 };
 
 // Soft delete - set TTL instead of immediate deletion (for checkout polling)
@@ -60,4 +142,4 @@ const softDeleteRedisItem = async (key: string, ttlSeconds: number = 1800) => {
   console.log(`[Redis] Soft delete: ${key} will expire in ${ttlSeconds}s`);
 };
 
-export { setRedisItem, setRedisItemWithTTL, setRedisTTL, getRedisItem, deleteRedisItem, softDeleteRedisItem };
+export { setRedisItem, setRedisItemWithTTL, setRedisTTL, getRedisItem, deleteRedisItem, softDeleteRedisItem, setMemoryCache, getMemoryCache };
