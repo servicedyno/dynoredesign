@@ -31,6 +31,7 @@ interface CacheEntry {
 }
 
 const memoryCache = new Map<string, CacheEntry>();
+console.log('[MemoryCache] Initialized');
 
 // Set item in memory cache with TTL
 const setMemoryCache = (key: string, value: any, ttlSeconds: number) => {
@@ -38,18 +39,24 @@ const setMemoryCache = (key: string, value: any, ttlSeconds: number) => {
     value,
     expires: Date.now() + (ttlSeconds * 1000)
   });
+  console.log(`[MemoryCache] SET ${key} (size: ${memoryCache.size})`);
 };
 
 // Get item from memory cache
 const getMemoryCache = (key: string): any | null => {
   const entry = memoryCache.get(key);
-  if (!entry) return null;
-  
-  if (Date.now() > entry.expires) {
-    memoryCache.delete(key);
+  if (!entry) {
+    console.log(`[MemoryCache] MISS ${key}`);
     return null;
   }
   
+  if (Date.now() > entry.expires) {
+    memoryCache.delete(key);
+    console.log(`[MemoryCache] EXPIRED ${key}`);
+    return null;
+  }
+  
+  console.log(`[MemoryCache] HIT ${key}`);
   return entry.value;
 };
 
