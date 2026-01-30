@@ -58,6 +58,14 @@ const getWallet = async (req: express.Request, res: express.Response) => {
   try {
     const { company_id } = req.query;
     
+    // Check cache first (30 second TTL)
+    const cacheKey = `wallet:${userData.user_id}:${company_id || 'all'}`;
+    const cached = await getRedisItem(cacheKey);
+    if (cached && Object.keys(cached).length > 0) {
+      console.log(`[Wallet] Cache hit for user ${userData.user_id}`);
+      return successResponseHelper(res, 200, "Wallets retrieved", cached);
+    }
+    
     // Build where clause with optional company_id filter
     const whereClause: any = {
       user_id: userData.user_id,
@@ -116,6 +124,10 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     const message = returnData.length === 0 
       ? "No wallets found. Add your first wallet address to start receiving payments."
       : `Successfully retrieved ${returnData.length} wallet${returnData.length === 1 ? '' : 's'}`;
+    
+    // Cache the result
+    await setRedisItem(cacheKey, returnData);
+    await setRedisTTL(cacheKey, 30);
     
     successResponseHelper(res, 200, message, returnData);
   } catch (e) {
