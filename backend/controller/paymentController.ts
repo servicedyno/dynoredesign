@@ -1957,21 +1957,42 @@ const verifyCryptoPayment = async (
           `?transaction_id=${tempData.payment_id || tempData.unique_tx_id}&status=successful&payment_type=CRYPTO`;
       }
       
+      // Get base currency info for USD conversion
+      const baseCurrency = customerData?.base_currency || tempData?.base_currency || "USD";
+      const baseAmount = parseFloat(customerData?.base_amount || tempData?.base_amount || "0");
+      
+      // Calculate USD values for overpayment
+      let paidAmountUsd = 0;
+      let expectedAmountUsd = baseAmount;
+      let excessAmountUsd = 0;
+      
+      if (totalReceived > 0 && originalExpected > 0) {
+        // Calculate paid USD based on ratio
+        const ratio = totalReceived / originalExpected;
+        paidAmountUsd = baseAmount * ratio;
+        excessAmountUsd = isOverpayment ? (paidAmountUsd - baseAmount) : 0;
+      }
+      
       // Build response matching checkout page expected format
       // Checkout expects: status, redirect (for redirect URL), paidAmount, expectedAmount, excessAmount
       const responseData: any = {
-        status: isOverpayment ? "overpaid" : "confirmed",  // FIXED: Use "overpaid" not "overpayment" to match checkout
+        status: isOverpayment ? "overpaid" : "confirmed",
         message: isOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
-        redirect: redirectUrl,  // FIXED: Use "redirect" not "redirect_url" to match checkout
+        redirect: redirectUrl,
         txId: tempData.txId,
-        paidAmount: parseFloat(totalReceived.toFixed(6)),  // FIXED: Use camelCase to match checkout
-        expectedAmount: parseFloat(originalExpected.toFixed(6)),  // FIXED: Use camelCase to match checkout
+        paidAmount: parseFloat(totalReceived.toFixed(6)),
+        expectedAmount: parseFloat(originalExpected.toFixed(6)),
         currency: currency,
+        // USD amounts
+        paidAmountUsd: parseFloat(paidAmountUsd.toFixed(2)),
+        expectedAmountUsd: parseFloat(expectedAmountUsd.toFixed(2)),
+        baseCurrency: baseCurrency,
         completedAt: tempData.completedAt,
       };
       
       if (isOverpayment) {
-        responseData.excessAmount = parseFloat(overpaymentAmount.toFixed(6));  // FIXED: Add excessAmount for overpayment
+        responseData.excessAmount = parseFloat(overpaymentAmount.toFixed(6));
+        responseData.excessAmountUsd = parseFloat(excessAmountUsd.toFixed(2));
       }
       
       return successResponseHelper(res, 200, responseData.message, responseData);
