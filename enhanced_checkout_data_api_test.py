@@ -332,19 +332,19 @@ class EnhancedCheckoutDataAPITester:
         
         merchant = checkout_data['merchant']
         
-        # Check company_name (should be "Johnny LTD" for company_id 38)
+        # Check company_name (should be "Johnnys LDA" for company_id 38)
         if 'company_name' not in merchant:
             self.log_result(
                 "Merchant Info - Company Name", 
                 False, 
                 "Missing company_name in merchant object"
             )
-        elif merchant['company_name'] != "Johnny LTD":
+        elif merchant['company_name'] != "Johnnys LDA":
             self.log_result(
                 "Merchant Info - Company Name", 
                 False, 
-                f"Expected company_name 'Johnny LTD', got '{merchant['company_name']}'",
-                {"expected": "Johnny LTD", "actual": merchant['company_name']}
+                f"Expected company_name 'Johnnys LDA', got '{merchant['company_name']}'",
+                {"expected": "Johnnys LDA", "actual": merchant['company_name']}
             )
         else:
             self.log_result(
