@@ -191,8 +191,9 @@ testRouter.get("/redis/:key", authMiddleware, async (req, res) => {
 /**
  * DELETE /api/test/redis/:key
  * Delete Redis data for a specific key
+ * Protected: Requires authentication
  */
-testRouter.delete("/redis/:key", async (req, res) => {
+testRouter.delete("/redis/:key", authMiddleware, async (req, res) => {
   try {
     const key = req.params.key;
     await deleteRedisItem(key);
