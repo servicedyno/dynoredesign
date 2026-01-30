@@ -3072,6 +3072,11 @@ const getCurrencyRates = async (
     // If customer pays fees, calculate total amounts including all fees
     if (fee_payer === 'customer') {
       console.log(`[getCurrencyRates] Customer pays fees - calculating enhanced rates with fees`);
+      
+      // Pre-fetch all blockchain fees in parallel for better performance
+      const allBlockchainFees = await getAllBlockchainFees();
+      console.log(`[getCurrencyRates] Pre-fetched blockchain fees for ${Object.keys(allBlockchainFees).length} chains`);
+      
       const enhancedRates = await Promise.all(
         currencyRateList.map(async (rate: any) => {
           try {
@@ -3083,7 +3088,8 @@ const getCurrencyRates = async (
               const chain = 'ETH';
               console.log(`[getCurrencyRates] Processing fiat ${rate.currency} - using ${chain} for fee calculation`);
               
-              const networkFee = await getBlockchainNetworkFee(chain);
+              // Use pre-fetched fees instead of individual API call
+              const networkFee = allBlockchainFees[chain] || await getBlockchainNetworkFee(chain);
               const feeResult = await calculateTransactionFees(chain, amount);
               
               const fixedFee = Number(feeResult.fixedFee) || 0;
