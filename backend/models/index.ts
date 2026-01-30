@@ -29,6 +29,14 @@ import notificationPreferencesModel from "./notificationPreferencesModel";
 import kycModel from "./kycModel";
 import webhookDeliveryLogModel from "./webhookDeliveryLogModel";
 
+// Referral models
+import referralModel from "./referralModels/referralModel";
+import referralRewardModel from "./referralModels/referralRewardModel";
+
+// Knowledge Base models
+import kbCategoryModel from "./knowledgeBaseModels/kbCategoryModel";
+import kbArticleModel from "./knowledgeBaseModels/kbArticleModel";
+
 // USDT Pool System models (legacy - to be deprecated)
 import {
   usdtPoolAddressModel,
