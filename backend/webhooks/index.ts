@@ -595,8 +595,9 @@ const tatumCryptoWebHook = async (
           ...items,
           status: "successful",
           txId: payload.txId,
-          receivedAmount: incomingAmount,
+          receivedAmount: finalReceivedAmount,  // Use cumulative amount
           originalExpectedAmount: expectedAmount,
+          incomplete: "false",  // Clear incomplete flag
           completedAt: new Date().toISOString(),
         });
         
@@ -611,7 +612,7 @@ const tatumCryptoWebHook = async (
               ...customerData,
               status: "successful",
               txId: payload.txId,
-              receivedAmount: incomingAmount,
+              receivedAmount: finalReceivedAmount,  // Use cumulative amount
               completedAt: new Date().toISOString(),
             });
             await setRedisTTL(items.ref, 1800); // 30 minutes TTL
@@ -622,7 +623,7 @@ const tatumCryptoWebHook = async (
         await setRedisItem(`processed-tx-${payload.txId}`, {
           address: address,
           payment_id: items.payment_id || items.ref,
-          amount: incomingAmount,
+          amount: finalReceivedAmount,  // Use cumulative amount
           processed_at: new Date().toISOString(),
         });
         await setRedisTTL(`processed-tx-${payload.txId}`, 172800); // 48 hours TTL
