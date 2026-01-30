@@ -2027,9 +2027,26 @@ const verifyCryptoPayment = async (
     let remainingSeconds = 15 * 60; // Default 15 minutes
     const GRACE_PERIOD_MINUTES = 30; // Grace period for underpayment completion
     
-    // Default merchant settings (until merchant configures their own)
+    // Default merchant settings - $5 overpayment threshold if merchant didn't set it
+    let merchantOverpaymentThreshold = 5; // Default $5
+    
+    // Try to fetch merchant-specific settings from company
+    if (customerData?.company_id || tempData?.company_id) {
+      try {
+        const company = await companyModel.findOne({
+          where: { company_id: customerData?.company_id || tempData?.company_id }
+        });
+        if (company?.dataValues?.overpayment_threshold_usd !== undefined && 
+            company?.dataValues?.overpayment_threshold_usd !== null) {
+          merchantOverpaymentThreshold = parseFloat(company.dataValues.overpayment_threshold_usd);
+        }
+      } catch (e) {
+        console.log("[verifyCryptoPayment] Could not fetch merchant settings:", e);
+      }
+    }
+    
     const merchantSettings = {
-      overpayment_threshold_usd: 5, // $5 default threshold
+      overpayment_threshold_usd: merchantOverpaymentThreshold,
       grace_period_minutes: GRACE_PERIOD_MINUTES,
     };
     
