@@ -19,8 +19,9 @@ const testRouter = express.Router();
 /**
  * POST /api/test/fix-customer-id-column
  * Fix the customer_id column to allow NULL values
+ * Protected: Admin only
  */
-testRouter.post("/fix-customer-id-column", async (req, res) => {
+testRouter.post("/fix-customer-id-column", authMiddleware, async (req, res) => {
   try {
     await sequelize.query('ALTER TABLE tbl_customer_transaction ALTER COLUMN customer_id DROP NOT NULL;');
     
