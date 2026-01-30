@@ -79,6 +79,26 @@ const userModel = sequelize.define(
       defaultValue: false,
       allowNull: true,
     },
+    // Referral fields
+    referral_code: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      unique: true,
+    },
+    referral_count: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: true,
+    },
+    referral_bonus_earned: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 0,
+      allowNull: true,
+    },
+    referred_by_code: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
   },
   {
     tableName: "tbl_user",
