@@ -2090,8 +2090,7 @@ const verifyCryptoPayment = async (
       let expectedAmountUsd = baseAmount;
       let remainingAmountUsd = 0;
       
-      // Try to get base amounts from customerData if not available in tempData
-      const customerData = await getRedisItem(tempData?.ref);
+      // Use customerData already fetched above
       const actualBaseAmount = baseAmount > 0 ? baseAmount : parseFloat(customerData?.base_amount || "0");
       
       if (totalPaid > 0 && originalExpected > 0 && actualBaseAmount > 0) {
@@ -2107,7 +2106,8 @@ const verifyCryptoPayment = async (
         - Remaining: ${remainingAmount} ${currency}
         - Paid USD: $${paidAmountUsd.toFixed(2)}
         - Expected USD: $${expectedAmountUsd.toFixed(2)}
-        - Remaining USD: $${remainingAmountUsd.toFixed(2)}`);
+        - Remaining USD: $${remainingAmountUsd.toFixed(2)}
+        - Remaining Seconds: ${remainingSeconds}`);
       
       // FIXED: Use "underpaid" status and camelCase fields to match checkout page expectations
       return successResponseHelper(res, 200, "Partial payment received", {
@@ -2124,7 +2124,10 @@ const verifyCryptoPayment = async (
         baseCurrency: baseCurrency || customerData?.base_currency || "USD",
         txId: tempData?.previousTxId || tempData?.txId,
         address: address, // Include address so user can send remaining payment
-        grace_period_minutes: 30,
+        // NEW: Timer and settings
+        remaining_seconds: remainingSeconds,
+        grace_period_minutes: GRACE_PERIOD_MINUTES,
+        merchant_settings: merchantSettings,
         partial_payment_timestamp: tempData?.partialPaymentTimestamp
       });
     }
