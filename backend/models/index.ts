@@ -85,6 +85,12 @@ export {
   notificationPreferencesModel,
   kycModel,
   webhookDeliveryLogModel,
+  // Referral models
+  referralModel,
+  referralRewardModel,
+  // Knowledge Base models
+  kbCategoryModel,
+  kbArticleModel,
   // USDT Pool System models (legacy)
   usdtPoolAddressModel,
   usdtPoolTransactionModel,
