@@ -1848,3 +1848,15 @@ ports:
       - working: "NA"
         agent: "main"
         comment: "Implemented per-merchant USDT/USDC pool system with lazy xpub generation, address rotation, gas funding optimization, and sweep mechanism. Integration with payment controller and wallet configuration hook added. Supports 9 crypto types: BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20. Key files: /app/backend/services/merchantPoolService.ts, /app/backend/models/merchantPoolModels/index.ts. Tables created: tbl_merchant_wallet, tbl_merchant_temp_address, tbl_merchant_pool_transaction, tbl_merchant_pool_sweep."
+
+  - task: "Enhanced Checkout Data API - getData Endpoint"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Enhanced POST /api/pay/getData endpoint to include: (1) Merchant info (company_name, company_logo if available), (2) Fee breakdown with display string format (e.g., '2% + $3.00'), (3) Expiry countdown with formatted string, (4) Order reference in format INV-YEAR-ID, (5) Transaction details and description. Fee tiers are applied based on payment amount."
