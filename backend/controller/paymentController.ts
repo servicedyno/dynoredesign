@@ -2475,9 +2475,10 @@ const cryptoVerification = async (address, webhook = true) => {
       }
 
       if (isFullPayment || webhook) {
-        const totalAmountReceived = tempData?.incomplete && tempData?.previousAmount
-          ? Number(tempData.previousAmount) + Number(receivedAmount)
-          : Number(receivedAmount);
+        // FIX: For completion payments, use receivedAmount directly as it's already the cumulative total
+        // The webhook handler updates receivedAmount to be (previousAmount + newPayment)
+        // So we should NOT add previousAmount again here
+        const totalAmountReceived = Number(receivedAmount);
 
         // Check fee_payer mode
         const fee_payer = tempData?.fee_payer || 'company';
