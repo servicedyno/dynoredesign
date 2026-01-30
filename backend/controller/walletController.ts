@@ -1957,7 +1957,7 @@ const exchangeCreate = async (req: express.Request, res: express.Response) => {
           },
         });
       } else {
-        errorResponseHelper(res, 500, "user not found!");
+        errorResponseHelper(res, 404, "user not found!");
         return;
       }
     }
@@ -1965,7 +1965,7 @@ const exchangeCreate = async (req: express.Request, res: express.Response) => {
       if (secondUser?.dataValues.user_id === userData.user_id) {
         errorResponseHelper(
           res,
-          500,
+          400,
           "please check provided details as user can not exchange with their own account!"
         );
       } else {
@@ -2067,7 +2067,7 @@ const exchangeCreate = async (req: express.Request, res: express.Response) => {
         });
       }
     } else {
-      errorResponseHelper(res, 500, "user not found!");
+      errorResponseHelper(res, 404, "user not found!");
     }
   } catch (e) {
     console.log(e);

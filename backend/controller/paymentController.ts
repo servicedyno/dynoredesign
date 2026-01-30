@@ -3504,7 +3504,7 @@ const deletePaymentLink = async (
     });
 
     if (links < 1) {
-      errorResponseHelper(res, 500, "Link not found!");
+      errorResponseHelper(res, 404, "Link not found!");
     } else {
       successResponseHelper(res, 200, "Payment link deleted successfully", links);
     }
