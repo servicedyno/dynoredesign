@@ -171,8 +171,9 @@ testRouter.post("/simulate-payment-redis", authMiddleware, async (req, res) => {
 /**
  * GET /api/test/redis/:key
  * Get Redis data for a specific key
+ * Protected: Requires authentication
  */
-testRouter.get("/redis/:key", async (req, res) => {
+testRouter.get("/redis/:key", authMiddleware, async (req, res) => {
   try {
     const key = req.params.key;
     const data = await getRedisItem(key);
