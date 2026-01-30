@@ -13,23 +13,6 @@ const RATE_CACHE_TTL = 300;
 // List of crypto currencies
 const CRYPTO_CURRENCIES = ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT', 'USDC', 'BNB', 'XRP', 'ADA', 'SOL'];
 
-// Fallback rates (updated periodically - last update: Jan 2026)
-// These are used ONLY when both FastForex and CoinGecko fail
-const FALLBACK_RATES: Record<string, Record<string, number>> = {
-  BTC: { USD: 82600, EUR: 76500, GBP: 66000 },
-  ETH: { USD: 2734, EUR: 2530, GBP: 2180 },
-  TRX: { USD: 0.289, EUR: 0.267, GBP: 0.23 },
-  LTC: { USD: 105, EUR: 97, GBP: 84 },
-  DOGE: { USD: 0.38, EUR: 0.35, GBP: 0.30 },
-  BCH: { USD: 480, EUR: 445, GBP: 385 },
-  USDT: { USD: 1, EUR: 0.93, GBP: 0.80 },
-  USDC: { USD: 1, EUR: 0.93, GBP: 0.80 },
-  BNB: { USD: 700, EUR: 650, GBP: 560 },
-  USD: { EUR: 0.93, GBP: 0.80 },
-  EUR: { USD: 1.08, GBP: 0.86 },
-  GBP: { USD: 1.25, EUR: 1.16 },
-};
-
 // CoinGecko ID mapping
 const COINGECKO_IDS: Record<string, string> = {
   BTC: 'bitcoin',
