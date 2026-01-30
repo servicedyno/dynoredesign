@@ -202,8 +202,9 @@ testRouter.delete("/redis/:key", async (req, res) => {
 /**
  * POST /api/test/threshold-test
  * Run threshold distribution test for a specific scenario
+ * Protected: Requires authentication
  */
-testRouter.post("/threshold-test", async (req, res) => {
+testRouter.post("/threshold-test", authMiddleware, async (req, res) => {
   try {
     const { blockchain, amount } = req.body;
     
@@ -226,7 +227,7 @@ testRouter.post("/threshold-test", async (req, res) => {
       const fees = await calculateTransactionFees(blockchain, Number(amount));
       adminReceives = fees.totalDeduction;
       merchantReceives = fees.userReceives;
-      explanation = `ABOVE THRESHOLD: Amount $${amount} >= $${threshold}. Admin receives fees ($${adminReceives.toFixed(4)}). Merchant receives ($${merchantReceives.toFixed(4)}).`;
+      explanation = `ABOVE THRESHOLD: Amount $${amount} >= $${threshold}. Admin receives processing fees ($${adminReceives.toFixed(2)}). Merchant receives ($${merchantReceives.toFixed(2)}).`;
     }
     
     successResponseHelper(res, 200, "Threshold test complete", {
@@ -237,9 +238,9 @@ testRouter.post("/threshold-test", async (req, res) => {
         is_below_threshold: isBelowThreshold,
       },
       expected_distribution: {
-        admin_wallet: adminReceives,
-        merchant_wallet: merchantReceives,
-        total: adminReceives + merchantReceives,
+        admin_wallet: parseFloat(adminReceives.toFixed(2)),
+        merchant_wallet: parseFloat(merchantReceives.toFixed(2)),
+        total: parseFloat((adminReceives + merchantReceives).toFixed(2)),
       },
       explanation,
       test_passed: true,
