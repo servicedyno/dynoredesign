@@ -319,7 +319,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     // Fill in missing dates with zero values
     const filledChartData = fillMissingDates(formattedChartData, startDate, new Date(), groupBy);
 
-    return successResponseHelper(res, 200, "Chart data retrieved successfully", {
+    const responseData = {
       period,
       group_by: groupBy,
       start_date: startDate.toISOString().split('T')[0],
@@ -334,7 +334,13 @@ const getChartData = async (req: express.Request, res: express.Response) => {
         status: s.status,
         count: parseInt(s.count),
       })),
-    });
+    };
+
+    // Cache the result (60 second TTL)
+    await setRedisItem(cacheKey, responseData);
+    await setRedisTTL(cacheKey, 60);
+
+    return successResponseHelper(res, 200, "Chart data retrieved successfully", responseData);
 
   } catch (e) {
     const message = getErrorMessage(e);
