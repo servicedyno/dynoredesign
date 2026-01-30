@@ -427,8 +427,65 @@ const tatumCryptoWebHook = async (
         console.warn("[tatumCryptoWebHook] No customerData available, skipping pending notification");
       }
 
-      // RACE CONDITION FIX: Process payment FIRST, then mark as processed in Redis
-      // If cryptoVerification fails, webhook can be safely retried
+      // Check if this is an underpayment BEFORE processing
+      const expectedAmount = parseFloat(items?.amount || '0');
+      const isUnderpayment = incomingAmount < expectedAmount && expectedAmount > 0;
+      const isOverpayment = incomingAmount > expectedAmount && expectedAmount > 0;
+      
+      console.log(`[tatumCryptoWebHook] Payment analysis:
+        - Expected: ${expectedAmount} ${items?.currency || payload.asset}
+        - Received: ${incomingAmount} ${items?.currency || payload.asset}
+        - Is Underpayment: ${isUnderpayment}
+        - Is Overpayment: ${isOverpayment}`);
+      
+      // UNDERPAYMENT: Set incomplete flag and DON'T process as full payment
+      // This allows the checkout page to display the underpayment screen
+      if (isUnderpayment) {
+        console.log("[tatumCryptoWebHook] UNDERPAYMENT detected - setting incomplete flag");
+        
+        const remainingAmount = expectedAmount - incomingAmount;
+        
+        // Set Redis state for underpayment - this allows verifyCryptoPayment to return underpaid status
+        await setRedisItem("crypto-" + address, {
+          ...items,
+          status: "underpaid",
+          incomplete: "true",
+          txId: payload.txId,
+          receivedAmount: incomingAmount,
+          previousAmount: incomingAmount,
+          previousTxId: payload.txId,
+          amount: remainingAmount,  // Now amount is the REMAINING amount
+          originalExpectedAmount: expectedAmount,  // Store original for reference
+          partialPaymentTimestamp: new Date().toISOString(),
+          lastAttempt: new Date().toISOString(),
+        });
+        
+        // Set TTL for underpayment grace period (30 minutes)
+        await setRedisTTL("crypto-" + address, 1800);
+        
+        // Send underpayment webhook to merchant
+        if (customerData && customerData.company_id) {
+          await callMerchantWebhook(customerData, {
+            event: 'payment.underpaid',
+            address: address,
+            txId: payload.txId,
+            amount_received: incomingAmount,
+            amount_expected: expectedAmount,
+            amount_remaining: remainingAmount,
+            currency: items?.currency || payload.asset,
+            payment_id: items?.payment_id || items?.unique_tx_id,
+            status: 'underpaid',
+            grace_period_minutes: 30,
+            timestamp: new Date().toISOString(),
+          });
+          console.log("[tatumCryptoWebHook] Underpayment webhook sent to merchant");
+        }
+        
+        console.log("[tatumCryptoWebHook] Underpayment recorded, waiting for remaining payment");
+        return res.status(200).end();
+      }
+      
+      // FULL or OVERPAYMENT: Process normally
       console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address);
       
       // Hard failures that should NOT be retried
@@ -455,6 +512,7 @@ const tatumCryptoWebHook = async (
           status: "processing",
           receivedAmount: incomingAmount,
           txId: payload.txId,  // MUST be set before cryptoVerification
+          originalExpectedAmount: expectedAmount,  // Store for overpayment calculation
           retryCount: "0",
           lastAttempt: new Date().toISOString(),
         });
@@ -509,6 +567,7 @@ const tatumCryptoWebHook = async (
           status: "successful",
           txId: payload.txId,
           receivedAmount: incomingAmount,
+          originalExpectedAmount: expectedAmount,
           completedAt: new Date().toISOString(),
         });
         
@@ -544,34 +603,29 @@ const tatumCryptoWebHook = async (
         // Send payment confirmed webhook to merchant
         if (customerData && customerData.company_id) {
           // Calculate overpayment if any
-          const expectedAmount = parseFloat(items?.amount || '0');
-          const receivedAmountNum = parseFloat(String(incomingAmount) || '0');
-          const overpaymentAmount = receivedAmountNum - expectedAmount;
-          const hasOverpayment = overpaymentAmount > 0;
+          const overpaymentAmount = isOverpayment ? (incomingAmount - expectedAmount) : 0;
           
           const webhookPayload: any = {
             event: 'payment.confirmed',
             address: address,
             txId: payload.txId,
             amount: incomingAmount,
-            expected_amount: items?.amount,
+            expected_amount: expectedAmount,
             currency: items?.currency || payload.asset,
             payment_id: items?.payment_id || items?.unique_tx_id,
             merchant_amount: items?.merchant_amount,
             fees: items?.total_fees,
             fee_payer: items?.fee_payer || 'company',
-            status: 'confirmed',
+            status: isOverpayment ? 'overpaid' : 'confirmed',
             timestamp: new Date().toISOString(),
           };
           
           // Include overpayment info if detected
-          if (hasOverpayment) {
+          if (isOverpayment) {
             webhookPayload.overpayment = {
               detected: true,
               amount_crypto: overpaymentAmount.toString(),
               currency_crypto: items?.currency || payload.asset,
-              // Note: base currency conversion would require async call, so we include crypto amount only
-              // Merchant can convert using their own rates or check dashboard for base currency amount
             };
           }
           
