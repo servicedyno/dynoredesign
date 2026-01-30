@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://install-deps-4.preview.emergentagent.com"
+backend_url = "https://config-dependencies.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(

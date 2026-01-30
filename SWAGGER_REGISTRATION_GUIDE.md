@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://install-deps-4.preview.emergentagent.com/api/docs
+Go to: https://config-dependencies.preview.emergentagent.com/api/docs
 
 ---
 
