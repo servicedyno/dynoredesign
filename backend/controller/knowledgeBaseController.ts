@@ -6,6 +6,15 @@ import User from '../models/userModels/userModel';
 import { Op } from 'sequelize';
 import sequelize from '../utils/dbInstance';
 
+// Set up associations if not already done
+if (!(KBArticle as any).associations?.category) {
+  KBArticle.belongsTo(KBCategory, { foreignKey: 'category_id', as: 'category' });
+  KBArticle.belongsTo(User, { foreignKey: 'author_id', as: 'author' });
+  KBCategory.hasMany(KBArticle, { foreignKey: 'category_id', as: 'articles' });
+  KBArticleFeedback.belongsTo(KBArticle, { foreignKey: 'article_id', as: 'article' });
+  KBArticle.hasMany(KBArticleFeedback, { foreignKey: 'article_id', as: 'feedbacks' });
+}
+
 /**
  * Get all KB categories
  * GET /api/kb/categories
