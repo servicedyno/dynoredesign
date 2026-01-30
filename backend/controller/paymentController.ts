@@ -2098,7 +2098,65 @@ const verifyCryptoPayment = async (
     const baseCurrency = tempData?.base_currency || "USD";
     const baseAmount = parseFloat(tempData?.base_amount || "0");
     
+    // IMPORTANT: Check for SUCCESSFUL status FIRST before checking underpaid
+    // This prevents returning stale underpaid data after payment completes
+    if (redisStatus === "successful") {
+      // Payment confirmed - check for overpayment
+      const totalReceived = receivedAmount > 0 ? receivedAmount : parseFloat(tempData?.amount || '0');
+      const originalExpected = tempData?.originalExpectedAmount ? parseFloat(tempData.originalExpectedAmount) : expectedAmount;
+      const isOverpayment = totalReceived > originalExpected && originalExpected > 0;
+      const overpaymentAmount = isOverpayment ? (totalReceived - originalExpected) : 0;
+      
+      // FIXED: Don't re-call cryptoVerification if already processed - just return the status
+      // The payment was already distributed when status became "successful"
+      console.log("[verifyCryptoPayment] Payment already successful, returning confirmed status");
+      
+      // Get redirect URL from customerData if available
+      let redirectUrl = null;
+      if (customerData?.redirect_uri) {
+        redirectUrl = customerData.redirect_uri + 
+          `?transaction_id=${tempData.payment_id || tempData.unique_tx_id}&status=successful&payment_type=CRYPTO`;
+      }
+      
+      // Calculate USD amounts
+      let paidAmountUsd = 0;
+      let expectedAmountUsd = baseAmount;
+      
+      if (totalReceived > 0 && originalExpected > 0 && baseAmount > 0) {
+        paidAmountUsd = baseAmount * (totalReceived / originalExpected);
+        expectedAmountUsd = baseAmount;
+      }
+      
+      // Build response matching checkout page expected format
+      // Checkout expects: status, redirect (for redirect URL), paidAmount, expectedAmount, excessAmount
+      const responseData: any = {
+        status: isOverpayment ? "overpaid" : "confirmed",
+        message: isOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
+        redirect: redirectUrl,
+        txId: tempData.txId,
+        paidAmount: parseFloat(totalReceived.toFixed(6)),
+        expectedAmount: parseFloat(originalExpected.toFixed(6)),
+        currency: currency,
+        // USD amounts
+        paidAmountUsd: parseFloat(paidAmountUsd.toFixed(2)),
+        expectedAmountUsd: parseFloat(expectedAmountUsd.toFixed(2)),
+        baseCurrency: baseCurrency,
+        completedAt: tempData.completedAt,
+        // Timer and settings (for consistency across all responses)
+        remaining_seconds: 0, // Payment complete, no time remaining
+        grace_period_minutes: gracePeriodMinutes,
+        merchant_settings: merchantSettings,
+      };
+
+      if (isOverpayment) {
+        responseData.excessAmount = parseFloat(overpaymentAmount.toFixed(6));
+      }
+
+      return successResponseHelper(res, 200, responseData.message, responseData);
+    }
+    
     // Check if this is a partial payment scenario (incomplete flag set OR underpaid status)
+    // Only return underpaid if NOT already successful
     // Redis stores values as strings, so convert to string for comparison
     if (String(tempData?.incomplete) === "true" || redisStatus === "underpaid") {
       // Use originalExpectedAmount if available (set by webhook), otherwise calculate from previousAmount
