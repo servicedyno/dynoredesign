@@ -64,8 +64,9 @@ testRouter.get("/thresholds", async (req, res) => {
 /**
  * POST /api/test/calculate-fees
  * Calculate fees for a given amount and blockchain
+ * Protected: Requires authentication - fee details are internal business logic
  */
-testRouter.post("/calculate-fees", async (req, res) => {
+testRouter.post("/calculate-fees", authMiddleware, async (req, res) => {
   try {
     const { blockchain, amount } = req.body;
     
@@ -77,24 +78,20 @@ testRouter.post("/calculate-fees", async (req, res) => {
     const threshold = getBlockchainThreshold(blockchain);
     const isBelowThreshold = Number(amount) < threshold;
     
+    // Only return total processing fee - no internal breakdown
     const response = {
       blockchain,
       amount: Number(amount),
       threshold,
       is_below_threshold: isBelowThreshold,
-      fees: {
-        fixed_fee: feeResult.fixedFee,
-        transaction_fee: feeResult.transactionFee,
-        blockchain_buffer: feeResult.blockchainBuffer,
-        total_deduction: feeResult.totalDeduction,
-      },
+      processing_fee: parseFloat(feeResult.totalDeduction.toFixed(2)),
       distribution: {
-        admin_receives: isBelowThreshold ? Number(amount) : feeResult.totalDeduction,
-        merchant_receives: isBelowThreshold ? 0 : feeResult.userReceives,
+        admin_receives: isBelowThreshold ? Number(amount) : parseFloat(feeResult.totalDeduction.toFixed(2)),
+        merchant_receives: isBelowThreshold ? 0 : parseFloat(feeResult.userReceives.toFixed(2)),
       },
       explanation: isBelowThreshold
         ? `Amount $${amount} is below the $${threshold} threshold. ALL funds will be sent to admin wallet.`
-        : `Amount $${amount} is above the $${threshold} threshold. Fees go to admin, remainder to merchant.`,
+        : `Amount $${amount} is above the $${threshold} threshold. Processing fees go to admin, remainder to merchant.`,
     };
     
     successResponseHelper(res, 200, "Fee calculation complete", response);
