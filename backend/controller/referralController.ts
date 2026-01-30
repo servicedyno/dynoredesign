@@ -597,12 +597,17 @@ const redeemRefereeCode = async (req: Request, res: Response) => {
  */
 const getDiscountStatus = async (req: Request, res: Response) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    // Get user from res.locals (set by authMiddleware)
+    const token = (req as any).headers.authorization?.split(' ')[1];
     if (!token) {
       return res.status(401).json({ message: "Authorization required" });
     }
 
-    const decoded = jwt.verify(token, process.env.TOKEN_SECRET || '') as any;
+    const decoded = jwt.decode(token) as any;
+    if (!decoded || !decoded.user_id) {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+    
     const userId = decoded.user_id;
 
     const user = await User.findByPk(userId, {
