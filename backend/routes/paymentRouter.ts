@@ -113,4 +113,11 @@ paymentRouter.delete(
   paymentController.deletePaymentLink
 );
 
+// Get fee preview with user's referral discount
+paymentRouter.get(
+  "/fee-preview",
+  authMiddleware,
+  paymentController.getFeePreview
+);
+
 export default paymentRouter;
