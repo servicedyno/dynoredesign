@@ -2728,27 +2728,10 @@ const cryptoVerification = async (address, webhook = true) => {
 
 const timer = (ms) => new Promise((res) => setTimeout(res, ms));
 
-const callWebHook = async (customerData, transferDetails) => {
-  await axios.post(
-    customerData?.redirect_uri,
-    {
-      ...transferDetails,
-      meta_data: customerData?.meta_data
-        ? JSON.parse(customerData?.meta_data)
-        : null,
-    },
-    {
-      timeout: 30000,
-    }
-  );
-  webhookLogs.log("info", "webhook sent successfully!", {
-    redirect_uri: customerData?.redirect_uri,
-    ...transferDetails,
-    meta_data: customerData?.meta_data
-      ? JSON.parse(customerData?.meta_data)
-      : null,
-  });
-};
+// DEPRECATED: Legacy callWebHook function - use callMerchantWebhook from webhooks/index.ts instead
+// This function incorrectly used redirect_uri for webhooks
+// Kept for reference but no longer used
+// const callWebHook = async (customerData, transferDetails) => { ... }
 
 const userWallet = async (data: IFundData, tokenData: IUserType) => {
   const id = tokenData.id;
