@@ -42,8 +42,9 @@ testRouter.post("/fix-customer-id-column", authMiddleware, async (req, res) => {
 /**
  * GET /api/test/thresholds
  * Returns all blockchain thresholds
+ * Protected: Requires authentication
  */
-testRouter.get("/thresholds", async (req, res) => {
+testRouter.get("/thresholds", authMiddleware, async (req, res) => {
   try {
     const thresholds = {
       BTC: getBlockchainThreshold("BTC"),
