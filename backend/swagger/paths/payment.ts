@@ -942,7 +942,8 @@ Modes must be provided in **UPPERCASE**. Valid modes:
     post: {
       tags: ['Payment Processing'],
       summary: 'Get currency exchange rates',
-      description: 'Retrieve current crypto-to-fiat exchange rates',
+      description: 'Retrieve current crypto-to-fiat exchange rates with calculated totals when customer pays fees',
+      security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
         content: {
@@ -950,28 +951,52 @@ Modes must be provided in **UPPERCASE**. Valid modes:
             schema: {
               type: 'object',
               properties: {
-                from: { type: 'string' },
-                to: { type: 'string' }
+                source: { type: 'string', description: 'Source currency (e.g., USD)' },
+                amount: { type: 'number', description: 'Amount in source currency' },
+                currencyList: { type: 'array', items: { type: 'string' }, description: 'List of target currencies' },
+                fee_payer: { type: 'string', enum: ['customer', 'company'], description: 'Who pays the fees' }
               }
             },
-            example: { from: 'USD', to: 'BTC' }
+            example: { 
+              source: 'USD', 
+              amount: 50,
+              currencyList: ['BTC', 'ETH', 'USDT-TRC20'],
+              fee_payer: 'customer'
+            }
           }
         }
       },
       responses: {
         200: {
-          description: 'Exchange rates',
+          description: 'Exchange rates with totals',
           content: {
             'application/json': {
               example: {
-                data: {
-                  BTC: { rate: 0.0000228, usd_price: 43859.65 },
-                  ETH: { rate: 0.000428, usd_price: 2336.45 },
-                  'USDT-TRC20': { rate: 1.0, usd_price: 1.0 },
-                  TRX: { rate: 9.52, usd_price: 0.105 },
-                  LTC: { rate: 0.0143, usd_price: 69.93 }
-                },
-                timestamp: '2024-01-15T10:30:00Z'
+                message: 'Exchange rates retrieved successfully',
+                data: [
+                  {
+                    currency: 'ETH',
+                    amount: '0.01650000',
+                    fee_payer: 'customer',
+                    base_amount: 0.0155,
+                    base_amount_usd: 50,
+                    processing_fee: 4.55,
+                    total_amount: '0.01650000',
+                    total_amount_usd: 54.55,
+                    total_amount_source: 54.55
+                  },
+                  {
+                    currency: 'BTC',
+                    amount: '0.00055000',
+                    fee_payer: 'customer',
+                    base_amount: 0.0005,
+                    base_amount_usd: 50,
+                    processing_fee: 4.55,
+                    total_amount: '0.00055000',
+                    total_amount_usd: 54.55,
+                    total_amount_source: 54.55
+                  }
+                ]
               }
             }
           }
