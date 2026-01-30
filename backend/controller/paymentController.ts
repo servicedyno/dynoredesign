@@ -2581,6 +2581,25 @@ const cryptoVerification = async (address, webhook = true) => {
           }
         }
 
+        // FIXED: Update payment link status to successful
+        if (tempData?.transaction_id || customerData?.transaction_id) {
+          const linkTransactionId = tempData?.transaction_id || customerData?.transaction_id;
+          console.log(`[cryptoVerification] Updating payment link status for transaction_id: ${linkTransactionId}`);
+          await paymentLinkModel.update(
+            {
+              status: "successful",
+              paid_amount: totalAmountReceived,
+              paid_currency: tempCurrency,
+              payment_mode: "CRYPTO",
+              transaction_reference: transactionId,
+            },
+            {
+              where: { transaction_id: linkTransactionId },
+              transaction,
+            }
+          );
+        }
+
         await tatumApi.deleteSubscription(tempAddressData.subscription_id);
         await transaction.commit();
         
