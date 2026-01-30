@@ -178,25 +178,33 @@ const getData = async (req: express.Request, res: express.Response) => {
     const feeTiers = (await import("../utils/feeConfigUtils")).getFeeTiers();
     const amount = Number(item.base_amount || item.amount || 0);
     
-    // Find applicable fee tier based on amount
+    // Find applicable fee tier based on amount (includes fixed fee and blockchain buffer)
     let fixedFee = 0;
+    let blockchainBuffer = 0;
     for (const tier of feeTiers) {
       if (amount >= tier.min && (tier.max === null || amount <= tier.max)) {
         fixedFee = tier.fixed;
+        blockchainBuffer = tier.buffer || 0;
         break;
       }
     }
     
     // Calculate fee breakdown for customer-pays scenario
+    // Total fees = transaction fee % + fixed fee + blockchain buffer %
     const feePercent = transactionFeePercent;
     const feeAmountPercent = (amount * feePercent) / 100;
-    const totalFeeAmount = feeAmountPercent + fixedFee;
+    const bufferAmount = (amount * blockchainBuffer) / 100;
+    const totalFeeAmount = feeAmountPercent + fixedFee + bufferAmount;
     const totalWithFees = amount + totalFeeAmount;
     
-    // Format fee display string (e.g., "2.99% + $0.49")
-    const feeDisplayString = fixedFee > 0 
-      ? `${feePercent}% + $${fixedFee.toFixed(2)}`
-      : `${feePercent}%`;
+    // Format fee display string (e.g., "2% + 1% buffer + $3.00")
+    let feeDisplayString = `${feePercent}%`;
+    if (blockchainBuffer > 0) {
+      feeDisplayString += ` + ${blockchainBuffer}% buffer`;
+    }
+    if (fixedFee > 0) {
+      feeDisplayString += ` + $${fixedFee.toFixed(2)}`;
+    }
     
     // Calculate expiry countdown
     let expiryInfo: any = null;
