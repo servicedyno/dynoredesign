@@ -44,7 +44,7 @@ const getStatus = async (req: express.Request, res: express.Response) => {
     // Check Redis cache first
     const cacheKey = 'system:status';
     const cached = await getRedisItem(cacheKey);
-    if (cached) {
+    if (cached && Object.keys(cached).length > 0) {
       console.log('[Status] Cache hit');
       return successResponseHelper(res, 200, "Status retrieved successfully", cached);
     }
