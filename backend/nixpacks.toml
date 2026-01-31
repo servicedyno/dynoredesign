@@ -5,7 +5,10 @@ nixPkgs = ["nodejs_20", "yarn"]
 cmds = ["yarn install --ignore-engines"]
 
 [phases.build]
-cmds = ["yarn build"]
+cmds = ["yarn build", "mkdir -p logs"]
 
 [start]
-cmd = "./start.sh"
+cmd = "node dist/server.js"
+
+[variables]
+NODE_ENV = "production"
