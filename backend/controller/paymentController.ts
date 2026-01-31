@@ -31,6 +31,7 @@ import {
   customerWalletModel,
   userModel,
   userWalletModel,
+  taxRateModel,
 } from "../models";
 import { createNotification, NOTIFICATION_TYPES } from "./notificationController";
 import {
@@ -49,6 +50,7 @@ import flw from "../apis/flutterwaveApi";
 import crypto from "crypto";
 import axios from "axios";
 import { autoGenerateInvoice } from "./invoiceController";
+import { getClientIP, getCountryFromIP } from "../utils/geolocation";
 
 import {
   userTempAddressModel,
