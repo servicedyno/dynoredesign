@@ -253,6 +253,9 @@ const startKYCVerification = async (req: express.Request, res: express.Response)
       company_id
     );
 
+    // Send KYC started email
+    await sendKYCStartedEmail(user.email, user.name, session.verification.url);
+
     return successResponseHelper(res, 200, "KYC verification session created successfully", {
       verification: {
         session_id: session.verification.id,
