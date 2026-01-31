@@ -125,7 +125,7 @@ curl -X GET http://localhost:8001/api/kyc/status \
   -H "Authorization: Bearer <JWT_TOKEN>"
 
 # 3. Submit KYC (requires document upload)
-# Use Swagger UI: https://dependency-hub-3.preview.emergentagent.com/api/docs
+# Use Swagger UI: https://install-deps-5.preview.emergentagent.com/api/docs
 ```
 
 ### Scenario 2: SMS OTP Flow
