@@ -2894,6 +2894,21 @@ const cryptoVerification = async (address, webhook = true) => {
           );
         }
 
+        // FIX: Also update customer transaction status to match payment link status
+        if (customerPayload?.id) {
+          console.log(`[cryptoVerification] Updating customer transaction ${customerPayload.id} status to successful`);
+          await customerTransactionModel.update(
+            {
+              status: "successful",
+              transaction_reference: transactionId,
+            },
+            {
+              where: { transaction_id: customerPayload.id },
+              transaction,
+            }
+          );
+        }
+
         await tatumApi.deleteSubscription(tempAddressData.subscription_id);
         await transaction.commit();
         
