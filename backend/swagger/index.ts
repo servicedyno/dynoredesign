@@ -582,7 +582,7 @@ export const setupSwagger = (app: Express) => {
     res.send(swaggerSpec);
   });
 
-  console.log("Swagger documentation available at /api/docs");
+  log("Swagger documentation available at /api/docs", "info");
 };
 
 export default swaggerSpec;
