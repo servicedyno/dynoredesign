@@ -409,6 +409,10 @@ const getData = async (req: express.Request, res: express.Response) => {
       }
     }
     
+    // Calculate grand total including tax (if applicable)
+    const taxAmount = taxInfo?.tax_amount || 0;
+    const grandTotal = amount + totalProcessingFee + taxAmount;
+    
     let payload;
     if (item.pathType === "createLink") {
       payload = {
@@ -434,7 +438,9 @@ const getData = async (req: express.Request, res: express.Response) => {
           // Only show totals if customer pays fees
           ...(item.fee_payer === 'customer' && {
             processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
-            total_amount: parseFloat(totalWithFees.toFixed(2)),
+            subtotal: parseFloat(amount.toFixed(2)),
+            tax_amount: parseFloat(taxAmount.toFixed(2)),
+            total_amount: parseFloat(grandTotal.toFixed(2)),  // Now includes tax!
           })
         },
         expiry: expiryInfo,
