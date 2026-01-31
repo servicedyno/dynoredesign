@@ -2528,6 +2528,18 @@ const cryptoVerification = async (address, webhook = true) => {
         const pendingAmount = (Number(tempData?.amount) - Number(receivedAmount)).toFixed(8);
         const expectedAmount = Number(tempData?.amount) + (tempData?.previousAmount ? Number(tempData.previousAmount) : 0);
 
+        // ENHANCED LOGGING: Partial payment accumulation tracking
+        console.log(`[cryptoVerification] 📊 PARTIAL PAYMENT DETECTED:
+          - Address: ${address}
+          - Transaction ID: ${transactionId}
+          - Payment #: ${tempData?.previousTxId ? '2+' : '1'}
+          - This Payment: ${receivedAmount} ${tempCurrency}
+          - Previous Payments: ${tempData?.previousAmount || 0} ${tempCurrency}
+          - Total Accumulated: ${Number(receivedAmount) + Number(tempData?.previousAmount || 0)} ${tempCurrency}
+          - Expected Total: ${expectedAmount} ${tempCurrency}
+          - Remaining: ${pendingAmount} ${tempCurrency}
+          - Grace Period: 30 minutes`);
+
         await userTempAddressModel.update(
           {
             txId: tempAddressData.txId ? tempAddressData.txId + "," + transactionId : transactionId,
