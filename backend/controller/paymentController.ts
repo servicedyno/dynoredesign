@@ -375,6 +375,16 @@ const getData = async (req: express.Request, res: express.Response) => {
     if (item.apply_tax) {
       console.log(`[getData] Tax enabled for this payment link, detecting customer location...`);
       
+      // Log all relevant headers for debugging
+      console.log(`[getData] Headers received:`, {
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'x-real-ip': req.headers['x-real-ip'],
+        'cf-connecting-ip': req.headers['cf-connecting-ip'],
+        'cf-ipcountry': req.headers['cf-ipcountry'],
+        'true-client-ip': req.headers['true-client-ip'],
+        'x-client-ip': req.headers['x-client-ip'],
+      });
+      
       // Get customer IP and detect country
       const clientIP = getClientIP(req);
       console.log(`[getData] Customer IP: ${clientIP}`);
