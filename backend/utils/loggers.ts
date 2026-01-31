@@ -1,87 +1,79 @@
 import winston from "winston";
 
-const { combine, timestamp, json, prettyPrint, errors } = winston.format;
+const { combine, timestamp, json, prettyPrint, errors, printf, colorize } = winston.format;
 
-winston.loggers.add("userLogger", {
-  format: combine(errors({ stack: true }), timestamp(), json(), prettyPrint()),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/userLogs.log" }),
-  ],
-  defaultMeta: { service: "userLogger" },
+// Check if running on Railway or in production
+const isRailway = !!process.env.RAILWAY_ENVIRONMENT;
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Custom format for Railway - simple, no colors, immediate output
+const railwayFormat = printf(({ level, message, timestamp, service, ...meta }) => {
+  const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+  return `[${timestamp}] [${service}] ${level}: ${message}${metaStr}`;
 });
 
-winston.loggers.add("walletLogger", {
-  format: combine(errors({ stack: true }), timestamp(), json(), prettyPrint()),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/walletLogs.log" }),
-  ],
-  defaultMeta: { service: "walletLogger" },
-});
+// Create transports based on environment
+const createTransports = (logFileName: string) => {
+  const transports: winston.transport[] = [
+    // Always log to console - this is what Railway captures
+    new winston.transports.Console({
+      // Use simple format for Railway, pretty for local development
+      format: isRailway || isProduction 
+        ? combine(timestamp(), railwayFormat)
+        : combine(timestamp(), json(), prettyPrint()),
+      // Ensure immediate output
+      stderrLevels: ['error'],
+    }),
+  ];
 
-winston.loggers.add("companyLogger", {
-  format: combine(errors({ stack: true }), timestamp(), json(), prettyPrint()),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/companyLogs.log" }),
-  ],
-  defaultMeta: { service: "companyLogger" },
-});
+  // Only add file transport in non-Railway environments
+  // Railway has ephemeral filesystem, file logs would be lost
+  if (!isRailway) {
+    transports.push(
+      new winston.transports.File({ 
+        filename: `logs/${logFileName}`,
+        format: combine(timestamp(), json()),
+      })
+    );
+  }
 
-winston.loggers.add("apiLogger", {
-  format: combine(errors({ stack: true }), timestamp(), json(), prettyPrint()),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/apiLogs.log" }),
-  ],
-  defaultMeta: { service: "apiLogger" },
-});
+  return transports;
+};
 
-winston.loggers.add("adminLogger", {
-  format: combine(errors({ stack: true }), timestamp(), json(), prettyPrint()),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/adminLogger.log" }),
-  ],
-  defaultMeta: { service: "adminLogger" },
-});
+// Create logger with consistent configuration
+const createLogger = (serviceName: string, logFileName: string) => {
+  winston.loggers.add(serviceName, {
+    level: isProduction ? 'info' : 'debug',
+    format: combine(
+      errors({ stack: true }), 
+      timestamp(), 
+      json()
+    ),
+    transports: createTransports(logFileName),
+    defaultMeta: { service: serviceName },
+    // Ensure logs are written immediately
+    exitOnError: false,
+  });
 
-winston.loggers.add("webhookLogs", {
-  format: combine(errors({ stack: true }), timestamp(), json(), prettyPrint()),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/webhookLogs.log" }),
-  ],
-  defaultMeta: { service: "webhookLogs" },
-});
+  return winston.loggers.get(serviceName);
+};
 
-winston.loggers.add("cronLogger", {
-  format: combine(errors({ stack: true }), timestamp(), json(), prettyPrint()),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/cronLogger.log" }),
-  ],
-  defaultMeta: { service: "cronLogger" },
-});
+// Initialize all loggers
+const userLogger = createLogger("userLogger", "userLogs.log");
+const walletLogger = createLogger("walletLogger", "walletLogs.log");
+const companyLogger = createLogger("companyLogger", "companyLogs.log");
+const apiLogger = createLogger("apiLogger", "apiLogs.log");
+const adminLogger = createLogger("adminLogger", "adminLogger.log");
+const webhookLogs = createLogger("webhookLogs", "webhookLogs.log");
+const cronLogger = createLogger("cronLogger", "cronLogger.log");
+const taxLogger = createLogger("taxLogger", "taxLogs.log");
 
-winston.loggers.add("taxLogger", {
-  format: combine(errors({ stack: true }), timestamp(), json(), prettyPrint()),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/taxLogs.log" }),
-  ],
-  defaultMeta: { service: "taxLogger" },
-});
-
-const userLogger = winston.loggers.get("userLogger");
-const walletLogger = winston.loggers.get("walletLogger");
-const companyLogger = winston.loggers.get("companyLogger");
-const apiLogger = winston.loggers.get("apiLogger");
-const adminLogger = winston.loggers.get("adminLogger");
-const webhookLogs = winston.loggers.get("webhookLogs");
-const cronLogger = winston.loggers.get("cronLogger");
-const taxLogger = winston.loggers.get("taxLogger");
+// Log startup info
+if (isRailway) {
+  console.log(`[${new Date().toISOString()}] ✅ Winston loggers initialized for Railway environment`);
+} else {
+  console.log(`[${new Date().toISOString()}] ✅ Winston loggers initialized (file logging enabled)`);
+}
 
 export {
   userLogger,
