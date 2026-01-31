@@ -3304,7 +3304,8 @@ const createPaymentLink = async (
     redirect_url,
     webhook_url,
     fee_payer,        // Who pays blockchain fees: 'customer' or 'company'
-    company_id        // Phase 10 Fix: Accept company_id for multi-tenant isolation
+    company_id,       // Phase 10 Fix: Accept company_id for multi-tenant isolation
+    apply_tax         // Tax toggle: calculate tax based on customer location (default: false)
   } = req.body;
   
   // Normalize field names - use new format first, fall back to legacy, then default
