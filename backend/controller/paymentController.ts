@@ -39,6 +39,9 @@ import {
   sendPartialPaymentExpiredNotification,
 } from "../services/pendingPaymentService";
 import {
+  sendCustomerPaymentConfirmationEmail,
+} from "../services/emailService";
+import {
   FW_API_Response,
   IFundData,
   ITemporaryAddress,
