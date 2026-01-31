@@ -192,7 +192,7 @@ class TaxCryptoIntegrationTester:
         """Get payment data using reference"""
         try:
             response = self.session.post(f"{API_BASE}/pay/getData", json={
-                "reference": reference
+                "data": reference
             })
             
             if response.status_code == 200:
