@@ -328,8 +328,10 @@ class TaxCryptoIntegrationTester:
         # Check if tax_info is in crypto response
         if 'tax_info' in crypto_info:
             tax_info = crypto_info['tax_info']
+            tax_amount_eur = tax_info.get('tax_amount', 0)
+            tax_amount_crypto = tax_info.get('tax_amount_crypto', 0)
             self.log_test("Tax Info in Crypto Response", True, 
-                f"Tax included: {tax_info.get('tax_amount')} EUR = {tax_info.get('tax_amount_crypto')} ETH")
+                f"Tax included: {tax_amount_eur} EUR = {tax_amount_crypto:.6f} ETH")
         else:
             self.log_test("Tax Info in Crypto Response", False, 
                 "No tax_info in crypto payment response")
