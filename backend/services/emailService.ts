@@ -828,6 +828,134 @@ export const sendInvoiceGeneratedEmail = async (
   }
 };
 
+/**
+ * Template 19: Customer Payment Confirmation Email
+ * Trigger: Customer successfully completes payment via payment link
+ * Recipient: Customer who made the payment
+ */
+export const sendCustomerPaymentConfirmationEmail = async (
+  customerEmail: string,
+  customerName: string | null,
+  companyName: string,
+  amount: string,
+  currency: string,
+  transactionId: string,
+  description: string | null,
+  date: string,
+  time: string
+) => {
+  try {
+    const displayName = customerName || customerEmail.split('@')[0];
+    const subject = `Payment Successful - Receipt from ${companyName}`;
+    const content = `<p class="message">Hey ${displayName},</p>
+    <p class="message">Your payment to <strong>${companyName}</strong> has been successfully processed. 🎉</p>
+    <div class="highlight-box">
+      <p><strong>Payment Receipt:</strong></p>
+      <p>
+        <strong>Amount Paid:</strong> ${amount} ${currency}<br />
+        ${description ? `<strong>Description:</strong> ${description}<br />` : ''}
+        <strong>Transaction ID:</strong> ${transactionId}<br />
+        <strong>Date:</strong> ${date} at ${time}
+      </p>
+    </div>
+    <p class="message">This email serves as your payment confirmation. Please keep it for your records.</p>
+    <p class="message">If you have any questions about this payment, please contact <strong>${companyName}</strong> directly.</p>
+    <p class="message" style="font-size: 13px; color: #6b7280; margin-top: 24px;">
+      This payment was processed securely through DynoPay, a trusted crypto payment gateway.
+    </p>`;
+
+    const html = dynoPayEmailTemplate("Payment Successful", content);
+    
+    await mailTransporter({
+      to: customerEmail,
+      name: displayName,
+      subject,
+      body: html,
+    });
+    
+    console.log(`[Email] Customer payment confirmation sent to ${customerEmail} for ${amount} ${currency}`);
+  } catch (e) {
+    console.error("Customer payment confirmation email error:", e);
+  }
+};
+
+/**
+ * Template 20: KYC Verification Started Email
+ * Trigger: User starts KYC verification session
+ * Recipient: Merchant/User who started KYC
+ */
+export const sendKYCStartedEmail = async (
+  email: string,
+  name: string,
+  verificationUrl: string
+) => {
+  try {
+    const subject = "Complete your identity verification";
+    const content = `<p class="message">Hey ${name},</p>
+    <p class="message">Your identity verification session has been created. Please complete the verification to continue using DynoPay without restrictions. 📋</p>
+    <div class="highlight-box">
+      <p><strong>What you'll need:</strong></p>
+      <p>✓ Government-issued ID (passport, driver's license, or national ID)<br />
+      ✓ Proof of address (utility bill or bank statement from last 3 months)<br />
+      ✓ A few minutes to complete a selfie verification</p>
+    </div>
+    <p class="message">The verification typically takes 5-10 minutes to complete and is reviewed within 24-48 hours.</p>
+    <p class="message">Click the button below to continue your verification:</p>`;
+
+    const html = dynoPayEmailTemplate("Identity Verification", content, true, "Complete Verification", verificationUrl);
+    
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+    
+    console.log(`KYC started email sent to ${email}`);
+  } catch (e) {
+    console.error("KYC started email error:", e);
+  }
+};
+
+/**
+ * Template 21: KYC Resubmission Required Email
+ * Trigger: Veriff requests additional documents
+ * Recipient: Merchant/User who needs to resubmit
+ */
+export const sendKYCResubmissionRequiredEmail = async (
+  email: string,
+  name: string,
+  reason: string
+) => {
+  try {
+    const subject = "Additional information needed for verification";
+    const content = `<p class="message">Hey ${name},</p>
+    <p class="message">We need a bit more information to complete your identity verification. 📝</p>
+    <div class="highlight-box" style="border-left-color: #f59e0b;">
+      <p><strong>Reason:</strong></p>
+      <p>${reason}</p>
+    </div>
+    <p class="message">Don't worry, this is a common request. To continue, please:</p>
+    <p class="message">1. Ensure your documents are clear and all text is readable<br />
+    2. Make sure the name matches your DynoPay account<br />
+    3. Use documents that are not expired</p>
+    <p class="message">Click below to resubmit your verification documents:</p>`;
+
+    const html = dynoPayEmailTemplate("Resubmission Required", content, true, "Resubmit Documents", "https://dynopay.com/dashboard/kyc");
+    
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+    
+    console.log(`KYC resubmission required email sent to ${email}`);
+  } catch (e) {
+    console.error("KYC resubmission required email error:", e);
+  }
+};
+
 export default {
   sendWelcomeEmail,
   sendCompanyProfileCreatedEmail,
@@ -848,4 +976,7 @@ export default {
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
   sendInvoiceGeneratedEmail,
+  sendCustomerPaymentConfirmationEmail,
+  sendKYCStartedEmail,
+  sendKYCResubmissionRequiredEmail,
 };
