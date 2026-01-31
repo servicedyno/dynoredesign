@@ -1,6 +1,7 @@
 import express, { RequestHandler } from "express";
 import { companyController } from "../controller";
 import { companyMiddleware, uploadImage, authMiddleware } from "../middleware";
+import { companyOwnershipMiddleware } from "../middleware/authMiddleware";
 const companyRouter = express.Router();
 
 companyRouter.post(
