@@ -384,15 +384,23 @@ const getData = async (req: express.Request, res: express.Response) => {
         'true-client-ip': req.headers['true-client-ip'],
         'x-client-ip': req.headers['x-client-ip'],
       });
+      console.log(`[getData] Timezone hint from frontend: ${timezone || 'not provided'}`);
       
       // Get customer IP and detect country
       const clientIP = getClientIP(req);
       console.log(`[getData] Customer IP: ${clientIP}`);
       
-      const geoLocation = await getCountryFromIP(clientIP, req.headers);
+      // Try IP-based geolocation first
+      let geoLocation = await getCountryFromIP(clientIP, req.headers);
+      
+      // If IP detection failed and timezone provided, use timezone as fallback
+      if ((!geoLocation || !geoLocation.country_code) && timezone) {
+        console.log(`[getData] IP detection failed, trying timezone fallback: ${timezone}`);
+        geoLocation = getCountryFromTimezone(timezone);
+      }
       
       if (geoLocation && geoLocation.country_code) {
-        console.log(`[getData] Detected country: ${geoLocation.country_name} (${geoLocation.country_code})`);
+        console.log(`[getData] Detected country: ${geoLocation.country_name} (${geoLocation.country_code}) via ${geoLocation.source}`);
         
         // Calculate tax based on detected country
         taxInfo = await calculateTaxForCheckout(
@@ -414,7 +422,7 @@ const getData = async (req: express.Request, res: express.Response) => {
           subtotal: amount,
           total: amount,
           currency: item.base_currency,
-          message: "Country could not be detected"
+          message: "Country could not be detected. Please ensure your browser allows timezone detection."
         };
       }
     }
