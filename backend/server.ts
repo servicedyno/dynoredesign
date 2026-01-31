@@ -179,30 +179,30 @@ import * as merchantPoolService from "./services/merchantPoolService";
 // Handles both threshold-based ($30 USD) and time-based (3 min for ETH/TRX) sweeps
 // Running every 1 min ensures sweeps happen promptly after time threshold is met
 cron.schedule("* * * * *", function () {
-  console.log("performMerchantPoolScheduledSweeps ==============> checked");
+  log("Cron: performMerchantPoolScheduledSweeps running", "info");
   merchantPoolService.performScheduledSweeps().catch(err => {
-    console.error("[Cron] Sweep failed, will retry next cycle:", err.message);
+    log(`Cron: Sweep failed, will retry next cycle: ${err.message}`, "error");
   });
 });
 
 // Merchant Pool: Release expired reservations every 2 minutes
 cron.schedule("*/2 * * * *", function () {
-  console.log("releaseMerchantPoolExpiredReservations ==============> checked");
+  log("Cron: releaseMerchantPoolExpiredReservations running", "info");
   merchantPoolService.releaseExpiredReservations().catch(err => {
-    console.error("[Cron] Release expired failed, will retry next cycle:", err.message);
+    log(`Cron: Release expired failed, will retry next cycle: ${err.message}`, "error");
   });
 });
 
 // Merchant Pool: Cleanup stuck addresses every 15 minutes (safety net)
 cron.schedule("*/15 * * * *", function () {
-  console.log("cleanupStaleMerchantPoolAddresses ==============> checked");
+  log("Cron: cleanupStaleMerchantPoolAddresses running", "info");
   merchantPoolService.cleanupStaleAddresses();
 });
 
 // Merchant Pool: Recover stranded gas every hour
 // Handles gas that was funded but token transfer failed
 cron.schedule("0 * * * *", function () {
-  console.log("recoverStrandedGas ==============> checked");
+  log("Cron: recoverStrandedGas running", "info");
   merchantPoolService.recoverStrandedGas();
 });
 
@@ -210,9 +210,9 @@ cron.schedule("0 * * * *", function () {
 // Ensures all pool addresses have valid Tatum webhook subscriptions
 // Cost: ~2 credits per check (minimal)
 cron.schedule("*/30 * * * *", function () {
-  console.log("ensurePoolSubscriptions ==============> checked");
+  log("Cron: ensurePoolSubscriptions running", "info");
   merchantPoolService.ensurePoolSubscriptions().catch(err => {
-    console.error("[Cron] Subscription health check failed:", err.message);
+    log(`Cron: Subscription health check failed: ${err.message}`, "error");
   });
 });
 
