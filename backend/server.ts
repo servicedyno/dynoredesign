@@ -228,6 +228,9 @@ setupHealthCheckCron();
 // Setup referee code reminder cron job (daily at 10 AM UTC)
 setupRefereeCodeReminderCron();
 
+// Setup payment link reminder cron job (every hour)
+setupPaymentLinkReminderCron();
+
 const startServer = async () => {
   log('Connecting to Redis...', 'info');
   await connectRedis();
