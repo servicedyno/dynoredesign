@@ -548,4 +548,66 @@ ${refereeCodeSection}
   }
 });
 
+/**
+ * POST /api/test/trigger-referee-reminders
+ * Manually trigger the referee code reminder job
+ * Protected: Requires authentication
+ */
+testRouter.post("/trigger-referee-reminders", authMiddleware, async (req, res) => {
+  try {
+    const { triggerRefereeCodeReminders } = await import("../utils/cronJobs");
+    const results = await triggerRefereeCodeReminders();
+    
+    successResponseHelper(res, 200, "Referee code reminders triggered", results);
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
+/**
+ * POST /api/test/send-referee-reminder
+ * Send a test referee code reminder email
+ * No authentication required for testing
+ */
+testRouter.post("/send-referee-reminder", async (req, res) => {
+  try {
+    const { email, reminder_type = 'week1' } = req.body;
+    
+    if (!email) {
+      return errorResponseHelper(res, 400, "email is required");
+    }
+    
+    const validTypes = ['week1', 'week2', 'week3', 'final'];
+    if (!validTypes.includes(reminder_type)) {
+      return errorResponseHelper(res, 400, `reminder_type must be one of: ${validTypes.join(', ')}`);
+    }
+    
+    const { sendRefereeCodeReminderEmail } = require("../helper");
+    
+    // Calculate days remaining based on reminder type
+    const daysRemaining = reminder_type === 'final' ? 3 : 
+                          reminder_type === 'week3' ? 9 :
+                          reminder_type === 'week2' ? 16 : 23;
+    
+    await sendRefereeCodeReminderEmail(
+      email,
+      "REF-TEST1234",       // Test code
+      50,                   // Discount percent
+      90,                   // Discount duration days
+      daysRemaining,        // Days remaining
+      reminder_type,        // Reminder type
+      "test-unsubscribe-token-12345"  // Unsubscribe token
+    );
+    
+    successResponseHelper(res, 200, "Test referee reminder email sent", {
+      sent_to: email,
+      reminder_type,
+      days_remaining: daysRemaining,
+      test_code: "REF-TEST1234",
+    });
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
 export default testRouter;
