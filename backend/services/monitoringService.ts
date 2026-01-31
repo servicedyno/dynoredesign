@@ -100,7 +100,7 @@ const MONITORED_SERVICES = [
 export const runHealthChecks = async (): Promise<void> => {
   const today = new Date().toISOString().split('T')[0];
   
-  console.log(`[Monitor] Running health checks at ${new Date().toISOString()}`);
+  log(`[Monitor] Running health checks`, "info");
   
   for (const service of MONITORED_SERVICES) {
     try {
@@ -123,9 +123,9 @@ export const runHealthChecks = async (): Promise<void> => {
         check_timestamp: new Date(),
       });
       
-      console.log(`[Monitor] ${service.name}: ${status} (${result.latency}ms)`);
+      log(`[Monitor] ${service.name}: ${status} (${result.latency}ms)`, "info");
     } catch (error: any) {
-      console.error(`[Monitor] Error checking ${service.name}:`, error.message);
+      log(`[Monitor] Error checking ${service.name}: ${error.message}`, "error");
       
       // Store the failure
       await serviceHealthModel.create({
