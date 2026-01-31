@@ -226,10 +226,14 @@ setupWalletReminderCron();
 setupHealthCheckCron();
 
 const startServer = async () => {
+  log('Connecting to Redis...', 'info');
   await connectRedis();
+  log('Redis connected successfully', 'info');
+  
   try {
+    log('Connecting to PostgreSQL...', 'info');
     await sequelize.authenticate();
-    console.log("PostgreSQL Connection has been established successfully.");
+    log('PostgreSQL Connection has been established successfully.', 'info');
     
     // Sync Merchant Pool models (per-merchant system for ALL chains including USDT)
     const {
