@@ -141,32 +141,32 @@ app.get("/", async (req: express.Request, res: express.Response) => {
 });
 
 cron.schedule("*/30 * * * *", function () {
-  console.log("usdt-checked==============> checked");
+  log("Cron: USDT check running", "info");
   paymentController.checkingUSDT();
 });
 
 cron.schedule("*/15 * * * *", function () {
-  console.log("sweepNativeAdminFees ==============> checked");
+  log("Cron: sweepNativeAdminFees running", "info");
   paymentController.sweepNativeAdminFees();
 });
 
 cron.schedule("*/50 * * * *", function () {
-  console.log("sending Leftover ==============> checked");
+  log("Cron: sendingLeftover running", "info");
   paymentController.sendingLeftover();
 });
 
 cron.schedule("*/10 * * * *", () => {
-  console.log("processIncompletePayments ==============> checked");
+  log("Cron: processIncompletePayments running", "info");
   paymentController.processIncompletePayments();
 });
 
 cron.schedule("*/15 * * * *", function () {
-  console.log("checkFeeBalance ==============> checked");
+  log("Cron: checkFeeBalance running", "info");
   paymentController.checkFeeBalance();
 });
 
 cron.schedule("0 */24 * * *", function () {
-  console.log("removeUnwantedSubscriptions ==============> checked");
+  log("Cron: removeUnwantedSubscriptions running", "info");
   paymentController.removeUnwantedSubscriptions();
 });
 
