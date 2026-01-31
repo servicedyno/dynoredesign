@@ -209,9 +209,17 @@ class TaxCryptoIntegrationTester:
     def get_payment_data(self, reference):
         """Get payment data using reference"""
         try:
-            response = self.session.post(f"{API_BASE}/pay/getData", json={
-                "data": reference
-            })
+            # Add Portuguese IP headers for tax geolocation
+            headers = {
+                'X-Forwarded-For': '85.240.1.1',  # Portuguese IP
+                'X-Real-IP': '85.240.1.1',
+                'CF-IPCountry': 'PT'
+            }
+            headers.update(self.session.headers)
+            
+            response = self.session.post(f"{API_BASE}/pay/getData", 
+                json={"data": reference}, 
+                headers=headers)
             
             if response.status_code == 200:
                 return {
