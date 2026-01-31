@@ -5,6 +5,39 @@ After analyzing the codebase, I identified a gap in email notifications: **custo
 
 ---
 
+## IMPLEMENTED FIXES ✅
+
+### 1. Customer Payment Confirmation Email (NEW)
+**File:** `/app/backend/services/emailService.ts`
+- Added `sendCustomerPaymentConfirmationEmail` template
+- Sends receipt to customer after successful payment
+- Includes: Amount, company name, transaction ID, date/time
+
+**File:** `/app/backend/controller/paymentController.ts`
+- Added import for new email function
+- Triggers email after payment is confirmed (after merchant notification)
+- Uses customer email from payment link or Redis data
+
+### 2. KYC Started Email (NEW)
+**File:** `/app/backend/services/emailService.ts`
+- Added `sendKYCStartedEmail` template
+- Sends when user starts KYC verification
+- Includes: Verification URL, document requirements
+
+**File:** `/app/backend/controller/kycController.ts`
+- Added in `submitKYC` function after session creation
+
+### 3. KYC Resubmission Required Email (NEW)
+**File:** `/app/backend/services/emailService.ts`
+- Added `sendKYCResubmissionRequiredEmail` template
+- Sends when Veriff requests additional documents
+- Includes: Reason for resubmission, tips for success
+
+**File:** `/app/backend/controller/kycController.ts`
+- Added in webhook handler for `resubmission_requested` decision
+
+---
+
 ## Current Email Flow Analysis
 
 ### ✅ Emails That ARE Sent
