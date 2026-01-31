@@ -1,4 +1,5 @@
 import { createClient } from "redis";
+import { log } from "./loggers";
 
 const redisClient = createClient({
   url: process.env.REDIS_PUBLIC_URL,
@@ -9,7 +10,7 @@ const redisClient = createClient({
 });
 
 redisClient.on("error", err => {
-  console.log("Redis Client Error", err.message);
+  log(`Redis Client Error: ${err.message}`, "error");
 });
 
 let redisConnected = false;
@@ -18,7 +19,7 @@ export const connectRedis = async () => {
   if (!redisConnected) {
     await redisClient.connect();
     redisConnected = true;
-    console.log("Redis connected");
+    log("Redis connected", "info");
   }
 };
 
@@ -31,7 +32,7 @@ interface CacheEntry {
 }
 
 const memoryCache = new Map<string, CacheEntry>();
-console.log('[MemoryCache] Initialized');
+log('[MemoryCache] Initialized', 'info');
 
 // Set item in memory cache with TTL
 const setMemoryCache = (key: string, value: any, ttlSeconds: number) => {
