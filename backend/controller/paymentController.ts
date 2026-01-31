@@ -3313,6 +3313,36 @@ const cryptoVerification = async (address, webhook = true) => {
           },
           company_data?.company_id
         );
+
+        // Send payment confirmation email to customer (the payer)
+        // Get customer email from payment link or customerData
+        try {
+          const customerEmail = customerData?.email || tempData?.email;
+          if (customerEmail && customerEmail.trim() !== "") {
+            const paymentDate = new Date();
+            const description = customerData?.description || tempData?.description || null;
+            const baseAmount = customerData?.base_amount || tempData?.base_amount;
+            const baseCurrency = customerData?.base_currency || tempData?.base_currency || "USD";
+            
+            await sendCustomerPaymentConfirmationEmail(
+              customerEmail,
+              null, // Customer name often not available
+              companyName,
+              `${baseAmount} ${baseCurrency}`,
+              baseCurrency,
+              transactionId,
+              description,
+              paymentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+              paymentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+            );
+            console.log(`[cryptoVerification] Customer payment confirmation email sent to ${customerEmail}`);
+          } else {
+            console.log(`[cryptoVerification] No customer email available for payment confirmation`);
+          }
+        } catch (customerEmailError) {
+          console.error("[cryptoVerification] Customer payment confirmation email failed:", customerEmailError.message);
+          // Don't fail the transaction if email fails
+        }
       }
     } else {
       let currency = tempCurrency;
