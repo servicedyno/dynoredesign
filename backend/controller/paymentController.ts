@@ -3529,15 +3529,18 @@ const getCurrencyRates = async (
               const networkFeeUSD = Number(networkFee.feeInUSD) || 0;
               
               const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
-              const totalAmountUSD = amount + totalFeesUSD;
+              const taxAmountNum = Number(tax_amount) || 0;
+              const totalAmountUSD = amount + totalFeesUSD + taxAmountNum;
               
-              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=$${amount}, fees=$${totalFeesUSD.toFixed(2)}, total=$${totalAmountUSD.toFixed(2)}`);
+              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=$${amount}, tax=$${taxAmountNum.toFixed(2)}, fees=$${totalFeesUSD.toFixed(2)}, total=$${totalAmountUSD.toFixed(2)}`);
               
               return {
                 ...rate,
                 fee_payer: 'customer',
                 base_amount: amount,
                 base_amount_usd: amount,
+                // Include tax in breakdown
+                tax_amount: parseFloat(taxAmountNum.toFixed(2)),
                 // Simplified - only show total processing fee, no breakdown
                 processing_fee: parseFloat(totalFeesUSD.toFixed(2)),
                 total_amount: totalAmountUSD,
