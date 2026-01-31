@@ -3328,14 +3328,17 @@ const cryptoVerification = async (address, webhook = true) => {
               customerEmail,
               null, // Customer name often not available
               companyName,
-              `${baseAmount} ${baseCurrency}`,
+              `${baseAmount}`,
               baseCurrency,
-              transactionId,
+              customerPayload.id || transactionId,
               description,
               paymentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-              paymentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+              paymentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+              totalAmountReceived.toString(), // Crypto amount
+              tempCurrency, // Crypto currency
+              transactionId // Blockchain transaction reference
             );
-            console.log(`[cryptoVerification] Customer payment confirmation email sent to ${customerEmail}`);
+            console.log(`[cryptoVerification] Customer payment confirmation email sent to ${customerEmail} with PDF receipt`);
           } else {
             console.log(`[cryptoVerification] No customer email available for payment confirmation`);
           }
