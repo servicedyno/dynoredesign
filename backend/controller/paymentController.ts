@@ -2594,6 +2594,16 @@ const cryptoVerification = async (address, webhook = true) => {
         // So we should NOT add previousAmount again here
         const totalAmountReceived = Number(receivedAmount);
 
+        // ENHANCED LOGGING: Payment completion tracking
+        const wasPartialPayment = tempData?.previousAmount && Number(tempData.previousAmount) > 0;
+        console.log(`[cryptoVerification] ✅ PAYMENT ${wasPartialPayment ? 'COMPLETED (after partial)' : 'RECEIVED (full)'}:
+          - Address: ${address}
+          - Transaction ID: ${transactionId}
+          - Total Received: ${totalAmountReceived} ${tempCurrency}
+          - Previous Payments: ${tempData?.previousAmount || 0} ${tempCurrency}
+          - Was Partial: ${wasPartialPayment ? 'YES' : 'NO'}
+          - Original Expected: ${tempData?.originalExpectedAmount || tempData?.amount} ${tempCurrency}`);
+
         // Check fee_payer mode
         const fee_payer = tempData?.fee_payer || 'company';
         const merchant_amount = tempData?.merchant_amount;
