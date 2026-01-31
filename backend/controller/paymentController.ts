@@ -3297,13 +3297,18 @@ const cryptoVerification = async (address, webhook = true) => {
 
         // Always send email notification for payment received
         const companyName = company_data?.company_name ?? "";
+        const paymentDateTime = new Date();
+        const paymentDateStr = paymentDateTime.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const paymentTimeStr = paymentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         await sendPaymentReceivedEmail(
           userData?.email,
           userData?.name,
-          companyName,
-          userAmountToSend,
-          tempCurrency,
-          transactionId
+          userAmountToSend.toString(),  // amount
+          tempCurrency,                 // currency
+          companyName,                  // companyName
+          transactionId,                // transactionId
+          paymentDateStr,               // date
+          paymentTimeStr                // time
         );
 
         // Create in-app notification for payment received
