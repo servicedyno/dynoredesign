@@ -3489,9 +3489,9 @@ const getCurrencyRates = async (
   res: express.Response
 ) => {
   try {
-    const { source, amount, currencyList, fixedDecimal = true, fee_payer = 'company' } = req.body;
+    const { source, amount, currencyList, fixedDecimal = true, fee_payer = 'company', tax_amount = 0 } = req.body;
 
-    console.log(`[getCurrencyRates] Request params: amount=${amount}, source=${source}, fee_payer=${fee_payer}`);
+    console.log(`[getCurrencyRates] Request params: amount=${amount}, source=${source}, fee_payer=${fee_payer}, tax_amount=${tax_amount}`);
 
     const currencyRateList = await currencyConvert({
       sourceCurrency: source,
