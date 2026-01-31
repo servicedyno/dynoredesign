@@ -1,5 +1,4 @@
 import PDFDocument from "pdfkit";
-import { Readable } from "stream";
 
 interface InvoiceData {
   invoice_number: string;
@@ -28,9 +27,9 @@ interface InvoiceData {
 /**
  * Generate PDF invoice
  * @param invoiceData - Invoice data to generate PDF from
- * @returns Readable stream of PDF data
+ * @returns PDFKit.PDFDocument stream
  */
-export const generateInvoicePDF = (invoiceData: InvoiceData): Readable => {
+export const generateInvoicePDF = (invoiceData: InvoiceData): PDFKit.PDFDocument => {
   const doc = new PDFDocument({ size: "A4", margin: 50 });
 
   // Helper function to format currency
