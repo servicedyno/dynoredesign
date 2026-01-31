@@ -32,7 +32,7 @@ import { getTransactionFee, getBlockchainFee, paymentController } from "./contro
 import { connectRedis } from "./utils/redisInstance";
 import sequelize from "./utils/dbInstance";
 import { QueryTypes } from "sequelize";
-import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron } from "./utils/cronJobs";
+import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron, setupRefereeCodeReminderCron } from "./utils/cronJobs";
 
 // Load environment variables
 dotenv.config();
