@@ -20,6 +20,8 @@ import {
   sendKYCRequiredEmail,
   sendKYCApprovedEmail,
   sendKYCRejectedEmail,
+  sendKYCStartedEmail,
+  sendKYCResubmissionRequiredEmail,
 } from "../services/emailService";
 
 /**
