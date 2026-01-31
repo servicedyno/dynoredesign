@@ -587,7 +587,7 @@ class MultiTenantBackendTester:
             }
             
             response = requests.post(
-                f"{self.backend_url}/api/payment/createPaymentLink",
+                f"{self.backend_url}/api/pay/createPaymentLink",
                 json=payment_data,
                 headers=headers,
                 timeout=15
