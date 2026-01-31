@@ -155,12 +155,20 @@ class TaxCryptoIntegrationTester:
             
             if response.status_code == 200:
                 data = response.json()
-                payment_link = data.get('payment_link', '')
+                
+                # Handle nested data structure
+                if 'data' in data and 'payment_link' in data['data']:
+                    payment_link = data['data']['payment_link']
+                else:
+                    payment_link = data.get('payment_link', '')
                 
                 # Extract payment reference from URL
-                parsed_url = urlparse(payment_link)
-                query_params = parse_qs(parsed_url.query)
-                reference = query_params.get('d', [None])[0]
+                if '?d=' in payment_link:
+                    reference = payment_link.split('?d=')[1]
+                else:
+                    parsed_url = urlparse(payment_link)
+                    query_params = parse_qs(parsed_url.query)
+                    reference = query_params.get('d', [None])[0]
                 
                 return {
                     'success': True,
