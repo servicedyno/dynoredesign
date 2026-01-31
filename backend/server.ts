@@ -34,7 +34,48 @@ import sequelize from "./utils/dbInstance";
 import { QueryTypes } from "sequelize";
 import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron } from "./utils/cronJobs";
 
+// Load environment variables
 dotenv.config();
+
+// ============================================
+// RAILWAY LOGGING FIX: Disable output buffering
+// This ensures logs appear immediately in Railway's deploy logs
+// ============================================
+if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
+  // Force unbuffered output for Railway
+  if (process.stdout.isTTY === false) {
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (chunk: any, encoding?: any, callback?: any) => {
+      const result = originalWrite(chunk, encoding, callback);
+      // Force flush after each write
+      if (process.stdout.writable) {
+        try {
+          (process.stdout as any)._handle?.flush?.();
+        } catch (e) {
+          // Ignore flush errors
+        }
+      }
+      return result;
+    };
+  }
+}
+
+// Custom logger that ensures Railway visibility
+const log = (message: string, level: 'info' | 'error' | 'warn' = 'info') => {
+  const timestamp = new Date().toISOString();
+  const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : '✅';
+  const output = `[${timestamp}] ${prefix} ${message}`;
+  
+  if (level === 'error') {
+    console.error(output);
+  } else {
+    console.log(output);
+  }
+};
+
+log('DynoPay Backend Starting...', 'info');
+log(`Environment: ${process.env.NODE_ENV || 'development'}`, 'info');
+log(`Railway Environment: ${process.env.RAILWAY_ENVIRONMENT || 'not detected'}`, 'info');
 const app = express();
 const port = process.env.PORT || 3300;
 
