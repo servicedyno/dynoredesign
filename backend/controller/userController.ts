@@ -1572,6 +1572,60 @@ const unsubscribeFromReminders = async (req: express.Request, res: express.Respo
   }
 };
 
+/**
+ * Unsubscribe from payment link reminder emails
+ * No authentication required - uses unsubscribe token
+ */
+const unsubscribeFromPaymentReminders = async (req: express.Request, res: express.Response) => {
+  try {
+    // Token can come from query param (GET) or body (POST)
+    const token = req.params.token || req.query.token || req.body.token;
+    
+    if (!token) {
+      return errorResponseHelper(res, 400, "Unsubscribe token is required");
+    }
+    
+    const { paymentLinkModel } = await import("../models");
+    
+    // Find the payment link with this unsubscribe token
+    const paymentLink = await paymentLinkModel.findOne({
+      where: { unsubscribe_token: token },
+    });
+    
+    if (!paymentLink) {
+      return errorResponseHelper(res, 404, "Invalid unsubscribe token");
+    }
+    
+    const linkData = paymentLink.dataValues;
+    
+    // Check if already unsubscribed
+    if (linkData.unsubscribed_at) {
+      return successResponseHelper(res, 200, "You have already unsubscribed from payment reminder emails", {
+        email: linkData.email,
+        unsubscribed_at: linkData.unsubscribed_at,
+      });
+    }
+    
+    // Mark as unsubscribed
+    await paymentLinkModel.update(
+      { unsubscribed_at: new Date() },
+      { where: { link_id: linkData.link_id } }
+    );
+    
+    console.log(`[Unsubscribe] ${linkData.email} unsubscribed from payment link reminders (link_id: ${linkData.link_id})`);
+    
+    return successResponseHelper(res, 200, "Successfully unsubscribed from payment reminder emails", {
+      email: linkData.email,
+      message: "You will no longer receive reminder emails about this payment. You can still complete the payment using your original link.",
+    });
+    
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Unsubscribe payment reminders error: ${errorMessage}`, new Error(e as any));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 export default {
   registerUser,
   registerPhoneStep1,
@@ -1595,4 +1649,5 @@ export default {
   removePhone,
   deleteAccount,
   unsubscribeFromReminders,
+  unsubscribeFromPaymentReminders,
 };
