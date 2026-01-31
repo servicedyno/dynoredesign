@@ -158,6 +158,26 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 - Merchant receives: $10.00 (full base amount)`,
                   example: 'company',
                   default: 'company'
+                },
+                apply_tax: {
+                  type: 'boolean',
+                  description: `🧾 OPTIONAL: Enable automatic tax calculation based on customer's location.
+
+**When enabled:**
+- Customer's country is auto-detected from IP at checkout
+- Tax rate (VAT/GST/Sales Tax) is fetched for that country
+- Tax is added to the payment total
+- Tax goes to merchant (for remittance to tax authority)
+
+**Default:** \`false\` (no tax applied)
+
+**Example (Portuguese customer, 23% VAT):**
+- Base amount: €100.00
+- VAT (23%): €23.00
+- Customer total: €123.00
+- Merchant receives: base + tax = €123.00 (67% of base + full tax if company pays fees)`,
+                  example: false,
+                  default: false
                 }
               }
             },
@@ -183,6 +203,19 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   modes: ['CRYPTO']
                 }
               },
+              'With Tax Enabled': {
+                summary: '🧾 TAX: Auto-calculate tax based on customer location',
+                value: {
+                  amount: 100.00,
+                  currency: 'EUR',
+                  company_id: 1,
+                  email: 'customer@example.com',
+                  modes: ['CRYPTO'],
+                  description: 'Digital Product - Pro Plan',
+                  apply_tax: true,
+                  redirect_url: 'https://myapp.com/success'
+                }
+              },
               'Alternative Field Names': {
                 summary: '🔄 ALTERNATIVE: Using base_* field names (works identically)',
                 value: {
@@ -192,6 +225,23 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   modes: ['CRYPTO', 'CARD'],
                   description: 'Test payment for production',
                   expire: '24h'
+                }
+              },
+              'Full Post-Payment Settings': {
+                summary: '🔗 COMPLETE: All URLs and settings configured',
+                value: {
+                  amount: 199.99,
+                  currency: 'USD',
+                  company_id: 1,
+                  email: 'customer@example.com',
+                  modes: ['CRYPTO'],
+                  description: 'Premium Subscription - Annual',
+                  expire: '7d',
+                  fee_payer: 'customer',
+                  apply_tax: true,
+                  callback_url: 'https://myapp.com/api/payment-callback',
+                  redirect_url: 'https://myapp.com/thank-you',
+                  webhook_url: 'https://myapp.com/webhooks/payment'
                 }
               },
               'Crypto Only Payment': {
