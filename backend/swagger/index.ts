@@ -1,6 +1,7 @@
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import { Express } from "express";
+import { log } from "../utils/loggers";
 
 // Import path definitions
 import { userPaths } from "./paths/user";
