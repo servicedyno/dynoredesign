@@ -839,9 +839,10 @@ export const sendInvoiceGeneratedEmail = async (
 };
 
 /**
- * Template 19: Customer Payment Confirmation Email
+ * Template 19: Customer Payment Confirmation Email with PDF Receipt
  * Trigger: Customer successfully completes payment via payment link
  * Recipient: Customer who made the payment
+ * Includes: Branded PDF receipt attachment
  */
 export const sendCustomerPaymentConfirmationEmail = async (
   customerEmail: string,
@@ -852,23 +853,65 @@ export const sendCustomerPaymentConfirmationEmail = async (
   transactionId: string,
   description: string | null,
   date: string,
-  time: string
+  time: string,
+  cryptoAmount?: string,
+  cryptoCurrency?: string,
+  transactionReference?: string
 ) => {
   try {
     const displayName = customerName || customerEmail.split('@')[0];
     const subject = `Payment Successful - Receipt from ${companyName}`;
+    
+    // Generate PDF receipt
+    let pdfAttachment: { name: string; content: string; contentType: string } | undefined;
+    try {
+      const receiptData = {
+        transactionId,
+        transactionReference,
+        amount,
+        currency,
+        cryptoAmount,
+        cryptoCurrency,
+        companyName,
+        customerEmail,
+        customerName: displayName,
+        paymentDate: new Date(`${date} ${time}`),
+        description: description || undefined,
+        paymentMethod: cryptoCurrency ? `Cryptocurrency (${cryptoCurrency})` : "Cryptocurrency",
+        status: "Completed",
+      };
+      
+      const pdfBuffer = await generatePaymentReceipt(receiptData);
+      const filename = getReceiptFilename(transactionId);
+      
+      pdfAttachment = {
+        name: filename,
+        content: pdfBuffer.toString('base64'),
+        contentType: 'application/pdf',
+      };
+      console.log(`[Email] Generated PDF receipt: ${filename}`);
+    } catch (pdfError) {
+      console.error("[Email] Failed to generate PDF receipt:", pdfError);
+      // Continue without PDF attachment
+    }
+    
     const content = `<p class="message">Hey ${displayName},</p>
     <p class="message">Your payment to <strong>${companyName}</strong> has been successfully processed. 🎉</p>
+    <div class="receipt-box">
+      <strong>✓ Payment Complete</strong>
+    </div>
     <div class="highlight-box">
-      <p><strong>Payment Receipt:</strong></p>
+      <p><strong>Payment Details:</strong></p>
       <p>
         <strong>Amount Paid:</strong> ${amount} ${currency}<br />
+        ${cryptoAmount && cryptoCurrency ? `<strong>Crypto Amount:</strong> ${cryptoAmount} ${cryptoCurrency}<br />` : ''}
         ${description ? `<strong>Description:</strong> ${description}<br />` : ''}
         <strong>Transaction ID:</strong> ${transactionId}<br />
+        ${transactionReference ? `<strong>Reference:</strong> ${transactionReference}<br />` : ''}
         <strong>Date:</strong> ${date} at ${time}
       </p>
     </div>
-    <p class="message">This email serves as your payment confirmation. Please keep it for your records.</p>
+    ${pdfAttachment ? `<p class="message"><strong>📎 PDF Receipt Attached</strong><br />A detailed receipt is attached to this email for your records.</p>` : ''}
     <p class="message">If you have any questions about this payment, please contact <strong>${companyName}</strong> directly.</p>
     <p class="message" style="font-size: 13px; color: #6b7280; margin-top: 24px;">
       This payment was processed securely through DynoPay, a trusted crypto payment gateway.
@@ -881,9 +924,10 @@ export const sendCustomerPaymentConfirmationEmail = async (
       name: displayName,
       subject,
       body: html,
+      attachments: pdfAttachment ? [pdfAttachment] : undefined,
     });
     
-    console.log(`[Email] Customer payment confirmation sent to ${customerEmail} for ${amount} ${currency}`);
+    console.log(`[Email] Customer payment confirmation sent to ${customerEmail} for ${amount} ${currency}${pdfAttachment ? ' with PDF receipt' : ''}`);
   } catch (e) {
     console.error("Customer payment confirmation email error:", e);
   }
