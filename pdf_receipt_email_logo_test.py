@@ -71,9 +71,9 @@ class PDFReceiptEmailLogoTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success') and 'data' in data:
-                    self.jwt_token = data['data'].get('token')
-                    self.user_data = data['data'].get('user', {})
+                if 'data' in data and 'accessToken' in data['data']:
+                    self.jwt_token = data['data'].get('accessToken')
+                    self.user_data = data['data'].get('userData', {})
                     
                     # Set authorization header
                     self.session.headers.update({
@@ -84,7 +84,7 @@ class PDFReceiptEmailLogoTester:
                                 f"Logged in as {self.user_data.get('name', 'Unknown')} (ID: {self.user_data.get('user_id')})")
                     return True
                 else:
-                    self.log_test("Authentication", "FAIL", "Invalid response format")
+                    self.log_test("Authentication", "FAIL", f"Invalid response format: {data}")
                     return False
             else:
                 self.log_test("Authentication", "FAIL", 
