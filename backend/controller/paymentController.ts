@@ -145,6 +145,129 @@ const withRetry = async <T>(
   throw lastError;
 };
 
+// Tax calculation constants
+const TAX_DATA_API_URL = process.env.TAX_DATA_API_URL || "https://api.apilayer.com/tax_data";
+const TAX_DATA_API_KEY = process.env.TAX_DATA_API_KEY;
+
+// Fallback VAT rates for major countries
+const FALLBACK_TAX_RATES: Record<string, number> = {
+  AT: 20, BE: 21, BG: 20, CY: 19, CZ: 21, DE: 19, DK: 25, EE: 22, ES: 21,
+  FI: 24, FR: 20, GR: 24, HR: 25, HU: 27, IE: 23, IT: 22, LT: 21, LU: 17,
+  LV: 21, MT: 18, NL: 21, PL: 23, PT: 23, RO: 19, SE: 25, SI: 22, SK: 20,
+  GB: 20, CH: 8.1, NO: 25, IS: 24, LI: 8.1,
+  US: 0, CA: 5, AU: 10, NZ: 15, JP: 10, SG: 9, IN: 18,
+};
+
+// Tax acronyms by country
+const TAX_ACRONYMS: Record<string, string> = {
+  AT: "VAT", BE: "VAT", BG: "VAT", CY: "VAT", CZ: "VAT", DE: "VAT", DK: "VAT",
+  EE: "VAT", ES: "IVA", FI: "VAT", FR: "TVA", GR: "VAT", HR: "VAT", HU: "VAT",
+  IE: "VAT", IT: "IVA", LT: "VAT", LU: "VAT", LV: "VAT", MT: "VAT", NL: "VAT",
+  PL: "VAT", PT: "IVA", RO: "VAT", SE: "VAT", SI: "VAT", SK: "VAT",
+  GB: "VAT", CH: "VAT", NO: "VAT", IS: "VAT", LI: "VAT",
+  US: "Tax", CA: "GST", AU: "GST", NZ: "GST", JP: "Tax", SG: "GST", IN: "GST",
+};
+
+// Country names
+const COUNTRY_NAMES: Record<string, string> = {
+  AT: "Austria", BE: "Belgium", BG: "Bulgaria", CY: "Cyprus", CZ: "Czech Republic",
+  DE: "Germany", DK: "Denmark", EE: "Estonia", ES: "Spain", FI: "Finland",
+  FR: "France", GR: "Greece", HR: "Croatia", HU: "Hungary", IE: "Ireland",
+  IT: "Italy", LT: "Lithuania", LU: "Luxembourg", LV: "Latvia", MT: "Malta",
+  NL: "Netherlands", PL: "Poland", PT: "Portugal", RO: "Romania", SE: "Sweden",
+  SI: "Slovenia", SK: "Slovakia", GB: "United Kingdom", US: "United States",
+  CA: "Canada", AU: "Australia", NZ: "New Zealand", IN: "India", JP: "Japan",
+  CH: "Switzerland", NO: "Norway", SG: "Singapore",
+};
+
+/**
+ * Calculate tax for checkout based on customer location
+ * Called internally by getData when apply_tax is enabled
+ */
+const calculateTaxForCheckout = async (
+  countryCode: string,
+  amount: number,
+  currency: string
+): Promise<{
+  tax_enabled: boolean;
+  tax_rate: number;
+  tax_acronym: string;
+  tax_amount: number;
+  country_code: string;
+  country_name: string;
+  subtotal: number;
+  total: number;
+  currency: string;
+} | null> => {
+  try {
+    const upperCountryCode = countryCode.toUpperCase();
+    
+    let taxRate = 0;
+    let taxAcronym = TAX_ACRONYMS[upperCountryCode] || 'Tax';
+    let countryName = COUNTRY_NAMES[upperCountryCode] || countryCode;
+    
+    // Check database cache first
+    const cachedRate = await taxRateModel.findOne({
+      where: { country_code: upperCountryCode }
+    });
+
+    if (cachedRate) {
+      taxRate = parseFloat((cachedRate as any).dataValues.standard_rate) || 0;
+      taxAcronym = (cachedRate as any).dataValues.tax_acronym || taxAcronym;
+      countryName = (cachedRate as any).dataValues.country_name || countryName;
+      console.log(`[Tax] Using cached rate for ${upperCountryCode}: ${taxRate}%`);
+    } else if (TAX_DATA_API_KEY) {
+      // Try to fetch from API
+      try {
+        const response = await axios.get(`${TAX_DATA_API_URL}/tax_rates`, {
+          headers: { apikey: TAX_DATA_API_KEY },
+          params: { country: upperCountryCode },
+          timeout: 5000
+        });
+
+        if (response.data && response.data.standard_rate !== undefined) {
+          taxRate = response.data.standard_rate;
+          console.log(`[Tax] Fetched rate from API for ${upperCountryCode}: ${taxRate}%`);
+          
+          // Cache the result
+          await taxRateModel.create({
+            country_code: upperCountryCode,
+            country_name: countryName,
+            tax_acronym: taxAcronym,
+            standard_rate: taxRate,
+          }).catch(() => {}); // Ignore cache errors
+        }
+      } catch (apiError: any) {
+        console.log(`[Tax] API error for ${upperCountryCode}, using fallback:`, apiError.message);
+        taxRate = FALLBACK_TAX_RATES[upperCountryCode] || 0;
+      }
+    } else {
+      // No API key, use fallback
+      taxRate = FALLBACK_TAX_RATES[upperCountryCode] || 0;
+      console.log(`[Tax] Using fallback rate for ${upperCountryCode}: ${taxRate}%`);
+    }
+
+    // Calculate tax
+    const taxAmount = (amount * taxRate) / 100;
+    const total = amount + taxAmount;
+
+    return {
+      tax_enabled: true,
+      tax_rate: taxRate,
+      tax_acronym: taxAcronym,
+      tax_amount: parseFloat(taxAmount.toFixed(2)),
+      country_code: upperCountryCode,
+      country_name: countryName,
+      subtotal: parseFloat(amount.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
+      currency
+    };
+  } catch (error: any) {
+    console.error(`[Tax] Error calculating tax:`, error.message);
+    return null;
+  }
+};
+
 const getData = async (req: express.Request, res: express.Response) => {
   try {
     const { data } = req.body;
