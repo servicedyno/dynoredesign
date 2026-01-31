@@ -16,6 +16,7 @@ import { knowledgeBasePaths } from "./paths/knowledgeBase";
 import { apiUsagePaths } from "./paths/apiUsage";
 import { companyPaths } from "./paths/company";
 import { taxPaths } from "./paths/tax";
+import { kycPaths } from "./paths/kyc";
 
 // Merge all paths
 const allPaths = {
@@ -31,6 +32,7 @@ const allPaths = {
   ...apiUsagePaths,
   ...companyPaths,
   ...taxPaths,
+  ...kycPaths,
 };
 
 const options: swaggerJsdoc.Options = {
