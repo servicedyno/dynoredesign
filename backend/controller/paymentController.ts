@@ -359,6 +359,45 @@ const getData = async (req: express.Request, res: express.Response) => {
       ? `INV-${new Date().getFullYear()}-${item.link_id || item.transaction_id.substring(0, 8).toUpperCase()}`
       : null;
     
+    // Tax calculation - only if merchant enabled apply_tax
+    let taxInfo: any = null;
+    if (item.apply_tax) {
+      console.log(`[getData] Tax enabled for this payment link, detecting customer location...`);
+      
+      // Get customer IP and detect country
+      const clientIP = getClientIP(req);
+      console.log(`[getData] Customer IP: ${clientIP}`);
+      
+      const geoLocation = await getCountryFromIP(clientIP, req.headers);
+      
+      if (geoLocation && geoLocation.country_code) {
+        console.log(`[getData] Detected country: ${geoLocation.country_name} (${geoLocation.country_code})`);
+        
+        // Calculate tax based on detected country
+        taxInfo = await calculateTaxForCheckout(
+          geoLocation.country_code,
+          amount,
+          item.base_currency
+        );
+        
+        if (taxInfo) {
+          console.log(`[getData] Tax calculated: ${taxInfo.tax_rate}% ${taxInfo.tax_acronym} = ${taxInfo.tax_amount} ${taxInfo.currency}`);
+        }
+      } else {
+        console.log(`[getData] Could not detect customer country, tax not applied`);
+        taxInfo = {
+          tax_enabled: true,
+          country_detected: false,
+          tax_rate: 0,
+          tax_amount: 0,
+          subtotal: amount,
+          total: amount,
+          currency: item.base_currency,
+          message: "Country could not be detected"
+        };
+      }
+    }
+    
     let payload;
     if (item.pathType === "createLink") {
       payload = {
@@ -392,6 +431,9 @@ const getData = async (req: express.Request, res: express.Response) => {
         // Post-payment settings - redirect_url for customer redirection after payment
         // Only include if configured (callback_url and webhook_url are backend-only for security)
         ...(item.redirect_url && { redirect_url: item.redirect_url }),
+        // Tax information - only included if merchant enabled apply_tax
+        apply_tax: item.apply_tax || false,
+        ...(taxInfo && { tax_info: taxInfo }),
       };
     } else {
       // Validate customer_id exists before calling getAccessToken
