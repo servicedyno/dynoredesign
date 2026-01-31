@@ -2936,7 +2936,16 @@ const cryptoVerification = async (address, webhook = true) => {
           );
         }
 
-        await tatumApi.deleteSubscription(tempAddressData.subscription_id);
+        // FIX: Only delete subscription for LEGACY (non-merchant-pool) addresses
+        // Merchant pool addresses handle their own subscription lifecycle in releaseAddress()
+        // Deleting here would remove the subscription that was just renewed in releaseAddress()
+        if (!isMerchantPoolAddress && tempAddressData.subscription_id) {
+          console.log(`[cryptoVerification] Deleting subscription for legacy address: ${tempAddressData.subscription_id}`);
+          await tatumApi.deleteSubscription(tempAddressData.subscription_id);
+        } else if (isMerchantPoolAddress) {
+          console.log(`[cryptoVerification] Skipping subscription delete for merchant pool address (handled by releaseAddress)`);
+        }
+        
         await transaction.commit();
         
         // FIXED: Use soft delete with 30-min TTL to allow checkout polling for status
