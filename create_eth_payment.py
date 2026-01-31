@@ -6,7 +6,7 @@ Create ETH Mainnet Crypto Payment for $10
 import requests
 import json
 
-BASE_URL = "https://depend-installer-2.preview.emergentagent.com/api"
+BASE_URL = "https://dependency-hub-3.preview.emergentagent.com/api"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 
