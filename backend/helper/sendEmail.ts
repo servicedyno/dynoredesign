@@ -199,16 +199,19 @@ const sendEmail = async (
 const sendPaymentReceivedEmail = async (
   recipientEmail: string,
   name: string,
-  companyName: string,
   amount: string,
   currency: string,
-  transactionId: string
+  companyName: string,
+  transactionId: string,
+  date?: string,
+  time?: string
 ) => {
   try {
-    const subject = "Payment Received - DynoPay";
+    const subject = `Payment received — ${amount} ${currency}`;
+    const dateTimeStr = date && time ? `\n📅 Date: ${date} at ${time}` : '';
     const message = `Great news! Your company ${companyName} has received a payment.
 
-💰 Amount: ${amount} ${currency}
+💰 Amount: ${amount} ${currency}${dateTimeStr}
 
 📝 Transaction Reference:
 ${transactionId}
