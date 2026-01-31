@@ -3,6 +3,7 @@
  * Sends a test email with PDF receipt to verify the email + PDF functionality
  */
 
+import "dotenv/config";
 import { sendCustomerPaymentConfirmationEmail } from "./services/emailService";
 
 async function sendTestReceipt() {
