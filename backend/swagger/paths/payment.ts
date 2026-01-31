@@ -715,7 +715,13 @@ When \`apply_tax: true\` was set during payment link creation:
     post: {
       tags: ['Payment Processing'],
       summary: 'Initiate crypto payment',
-      description: 'Customer selects cryptocurrency and receives a deposit address. The system monitors this address for incoming payments.',
+      description: `Customer selects cryptocurrency and receives a deposit address. The system monitors this address for incoming payments.
+
+**Tax Handling:**
+If the payment link has \`apply_tax: true\`, the crypto amount will include the calculated tax based on customer's detected location.
+
+**Amount Calculation:**
+- Base amount + Tax (if enabled) + Processing fee (if customer pays) = Total crypto amount`,
       requestBody: {
         required: true,
         content: {
@@ -763,8 +769,8 @@ When \`apply_tax: true\` was set during payment link creation:
           content: {
             'application/json': {
               examples: {
-                'BTC Response': {
-                  summary: 'Bitcoin deposit address',
+                'Standard Response (No Tax)': {
+                  summary: 'Crypto address without tax',
                   value: {
                     message: 'Crypto payment initiated',
                     data: {
@@ -773,10 +779,44 @@ When \`apply_tax: true\` was set during payment link creation:
                       crypto_amount: 0.00456789,
                       usd_amount: 199.99,
                       exchange_rate: 43750.00,
+                      base_amount: 199.99,
+                      base_currency: 'USD',
+                      merchant_amount: 0.00306,
+                      fees: 0.00151,
+                      fee_payer: 'company',
                       qr_code: 'data:image/png;base64,iVBORw0KGgo...',
                       expires_at: '2024-01-15T11:30:00Z',
                       confirmations_required: 1,
                       network: 'Bitcoin Mainnet'
+                    }
+                  }
+                },
+                'With Tax (Portuguese Customer)': {
+                  summary: 'Crypto amount includes 23% VAT',
+                  value: {
+                    message: 'Crypto payment initiated',
+                    data: {
+                      deposit_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE4E',
+                      crypto_currency: 'ETH',
+                      crypto_amount: 0.0615,
+                      usd_amount: 123.00,
+                      exchange_rate: 2000.00,
+                      base_amount: 100.00,
+                      base_currency: 'EUR',
+                      merchant_amount: 0.0515,
+                      fees: 0.01,
+                      fee_payer: 'company',
+                      qr_code: 'data:image/png;base64,iVBORw0KGgo...',
+                      expires_at: '2024-01-15T11:30:00Z',
+                      confirmations_required: 12,
+                      network: 'Ethereum Mainnet',
+                      tax_info: {
+                        tax_amount: 23.00,
+                        tax_amount_crypto: 0.0115,
+                        tax_rate: 23,
+                        tax_acronym: 'VAT',
+                        country_code: 'PT'
+                      }
                     }
                   }
                 },
@@ -790,6 +830,11 @@ When \`apply_tax: true\` was set during payment link creation:
                       crypto_amount: 199.99,
                       usd_amount: 199.99,
                       exchange_rate: 1.00,
+                      base_amount: 199.99,
+                      base_currency: 'USD',
+                      merchant_amount: 133.99,
+                      fees: 66.00,
+                      fee_payer: 'company',
                       qr_code: 'data:image/png;base64,iVBORw0KGgo...',
                       expires_at: '2024-01-15T11:30:00Z',
                       confirmations_required: 20,
