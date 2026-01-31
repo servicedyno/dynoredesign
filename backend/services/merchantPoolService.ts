@@ -25,7 +25,7 @@ import {
 } from "../models";
 import tatumApi from "../apis/tatumApi";
 import sequelize from "../utils/dbInstance";
-import { cronLogger } from "../utils/loggers";
+import { cronLogger, log } from "../utils/loggers";
 import { currencyConvert, getErrorMessage } from "../helper";
 
 // Configuration
