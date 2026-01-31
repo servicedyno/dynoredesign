@@ -275,20 +275,23 @@ const startServer = async () => {
     
     // Validate Merchant Pool Configuration (CRITICAL STARTUP CHECK)
     try {
+      log('Validating Merchant Pool configuration...', 'info');
       const validateMerchantPoolConfiguration = (await import("./services/merchantPoolValidator")).default;
       await validateMerchantPoolConfiguration();
+      log('Merchant Pool configuration validated successfully', 'info');
     } catch (validationError: any) {
-      console.error("❌ MERCHANT POOL CONFIGURATION VALIDATION FAILED");
-      console.error("❌ Server cannot start with invalid configuration");
-      console.error("❌ Error:", validationError.message);
+      log('MERCHANT POOL CONFIGURATION VALIDATION FAILED', 'error');
+      log(`Server cannot start with invalid configuration: ${validationError.message}`, 'error');
       process.exit(1); // Exit server - don't start with bad config
     }
-  } catch (error) {
-    console.error("PostgreSQL Unable to connect to the database:", error);
+  } catch (error: any) {
+    log(`PostgreSQL Unable to connect to the database: ${error.message}`, 'error');
   }
-  app.listen(port, () =>
-    console.log(`Server is listening on port ${port}!`)
-  );
+  app.listen(port, () => {
+    log(`🚀 Server is listening on port ${port}!`, 'info');
+    log(`📚 Swagger docs available at /api/docs`, 'info');
+    log(`❤️ Health check available at /health`, 'info');
+  });
 };
 
 startServer();
