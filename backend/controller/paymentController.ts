@@ -3527,10 +3527,11 @@ ${refereeCodeSection}
         `.trim();
 
         await sendEmail(
-          email,
-          `Payment Request from ${companyName} - ${normalizedAmount} ${normalizedCurrency}`,
-          paymentMessage,
-          "Payment Request"
+          email,                                                                          // recipientEmail
+          email.split('@')[0] || "Customer",                                              // name (extract from email)
+          `Payment Request from ${companyName} - ${normalizedAmount} ${normalizedCurrency}`, // subject
+          paymentMessage,                                                                 // message body
+          false                                                                           // showImage
         );
 
         console.log(`[PaymentLink] Email sent to ${email}${refereeCodeData ? ` with referee code ${refereeCodeData.code}` : ''}`);
