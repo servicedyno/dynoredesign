@@ -256,6 +256,21 @@ backend:
         agent: "testing"
         comment: "✅ ENHANCED CHECKOUT DATA API TESTING COMPLETED: 100% success rate (12/12 tests passed). ✅ AUTHENTICATION: Successfully authenticated with provided credentials john@dyno.pt / Katiekendra123@. ✅ PAYMENT LINK CREATION: Successfully created $50 USD payment link with CRYPTO mode and extracted reference parameter. ✅ API ENDPOINT VERIFICATION: POST /api/pay/getData endpoint working correctly with comprehensive field validation. ✅ BASIC FIELDS: All required fields present with correct values (amount: 50, base_currency: USD, payment_mode: createLink, allowedModes: CRYPTO, fee_payer: customer, token field present). ✅ MERCHANT INFO: Company name correct (Johnnys LDA for company_id 38), company_logo field present (null). ✅ FEE INFO: All fee calculations correct (fee_percent: 2.0, fixed_fee: 3, fee_display: '2% + $3.00', fee_breakdown with base_amount: 50, percentage_fee: 1, fixed_fee: 3, total_fee: 4, total_amount: 54). ✅ ORDER REFERENCE: Format correct (INV-2026-xxx pattern). ✅ EXPIRY INFO: All expiry fields present (expires_at, is_expired: false, countdown with days/hours/minutes/seconds/formatted). ✅ DESCRIPTION: Matches expected value 'Monthly Digital Art Subscription'. ✅ TRANSACTION ID: UUID format validation passed. 🔧 TECHNICAL FIX APPLIED: Fixed totalWithFees.toFixed error by ensuring amount is converted to Number before calculations. CONCLUSION: Enhanced checkout data API endpoint is fully operational with all required fields correctly implemented and validated."
 
+  - task: "Tax at Checkout Feature Testing"
+    implemented: true
+    working: true
+    file: "/app/tax_checkout_test.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test the tax at checkout feature in DynoPay with test credentials john@dyno.pt / Katiekendra123@. Test scenarios: (1) Create payment link WITHOUT tax (default behavior), (2) Create payment link WITH tax enabled, (3) Verify tax API rate endpoints for PT and DE countries. Expected results: Tax is OFF by default when apply_tax not provided, Tax is calculated when apply_tax: true, Tax calculation uses customer IP geolocation, Tax rates are fetched from API or fallback values."
+      - working: true
+        agent: "testing"
+        comment: "✅ TAX AT CHECKOUT FEATURE TESTING COMPLETED: 100% success rate (15/15 tests passed). ✅ AUTHENTICATION: Successfully authenticated with provided credentials john@dyno.pt / Katiekendra123@. ✅ TEST 1 - PAYMENT LINK WITHOUT TAX: Successfully created payment link with amount: 50 EUR, modes: ['CRYPTO'], company_id: 38, description: 'Product without tax' (apply_tax field omitted). Verified getData response shows apply_tax: false and no tax_info object present. ✅ TEST 2 - PAYMENT LINK WITH TAX ENABLED: Successfully created payment link with amount: 100 EUR, apply_tax: true. Verified getData response shows apply_tax: true and complete tax_info object with all required fields (tax_enabled: true, tax_rate: 23%, tax_acronym: VAT, tax_amount: 23, subtotal: 100, total: 123, country_code: PT, country_name: Portugal). ✅ TAX CALCULATION VERIFICATION: Tax calculation logic working correctly - 23% VAT on 100 EUR = 23 EUR tax, total: 123 EUR. ✅ COUNTRY DETECTION: Customer IP geolocation working correctly, detected Portugal (PT) from simulated Portuguese IP headers. ✅ TEST 3 - TAX API RATE ENDPOINTS: GET /api/tax/rate/PT returns 23% VAT for Portugal (within expected range 20-25%). GET /api/tax/rate/DE returns 19% VAT for Germany (within expected range 18-20%). Both endpoints return correct country codes, names, and tax acronyms. CONCLUSION: Tax at checkout feature is fully operational. Default behavior (no tax) works correctly, tax calculation with geolocation works correctly, and tax rate API endpoints provide accurate data for supported countries."
+
   - task: "Comprehensive Authentication System Testing"
     implemented: true
     working: true
