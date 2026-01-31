@@ -377,6 +377,9 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
         },
         companyId
       );
+
+      // Send resubmission required email
+      await sendKYCResubmissionRequiredEmail(user.email, user.name, reason || "Additional documents required for verification");
     }
 
     return successResponseHelper(res, 200, "Webhook processed successfully", {});
