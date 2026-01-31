@@ -17,11 +17,18 @@ import axios from "axios";
 // const mailTransporter = new brevo.TransactionalEmailsApi();
 // const smtpTemplate = new brevo.SendSmtpEmail();
 
+interface Attachment {
+  name: string;
+  content: string; // Base64 encoded content
+  contentType?: string;
+}
+
 interface mailOptions {
   to: string;
   name: string;
   subject: string;
   body?: string;
+  attachments?: Attachment[];
 }
 
 /**
@@ -36,32 +43,44 @@ const stripHtml = (html: string): string => {
     .trim();
 };
 
-const mailTransporter = async ({ to, subject, body, name }: mailOptions) => {
+const mailTransporter = async ({ to, subject, body, name, attachments }: mailOptions) => {
+  const payload: any = {
+    sender: {
+      name: "DynoPay",
+      email: "notify@dynocash.com",
+    },
+    subject,
+    to: [
+      {
+        email: to,
+        name: name.trim().length > 0 ? name : to,
+      },
+    ],
+    htmlContent: body,                    // Send as HTML for proper rendering
+    textContent: stripHtml(body || ''),   // Plain text fallback for email clients that don't support HTML
+  };
+
+  // Add attachments if provided
+  if (attachments && attachments.length > 0) {
+    payload.attachment = attachments.map(att => ({
+      name: att.name,
+      content: att.content,
+      contentType: att.contentType || 'application/pdf',
+    }));
+  }
+
   const { data } = await axios.post(
     "https://api.brevo.com/v3/smtp/email",
-    {
-      sender: {
-        name: "DynoPay",
-        email: "notify@dynocash.com",
-      },
-      subject,
-      to: [
-        {
-          email: to,
-          name: name.trim().length > 0 ? name : to,
-        },
-      ],
-      htmlContent: body,                    // Send as HTML for proper rendering
-      textContent: stripHtml(body || ''),   // Plain text fallback for email clients that don't support HTML
-    },
+    payload,
     {
       headers: {
         "api-key": process.env.BREVO_API_KEY,
       },
     }
   );
-  console.log(`[Email] Sent to ${to}: ${subject}`);
+  console.log(`[Email] Sent to ${to}: ${subject}${attachments ? ` (with ${attachments.length} attachment(s))` : ''}`);
   return data;
 };
 
 export default mailTransporter;
+export type { mailOptions, Attachment };
