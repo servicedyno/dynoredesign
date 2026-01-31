@@ -390,17 +390,33 @@ const getData = async (req: express.Request, res: express.Response) => {
       const clientIP = getClientIP(req);
       console.log(`[getData] Customer IP: ${clientIP}`);
       
-      // Try IP-based geolocation first
-      let geoLocation = await getCountryFromIP(clientIP, req.headers);
+      // Check if IP is localhost/private (unreliable for geolocation)
+      const isPrivateIP = clientIP === '127.0.0.1' || 
+                          clientIP === 'localhost' ||
+                          clientIP.startsWith('192.168.') ||
+                          clientIP.startsWith('10.') ||
+                          clientIP.startsWith('172.') ||
+                          clientIP === '::1';
       
-      // If IP detection failed and timezone provided, use timezone as fallback
-      if ((!geoLocation || !geoLocation.country_code) && timezone) {
-        console.log(`[getData] IP detection failed, trying timezone fallback: ${timezone}`);
+      let geoLocation = null;
+      
+      // If timezone is provided and IP is private/localhost, prefer timezone
+      if (timezone && isPrivateIP) {
+        console.log(`[getData] Private/localhost IP detected (${clientIP}), using timezone: ${timezone}`);
         geoLocation = getCountryFromTimezone(timezone);
+      } else {
+        // Try IP-based geolocation first
+        geoLocation = await getCountryFromIP(clientIP, req.headers);
+        
+        // If IP detection failed or returned unreliable result, and timezone provided, use timezone
+        if ((!geoLocation || !geoLocation.country_code) && timezone) {
+          console.log(`[getData] IP detection failed, trying timezone fallback: ${timezone}`);
+          geoLocation = getCountryFromTimezone(timezone);
+        }
       }
       
       if (geoLocation && geoLocation.country_code) {
-        console.log(`[getData] Detected country: ${geoLocation.country_name} (${geoLocation.country_code}) via ${geoLocation.source}`);
+        console.log(`[getData] Detected country: ${geoLocation.country_name} (${geoLocation.country_code}) via ${geoLocation.source || 'ip'}`);
         
         // Calculate tax based on detected country
         taxInfo = await calculateTaxForCheckout(
