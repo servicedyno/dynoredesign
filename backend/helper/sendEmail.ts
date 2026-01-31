@@ -685,6 +685,117 @@ const sendRefereeCodeReminderEmail = async (
   }
 };
 
+/**
+ * Send payment link reminder email
+ * Reminds customers to complete their pending payment
+ */
+const sendPaymentLinkReminderEmail = async (
+  recipientEmail: string,
+  companyName: string,
+  amount: string,
+  currency: string,
+  description: string | null,
+  paymentLink: string,
+  expiresAt: Date | null,
+  reminderType: 'reminder1' | 'reminder2' | 'final',
+  unsubscribeToken: string
+) => {
+  try {
+    const baseUrl = process.env.FRONTEND_URL || process.env.CHECKOUT_URL || 'https://dynopay.io';
+    const unsubscribeUrl = `${baseUrl}/api/user/unsubscribe-payment-reminders?token=${unsubscribeToken}`;
+    
+    let subject: string;
+    let urgencyMessage: string;
+    let ctaText: string;
+    let headerText: string;
+    
+    // Calculate time remaining if expires_at exists
+    let timeRemaining = '';
+    if (expiresAt) {
+      const now = new Date();
+      const diffMs = expiresAt.getTime() - now.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffHours / 24);
+      
+      if (diffDays > 0) {
+        timeRemaining = `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+      } else if (diffHours > 0) {
+        timeRemaining = `${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+      } else {
+        timeRemaining = 'less than an hour';
+      }
+    }
+    
+    switch (reminderType) {
+      case 'reminder1':
+        subject = `Complete your payment to ${companyName}`;
+        headerText = "Payment Reminder";
+        urgencyMessage = expiresAt 
+          ? `You have <strong>${timeRemaining}</strong> to complete this payment.`
+          : `Please complete your payment at your earliest convenience.`;
+        ctaText = "Complete Payment";
+        break;
+      case 'reminder2':
+        subject = `Your payment to ${companyName} is still pending`;
+        headerText = "Payment Still Pending";
+        urgencyMessage = expiresAt
+          ? `<strong>Don't forget!</strong> You have <strong>${timeRemaining}</strong> remaining to complete this payment.`
+          : `We noticed you haven't completed your payment yet. Need help?`;
+        ctaText = "Pay Now";
+        break;
+      case 'final':
+        subject = expiresAt 
+          ? `⚠️ Payment expires soon - ${companyName}`
+          : `Final reminder: Payment pending - ${companyName}`;
+        headerText = expiresAt ? "⚠️ Expiring Soon!" : "Final Reminder";
+        urgencyMessage = expiresAt
+          ? `<strong style="color: #dc2626;">URGENT:</strong> Your payment link expires in <strong>${timeRemaining}</strong>. Please complete your payment now to avoid missing the deadline.`
+          : `This is a final reminder about your pending payment. Please complete it soon or contact ${companyName} if you have questions.`;
+        ctaText = "Complete Payment Now";
+        break;
+    }
+    
+    const message = `
+<p>You have a pending payment request from <strong>${companyName}</strong>.</p>
+
+<div style="margin: 24px 0; padding: 20px; background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6;">
+  <p style="margin: 0 0 8px 0; font-size: 16px;"><strong>Amount Due:</strong> ${amount} ${currency}</p>
+  ${description ? `<p style="margin: 0 0 8px 0;"><strong>Description:</strong> ${description}</p>` : ''}
+  ${expiresAt ? `<p style="margin: 0;"><strong>Expires:</strong> ${expiresAt.toLocaleDateString()} at ${expiresAt.toLocaleTimeString()}</p>` : ''}
+</div>
+
+<p style="font-size: 15px;">${urgencyMessage}</p>
+
+<div style="text-align: center; margin: 32px 0;">
+  <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #f47323 0%, #e05a00 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">${ctaText}</a>
+</div>
+
+<p style="font-size: 14px; color: #6b7280;">
+  If you've already completed this payment, please disregard this email. If you have any questions about this payment, please contact ${companyName} directly.
+</p>
+
+<p style="font-size: 13px; color: #9ca3af; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+  <a href="${unsubscribeUrl}" style="color: #9ca3af;">Unsubscribe</a> from payment reminders
+</p>
+    `.trim();
+    
+    const recipientName = recipientEmail.split('@')[0] || "there";
+    const htmlBody = dynoPayEmailTemplate(recipientName, message, headerText, false);
+    
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name: recipientName,
+      subject,
+      body: htmlBody,
+    });
+    
+    console.log(`[Email] Payment link reminder (${reminderType}) sent to ${recipientEmail}`);
+    return info;
+  } catch (e) {
+    console.log("Payment link reminder email error:", e);
+  }
+};
+
 export default sendEmail;
 export {
   sendEmail,
@@ -698,5 +809,6 @@ export {
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
   sendRefereeCodeReminderEmail,
+  sendPaymentLinkReminderEmail,
   dynoPayEmailTemplate,
 };
