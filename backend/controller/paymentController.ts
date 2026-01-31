@@ -835,27 +835,77 @@ const createCryptoPayment = async (
       const ADMIN_FEE_PERCENT = 0.33;
       
       // Calculate crypto amount using FastForex
-      const baseAmountUSD = Number(items.base_amount || items.amount || 0);
-      let crypto_amount = 0;           // What customer should pay
-      let merchant_amount_crypto = 0;  // What merchant receives
+      let baseAmountUSD = Number(items.base_amount || items.amount || 0);
+      let taxAmount = 0;
+      let taxInfo: any = null;
+      
+      // TAX HANDLING: If apply_tax is enabled, calculate tax based on customer location
+      if (items.apply_tax) {
+        console.log(`[createCryptoPayment] Tax enabled, detecting customer location...`);
+        
+        // Get customer IP and detect country
+        const clientIP = getClientIP(req);
+        const geoLocation = await getCountryFromIP(clientIP, req.headers);
+        
+        if (geoLocation && geoLocation.country_code) {
+          console.log(`[createCryptoPayment] Detected country: ${geoLocation.country_name} (${geoLocation.country_code})`);
+          
+          // Calculate tax using the same function as getData
+          taxInfo = await calculateTaxForCheckout(
+            geoLocation.country_code,
+            baseAmountUSD,
+            items.base_currency || 'USD'
+          );
+          
+          if (taxInfo && taxInfo.tax_amount > 0) {
+            taxAmount = taxInfo.tax_amount;
+            console.log(`[createCryptoPayment] Tax calculated: ${taxInfo.tax_rate}% ${taxInfo.tax_acronym} = ${taxAmount} ${items.base_currency || 'USD'}`);
+            console.log(`[createCryptoPayment] Total with tax: ${taxInfo.total} ${items.base_currency || 'USD'}`);
+          }
+        } else {
+          console.log(`[createCryptoPayment] Could not detect customer country, no tax applied`);
+        }
+      }
+      
+      // Total amount customer should pay (base + tax if applicable)
+      const totalAmountWithTax = baseAmountUSD + taxAmount;
+      
+      let crypto_amount = 0;           // What customer should pay (includes tax)
+      let merchant_amount_crypto = 0;  // What merchant receives (base amount only, no tax)
       let total_fees_crypto = 0;       // Admin fees
+      let tax_amount_crypto = 0;       // Tax in crypto (goes to merchant as collected tax)
       let exchange_rate = 0;
       
       try {
-        // Get the crypto amount for the USD base value using FastForex
+        // Get the crypto amount for the TOTAL value (base + tax) using FastForex
         const cryptoRates = await currencyConvert({
           sourceCurrency: items.base_currency || 'USD',
           currency: [requestedCurrency],
-          amount: baseAmountUSD,
+          amount: totalAmountWithTax,  // Use total with tax
           fixedDecimal: false,
         });
-        const base_crypto_amount = parseFloat(cryptoRates[0]?.amount?.toString() || '0');
+        const total_crypto_amount = parseFloat(cryptoRates[0]?.amount?.toString() || '0');
         exchange_rate = parseFloat(cryptoRates[0]?.transferRate?.toString() || '0');
         
-        console.log(`[createCryptoPayment] Base crypto amount calculated:
+        // Calculate base crypto amount (without tax) for merchant amount calculation
+        const base_crypto_amount = taxAmount > 0 
+          ? total_crypto_amount * (baseAmountUSD / totalAmountWithTax)
+          : total_crypto_amount;
+        
+        // Calculate tax amount in crypto
+        tax_amount_crypto = taxAmount > 0 
+          ? total_crypto_amount * (taxAmount / totalAmountWithTax)
+          : 0;
+        
+        console.log(`[createCryptoPayment] Crypto amount calculated:
           - Base amount: ${baseAmountUSD} ${items.base_currency || 'USD'}
+          - Tax amount: ${taxAmount} ${items.base_currency || 'USD'}
+          - Total with tax: ${totalAmountWithTax} ${items.base_currency || 'USD'}
+          - Total crypto: ${total_crypto_amount} ${requestedCurrency}
           - Base crypto: ${base_crypto_amount} ${requestedCurrency}
+          - Tax crypto: ${tax_amount_crypto} ${requestedCurrency}
           - Exchange rate: 1 ${items.base_currency || 'USD'} = ${exchange_rate} ${requestedCurrency}`);
+        
         
         if (fee_payer === 'customer') {
           // CUSTOMER PAYS FEES:
