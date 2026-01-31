@@ -76,7 +76,7 @@ class DynoPayCheckoutAPITester:
                 
                 if 'data' in data and 'accessToken' in data['data']:
                     self.jwt_token = data['data']['accessToken']
-                    user_data = data['data']
+                    user_data = data['data'].get('userData', {})
                     
                     self.log_result(
                         "Authentication", 
@@ -151,8 +151,8 @@ class DynoPayCheckoutAPITester:
             if response.status_code == 200:
                 data = response.json()
                 
-                if 'data' in data and 'payment_url' in data['data']:
-                    payment_url = data['data']['payment_url']
+                if 'data' in data and 'payment_link' in data['data']:
+                    payment_url = data['data']['payment_link']
                     
                     # Extract reference parameter from URL
                     parsed_url = urlparse(payment_url)
@@ -185,7 +185,7 @@ class DynoPayCheckoutAPITester:
                     self.log_result(
                         "Create Payment Link", 
                         False, 
-                        "Response missing payment_url",
+                        "Response missing payment_link field",
                         {"response": data}
                     )
             else:
@@ -608,8 +608,8 @@ class DynoPayCheckoutAPITester:
             if response.status_code == 200:
                 data = response.json()
                 
-                if 'data' in data and 'payment_url' in data['data']:
-                    payment_url = data['data']['payment_url']
+                if 'data' in data and 'payment_link' in data['data']:
+                    payment_url = data['data']['payment_link']
                     
                     # Extract reference and test getData with tax
                     parsed_url = urlparse(payment_url)
@@ -683,7 +683,7 @@ class DynoPayCheckoutAPITester:
                     self.log_result(
                         "Payment Link with Tax", 
                         False, 
-                        "Response missing payment_url",
+                        "Response missing payment_link field",
                         {"response": data}
                     )
             else:
