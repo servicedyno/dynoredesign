@@ -48,4 +48,8 @@ userRouter.put(
 // Account deletion (requires auth)
 userRouter.delete("/account", authMiddleware, userController.deleteAccount);
 
+// Referee code unsubscribe (no auth required - uses token)
+userRouter.post("/unsubscribe-reminders", userController.unsubscribeFromReminders);
+userRouter.get("/unsubscribe-reminders/:token", userController.unsubscribeFromReminders);
+
 export default userRouter;
