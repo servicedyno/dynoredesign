@@ -510,8 +510,22 @@ Modes must be provided in **UPPERCASE**. Valid modes:
   '/api/pay/getData': {
     post: {
       tags: ['Payment Processing'],
-      summary: 'Get payment data',
-      description: 'Retrieve payment information for checkout page. Called when customer opens a payment link.',
+      summary: 'Get payment data for checkout',
+      description: `Retrieve payment information for checkout page. Called when customer opens a payment link.
+
+**Enhanced Response Includes:**
+- Order details (description, invoice reference)
+- Merchant branding (company name, logo)
+- Fee breakdown (subtotal, processing fee, who pays)
+- Tax calculation (if merchant enabled \`apply_tax\`)
+- Link expiry with countdown
+- Redirect URL for post-payment
+
+**Tax Calculation:**
+When \`apply_tax: true\` was set during payment link creation:
+- Customer's country is auto-detected from IP
+- Tax rate (VAT/GST) is fetched and calculated
+- Response includes \`tax_info\` object with breakdown`,
       requestBody: {
         required: true,
         content: {
@@ -534,39 +548,153 @@ Modes must be provided in **UPPERCASE**. Valid modes:
           description: 'Payment data retrieved',
           content: {
             'application/json': {
-              example: {
-                message: 'Payment link details retrieved successfully',
-                data: {
-                  amount: 50,
-                  base_currency: 'USD',
-                  token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-                  payment_mode: 'createLink',
-                  allowedModes: 'CRYPTO',
-                  fee_payer: 'customer',
-                  transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-                  order_reference: 'INV-2026-123',
-                  description: 'Order #12345 - Premium Subscription',
-                  merchant: {
-                    company_name: 'My Online Store',
-                    company_logo: 'https://mystore.com/logo.png'
-                  },
-                  fee_info: {
-                    fee_payer: 'customer',
-                    processing_fee: 4.5,
-                    total_amount: 54.5
-                  },
-                  expiry: {
-                    expires_at: '2026-01-16T10:30:00Z',
-                    is_expired: false,
-                    countdown: {
-                      days: 6,
-                      hours: 23,
-                      minutes: 45,
-                      seconds: 30,
-                      formatted: '6d : 23h : 45m : 30s'
+              examples: {
+                'Standard Response': {
+                  summary: 'Payment link without tax',
+                  value: {
+                    message: 'Payment link details retrieved successfully',
+                    data: {
+                      amount: 50,
+                      base_currency: 'USD',
+                      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                      payment_mode: 'createLink',
+                      allowedModes: 'CRYPTO',
+                      fee_payer: 'company',
+                      transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                      order_reference: 'INV-2026-A1B2C3',
+                      description: 'Order #12345 - Premium Subscription',
+                      merchant: {
+                        company_name: 'My Online Store',
+                        company_logo: 'https://mystore.com/logo.png'
+                      },
+                      fee_info: {
+                        fee_payer: 'company'
+                      },
+                      expiry: {
+                        expires_at: '2026-02-07T10:30:00Z',
+                        is_expired: false,
+                        countdown: {
+                          days: 6,
+                          hours: 23,
+                          minutes: 45,
+                          seconds: 30,
+                          formatted: '6d : 23h : 45m : 30s'
+                        }
+                      },
+                      created_at: '2026-01-31T10:30:00Z',
+                      apply_tax: false,
+                      redirect_url: 'https://mystore.com/success'
                     }
-                  },
-                  created_at: '2026-01-09T10:30:00Z'
+                  }
+                },
+                'With Tax Enabled (Customer in Portugal)': {
+                  summary: 'Payment with auto-calculated VAT',
+                  value: {
+                    message: 'Payment link details retrieved successfully',
+                    data: {
+                      amount: 100,
+                      base_currency: 'EUR',
+                      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                      payment_mode: 'createLink',
+                      allowedModes: 'CRYPTO',
+                      fee_payer: 'company',
+                      transaction_id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+                      order_reference: 'INV-2026-X7Y8Z9',
+                      description: 'Digital Product - Pro Plan',
+                      merchant: {
+                        company_name: 'SaaS Company',
+                        company_logo: 'https://saas.com/logo.png'
+                      },
+                      fee_info: {
+                        fee_payer: 'company'
+                      },
+                      expiry: {
+                        expires_at: '2026-02-07T10:30:00Z',
+                        is_expired: false,
+                        countdown: {
+                          days: 7,
+                          hours: 0,
+                          minutes: 0,
+                          seconds: 0,
+                          formatted: '7d : 00h : 00m : 00s'
+                        }
+                      },
+                      created_at: '2026-01-31T10:30:00Z',
+                      apply_tax: true,
+                      tax_info: {
+                        tax_enabled: true,
+                        tax_rate: 23,
+                        tax_acronym: 'VAT',
+                        tax_amount: 23.00,
+                        country_code: 'PT',
+                        country_name: 'Portugal',
+                        subtotal: 100.00,
+                        total: 123.00,
+                        currency: 'EUR'
+                      },
+                      redirect_url: 'https://saas.com/thank-you'
+                    }
+                  }
+                },
+                'Customer Pays Fees': {
+                  summary: 'Fee breakdown when customer pays',
+                  value: {
+                    message: 'Payment link details retrieved successfully',
+                    data: {
+                      amount: 50,
+                      base_currency: 'USD',
+                      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                      payment_mode: 'createLink',
+                      allowedModes: 'CRYPTO',
+                      fee_payer: 'customer',
+                      transaction_id: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+                      order_reference: 'INV-2026-FEE123',
+                      description: 'Consulting Service',
+                      merchant: {
+                        company_name: 'Consulting Co',
+                        company_logo: null
+                      },
+                      fee_info: {
+                        fee_payer: 'customer',
+                        processing_fee: 4.55,
+                        total_amount: 54.55
+                      },
+                      expiry: null,
+                      created_at: '2026-01-31T10:30:00Z',
+                      apply_tax: false
+                    }
+                  }
+                },
+                'Expired Link': {
+                  summary: 'Payment link has expired',
+                  value: {
+                    message: 'Payment link details retrieved successfully',
+                    data: {
+                      amount: 100,
+                      base_currency: 'USD',
+                      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                      payment_mode: 'createLink',
+                      allowedModes: 'CRYPTO',
+                      fee_payer: 'company',
+                      transaction_id: 'd4e5f6a7-b8c9-0123-def0-234567890123',
+                      order_reference: 'INV-2026-EXP456',
+                      description: 'Expired Order',
+                      merchant: {
+                        company_name: 'Test Store',
+                        company_logo: null
+                      },
+                      fee_info: {
+                        fee_payer: 'company'
+                      },
+                      expiry: {
+                        expires_at: '2026-01-30T10:30:00Z',
+                        is_expired: true,
+                        countdown: null
+                      },
+                      created_at: '2026-01-23T10:30:00Z',
+                      apply_tax: false
+                    }
+                  }
                 }
               }
             }
