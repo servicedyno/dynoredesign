@@ -105,7 +105,7 @@ class MultiTenantBackendTester:
                 
                 if 'data' in data and 'accessToken' in data['data']:
                     self.jwt_token = data['data']['accessToken']
-                    self.user_data = data['data']
+                    self.user_data = data['data']['userData']  # Fix: userData is nested
                     
                     # Verify user details match expected
                     user_id = self.user_data.get('user_id')
