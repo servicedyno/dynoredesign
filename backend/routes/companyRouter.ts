@@ -15,27 +15,28 @@ companyRouter.post(
 companyRouter.put(
   "/updateCompany/:id",
   authMiddleware,
+  companyOwnershipMiddleware,
   uploadImage.single("image") as unknown as RequestHandler,
   companyMiddleware,
   companyController.updateCompany
 );
 
 companyRouter.get("/getCompany", authMiddleware, companyController.getCompany);
-companyRouter.get("/getCompany/:id", authMiddleware, companyController.getCompanyById);
-companyRouter.get("/getTransactions/:id", authMiddleware, companyController.getTransactions);
-companyRouter.delete("/deleteCompany/:id", authMiddleware, companyController.deleteCompany);
+companyRouter.get("/getCompany/:id", authMiddleware, companyOwnershipMiddleware, companyController.getCompanyById);
+companyRouter.get("/getTransactions/:id", authMiddleware, companyOwnershipMiddleware, companyController.getTransactions);
+companyRouter.delete("/deleteCompany/:id", authMiddleware, companyOwnershipMiddleware, companyController.deleteCompany);
 
 // TAX ID Validation endpoint
 companyRouter.post("/validateTaxId", authMiddleware, companyController.validateTaxId);
 
 // Webhook configuration endpoints
-companyRouter.put("/webhook-settings/:id", authMiddleware, companyController.updateWebhookSettings);
-companyRouter.get("/webhook-settings/:id", authMiddleware, companyController.getWebhookSettings);
-companyRouter.post("/webhook-test/:id", authMiddleware, companyController.testWebhook);
+companyRouter.put("/webhook-settings/:id", authMiddleware, companyOwnershipMiddleware, companyController.updateWebhookSettings);
+companyRouter.get("/webhook-settings/:id", authMiddleware, companyOwnershipMiddleware, companyController.getWebhookSettings);
+companyRouter.post("/webhook-test/:id", authMiddleware, companyOwnershipMiddleware, companyController.testWebhook);
 
 // Webhook history and stats endpoints
-companyRouter.get("/webhook-history/:id", authMiddleware, companyController.getWebhookHistory);
-companyRouter.get("/webhook-history/:id/detail/:logId", authMiddleware, companyController.getWebhookDetail);
-companyRouter.get("/webhook-stats/:id", authMiddleware, companyController.getWebhookStats);
+companyRouter.get("/webhook-history/:id", authMiddleware, companyOwnershipMiddleware, companyController.getWebhookHistory);
+companyRouter.get("/webhook-history/:id/detail/:logId", authMiddleware, companyOwnershipMiddleware, companyController.getWebhookDetail);
+companyRouter.get("/webhook-stats/:id", authMiddleware, companyOwnershipMiddleware, companyController.getWebhookStats);
 
 export default companyRouter;
