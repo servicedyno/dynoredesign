@@ -1518,6 +1518,60 @@ const deleteAccount = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Unsubscribe from referee code reminder emails
+ * No authentication required - uses unsubscribe token
+ */
+const unsubscribeFromReminders = async (req: express.Request, res: express.Response) => {
+  try {
+    // Token can come from query param (GET) or body (POST)
+    const token = req.params.token || req.query.token || req.body.token;
+    
+    if (!token) {
+      return errorResponseHelper(res, 400, "Unsubscribe token is required");
+    }
+    
+    const { refereeCodeModel } = await import("../models");
+    
+    // Find the referee code with this unsubscribe token
+    const refereeCode = await refereeCodeModel.findOne({
+      where: { unsubscribe_token: token },
+    });
+    
+    if (!refereeCode) {
+      return errorResponseHelper(res, 404, "Invalid unsubscribe token");
+    }
+    
+    const codeData = refereeCode.dataValues;
+    
+    // Check if already unsubscribed
+    if (codeData.unsubscribed_at) {
+      return successResponseHelper(res, 200, "You have already unsubscribed from reminder emails", {
+        email: codeData.customer_email,
+        unsubscribed_at: codeData.unsubscribed_at,
+      });
+    }
+    
+    // Mark as unsubscribed
+    await refereeCodeModel.update(
+      { unsubscribed_at: new Date() },
+      { where: { code_id: codeData.code_id } }
+    );
+    
+    console.log(`[Unsubscribe] ${codeData.customer_email} unsubscribed from referee code reminders`);
+    
+    return successResponseHelper(res, 200, "Successfully unsubscribed from reminder emails", {
+      email: codeData.customer_email,
+      message: "You will no longer receive reminder emails about your discount code. Note: Your discount code is still valid if you decide to sign up.",
+    });
+    
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Unsubscribe error: ${errorMessage}`, new Error(e as any));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 export default {
   registerUser,
   registerPhoneStep1,
@@ -1540,4 +1594,5 @@ export default {
   removeEmail,
   removePhone,
   deleteAccount,
+  unsubscribeFromReminders,
 };
