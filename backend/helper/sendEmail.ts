@@ -591,6 +591,100 @@ const sendAdminFeeReceivedEmail = async (
   }
 };
 
+/**
+ * Send referee code reminder email
+ * Encourages recipients to sign up before their discount expires
+ */
+const sendRefereeCodeReminderEmail = async (
+  recipientEmail: string,
+  code: string,
+  discountPercent: number,
+  discountDurationDays: number,
+  daysRemaining: number,
+  reminderType: 'week1' | 'week2' | 'week3' | 'final',
+  unsubscribeToken: string
+) => {
+  try {
+    const baseUrl = process.env.FRONTEND_URL || process.env.CHECKOUT_URL || 'https://dynopay.io';
+    const signupUrl = `${baseUrl}/signup?ref=${code}`;
+    const unsubscribeUrl = `${baseUrl}/unsubscribe?token=${unsubscribeToken}`;
+    
+    let subject: string;
+    let urgencyMessage: string;
+    let ctaText: string;
+    
+    switch (reminderType) {
+      case 'week1':
+        subject = "Don't forget your exclusive DynoPay offer! 🎁";
+        urgencyMessage = `You still have <strong>${daysRemaining} days</strong> to claim your exclusive discount.`;
+        ctaText = "Claim Your Discount";
+        break;
+      case 'week2':
+        subject = "Your 50% discount is waiting - DynoPay 💰";
+        urgencyMessage = `Your exclusive <strong>${discountPercent}% discount</strong> is still available! Only <strong>${daysRemaining} days</strong> remaining.`;
+        ctaText = "Start Saving Today";
+        break;
+      case 'week3':
+        subject = `⏰ Only ${daysRemaining} days left on your DynoPay offer!`;
+        urgencyMessage = `<strong>Time is running out!</strong> Your exclusive ${discountPercent}% discount expires in just <strong>${daysRemaining} days</strong>.`;
+        ctaText = "Don't Miss Out";
+        break;
+      case 'final':
+        subject = "⚠️ LAST CHANCE: Your DynoPay discount expires in 3 days!";
+        urgencyMessage = `<strong style="color: #dc2626;">FINAL REMINDER:</strong> Your exclusive ${discountPercent}% discount expires in just <strong>${daysRemaining} days</strong>. This is your last chance!`;
+        ctaText = "Claim Now Before It's Gone";
+        break;
+    }
+    
+    const message = `
+<p>We noticed you haven't claimed your exclusive DynoPay discount yet!</p>
+
+<div style="margin: 24px 0; padding: 20px; background: linear-gradient(135deg, #f0fff4 0%, #e6ffed 100%); border-left: 4px solid #22c55e; border-radius: 0 8px 8px 0;">
+  <h3 style="margin: 0 0 12px 0; color: #166534; font-size: 18px;">🎁 Your Exclusive Offer</h3>
+  <p style="margin: 0 0 8px 0; color: #14532d; font-size: 16px;">
+    <strong>${discountPercent}% OFF</strong> all transaction fees for <strong>${discountDurationDays} days</strong>
+  </p>
+  <p style="margin: 0; font-size: 14px;">
+    Your code: <strong style="background: #dcfce7; padding: 6px 12px; border-radius: 4px; font-family: monospace; font-size: 16px;">${code}</strong>
+  </p>
+</div>
+
+<p style="font-size: 15px;">${urgencyMessage}</p>
+
+<h4 style="margin: 24px 0 12px 0; color: #1034a6;">Why DynoPay?</h4>
+<ul style="margin: 0; padding-left: 20px; color: #4a4a4a;">
+  <li>Accept crypto payments from customers worldwide</li>
+  <li>Support for Bitcoin, Ethereum, USDT, and more</li>
+  <li>Instant notifications and easy dashboard</li>
+  <li>Lower fees than traditional payment processors</li>
+</ul>
+
+<div style="text-align: center; margin: 32px 0;">
+  <a href="${signupUrl}" style="display: inline-block; background: linear-gradient(135deg, #f47323 0%, #e05a00 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">${ctaText}</a>
+</div>
+
+<p style="font-size: 13px; color: #6b7280; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+  <a href="${unsubscribeUrl}" style="color: #6b7280;">Unsubscribe</a> from these reminders
+</p>
+    `.trim();
+    
+    const recipientName = recipientEmail.split('@')[0] || "there";
+    const htmlBody = dynoPayEmailTemplate(recipientName, message, "Your Discount is Waiting!", false);
+    
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name: recipientName,
+      subject,
+      body: htmlBody,
+    });
+    
+    console.log(`[Email] Referee reminder (${reminderType}) sent to ${recipientEmail}`);
+    return info;
+  } catch (e) {
+    console.log("Referee code reminder email error:", e);
+  }
+};
+
 export default sendEmail;
 export {
   sendEmail,
@@ -603,5 +697,6 @@ export {
   sendAdminFeeReceivedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
+  sendRefereeCodeReminderEmail,
   dynoPayEmailTemplate,
 };
