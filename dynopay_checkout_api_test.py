@@ -220,7 +220,7 @@ class DynoPayCheckoutAPITester:
         try:
             response = requests.post(
                 f"{self.backend_url}/api/pay/getData",
-                json={"d": self.payment_reference},
+                json={"data": self.payment_reference},
                 headers={"Content-Type": "application/json"},
                 timeout=15
             )
