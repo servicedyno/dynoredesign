@@ -108,6 +108,13 @@ const paymentLinkModel = sequelize.define(
       defaultValue: 'company',
       allowNull: true,
     },
+    // Tax settings - merchant can enable tax calculation based on customer location
+    // Tax is OFF by default - merchant must explicitly enable it
+    apply_tax: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
     // Payment link reminder tracking
     reminder_1_sent_at: {
       type: DataTypes.DATE,
