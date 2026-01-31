@@ -273,7 +273,7 @@ const calculateTaxForCheckout = async (
 
 const getData = async (req: express.Request, res: express.Response) => {
   try {
-    const { data } = req.body;
+    const { data, timezone } = req.body;  // Accept timezone hint from frontend
 
     // Validate data parameter is provided
     if (!data) {
