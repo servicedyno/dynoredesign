@@ -469,4 +469,83 @@ testRouter.post("/manual-transfer", authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/test/send-payment-link-email
+ * Send a test payment link email to verify email formatting
+ * No authentication required for testing
+ */
+testRouter.post("/send-payment-link-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return errorResponseHelper(res, 400, "email is required");
+    }
+    
+    const { sendEmail } = require("../helper");
+    
+    // Sample payment link email content (matching real implementation)
+    const companyName = "DynoPay Test Merchant";
+    const amount = "50.00";
+    const currency = "USD";
+    const description = "Monthly Subscription - Premium Plan";
+    const paymentLink = "https://checkout.dynopay.io/pay?d=test123456";
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+    
+    // Sample referee code section (shown for first-time recipients)
+    const refereeCodeSection = `
+      <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f0fff4 0%, #e6ffed 100%); border-left: 4px solid #22c55e; border-radius: 0 8px 8px 0;">
+        <h3 style="margin: 0 0 10px 0; color: #166534; font-size: 16px;">🎁 Special Offer for You!</h3>
+        <p style="margin: 0 0 10px 0; color: #14532d; font-size: 14px;">
+          Want to accept crypto payments for your own business? Join DynoPay and get <strong>50% off</strong> all fees for <strong>90 days</strong>!
+        </p>
+        <p style="margin: 0; font-size: 14px;">
+          Use code: <strong style="background: #dcfce7; padding: 4px 8px; border-radius: 4px; font-family: monospace;">REF-TEST1234</strong>
+        </p>
+        <p style="margin: 10px 0 0 0; font-size: 12px; color: #166534;">
+          This code is exclusive to you and expires in 30 days.
+        </p>
+      </div>
+    `;
+
+    const paymentMessage = `
+You have received a payment request from <strong>${companyName}</strong>.
+
+<div style="margin: 20px 0; padding: 20px; background: #f8f9ff; border-radius: 8px;">
+  <p style="margin: 0 0 8px 0;"><strong>Amount:</strong> ${amount} ${currency}</p>
+  <p style="margin: 0 0 8px 0;"><strong>Description:</strong> ${description}</p>
+  <p style="margin: 0;"><strong>Expires:</strong> ${expiresAt.toLocaleDateString()}</p>
+</div>
+
+<div style="text-align: center; margin: 24px 0;">
+  <a href="${paymentLink}" style="display: inline-block; background: linear-gradient(135deg, #f47323 0%, #e05a00 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">Pay Now</a>
+</div>
+
+${refereeCodeSection}
+    `.trim();
+
+    // Send the test email
+    const recipientName = email.split('@')[0] || "Customer";
+    const subject = `Payment Request from ${companyName} - ${amount} ${currency}`;
+    
+    await sendEmail(
+      email,
+      recipientName,
+      subject,
+      paymentMessage,
+      false
+    );
+    
+    successResponseHelper(res, 200, "Test payment link email sent", {
+      sent_to: email,
+      recipient_name: recipientName,
+      subject: subject,
+      includes_referee_code: true,
+      sample_code: "REF-TEST1234",
+    });
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
 export default testRouter;
