@@ -2,21 +2,33 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Set production environment
+ENV NODE_ENV=production
+# Disable npm/yarn update checks
+ENV NO_UPDATE_NOTIFIER=true
+# Force unbuffered output for logs
+ENV NODE_OPTIONS="--no-warnings"
+ENV PYTHONUNBUFFERED=1
+
 # Copy all backend source code
 COPY backend/ .
 
 # Install dependencies (without frozen lockfile since it might not exist)
-RUN yarn install --ignore-engines
+RUN yarn install --ignore-engines --production=false
 
 # Build TypeScript
 RUN yarn build
 
-# Expose port
-EXPOSE 8001
+# Create logs directory (even though we don't use file logs on Railway)
+RUN mkdir -p logs
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8001/health || exit 1
+# Expose the port Railway will use (PORT env var is set by Railway)
+EXPOSE 3300
 
-# Start the server
+# Health check using the correct port
+# Railway sets PORT dynamically, so we use the default
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3300}/health || exit 1
+
+# Start the server - Railway will set PORT env var
 CMD ["node", "dist/server.js"]
