@@ -851,5 +851,196 @@ export const userPaths = {
         401: { description: 'Invalid password' }
       }
     }
+  },
+  // ============================================
+  // UNSUBSCRIBE ENDPOINTS (No Auth Required)
+  // ============================================
+  '/api/user/unsubscribe-reminders/{token}': {
+    get: {
+      tags: ['Email Unsubscribe'],
+      summary: 'Unsubscribe from referee code reminders (GET)',
+      description: `Unsubscribe from referee code reminder emails using the token from the email link.
+      
+**No authentication required** - uses the unsubscribe token from the email.
+
+This endpoint is typically accessed by clicking the unsubscribe link in reminder emails.`,
+      parameters: [
+        {
+          in: 'path',
+          name: 'token',
+          required: true,
+          schema: { type: 'string' },
+          description: 'Unsubscribe token from the email link'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'Successfully unsubscribed',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Successfully unsubscribed from reminder emails' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string', example: 'customer@example.com' },
+                      unsubscribed_at: { type: 'string', format: 'date-time' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: { description: 'Invalid unsubscribe token' }
+      }
+    }
+  },
+  '/api/user/unsubscribe-reminders': {
+    post: {
+      tags: ['Email Unsubscribe'],
+      summary: 'Unsubscribe from referee code reminders (POST)',
+      description: `Unsubscribe from referee code reminder emails using a POST request.
+      
+**No authentication required** - uses the unsubscribe token.`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['token'],
+              properties: {
+                token: { 
+                  type: 'string', 
+                  description: 'Unsubscribe token from the email',
+                  example: 'abc123def456...'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Successfully unsubscribed',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Successfully unsubscribed from reminder emails' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string' },
+                      unsubscribed_at: { type: 'string', format: 'date-time' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Token is required' },
+        404: { description: 'Invalid unsubscribe token' }
+      }
+    }
+  },
+  '/api/user/unsubscribe-payment-reminders/{token}': {
+    get: {
+      tags: ['Email Unsubscribe'],
+      summary: 'Unsubscribe from payment link reminders (GET)',
+      description: `Unsubscribe from payment link reminder emails using the token from the email link.
+      
+**No authentication required** - uses the unsubscribe token from the email.
+
+This endpoint is typically accessed by clicking the unsubscribe link in payment reminder emails.`,
+      parameters: [
+        {
+          in: 'path',
+          name: 'token',
+          required: true,
+          schema: { type: 'string' },
+          description: 'Unsubscribe token from the email link'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'Successfully unsubscribed',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Successfully unsubscribed from payment reminder emails' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string', example: 'customer@example.com' },
+                      unsubscribed_at: { type: 'string', format: 'date-time' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: { description: 'Invalid unsubscribe token' }
+      }
+    }
+  },
+  '/api/user/unsubscribe-payment-reminders': {
+    post: {
+      tags: ['Email Unsubscribe'],
+      summary: 'Unsubscribe from payment link reminders (POST)',
+      description: `Unsubscribe from payment link reminder emails using a POST request.
+      
+**No authentication required** - uses the unsubscribe token.`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['token'],
+              properties: {
+                token: { 
+                  type: 'string', 
+                  description: 'Unsubscribe token from the email',
+                  example: 'abc123def456...'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Successfully unsubscribed',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Successfully unsubscribed from payment reminder emails' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string' },
+                      unsubscribed_at: { type: 'string', format: 'date-time' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Token is required' },
+        404: { description: 'Invalid unsubscribe token' }
+      }
+    }
   }
 };
