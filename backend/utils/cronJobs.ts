@@ -370,10 +370,229 @@ export const setupHealthCheckCron = () => {
   log("Health Check Cron Job scheduled for every 5 minutes", "info");
 };
 
+/**
+ * Referee Code Reminder Cron Job
+ * Schedule: Daily at 10:00 AM UTC
+ * Logic: Send weekly reminders to users with unused referee codes
+ * - Week 1 (7 days): "Don't forget your offer"
+ * - Week 2 (14 days): "Your discount is waiting"
+ * - Week 3 (21 days): "Only X days left"
+ * - Final (27 days): "Last chance - expires in 3 days"
+ */
+export const setupRefereeCodeReminderCron = () => {
+  // Run daily at 10:00 AM UTC
+  cron.schedule("0 10 * * *", async () => {
+    log("Referee Code Reminder Cron Job starting...", "info");
+    
+    try {
+      const { sendRefereeCodeReminderEmail } = await import("../helper");
+      const { refereeCodeModel, userModel } = await import("../models");
+      const { Op } = await import("sequelize");
+      
+      const now = new Date();
+      
+      // Find all active (sent) referee codes that:
+      // 1. Are not expired
+      // 2. Have not been unsubscribed
+      // 3. Need a reminder based on their age
+      const activeCodes = await refereeCodeModel.findAll({
+        where: {
+          status: 'sent',
+          expires_at: { [Op.gt]: now },
+          unsubscribed_at: null,
+        },
+      });
+      
+      log(`Found ${activeCodes.length} active referee codes to check for reminders`, "info");
+      
+      let remindersSent = 0;
+      let skippedAlreadySignedUp = 0;
+      
+      for (const code of activeCodes) {
+        try {
+          const codeData = code.dataValues;
+          const sentAt = new Date(codeData.sent_at);
+          const expiresAt = new Date(codeData.expires_at);
+          const daysSinceSent = Math.floor((now.getTime() - sentAt.getTime()) / (1000 * 60 * 60 * 24));
+          const daysRemaining = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          
+          // Check if user has already signed up with this email
+          const existingUser = await userModel.findOne({
+            where: { email: codeData.customer_email },
+          });
+          
+          if (existingUser) {
+            skippedAlreadySignedUp++;
+            continue; // Skip - user already signed up
+          }
+          
+          let reminderType: 'week1' | 'week2' | 'week3' | 'final' | null = null;
+          let reminderColumn: string | null = null;
+          
+          // Determine which reminder to send based on days since sent
+          if (daysSinceSent >= 27 && !codeData.final_reminder_sent_at) {
+            reminderType = 'final';
+            reminderColumn = 'final_reminder_sent_at';
+          } else if (daysSinceSent >= 21 && !codeData.reminder_3_sent_at) {
+            reminderType = 'week3';
+            reminderColumn = 'reminder_3_sent_at';
+          } else if (daysSinceSent >= 14 && !codeData.reminder_2_sent_at) {
+            reminderType = 'week2';
+            reminderColumn = 'reminder_2_sent_at';
+          } else if (daysSinceSent >= 7 && !codeData.reminder_1_sent_at) {
+            reminderType = 'week1';
+            reminderColumn = 'reminder_1_sent_at';
+          }
+          
+          if (reminderType && reminderColumn) {
+            // Send reminder email
+            await sendRefereeCodeReminderEmail(
+              codeData.customer_email,
+              codeData.code,
+              Number(codeData.discount_percent),
+              codeData.discount_duration_days,
+              daysRemaining,
+              reminderType,
+              codeData.unsubscribe_token
+            );
+            
+            // Mark reminder as sent
+            await refereeCodeModel.update(
+              { [reminderColumn]: now },
+              { where: { code_id: codeData.code_id } }
+            );
+            
+            remindersSent++;
+            log(`Sent ${reminderType} reminder to ${codeData.customer_email} (code: ${codeData.code})`, "info");
+          }
+        } catch (codeError: any) {
+          log(`Error processing referee code ${code.dataValues.code}: ${codeError.message}`, "error");
+        }
+      }
+      
+      log(`Referee Code Reminder Cron completed: ${remindersSent} reminders sent, ${skippedAlreadySignedUp} skipped (already signed up)`, "info");
+      
+    } catch (e: any) {
+      log(`Referee Code Reminder Cron Job Error: ${e.message}`, "error");
+      cronLogger?.error?.("Referee Code Reminder Cron Error", {}, new Error(e));
+    }
+  });
+  
+  log("Referee Code Reminder Cron Job scheduled for daily at 10:00 AM UTC", "info");
+};
+
+/**
+ * Manually trigger referee code reminders (for testing)
+ */
+export const triggerRefereeCodeReminders = async () => {
+  log("Manually triggering Referee Code Reminders...", "info");
+  
+  const { sendRefereeCodeReminderEmail } = await import("../helper");
+  const { refereeCodeModel, userModel } = await import("../models");
+  const { Op } = await import("sequelize");
+  
+  const now = new Date();
+  
+  const activeCodes = await refereeCodeModel.findAll({
+    where: {
+      status: 'sent',
+      expires_at: { [Op.gt]: now },
+      unsubscribed_at: null,
+    },
+  });
+  
+  const results = {
+    total: activeCodes.length,
+    reminders_sent: 0,
+    skipped_already_signed_up: 0,
+    skipped_no_reminder_due: 0,
+    details: [] as any[],
+  };
+  
+  for (const code of activeCodes) {
+    const codeData = code.dataValues;
+    const sentAt = new Date(codeData.sent_at);
+    const expiresAt = new Date(codeData.expires_at);
+    const daysSinceSent = Math.floor((now.getTime() - sentAt.getTime()) / (1000 * 60 * 60 * 24));
+    const daysRemaining = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Check if user has already signed up
+    const existingUser = await userModel.findOne({
+      where: { email: codeData.customer_email },
+    });
+    
+    if (existingUser) {
+      results.skipped_already_signed_up++;
+      results.details.push({
+        email: codeData.customer_email,
+        code: codeData.code,
+        status: 'skipped_already_signed_up',
+      });
+      continue;
+    }
+    
+    let reminderType: 'week1' | 'week2' | 'week3' | 'final' | null = null;
+    let reminderColumn: string | null = null;
+    
+    if (daysSinceSent >= 27 && !codeData.final_reminder_sent_at) {
+      reminderType = 'final';
+      reminderColumn = 'final_reminder_sent_at';
+    } else if (daysSinceSent >= 21 && !codeData.reminder_3_sent_at) {
+      reminderType = 'week3';
+      reminderColumn = 'reminder_3_sent_at';
+    } else if (daysSinceSent >= 14 && !codeData.reminder_2_sent_at) {
+      reminderType = 'week2';
+      reminderColumn = 'reminder_2_sent_at';
+    } else if (daysSinceSent >= 7 && !codeData.reminder_1_sent_at) {
+      reminderType = 'week1';
+      reminderColumn = 'reminder_1_sent_at';
+    }
+    
+    if (reminderType && reminderColumn) {
+      await sendRefereeCodeReminderEmail(
+        codeData.customer_email,
+        codeData.code,
+        Number(codeData.discount_percent),
+        codeData.discount_duration_days,
+        daysRemaining,
+        reminderType,
+        codeData.unsubscribe_token
+      );
+      
+      await refereeCodeModel.update(
+        { [reminderColumn]: now },
+        { where: { code_id: codeData.code_id } }
+      );
+      
+      results.reminders_sent++;
+      results.details.push({
+        email: codeData.customer_email,
+        code: codeData.code,
+        reminder_type: reminderType,
+        days_since_sent: daysSinceSent,
+        days_remaining: daysRemaining,
+        status: 'sent',
+      });
+    } else {
+      results.skipped_no_reminder_due++;
+      results.details.push({
+        email: codeData.customer_email,
+        code: codeData.code,
+        days_since_sent: daysSinceSent,
+        status: 'no_reminder_due',
+      });
+    }
+  }
+  
+  return results;
+};
+
 export default {
   setupWeeklySummaryCron,
   triggerWeeklySummary,
   setupWalletReminderCron,
   triggerWalletReminder,
   setupHealthCheckCron,
+  setupRefereeCodeReminderCron,
+  triggerRefereeCodeReminders,
 };
