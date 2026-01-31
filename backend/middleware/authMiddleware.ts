@@ -78,4 +78,58 @@ const authMiddleware = async (
   }
 };
 
+/**
+ * Middleware to validate company ownership
+ * Ensures the authenticated user owns the company_id in request params/body/query
+ */
+const companyOwnershipMiddleware = async (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  try {
+    const userData = res.locals.user as IUserType;
+    
+    // Get company_id from various sources
+    const companyId = req.params.id || req.params.company_id || 
+                      req.body.company_id || req.query.company_id;
+    
+    // If no company_id provided, skip validation (some endpoints don't need it)
+    if (!companyId) {
+      return next();
+    }
+    
+    const parsedCompanyId = parseInt(companyId as string);
+    if (isNaN(parsedCompanyId)) {
+      return errorResponseHelper(res, 400, "Invalid company_id format");
+    }
+    
+    // Import companyModel here to avoid circular dependency
+    const { companyModel } = require("../models");
+    
+    // Verify the user owns this company
+    const company = await companyModel.findOne({
+      where: {
+        company_id: parsedCompanyId,
+        user_id: userData.user_id,
+      },
+    });
+    
+    if (!company) {
+      console.log(`[CompanyOwnership] ❌ User ${userData.user_id} does not own company ${parsedCompanyId}`);
+      return errorResponseHelper(res, 403, "You do not have access to this company");
+    }
+    
+    // Store validated company in res.locals for use in controllers
+    res.locals.validatedCompany = company.dataValues;
+    
+    next();
+  } catch (e: any) {
+    console.log("Company Ownership Middleware Error:", e);
+    const message = getErrorMessage(e);
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 export default authMiddleware;
+export { companyOwnershipMiddleware };
