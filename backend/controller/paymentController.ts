@@ -2649,7 +2649,7 @@ const cryptoVerification = async (address, webhook = true) => {
       `);
       
       // Handle company_id: if provided and valid, add to query
-      // First try with company_id, then fallback to without
+      // MULTI-TENANT FIX: Require company_id for proper isolation
       if (customerData.company_id && customerData.company_id !== '' && customerData.company_id !== 'undefined' && customerData.company_id !== 'null') {
         const companyId = parseInt(customerData.company_id);
         if (!isNaN(companyId)) {
@@ -2665,14 +2665,17 @@ const cryptoVerification = async (address, webhook = true) => {
         transaction,
       });
       
-      // Fallback: If no wallet found with company_id, try without company_id constraint
+      // MULTI-TENANT FIX: Do NOT fallback without company_id - log error instead
       if (!walletData && whereClause.company_id) {
-        console.log(`[cryptoVerification] No wallet found with company_id ${whereClause.company_id}, trying without company_id constraint`);
-        delete whereClause.company_id;
-        walletData = await userWalletModel.findOne({
-          where: whereClause,
-          transaction,
-        });
+        console.error(`[cryptoVerification] ❌ MULTI-TENANT: No wallet found for company_id ${whereClause.company_id}. NOT falling back to avoid cross-company payment routing.`);
+        // Instead of removing company_id constraint, we fail safely
+        await transaction.rollback();
+        return {
+          status: 400,
+          message: `No wallet configured for this company and currency (${tempCurrency}). Please configure a ${tempCurrency} wallet for this company.`,
+          company_id: whereClause.company_id,
+          currency: tempCurrency
+        };
       }
       
       console.log(`[cryptoVerification] walletData result:`, walletData ? walletData.dataValues : 'NULL');
