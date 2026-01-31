@@ -230,7 +230,7 @@ class PostPaymentSettingsTest:
         try:
             response = requests.post(
                 f"{self.backend_url}/api/pay/getData",
-                json={"reference": self.payment_reference},
+                json={"data": self.payment_reference},
                 headers={"Content-Type": "application/json"},
                 timeout=15
             )
