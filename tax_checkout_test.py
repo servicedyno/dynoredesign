@@ -496,8 +496,8 @@ class TaxCheckoutTester:
         """Test 3: Verify Tax API Rate Endpoints"""
         print("\n=== Test 3: Tax API Rate Endpoints ===")
         
-        # Test Portugal (PT) - should return ~23% with acronym "IVA"
-        self.test_single_tax_rate("PT", expected_rate_range=(20, 25), expected_acronym="IVA")
+        # Test Portugal (PT) - should return ~23% with acronym "VAT" (from taxController)
+        self.test_single_tax_rate("PT", expected_rate_range=(20, 25), expected_acronym="VAT")
         
         # Test Germany (DE) - should return ~19% with acronym "VAT"  
         self.test_single_tax_rate("DE", expected_rate_range=(18, 20), expected_acronym="VAT")
