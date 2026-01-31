@@ -353,7 +353,7 @@ class PostPaymentSettingsTest:
             }
             
             response = requests.get(
-                f"{self.backend_url}/api/paymentLink/getLinks",
+                f"{self.backend_url}/api/pay/getPaymentLinks",
                 headers=headers,
                 timeout=15
             )
