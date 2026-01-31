@@ -788,7 +788,8 @@ const createCryptoPayment = async (
         wallet_address: { [Op.not]: null },
       };
       
-      // Handle company_id: if provided and valid, add to query; otherwise search flexibly
+      // Handle company_id: if provided and valid, add to query
+      // MULTI-TENANT FIX: Require company_id for proper isolation when available
       let hasWallet;
       if (items.company_id && items.company_id !== '' && items.company_id !== 'undefined' && items.company_id !== 'null') {
         const companyId = parseInt(items.company_id);
@@ -797,26 +798,42 @@ const createCryptoPayment = async (
         }
         console.log('[Phase 10 Validation] Where clause (with company_id):', JSON.stringify(whereClause));
         hasWallet = await userWalletModel.findOne({ where: whereClause });
-      } else {
-        // If company_id not provided, try to find ANY wallet for this user and currency
-        // This allows payment links without company_id to still work
-        console.log('[Phase 10 Validation] No company_id, searching flexibly');
         
-        // First try with null company_id
+        // MULTI-TENANT FIX: If company_id is set but no wallet found, DO NOT fallback
+        if (!hasWallet) {
+          console.error(`[Phase 10 Validation] ❌ MULTI-TENANT: No wallet found for company_id ${whereClause.company_id}. NOT falling back.`);
+          return errorResponseHelper(
+            res,
+            400,
+            `No wallet address configured for ${requestedCurrency} in this company. Please add a ${requestedCurrency} wallet for this company first.`
+          );
+        }
+      } else {
+        // If company_id not provided, try to find wallet with null company_id first (legacy support)
+        console.log('[Phase 10 Validation] No company_id provided, searching with null company_id');
+        
+        // First try with null company_id (legacy wallets)
         whereClause.company_id = null;
         console.log('[Phase 10 Validation] Where clause (null company_id):', JSON.stringify(whereClause));
         hasWallet = await userWalletModel.findOne({ where: whereClause });
         
-        // If not found, try without company_id constraint
+        // If not found with null, get the FIRST company for this user and use its wallet
         if (!hasWallet) {
-          delete whereClause.company_id;
-          console.log('[Phase 10 Validation] Where clause (any company_id):', JSON.stringify(whereClause));
-          hasWallet = await userWalletModel.findOne({ where: whereClause });
+          console.log('[Phase 10 Validation] No null company_id wallet, finding user default company');
+          const userCompany = await companyModel.findOne({
+            where: { user_id: items.adm_id },
+            order: [['createdAt', 'ASC']]  // Get the first/oldest company
+          });
           
-          // If wallet found, use its company_id
-          if (hasWallet) {
-            items.company_id = hasWallet.dataValues.company_id;
-            console.log('[Phase 10 Validation] Found wallet with company_id:', items.company_id);
+          if (userCompany) {
+            whereClause.company_id = userCompany.dataValues.company_id;
+            console.log('[Phase 10 Validation] Using default company_id:', whereClause.company_id);
+            hasWallet = await userWalletModel.findOne({ where: whereClause });
+            
+            if (hasWallet) {
+              items.company_id = userCompany.dataValues.company_id;
+              console.log('[Phase 10 Validation] Found wallet with default company_id:', items.company_id);
+            }
           }
         }
       }
