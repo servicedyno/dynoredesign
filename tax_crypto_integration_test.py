@@ -367,10 +367,16 @@ class TaxCryptoIntegrationTester:
         
         payment_data = data_result['data']
         
+        # Handle nested data structure
+        if 'data' in payment_data:
+            payment_info = payment_data['data']
+        else:
+            payment_info = payment_data
+        
         # Verify NO tax_info is present
-        if 'tax_info' not in payment_data or not payment_data.get('apply_tax', True):
+        if 'tax_info' not in payment_info or not payment_info.get('apply_tax', True):
             self.log_test("No Tax Info Present", True, 
-                f"Apply Tax: {payment_data.get('apply_tax', False)}")
+                f"Apply Tax: {payment_info.get('apply_tax', False)}")
         else:
             self.log_test("No Tax Info Present", False, 
                 "Unexpected tax_info in response")
