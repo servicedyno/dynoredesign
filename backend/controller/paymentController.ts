@@ -53,7 +53,7 @@ import flw from "../apis/flutterwaveApi";
 import crypto from "crypto";
 import axios from "axios";
 import { autoGenerateInvoice } from "./invoiceController";
-import { getClientIP, getCountryFromIP } from "../utils/geolocation";
+import { getClientIP, getCountryFromIP, getCountryFromTimezone } from "../utils/geolocation";
 
 import {
   userTempAddressModel,
