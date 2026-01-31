@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://dep-setup-4.preview.emergentagent.com/api
+Development: https://depend-installer-2.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

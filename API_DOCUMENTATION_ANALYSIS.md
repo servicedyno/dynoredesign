@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://dep-setup-4.preview.emergentagent.com/api/docs/
+**URL:** https://depend-installer-2.preview.emergentagent.com/api/docs/
 
 ---
 
