@@ -240,6 +240,21 @@ user_problem_statement: "ETH PAYMENT CREATION TEST FOR john@dyno.pt - Create a $
         agent: "testing"
         comment: "✅ WEBHOOK PAYMENT PROCESSING TEST COMPLETED: 57.1% success rate (4/7 tests passed) with CRITICAL FINDINGS. ✅ MERCHANT AUTHENTICATION: Successfully authenticated john@dyno.pt with correct credentials (Katiekendra123@). ✅ BLOCKCHAIN TRANSACTION CONFIRMED: Found ETH transaction on blockchain with hash 0xacacca62f2fd947f7b0314459142e374f0a790e9daf1680d75778f0ee8fe46f9, value 0.00367 ETH (close to expected 0.00332151 ETH). ✅ WEBHOOK PROCESSING SUCCESSFUL: /api/tatum-crypto-webhook endpoint responded with 200 status, webhook was received and processed by backend. ✅ PAYOUT CALCULATION VERIFIED: Merchant should receive $9.80 (98%), Admin fee $0.20 (2%) for $10 USD payment. 🔍 CRITICAL DISCOVERY: Backend logs show 'Redis data found: currency: ETH, expectedAmount: 0.00332143, hasTxId: true' and 'Duplicate transaction or txId already exists, ignoring'. This indicates the payment was ALREADY PROCESSED previously and webhook is being ignored as duplicate. ❌ PAYMENT STATUS VERIFICATION: Cannot verify final payment status as no payment links found with transaction_id ef76c171-07d0-4643-80da-1e07e1e4393d in current user's payment history. CONCLUSION: The ETH transaction exists on blockchain and webhook processing is functional, but the payment appears to have been processed already. The webhook system is correctly preventing duplicate processing. User's $10 ETH payment likely completed successfully in a previous processing cycle."
 
+  - task: "Tax Integration with Crypto Payment Flow Testing"
+    implemented: true
+    working: true
+    file: "/app/tax_crypto_integration_test.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test the tax integration with payment flow in DynoPay to ensure underpayment logic and funds distribution work correctly. Test Scenarios: (1) Create Payment Link with Tax → Verify Crypto Amount Includes Tax, (2) Create Payment Link WITHOUT Tax → Verify Normal Flow, (3) Verify Tax Rate Endpoint Still Works. Test Credentials: Email: john@dyno.pt, Password: Katiekendra123@"
+      - working: true
+        agent: "testing"
+        comment: "✅ TAX INTEGRATION WITH CRYPTO PAYMENT FLOW TESTING COMPLETED: 100% success rate (12/12 tests passed). ✅ AUTHENTICATION: Successfully authenticated with provided credentials john@dyno.pt / Katiekendra123@. ✅ TAX RATE ENDPOINTS: GET /api/tax/rate/PT returns 23% VAT for Portugal, GET /api/tax/rate/US returns 0% for United States - both working correctly. ✅ PAYMENT WITH TAX: Successfully created payment link with apply_tax: true, verified tax_info object present in getData response with correct values (tax_rate: 23%, tax_amount: 23 EUR, total: 123 EUR, country: Portugal). ✅ CRYPTO PAYMENT WITH TAX: Successfully created crypto payment, verified tax_info included in response with tax_amount_crypto field, merchant amount includes tax portion, total crypto amount reflects base + tax. ✅ PAYMENT WITHOUT TAX: Successfully created payment link without apply_tax field, verified no tax_info in getData response, crypto payment has no tax calculations. ✅ CRITICAL VERIFICATION: Tax calculation uses customer IP geolocation correctly (Portuguese IP → 23% VAT), crypto amounts include tax when enabled (customer pays base + tax, merchant receives portion including tax, admin fees calculated on base amount only). ✅ UNDERPAYMENT LOGIC: Verified Redis stored amount matches total amount with tax for proper underpayment detection. ✅ FUNDS DISTRIBUTION: Confirmed merchant receives base amount + tax portion, admin fees calculated on base amount only (not on tax), tax goes to merchant for remittance as expected. CONCLUSION: Tax integration with crypto payment flow is fully operational and meets all requirements specified in the review request."
+
 backend:
   - task: "Enhanced Checkout Data API Testing - POST /api/pay/getData"
     implemented: true
