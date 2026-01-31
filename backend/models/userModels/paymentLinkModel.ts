@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../utils/dbInstance";
+import crypto from "crypto";
 
 const paymentLinkModel = sequelize.define(
   "Payment_Link",
@@ -105,6 +106,29 @@ const paymentLinkModel = sequelize.define(
     fee_payer: {
       type: DataTypes.STRING(20),
       defaultValue: 'company',
+      allowNull: true,
+    },
+    // Payment link reminder tracking
+    reminder_1_sent_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    reminder_2_sent_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    final_reminder_sent_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    // Unsubscribe functionality
+    unsubscribe_token: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+      defaultValue: () => crypto.randomBytes(32).toString('hex'),
+    },
+    unsubscribed_at: {
+      type: DataTypes.DATE,
       allowNull: true,
     },
   },
