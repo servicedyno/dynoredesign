@@ -906,36 +906,44 @@ const createCryptoPayment = async (
           - Tax crypto: ${tax_amount_crypto} ${requestedCurrency}
           - Exchange rate: 1 ${items.base_currency || 'USD'} = ${exchange_rate} ${requestedCurrency}`);
         
+        // TAX HANDLING IN FEE CALCULATION:
+        // - Admin fees are calculated on BASE amount only (not on tax)
+        // - Tax goes entirely to merchant (they must remit to tax authority)
+        // - Merchant receives: base_amount (after fees) + tax_amount
         
         if (fee_payer === 'customer') {
           // CUSTOMER PAYS FEES:
-          // - Customer pays: base_amount + fees = base_amount / (1 - fee_percent)
-          // - Merchant receives: full base_amount (what they requested)
-          // - Admin receives: fees (swept from temp wallet)
+          // - Customer pays: base_amount + fees + tax
+          // - Merchant receives: full base_amount + tax (what they requested + tax collected)
+          // - Admin receives: fees only (swept from temp wallet)
           
-          merchant_amount_crypto = base_crypto_amount;  // Merchant gets full base amount
-          total_fees_crypto = base_crypto_amount * ADMIN_FEE_PERCENT / (1 - ADMIN_FEE_PERCENT);  // Calculate fees on top
-          crypto_amount = merchant_amount_crypto + total_fees_crypto;  // Customer pays base + fees
+          const merchant_base_crypto = base_crypto_amount;  // Merchant gets full base
+          total_fees_crypto = base_crypto_amount * ADMIN_FEE_PERCENT / (1 - ADMIN_FEE_PERCENT);  // Calculate fees on base only
+          merchant_amount_crypto = merchant_base_crypto + tax_amount_crypto;  // Merchant gets base + tax
+          crypto_amount = merchant_base_crypto + total_fees_crypto + tax_amount_crypto;  // Customer pays base + fees + tax
           
-          console.log(`[createCryptoPayment] CUSTOMER PAYS FEES mode:
-            - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base + fees)
-            - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (full base)
-            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (swept later)`);
+          console.log(`[createCryptoPayment] CUSTOMER PAYS FEES mode (with tax):
+            - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base + fees + tax)
+            - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (base + tax)
+            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (swept later)
+            - Tax collected: ${tax_amount_crypto.toFixed(8)} ${requestedCurrency} (included in merchant amount)`);
             
         } else {
           // COMPANY (MERCHANT) PAYS FEES:
-          // - Customer pays: base_amount only
-          // - Merchant receives: base_amount * (1 - fee_percent) = 67%
-          // - Admin receives: base_amount * fee_percent = 33% (swept from temp wallet)
+          // - Customer pays: base_amount + tax
+          // - Merchant receives: base_amount * (1 - fee_percent) + tax = 67% of base + full tax
+          // - Admin receives: base_amount * fee_percent = 33% of base (swept from temp wallet)
           
-          crypto_amount = base_crypto_amount;  // Customer pays just the base
-          merchant_amount_crypto = base_crypto_amount * (1 - ADMIN_FEE_PERCENT);  // Merchant gets 67%
-          total_fees_crypto = base_crypto_amount * ADMIN_FEE_PERCENT;  // Admin gets 33%
+          crypto_amount = total_crypto_amount;  // Customer pays base + tax
+          const merchant_base_after_fees = base_crypto_amount * (1 - ADMIN_FEE_PERCENT);  // 67% of base
+          merchant_amount_crypto = merchant_base_after_fees + tax_amount_crypto;  // 67% of base + tax
+          total_fees_crypto = base_crypto_amount * ADMIN_FEE_PERCENT;  // 33% of base
           
-          console.log(`[createCryptoPayment] COMPANY PAYS FEES mode:
-            - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base only)
-            - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (67%)
-            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (33%, swept later)`);
+          console.log(`[createCryptoPayment] COMPANY PAYS FEES mode (with tax):
+            - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base + tax)
+            - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (67% base + tax)
+            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (33% of base, swept later)
+            - Tax collected: ${tax_amount_crypto.toFixed(8)} ${requestedCurrency} (included in merchant amount)`);
         }
       } catch (calcError) {
         console.error('[createCryptoPayment] Crypto amount calculation error:', calcError);
@@ -955,7 +963,17 @@ const createCryptoPayment = async (
         fee_payer: fee_payer,
         base_amount: baseAmountUSD,
         base_currency: items.base_currency || 'USD',
-        rate: exchange_rate
+        rate: exchange_rate,
+        // Tax info (if applicable)
+        ...(taxInfo && {
+          tax_info: {
+            tax_amount: taxAmount,
+            tax_amount_crypto: tax_amount_crypto,
+            tax_rate: taxInfo.tax_rate,
+            tax_acronym: taxInfo.tax_acronym,
+            country_code: taxInfo.country_code,
+          }
+        }),
       };
 
       console.log("paymentRes=============>", paymentRes, uniqueRef, {
