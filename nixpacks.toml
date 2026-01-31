@@ -5,7 +5,10 @@ nixPkgs = ["nodejs_20", "yarn"]
 cmds = ["cd backend && yarn install --ignore-engines"]
 
 [phases.build]
-cmds = ["cd backend && yarn build"]
+cmds = ["cd backend && yarn build && mkdir -p logs"]
 
 [start]
-cmd = "cd backend && ./start.sh"
+cmd = "cd backend && node dist/server.js"
+
+[variables]
+NODE_ENV = "production"
