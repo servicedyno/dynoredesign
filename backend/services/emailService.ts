@@ -1,4 +1,5 @@
 import mailTransporter from "../utils/mailTransporter";
+import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService";
 
 /**
  * DynoPay Email Service - Phase 9
@@ -6,7 +7,10 @@ import mailTransporter from "../utils/mailTransporter";
  * Provider: Brevo
  */
 
-// Base email template wrapper
+// DynoPay Logo URL (from official checkout repo)
+const DYNOPAY_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynocheckoutDarkMode/main/public/Logo.png";
+
+// Base email template wrapper with proper logo
 const dynoPayEmailTemplate = (
   heading: string,
   content: string,
@@ -30,6 +34,7 @@ const dynoPayEmailTemplate = (
         .header { background: linear-gradient(135deg, #1034a6 0%, #0d2570 100%); padding: 24px 32px; text-align: center; }
         .logo { font-size: 28px; font-weight: 700; color: #ffffff; text-decoration: none; letter-spacing: -0.5px; }
         .logo span { color: #f47323; }
+        .logo-img { height: 40px; vertical-align: middle; }
         .content { padding: 40px 32px; }
         .heading { font-size: 24px; font-weight: 600; color: #1034a6; margin: 0 0 24px 0; }
         .message { font-size: 15px; color: #4a4a4a; margin-bottom: 16px; white-space: pre-line; }
@@ -39,12 +44,15 @@ const dynoPayEmailTemplate = (
         .footer { background: #1a1a2e; padding: 32px; text-align: center; color: #9ca3af; font-size: 13px; }
         .footer-logo { font-size: 20px; font-weight: 700; color: #ffffff; margin-bottom: 16px; }
         .footer-logo span { color: #f47323; }
+        .receipt-box { background: #10b981; color: #ffffff; padding: 12px 20px; border-radius: 8px; margin: 16px 0; text-align: center; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <a href="https://dynopay.com" class="logo">Dyno<span>Pay</span></a>
+          <a href="https://dynopay.com" class="logo">
+            <img src="${DYNOPAY_LOGO_URL}" alt="DynoPay" class="logo-img" style="height: 40px;" />
+          </a>
         </div>
         <div class="content">
           <h1 class="heading">${heading}</h1>
@@ -55,7 +63,9 @@ const dynoPayEmailTemplate = (
           </div>
         </div>
         <div class="footer">
-          <div class="footer-logo">Dyno<span>Pay</span></div>
+          <div class="footer-logo">
+            <img src="${DYNOPAY_LOGO_URL}" alt="DynoPay" style="height: 30px; opacity: 0.9;" />
+          </div>
           <p>Secure Crypto Payment Gateway</p>
           <p>© ${new Date().getFullYear()} DynoPay. All rights reserved.</p>
           <div style="margin-top: 16px;">
