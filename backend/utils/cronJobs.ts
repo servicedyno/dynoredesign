@@ -222,7 +222,7 @@ export const setupWalletReminderCron = () => {
   // Cron format: minute hour day-of-month month day-of-week
   // 0 * * * * = At minute 0 of every hour
   cron.schedule("0 * * * *", async () => {
-    console.log("Wallet Reminder Cron Job ==============> Starting");
+    log("Wallet Reminder Cron Job starting...", "info");
     
     try {
       // Get date 24 hours ago
@@ -258,7 +258,7 @@ export const setupWalletReminderCron = () => {
         }
       ) as any[];
 
-      console.log(`Found ${usersWithoutWallets.length} users without wallets to remind`);
+      log(`Found ${usersWithoutWallets.length} users without wallets to remind`, "info");
 
       for (const user of usersWithoutWallets) {
         try {
@@ -275,22 +275,22 @@ export const setupWalletReminderCron = () => {
             }
           );
 
-          console.log(`Wallet reminder sent to user ${user.user_id} (${user.email})`);
+          log(`Wallet reminder sent to user ${user.user_id} (${user.email})`, "info");
 
         } catch (userError) {
-          console.error(`Error sending wallet reminder to user ${user.user_id}:`, userError);
+          log(`Error sending wallet reminder to user ${user.user_id}: ${userError}`, "error");
         }
       }
 
-      console.log("Wallet Reminder Cron Job ==============> Completed");
+      log("Wallet Reminder Cron Job completed", "info");
       
     } catch (e) {
-      console.error("Wallet Reminder Cron Job Error:", e);
+      log(`Wallet Reminder Cron Job Error: ${e}`, "error");
       cronLogger?.error?.("Wallet Reminder Cron Error", {}, new Error(e as any));
     }
   });
 
-  console.log("Wallet Reminder Cron Job scheduled for every hour");
+  log("Wallet Reminder Cron Job scheduled for every hour", "info");
 };
 
 /**
