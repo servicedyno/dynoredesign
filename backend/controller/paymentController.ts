@@ -264,6 +264,9 @@ const getData = async (req: express.Request, res: express.Response) => {
         },
         expiry: expiryInfo,
         created_at: item.createdAt || new Date().toISOString(),
+        // Post-payment settings - redirect_url for customer redirection after payment
+        // Only include if configured (callback_url and webhook_url are backend-only for security)
+        ...(item.redirect_url && { redirect_url: item.redirect_url }),
       };
     } else {
       // Validate customer_id exists before calling getAccessToken
