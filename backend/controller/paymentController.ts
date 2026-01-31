@@ -298,6 +298,8 @@ const getData = async (req: express.Request, res: express.Response) => {
             })
           },
           expiry: expiryInfo,
+          // Post-payment settings - redirect_url for customer redirection after payment
+          ...(item.redirect_url && { redirect_url: item.redirect_url }),
         };
       } else {
         payload = {
@@ -320,6 +322,8 @@ const getData = async (req: express.Request, res: express.Response) => {
             })
           },
           expiry: expiryInfo,
+          // Post-payment settings - redirect_url for customer redirection after payment
+          ...(item.redirect_url && { redirect_url: item.redirect_url }),
         };
       }
     }
