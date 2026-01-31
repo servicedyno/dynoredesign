@@ -93,20 +93,32 @@ const logWebhookDelivery = async (
  */
 const callMerchantWebhook = async (customerData: any, eventData: any): Promise<void> => {
   try {
-    // Get webhook URL and secret from payment link or company settings
+    // Get webhook URL, callback URL, and secret from payment link or company settings
     const sequelize = require('../utils/dbInstance').default;
     
     let webhookUrl = null;
+    let callbackUrl = null;
     let webhookSecret = null;
     let companyId = customerData?.company_id;
     
     // First try to get from payment link
     if (customerData?.payment_link_id) {
       const [linkResult] = await sequelize.query(
-        `SELECT webhook_url FROM tbl_payment_link WHERE payment_link_id = :linkId`,
+        `SELECT webhook_url, callback_url FROM tbl_payment_link WHERE payment_link_id = :linkId`,
         { replacements: { linkId: customerData.payment_link_id }, type: QueryTypes.SELECT }
       );
       webhookUrl = linkResult?.webhook_url;
+      callbackUrl = linkResult?.callback_url;
+    }
+    
+    // Also check Redis for payment link data (for createLink flow)
+    if (customerData?.link_id && (!webhookUrl || !callbackUrl)) {
+      const [linkResult] = await sequelize.query(
+        `SELECT webhook_url, callback_url FROM tbl_payment_link WHERE link_id = :linkId`,
+        { replacements: { linkId: customerData.link_id }, type: QueryTypes.SELECT }
+      );
+      if (!webhookUrl) webhookUrl = linkResult?.webhook_url;
+      if (!callbackUrl) callbackUrl = linkResult?.callback_url;
     }
     
     // If no webhook on link, try company settings
@@ -119,10 +131,43 @@ const callMerchantWebhook = async (customerData: any, eventData: any): Promise<v
       webhookSecret = companyResult?.webhook_secret;
     }
     
-    if (!webhookUrl) {
-      console.log("[callMerchantWebhook] No webhook URL configured, skipping");
+    // If neither webhook_url nor callback_url configured, skip
+    if (!webhookUrl && !callbackUrl) {
+      console.log("[callMerchantWebhook] No webhook URL or callback URL configured, skipping");
       return;
     }
+    
+    // Call callback_url first (instant notification, synchronous)
+    if (callbackUrl) {
+      await callUrlWithPayload(callbackUrl, eventData, webhookSecret, companyId, 'callback');
+    }
+    
+    // Then call webhook_url (transaction updates, can be same or different)
+    if (webhookUrl && webhookUrl !== callbackUrl) {
+      await callUrlWithPayload(webhookUrl, eventData, webhookSecret, companyId, 'webhook');
+    } else if (webhookUrl && !callbackUrl) {
+      // If only webhook_url is configured (no callback_url)
+      await callUrlWithPayload(webhookUrl, eventData, webhookSecret, companyId, 'webhook');
+    }
+    
+  } catch (error: any) {
+    // Log but don't throw - webhook failure shouldn't block payment processing
+    console.error(`[callMerchantWebhook] Failed to send webhook: ${error.message}`);
+  }
+};
+
+/**
+ * Helper function to call a URL with webhook payload
+ */
+const callUrlWithPayload = async (
+  url: string, 
+  eventData: any, 
+  webhookSecret: string | null, 
+  companyId: number | null,
+  urlType: 'webhook' | 'callback'
+): Promise<void> => {
+  try {
+    if (!url) return;
     
     // Add metadata to payload
     const timestamp = Math.floor(Date.now() / 1000);
