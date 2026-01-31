@@ -91,7 +91,7 @@ export const generatePaymentReceipt = async (data: ReceiptData): Promise<Buffer>
       // Receipt label
       doc.fontSize(12)
         .fillColor("#ffffff")
-        .text("PAYMENT RECEIPT", 50, 80, { opacity: 0.8 });
+        .text("PAYMENT RECEIPT", 50, 80);
 
       // Receipt number on right
       doc.fontSize(10)
