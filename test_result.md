@@ -1672,6 +1672,21 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: Complete payment threshold and Redis flow testing successful! All 12 tests passed (100% success rate). ✅ Authentication with nomadly@moxx.co working correctly. ✅ All blockchain thresholds correctly loaded from environment (BTC=$7, ETH=$5, TRX=$5, USDT-TRC20=$10, LTC=$5, DOGE=$5). ✅ Below threshold fee calculation working correctly - ALL funds go to admin, ZERO to merchant. ✅ Above threshold fee calculation working correctly - fees to admin, remainder to merchant. ✅ Threshold test endpoints working for both below and above threshold scenarios. ✅ Redis data setup working correctly for payment simulation. ✅ Redis data verification successful with all expected fields. ✅ Webhook simulation working correctly (POST /api/tatum-crypto-webhook). ✅ Payment notifications being created and retrieved successfully. ✅ Above threshold payment flow working with correct merchant fund distribution. ✅ All 6 verification checklist items passed: thresholds loaded, below/above threshold logic, Redis setup, webhooks, and end-to-end payment flow. The payment threshold and Redis infrastructure is fully functional and ready for production use."
 
+  - task: "Post-Payment Settings Functionality Testing"
+    implemented: true
+    working: true
+    file: "/app/post_payment_settings_test.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test the post-payment settings functionality in DynoPay: authenticate with john@dyno.pt/Katiekendra123@, create payment link with callback_url/redirect_url/webhook_url, extract payment reference, verify getData returns redirect_url but hides callback_url/webhook_url for security, confirm all 3 URLs stored in database"
+      - working: true
+        agent: "testing"
+        comment: "✅ POST-PAYMENT SETTINGS FUNCTIONALITY FULLY OPERATIONAL: 100% success rate (5/5 tests passed). ✅ AUTHENTICATION: Successfully authenticated with test credentials john@dyno.pt / Katiekendra123@. ✅ PAYMENT LINK CREATION: Successfully created $25 USD payment link with CRYPTO mode and all 3 post-payment URLs (callback_url: https://webhook.site/test-callback, redirect_url: https://example.com/payment-success, webhook_url: https://webhook.site/test-webhook). ✅ PAYMENT REFERENCE EXTRACTION: Successfully extracted payment reference from URL d= parameter for getData testing. ✅ GETDATA ENDPOINT SECURITY: POST /api/pay/getData correctly returns redirect_url for checkout page use while properly hiding callback_url and webhook_url from response (critical security requirement met). ✅ DATABASE STORAGE VERIFICATION: GET /api/pay/getPaymentLinks confirms all 3 URLs are correctly stored in database with exact values matching input. ✅ TECHNICAL FIXES APPLIED: Fixed database schema by ensuring unsubscribe_token column exists in tbl_payment_link, corrected API endpoints (/api/pay/createPaymentLink and /api/pay/getPaymentLinks), fixed getData request format (data field not reference field). CONCLUSION: Post-payment settings functionality is production-ready with proper security implementation - redirect_url exposed for checkout functionality while callback_url and webhook_url remain backend-only for security."
+
 frontend:
   # Frontend testing not performed by testing agent
 
