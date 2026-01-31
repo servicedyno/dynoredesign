@@ -134,8 +134,8 @@ class TaxCheckoutTester:
             if response.status_code == 200:
                 data = response.json()
                 
-                if 'data' in data and 'link' in data['data']:
-                    payment_link = data['data']['link']
+                if 'data' in data and 'payment_link' in data['data']:
+                    payment_link = data['data']['payment_link']
                     
                     # Extract payment reference from URL
                     # URL format: https://domain.com/pay?d=reference
@@ -287,8 +287,8 @@ class TaxCheckoutTester:
             if response.status_code == 200:
                 data = response.json()
                 
-                if 'data' in data and 'link' in data['data']:
-                    payment_link = data['data']['link']
+                if 'data' in data and 'payment_link' in data['data']:
+                    payment_link = data['data']['payment_link']
                     
                     # Extract payment reference from URL
                     if '?d=' in payment_link:
