@@ -225,6 +225,9 @@ setupWalletReminderCron();
 // Setup infrastructure health check cron job (every 5 minutes)
 setupHealthCheckCron();
 
+// Setup referee code reminder cron job (daily at 10 AM UTC)
+setupRefereeCodeReminderCron();
+
 const startServer = async () => {
   log('Connecting to Redis...', 'info');
   await connectRedis();
