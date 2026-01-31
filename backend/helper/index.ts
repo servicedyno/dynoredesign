@@ -47,6 +47,7 @@ export {
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
   sendRefereeCodeReminderEmail,
+  sendPaymentLinkReminderEmail,
   dynoPayEmailTemplate,
   successResponseHelper,
   errorResponseHelper,
