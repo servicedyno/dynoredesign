@@ -2,6 +2,7 @@ import sequelize from "../utils/dbInstance";
 import { QueryTypes } from "sequelize";
 import serviceHealthModel from "../models/serviceHealthModel";
 import { getRedisItem } from "../utils/redisInstance";
+import { log } from "../utils/loggers";
 
 /**
  * Infrastructure Monitoring Service
