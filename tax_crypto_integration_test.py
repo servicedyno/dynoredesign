@@ -73,8 +73,14 @@ class TaxCryptoIntegrationTester:
             
             if response.status_code == 200:
                 data = response.json()
-                self.jwt_token = data.get('token')
-                self.user_data = data.get('user', {})
+                
+                # Handle nested data structure
+                if 'data' in data and 'accessToken' in data['data']:
+                    self.jwt_token = data['data']['accessToken']
+                    self.user_data = data['data']
+                else:
+                    self.jwt_token = data.get('token')
+                    self.user_data = data.get('user', {})
                 
                 # Set authorization header for future requests
                 self.session.headers.update({
