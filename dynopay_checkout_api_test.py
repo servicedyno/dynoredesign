@@ -621,7 +621,7 @@ class DynoPayCheckoutAPITester:
                         # Test getData for tax payment
                         get_data_response = requests.post(
                             f"{self.backend_url}/api/pay/getData",
-                            json={"d": tax_reference},
+                            json={"data": tax_reference},
                             headers={"Content-Type": "application/json"},
                             timeout=15
                         )
