@@ -32,7 +32,7 @@ interface CacheEntry {
 }
 
 const memoryCache = new Map<string, CacheEntry>();
-log('[MemoryCache] Initialized', 'info');
+// Note: MemoryCache initialization log moved to connectRedis() to ensure proper load order
 
 // Set item in memory cache with TTL
 const setMemoryCache = (key: string, value: any, ttlSeconds: number) => {
