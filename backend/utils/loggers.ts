@@ -2,6 +2,34 @@ import winston from "winston";
 
 const { combine, timestamp, json, prettyPrint, errors, printf, colorize } = winston.format;
 
+// ============================================
+// RAILWAY-COMPATIBLE CONSOLE LOGGER
+// Use this for ALL console output to ensure
+// consistent formatting across the application
+// ============================================
+
+/**
+ * Centralized logger for consistent Railway-compatible output
+ * All modules should use this instead of console.log
+ */
+export const log = (message: string, level: 'info' | 'error' | 'warn' | 'debug' = 'info') => {
+  const timestamp = new Date().toISOString();
+  const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : level === 'debug' ? '🔍' : '✅';
+  const output = `[${timestamp}] ${prefix} ${message}`;
+  
+  if (level === 'error') {
+    console.error(output);
+  } else {
+    console.log(output);
+  }
+};
+
+// Alias for common use cases
+export const logInfo = (message: string) => log(message, 'info');
+export const logError = (message: string) => log(message, 'error');
+export const logWarn = (message: string) => log(message, 'warn');
+export const logDebug = (message: string) => log(message, 'debug');
+
 // Check if running on Railway or in production
 const isRailway = !!process.env.RAILWAY_ENVIRONMENT;
 const isProduction = process.env.NODE_ENV === 'production';
