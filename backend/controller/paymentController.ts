@@ -2645,7 +2645,7 @@ const cryptoVerification = async (address, webhook = true) => {
             fixedDecimal: false,
           });
           
-          const { totalDeduction, minForwarding } = await calculateTransactionFees(
+          const { totalDeduction, minForwarding, fixedFee, transactionFee, blockchainBuffer } = await calculateTransactionFees(
             tempCurrency,
             Number(amountInUSD[0].amount)  // Pass USD amount for fee calculation
           );
@@ -2653,9 +2653,14 @@ const cryptoVerification = async (address, webhook = true) => {
           console.log(`[cryptoVerification] Fee calculation DEBUG:
             - Total received (crypto): ${totalAmountReceived} ${tempCurrency}
             - Total received (USD): $${amountInUSD[0].amount}
+            - Fee Breakdown:
+              • Fixed Fee: $${fixedFee?.toFixed(2) || 'N/A'} (Tier-based)
+              • Transaction Fee (2%): $${transactionFee?.toFixed(2) || 'N/A'}
+              • Blockchain Buffer: $${blockchainBuffer?.toFixed(2) || 'N/A'}
             - Total deduction (USD): $${totalDeduction}
             - Min forwarding threshold: $${minForwarding}
-            - Fee percentage: ${(totalDeduction / Number(amountInUSD[0].amount) * 100).toFixed(2)}%`);
+            - Effective Fee %: ${(totalDeduction / Number(amountInUSD[0].amount) * 100).toFixed(2)}%
+            - Note: High % on small payments due to $${fixedFee} fixed fee (Tier 1: $5-$100)`);
 
           if (Number(amountInUSD[0].amount) < Number(minForwarding)) {
             // Under threshold - all to admin
