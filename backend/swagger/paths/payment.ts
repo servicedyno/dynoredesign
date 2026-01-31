@@ -1825,5 +1825,85 @@ When you create a payment link with a \`webhook_url\`, DynoPay will POST to YOUR
         401: { description: 'Unauthorized' }
       }
     }
+  },
+
+  // ==================== CHECKOUT UTILITIES ====================
+  '/api/pay/configured-currencies': {
+    get: {
+      tags: ['Payment Processing'],
+      summary: 'Get configured currencies for checkout',
+      description: `Returns the list of cryptocurrencies configured by the merchant for accepting payments.
+      
+**Use Case:** Called by checkout page to show only the payment methods the merchant has set up.
+
+**Response includes:**
+- \`configured_currencies\` - Array of currency codes (e.g., ["BTC", "ETH", "USDT-TRC20"])
+- \`skip_selection\` - If true and only one currency configured, auto-select it
+
+**Note:** Requires customer token from getData response (not merchant JWT token).`,
+      parameters: [],
+      responses: {
+        200: {
+          description: 'Configured currencies retrieved',
+          content: {
+            'application/json': {
+              examples: {
+                'Multiple Currencies': {
+                  summary: 'Merchant with multiple crypto options',
+                  value: {
+                    message: 'Configured currencies retrieved successfully',
+                    data: {
+                      configured_currencies: ['BTC', 'ETH', 'USDT-TRC20', 'USDT-ERC20', 'LTC', 'TRX'],
+                      skip_selection: false,
+                      fee_info: {
+                        fee_payer: 'company',
+                        transaction_fee_percent: 2.0
+                      }
+                    }
+                  }
+                },
+                'Single Currency (Auto-select)': {
+                  summary: 'Merchant with only one crypto option',
+                  value: {
+                    message: 'Configured currencies retrieved successfully',
+                    data: {
+                      configured_currencies: ['USDT-TRC20'],
+                      skip_selection: true,
+                      fee_info: {
+                        fee_payer: 'company',
+                        transaction_fee_percent: 2.0
+                      }
+                    }
+                  }
+                },
+                'No Currencies Configured': {
+                  summary: 'Merchant has not configured any crypto wallets',
+                  value: {
+                    message: 'Configured currencies retrieved successfully',
+                    data: {
+                      configured_currencies: [],
+                      skip_selection: false,
+                      fee_info: {
+                        fee_payer: 'company',
+                        transaction_fee_percent: 2.0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { 
+          description: 'Invalid customer session',
+          content: {
+            'application/json': {
+              example: { message: 'Invalid customer session', error: true }
+            }
+          }
+        },
+        401: { description: 'Unauthorized - Invalid or missing customer token' }
+      }
+    }
   }
 };
