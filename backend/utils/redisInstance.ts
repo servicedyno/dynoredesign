@@ -20,6 +20,7 @@ export const connectRedis = async () => {
     await redisClient.connect();
     redisConnected = true;
     log("Redis connected", "info");
+    log("[MemoryCache] Initialized", "info");
   }
 };
 
