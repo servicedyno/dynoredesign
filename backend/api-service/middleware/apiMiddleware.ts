@@ -13,18 +13,24 @@ const apiMiddleware = async (
   try {
     const headers = req.headers;
     if (headers["x-api-key"]) {
-      const apiKey = headers["x-api-key"];
+      const apiKey = headers["x-api-key"] as string;
       const decryptedData = decrypt(apiKey, process.env.API_SECRET);
+      
+      // Handle both old format and new format with prefix (dpk_live_ or dpk_test_)
       if (decryptedData.includes("DYNOPAY_USER_API")) {
-        const apiKeyData = decryptedData.split("-")[1];
-        const apiData = JSON.parse(apiKeyData);
+        // Extract the JSON part after "DYNOPAY_USER_API-"
+        const apiKeyPart = decryptedData.split("DYNOPAY_USER_API-")[1];
+        const apiData = JSON.parse(apiKeyPart);
         const { company_id, adm_id } = apiData;
+        
         const tempData = await sequelize.query(
-          `select * from tbl_company where company_id=${company_id}
-            and user_id=${adm_id}
-          `,
-          { type: QueryTypes.SELECT }
+          `SELECT * FROM tbl_company WHERE company_id=$1 AND user_id=$2`,
+          { 
+            bind: [company_id, adm_id],
+            type: QueryTypes.SELECT 
+          }
         );
+        
         if (tempData.length > 0) {
           res.locals.apiKeyData = apiData;
           next();
@@ -32,24 +38,23 @@ const apiMiddleware = async (
           errorResponseHelper(
             res,
             403,
-            "API key authorization failed! Please check the API key."
+            "API key authorization failed! Company not found."
           );
         }
       } else {
         errorResponseHelper(
           res,
           403,
-          "API key authorization failed! Please check the API key."
+          "API key authorization failed! Invalid key format."
         );
       }
     } else {
-      errorResponseHelper(res, 403, "API key does not exists");
+      errorResponseHelper(res, 403, "API key is required in x-api-key header");
     }
-    // next();
   } catch (e) {
     const errorMessage = getErrorMessage(e);
-    customerLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+    customerLogger.error(errorMessage, new Error(e as any));
+    errorResponseHelper(res, 500, "API key validation error: " + errorMessage);
   }
 };
 
