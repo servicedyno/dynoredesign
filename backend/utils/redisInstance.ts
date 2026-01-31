@@ -48,7 +48,10 @@ const setMemoryCache = (key: string, value: any, ttlSeconds: number) => {
 const getMemoryCache = (key: string): any | null => {
   const entry = memoryCache.get(key);
   if (!entry) {
-    console.log(`[MemoryCache] MISS ${key}`);
+    // Only log cache misses in development or for non-customer keys to reduce noise
+    if (process.env.NODE_ENV === 'development' || !key.startsWith('customer-')) {
+      console.log(`[MemoryCache] MISS ${key}`);
+    }
     return null;
   }
   
