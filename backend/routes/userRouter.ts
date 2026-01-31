@@ -52,4 +52,8 @@ userRouter.delete("/account", authMiddleware, userController.deleteAccount);
 userRouter.post("/unsubscribe-reminders", userController.unsubscribeFromReminders);
 userRouter.get("/unsubscribe-reminders/:token", userController.unsubscribeFromReminders);
 
+// Payment link unsubscribe (no auth required - uses token)
+userRouter.post("/unsubscribe-payment-reminders", userController.unsubscribeFromPaymentReminders);
+userRouter.get("/unsubscribe-payment-reminders/:token", userController.unsubscribeFromPaymentReminders);
+
 export default userRouter;
