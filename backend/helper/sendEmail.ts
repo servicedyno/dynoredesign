@@ -177,11 +177,14 @@ const sendEmail = async (
   showImage = false
 ) => {
   try {
+    // Wrap message in DynoPay branded HTML template
+    const htmlBody = dynoPayEmailTemplate(name, message, subject, showImage);
+    
     const info = await mailTransporter({
       to: recipientEmail,
       name,
       subject,
-      body: message,
+      body: htmlBody,
     });
     return info;
   } catch (e) {
