@@ -3461,6 +3461,7 @@ const createPaymentLink = async (
       redirect_url: redirect_url || null,
       webhook_url: webhook_url || null,
       fee_payer: fee_payer || 'company',  // Default: company pays fees (existing behavior)
+      apply_tax: apply_tax || false,  // Tax toggle: OFF by default, merchant must enable
     };
 
     const links = await paymentLinkModel.create(payload);
