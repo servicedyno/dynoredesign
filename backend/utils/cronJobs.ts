@@ -363,11 +363,11 @@ export const setupHealthCheckCron = () => {
       const monitoringService = require("../services/monitoringService").default;
       await monitoringService.runHealthChecks();
     } catch (e) {
-      console.error("Health Check Cron Job Error:", e);
+      log(`Health Check Cron Job Error: ${e}`, "error");
     }
   });
 
-  console.log("Health Check Cron Job scheduled for every 5 minutes");
+  log("Health Check Cron Job scheduled for every 5 minutes", "info");
 };
 
 export default {
