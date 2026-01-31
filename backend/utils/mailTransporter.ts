@@ -24,12 +24,24 @@ interface mailOptions {
   body?: string;
 }
 
+/**
+ * Strip HTML tags for plain text fallback
+ */
+const stripHtml = (html: string): string => {
+  return html
+    .replace(/<style[^>]*>.*?<\/style>/gi, '')
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 const mailTransporter = async ({ to, subject, body, name }: mailOptions) => {
   const { data } = await axios.post(
     "https://api.brevo.com/v3/smtp/email",
     {
       sender: {
-        name: "Dynocash",
+        name: "DynoPay",
         email: "notify@dynocash.com",
       },
       subject,
@@ -39,7 +51,8 @@ const mailTransporter = async ({ to, subject, body, name }: mailOptions) => {
           name: name.trim().length > 0 ? name : to,
         },
       ],
-      textContent: body,
+      htmlContent: body,                    // Send as HTML for proper rendering
+      textContent: stripHtml(body || ''),   // Plain text fallback for email clients that don't support HTML
     },
     {
       headers: {
@@ -47,7 +60,7 @@ const mailTransporter = async ({ to, subject, body, name }: mailOptions) => {
       },
     }
   );
-  console.log("Email sent via Brevo:", data);
+  console.log(`[Email] Sent to ${to}: ${subject}`);
   return data;
 };
 
