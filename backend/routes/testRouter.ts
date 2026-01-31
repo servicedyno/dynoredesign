@@ -610,4 +610,69 @@ testRouter.post("/send-referee-reminder", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/test/trigger-payment-link-reminders
+ * Manually trigger the payment link reminder job
+ * Protected: Requires authentication
+ */
+testRouter.post("/trigger-payment-link-reminders", authMiddleware, async (req, res) => {
+  try {
+    const { triggerPaymentLinkReminders } = await import("../utils/cronJobs");
+    const results = await triggerPaymentLinkReminders();
+    
+    successResponseHelper(res, 200, "Payment link reminders check triggered", results);
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
+/**
+ * POST /api/test/send-payment-link-reminder
+ * Send a test payment link reminder email
+ * No authentication required for testing
+ */
+testRouter.post("/send-payment-link-reminder", async (req, res) => {
+  try {
+    const { email, reminder_type = 'reminder1', expires_in_hours = null } = req.body;
+    
+    if (!email) {
+      return errorResponseHelper(res, 400, "email is required");
+    }
+    
+    const validTypes = ['reminder1', 'reminder2', 'final'];
+    if (!validTypes.includes(reminder_type)) {
+      return errorResponseHelper(res, 400, `reminder_type must be one of: ${validTypes.join(', ')}`);
+    }
+    
+    const { sendPaymentLinkReminderEmail } = require("../helper");
+    
+    // Calculate expiry date if hours specified
+    let expiresAt: Date | null = null;
+    if (expires_in_hours !== null) {
+      expiresAt = new Date(Date.now() + expires_in_hours * 60 * 60 * 1000);
+    }
+    
+    await sendPaymentLinkReminderEmail(
+      email,
+      "Test Company Ltd",         // Company name
+      "150.00",                   // Amount
+      "USD",                      // Currency
+      "Monthly Subscription",     // Description
+      "https://checkout.dynopay.io/pay?d=test123456", // Payment link
+      expiresAt,                  // Expires at
+      reminder_type,              // Reminder type
+      "test-payment-unsubscribe-token-12345"  // Unsubscribe token
+    );
+    
+    successResponseHelper(res, 200, "Test payment link reminder email sent", {
+      sent_to: email,
+      reminder_type,
+      expires_at: expiresAt?.toISOString() || null,
+      expires_in_hours,
+    });
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
 export default testRouter;
