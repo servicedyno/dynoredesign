@@ -1,5 +1,6 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../../utils/dbInstance';
+import crypto from 'crypto';
 
 interface RefereeCodeAttributes {
   code_id: number;
@@ -15,11 +16,19 @@ interface RefereeCodeAttributes {
   sent_at: Date;
   used_at?: Date;
   expires_at: Date;
+  // Reminder tracking
+  reminder_1_sent_at?: Date;
+  reminder_2_sent_at?: Date;
+  reminder_3_sent_at?: Date;
+  final_reminder_sent_at?: Date;
+  // Unsubscribe functionality
+  unsubscribe_token: string;
+  unsubscribed_at?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface RefereeCodeCreationAttributes extends Optional<RefereeCodeAttributes, 'code_id' | 'status' | 'discount_percent' | 'discount_duration_days' | 'sent_at' | 'createdAt' | 'updatedAt'> {}
+interface RefereeCodeCreationAttributes extends Optional<RefereeCodeAttributes, 'code_id' | 'status' | 'discount_percent' | 'discount_duration_days' | 'sent_at' | 'unsubscribe_token' | 'createdAt' | 'updatedAt'> {}
 
 class RefereeCode extends Model<RefereeCodeAttributes, RefereeCodeCreationAttributes> implements RefereeCodeAttributes {
   public code_id!: number;
@@ -35,6 +44,14 @@ class RefereeCode extends Model<RefereeCodeAttributes, RefereeCodeCreationAttrib
   public sent_at!: Date;
   public used_at?: Date;
   public expires_at!: Date;
+  // Reminder tracking
+  public reminder_1_sent_at?: Date;
+  public reminder_2_sent_at?: Date;
+  public reminder_3_sent_at?: Date;
+  public final_reminder_sent_at?: Date;
+  // Unsubscribe functionality
+  public unsubscribe_token!: string;
+  public unsubscribed_at?: Date;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
