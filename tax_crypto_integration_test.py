@@ -151,7 +151,7 @@ class TaxCryptoIntegrationTester:
             payload["apply_tax"] = True
         
         try:
-            response = self.session.post(f"{API_BASE}/payment/createLink", json=payload)
+            response = self.session.post(f"{API_BASE}/pay/createPaymentLink", json=payload)
             
             if response.status_code == 200:
                 data = response.json()
