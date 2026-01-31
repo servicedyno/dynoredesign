@@ -45,6 +45,7 @@ export {
   sendAdminFeeReceivedEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
+  sendRefereeCodeReminderEmail,
   dynoPayEmailTemplate,
   successResponseHelper,
   errorResponseHelper,
