@@ -251,27 +251,27 @@ const startServer = async () => {
     await merchantTempAddressModel.sync({ alter: true });
     await merchantPoolTransactionModel.sync({ alter: true });
     await merchantPoolSweepModel.sync({ alter: true });
-    console.log("Merchant Pool tables synced successfully.");
+    log('Merchant Pool tables synced successfully.', 'info');
     
     // Sync Referral models
     await referralModel.sync({ alter: true });
     await referralRewardModel.sync({ alter: true });
-    console.log("Referral tables synced successfully.");
+    log('Referral tables synced successfully.', 'info');
     
     // Sync Referee Code model
     const { refereeCodeModel } = await import("./models");
     await refereeCodeModel.sync({ alter: true });
-    console.log("Referee Code table synced successfully.");
+    log('Referee Code table synced successfully.', 'info');
     
     // Sync Knowledge Base models
     await kbCategoryModel.sync({ alter: true });
     await kbArticleModel.sync({ alter: true });
-    console.log("Knowledge Base tables synced successfully.");
+    log('Knowledge Base tables synced successfully.', 'info');
     
     // Sync user model to add referral columns
     const { userModel } = await import("./models");
     await userModel.sync({ alter: true });
-    console.log("User model synced with referral columns.");
+    log('User model synced with referral columns.', 'info');
     
     // Validate Merchant Pool Configuration (CRITICAL STARTUP CHECK)
     try {
