@@ -144,7 +144,7 @@ RefereeCode.init(
     // Unsubscribe functionality
     unsubscribe_token: {
       type: DataTypes.STRING(64),
-      allowNull: false,
+      allowNull: true,
       defaultValue: () => crypto.randomBytes(32).toString('hex'),
     },
     unsubscribed_at: {
