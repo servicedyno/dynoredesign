@@ -110,11 +110,17 @@ class TaxCryptoIntegrationTester:
             response = self.session.get(f"{API_BASE}/tax/rate/PT")
             if response.status_code == 200:
                 data = response.json()
-                tax_rate = data.get('standard_rate', 0)
+                
+                # Handle nested data structure
+                if 'data' in data:
+                    tax_data = data['data']
+                    tax_rate = tax_data.get('standard_rate', 0)
+                else:
+                    tax_rate = data.get('standard_rate', 0)
                 
                 if 20 <= tax_rate <= 25:  # Expected range for Portugal VAT
                     self.log_test("Portugal Tax Rate (PT)", True, 
-                        f"Rate: {tax_rate}%, Country: {data.get('country_name')}")
+                        f"Rate: {tax_rate}%, Country: {tax_data.get('country_name', 'Portugal')}")
                 else:
                     self.log_test("Portugal Tax Rate (PT)", False, 
                         f"Unexpected rate: {tax_rate}%")
@@ -129,11 +135,17 @@ class TaxCryptoIntegrationTester:
             response = self.session.get(f"{API_BASE}/tax/rate/US")
             if response.status_code == 200:
                 data = response.json()
-                tax_rate = data.get('standard_rate', 0)
+                
+                # Handle nested data structure
+                if 'data' in data:
+                    tax_data = data['data']
+                    tax_rate = tax_data.get('standard_rate', 0)
+                else:
+                    tax_rate = data.get('standard_rate', 0)
                 
                 if tax_rate <= 10:  # Expected low/zero rate for US
                     self.log_test("US Tax Rate (US)", True, 
-                        f"Rate: {tax_rate}%, Country: {data.get('country_name')}")
+                        f"Rate: {tax_rate}%, Country: {tax_data.get('country_name', 'US')}")
                 else:
                     self.log_test("US Tax Rate (US)", False, 
                         f"Unexpected rate: {tax_rate}%")
