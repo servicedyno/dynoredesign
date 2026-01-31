@@ -2054,31 +2054,42 @@ const verifyCryptoPayment = async (
       grace_period_minutes: gracePeriodMinutes,
     };
     
-    // Try to get payment link expiry
-    if (customerData?.payment_link_id || tempData?.payment_id) {
+    // Try to get payment link expiry - FIX: Only query with valid IDs to avoid "undefined" error
+    const linkId = customerData?.payment_link_id;
+    const paymentId = tempData?.payment_id;
+    
+    if (linkId || paymentId) {
       try {
-        const paymentLink = await paymentLinkModel.findOne({
-          where: {
-            [Op.or]: [
-              { link_id: customerData?.payment_link_id },
-              { transaction_id: tempData?.payment_id },
-            ]
-          }
-        });
+        // Build where clause only with valid values
+        const whereConditions: any[] = [];
+        if (linkId && linkId !== undefined && linkId !== null) {
+          whereConditions.push({ link_id: linkId });
+        }
+        if (paymentId && paymentId !== undefined && paymentId !== null) {
+          whereConditions.push({ transaction_id: paymentId });
+        }
         
-        if (paymentLink) {
-          const linkData = paymentLink.dataValues;
-          if (linkData.expires_at) {
-            const expiresAt = new Date(linkData.expires_at);
-            const now = new Date();
-            remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
-          } else {
-            // No explicit expiry - use created_at + default expiry (15 min for initial, 30 min for grace)
-            const createdAt = new Date(linkData.createdAt);
-            const defaultExpiryMinutes = String(tempData?.incomplete) === "true" ? gracePeriodMinutes : 15;
-            const expiresAt = new Date(createdAt.getTime() + defaultExpiryMinutes * 60 * 1000);
-            const now = new Date();
-            remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
+        if (whereConditions.length > 0) {
+          const paymentLink = await paymentLinkModel.findOne({
+            where: {
+              [Op.or]: whereConditions
+            }
+          });
+          
+          if (paymentLink) {
+            const linkData = paymentLink.dataValues;
+            if (linkData.expires_at) {
+              const expiresAt = new Date(linkData.expires_at);
+              const now = new Date();
+              remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
+            } else {
+              // No explicit expiry - use created_at + default expiry (15 min for initial, 30 min for grace)
+              const createdAt = new Date(linkData.createdAt);
+              const defaultExpiryMinutes = String(tempData?.incomplete) === "true" ? gracePeriodMinutes : 15;
+              const expiresAt = new Date(createdAt.getTime() + defaultExpiryMinutes * 60 * 1000);
+              const now = new Date();
+              remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
+            }
           }
         }
       } catch (e) {
