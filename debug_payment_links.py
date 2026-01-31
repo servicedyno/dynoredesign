@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://install-bundle.preview.emergentagent.com"
+backend_url = "https://quick-setup-56.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(

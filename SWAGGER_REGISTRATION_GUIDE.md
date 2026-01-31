@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://install-bundle.preview.emergentagent.com/api/docs
+Go to: https://quick-setup-56.preview.emergentagent.com/api/docs
 
 ---
 

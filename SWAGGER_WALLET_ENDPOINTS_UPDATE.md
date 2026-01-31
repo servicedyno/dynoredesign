@@ -141,7 +141,7 @@ Deprecated - Use /getWallet instead
 ## 🧪 Verification
 
 ### Check Swagger UI:
-1. Visit: `https://install-bundle.preview.emergentagent.com/api/docs`
+1. Visit: `https://quick-setup-56.preview.emergentagent.com/api/docs`
 2. Find "Wallet Address Management" section
 3. Verify both endpoints are listed:
    - ✅ `/getWallet` marked as RECOMMENDED
@@ -151,7 +151,7 @@ Deprecated - Use /getWallet instead
 
 **Primary Endpoint (Recommended):**
 ```bash
-curl -X GET "https://install-bundle.preview.emergentagent.com/api/wallet/getWallet?company_id=38" \
+curl -X GET "https://quick-setup-56.preview.emergentagent.com/api/wallet/getWallet?company_id=38" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -159,7 +159,7 @@ curl -X GET "https://install-bundle.preview.emergentagent.com/api/wallet/getWall
 
 **Legacy Endpoint (Deprecated):**
 ```bash
-curl -X GET "https://install-bundle.preview.emergentagent.com/api/wallet/getWalletAddresses?company_id=38" \
+curl -X GET "https://quick-setup-56.preview.emergentagent.com/api/wallet/getWalletAddresses?company_id=38" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
