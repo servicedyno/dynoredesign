@@ -275,9 +275,17 @@ const getData = async (req: express.Request, res: express.Response) => {
   try {
     const { data } = req.body;
 
+    // Validate data parameter is provided
+    if (!data) {
+      return errorResponseHelper(res, 400, "Payment reference is required");
+    }
+
     const item = await getRedisItem("customer-" + data);
 
-    console.log("item=======>", item, data);
+    // Only log for debugging when item exists or in development
+    if (process.env.NODE_ENV === 'development' || (item && Object.keys(item).length > 0)) {
+      console.log("[getData] Payment lookup:", { hasItem: !!item && Object.keys(item).length > 0, dataRef: data?.substring(0, 10) + '...' });
+    }
     
     // Check if item exists
     if (!item || Object.keys(item).length === 0) {
