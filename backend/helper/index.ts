@@ -15,6 +15,7 @@ import sendEmail, {
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
   sendRefereeCodeReminderEmail,
+  sendPaymentLinkReminderEmail,
   dynoPayEmailTemplate,
 } from "./sendEmail";
 import successResponseHelper from "./successResponseHelper";
