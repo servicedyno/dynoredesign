@@ -291,13 +291,20 @@ class TaxCryptoIntegrationTester:
         
         payment_data = data_result['data']
         
+        # Handle nested data structure
+        if 'data' in payment_data:
+            payment_info = payment_data['data']
+        else:
+            payment_info = payment_data
+        
         # Verify tax_info is present
-        if 'tax_info' in payment_data:
-            tax_info = payment_data['tax_info']
+        if 'tax_info' in payment_info:
+            tax_info = payment_info['tax_info']
             self.log_test("Tax Info Present", True, 
                 f"Tax Rate: {tax_info.get('tax_rate')}%, Tax Amount: {tax_info.get('tax_amount')}")
         else:
-            self.log_test("Tax Info Present", False, "No tax_info in response")
+            self.log_test("Tax Info Present", False, 
+                f"No tax_info in response. Keys: {list(payment_info.keys())}")
             return
         
         # Step 3: Create crypto payment
