@@ -398,11 +398,16 @@ class TaxCryptoIntegrationTester:
         crypto_data = crypto_result['data']
         
         # Step 4: Verify crypto amount is base only
-        crypto_amount = crypto_data.get('amount', 0)
-        merchant_amount = crypto_data.get('merchant_amount', 0)
+        if 'data' in crypto_data:
+            crypto_info = crypto_data['data']
+        else:
+            crypto_info = crypto_data
+            
+        crypto_amount = crypto_info.get('amount', 0)
+        merchant_amount = crypto_info.get('merchant_amount', 0)
         
         # Check if NO tax_info is in crypto response
-        if 'tax_info' not in crypto_data:
+        if 'tax_info' not in crypto_info:
             self.log_test("No Tax Info in Crypto Response", True, 
                 f"No tax in crypto payment")
         else:
@@ -410,7 +415,7 @@ class TaxCryptoIntegrationTester:
                 "Unexpected tax_info in crypto payment response")
         
         self.log_test("Create Crypto Payment without Tax", True, 
-            f"Crypto Amount: {crypto_amount}, Merchant Amount: {merchant_amount}")
+            f"Crypto Amount: {crypto_amount} ETH, Merchant Amount: {merchant_amount} ETH")
     
     def run_all_tests(self):
         """Run all tax crypto integration tests"""
