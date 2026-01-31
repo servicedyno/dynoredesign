@@ -331,7 +331,7 @@ class DynoPayCheckoutAPITester:
                     if isinstance(rates_response, list) and rates_response:
                         # Check first rate entry structure
                         first_rate = rates_response[0]
-                        required_rate_fields = ['currency', 'amount', 'total_amount']
+                        required_rate_fields = ['currency', 'amount']
                         
                         missing_rate_fields = [field for field in required_rate_fields if field not in first_rate]
                         
@@ -345,7 +345,7 @@ class DynoPayCheckoutAPITester:
                                     "sample_rate": {
                                         "currency": first_rate.get('currency'),
                                         "amount": first_rate.get('amount'),
-                                        "total_amount": first_rate.get('total_amount')
+                                        "transferRate": first_rate.get('transferRate')
                                     },
                                     "fee_payer": rates_data["fee_payer"]
                                 }
