@@ -467,6 +467,9 @@ const getData = async (req: express.Request, res: express.Response) => {
           expiry: expiryInfo,
           // Post-payment settings - redirect_url for customer redirection after payment
           ...(item.redirect_url && { redirect_url: item.redirect_url }),
+          // Tax information
+          apply_tax: item.apply_tax || false,
+          ...(taxInfo && { tax_info: taxInfo }),
         };
       } else {
         payload = {
@@ -491,6 +494,9 @@ const getData = async (req: express.Request, res: express.Response) => {
           expiry: expiryInfo,
           // Post-payment settings - redirect_url for customer redirection after payment
           ...(item.redirect_url && { redirect_url: item.redirect_url }),
+          // Tax information
+          apply_tax: item.apply_tax || false,
+          ...(taxInfo && { tax_info: taxInfo }),
         };
       }
     }
