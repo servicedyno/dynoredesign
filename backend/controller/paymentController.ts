@@ -986,6 +986,8 @@ const createCryptoPayment = async (
         currency: data.currency,
         walletType: "customer",
         fee_payer,
+        // Tax info for logging
+        ...(taxInfo && { tax_enabled: true, tax_amount: taxAmount }),
       });
 
       // Clear any existing data for this address before setting new payment data
@@ -994,11 +996,12 @@ const createCryptoPayment = async (
       
       await setRedisItem("crypto-" + paymentRes.address, {
         mode: paymentTypes.CRYPTO,
-        amount: crypto_amount,                  // Crypto amount customer should pay
-        merchant_amount: merchant_amount_crypto, // Amount merchant should receive
-        total_fees: total_fees_crypto,          // Total fees (admin's portion)
+        amount: crypto_amount,                  // Crypto amount customer should pay (includes tax)
+        merchant_amount: merchant_amount_crypto, // Amount merchant should receive (includes tax)
+        total_fees: total_fees_crypto,          // Total fees (admin's portion - from base only)
         fee_payer: fee_payer,                   // Who pays fees
-        base_amount_usd: baseAmountUSD,         // Original USD amount
+        base_amount_usd: baseAmountUSD,         // Original USD amount (without tax)
+        total_amount_usd: totalAmountWithTax,   // Total USD amount (with tax if applicable)
         status: "pending",
         ref: uniqueRef,
         currency: data.currency,
@@ -1007,6 +1010,14 @@ const createCryptoPayment = async (
         walletType: "customer",
         temp_id: paymentRes.temp_id,
         is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",  // CRITICAL: Include merchant pool flag
+        // Tax tracking
+        ...(taxInfo && {
+          tax_enabled: "true",
+          tax_amount_usd: taxAmount,
+          tax_amount_crypto: tax_amount_crypto,
+          tax_rate: taxInfo.tax_rate,
+          tax_country_code: taxInfo.country_code,
+        }),
       });
 
       // Also update the temp address record in database for partial payment handling
