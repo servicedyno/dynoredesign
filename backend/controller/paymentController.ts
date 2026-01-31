@@ -478,7 +478,9 @@ const getData = async (req: express.Request, res: express.Response) => {
             fee_payer: item.fee_payer || 'company',
             ...(item.fee_payer === 'customer' && {
               processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
-              total_amount: parseFloat(totalWithFees.toFixed(2)),
+              subtotal: parseFloat(amount.toFixed(2)),
+              tax_amount: parseFloat(taxAmount.toFixed(2)),
+              total_amount: parseFloat(grandTotal.toFixed(2)),
             })
           },
           expiry: expiryInfo,
@@ -505,7 +507,9 @@ const getData = async (req: express.Request, res: express.Response) => {
             fee_payer: item.fee_payer || 'company',
             ...(item.fee_payer === 'customer' && {
               processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
-              total_amount: parseFloat(totalWithFees.toFixed(2)),
+              subtotal: parseFloat(amount.toFixed(2)),
+              tax_amount: parseFloat(taxAmount.toFixed(2)),
+              total_amount: parseFloat(grandTotal.toFixed(2)),
             })
           },
           expiry: expiryInfo,
