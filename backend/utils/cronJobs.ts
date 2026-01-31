@@ -19,7 +19,7 @@ export const setupWeeklySummaryCron = () => {
   // Cron format: minute hour day-of-month month day-of-week
   // 0 9 * * 1 = At 09:00 on Monday
   cron.schedule("0 9 * * 1", async () => {
-    console.log("Weekly Summary Cron Job ==============> Starting");
+    log("Weekly Summary Cron Job starting...", "info");
     
     try {
       // Get date range for last 7 days
@@ -36,7 +36,7 @@ export const setupWeeklySummaryCron = () => {
         { type: QueryTypes.SELECT }
       ) as any[];
 
-      console.log(`Found ${usersWithWeeklySummary.length} users with weekly summary enabled`);
+      log(`Found ${usersWithWeeklySummary.length} users with weekly summary enabled`, "info");
 
       for (const user of usersWithWeeklySummary) {
         try {
@@ -93,25 +93,25 @@ export const setupWeeklySummaryCron = () => {
             user.company_id
           );
 
-          console.log(`Weekly summary created for user ${user.user_id}`);
+          log(`Weekly summary created for user ${user.user_id}`, "info");
 
           // TODO: Send email when Email Service (Phase 9) is implemented
           // await sendWeeklySummaryEmail(user.email, user.name, notificationData);
 
         } catch (userError) {
-          console.error(`Error creating weekly summary for user ${user.user_id}:`, userError);
+          log(`Error creating weekly summary for user ${user.user_id}: ${userError}`, "error");
         }
       }
 
-      console.log("Weekly Summary Cron Job ==============> Completed");
+      log("Weekly Summary Cron Job completed", "info");
       
     } catch (e) {
-      console.error("Weekly Summary Cron Job Error:", e);
+      log(`Weekly Summary Cron Job Error: ${e}`, "error");
       cronLogger?.error?.("Weekly Summary Cron Error", {}, new Error(e as any));
     }
   });
 
-  console.log("Weekly Summary Cron Job scheduled for every Monday at 9:00 AM UTC");
+  log("Weekly Summary Cron Job scheduled for every Monday at 9:00 AM UTC", "info");
 };
 
 /**
