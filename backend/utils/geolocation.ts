@@ -101,6 +101,63 @@ export const getCountryFromIP = async (ip: string, headers?: any): Promise<GeoLo
   }
 };
 
+// Timezone to country mapping (most common timezones)
+const TIMEZONE_TO_COUNTRY: Record<string, string> = {
+  // Europe
+  'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Lisbon': 'PT',
+  'Europe/Madrid': 'ES', 'Europe/Paris': 'FR', 'Europe/Brussels': 'BE',
+  'Europe/Amsterdam': 'NL', 'Europe/Berlin': 'DE', 'Europe/Zurich': 'CH',
+  'Europe/Vienna': 'AT', 'Europe/Rome': 'IT', 'Europe/Warsaw': 'PL',
+  'Europe/Prague': 'CZ', 'Europe/Budapest': 'HU', 'Europe/Bucharest': 'RO',
+  'Europe/Sofia': 'BG', 'Europe/Athens': 'GR', 'Europe/Helsinki': 'FI',
+  'Europe/Stockholm': 'SE', 'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK',
+  // Americas
+  'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US',
+  'America/Los_Angeles': 'US', 'America/Phoenix': 'US', 'America/Toronto': 'CA',
+  'America/Vancouver': 'CA', 'America/Mexico_City': 'MX', 'America/Sao_Paulo': 'BR',
+  'America/Buenos_Aires': 'AR', 'America/Santiago': 'CL', 'America/Lima': 'PE',
+  'America/Bogota': 'CO',
+  // Asia/Pacific
+  'Asia/Tokyo': 'JP', 'Asia/Seoul': 'KR', 'Asia/Shanghai': 'CN',
+  'Asia/Hong_Kong': 'HK', 'Asia/Singapore': 'SG', 'Asia/Bangkok': 'TH',
+  'Asia/Jakarta': 'ID', 'Asia/Manila': 'PH', 'Asia/Kolkata': 'IN',
+  'Asia/Dubai': 'AE', 'Asia/Tel_Aviv': 'IL', 'Asia/Istanbul': 'TR',
+  'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'Pacific/Auckland': 'NZ',
+  // Africa
+  'Africa/Johannesburg': 'ZA', 'Africa/Cairo': 'EG', 'Africa/Lagos': 'NG',
+  'Africa/Nairobi': 'KE', 'Africa/Casablanca': 'MA',
+};
+
+/**
+ * Get country from timezone string
+ */
+export const getCountryFromTimezone = (timezone: string): GeoLocationResult | null => {
+  const countryCode = TIMEZONE_TO_COUNTRY[timezone];
+  if (countryCode) {
+    console.log(`[Geolocation] Country from timezone ${timezone}: ${countryCode}`);
+    return {
+      country_code: countryCode,
+      country_name: COUNTRY_NAMES[countryCode] || countryCode,
+      ip: 'timezone-based',
+      source: 'fallback'
+    };
+  }
+  
+  // Try to extract from timezone (e.g., "Europe/Lisbon" -> check Europe)
+  if (timezone.startsWith('Europe/')) {
+    // Default to GB for unknown European timezones
+    console.log(`[Geolocation] Unknown European timezone ${timezone}, defaulting to GB`);
+    return {
+      country_code: 'GB',
+      country_name: 'United Kingdom',
+      ip: 'timezone-based',
+      source: 'fallback'
+    };
+  }
+  
+  return null;
+};
+
 /**
  * Get country from request (combines IP extraction and geolocation)
  */
@@ -113,4 +170,5 @@ export default {
   getClientIP,
   getCountryFromIP,
   getCountryFromRequest,
+  getCountryFromTimezone,
 };
