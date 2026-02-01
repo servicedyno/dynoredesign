@@ -1249,8 +1249,28 @@ export const recoverStrandedGas = async (): Promise<{
         
       } catch (error) {
         const message = getErrorMessage(error);
-        console.error(`[MerchantPool] Failed to recover gas from ${walletAddress}:`, message);
-        result.errors.push(`${walletAddress}: ${message}`);
+        
+        // Check if it's a known ignorable error (account not found, insufficient balance, etc.)
+        const ignorableErrors = [
+          'account.not.found',
+          'tron.account.not.found',
+          'insufficient',
+          'balance too low',
+          'account does not exist'
+        ];
+        
+        const isIgnorable = ignorableErrors.some(errType => 
+          message.toLowerCase().includes(errType.toLowerCase())
+        );
+        
+        if (isIgnorable) {
+          // Log at lower severity for expected errors
+          console.log(`[MerchantPool] ⚠️  Skipped gas recovery from ${walletAddress}: ${message}`);
+        } else {
+          // Log unexpected errors at error level
+          console.error(`[MerchantPool] Failed to recover gas from ${walletAddress}:`, message);
+          result.errors.push(`${walletAddress}: ${message}`);
+        }
       }
     }
     
