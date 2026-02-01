@@ -23,7 +23,7 @@ from datetime import datetime
 # Configuration
 BACKEND_URL = "https://setup-wizard-80.preview.emergentagent.com"
 TEST_USER_EMAIL = "john@dyno.pt"
-TEST_USER_PASSWORD = "Teste@123"
+TEST_USER_PASSWORD = "Katiekendra123@"
 
 class EmailNotificationTester:
     def __init__(self):
