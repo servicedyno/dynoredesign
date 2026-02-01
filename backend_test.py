@@ -139,7 +139,7 @@ class DynoPayEmailNotificationTester:
                 # Now change password back to original for future tests
                 time.sleep(2)  # Brief pause
                 
-                response2 = requests.post(
+                response2 = requests.put(
                     f"{self.backend_url}/api/user/changePassword",
                     json={
                         "oldPassword": "NewKatiekendra123@",
