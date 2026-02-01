@@ -58,11 +58,25 @@ const linkMiddleware = (
     "MXN",  // Mexican Peso
     "VES",  // Venezuelan Bolívar
     "UYU",  // Uruguayan Peso
-    // Fiat - African
-    "NGN",
-    "KES",
-    "UGX",
-    "RWF",
+    // Fiat - African (high crypto adoption regions)
+    "NGN",  // Nigerian Naira (#1 Africa, #2 Global)
+    "ZAR",  // South African Rand (#5 Africa)
+    "KES",  // Kenyan Shilling (#4 Africa)
+    "GHS",  // Ghanaian Cedi (#9 Africa)
+    "TZS",  // Tanzanian Shilling
+    "XAF",  // CFA Franc BEAC (Cameroon, Chad, CAR, Congo, Gabon, Eq. Guinea)
+    "XOF",  // CFA Franc BCEAO (Senegal, Ivory Coast, Benin, Burkina Faso, Mali, Niger, Togo, Guinea-Bissau)
+    "EGP",  // Egyptian Pound
+    "MAD",  // Moroccan Dirham
+    "UGX",  // Ugandan Shilling
+    "RWF",  // Rwandan Franc
+    "ETB",  // Ethiopian Birr
+    "ZMW",  // Zambian Kwacha
+    "BWP",  // Botswanan Pula
+    "MUR",  // Mauritian Rupee
+    "AOA",  // Angolan Kwanza
+    "MZN",  // Mozambican Metical
+    "CDF",  // Congolese Franc (DRC)
     // Crypto
     "BTC",
     "LTC",
