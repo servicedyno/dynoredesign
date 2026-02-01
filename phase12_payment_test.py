@@ -74,7 +74,11 @@ class Phase12PaymentTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get("success") and "token" in data.get("data", {}):
+                # Handle both response formats: {"success": true, "data": {"token": ...}} and {"data": {"accessToken": ...}}
+                if "data" in data and "accessToken" in data["data"]:
+                    self.jwt_token = data["data"]["accessToken"]
+                    user_info = data["data"]["userData"] if "userData" in data["data"] else data["data"]
+                elif data.get("success") and "token" in data.get("data", {}):
                     self.jwt_token = data["data"]["token"]
                     user_info = data["data"]
                     self.log_test(
