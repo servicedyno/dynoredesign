@@ -23,7 +23,7 @@ import base64
 import re
 
 # Configuration
-BACKEND_URL = "https://quick-setup-56.preview.emergentagent.com"
+BACKEND_URL = "https://setup-wizard-79.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Test credentials
