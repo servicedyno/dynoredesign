@@ -98,6 +98,8 @@ export const setupWeeklySummaryCron = () => {
           // Send weekly summary email
           try {
             const { sendWeeklySummaryEmail } = await import("../services/emailService");
+            const periodStart = startDate.toISOString().split('T')[0];
+            const periodEnd = endDate.toISOString().split('T')[0];
             await sendWeeklySummaryEmail(
               user.email,
               user.name,
