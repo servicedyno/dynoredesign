@@ -3554,21 +3554,25 @@ const getCurrencyRates = async (
               const taxAmountNum = Number(tax_amount) || 0;
               const totalAmountUSD = amount + totalFeesUSD + taxAmountNum;
               
-              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=$${amount}, tax=$${taxAmountNum.toFixed(2)}, fees=$${totalFeesUSD.toFixed(2)}, total=$${totalAmountUSD.toFixed(2)}`);
+              // Round all amounts to 2 decimal places for consistency
+              const roundedTotalFeesUSD = parseFloat(totalFeesUSD.toFixed(2));
+              const roundedTotalAmountUSD = parseFloat((amount + roundedTotalFeesUSD + taxAmountNum).toFixed(2));
+              
+              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=$${amount}, tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)}`);
               
               return {
                 ...rate,
                 fee_payer: 'customer',
-                base_amount: amount,
-                base_amount_usd: amount,
+                base_amount: parseFloat(amount.toFixed(2)),
+                base_amount_usd: parseFloat(amount.toFixed(2)),
                 // Include tax in breakdown
                 tax_amount: parseFloat(taxAmountNum.toFixed(2)),
                 // Simplified - only show total processing fee, no breakdown
-                processing_fee: parseFloat(totalFeesUSD.toFixed(2)),
-                total_amount: totalAmountUSD,
-                total_amount_usd: totalAmountUSD,
-                total_amount_source: totalAmountUSD,
-                amount: totalAmountUSD, // Override with total for display
+                processing_fee: roundedTotalFeesUSD,
+                total_amount: roundedTotalAmountUSD,
+                total_amount_usd: roundedTotalAmountUSD,
+                total_amount_source: roundedTotalAmountUSD,
+                amount: roundedTotalAmountUSD, // Override with total for display
               };
             }
             
