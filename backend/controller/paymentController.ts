@@ -457,11 +457,11 @@ const getData = async (req: express.Request, res: express.Response) => {
     
     // Calculate grand total including tax (if applicable)
     const taxAmount = taxInfo?.tax_amount || 0;
+    // Total should ALWAYS include tax, regardless of fee_payer
     // For customer pays fees: Don't include processing fee in total_amount yet
     // The exact fee depends on selected crypto and will be calculated by getCurrencyRates
-    // Only include subtotal + tax here, frontend will add fee after crypto selection
     const subtotalWithTax = amount + taxAmount;
-    const grandTotal = amount + totalProcessingFee + taxAmount; // Keep for reference but use subtotalWithTax
+    const grandTotal = amount + totalProcessingFee + taxAmount; // Keep for reference
     
     let payload;
     if (item.pathType === "createLink") {
@@ -482,19 +482,23 @@ const getData = async (req: express.Request, res: express.Response) => {
         order_reference: orderReference,
         description: item.description || null,
         merchant: companyInfo,
-        // Simplified fee info - no internal breakdown exposed
+        // Simplified fee info - always include subtotal and total with tax
         fee_info: {
           fee_payer: item.fee_payer || 'company',
-          // Only show totals if customer pays fees
+          subtotal: parseFloat(amount.toFixed(2)),
+          tax_amount: parseFloat(taxAmount.toFixed(2)),
+          // Total always includes tax, regardless of fee_payer
+          total_amount: parseFloat(subtotalWithTax.toFixed(2)),
+          // For customer pays fees: show estimated processing fee
           ...(item.fee_payer === 'customer' && {
             // Processing fee is ESTIMATED - actual fee depends on selected cryptocurrency
             // Frontend should call getCurrencyRates after crypto selection to get exact fee
             estimated_processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
             fees_pending_crypto_selection: true, // Flag to indicate fee is estimated
-            subtotal: parseFloat(amount.toFixed(2)),
-            tax_amount: parseFloat(taxAmount.toFixed(2)),
-            // total_amount excludes processing fee - will be calculated after crypto selection
-            total_amount: parseFloat(subtotalWithTax.toFixed(2)),
+          }),
+          // For company pays fees: processing_fee not shown to customer
+          ...(item.fee_payer === 'company' && {
+            processing_fee: parseFloat(totalProcessingFee.toFixed(2)), // For backend tracking only
           })
         },
         expiry: expiryInfo,
