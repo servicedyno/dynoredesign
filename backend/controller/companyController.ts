@@ -423,12 +423,55 @@ const deleteCompany = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
     const company_id = req.params.id;
+    
+    // First verify company belongs to user
+    const company = await companyModel.findOne({
+      where: {
+        user_id: userData.user_id,
+        company_id,
+      },
+    });
+    
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found");
+    }
+    
+    // Clean up Redis entries for company's payment links
+    try {
+      const { paymentLinkModel } = await import("../models");
+      const companyPaymentLinks = await paymentLinkModel.findAll({
+        where: { company_id },
+        attributes: ['payment_link'],
+      });
+      
+      for (const link of companyPaymentLinks) {
+        const paymentLinkUrl = link.dataValues.payment_link;
+        const urlMatch = paymentLinkUrl?.match(/[?&]d=([a-f0-9]+)/i);
+        if (urlMatch && urlMatch[1]) {
+          await deleteRedisItem("customer-" + urlMatch[1]);
+        }
+      }
+      
+      // Delete all payment links for this company
+      await paymentLinkModel.destroy({ where: { company_id } });
+      
+      // Invalidate dashboard cache for this user
+      await deleteRedisItem(`dashboard:${userData.user_id}:all`);
+      
+      companyLogger.info(`Redis cleanup completed for company ${company_id}`);
+    } catch (redisError) {
+      companyLogger.warn(`Redis cleanup failed for company ${company_id}: ${getErrorMessage(redisError)}`);
+      // Continue with deletion even if Redis cleanup fails
+    }
+    
+    // Delete the company
     const resData = await companyModel.destroy({
       where: {
         user_id: userData.user_id,
         company_id,
       },
     });
+    
     successResponseHelper(res, 200, "Company deleted successfully!", resData);
   } catch (e) {
     const message = getErrorMessage(e);
