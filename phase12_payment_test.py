@@ -861,7 +861,12 @@ class Phase12PaymentTester:
             
             if response_customer.status_code == 200:
                 link_data_customer = response_customer.json().get("data", {})
-                payment_ref_customer = link_data_customer.get("payment_reference")
+                payment_link_customer = link_data_customer.get("payment_link", "")
+                
+                # Extract reference from payment link URL
+                payment_ref_customer = None
+                if "?d=" in payment_link_customer:
+                    payment_ref_customer = payment_link_customer.split("?d=")[1]
                 
                 # Get payment data to analyze fee structure
                 get_data_customer = self.session.post(
