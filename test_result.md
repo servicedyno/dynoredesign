@@ -7,6 +7,19 @@
 user_problem_statement: "Phase 12 - Incomplete Payment Currency Lock + Processing Fee Display Fixes. Comprehensive testing of: (1) Payment confirmation and fund distribution, (2) Email notifications to merchant/admin/customer, (3) Fee payer modes (customer vs company), (4) Tax enabled/disabled scenarios, (5) Underpayment handling, (6) Payment link updates, (7) Incomplete payment currency lock mechanism."
 
 current_test_task:
+  - task: "Comprehensive Email Notification System - 10 New Templates Implementation"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/services/emailService.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented 10 new email notification templates (Templates 22-31): (1) sendPaymentExpiringEmail - payment link expiry reminder to customer, (2) sendNewDeviceLoginEmail - security alert on new IP login, (3) sendFailedLoginAttemptsEmail - alert after 3+ failed login attempts, (4) sendPaymentFailedEmail - payment failed/underpaid notification to customer and merchant, (5) sendApiKeyCreatedEmail - API key created/regenerated notification, (6) sendWalletDeletedEmail - wallet deletion confirmation, (7) sendLargeTransactionAlertEmail - alert for payments >$1000, (8) sendSubscriptionCreatedEmail - subscription lifecycle, (9) sendSubscriptionCancelledEmail - subscription cancelled, (10) sendSubscriptionPaymentFailedEmail - subscription payment failure. Also enabled weekly summary cron, added login IP tracking, and integrated triggers in controllers."
+
+previous_test_tasks:
   - task: "Email Notification Enhancement - Password Changed and Payment Link Created"
     implemented: true
     working: true
@@ -21,8 +34,6 @@ current_test_task:
       - working: true
         agent: "testing"
         comment: "✅ EMAIL NOTIFICATION ENHANCEMENT TESTING COMPLETED: 100% success rate (7/7 tests passed). ✅ AUTHENTICATION: Successfully authenticated john@dyno.pt with correct credentials (Katiekendra123@). ✅ EMAIL SERVICE INTEGRATION: Both email notification functions properly integrated - sendPasswordChangedEmail in userController.ts and sendPaymentLinkCreatedEmail in paymentController.ts. ✅ PASSWORD CHANGE EMAIL NOTIFICATION: Successfully tested PUT /api/user/changePassword endpoint, verified '[ChangePassword] Password changed notification sent to john@dyno.pt' in backend logs. Function sendPasswordChangedEmail(email, name, date, time) called automatically after password change. ✅ PAYMENT LINK CREATION EMAIL NOTIFICATION: Successfully tested POST /api/pay/createPaymentLink endpoint, verified '[PaymentLink] Merchant notification sent to john@dyno.pt' in backend logs. Function sendPaymentLinkCreatedEmail(email, name, amount, currency, paymentLink, description, expiresAt) called automatically after payment link creation. ✅ BACKEND HEALTH: All endpoints responding correctly, no compilation errors detected. ✅ LOG VERIFICATION: Both expected console log messages confirmed in backend logs - password change and payment link creation notifications working as specified. CONCLUSION: Email notification enhancements are fully operational and meet all requirements specified in the review request."
-
-previous_test_tasks:
   - task: "Phase 12 Comprehensive Payment System Testing"
     implemented: true
     working: true
