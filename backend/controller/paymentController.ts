@@ -1310,6 +1310,24 @@ const createCryptoPayment = async (
         }),
       });
 
+      // PHASE 12.1: Store active crypto address in customer Redis key
+      // This prevents generating multiple addresses for the same payment link when customer refreshes
+      const customerRedisData = await getRedisItem("customer-" + uniqueRef);
+      if (customerRedisData) {
+        const updatedCustomerData = {
+          ...customerRedisData,
+          active_crypto_address: {
+            currency: data.currency,
+            address: paymentRes.address,
+            qr_code: paymentRes.qr_code,
+            payment_id: paymentRes.transaction_id,
+            created_at: new Date().toISOString(),
+          }
+        };
+        await setRedisItem("customer-" + uniqueRef, updatedCustomerData);
+        console.log(`[Phase 12.1] Stored active_crypto_address for ${uniqueRef}: ${paymentRes.address}`);
+      }
+
       // Also update the temp address record in database for partial payment handling
       // Note: Only update if NOT a merchant pool address (userTempAddressModel is for legacy addresses)
       if (!paymentRes.is_merchant_pool) {
