@@ -3551,14 +3551,14 @@ const cryptoVerification = async (address, webhook = true) => {
         
         await transaction.commit();
         
-        // PHASE 12: Clear incomplete_payment info from customer Redis key on successful completion
+        // PHASE 12: Clear incomplete_payment and active_crypto_address from customer Redis key on successful completion
         const customerRef = tempData.ref;
         if (customerRef) {
           const customerRedisData = await getRedisItem("customer-" + customerRef);
-          if (customerRedisData && customerRedisData.incomplete_payment) {
-            const { incomplete_payment, ...cleanCustomerData } = customerRedisData;
+          if (customerRedisData && (customerRedisData.incomplete_payment || customerRedisData.active_crypto_address)) {
+            const { incomplete_payment, active_crypto_address, ...cleanCustomerData } = customerRedisData;
             await setRedisItem("customer-" + customerRef, cleanCustomerData);
-            console.log(`[Phase 12] Cleared incomplete_payment from customer-${customerRef} on successful completion`);
+            console.log(`[Phase 12] Cleared incomplete_payment and active_crypto_address from customer-${customerRef} on successful completion`);
           }
         }
         
