@@ -4164,6 +4164,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
   const { 
     description, 
     expire,
+    email,
     callback_url, 
     redirect_url, 
     webhook_url 
