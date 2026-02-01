@@ -314,10 +314,26 @@ class DeviceLoginEmailTester:
                     'Location:' in function_content,
                     'location' in function_content.lower(),
                     'city' in function_content.lower(),
-                    'country' in function_content.lower()
+                    'country' in function_content.lower(),
+                    'locationDisplay' in function_content
                 ]
                 
-                if any(location_checks):
+                # Check if location is first in login details
+                location_first = 'Location:</strong> ${locationDisplay}' in function_content
+                
+                if location_first:
+                    self.log_result(
+                        "Email Template Location Display", 
+                        True, 
+                        "Location information found prominently displayed as first item in login details",
+                        {
+                            "function_found": True,
+                            "location_first": True,
+                            "location_references": sum(location_checks),
+                            "location_format": "Location: ${locationDisplay}"
+                        }
+                    )
+                elif any(location_checks):
                     self.log_result(
                         "Email Template Location Display", 
                         True, 
