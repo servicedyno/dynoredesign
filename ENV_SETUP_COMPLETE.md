@@ -8,7 +8,7 @@
 The following configuration has been applied:
 
 #### Server Configuration
-- **SERVER_URL**: Updated to `https://dynopay-fix.preview.emergentagent.com`
+- **SERVER_URL**: Updated to `https://install-deps-6.preview.emergentagent.com`
 - **PORT**: 8001 (Backend API)
 - **API_SERVICE_PORT**: 3301 (Additional API service)
 - **CHECKOUT_URL**: `https://checkout.dynopay.com`
@@ -75,7 +75,7 @@ Configured for the following cryptocurrencies:
 - **ADMIN_EMAIL**: moxxcompany@gmail.com
 
 ### 2. Frontend Environment Variables Updated (/app/frontend/.env)
-- **REACT_APP_BACKEND_URL**: Updated to `https://dynopay-fix.preview.emergentagent.com`
+- **REACT_APP_BACKEND_URL**: Updated to `https://install-deps-6.preview.emergentagent.com`
 - Frontend now correctly points to the new backend URL
 
 ### 3. Dependencies Installed

@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://dynopay-fix.preview.emergentagent.com/api
+Development: https://install-deps-6.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 
