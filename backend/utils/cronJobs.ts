@@ -95,8 +95,24 @@ export const setupWeeklySummaryCron = () => {
 
           log(`Weekly summary created for user ${user.user_id}`, "info");
 
-          // TODO: Send email when Email Service (Phase 9) is implemented
-          // await sendWeeklySummaryEmail(user.email, user.name, notificationData);
+          // Send weekly summary email
+          try {
+            const { sendWeeklySummaryEmail } = await import("../services/emailService");
+            await sendWeeklySummaryEmail(
+              user.email,
+              user.name,
+              periodStart,
+              periodEnd,
+              stats.total_count,
+              stats.total_volume?.toFixed(2) || "0.00",
+              stats.completed_count,
+              stats.pending_count,
+              stats.top_currency || "N/A"
+            );
+            log(`Weekly summary email sent to ${user.email}`, "info");
+          } catch (emailError) {
+            log(`Failed to send weekly summary email to ${user.email}: ${emailError}`, "error");
+          }
 
         } catch (userError) {
           log(`Error creating weekly summary for user ${user.user_id}: ${userError}`, "error");
