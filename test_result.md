@@ -7,6 +7,19 @@
 user_problem_statement: "Phase 12 - Incomplete Payment Currency Lock + Processing Fee Display Fixes. Comprehensive testing of: (1) Payment confirmation and fund distribution, (2) Email notifications to merchant/admin/customer, (3) Fee payer modes (customer vs company), (4) Tax enabled/disabled scenarios, (5) Underpayment handling, (6) Payment link updates, (7) Incomplete payment currency lock mechanism."
 
 current_test_task:
+  - task: "Email Notification Enhancement - Password Changed and Payment Link Created"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/controller/userController.ts, /app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added missing email notifications: (1) sendPasswordChangedEmail now called after password change via /api/user/changePassword, (2) sendPasswordChangedEmail now called after password reset via /api/user/reset-password, (3) sendPaymentLinkCreatedEmail now sends merchant notification when payment link is created. Test: authenticate user, change password, verify email sent. Create payment link, verify merchant notification email sent."
+
+previous_test_tasks:
   - task: "Phase 12 Comprehensive Payment System Testing"
     implemented: true
     working: true
