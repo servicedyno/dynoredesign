@@ -379,7 +379,8 @@ const login = async (req: express.Request, res: express.Response) => {
       await deleteRedisItem(cacheKey);
       
       // Check for new device/IP login
-      const ipAddress = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
+      const rawIp = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
+      const ipAddress = rawIp.split(',')[0].trim().substring(0, 45); // Get first IP and limit length
       const userAgent = req.headers['user-agent'] || 'Unknown';
       const lastLoginIp = userData.dataValues.last_login_ip;
       
