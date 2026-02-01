@@ -4165,6 +4165,11 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
     description, 
     expire,
     email,
+    base_amount,
+    base_currency,
+    allowedModes,
+    fee_payer,
+    apply_tax,
     callback_url, 
     redirect_url, 
     webhook_url 
@@ -4183,6 +4188,11 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
       return errorResponseHelper(res, 404, "Payment link not found!");
     }
 
+    // Check if link is already completed - don't allow updates
+    if (existingLink.dataValues.status === 'completed') {
+      return errorResponseHelper(res, 400, "Cannot update a completed payment link");
+    }
+
     // Prepare update object
     const updateData: any = {};
     
@@ -4194,9 +4204,52 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
       updateData.email = email;
     }
     
+    if (base_amount !== undefined) {
+      const amount = Number(base_amount);
+      if (isNaN(amount) || amount <= 0) {
+        return errorResponseHelper(res, 400, "Invalid amount. Must be a positive number.");
+      }
+      updateData.base_amount = amount;
+    }
+    
+    if (base_currency !== undefined) {
+      const validCurrencies = ['USD', 'EUR', 'GBP', 'NGN', 'BRL', 'CAD', 'AUD'];
+      if (!validCurrencies.includes(base_currency.toUpperCase())) {
+        return errorResponseHelper(res, 400, `Invalid currency. Valid options: ${validCurrencies.join(', ')}`);
+      }
+      updateData.base_currency = base_currency.toUpperCase();
+    }
+    
+    if (allowedModes !== undefined) {
+      // Can be array or comma-separated string
+      let modes = allowedModes;
+      if (Array.isArray(allowedModes)) {
+        modes = allowedModes.join(',');
+      }
+      const validModes = ['CRYPTO', 'CARD', 'BANK'];
+      const providedModes = modes.split(',').map((m: string) => m.trim().toUpperCase());
+      const invalidModes = providedModes.filter((m: string) => !validModes.includes(m));
+      if (invalidModes.length > 0) {
+        return errorResponseHelper(res, 400, `Invalid payment modes: ${invalidModes.join(', ')}. Valid options: ${validModes.join(', ')}`);
+      }
+      updateData.allowedModes = providedModes.join(',');
+    }
+    
+    if (fee_payer !== undefined) {
+      const validFeePayers = ['customer', 'company'];
+      if (!validFeePayers.includes(fee_payer.toLowerCase())) {
+        return errorResponseHelper(res, 400, "Invalid fee_payer. Must be 'customer' or 'company'.");
+      }
+      updateData.fee_payer = fee_payer.toLowerCase();
+    }
+    
+    if (apply_tax !== undefined) {
+      updateData.apply_tax = Boolean(apply_tax);
+    }
+    
     if (expire !== undefined) {
       // Calculate new expires_at
-      if (expire === "No" || !expire) {
+      if (expire === "No" || expire === null || expire === "") {
         updateData.expires_at = null;
       } else {
         const now = new Date();
@@ -4206,20 +4259,27 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
           updateData.expires_at = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
         } else if (expire === "30d") {
           updateData.expires_at = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        } else {
+          return errorResponseHelper(res, 400, "Invalid expire value. Valid options: '24h', '7d', '30d', 'No', or null");
         }
       }
     }
     
     if (callback_url !== undefined) {
-      updateData.callback_url = callback_url;
+      updateData.callback_url = callback_url || null;
     }
     
     if (redirect_url !== undefined) {
-      updateData.redirect_url = redirect_url;
+      updateData.redirect_url = redirect_url || null;
     }
     
     if (webhook_url !== undefined) {
-      updateData.webhook_url = webhook_url;
+      updateData.webhook_url = webhook_url || null;
+    }
+
+    // Check if there are any fields to update
+    if (Object.keys(updateData).length === 0) {
+      return errorResponseHelper(res, 400, "No valid fields provided for update");
     }
 
     // Update the link
