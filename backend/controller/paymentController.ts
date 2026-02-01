@@ -4215,6 +4215,27 @@ ${refereeCodeSection}
         // Don't fail the request if email fails
       }
     }
+    
+    // Send payment link created notification to merchant
+    try {
+      const user = await userModel.findByPk(userData.user_id);
+      if (user && user.dataValues.email) {
+        const { sendPaymentLinkCreatedEmail } = await import("../services/emailService");
+        await sendPaymentLinkCreatedEmail(
+          user.dataValues.email,
+          user.dataValues.name || 'Merchant',
+          normalizedAmount.toString(),
+          normalizedCurrency,
+          payload.payment_link,
+          description || 'No description provided',
+          expires_at ? new Date(expires_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : null
+        );
+        console.log(`[PaymentLink] Merchant notification sent to ${user.dataValues.email}`);
+      }
+    } catch (merchantEmailError) {
+      console.error("[PaymentLink] Failed to send merchant notification:", merchantEmailError);
+      // Don't fail the request if email fails
+    }
 
     successResponseHelper(res, 200, "Payment link created successfully", links);
   } catch (e) {
