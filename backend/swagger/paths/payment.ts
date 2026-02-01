@@ -271,31 +271,6 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   expire: '30d',
                   webhook_url: 'https://myapp.com/webhooks/payment'
                 }
-              },
-              'Multiple Payment Methods': {
-                summary: '💳 MULTIPLE: Accept various payment methods',
-                value: {
-                  amount: 199.99,
-                  currency: 'USD',
-                  company_id: 1,
-                  email: 'customer@example.com',
-                  modes: ['CRYPTO', 'CARD', 'GOOGLE_PAY', 'APPLE_PAY'],
-                  description: 'Premium Subscription - Annual',
-                  expire: '7d',
-                  redirect_url: 'https://myapp.com/thank-you',
-                  webhook_url: 'https://myapp.com/webhooks/payment'
-                }
-              },
-              'No Expiration Link': {
-                summary: '∞ PERMANENT: Link never expires',
-                value: {
-                  amount: 999.99,
-                  currency: 'EUR',
-                  company_id: 1,
-                  modes: ['CARD', 'BANK_TRANSFER'],
-                  description: 'Lifetime Membership',
-                  expire: 'No'
-                }
               }
             }
           }
