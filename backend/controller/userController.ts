@@ -1502,6 +1502,37 @@ const deleteAccount = async (req: express.Request, res: express.Response) => {
     // Delete companies (will cascade to related data)
     await companyModel.destroy({ where: { user_id: userId } });
 
+    // Clean up Redis entries for user's payment links
+    try {
+      const { paymentLinkModel } = await import("../models");
+      const userPaymentLinks = await paymentLinkModel.findAll({
+        where: { user_id: userId },
+        attributes: ['payment_link'],
+      });
+      
+      for (const link of userPaymentLinks) {
+        const paymentLinkUrl = link.dataValues.payment_link;
+        const urlMatch = paymentLinkUrl?.match(/[?&]d=([a-f0-9]+)/i);
+        if (urlMatch && urlMatch[1]) {
+          await deleteRedisItem("customer-" + urlMatch[1]);
+        }
+      }
+      
+      // Delete payment links from database
+      await paymentLinkModel.destroy({ where: { user_id: userId } });
+      
+      // Clean up any cached data for this user
+      await deleteRedisItem(`dashboard:${userId}:all`);
+      await deleteRedisItem(`profile:${userId}`);
+      await deleteRedisItem(`wallets:${userId}`);
+      await deleteRedisItem(userData.email + "-withdrawal-otp");
+      
+      userLogger.info(`Redis cleanup completed for user ${userId}`);
+    } catch (redisError) {
+      userLogger.warn(`Redis cleanup failed for user ${userId}: ${getErrorMessage(redisError)}`);
+      // Continue with deletion even if Redis cleanup fails
+    }
+
     // Finally, delete the user
     await userModel.destroy({ where: { user_id: userId } });
 
