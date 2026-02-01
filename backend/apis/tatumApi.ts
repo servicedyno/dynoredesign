@@ -1666,4 +1666,5 @@ export default {
   getCurrentPaymentStatus,
   encryptSymmetric,
   decryptSymmetric,
+  waitForTransactionConfirmation,
 };
