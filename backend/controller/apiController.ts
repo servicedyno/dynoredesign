@@ -569,7 +569,15 @@ const updateApi = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
     const api_id = req.params.id;
-    const { api_name, permissions, withdrawal_whitelist } = req.body;
+    const { 
+      api_name, 
+      permissions, 
+      withdrawal_whitelist,
+      base_currency,
+      webhook_url,
+      webhook_secret,
+      notes
+    } = req.body;
 
     // Check if API exists and belongs to user
     const existingApi = await apiModel.findOne({
@@ -602,6 +610,26 @@ const updateApi = async (req: express.Request, res: express.Response) => {
     
     if (withdrawal_whitelist !== undefined) {
       updateData.withdrawal_whitelist = withdrawal_whitelist;
+    }
+    
+    if (base_currency !== undefined) {
+      const validCurrencies = ['USD', 'EUR', 'GBP', 'NGN', 'BRL', 'BTC'];
+      if (!validCurrencies.includes(base_currency.toUpperCase())) {
+        return errorResponseHelper(res, 400, `Invalid base_currency. Valid options: ${validCurrencies.join(', ')}`);
+      }
+      updateData.base_currency = base_currency.toUpperCase();
+    }
+    
+    if (webhook_url !== undefined) {
+      updateData.webhook_url = webhook_url || null;
+    }
+    
+    if (webhook_secret !== undefined) {
+      updateData.webhook_secret = webhook_secret || null;
+    }
+    
+    if (notes !== undefined) {
+      updateData.notes = notes || null;
     }
 
     if (Object.keys(updateData).length === 0) {
