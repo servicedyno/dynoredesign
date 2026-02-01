@@ -1010,6 +1010,597 @@ export const sendKYCResubmissionRequiredEmail = async (
   }
 };
 
+/**
+ * Template 22: Payment Link Expiring Soon
+ * Trigger: Payment link about to expire (24h, 6h, 1h before)
+ * Recipient: Customer who received the payment link
+ */
+export const sendPaymentExpiringEmail = async (
+  customerEmail: string,
+  customerName: string | null,
+  companyName: string,
+  amount: string,
+  currency: string,
+  paymentLink: string,
+  expiresIn: string,
+  description: string | null
+) => {
+  try {
+    const displayName = customerName || customerEmail.split('@')[0];
+    const subject = `⏰ Payment link expires ${expiresIn} - ${amount} ${currency}`;
+    
+    const content = `<p class="message">Hey ${displayName},</p>
+    <p class="message">This is a friendly reminder that your payment link from <strong>${companyName}</strong> will expire <strong>${expiresIn}</strong>.</p>
+    <div class="highlight-box" style="border-left-color: #f59e0b;">
+      <p><strong>Payment Details:</strong></p>
+      <p>Amount: <strong>${amount} ${currency}</strong><br />
+      ${description ? `Description: ${description}<br />` : ''}
+      Expires: ${expiresIn}</p>
+    </div>
+    <p class="message">Complete your payment now to avoid missing this deadline.</p>`;
+
+    const html = dynoPayEmailTemplate("Payment Expiring Soon", content, true, "Pay Now", paymentLink);
+    
+    await mailTransporter({
+      to: customerEmail,
+      name: displayName,
+      subject,
+      body: html,
+    });
+    
+    console.log(`[Email] Payment expiring reminder sent to ${customerEmail} - expires ${expiresIn}`);
+  } catch (e) {
+    console.error("Payment expiring email error:", e);
+  }
+};
+
+/**
+ * Template 23: New Device Login Alert
+ * Trigger: User logs in from new IP address or device
+ * Recipient: Account holder
+ */
+export const sendNewDeviceLoginEmail = async (
+  email: string,
+  name: string,
+  ipAddress: string,
+  userAgent: string,
+  location: string | null,
+  date: string,
+  time: string
+) => {
+  try {
+    const subject = "🔔 New login to your DynoPay account";
+    
+    // Parse user agent for readable device info
+    const deviceInfo = userAgent.includes('Mobile') ? 'Mobile Device' : 
+                       userAgent.includes('Windows') ? 'Windows PC' :
+                       userAgent.includes('Mac') ? 'Mac' :
+                       userAgent.includes('Linux') ? 'Linux' : 'Unknown Device';
+    
+    const content = `<p class="message">Hey ${name},</p>
+    <p class="message">We noticed a new login to your DynoPay account.</p>
+    <div class="highlight-box">
+      <p><strong>Login Details:</strong></p>
+      <p>Date: ${date} at ${time}<br />
+      Device: ${deviceInfo}<br />
+      IP Address: ${ipAddress}<br />
+      ${location ? `Location: ${location}` : ''}</p>
+    </div>
+    <p class="message"><strong>Was this you?</strong><br />
+    If you recognize this login, you can ignore this message.</p>
+    <p class="message"><strong>Didn't log in?</strong><br />
+    If you don't recognize this activity, please:</p>
+    <p class="message">1. Change your password immediately<br />
+    2. Review your recent activity<br />
+    3. Contact our support team</p>`;
+
+    const html = dynoPayEmailTemplate("New Login Detected", content, true, "Secure My Account", "https://dynopay.com/dashboard/settings");
+    
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+    
+    console.log(`[Email] New device login alert sent to ${email} from IP ${ipAddress}`);
+  } catch (e) {
+    console.error("New device login email error:", e);
+  }
+};
+
+/**
+ * Template 24: Failed Login Attempts Alert
+ * Trigger: Multiple failed login attempts (3+)
+ * Recipient: Account holder
+ */
+export const sendFailedLoginAttemptsEmail = async (
+  email: string,
+  name: string,
+  attemptCount: number,
+  ipAddress: string,
+  date: string,
+  time: string
+) => {
+  try {
+    const subject = "🚨 Multiple failed login attempts on your account";
+    
+    const content = `<p class="message">Hey ${name},</p>
+    <p class="message">We detected <strong>${attemptCount} failed login attempts</strong> on your DynoPay account.</p>
+    <div class="highlight-box" style="border-left-color: #ef4444;">
+      <p><strong>⚠️ Alert Details:</strong></p>
+      <p>Failed Attempts: ${attemptCount}<br />
+      Date: ${date} at ${time}<br />
+      IP Address: ${ipAddress}</p>
+    </div>
+    <p class="message"><strong>Was this you?</strong><br />
+    If you forgot your password, you can reset it using the button below.</p>
+    <p class="message"><strong>Wasn't you?</strong><br />
+    Someone may be trying to access your account. We recommend:</p>
+    <p class="message">1. Change your password immediately<br />
+    2. Enable two-factor authentication<br />
+    3. Review your recent account activity</p>
+    <p class="message">Your account is still secure - we blocked these login attempts.</p>`;
+
+    const html = dynoPayEmailTemplate("Security Alert", content, true, "Reset Password", "https://dynopay.com/forgot-password");
+    
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+    
+    console.log(`[Email] Failed login attempts alert sent to ${email} - ${attemptCount} attempts from ${ipAddress}`);
+  } catch (e) {
+    console.error("Failed login attempts email error:", e);
+  }
+};
+
+/**
+ * Template 25: Payment Failed/Underpaid Notification
+ * Trigger: Payment expired, underpaid, or cancelled
+ * Recipient: Customer and optionally Merchant
+ */
+export const sendPaymentFailedEmail = async (
+  customerEmail: string,
+  customerName: string | null,
+  merchantEmail: string | null,
+  merchantName: string | null,
+  companyName: string,
+  reason: 'expired' | 'underpaid' | 'cancelled' | 'timeout',
+  amount: string,
+  currency: string,
+  paidAmount: string | null,
+  transactionId: string
+) => {
+  try {
+    const displayName = customerName || customerEmail.split('@')[0];
+    
+    const reasonMessages = {
+      expired: 'The payment link has expired',
+      underpaid: `We received ${paidAmount} ${currency} but the required amount was ${amount} ${currency}`,
+      cancelled: 'The payment was cancelled',
+      timeout: 'The payment session timed out'
+    };
+    
+    const reasonMessage = reasonMessages[reason];
+    const subject = reason === 'underpaid' 
+      ? `⚠️ Underpayment detected - ${paidAmount} of ${amount} ${currency} received`
+      : `Payment unsuccessful - ${companyName}`;
+    
+    // Email to Customer
+    const customerContent = `<p class="message">Hey ${displayName},</p>
+    <p class="message">Unfortunately, your payment to <strong>${companyName}</strong> was not completed.</p>
+    <div class="highlight-box" style="border-left-color: #ef4444;">
+      <p><strong>Issue:</strong></p>
+      <p>${reasonMessage}</p>
+    </div>
+    <div class="highlight-box">
+      <p><strong>Payment Details:</strong></p>
+      <p>Amount: ${amount} ${currency}<br />
+      ${paidAmount ? `Amount Received: ${paidAmount} ${currency}<br />` : ''}
+      Transaction ID: ${transactionId}</p>
+    </div>
+    ${reason === 'underpaid' ? `<p class="message">Please contact <strong>${companyName}</strong> to resolve this underpayment or request a refund.</p>` : ''}
+    ${reason === 'expired' || reason === 'timeout' ? `<p class="message">Please contact <strong>${companyName}</strong> if you still wish to complete this payment.</p>` : ''}`;
+
+    const customerHtml = dynoPayEmailTemplate("Payment Unsuccessful", customerContent);
+    
+    await mailTransporter({
+      to: customerEmail,
+      name: displayName,
+      subject,
+      body: customerHtml,
+    });
+    
+    console.log(`[Email] Payment failed notification sent to customer ${customerEmail} - reason: ${reason}`);
+    
+    // Email to Merchant (if provided)
+    if (merchantEmail) {
+      const merchantDisplayName = merchantName || 'Merchant';
+      const merchantSubject = reason === 'underpaid'
+        ? `⚠️ Underpayment received - ${paidAmount} of ${amount} ${currency}`
+        : `Payment failed - ${transactionId}`;
+      
+      const merchantContent = `<p class="message">Hey ${merchantDisplayName},</p>
+      <p class="message">A payment from <strong>${displayName}</strong> was not completed.</p>
+      <div class="highlight-box" style="border-left-color: #f59e0b;">
+        <p><strong>Issue:</strong></p>
+        <p>${reasonMessage}</p>
+      </div>
+      <div class="highlight-box">
+        <p><strong>Payment Details:</strong></p>
+        <p>Customer: ${customerEmail}<br />
+        Amount: ${amount} ${currency}<br />
+        ${paidAmount ? `Amount Received: ${paidAmount} ${currency}<br />` : ''}
+        Transaction ID: ${transactionId}</p>
+      </div>
+      ${reason === 'underpaid' ? `<p class="message">The customer has been notified. You may need to issue a partial refund or request the remaining amount.</p>` : ''}`;
+
+      const merchantHtml = dynoPayEmailTemplate("Payment Alert", merchantContent, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
+      
+      await mailTransporter({
+        to: merchantEmail,
+        name: merchantDisplayName,
+        subject: merchantSubject,
+        body: merchantHtml,
+      });
+      
+      console.log(`[Email] Payment failed notification sent to merchant ${merchantEmail} - reason: ${reason}`);
+    }
+  } catch (e) {
+    console.error("Payment failed email error:", e);
+  }
+};
+
+/**
+ * Template 26: API Key Created/Regenerated
+ * Trigger: User creates new API key or regenerates existing one
+ * Recipient: Account holder
+ */
+export const sendApiKeyCreatedEmail = async (
+  email: string,
+  name: string,
+  keyType: 'development' | 'production',
+  action: 'created' | 'regenerated',
+  keyPreview: string,
+  date: string,
+  time: string
+) => {
+  try {
+    const subject = `🔑 API key ${action} - ${keyType} environment`;
+    const actionText = action === 'created' ? 'created' : 'regenerated';
+    
+    const content = `<p class="message">Hey ${name},</p>
+    <p class="message">Your <strong>${keyType}</strong> API key has been ${actionText}.</p>
+    <div class="highlight-box">
+      <p><strong>API Key Details:</strong></p>
+      <p>Environment: ${keyType === 'production' ? '🔴 Production' : '🟡 Development'}<br />
+      Key Preview: ${keyPreview}...<br />
+      ${action === 'regenerated' ? 'Note: Your old key is now invalid<br />' : ''}
+      Date: ${date} at ${time}</p>
+    </div>
+    ${keyType === 'production' ? `<p class="message" style="color: #ef4444;"><strong>⚠️ Important:</strong> This is a production key. Keep it secure and never share it publicly.</p>` : ''}
+    <p class="message"><strong>Didn't do this?</strong><br />
+    If you didn't ${action === 'created' ? 'create' : 'regenerate'} this API key, please secure your account immediately.</p>`;
+
+    const html = dynoPayEmailTemplate("API Key Update", content, true, "View API Keys", "https://dynopay.com/dashboard/api-keys");
+    
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+    
+    console.log(`[Email] API key ${action} notification sent to ${email} for ${keyType} environment`);
+  } catch (e) {
+    console.error("API key created email error:", e);
+  }
+};
+
+/**
+ * Template 27: Wallet Deleted Confirmation
+ * Trigger: User deletes a wallet address
+ * Recipient: Account holder
+ */
+export const sendWalletDeletedEmail = async (
+  email: string,
+  name: string,
+  walletAddressMasked: string,
+  network: string,
+  date: string,
+  time: string
+) => {
+  try {
+    const subject = "Wallet removed from your account";
+    
+    const content = `<p class="message">Hey ${name},</p>
+    <p class="message">A wallet has been removed from your DynoPay account.</p>
+    <div class="highlight-box">
+      <p><strong>Removed Wallet:</strong></p>
+      <p>Address: ${walletAddressMasked}<br />
+      Network: ${network}<br />
+      Removed: ${date} at ${time}</p>
+    </div>
+    <p class="message">⚠️ Payments will no longer be forwarded to this wallet.</p>
+    <p class="message"><strong>Didn't do this?</strong><br />
+    If you didn't remove this wallet, please secure your account immediately and contact support.</p>`;
+
+    const html = dynoPayEmailTemplate("Wallet Removed", content, true, "Manage Wallets", "https://dynopay.com/dashboard/wallets");
+    
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+    
+    console.log(`[Email] Wallet deleted notification sent to ${email} for ${network}`);
+  } catch (e) {
+    console.error("Wallet deleted email error:", e);
+  }
+};
+
+/**
+ * Template 28: Large Transaction Alert
+ * Trigger: Payment above threshold (e.g., $1000+)
+ * Recipient: Merchant
+ */
+export const sendLargeTransactionAlertEmail = async (
+  email: string,
+  name: string,
+  amount: string,
+  currency: string,
+  cryptoAmount: string,
+  cryptoCurrency: string,
+  customerEmail: string | null,
+  transactionId: string,
+  companyName: string
+) => {
+  try {
+    const subject = `💰 Large payment received - ${amount} ${currency}`;
+    
+    const content = `<p class="message">Hey ${name},</p>
+    <p class="message">Great news! <strong>${companyName}</strong> received a large payment that may require your attention.</p>
+    <div class="highlight-box" style="border-left-color: #10b981;">
+      <p><strong>💰 Payment Details:</strong></p>
+      <p>Amount: <strong>${amount} ${currency}</strong><br />
+      Crypto: ${cryptoAmount} ${cryptoCurrency}<br />
+      ${customerEmail ? `Customer: ${customerEmail}<br />` : ''}
+      Transaction ID: ${transactionId}</p>
+    </div>
+    <p class="message">This payment has been automatically processed and forwarded to your wallet.</p>
+    <p class="message">For large transactions, we recommend:</p>
+    <p class="message">✓ Verify the transaction in your dashboard<br />
+    ✓ Confirm product/service delivery to customer<br />
+    ✓ Keep records for accounting purposes</p>`;
+
+    const html = dynoPayEmailTemplate("Large Payment Received", content, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
+    
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+    
+    console.log(`[Email] Large transaction alert sent to ${email} - ${amount} ${currency}`);
+  } catch (e) {
+    console.error("Large transaction alert email error:", e);
+  }
+};
+
+/**
+ * Template 29: Subscription Created
+ * Trigger: Customer subscribes to recurring plan
+ * Recipients: Customer + Merchant
+ */
+export const sendSubscriptionCreatedEmail = async (
+  customerEmail: string,
+  customerName: string | null,
+  merchantEmail: string,
+  merchantName: string,
+  planName: string,
+  amount: string,
+  currency: string,
+  interval: string,
+  nextBillingDate: string,
+  companyName: string
+) => {
+  try {
+    const displayName = customerName || customerEmail.split('@')[0];
+    
+    // Email to Customer
+    const customerSubject = `Subscription confirmed - ${planName}`;
+    const customerContent = `<p class="message">Hey ${displayName},</p>
+    <p class="message">Your subscription to <strong>${planName}</strong> from <strong>${companyName}</strong> is now active! 🎉</p>
+    <div class="highlight-box">
+      <p><strong>Subscription Details:</strong></p>
+      <p>Plan: ${planName}<br />
+      Amount: ${amount} ${currency} / ${interval}<br />
+      Next Billing: ${nextBillingDate}</p>
+    </div>
+    <p class="message">You'll be charged automatically on each billing date. You can manage or cancel your subscription anytime.</p>`;
+
+    const customerHtml = dynoPayEmailTemplate("Subscription Active", customerContent);
+    
+    await mailTransporter({
+      to: customerEmail,
+      name: displayName,
+      subject: customerSubject,
+      body: customerHtml,
+    });
+    
+    // Email to Merchant
+    const merchantSubject = `New subscriber - ${planName}`;
+    const merchantContent = `<p class="message">Hey ${merchantName},</p>
+    <p class="message">Great news! You have a new subscriber for <strong>${planName}</strong>. 🎉</p>
+    <div class="highlight-box">
+      <p><strong>Subscription Details:</strong></p>
+      <p>Customer: ${customerEmail}<br />
+      Plan: ${planName}<br />
+      Revenue: ${amount} ${currency} / ${interval}<br />
+      Next Billing: ${nextBillingDate}</p>
+    </div>`;
+
+    const merchantHtml = dynoPayEmailTemplate("New Subscription", merchantContent, true, "View Subscriptions", "https://dynopay.com/dashboard/subscriptions");
+    
+    await mailTransporter({
+      to: merchantEmail,
+      name: merchantName,
+      subject: merchantSubject,
+      body: merchantHtml,
+    });
+    
+    console.log(`[Email] Subscription created notifications sent for ${planName}`);
+  } catch (e) {
+    console.error("Subscription created email error:", e);
+  }
+};
+
+/**
+ * Template 30: Subscription Cancelled
+ * Trigger: Subscription cancelled by customer or merchant
+ * Recipients: Customer + Merchant
+ */
+export const sendSubscriptionCancelledEmail = async (
+  customerEmail: string,
+  customerName: string | null,
+  merchantEmail: string,
+  merchantName: string,
+  planName: string,
+  companyName: string,
+  effectiveDate: string,
+  cancelledBy: 'customer' | 'merchant'
+) => {
+  try {
+    const displayName = customerName || customerEmail.split('@')[0];
+    
+    // Email to Customer
+    const customerSubject = `Subscription cancelled - ${planName}`;
+    const customerContent = `<p class="message">Hey ${displayName},</p>
+    <p class="message">Your subscription to <strong>${planName}</strong> from <strong>${companyName}</strong> has been cancelled.</p>
+    <div class="highlight-box">
+      <p><strong>Cancellation Details:</strong></p>
+      <p>Plan: ${planName}<br />
+      Effective: ${effectiveDate}<br />
+      Cancelled by: ${cancelledBy === 'customer' ? 'You' : companyName}</p>
+    </div>
+    <p class="message">You will continue to have access until ${effectiveDate}. After that, no further charges will be made.</p>
+    <p class="message">We're sorry to see you go! If you change your mind, you can always resubscribe.</p>`;
+
+    const customerHtml = dynoPayEmailTemplate("Subscription Cancelled", customerContent);
+    
+    await mailTransporter({
+      to: customerEmail,
+      name: displayName,
+      subject: customerSubject,
+      body: customerHtml,
+    });
+    
+    // Email to Merchant
+    const merchantSubject = `Subscription cancelled - ${displayName}`;
+    const merchantContent = `<p class="message">Hey ${merchantName},</p>
+    <p class="message">A subscription to <strong>${planName}</strong> has been cancelled.</p>
+    <div class="highlight-box">
+      <p><strong>Cancellation Details:</strong></p>
+      <p>Customer: ${customerEmail}<br />
+      Plan: ${planName}<br />
+      Effective: ${effectiveDate}<br />
+      Cancelled by: ${cancelledBy === 'customer' ? 'Customer' : 'You'}</p>
+    </div>`;
+
+    const merchantHtml = dynoPayEmailTemplate("Subscription Cancelled", merchantContent, true, "View Subscriptions", "https://dynopay.com/dashboard/subscriptions");
+    
+    await mailTransporter({
+      to: merchantEmail,
+      name: merchantName,
+      subject: merchantSubject,
+      body: merchantHtml,
+    });
+    
+    console.log(`[Email] Subscription cancelled notifications sent for ${planName}`);
+  } catch (e) {
+    console.error("Subscription cancelled email error:", e);
+  }
+};
+
+/**
+ * Template 31: Subscription Payment Failed
+ * Trigger: Recurring payment fails (card declined, etc.)
+ * Recipients: Customer + Merchant
+ */
+export const sendSubscriptionPaymentFailedEmail = async (
+  customerEmail: string,
+  customerName: string | null,
+  merchantEmail: string,
+  merchantName: string,
+  planName: string,
+  amount: string,
+  currency: string,
+  companyName: string,
+  failureReason: string,
+  retryDate: string | null
+) => {
+  try {
+    const displayName = customerName || customerEmail.split('@')[0];
+    
+    // Email to Customer
+    const customerSubject = `⚠️ Payment failed for ${planName}`;
+    const customerContent = `<p class="message">Hey ${displayName},</p>
+    <p class="message">We were unable to process your subscription payment for <strong>${planName}</strong> from <strong>${companyName}</strong>.</p>
+    <div class="highlight-box" style="border-left-color: #ef4444;">
+      <p><strong>Payment Issue:</strong></p>
+      <p>Amount: ${amount} ${currency}<br />
+      Reason: ${failureReason}<br />
+      ${retryDate ? `Next Retry: ${retryDate}` : ''}</p>
+    </div>
+    <p class="message">To keep your subscription active, please:</p>
+    <p class="message">1. Update your payment method<br />
+    2. Ensure sufficient funds are available<br />
+    3. Contact your bank if the issue persists</p>
+    <p class="message">⚠️ Your subscription may be cancelled if payment is not received.</p>`;
+
+    const customerHtml = dynoPayEmailTemplate("Payment Failed", customerContent, true, "Update Payment", "https://dynopay.com/dashboard/subscriptions");
+    
+    await mailTransporter({
+      to: customerEmail,
+      name: displayName,
+      subject: customerSubject,
+      body: customerHtml,
+    });
+    
+    // Email to Merchant
+    const merchantSubject = `Subscription payment failed - ${displayName}`;
+    const merchantContent = `<p class="message">Hey ${merchantName},</p>
+    <p class="message">A subscription payment has failed for <strong>${planName}</strong>.</p>
+    <div class="highlight-box" style="border-left-color: #f59e0b;">
+      <p><strong>Payment Failure:</strong></p>
+      <p>Customer: ${customerEmail}<br />
+      Plan: ${planName}<br />
+      Amount: ${amount} ${currency}<br />
+      Reason: ${failureReason}<br />
+      ${retryDate ? `Retry Scheduled: ${retryDate}` : ''}</p>
+    </div>
+    <p class="message">The customer has been notified to update their payment method.</p>`;
+
+    const merchantHtml = dynoPayEmailTemplate("Subscription Payment Failed", merchantContent, true, "View Subscription", "https://dynopay.com/dashboard/subscriptions");
+    
+    await mailTransporter({
+      to: merchantEmail,
+      name: merchantName,
+      subject: merchantSubject,
+      body: merchantHtml,
+    });
+    
+    console.log(`[Email] Subscription payment failed notifications sent for ${planName}`);
+  } catch (e) {
+    console.error("Subscription payment failed email error:", e);
+  }
+};
+
 export default {
   sendWelcomeEmail,
   sendCompanyProfileCreatedEmail,
@@ -1033,4 +1624,15 @@ export default {
   sendCustomerPaymentConfirmationEmail,
   sendKYCStartedEmail,
   sendKYCResubmissionRequiredEmail,
+  // New templates (22-31)
+  sendPaymentExpiringEmail,
+  sendNewDeviceLoginEmail,
+  sendFailedLoginAttemptsEmail,
+  sendPaymentFailedEmail,
+  sendApiKeyCreatedEmail,
+  sendWalletDeletedEmail,
+  sendLargeTransactionAlertEmail,
+  sendSubscriptionCreatedEmail,
+  sendSubscriptionCancelledEmail,
+  sendSubscriptionPaymentFailedEmail,
 };
