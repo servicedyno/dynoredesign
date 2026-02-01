@@ -1,13 +1,13 @@
 {
-  "total": 22,
-  "passed": 18,
+  "total": 30,
+  "passed": 26,
   "failed": 4,
-  "success_rate": 81.81818181818183,
+  "success_rate": 86.66666666666667,
   "results": [
     {
       "test_name": "Authentication",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:21.396429",
+      "timestamp": "2026-02-01T15:48:03.961909",
       "details": {
         "user_id": 28,
         "name": "Johnny LTD",
@@ -19,7 +19,7 @@
     {
       "test_name": "Get Payment Link 220 Details",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:21.651773",
+      "timestamp": "2026-02-01T15:48:04.191125",
       "details": {
         "link_id": 220,
         "base_amount": 10,
@@ -32,7 +32,7 @@
     {
       "test_name": "Update Payment Link - Customer Pays + Tax",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:22.318191",
+      "timestamp": "2026-02-01T15:48:04.846713",
       "details": {
         "updated_fields": {
           "fee_payer": "customer",
@@ -44,7 +44,7 @@
     {
       "test_name": "Verify getData - Customer Pays + Tax",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:22.939495",
+      "timestamp": "2026-02-01T15:48:05.479467",
       "details": {
         "fee_payer": "customer",
         "apply_tax": true,
@@ -56,7 +56,7 @@
     {
       "test_name": "Update Payment Link - Company Pays + No Tax",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:23.486911",
+      "timestamp": "2026-02-01T15:48:06.031690",
       "details": {
         "updated_fields": {
           "fee_payer": "company",
@@ -68,7 +68,7 @@
     {
       "test_name": "Verify getData - Company Pays + No Tax",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:23.607556",
+      "timestamp": "2026-02-01T15:48:06.150592",
       "details": {
         "fee_payer": "company",
         "apply_tax": false,
@@ -80,67 +80,152 @@
     {
       "test_name": "Create Payment Link - Customer Pays Fees",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:24.871937",
+      "timestamp": "2026-02-01T15:48:07.366061",
       "details": {
-        "link_id": 222,
-        "payment_reference": null,
+        "link_id": 231,
+        "payment_reference": "2da4a6591b941fe5704d...",
         "fee_payer": "customer"
       },
       "error": null
     },
     {
-      "test_name": "Extract Payment Reference",
+      "test_name": "Get Payment Data - Customer Pays",
+      "status": "PASS",
+      "timestamp": "2026-02-01T15:48:07.487696",
+      "details": {
+        "has_token": true,
+        "fee_payer": "customer",
+        "has_fee_info": true
+      },
+      "error": null
+    },
+    {
+      "test_name": "getCurrencyRates - Customer Pays Mode",
       "status": "FAIL",
-      "timestamp": "2026-02-01T15:46:24.871970",
+      "timestamp": "2026-02-01T15:48:07.604032",
       "details": {},
-      "error": "No payment reference returned"
+      "error": "HTTP 520"
+    },
+    {
+      "test_name": "getCurrencyRates - Company Pays Mode",
+      "status": "FAIL",
+      "timestamp": "2026-02-01T15:48:07.721139",
+      "details": {},
+      "error": "HTTP 520"
     },
     {
       "test_name": "Create Payment Link - Tax Enabled",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:25.804927",
+      "timestamp": "2026-02-01T15:48:08.645967",
       "details": {
-        "link_id": 223,
+        "link_id": 232,
         "apply_tax": true,
         "fee_payer": "customer"
       },
       "error": null
     },
     {
+      "test_name": "getData - Tax Calculation",
+      "status": "PASS",
+      "timestamp": "2026-02-01T15:48:08.877456",
+      "details": {
+        "apply_tax": true,
+        "has_tax_info": true,
+        "tax_rate": 23,
+        "tax_amount": 23,
+        "country_code": "PT",
+        "has_fee_info": true
+      },
+      "error": null
+    },
+    {
+      "test_name": "getCurrencyRates - Tax Included",
+      "status": "FAIL",
+      "timestamp": "2026-02-01T15:48:08.993689",
+      "details": {},
+      "error": "HTTP 520"
+    },
+    {
       "test_name": "Create Payment Link - No Tax",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:26.756321",
+      "timestamp": "2026-02-01T15:48:09.930890",
       "details": {
-        "link_id": 224,
+        "link_id": 233,
         "apply_tax": false
+      },
+      "error": null
+    },
+    {
+      "test_name": "getData - No Tax Verification",
+      "status": "PASS",
+      "timestamp": "2026-02-01T15:48:10.050038",
+      "details": {
+        "apply_tax": false,
+        "has_tax_info": false,
+        "expected_no_tax": true
       },
       "error": null
     },
     {
       "test_name": "Create Payment Link - Currency Lock Test",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:27.746969",
+      "timestamp": "2026-02-01T15:48:10.986692",
       "details": {
-        "link_id": 225,
+        "link_id": 234,
         "amount": 20,
         "currency": "USD"
       },
       "error": null
     },
     {
-      "test_name": "Extract Payment Reference",
+      "test_name": "Initial getData - No Incomplete Payment",
+      "status": "PASS",
+      "timestamp": "2026-02-01T15:48:11.103891",
+      "details": {
+        "has_incomplete_payment": false,
+        "expected_no_incomplete": true
+      },
+      "error": null
+    },
+    {
+      "test_name": "Create BTC Payment Address",
+      "status": "PASS",
+      "timestamp": "2026-02-01T15:48:13.036613",
+      "details": {
+        "currency": "BTC",
+        "address": "bc1qkq2r68vw8pu42gg8...",
+        "amount": 0.0003864626865671642
+      },
+      "error": null
+    },
+    {
+      "test_name": "Same Currency - Should Return Same Address",
       "status": "FAIL",
-      "timestamp": "2026-02-01T15:46:27.747006",
-      "details": {},
-      "error": "No payment reference returned"
+      "timestamp": "2026-02-01T15:48:14.451752",
+      "details": {
+        "original_address": "bc1qkq2r68vw8pu42gg8...",
+        "new_address": "bc1qja9l4ygfv8rtupva...",
+        "addresses_match": false
+      },
+      "error": null
+    },
+    {
+      "test_name": "Different Currency - Should Work (No Incomplete Payment)",
+      "status": "PASS",
+      "timestamp": "2026-02-01T15:48:16.287981",
+      "details": {
+        "new_currency": "ETH",
+        "status": "allowed"
+      },
+      "error": null
     },
     {
       "test_name": "Backend Health Check",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:27.865431",
+      "timestamp": "2026-02-01T15:48:16.408846",
       "details": {
         "status": "healthy",
-        "timestamp": "2026-02-01T15:46:27.860Z",
+        "timestamp": "2026-02-01T15:48:16.405Z",
         "uptime": null
       },
       "error": null
@@ -148,7 +233,7 @@
     {
       "test_name": "Email Service Endpoint - Forgot Password",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:27.984255",
+      "timestamp": "2026-02-01T15:48:16.526680",
       "details": {
         "endpoint_accessible": true,
         "status_code": 200,
@@ -159,7 +244,7 @@
     {
       "test_name": "Email Function Verification",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:27.984285",
+      "timestamp": "2026-02-01T15:48:16.526711",
       "details": {
         "sendPaymentReceivedEmail": "imported_in_paymentController",
         "sendAdminFeeReceivedEmail": "imported_in_paymentController",
@@ -170,22 +255,33 @@
     },
     {
       "test_name": "Customer Pays Fees - Distribution Logic",
-      "status": "FAIL",
-      "timestamp": "2026-02-01T15:46:28.959542",
-      "details": {},
-      "error": "HTTP 400"
+      "status": "PASS",
+      "timestamp": "2026-02-01T15:48:17.806412",
+      "details": {
+        "fee_payer": "customer",
+        "has_fee_breakdown": true,
+        "subtotal": 100,
+        "total_amount": 100,
+        "logic": "merchant_gets_full_amount_admin_gets_fees"
+      },
+      "error": null
     },
     {
       "test_name": "Company Pays Fees - Distribution Logic",
-      "status": "FAIL",
-      "timestamp": "2026-02-01T15:46:29.909355",
-      "details": {},
-      "error": "HTTP 400"
+      "status": "PASS",
+      "timestamp": "2026-02-01T15:48:18.860193",
+      "details": {
+        "fee_payer": "company",
+        "has_fee_breakdown": false,
+        "logic": "fees_deducted_from_received_amount",
+        "note": "Company mode - no fee breakdown shown to customer"
+      },
+      "error": null
     },
     {
       "test_name": "Under-Threshold Payment Logic",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:29.909381",
+      "timestamp": "2026-02-01T15:48:18.860243",
       "details": {
         "threshold": "$5_USD_for_ETH",
         "logic": "all_goes_to_admin_if_below_threshold",
@@ -197,11 +293,11 @@
     {
       "test_name": "API Health - /api/status/health",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:30.027447",
+      "timestamp": "2026-02-01T15:48:18.974081",
       "details": {
         "method": "GET",
         "status_code": 200,
-        "response_time_ms": 117.7,
+        "response_time_ms": 113.471,
         "has_json_response": true
       },
       "error": null
@@ -209,11 +305,11 @@
     {
       "test_name": "API Health - /api/user/login",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:30.253682",
+      "timestamp": "2026-02-01T15:48:19.197885",
       "details": {
         "method": "POST",
         "status_code": 200,
-        "response_time_ms": 225.771,
+        "response_time_ms": 223.358,
         "has_json_response": true
       },
       "error": null
@@ -221,11 +317,11 @@
     {
       "test_name": "API Health - /api/pay/getData",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:30.475780",
+      "timestamp": "2026-02-01T15:48:19.417937",
       "details": {
         "method": "POST",
         "status_code": 404,
-        "response_time_ms": 221.631,
+        "response_time_ms": 219.59699999999998,
         "has_json_response": true
       },
       "error": null
@@ -233,11 +329,11 @@
     {
       "test_name": "API Health - /api/pay/createPaymentLink",
       "status": "PASS",
-      "timestamp": "2026-02-01T15:46:31.408049",
+      "timestamp": "2026-02-01T15:48:20.339911",
       "details": {
         "method": "POST",
         "status_code": 200,
-        "response_time_ms": 931.644,
+        "response_time_ms": 921.477,
         "has_json_response": true
       },
       "error": null
