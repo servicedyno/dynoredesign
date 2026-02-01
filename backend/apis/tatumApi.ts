@@ -592,8 +592,8 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
     // Construct webhook URL properly
     const webhookPath = onlyCrypto ? "api/tatum-crypto-webhook" : "api/tatum-webhook";
     const url = buildUrl(webhookPath);
-
-    // const url = process.env.SERVER_URL + "api/tatum-webhook";
+    
+    console.log(`[createSubscription] Address: ${address}, Chain: ${chain}, Webhook URL: ${url}`);
 
     const { data } = await axios.get(
       "https://api.tatum.io/v4/subscription?pageSize=10&address=" + address,
@@ -603,11 +603,20 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
 
     if (data?.length > 0) {
       resData = { id: data[0]?.id };
+      const existingUrl = data[0]?.attr?.url;
+      
+      // ALWAYS update webhook URL to ensure it matches current SERVER_URL
+      // This fixes issues where subscription was created with old URL
+      console.log(`[createSubscription] Existing subscription ${resData.id}, URL: ${existingUrl}`);
+      if (existingUrl !== url) {
+        console.log(`[createSubscription] Updating webhook URL from ${existingUrl} to ${url}`);
+      }
       await axios.put(
         "https://api.tatum.io/v4/subscription/" + resData.id,
         { url },
         { headers }
       );
+      console.log(`[createSubscription] Webhook URL updated for subscription ${resData.id}`);
     } else {
       const { data } = await axios.post(
         "https://api.tatum.io/v4/subscription",
@@ -621,12 +630,12 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
         },
         { headers }
       );
-      console.log("Tatum subscription created:", data);
+      console.log("[createSubscription] New Tatum subscription created:", data?.id);
       resData = data;
     }
     return resData;
   } catch (e) {
-    console.log("Tatum subscription error:", JSON.stringify(e.response?.data || e.message, null, 2));
+    console.log("[createSubscription] Tatum subscription error:", JSON.stringify(e.response?.data || e.message, null, 2));
     throw e;
   }
 };
