@@ -922,6 +922,51 @@ const createCryptoPayment = async (
         console.log(`[Phase 11] Currency ${requestedCurrency} validated against available list:`, availableCurrenciesList);
       }
 
+      // PHASE 12: Check for existing incomplete payment - prevent currency switching
+      // This ensures customer completes partial payment on same currency before switching
+      if (items.incomplete_payment) {
+        const incompletePayment = items.incomplete_payment;
+        const incompleteTimestamp = new Date(incompletePayment.timestamp);
+        const gracePeriodMs = 30 * 60 * 1000; // 30 minutes
+        const now = new Date();
+        const graceExpiry = new Date(incompleteTimestamp.getTime() + gracePeriodMs);
+        
+        // Check if grace period has NOT expired
+        if (now < graceExpiry) {
+          const remainingMs = graceExpiry.getTime() - now.getTime();
+          const remainingMinutes = Math.ceil(remainingMs / 60000);
+          
+          // If trying to switch to DIFFERENT currency - BLOCK
+          if (incompletePayment.currency !== requestedCurrency) {
+            console.log(`[Phase 12] ❌ Blocking currency switch: Incomplete ${incompletePayment.currency} payment exists, requested ${requestedCurrency}`);
+            return errorResponseHelper(
+              res,
+              400,
+              `You have an incomplete payment of ${incompletePayment.pending_amount} ${incompletePayment.currency}. ` +
+              `Please complete it or wait for expiry (${remainingMinutes} minutes remaining) before switching currencies.`
+            );
+          }
+          
+          // If SAME currency - return existing address info (don't create new)
+          console.log(`[Phase 12] ✓ Same currency requested, returning existing incomplete payment address`);
+          return successResponseHelper(res, 200, "Continue existing payment", {
+            address: incompletePayment.address,
+            amount: incompletePayment.pending_amount,
+            currency: incompletePayment.currency,
+            qr_code: incompletePayment.qr_code,
+            remaining_minutes: remainingMinutes,
+            is_continuation: true,
+            message: `You have ${remainingMinutes} minutes to complete your payment of ${incompletePayment.pending_amount} ${incompletePayment.currency}`
+          });
+        } else {
+          // Grace period expired - clear incomplete payment info and allow new payment
+          console.log(`[Phase 12] Grace period expired for incomplete payment, clearing and allowing new payment`);
+          const updatedItems = { ...items };
+          delete updatedItems.incomplete_payment;
+          await setRedisItem("customer-" + data.uniqueRef, updatedItems);
+        }
+      }
+
       // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
       console.log(`[Phase 10 Validation] Checking wallet for currency: ${requestedCurrency}, user_id: ${items.adm_id}, company_id: ${items.company_id}`);
       
