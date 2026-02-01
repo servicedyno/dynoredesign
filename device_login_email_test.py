@@ -83,11 +83,16 @@ class DeviceLoginEmailTester:
         print(f"\n=== Login Attempt #{attempt_number} ===")
         
         try:
-            # Add headers to simulate different IP/device for geolocation testing
+            # Use different IP addresses for each attempt to trigger new device alert
+            ip_addresses = [
+                "185.243.112.45",  # Portuguese IP for first login
+                "8.8.8.8"          # Different IP for second login to trigger alert
+            ]
+            
             headers = {
                 "Content-Type": "application/json",
-                "X-Forwarded-For": "185.243.112.45",  # Portuguese IP for geolocation testing
-                "X-Real-IP": "185.243.112.45",
+                "X-Forwarded-For": ip_addresses[attempt_number - 1],
+                "X-Real-IP": ip_addresses[attempt_number - 1],
                 "User-Agent": f"DeviceLoginTest-{attempt_number}/1.0"
             }
             
