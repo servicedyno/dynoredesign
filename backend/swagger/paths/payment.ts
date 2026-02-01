@@ -53,41 +53,43 @@ Modes must be provided in **UPPERCASE**. Valid modes:
           'application/json': {
             schema: {
               type: 'object',
-              required: ['company_id', 'modes'],
+              required: ['amount'],
               properties: {
                 amount: { 
                   type: 'number', 
-                  description: '💰 Payment amount (RECOMMENDED field name). Provide this OR base_amount, not both',
+                  description: '✅ REQUIRED: Payment amount. Provide this OR base_amount',
                   example: 100.00,
-                  minimum: 5.00
+                  minimum: 0.01
                 },
                 base_amount: { 
                   type: 'number', 
-                  description: '💰 Payment amount (alternative field name). Provide this OR amount, not both',
+                  description: '✅ REQUIRED (alternative): Payment amount. Provide this OR amount',
                   example: 100.00,
-                  minimum: 5.00
+                  minimum: 0.01
                 },
                 currency: { 
                   type: 'string', 
                   enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'LTC', 'DOGE', 'KES', 'UGX', 'RWF'], 
-                  description: '💱 Currency code (RECOMMENDED field name). Provide this OR base_currency, not both',
-                  example: 'USD'
+                  description: '📝 OPTIONAL: Currency code (defaults to "USD")',
+                  example: 'USD',
+                  default: 'USD'
                 },
                 base_currency: { 
                   type: 'string', 
                   enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'LTC', 'DOGE', 'KES', 'UGX', 'RWF'], 
-                  description: '💱 Currency code (alternative field name). Provide this OR currency, not both',
-                  example: 'USD'
+                  description: '📝 OPTIONAL: Currency code (alternative field name, defaults to "USD")',
+                  example: 'USD',
+                  default: 'USD'
                 },
                 company_id: { 
                   type: 'integer', 
-                  description: '✅ REQUIRED: Company ID receiving the payment',
+                  description: '📝 OPTIONAL: Company ID (defaults to user\'s first company). Recommended for multi-company accounts',
                   example: 1
                 },
                 email: {
                   type: 'string',
                   format: 'email',
-                  description: '📧 OPTIONAL: Customer email for payment notifications and receipts',
+                  description: '📝 OPTIONAL: Customer email for payment notifications and receipts',
                   example: 'customer@example.com'
                 },
                 modes: {
@@ -96,9 +98,9 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                     type: 'string', 
                     enum: ['CRYPTO', 'CARD', 'BANK_TRANSFER', 'GOOGLE_PAY', 'APPLE_PAY', 'USSD', 'MOBILE_MONEY', 'QR_CODE']
                   },
-                  description: '✅ REQUIRED: Payment modes (UPPERCASE). Must include at least one mode',
-                  example: ['CRYPTO', 'CARD'],
-                  minItems: 1
+                  description: '📝 OPTIONAL: Payment modes (defaults to ["CRYPTO"]). Must be UPPERCASE',
+                  example: ['CRYPTO'],
+                  default: ['CRYPTO']
                 },
                 description: { 
                   type: 'string', 
@@ -108,7 +110,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 expire: {
                   type: 'string',
                   enum: ['24h', '7d', '30d', 'No'],
-                  description: '⏰ OPTIONAL: Link expiration period. Defaults to "No" (never expires)',
+                  description: '📝 OPTIONAL: Link expiration period (defaults to "No" - never expires)',
                   example: '24h',
                   default: 'No'
                 },
