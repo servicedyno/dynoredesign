@@ -7,10 +7,10 @@
 user_problem_statement: "Phase 12 - Incomplete Payment Currency Lock + Processing Fee Display Fixes. Comprehensive testing of: (1) Payment confirmation and fund distribution, (2) Email notifications to merchant/admin/customer, (3) Fee payer modes (customer vs company), (4) Tax enabled/disabled scenarios, (5) Underpayment handling, (6) Payment link updates, (7) Incomplete payment currency lock mechanism."
 
 current_test_task:
-  - task: "Comprehensive Email Notification System - 10 New Templates Implementation"
+  - task: "Device Login Email Fixes - Redis Cache and IP Geolocation Testing"
     implemented: true
     working: true
-    file: "/app/backend/services/emailService.ts"
+    file: "/app/backend/controller/userController.ts, /app/backend/services/emailService.ts"
     stuck_count: 0
     priority: "critical"
     needs_retesting: false
