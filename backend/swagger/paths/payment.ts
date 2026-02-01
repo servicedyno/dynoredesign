@@ -69,14 +69,14 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 },
                 currency: { 
                   type: 'string', 
-                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'LTC', 'DOGE', 'KES', 'UGX', 'RWF'], 
-                  description: '📝 OPTIONAL: Currency code (defaults to "USD")',
+                  enum: ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'HKD', 'NZD', 'NGN', 'KES', 'UGX', 'RWF', 'BTC', 'LTC', 'DOGE'], 
+                  description: '📝 OPTIONAL: Currency code (defaults to "USD"). Supports major international currencies.',
                   example: 'USD',
                   default: 'USD'
                 },
                 base_currency: { 
                   type: 'string', 
-                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC', 'LTC', 'DOGE', 'KES', 'UGX', 'RWF'], 
+                  enum: ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'HKD', 'NZD', 'NGN', 'KES', 'UGX', 'RWF', 'BTC', 'LTC', 'DOGE'], 
                   description: '📝 OPTIONAL: Currency code (alternative field name, defaults to "USD")',
                   example: 'USD',
                   default: 'USD'
