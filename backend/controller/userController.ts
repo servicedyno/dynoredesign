@@ -947,13 +947,22 @@ const resetPassword = async (req: express.Request, res: express.Response) => {
       }
     );
 
-    // Send confirmation email
-    await sendEmail(
-      email.toLowerCase(),
-      user.dataValues.name || "User",
-      "Password Changed Successfully - Dynocash",
-      "Your password has been successfully changed. If you didn't make this change, please contact support immediately."
-    );
+    // Send branded password changed confirmation email
+    try {
+      const now = new Date();
+      const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      await emailService.sendPasswordChangedEmail(
+        email.toLowerCase(),
+        user.dataValues.name || "User",
+        date,
+        time
+      );
+      console.log(`[ResetPassword] Password changed notification sent to ${email}`);
+    } catch (emailError) {
+      console.error("[ResetPassword] Failed to send password changed email:", emailError);
+      // Don't fail the request if email fails
+    }
 
     userLogger.info(`Password reset successful for email: ${email}`);
 
