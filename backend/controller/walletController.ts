@@ -2916,6 +2916,10 @@ const deleteWalletAddress = async (
       );
     }
 
+    // Store wallet info for notification before clearing
+    const deletedWalletAddress = wallet.dataValues.wallet_address;
+    const deletedWalletType = wallet.dataValues.wallet_type;
+
     // Clear the wallet address (set to null) instead of deleting the record
     // This preserves the wallet structure for future use
     await userWalletModel.update(
@@ -2928,6 +2932,28 @@ const deleteWalletAddress = async (
         where: whereClause,
       }
     );
+
+    // Send wallet deleted notification email
+    if (deletedWalletAddress) {
+      try {
+        const { sendWalletDeletedEmail } = await import("../services/emailService");
+        const now = new Date();
+        const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const maskedAddress = deletedWalletAddress.substring(0, 8) + '...' + deletedWalletAddress.slice(-6);
+        await sendWalletDeletedEmail(
+          userData.email,
+          userData.name || 'User',
+          maskedAddress,
+          deletedWalletType,
+          date,
+          time
+        );
+        console.log(`[Wallet] Deletion notification sent to ${userData.email} for ${deletedWalletType}`);
+      } catch (emailError) {
+        console.error("[Wallet] Failed to send deletion notification:", emailError);
+      }
+    }
 
     return successResponseHelper(res, 200, "Wallet address removed successfully!", {
       removed: true,
