@@ -3845,21 +3845,31 @@ const getCurrencyRates = async (
               const roundedTotalFeesUSD = parseFloat(totalFeesUSD.toFixed(2));
               const roundedTotalAmountUSD = parseFloat((amount + roundedTotalFeesUSD + taxAmountNum).toFixed(2));
               
-              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=$${amount}, tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)}`);
+              // Get the exchange rate and convert fees/tax to target currency
+              const exchangeRate = Number(rate.transferRate) || 1;
+              const convertedBaseAmount = Number(rate.amount) || 0;
+              const convertedTotalFees = parseFloat((roundedTotalFeesUSD * exchangeRate).toFixed(2));
+              const convertedTaxAmount = parseFloat((taxAmountNum * exchangeRate).toFixed(2));
+              const convertedTotalAmount = parseFloat((roundedTotalAmountUSD * exchangeRate).toFixed(2));
+              
+              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=$${amount} USD = ${convertedBaseAmount} ${rate.currency}, tax=$${taxAmountNum.toFixed(2)} USD = ${convertedTaxAmount} ${rate.currency}, fees=$${roundedTotalFeesUSD.toFixed(2)} USD = ${convertedTotalFees} ${rate.currency}, total=$${roundedTotalAmountUSD.toFixed(2)} USD = ${convertedTotalAmount} ${rate.currency}`);
               
               return {
                 ...rate,
                 fee_payer: 'customer',
                 base_amount: parseFloat(amount.toFixed(2)),
                 base_amount_usd: parseFloat(amount.toFixed(2)),
-                // Include tax in breakdown
-                tax_amount: parseFloat(taxAmountNum.toFixed(2)),
-                // Simplified - only show total processing fee, no breakdown
-                processing_fee: roundedTotalFeesUSD,
-                total_amount: roundedTotalAmountUSD,
+                // Include tax in breakdown (converted to target currency)
+                tax_amount: convertedTaxAmount,
+                tax_amount_usd: parseFloat(taxAmountNum.toFixed(2)),
+                // Simplified - only show total processing fee (converted to target currency)
+                processing_fee: convertedTotalFees,
+                processing_fee_usd: roundedTotalFeesUSD,
+                total_amount: convertedTotalAmount,
                 total_amount_usd: roundedTotalAmountUSD,
                 total_amount_source: roundedTotalAmountUSD,
-                amount: roundedTotalAmountUSD, // Override with total for display
+                // Use the properly converted amount for display
+                amount: convertedTotalAmount,
               };
             }
             
