@@ -4359,6 +4359,24 @@ const deletePaymentLink = async (
   const userData = jwt.decode(res.locals.token) as any;
   const link_id = req.params.id;
   try {
+    // First get the payment link to extract uniqueRef for Redis deletion
+    const linkToDelete = await paymentLinkModel.findOne({
+      where: {
+        user_id: userData.user_id,
+        link_id,
+      },
+    });
+    
+    if (!linkToDelete) {
+      return errorResponseHelper(res, 404, "Link not found!");
+    }
+    
+    // Extract uniqueRef from payment_link URL
+    const paymentLinkUrl = linkToDelete.dataValues.payment_link;
+    const urlMatch = paymentLinkUrl?.match(/[?&]d=([a-f0-9]+)/i);
+    const uniqueRef = urlMatch ? urlMatch[1] : null;
+    
+    // Delete from database
     const links = await paymentLinkModel.destroy({
       where: {
         user_id: userData.user_id,
@@ -4366,11 +4384,13 @@ const deletePaymentLink = async (
       },
     });
 
-    if (links < 1) {
-      errorResponseHelper(res, 404, "Link not found!");
-    } else {
-      successResponseHelper(res, 200, "Payment link deleted successfully", links);
+    // Also delete from Redis to prevent checkout access
+    if (uniqueRef) {
+      await deleteRedisItem("customer-" + uniqueRef);
+      console.log(`[deletePaymentLink] Redis deleted for key: customer-${uniqueRef}`);
     }
+
+    successResponseHelper(res, 200, "Payment link deleted successfully", links);
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
