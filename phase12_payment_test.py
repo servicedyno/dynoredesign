@@ -535,7 +535,12 @@ class Phase12PaymentTester:
                 
                 if response_no_tax.status_code == 200:
                     link_data_no_tax = response_no_tax.json().get("data", {})
-                    payment_reference_no_tax = link_data_no_tax.get("payment_reference")
+                    payment_link_no_tax = link_data_no_tax.get("payment_link", "")
+                    
+                    # Extract reference from payment link URL
+                    payment_reference_no_tax = None
+                    if "?d=" in payment_link_no_tax:
+                        payment_reference_no_tax = payment_link_no_tax.split("?d=")[1]
                     
                     self.log_test(
                         "Create Payment Link - No Tax",
