@@ -3821,7 +3821,7 @@ const getCurrencyRates = async (
         currencyRateList.map(async (rate: any) => {
           try {
             // Check if this is a fiat currency (not crypto)
-            const fiatCurrencies = ['USD', 'EUR', 'GBP', 'NGN', 'KES', 'UGX', 'RWF'];
+            const fiatCurrencies = ['USD', 'EUR', 'GBP', 'CNY', 'JPY', 'AUD', 'CAD', 'CHF', 'HKD', 'NZD', 'SGD', 'NGN', 'KES', 'UGX', 'RWF', 'BRL', 'ARS', 'COP', 'CLP', 'PEN', 'MXN', 'VES', 'UYU', 'ZAR', 'GHS', 'TZS', 'XAF', 'XOF', 'EGP', 'MAD', 'RWF', 'ETB', 'ZMW', 'BWP', 'MUR', 'AOA', 'MZN', 'CDF'];
             if (fiatCurrencies.includes(rate.currency.toUpperCase())) {
               // For fiat currencies, use a default crypto (ETH) to calculate fees
               // This gives us the USD equivalent fees to display
