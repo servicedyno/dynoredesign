@@ -95,7 +95,7 @@ class DeviceLoginEmailTester:
                 f"{self.backend_url}/api/user/login",
                 json={
                     "email": "john@dyno.pt",
-                    "password": "Teste@123"
+                    "password": "Katiekendra123@"
                 },
                 headers=headers,
                 timeout=15
