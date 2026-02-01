@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://dep-installer-38.preview.emergentagent.com/api"
+BASE_URL = "https://setup-dependencies-2.preview.emergentagent.com/api"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 
