@@ -792,6 +792,21 @@ const createCryptoPayment = async (
       
       console.log('[DEBUG] Step 4: Redis item retrieved successfully:', { adm_id: items?.adm_id, company_id: items?.company_id });
 
+      // Check if payment link has expired
+      if (items.expires_at) {
+        const expiresAt = new Date(items.expires_at);
+        const now = new Date();
+        if (expiresAt.getTime() <= now.getTime()) {
+          console.log(`[Expiry Check] Payment link expired at ${items.expires_at}, current time: ${now.toISOString()}`);
+          return errorResponseHelper(
+            res,
+            410,
+            "This payment link has expired and can no longer be used for payments."
+          );
+        }
+        console.log(`[Expiry Check] Payment link valid until ${items.expires_at}`);
+      }
+
       // Phase 11: Validate requested currency is in available_currencies list
       const requestedCurrency = data.currency;
       
