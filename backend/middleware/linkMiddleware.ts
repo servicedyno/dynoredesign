@@ -17,15 +17,23 @@ const linkMiddleware = (
   } = req.body;
 
   // Support both new and legacy field names
-  // Priority: base_currency > currency, base_amount > amount
-  const normalizedCurrency = base_currency || currency;
+  // Priority: base_currency > currency > 'USD' (default)
+  const normalizedCurrency = base_currency || currency || 'USD';
+  // Priority: base_amount > amount
   const normalizedAmount = base_amount || amount;
+  // Default modes to ['CRYPTO'] if not provided
+  const normalizedModes = modes || ['CRYPTO'];
+
+  // Update req.body with normalized/defaulted values
+  req.body.currency = normalizedCurrency;
+  req.body.base_currency = normalizedCurrency;
+  req.body.modes = normalizedModes;
 
   const validateFields = { 
     email, 
     currency: normalizedCurrency, 
     amount: normalizedAmount, 
-    modes 
+    modes: normalizedModes 
   };
 
   const allowedCurrency = [
@@ -51,21 +59,22 @@ const linkMiddleware = (
 
     amount: Joi.number()
       .required()
-      .min(5)
+      .min(0.01)
       .messages({
-        "number.min": `Amount must be greater than or equal to ${5}`,
+        "number.min": `Amount must be greater than 0`,
         "any.required": "Amount is required. Please provide either 'amount' or 'base_amount' field.",
       }),
     currency: Joi.string()
-      .required()
+      .optional()
       .valid(...allowedCurrency)
+      .default('USD')
       .messages({
-        "string.empty": "Currency is required. Please provide either 'currency' or 'base_currency' field.",
-        "any.required": "Currency is required. Please provide either 'currency' or 'base_currency' field.",
+        "any.only": `Currency must be one of: ${allowedCurrency.join(', ')}`,
       }),
     modes: Joi.array()
-      .required()
-      .items(Joi.string().valid(...allowedModes)),
+      .optional()
+      .items(Joi.string().valid(...allowedModes))
+      .default(['CRYPTO']),
   };
 
   const validationSchema = Joi.object({ ...schema });
