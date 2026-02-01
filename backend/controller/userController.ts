@@ -596,6 +596,27 @@ const changePassword = async (req: express.Request, res: express.Response) => {
           },
         }
       );
+      
+      // Send password changed notification email
+      try {
+        const user = await userModel.findByPk(userData.user_id);
+        if (user && user.dataValues.email) {
+          const now = new Date();
+          const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+          const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          await emailService.sendPasswordChangedEmail(
+            user.dataValues.email,
+            user.dataValues.name || 'User',
+            date,
+            time
+          );
+          console.log(`[ChangePassword] Password changed notification sent to ${user.dataValues.email}`);
+        }
+      } catch (emailError) {
+        console.error("[ChangePassword] Failed to send password changed email:", emailError);
+        // Don't fail the request if email fails
+      }
+      
       successResponseHelper(res, 200, "Password updated successfully!", null);
     } else {
       errorResponseHelper(res, 401, "Old password not recognized!");
