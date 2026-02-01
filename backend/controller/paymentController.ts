@@ -457,7 +457,11 @@ const getData = async (req: express.Request, res: express.Response) => {
     
     // Calculate grand total including tax (if applicable)
     const taxAmount = taxInfo?.tax_amount || 0;
-    const grandTotal = amount + totalProcessingFee + taxAmount;
+    // For customer pays fees: Don't include processing fee in total_amount yet
+    // The exact fee depends on selected crypto and will be calculated by getCurrencyRates
+    // Only include subtotal + tax here, frontend will add fee after crypto selection
+    const subtotalWithTax = amount + taxAmount;
+    const grandTotal = amount + totalProcessingFee + taxAmount; // Keep for reference but use subtotalWithTax
     
     let payload;
     if (item.pathType === "createLink") {
@@ -483,10 +487,14 @@ const getData = async (req: express.Request, res: express.Response) => {
           fee_payer: item.fee_payer || 'company',
           // Only show totals if customer pays fees
           ...(item.fee_payer === 'customer' && {
-            processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
+            // Processing fee is ESTIMATED - actual fee depends on selected cryptocurrency
+            // Frontend should call getCurrencyRates after crypto selection to get exact fee
+            estimated_processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
+            fees_pending_crypto_selection: true, // Flag to indicate fee is estimated
             subtotal: parseFloat(amount.toFixed(2)),
             tax_amount: parseFloat(taxAmount.toFixed(2)),
-            total_amount: parseFloat(grandTotal.toFixed(2)),  // Now includes tax!
+            // total_amount excludes processing fee - will be calculated after crypto selection
+            total_amount: parseFloat(subtotalWithTax.toFixed(2)),
           })
         },
         expiry: expiryInfo,
