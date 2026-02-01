@@ -37,16 +37,26 @@ const linkMiddleware = (
   };
 
   const allowedCurrency = [
+    // Fiat - Major International
     "USD",
-    "NGN",
-    "GBP",
     "EUR",
-    "BTC",
-    "LTC",
-    "DOGE",
+    "GBP",
+    "AUD",
+    "CAD",
+    "CHF",
+    "CNY",
+    "JPY",
+    "HKD",
+    "NZD",
+    // Fiat - African
+    "NGN",
     "KES",
     "UGX",
     "RWF",
+    // Crypto
+    "BTC",
+    "LTC",
+    "DOGE",
   ];
   const allowedModes = [
     ...Object.keys(paymentTypes).filter((x) => x !== "WALLET" && x),
