@@ -33,6 +33,34 @@ import adminRouter from "./adminRouter";
 
 const router = express.Router();
 
+// Base API route - Returns API status and available endpoints
+router.get("/", (req: express.Request, res: express.Response) => {
+  res.status(200).json({
+    status: "operational",
+    service: "DynoPay API",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    documentation: "/api-docs",
+    endpoints: {
+      authentication: "/api/user",
+      admin: "/api/admin",
+      companies: "/api/company",
+      apiKeys: "/api/userApi",
+      wallets: "/api/wallet",
+      payments: "/api/pay",
+      tax: "/api/tax",
+      dashboard: "/api/dashboard",
+      notifications: "/api/notifications",
+      kyc: "/api/kyc",
+      status: "/api/status",
+      subscriptions: "/api/subscriptions",
+      referrals: "/api/referral",
+      knowledgeBase: "/api/kb",
+      invoices: "/api/invoices"
+    }
+  });
+});
+
 router.use("/user", userRouter);
 router.use("/admin", adminRouter);
 router.use("/company", companyRouter);
