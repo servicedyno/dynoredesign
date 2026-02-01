@@ -336,12 +336,15 @@ const login = async (req: express.Request, res: express.Response) => {
     
     if (!userData) {
       // Track failed login attempt
-      const ipAddress = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
+      const rawIp = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
+      const ipAddress = rawIp.split(',')[0].trim().substring(0, 45); // Get first IP and limit length
       const cacheKey = `failed_logins:${email.toLowerCase()}`;
       
       try {
         let failedAttempts = await getRedisItem(cacheKey);
-        const attemptCount = failedAttempts ? parseInt(failedAttempts) + 1 : 1;
+        // Handle Redis returning object or string
+        const attemptStr = typeof failedAttempts === 'string' ? failedAttempts : String(failedAttempts || '0');
+        const attemptCount = attemptStr && !isNaN(parseInt(attemptStr)) ? parseInt(attemptStr) + 1 : 1;
         await setRedisItem(cacheKey, attemptCount.toString());
         await setRedisTTL(cacheKey, 3600); // 1 hour expiry
         
@@ -362,6 +365,7 @@ const login = async (req: express.Request, res: express.Response) => {
               time
             );
             console.log(`[Login] Failed login alert sent to ${email} - ${attemptCount} attempts from ${ipAddress}`);
+          }
           }
         }
       } catch (redisError) {
