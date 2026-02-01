@@ -557,6 +557,19 @@ const getData = async (req: express.Request, res: express.Response) => {
           // Tax information
           apply_tax: item.apply_tax || false,
           ...(taxInfo && { tax_info: taxInfo }),
+          // PHASE 12: Include incomplete payment info if exists
+          ...(item.incomplete_payment && {
+            incomplete_payment: {
+              exists: true,
+              currency: item.incomplete_payment.currency,
+              address: item.incomplete_payment.address,
+              pending_amount: item.incomplete_payment.pending_amount,
+              pending_usd: item.incomplete_payment.pending_amount,
+              timestamp: item.incomplete_payment.timestamp,
+              remaining_minutes: Math.max(0, Math.ceil((new Date(item.incomplete_payment.timestamp).getTime() + 30 * 60 * 1000 - Date.now()) / 60000)),
+              qr_code: item.incomplete_payment.qr_code,
+            }
+          }),
         };
       } else {
         payload = {
