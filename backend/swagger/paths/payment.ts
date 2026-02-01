@@ -184,25 +184,36 @@ Modes must be provided in **UPPERCASE**. Valid modes:
               }
             },
             examples: {
-              'Standard Payment - Recommended': {
-                summary: '💡 RECOMMENDED: Using standard field names',
+              'Minimal - Just Amount': {
+                summary: '⚡ SIMPLEST: Only amount required (uses all defaults)',
+                value: {
+                  amount: 10.00
+                }
+              },
+              'With Customer Email': {
+                summary: '📧 SIMPLE: Amount + customer email',
+                value: {
+                  amount: 50.00,
+                  email: 'customer@example.com'
+                }
+              },
+              'Standard Payment': {
+                summary: '💡 STANDARD: Common use case',
                 value: {
                   amount: 100.00,
                   currency: 'USD',
-                  company_id: 1,
                   email: 'customer@example.com',
-                  modes: ['CRYPTO', 'CARD'],
-                  description: 'Test payment for production',
-                  expire: '24h'
+                  description: 'Order #12345'
                 }
               },
-              'Minimal Required Fields': {
-                summary: '⚡ MINIMAL: Only required fields (no email)',
+              'With Company ID': {
+                summary: '🏢 MULTI-COMPANY: Specify which company',
                 value: {
-                  amount: 50.00,
-                  currency: 'USD',
-                  company_id: 1,
-                  modes: ['CRYPTO']
+                  amount: 100.00,
+                  company_id: 38,
+                  email: 'customer@example.com',
+                  modes: ['CRYPTO'],
+                  description: 'Payment for Company #38'
                 }
               },
               'With Tax Enabled': {
@@ -210,27 +221,31 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 value: {
                   amount: 100.00,
                   currency: 'EUR',
-                  company_id: 1,
                   email: 'customer@example.com',
-                  modes: ['CRYPTO'],
                   description: 'Digital Product - Pro Plan',
-                  apply_tax: true,
-                  redirect_url: 'https://myapp.com/success'
+                  apply_tax: true
                 }
               },
-              'Alternative Field Names': {
-                summary: '🔄 ALTERNATIVE: Using base_* field names (works identically)',
+              'Customer Pays Fees': {
+                summary: '💰 FEES: Customer pays processing fees',
                 value: {
-                  base_amount: 100.00,
-                  base_currency: 'USD',
-                  company_id: 1,
-                  modes: ['CRYPTO', 'CARD'],
-                  description: 'Test payment for production',
+                  amount: 50.00,
+                  email: 'customer@example.com',
+                  fee_payer: 'customer',
+                  description: 'Service Fee - Customer Absorbs Fees'
+                }
+              },
+              'With Expiration': {
+                summary: '⏰ EXPIRY: Link expires in 24 hours',
+                value: {
+                  amount: 199.99,
+                  email: 'customer@example.com',
+                  description: 'Limited Time Offer',
                   expire: '24h'
                 }
               },
-              'Full Post-Payment Settings': {
-                summary: '🔗 COMPLETE: All URLs and settings configured',
+              'Full Configuration': {
+                summary: '🔧 COMPLETE: All options configured',
                 value: {
                   amount: 199.99,
                   currency: 'USD',
@@ -251,9 +266,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 value: {
                   amount: 0.001,
                   currency: 'BTC',
-                  company_id: 1,
                   email: 'crypto@example.com',
-                  modes: ['CRYPTO'],
                   description: 'BTC Payment - Invoice #001',
                   expire: '30d',
                   webhook_url: 'https://myapp.com/webhooks/payment'
