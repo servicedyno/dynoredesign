@@ -372,12 +372,7 @@ const getData = async (req: express.Request, res: express.Response) => {
         return errorResponseHelper(
           res, 
           410, 
-          "This payment link has expired",
-          {
-            expired: true,
-            expires_at: item.expires_at,
-            message: "This payment link is no longer valid. Please contact the merchant for a new payment link."
-          }
+          "This payment link has expired. Please contact the merchant for a new payment link."
         );
       }
     }
