@@ -496,10 +496,7 @@ const getData = async (req: express.Request, res: express.Response) => {
             estimated_processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
             fees_pending_crypto_selection: true, // Flag to indicate fee is estimated
           }),
-          // For company pays fees: processing_fee not shown to customer
-          ...(item.fee_payer === 'company' && {
-            processing_fee: parseFloat(totalProcessingFee.toFixed(2)), // For backend tracking only
-          })
+          // For company pays fees: NO processing_fee returned (hidden from customer)
         },
         expiry: expiryInfo,
         created_at: item.createdAt || new Date().toISOString(),
