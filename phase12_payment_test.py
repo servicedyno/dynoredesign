@@ -611,7 +611,12 @@ class Phase12PaymentTester:
             
             if response.status_code == 200:
                 link_data = response.json().get("data", {})
-                payment_reference = link_data.get("payment_reference")
+                payment_link = link_data.get("payment_link", "")
+                
+                # Extract reference from payment link URL
+                payment_reference = None
+                if "?d=" in payment_link:
+                    payment_reference = payment_link.split("?d=")[1]
                 
                 self.log_test(
                     "Create Payment Link - Currency Lock Test",
