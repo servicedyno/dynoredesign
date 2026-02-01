@@ -9,7 +9,7 @@
 **File:** `/app/backend/.env`
 
 **Key Changes:**
-- **SERVER_URL**: `https://setup-deps-3.preview.emergentagent.com` (Current Development URL)
+- **SERVER_URL**: `https://setup-wizard-80.preview.emergentagent.com` (Current Development URL)
 - **CHECKOUT_URL**: `https://dynocheckoutfix-production.up.railway.app/`
 - All environment variables replaced with provided configuration
 - Fixed GOOGLE_CLIENT_KEY format (converted multiline to escaped single-line format for python-dotenv compatibility)
@@ -30,7 +30,7 @@
 **File:** `/app/frontend/.env`
 
 **Key Changes:**
-- **REACT_APP_BACKEND_URL**: `https://setup-deps-3.preview.emergentagent.com` (Current Development URL)
+- **REACT_APP_BACKEND_URL**: `https://setup-wizard-80.preview.emergentagent.com` (Current Development URL)
 - Frontend now points to the current Emergent preview environment
 
 ### 3. Dependencies Installed
@@ -68,7 +68,7 @@ sudo supervisorctl status
 ## Configuration Details
 
 ### Current Development Environment
-- **Preview URL**: `https://setup-deps-3.preview.emergentagent.com`
+- **Preview URL**: `https://setup-wizard-80.preview.emergentagent.com`
 - **Environment**: Emergent Agent Development Environment
 - **Backend Base URL**: Same as preview URL (configured via REACT_APP_BACKEND_URL)
 - **All API requests**: Routed through `/api` prefix to backend port 8001

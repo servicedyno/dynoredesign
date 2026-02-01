@@ -8,7 +8,7 @@ import json
 from urllib.parse import urlparse, parse_qs
 
 def debug_currency_rates():
-    backend_url = "https://setup-deps-3.preview.emergentagent.com"
+    backend_url = "https://setup-wizard-80.preview.emergentagent.com"
     
     # First authenticate
     response = requests.post(
