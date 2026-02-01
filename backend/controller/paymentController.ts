@@ -757,20 +757,89 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           }, true);  // Use crypto-specific webhook for proper verification
           console.log("paymentRes=============>", paymentRes, uniqueRef);
           finalRes = { hash: uniqueRef, ...paymentRes };
+          
+          // Get fee_payer mode from original payment link data
+          const fee_payer = items.fee_payer || 'company';
+          const baseAmountUSD = Number(items.base_amount || items.amount || 0);
+          
+          // Calculate merchant_amount and fees based on fee_payer mode
+          const ADMIN_FEE_PERCENT = Number(process.env.ADMIN_FEE_PERCENT) || 0.33;
+          let merchant_amount_crypto = 0;
+          let total_fees_crypto = 0;
+          const crypto_amount = Number(value.amount);
+          
+          // Check if tax applies
+          let taxAmount = 0;
+          let taxAmountCrypto = 0;
+          let taxInfo = null;
+          
+          if (items.apply_tax) {
+            try {
+              const clientIP = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.ip || '';
+              const geoLocation = await (await import("../helper/geoLocation")).getCountryFromIP(clientIP, req.headers);
+              if (geoLocation.country_code) {
+                const { calculateTax } = await import("../helper/taxCalculation");
+                taxInfo = await calculateTax(baseAmountUSD, geoLocation.country_code, items.base_currency || 'USD');
+                if (taxInfo) {
+                  taxAmount = taxInfo.tax_amount || 0;
+                  // Calculate tax portion in crypto
+                  const totalWithTax = baseAmountUSD + taxAmount;
+                  taxAmountCrypto = crypto_amount * (taxAmount / totalWithTax);
+                }
+              }
+            } catch (e) {
+              console.log('[addPayment] Tax calculation failed:', e);
+            }
+          }
+          
+          if (fee_payer === 'customer') {
+            // Customer pays fees - merchant gets base + tax
+            const baseCrypto = taxAmount > 0 
+              ? crypto_amount * (baseAmountUSD / (baseAmountUSD + taxAmount + (crypto_amount - crypto_amount * baseAmountUSD / (baseAmountUSD + taxAmount))))
+              : crypto_amount / (1 + ADMIN_FEE_PERCENT / (1 - ADMIN_FEE_PERCENT));
+            total_fees_crypto = crypto_amount - baseCrypto - taxAmountCrypto;
+            merchant_amount_crypto = baseCrypto + taxAmountCrypto;
+          } else {
+            // Company pays fees - standard deduction
+            merchant_amount_crypto = crypto_amount * (1 - ADMIN_FEE_PERCENT);
+            total_fees_crypto = crypto_amount * ADMIN_FEE_PERCENT;
+          }
+          
           // Clear any existing data for this address before setting new payment data
           await deleteRedisItem("crypto-" + paymentRes.address);
           await setRedisItem("crypto-" + paymentRes.address, {
             mode: paymentTypes.CRYPTO,
-            amount: value.amount,
+            amount: crypto_amount,                    // Crypto amount customer should pay
+            merchant_amount: merchant_amount_crypto,  // Amount merchant should receive
+            total_fees: total_fees_crypto,            // Admin's portion
+            fee_payer: fee_payer,                     // Who pays fees
+            base_amount_usd: baseAmountUSD,           // Original USD amount
+            total_amount_usd: baseAmountUSD + taxAmount, // Total USD with tax
             status: "pending",
             ref: uniqueRef,
             currency: value.currency,
-            payment_id: paymentRes.transaction_id,  // Internal payment ID (NOT blockchain txId)
-            unique_tx_id: paymentRes.transaction_id,  // Alias for backward compatibility with cryptoVerification
+            payment_id: paymentRes.transaction_id,
+            unique_tx_id: paymentRes.transaction_id,
             walletType: "customer",
             temp_id: paymentRes.temp_id,
-            is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",  // CRITICAL: Include merchant pool flag
+            is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",
+            // Tax tracking
+            ...(taxInfo && {
+              tax_enabled: "true",
+              tax_amount_usd: taxAmount,
+              tax_amount_crypto: taxAmountCrypto,
+              tax_rate: taxInfo.tax_rate,
+              tax_country_code: taxInfo.country_code,
+            }),
           });
+          
+          console.log(`[addPayment] Crypto payment created:
+            - Currency: ${value.currency}
+            - Amount: ${crypto_amount}
+            - Fee Payer: ${fee_payer}
+            - Merchant Amount: ${merchant_amount_crypto}
+            - Fees: ${total_fees_crypto}
+            - Tax: ${taxAmount} USD (${taxAmountCrypto} crypto)`);
         }
         successResponseHelper(res, 200, "Payment created successfully", finalRes);
       } else {
