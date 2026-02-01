@@ -383,10 +383,14 @@ const login = async (req: express.Request, res: express.Response) => {
       const userAgent = req.headers['user-agent'] || 'Unknown';
       const lastLoginIp = userData.dataValues.last_login_ip;
       
+      console.log(`[Login] User ${email} - Current IP: ${ipAddress}, Last IP: ${lastLoginIp || 'none'}`);
+      
       // Send new device alert if IP changed (and not first login)
       // Use Redis to prevent duplicate alerts within 5 minutes
       const alertCacheKey = `new_device_alert:${userData.dataValues.user_id}:${ipAddress}`;
       const alertAlreadySent = await getRedisItem(alertCacheKey);
+      
+      console.log(`[Login] Alert check - lastLoginIp: ${!!lastLoginIp}, ipChanged: ${lastLoginIp !== ipAddress}, alertAlreadySent: ${!!alertAlreadySent}`);
       
       if (lastLoginIp && lastLoginIp !== ipAddress && !alertAlreadySent) {
         try {
