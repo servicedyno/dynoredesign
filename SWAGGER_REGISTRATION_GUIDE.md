@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://setup-wizard-80.preview.emergentagent.com/api/docs
+Go to: https://dynopay-fix.preview.emergentagent.com/api/docs
 
 ---
 

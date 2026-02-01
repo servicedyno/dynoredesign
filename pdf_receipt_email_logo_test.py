@@ -23,7 +23,7 @@ import base64
 import re
 
 # Configuration
-BACKEND_URL = "https://setup-wizard-80.preview.emergentagent.com"
+BACKEND_URL = "https://dynopay-fix.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Test credentials
