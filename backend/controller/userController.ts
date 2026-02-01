@@ -335,8 +335,78 @@ const login = async (req: express.Request, res: express.Response) => {
     });
     
     if (!userData) {
+      // Track failed login attempt
+      const ipAddress = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
+      const cacheKey = `failed_logins:${email.toLowerCase()}`;
+      
+      try {
+        let failedAttempts = await getRedisItem(cacheKey);
+        const attemptCount = failedAttempts ? parseInt(failedAttempts) + 1 : 1;
+        await setRedisItem(cacheKey, attemptCount.toString());
+        await setRedisTTL(cacheKey, 3600); // 1 hour expiry
+        
+        // Send alert after 3 failed attempts
+        if (attemptCount >= 3) {
+          const existingUser = await userModel.findOne({ where: { email: email.toLowerCase() } });
+          if (existingUser) {
+            const { sendFailedLoginAttemptsEmail } = await import("../services/emailService");
+            const now = new Date();
+            const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+            const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            await sendFailedLoginAttemptsEmail(
+              existingUser.dataValues.email,
+              existingUser.dataValues.name || 'User',
+              attemptCount,
+              ipAddress,
+              date,
+              time
+            );
+            console.log(`[Login] Failed login alert sent to ${email} - ${attemptCount} attempts from ${ipAddress}`);
+          }
+        }
+      } catch (redisError) {
+        console.error("[Login] Redis error tracking failed attempts:", redisError);
+      }
+      
       return errorResponseHelper(res, 401, "Invalid email or password");
     } else {
+      // Clear failed login attempts on successful login
+      const cacheKey = `failed_logins:${email.toLowerCase()}`;
+      await deleteRedisItem(cacheKey);
+      
+      // Check for new device/IP login
+      const ipAddress = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
+      const userAgent = req.headers['user-agent'] || 'Unknown';
+      const lastLoginIp = userData.dataValues.last_login_ip;
+      
+      // Send new device alert if IP changed (and not first login)
+      if (lastLoginIp && lastLoginIp !== ipAddress) {
+        try {
+          const { sendNewDeviceLoginEmail } = await import("../services/emailService");
+          const now = new Date();
+          const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+          const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          await sendNewDeviceLoginEmail(
+            userData.dataValues.email,
+            userData.dataValues.name || 'User',
+            ipAddress,
+            userAgent,
+            null, // Location - could be added via IP geolocation service
+            date,
+            time
+          );
+          console.log(`[Login] New device alert sent to ${email} - IP changed from ${lastLoginIp} to ${ipAddress}`);
+        } catch (emailError) {
+          console.error("[Login] Failed to send new device alert:", emailError);
+        }
+      }
+      
+      // Update last login IP
+      await userModel.update(
+        { last_login_ip: ipAddress },
+        { where: { user_id: userData.dataValues.user_id } }
+      );
+      
       const resData = await getAccessToken(userData.dataValues.user_id);
       successResponseHelper(res, 200, "Login Successful!", resData);
     }
