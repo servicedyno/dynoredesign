@@ -4519,7 +4519,14 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
     }
     
     if (base_currency !== undefined) {
-      const validCurrencies = ['USD', 'EUR', 'GBP', 'NGN', 'BRL', 'CAD', 'AUD'];
+      const validCurrencies = [
+        // Major International
+        'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'HKD', 'NZD',
+        // African
+        'NGN', 'KES', 'UGX', 'RWF',
+        // Other
+        'BRL'
+      ];
       if (!validCurrencies.includes(base_currency.toUpperCase())) {
         return errorResponseHelper(res, 400, `Invalid currency. Valid options: ${validCurrencies.join(', ')}`);
       }
