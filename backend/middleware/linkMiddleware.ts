@@ -48,6 +48,16 @@ const linkMiddleware = (
     "JPY",
     "HKD",
     "NZD",
+    "SGD",  // Singapore Dollar
+    // Fiat - Latin America (high crypto adoption)
+    "BRL",  // Brazilian Real
+    "ARS",  // Argentine Peso
+    "COP",  // Colombian Peso
+    "CLP",  // Chilean Peso
+    "PEN",  // Peruvian Sol
+    "MXN",  // Mexican Peso
+    "VES",  // Venezuelan Bolívar
+    "UYU",  // Uruguayan Peso
     // Fiat - African
     "NGN",
     "KES",
