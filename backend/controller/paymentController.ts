@@ -326,10 +326,20 @@ const getData = async (req: express.Request, res: express.Response) => {
     }
     
     // Calculate total processing fee (internal - details not exposed)
-    // Total fees = transaction fee % + fixed fee + blockchain buffer %
+    // Total fees = transaction fee % + fixed fee + blockchain buffer % + network fee
     const feeAmountPercent = (amount * transactionFeePercent) / 100;
     const bufferAmount = (amount * blockchainBuffer) / 100;
-    const totalProcessingFee = feeAmountPercent + fixedFee + bufferAmount;
+    
+    // Include blockchain network fee for consistency with getCurrencyRates
+    let networkFeeUSD = 0;
+    try {
+      const networkFee = await getBlockchainNetworkFee('ETH'); // Use ETH as default for USD display
+      networkFeeUSD = Number(networkFee.feeInUSD) || 0;
+    } catch (e) {
+      console.log('[getData] Could not fetch network fee, using 0');
+    }
+    
+    const totalProcessingFee = parseFloat((feeAmountPercent + fixedFee + bufferAmount + networkFeeUSD).toFixed(2));
     const totalWithFees = amount + totalProcessingFee;
     
     // Calculate expiry countdown
