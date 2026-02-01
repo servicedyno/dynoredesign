@@ -3465,6 +3465,17 @@ const cryptoVerification = async (address, webhook = true) => {
         
         await transaction.commit();
         
+        // PHASE 12: Clear incomplete_payment info from customer Redis key on successful completion
+        const customerRef = tempData.ref;
+        if (customerRef) {
+          const customerRedisData = await getRedisItem("customer-" + customerRef);
+          if (customerRedisData && customerRedisData.incomplete_payment) {
+            const { incomplete_payment, ...cleanCustomerData } = customerRedisData;
+            await setRedisItem("customer-" + customerRef, cleanCustomerData);
+            console.log(`[Phase 12] Cleared incomplete_payment from customer-${customerRef} on successful completion`);
+          }
+        }
+        
         // FIXED: Use soft delete with 30-min TTL to allow checkout polling for status
         // Update status to successful before soft delete
         await setRedisItem(tempData.ref, {
