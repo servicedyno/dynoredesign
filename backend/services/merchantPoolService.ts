@@ -2071,6 +2071,7 @@ export default {
   findByWalletAddress,
   processQueuedPayments,
   ensurePoolSubscriptions,
+  checkMissedPayments,
   POOL_CONFIG,
   UTXO_CHAINS,
   NATIVE_CURRENCIES,
