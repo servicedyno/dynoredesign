@@ -78,6 +78,17 @@ class Phase12PaymentTester:
                 if "data" in data and "accessToken" in data["data"]:
                     self.jwt_token = data["data"]["accessToken"]
                     user_info = data["data"]["userData"] if "userData" in data["data"] else data["data"]
+                    self.log_test(
+                        "Authentication",
+                        "PASS",
+                        {
+                            "user_id": user_info.get("user_id"),
+                            "name": user_info.get("name"),
+                            "email": user_info.get("email"),
+                            "token_length": len(self.jwt_token)
+                        }
+                    )
+                    return True
                 elif data.get("success") and "token" in data.get("data", {}):
                     self.jwt_token = data["data"]["token"]
                     user_info = data["data"]
