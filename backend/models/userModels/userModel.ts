@@ -121,6 +121,12 @@ const userModel = sequelize.define(
       allowNull: true,
       comment: "referee_code, user_referral_referee, user_referral_referrer, referrer_reward, promo",
     },
+    // Security tracking
+    last_login_ip: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: "Last known login IP address for new device detection",
+    },
   },
   {
     tableName: "tbl_user",
