@@ -4282,7 +4282,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
       return errorResponseHelper(res, 400, "No valid fields provided for update");
     }
 
-    // Update the link
+    // Update the link in database
     await paymentLinkModel.update(updateData, {
       where: {
         user_id: userData.user_id,
@@ -4297,6 +4297,48 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
         link_id,
       },
     });
+
+    // CRITICAL: Also update Redis so checkout page and payment processing get new data
+    if (updatedLink) {
+      const linkData = updatedLink.dataValues;
+      
+      // Extract the uniqueRef from payment_link URL (the 'd' parameter)
+      const paymentLinkUrl = linkData.payment_link;
+      const urlMatch = paymentLinkUrl?.match(/[?&]d=([a-f0-9]+)/i);
+      const uniqueRef = urlMatch ? urlMatch[1] : null;
+      
+      if (uniqueRef) {
+        // Get existing Redis data to preserve fields not in database
+        const existingRedisData = await getRedisItem("customer-" + uniqueRef);
+        
+        if (existingRedisData && Object.keys(existingRedisData).length > 0) {
+          // Merge updated fields with existing Redis data
+          const updatedRedisPayload = {
+            ...existingRedisData,
+            // Update all fields that could have changed
+            email: linkData.email,
+            base_amount: linkData.base_amount,
+            base_currency: linkData.base_currency,
+            description: linkData.description,
+            expires_at: linkData.expires_at,
+            callback_url: linkData.callback_url,
+            redirect_url: linkData.redirect_url,
+            webhook_url: linkData.webhook_url,
+            fee_payer: linkData.fee_payer,
+            apply_tax: linkData.apply_tax,
+            allowedModes: linkData.allowedModes,
+            updatedAt: new Date().toISOString(),
+          };
+          
+          await setRedisItem("customer-" + uniqueRef, updatedRedisPayload);
+          console.log(`[updatePaymentLink] Redis updated for key: customer-${uniqueRef}`);
+        } else {
+          console.warn(`[updatePaymentLink] No existing Redis data found for key: customer-${uniqueRef}`);
+        }
+      } else {
+        console.warn(`[updatePaymentLink] Could not extract uniqueRef from payment_link: ${paymentLinkUrl}`);
+      }
+    }
 
     successResponseHelper(res, 200, "Payment link updated successfully", updatedLink);
   } catch (e) {
