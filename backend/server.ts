@@ -216,6 +216,15 @@ cron.schedule("*/30 * * * *", function () {
   });
 });
 
+// Merchant Pool: Check for missed webhooks every 5 minutes
+// This is a fallback mechanism when Tatum webhooks fail to deliver
+cron.schedule("*/5 * * * *", function () {
+  log("Cron: checkMissedPayments running", "info");
+  merchantPoolService.checkMissedPayments().catch(err => {
+    log(`Cron: Missed payments check failed: ${err.message}`, "error");
+  });
+});
+
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
 setupWeeklySummaryCron();
 
