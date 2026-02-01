@@ -741,8 +741,12 @@ const feeEstimation = async (
 
     console.log(gasFees);
 
-    let gasPrice = Math.ceil(gasFees?.gasPrice > 30 ? 30 : gasFees.gasPrice);
-    const gas_fee_for_amount = gasPrice < 3 ? 4 : gasPrice + 1;
+    // FIX: Ensure minimum gas price of 10 Gwei to prevent stuck transactions
+    // Cap at 50 Gwei for cost control (increased from 30 for reliability)
+    const MIN_GAS_PRICE = 10;
+    const MAX_GAS_PRICE = 50;
+    let gasPrice = Math.max(MIN_GAS_PRICE, Math.min(MAX_GAS_PRICE, Math.ceil(gasFees?.gasPrice || MIN_GAS_PRICE)));
+    const gas_fee_for_amount = gasPrice + 2; // Add buffer for priority
     fees = {
       fast: Number(
         Number((gas_fee_for_amount * gasFees?.gasLimit) / 1000000000)
