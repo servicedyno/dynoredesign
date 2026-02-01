@@ -776,10 +776,9 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           if (items.apply_tax) {
             try {
               const clientIP = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.ip || '';
-              const geoLocation = await (await import("../helper/geoLocation")).getCountryFromIP(clientIP, req.headers);
-              if (geoLocation.country_code) {
-                const { calculateTax } = await import("../helper/taxCalculation");
-                taxInfo = await calculateTax(baseAmountUSD, geoLocation.country_code, items.base_currency || 'USD');
+              const geoLocation = await getCountryFromIP(clientIP, req.headers);
+              if (geoLocation && geoLocation.country_code) {
+                taxInfo = await calculateTaxForCheckout(baseAmountUSD, geoLocation.country_code, items.base_currency || 'USD');
                 if (taxInfo) {
                   taxAmount = taxInfo.tax_amount || 0;
                   // Calculate tax portion in crypto
