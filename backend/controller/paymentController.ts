@@ -2543,6 +2543,24 @@ const settleCryptoTransaction = async ({
       }
     }
 
+    // FIX: Verify merchant transaction was actually mined for account-based chains
+    // This prevents marking payment complete when TX is stuck due to low gas
+    if (["ETH", "BSC", "TRX", "USDT-ERC20", "USDC-ERC20", "USDT-TRC20"].includes(currency)) {
+      const txHash = merchantTransactionDetails?.txId;
+      if (txHash) {
+        console.log(`[settleCryptoTransaction] Waiting for TX confirmation: ${txHash}`);
+        const { confirmed, blockNumber } = await tatumApi.waitForTransactionConfirmation(txHash, currency, 90000); // 90 sec timeout
+        
+        if (!confirmed) {
+          console.error(`[settleCryptoTransaction] WARNING: TX ${txHash} not confirmed within timeout!`);
+          // Don't throw - allow flow to continue but log the issue
+          // The sweep will detect unspent balance and retry later
+        } else {
+          console.log(`[settleCryptoTransaction] TX ${txHash} confirmed in block ${blockNumber}`);
+        }
+      }
+    }
+
     return {
       transactionDetails: merchantTransactionDetails,  // Now this is merchant tx, not admin
       userTransactionDetails: null,  // No separate user tx needed
