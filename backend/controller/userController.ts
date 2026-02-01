@@ -384,8 +384,29 @@ const login = async (req: express.Request, res: express.Response) => {
       const lastLoginIp = userData.dataValues.last_login_ip;
       
       // Send new device alert if IP changed (and not first login)
-      if (lastLoginIp && lastLoginIp !== ipAddress) {
+      // Use Redis to prevent duplicate alerts within 5 minutes
+      const alertCacheKey = `new_device_alert:${userData.dataValues.user_id}:${ipAddress}`;
+      const alertAlreadySent = await getRedisItem(alertCacheKey);
+      
+      if (lastLoginIp && lastLoginIp !== ipAddress && !alertAlreadySent) {
         try {
+          // Mark alert as sent immediately to prevent duplicates
+          await setRedisItem(alertCacheKey, 'sent');
+          await setRedisTTL(alertCacheKey, 300); // 5 minute cooldown
+          
+          // Get location from IP using free geolocation API
+          let location: string | null = null;
+          try {
+            const axios = (await import("axios")).default;
+            const geoResponse = await axios.get(`http://ip-api.com/json/${ipAddress}?fields=status,city,country`, { timeout: 3000 });
+            if (geoResponse.data && geoResponse.data.status === 'success') {
+              const { city, country } = geoResponse.data;
+              location = city && country ? `${city}, ${country}` : (country || null);
+            }
+          } catch (geoError) {
+            console.log(`[Login] IP geolocation failed for ${ipAddress}:`, geoError.message);
+          }
+          
           const { sendNewDeviceLoginEmail } = await import("../services/emailService");
           const now = new Date();
           const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -395,11 +416,11 @@ const login = async (req: express.Request, res: express.Response) => {
             userData.dataValues.name || 'User',
             ipAddress,
             userAgent,
-            null, // Location - could be added via IP geolocation service
+            location,
             date,
             time
           );
-          console.log(`[Login] New device alert sent to ${email} - IP changed from ${lastLoginIp} to ${ipAddress}`);
+          console.log(`[Login] New device alert sent to ${email} - IP changed from ${lastLoginIp} to ${ipAddress} (${location || 'Unknown location'})`);
         } catch (emailError) {
           console.error("[Login] Failed to send new device alert:", emailError);
         }
