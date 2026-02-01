@@ -4190,6 +4190,10 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
       updateData.description = description;
     }
     
+    if (email !== undefined) {
+      updateData.email = email;
+    }
+    
     if (expire !== undefined) {
       // Calculate new expires_at
       if (expire === "No" || !expire) {
