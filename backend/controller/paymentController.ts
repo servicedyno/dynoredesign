@@ -1006,6 +1006,35 @@ const createCryptoPayment = async (
         }
       }
 
+      // PHASE 12.1: Check if an address already exists for this payment link + currency combination
+      // This prevents generating multiple addresses for the same payment link when customer refreshes page
+      if (items.active_crypto_address && items.active_crypto_address.currency === requestedCurrency) {
+        const existingAddress = items.active_crypto_address.address;
+        const existingRedisData = await getRedisItem("crypto-" + existingAddress);
+        
+        // Only return existing address if it's still pending (not completed/expired)
+        if (existingRedisData && existingRedisData.status === 'pending') {
+          console.log(`[Phase 12.1] ✓ Returning existing address for same payment link + currency: ${existingAddress}`);
+          return successResponseHelper(res, 200, "Using existing payment address", {
+            qr_code: items.active_crypto_address.qr_code,
+            address: existingAddress,
+            transaction_id: existingRedisData.payment_id || existingRedisData.unique_tx_id,
+            amount: existingRedisData.amount,
+            currency: requestedCurrency,
+            merchant_amount: existingRedisData.merchant_amount,
+            fee_payer: existingRedisData.fee_payer,
+            is_existing_address: true,
+            message: `Payment address already generated. Send ${existingRedisData.amount} ${requestedCurrency} to complete payment.`
+          });
+        } else {
+          // Address exists but status changed (completed/expired) - clear and generate new
+          console.log(`[Phase 12.1] Existing address status changed, clearing active_crypto_address`);
+          const updatedItems = { ...items };
+          delete updatedItems.active_crypto_address;
+          await setRedisItem("customer-" + data.uniqueRef, updatedItems);
+        }
+      }
+
       // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
       console.log(`[Phase 10 Validation] Checking wallet for currency: ${requestedCurrency}, user_id: ${items.adm_id}, company_id: ${items.company_id}`);
       
