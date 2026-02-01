@@ -3515,8 +3515,9 @@ const cryptoVerification = async (address, webhook = true) => {
         }
 
         // FIXED: Update payment link status to successful
-        if (tempData?.transaction_id || customerData?.transaction_id) {
-          const linkTransactionId = tempData?.transaction_id || customerData?.transaction_id;
+        // BUG FIX: Check for payment_id/unique_tx_id (from crypto- Redis key) OR transaction_id (from customer- Redis key)
+        const linkTransactionId = tempData?.payment_id || tempData?.unique_tx_id || tempData?.transaction_id || customerData?.transaction_id;
+        if (linkTransactionId) {
           console.log(`[cryptoVerification] Updating payment link status for transaction_id: ${linkTransactionId}`);
           await paymentLinkModel.update(
             {
