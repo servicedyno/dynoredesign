@@ -1037,11 +1037,9 @@ const createCryptoPayment = async (
         // User is switching to a DIFFERENT currency (allowed since no incomplete_payment)
         // Clear the old active_crypto_address since they're changing currency
         console.log(`[Phase 12.1] User switching from ${items.active_crypto_address.currency} to ${requestedCurrency}, clearing old active_crypto_address`);
-        const updatedItems = { ...items };
-        delete updatedItems.active_crypto_address;
-        await setRedisItem("customer-" + data.uniqueRef, updatedItems);
-        // Refresh items with updated data
-        items = updatedItems;
+        const updatedItemsForSwitch = { ...items };
+        delete updatedItemsForSwitch.active_crypto_address;
+        await setRedisItem("customer-" + data.uniqueRef, updatedItemsForSwitch);
       }
 
       // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
