@@ -3440,8 +3440,8 @@ const cryptoVerification = async (address, webhook = true) => {
             customer_id: customerData.customer_id ? Number(customerData.customer_id) : null,
           };
 
-          // FIX: Use payment_id if unique_tx_id is not available (for merchant pool payments)
-          const transactionRecordId = tempData.unique_tx_id || tempData.payment_id;
+          // FIX: Use user_tx_id for user transaction updates (separate from payment_id which is for payment link)
+          const transactionRecordId = tempData.user_tx_id || tempData.unique_tx_id || tempData.payment_id;
           
           if (!transactionRecordId) {
             console.error(`[cryptoVerification] ⚠️  No transaction ID found in tempData - cannot update user transaction`);
