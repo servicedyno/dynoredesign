@@ -142,8 +142,8 @@ class DynoPayEmailNotificationTester:
                 response2 = requests.post(
                     f"{self.backend_url}/api/user/changePassword",
                     json={
-                        "oldPassword": "NewTeste@123",
-                        "newPassword": "Teste@123"
+                        "oldPassword": "NewKatiekendra123@",
+                        "newPassword": "Katiekendra123@"
                     },
                     headers=headers,
                     timeout=15
