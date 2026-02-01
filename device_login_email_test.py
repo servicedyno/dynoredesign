@@ -84,9 +84,10 @@ class DeviceLoginEmailTester:
         
         try:
             # Use different IP addresses for each attempt to trigger new device alert
+            # Current last_login_ip is "34.16.56.64", so we need different IPs
             ip_addresses = [
-                "185.243.112.45",  # Portuguese IP for first login
-                "8.8.8.8"          # Different IP for second login to trigger alert
+                "185.243.112.45",  # Portuguese IP for first login (different from current)
+                "8.8.8.8"          # Different IP for second login to test duplicate prevention
             ]
             
             headers = {
