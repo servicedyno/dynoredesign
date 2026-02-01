@@ -3603,26 +3603,28 @@ const getCurrencyRates = async (
             const blockchainBuffer = Number(feeResult.blockchainBuffer) || 0;
             const networkFeeUSD = Number(networkFee.feeInUSD) || 0;
             
-            // Calculate totals including tax
+            // Calculate totals including tax - round USD amounts to 2 decimals for consistency
             const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
+            const roundedTotalFeesUSD = parseFloat(totalFeesUSD.toFixed(2));
             const taxAmountNum = Number(tax_amount) || 0;
-            const totalAmountUSD = amount + totalFeesUSD + taxAmountNum;
-            const totalAmountCrypto = cryptoPrice > 0 ? totalAmountUSD / cryptoPrice : 0;
+            const totalAmountUSD = amount + roundedTotalFeesUSD + taxAmountNum;
+            const roundedTotalAmountUSD = parseFloat(totalAmountUSD.toFixed(2));
+            const totalAmountCrypto = cryptoPrice > 0 ? roundedTotalAmountUSD / cryptoPrice : 0;
             
-            console.log(`[getCurrencyRates] ${rate.currency}: base=$${amount}, tax=$${taxAmountNum.toFixed(2)}, fees=$${totalFeesUSD.toFixed(2)}, total=$${totalAmountUSD.toFixed(2)}`);
+            console.log(`[getCurrencyRates] ${rate.currency}: base=$${amount}, tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)}`);
             
             return {
               ...rate,
               fee_payer: 'customer',
               base_amount: parseFloat(rate.amount),
-              base_amount_usd: amount,
+              base_amount_usd: parseFloat(amount.toFixed(2)),
               // Include tax in breakdown
               tax_amount: parseFloat(taxAmountNum.toFixed(2)),
               // Simplified - only show total processing fee, no breakdown
-              processing_fee: parseFloat(totalFeesUSD.toFixed(2)),
+              processing_fee: roundedTotalFeesUSD,
               total_amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto,
-              total_amount_usd: totalAmountUSD,
-              total_amount_source: totalAmountUSD, // Total in source currency (USD) for display
+              total_amount_usd: roundedTotalAmountUSD,
+              total_amount_source: roundedTotalAmountUSD, // Total in source currency (USD) for display
               amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto, // Override amount with total
             };
           } catch (feeError: any) {
