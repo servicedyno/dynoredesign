@@ -1072,26 +1072,55 @@ export const sendNewDeviceLoginEmail = async (
     const subject = "🔔 New login to your DynoPay account";
     
     // Parse user agent for readable device info
-    const deviceInfo = userAgent.includes('Mobile') ? 'Mobile Device' : 
-                       userAgent.includes('Windows') ? 'Windows PC' :
-                       userAgent.includes('Mac') ? 'Mac' :
-                       userAgent.includes('Linux') ? 'Linux' : 'Unknown Device';
+    let deviceInfo = 'Unknown Device';
+    if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+      deviceInfo = userAgent.includes('iPad') ? 'iPad' : 'iPhone';
+    } else if (userAgent.includes('Android')) {
+      deviceInfo = 'Android Device';
+    } else if (userAgent.includes('Windows')) {
+      deviceInfo = 'Windows PC';
+    } else if (userAgent.includes('Mac')) {
+      deviceInfo = 'Mac';
+    } else if (userAgent.includes('Linux')) {
+      deviceInfo = 'Linux';
+    } else if (userAgent.includes('Mobile')) {
+      deviceInfo = 'Mobile Device';
+    }
+    
+    // Browser detection
+    let browser = '';
+    if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+      browser = 'Chrome';
+    } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+      browser = 'Safari';
+    } else if (userAgent.includes('Firefox')) {
+      browser = 'Firefox';
+    } else if (userAgent.includes('Edg')) {
+      browser = 'Edge';
+    }
+    if (browser) {
+      deviceInfo += ` (${browser})`;
+    }
+    
+    const locationDisplay = location || 'Unknown location';
     
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">We noticed a new login to your DynoPay account.</p>
+    <p class="message">We noticed a new login to your DynoPay account from a different location.</p>
     <div class="highlight-box">
-      <p><strong>Login Details:</strong></p>
-      <p>Date: ${date} at ${time}<br />
-      Device: ${deviceInfo}<br />
-      IP Address: ${ipAddress}<br />
-      ${location ? `Location: ${location}` : ''}</p>
+      <p><strong>📍 Login Details:</strong></p>
+      <p>
+        <strong>Location:</strong> ${locationDisplay}<br />
+        <strong>Device:</strong> ${deviceInfo}<br />
+        <strong>IP Address:</strong> ${ipAddress}<br />
+        <strong>Date:</strong> ${date} at ${time}
+      </p>
     </div>
     <p class="message"><strong>Was this you?</strong><br />
-    If you recognize this login, you can ignore this message.</p>
+    If you recognize this login, you can safely ignore this message.</p>
     <p class="message"><strong>Didn't log in?</strong><br />
-    If you don't recognize this activity, please:</p>
+    If you don't recognize this activity, please take action immediately:</p>
     <p class="message">1. Change your password immediately<br />
-    2. Review your recent activity<br />
+    2. Review your recent account activity<br />
     3. Contact our support team</p>`;
 
     const html = dynoPayEmailTemplate("New Login Detected", content, true, "Secure My Account", "https://dynopay.com/dashboard/settings");
@@ -1103,7 +1132,7 @@ export const sendNewDeviceLoginEmail = async (
       body: html,
     });
     
-    console.log(`[Email] New device login alert sent to ${email} from IP ${ipAddress}`);
+    console.log(`[Email] New device login alert sent to ${email} from ${locationDisplay} (${ipAddress})`);
   } catch (e) {
     console.error("New device login email error:", e);
   }
