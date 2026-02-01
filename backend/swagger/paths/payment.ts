@@ -72,10 +72,11 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   enum: [
                     'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'HKD', 'NZD', 'SGD',
                     'BRL', 'ARS', 'COP', 'CLP', 'PEN', 'MXN', 'VES', 'UYU',
-                    'NGN', 'KES', 'UGX', 'RWF',
+                    'NGN', 'ZAR', 'KES', 'GHS', 'TZS', 'XAF', 'XOF', 'EGP', 'MAD',
+                    'UGX', 'RWF', 'ETB', 'ZMW', 'BWP', 'MUR', 'AOA', 'MZN', 'CDF',
                     'BTC', 'LTC', 'DOGE'
                   ], 
-                  description: '📝 OPTIONAL: Currency code (defaults to "USD"). Supports major international, Latin American, and African currencies.',
+                  description: '📝 OPTIONAL: Currency code (defaults to "USD"). Supports 35+ international, Latin American, and African currencies.',
                   example: 'USD',
                   default: 'USD'
                 },
@@ -84,7 +85,8 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   enum: [
                     'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'HKD', 'NZD', 'SGD',
                     'BRL', 'ARS', 'COP', 'CLP', 'PEN', 'MXN', 'VES', 'UYU',
-                    'NGN', 'KES', 'UGX', 'RWF',
+                    'NGN', 'ZAR', 'KES', 'GHS', 'TZS', 'XAF', 'XOF', 'EGP', 'MAD',
+                    'UGX', 'RWF', 'ETB', 'ZMW', 'BWP', 'MUR', 'AOA', 'MZN', 'CDF',
                     'BTC', 'LTC', 'DOGE'
                   ], 
                   description: '📝 OPTIONAL: Currency code (alternative field name, defaults to "USD")',
