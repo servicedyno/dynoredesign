@@ -3660,6 +3660,30 @@ const cryptoVerification = async (address, webhook = true) => {
           paymentTimeStr                // time
         );
 
+        // Send large transaction alert if amount > $1000 USD equivalent
+        const baseAmount = customerData?.base_amount || tempData?.base_amount || 0;
+        const LARGE_TRANSACTION_THRESHOLD = 1000;
+        if (parseFloat(baseAmount) >= LARGE_TRANSACTION_THRESHOLD) {
+          try {
+            const { sendLargeTransactionAlertEmail } = await import("../services/emailService");
+            const customerEmail = customerData?.email || tempData?.email || null;
+            await sendLargeTransactionAlertEmail(
+              userData?.email,
+              userData?.name || 'Merchant',
+              `${baseAmount}`,
+              customerData?.base_currency || 'USD',
+              totalAmountReceived.toString(),
+              tempCurrency,
+              customerEmail,
+              transactionId,
+              companyName
+            );
+            console.log(`[cryptoVerification] Large transaction alert sent to ${userData?.email} for $${baseAmount}`);
+          } catch (largeAlertError) {
+            console.error("[cryptoVerification] Failed to send large transaction alert:", largeAlertError);
+          }
+        }
+
         // Create in-app notification for payment received
         await createNotification(
           customerData.adm_id,
