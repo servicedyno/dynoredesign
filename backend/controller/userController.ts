@@ -366,7 +366,6 @@ const login = async (req: express.Request, res: express.Response) => {
             );
             console.log(`[Login] Failed login alert sent to ${email} - ${attemptCount} attempts from ${ipAddress}`);
           }
-          }
         }
       } catch (redisError) {
         console.error("[Login] Redis error tracking failed attempts:", redisError);
