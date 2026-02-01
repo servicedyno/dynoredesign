@@ -1319,7 +1319,8 @@ const createCryptoPayment = async (
 
       // PHASE 12.1: Store active crypto address in customer Redis key
       // This prevents generating multiple addresses for the same payment link when customer refreshes
-      const customerRedisData = await getRedisItem("customer-" + uniqueRef);
+      // Note: uniqueRef already has "customer-" prefix, so use it directly
+      const customerRedisData = await getRedisItem(uniqueRef);
       if (customerRedisData) {
         const updatedCustomerData = {
           ...customerRedisData,
@@ -1331,7 +1332,7 @@ const createCryptoPayment = async (
             created_at: new Date().toISOString(),
           }
         };
-        await setRedisItem("customer-" + uniqueRef, updatedCustomerData);
+        await setRedisItem(uniqueRef, updatedCustomerData);
         console.log(`[Phase 12.1] Stored active_crypto_address for ${uniqueRef}: ${paymentRes.address}`);
       }
 
