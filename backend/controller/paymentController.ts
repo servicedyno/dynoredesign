@@ -3060,6 +3060,36 @@ const cryptoVerification = async (address, webhook = true) => {
         await deleteRedisItem("crypto-" + address);
         await setRedisItem("crypto-" + address, redisPayload);
 
+        // PHASE 12: Also update customer Redis key with incomplete payment info
+        // This enables blocking currency switching until payment is complete or expired
+        const customerRef = tempData.ref;
+        if (customerRef) {
+          const customerData = await getRedisItem("customer-" + customerRef);
+          if (customerData) {
+            // Generate QR code for the address
+            let qrCode;
+            try {
+              qrCode = await QR_Code.toDataURL(address, { width: 300 });
+            } catch (e) {
+              console.log('[Phase 12] QR code generation failed:', e);
+            }
+            
+            const updatedCustomerData = {
+              ...customerData,
+              incomplete_payment: {
+                currency: tempCurrency,
+                address: address,
+                pending_amount: pendingAmount,
+                previous_amount: receivedAmount,
+                timestamp: new Date().toISOString(),
+                qr_code: qrCode,
+              }
+            };
+            await setRedisItem("customer-" + customerRef, updatedCustomerData);
+            console.log(`[Phase 12] Updated customer-${customerRef} with incomplete payment info: ${pendingAmount} ${tempCurrency}`);
+          }
+        }
+
         transaction.commit();
 
         throw {
