@@ -531,10 +531,11 @@ const getData = async (req: express.Request, res: express.Response) => {
           fee_info: {
             fee_payer: item.fee_payer || 'company',
             ...(item.fee_payer === 'customer' && {
-              processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
+              estimated_processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
+              fees_pending_crypto_selection: true,
               subtotal: parseFloat(amount.toFixed(2)),
               tax_amount: parseFloat(taxAmount.toFixed(2)),
-              total_amount: parseFloat(grandTotal.toFixed(2)),
+              total_amount: parseFloat(subtotalWithTax.toFixed(2)),
             })
           },
           expiry: expiryInfo,
@@ -560,10 +561,11 @@ const getData = async (req: express.Request, res: express.Response) => {
           fee_info: {
             fee_payer: item.fee_payer || 'company',
             ...(item.fee_payer === 'customer' && {
-              processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
+              estimated_processing_fee: parseFloat(totalProcessingFee.toFixed(2)),
+              fees_pending_crypto_selection: true,
               subtotal: parseFloat(amount.toFixed(2)),
               tax_amount: parseFloat(taxAmount.toFixed(2)),
-              total_amount: parseFloat(grandTotal.toFixed(2)),
+              total_amount: parseFloat(subtotalWithTax.toFixed(2)),
             })
           },
           expiry: expiryInfo,
