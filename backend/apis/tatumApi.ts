@@ -1602,6 +1602,48 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
   return res;
 };
 
+/**
+ * Wait for a transaction to be confirmed on the blockchain
+ * Returns true if confirmed within timeout, false if still pending
+ */
+const waitForTransactionConfirmation = async (
+  txHash: string,
+  currency: string,
+  maxWaitMs: number = 60000, // Default 60 seconds
+  pollIntervalMs: number = 5000 // Check every 5 seconds
+): Promise<{ confirmed: boolean; blockNumber?: number }> => {
+  const startTime = Date.now();
+  const tatumSdk = await getTatumSDK();
+  
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      let txData: any = null;
+      
+      if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
+        txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);
+      } else if (currency === "BSC") {
+        txData = await tatumSdk.blockchain.bsc.bscGetTransaction(txHash);
+      } else if (currency === "TRX" || currency === "USDT-TRC20") {
+        txData = await tatumSdk.blockchain.tron.tronGetTransaction(txHash);
+      }
+      
+      if (txData && txData.blockNumber) {
+        console.log(`[waitForTransactionConfirmation] TX ${txHash} confirmed in block ${txData.blockNumber}`);
+        return { confirmed: true, blockNumber: txData.blockNumber };
+      }
+      
+      console.log(`[waitForTransactionConfirmation] TX ${txHash} still pending, waiting...`);
+    } catch (error) {
+      console.log(`[waitForTransactionConfirmation] Error checking TX: ${error.message}`);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
+  
+  console.log(`[waitForTransactionConfirmation] TX ${txHash} not confirmed within ${maxWaitMs}ms`);
+  return { confirmed: false };
+};
+
 export default {
   generateWallet,
   createVirtualAccount,
