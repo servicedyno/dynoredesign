@@ -4014,14 +4014,6 @@ const createPaymentLink = async (
       );
     }
     
-    if (!normalizedCurrency) {
-      return errorResponseHelper(
-        res, 
-        400, 
-        "Currency is required. Please provide either 'currency' or 'base_currency' field."
-      );
-    }
-    
     // Validate amount is positive
     if (normalizedAmount <= 0) {
       return errorResponseHelper(
