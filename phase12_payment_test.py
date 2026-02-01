@@ -1092,7 +1092,7 @@ class Phase12PaymentTester:
         print(f"Total Tests: {total_tests}")
         print(f"Passed: {passed_tests} ✅")
         print(f"Failed: {failed_tests} ❌")
-        print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%")
+        print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%" if total_tests > 0 else "Success Rate: 0.0%")
         print()
         
         if failed_tests > 0:
