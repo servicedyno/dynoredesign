@@ -24,10 +24,17 @@ export const apiKeyPaths = {
                   description: '✅ REQUIRED: Friendly name for the API key',
                   example: 'Production API'
                 },
+                environment: {
+                  type: 'string',
+                  enum: ['development', 'production'],
+                  description: '📝 OPTIONAL: API key environment (defaults to "development")',
+                  default: 'development',
+                  example: 'production'
+                },
                 base_currency: {
                   type: 'string',
                   enum: ['USD', 'EUR', 'NGN', 'GBP'],
-                  description: '📝 OPTIONAL: Default currency for transactions',
+                  description: '📝 OPTIONAL: Default currency for transactions (defaults to "USD")',
                   default: 'USD'
                 },
                 webhook_url: {
@@ -41,6 +48,30 @@ export const apiKeyPaths = {
                   items: { type: 'string' },
                   description: '📝 OPTIONAL: Approved withdrawal addresses',
                   example: ['1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa']
+                }
+              }
+            },
+            examples: {
+              'Minimal': {
+                summary: '⚡ SIMPLE: Just the name',
+                value: {
+                  api_name: 'My API Key'
+                }
+              },
+              'Production Key': {
+                summary: '🚀 PRODUCTION: Ready for live use',
+                value: {
+                  api_name: 'Production API',
+                  environment: 'production',
+                  base_currency: 'USD',
+                  webhook_url: 'https://myapp.com/webhooks/dynopay'
+                }
+              },
+              'Development Key': {
+                summary: '🔧 DEV: For testing',
+                value: {
+                  api_name: 'Test API',
+                  environment: 'development'
                 }
               }
             }
