@@ -85,6 +85,12 @@ const companyModel = sequelize.define(
       defaultValue: null,
       comment: "Minimum overpayment amount in USD to trigger overpayment handling. Default $5 if not set.",
     },
+    underpayment_threshold_usd: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      defaultValue: null,
+      comment: "Maximum underpayment amount in USD to accept as full payment. Default $1 if not set.",
+    },
     grace_period_minutes: {
       type: DataTypes.INTEGER,
       allowNull: true,
