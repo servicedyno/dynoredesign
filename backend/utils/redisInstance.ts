@@ -152,7 +152,10 @@ const deleteRedisItem = async (key: string) => {
 // Soft delete - set TTL instead of immediate deletion (for checkout polling)
 const softDeleteRedisItem = async (key: string, ttlSeconds: number = 1800) => {
   // Default 30 minutes TTL to allow checkout to poll for status
+  // IMPORTANT: Clear memory cache to prevent stale reads
+  memoryCache.delete(key);
   await redisClient.expire(key, ttlSeconds);
+  await redisClient.expire(key + ':json', ttlSeconds);
   console.log(`[Redis] Soft delete: ${key} will expire in ${ttlSeconds}s`);
 };
 
