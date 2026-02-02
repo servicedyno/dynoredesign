@@ -140,7 +140,7 @@ class DynoPayTester:
                 self.log_test("25-minute Underpayment Threshold", False, "25-minute threshold not found")
             
             # Check for cryptoVerification call with webhook=true
-            if 'cryptoVerification(address, true)' in content:
+            if 'paymentController.cryptoVerification(walletAddress, true)' in content:
                 self.log_test("cryptoVerification(address, true) Call", True, "Found webhook=true parameter")
             else:
                 self.log_test("cryptoVerification(address, true) Call", False, "webhook=true parameter not found")
