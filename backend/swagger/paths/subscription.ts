@@ -64,7 +64,7 @@ export const subscriptionPaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['customer_email', 'amount', 'currency', 'interval'],
+              required: ['customer_email', 'amount', 'currency', 'interval', 'company_id'],
               properties: {
                 customer_email: { 
                   type: 'string', 
@@ -96,15 +96,15 @@ export const subscriptionPaths = {
                   description: '✅ REQUIRED: Billing frequency',
                   example: 'monthly' 
                 },
+                company_id: { 
+                  type: 'integer',
+                  description: '✅ REQUIRED: Your company ID receiving payments. Get from GET /api/company/getCompany',
+                  example: 1
+                },
                 description: { 
                   type: 'string',
                   description: '📝 OPTIONAL: Subscription description shown to customer',
                   example: 'Premium Plan - Monthly Subscription'
-                },
-                company_id: { 
-                  type: 'integer',
-                  description: '✅ REQUIRED: Your company ID receiving payments',
-                  example: 1
                 },
                 start_date: { 
                   type: 'string', 
@@ -122,6 +122,32 @@ export const subscriptionPaths = {
                   type: 'object',
                   description: '📝 OPTIONAL: Custom data for your reference',
                   example: { plan_tier: 'premium', user_id: '12345' }
+                }
+              }
+            },
+            examples: {
+              'Monthly Subscription': {
+                summary: '📅 Basic monthly subscription',
+                value: {
+                  customer_email: 'customer@example.com',
+                  amount: 29.99,
+                  currency: 'USD',
+                  interval: 'monthly',
+                  company_id: 1,
+                  description: 'Premium Plan - Monthly'
+                }
+              },
+              'Annual Subscription': {
+                summary: '📆 Annual subscription with savings',
+                value: {
+                  customer_email: 'customer@example.com',
+                  customer_name: 'John Doe',
+                  amount: 299.00,
+                  currency: 'USD',
+                  interval: 'yearly',
+                  company_id: 1,
+                  description: 'Premium Plan - Annual (Save 17%)',
+                  metadata: { plan_tier: 'premium', discount: '17%' }
                 }
               }
             }
