@@ -9,7 +9,11 @@ export const apiKeyPaths = {
 - Auto-generates secure API key
 - Configurable rate limits
 - Webhook URL for notifications
-- Withdrawal whitelist for security`,
+- Withdrawal whitelist for security
+
+**⚠️ MULTI-TENANT REQUIREMENT:**
+- \`company_id\` is **REQUIRED** for proper data isolation
+- \`base_currency\` is **REQUIRED** for transaction processing`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -17,25 +21,30 @@ export const apiKeyPaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['api_name'],
+              required: ['api_name', 'company_id', 'base_currency'],
               properties: {
                 api_name: {
                   type: 'string',
                   description: '✅ REQUIRED: Friendly name for the API key',
                   example: 'Production API'
                 },
-                environment: {
-                  type: 'string',
-                  enum: ['development', 'production'],
-                  description: '📝 OPTIONAL: API key environment (defaults to "development")',
-                  default: 'development',
-                  example: 'production'
+                company_id: {
+                  type: 'integer',
+                  description: '✅ REQUIRED: Company ID for multi-tenant isolation. Get from GET /api/company/getCompany',
+                  example: 1
                 },
                 base_currency: {
                   type: 'string',
-                  enum: ['USD', 'EUR', 'NGN', 'GBP'],
-                  description: '📝 OPTIONAL: Default currency for transactions (defaults to "USD")',
-                  default: 'USD'
+                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC'],
+                  description: '✅ REQUIRED: Default currency for transactions',
+                  example: 'USD'
+                },
+                environment: {
+                  type: 'string',
+                  enum: ['development', 'production'],
+                  description: '📝 OPTIONAL: API key environment (defaults to "production")',
+                  default: 'production',
+                  example: 'production'
                 },
                 webhook_url: {
                   type: 'string',
@@ -53,17 +62,20 @@ export const apiKeyPaths = {
             },
             examples: {
               'Minimal': {
-                summary: '⚡ SIMPLE: Just the name',
+                summary: '⚡ REQUIRED FIELDS ONLY',
                 value: {
-                  api_name: 'My API Key'
+                  api_name: 'My API Key',
+                  company_id: 1,
+                  base_currency: 'USD'
                 }
               },
               'Production Key': {
                 summary: '🚀 PRODUCTION: Ready for live use',
                 value: {
                   api_name: 'Production API',
-                  environment: 'production',
+                  company_id: 1,
                   base_currency: 'USD',
+                  environment: 'production',
                   webhook_url: 'https://myapp.com/webhooks/dynopay'
                 }
               },
@@ -71,6 +83,8 @@ export const apiKeyPaths = {
                 summary: '🔧 DEV: For testing',
                 value: {
                   api_name: 'Test API',
+                  company_id: 1,
+                  base_currency: 'USD',
                   environment: 'development'
                 }
               }
