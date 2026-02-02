@@ -2244,6 +2244,21 @@ export const checkMissedPayments = async (): Promise<{
         console.log(`[MerchantPool]    - Latest tx amount: ${latestTx.amount} ${walletType}`);
         console.log(`[MerchantPool]    - Total from all txs: ${totalFromTxs} ${walletType}`);
 
+        // Step 6.5: CHECK TRANSACTION CONFIRMATIONS
+        // For UTXO chains (BTC, LTC, DOGE, BCH), unconfirmed transactions cannot be spent
+        // We must wait for sufficient confirmations before processing
+        const confirmationCheck = await tatumApi.getTransactionConfirmations(latestTx.txId, walletType);
+        
+        if (!confirmationCheck.confirmed) {
+          console.log(`[MerchantPool] ⏳ Transaction not yet confirmed - waiting for confirmations`);
+          console.log(`[MerchantPool]    - Current: ${confirmationCheck.confirmations}/${confirmationCheck.required} confirmations`);
+          console.log(`[MerchantPool]    - ${walletType} requires ${confirmationCheck.required} confirmation(s) before processing`);
+          result.skippedTooRecent++;
+          continue;
+        }
+        
+        console.log(`[MerchantPool] ✅ Transaction confirmed: ${confirmationCheck.confirmations}/${confirmationCheck.required} confirmations`);
+
         // Step 7: Check if this txId was already processed (duplicate prevention)
         const processedTxKey = `processed-tx-${latestTx.txId}`;
         const alreadyProcessedTx = await getRedisItem(processedTxKey);
