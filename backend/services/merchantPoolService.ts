@@ -1966,17 +1966,28 @@ export const ensurePoolSubscriptions = async (): Promise<{
 /**
  * Fallback mechanism to check for missed payments when webhooks fail
  * Runs every 5 minutes to detect payments that may have been missed
+ * 
+ * LOGIC:
+ * 1. Only check addresses with status='RESERVED' (awaiting payment)
+ * 2. Check blockchain balance
+ * 3. If balance > 0, verify it's NOT already processed by checking:
+ *    - Redis for existing txId (webhook already fired)
+ *    - Database for completed transaction records
+ *    - Address status (IN_USE means already being processed)
+ * 4. Only flag as "missed" if balance exists AND no processing evidence found
  */
 export const checkMissedPayments = async (): Promise<{
   checked: number;
   found: number;
   processed: number;
+  alreadyProcessed: number;
   errors: string[];
 }> => {
   const result = {
     checked: 0,
     found: 0,
     processed: 0,
+    alreadyProcessed: 0,
     errors: [] as string[],
   };
 
@@ -1984,11 +1995,22 @@ export const checkMissedPayments = async (): Promise<{
     console.log("[MerchantPool] 🔍 Checking for missed payments (webhook fallback)...");
 
     // Get addresses that are currently RESERVED (awaiting payment)
+    // Note: IN_USE status means payment received and being processed - NOT missed
     const reservedAddresses = await merchantTempAddressModel.findAll({
       where: {
         status: 'RESERVED',
       },
-      attributes: ['temp_address_id', 'wallet_address', 'wallet_type', 'owner_user_id', 'current_company_id', 'reserved_until'],
+      attributes: [
+        'temp_address_id', 
+        'wallet_address', 
+        'wallet_type', 
+        'owner_user_id', 
+        'current_company_id', 
+        'current_payment_id',
+        'reserved_until',
+        'expected_amount',
+        'received_amount'
+      ],
     });
 
     console.log(`[MerchantPool] 📋 Found ${reservedAddresses.length} reserved addresses to check`);
@@ -1998,6 +2020,8 @@ export const checkMissedPayments = async (): Promise<{
       
       const walletAddress = addr.dataValues.wallet_address;
       const walletType = addr.dataValues.wallet_type;
+      const currentPaymentId = addr.dataValues.current_payment_id;
+      const expectedAmount = parseFloat(addr.dataValues.expected_amount || '0');
       const reservedUntil = addr.dataValues.reserved_until ? new Date(addr.dataValues.reserved_until) : null;
       const now = new Date();
       
@@ -2007,10 +2031,9 @@ export const checkMissedPayments = async (): Promise<{
         continue;
       }
       
-      // Calculate time since reservation started (reserved_until is typically 30 min from start)
-      // So if reserved_until is 25 min from now, reservation started 5 min ago
+      // Calculate time since reservation started
       const minutesUntilExpiry = (reservedUntil.getTime() - now.getTime()) / 60000;
-      const minutesSinceReserved = 30 - minutesUntilExpiry; // Assuming 30 min reservation window
+      const minutesSinceReserved = 30 - minutesUntilExpiry;
       
       // Only check addresses reserved more than 2 minutes ago (give webhook time to fire)
       if (minutesSinceReserved < 2) {
@@ -2019,34 +2042,102 @@ export const checkMissedPayments = async (): Promise<{
       }
 
       try {
-        // Check actual blockchain balance
+        // Step 1: Check actual blockchain balance
         const balanceResult = await tatumApi.getAddressBalance(walletAddress, walletType);
         const balance = parseFloat(balanceResult?.balance || '0');
 
-        if (balance > 0) {
-          result.found++;
-          console.log(`[MerchantPool] ⚠️ MISSED PAYMENT DETECTED: ${walletAddress} has ${balance} ${walletType}`);
-          console.log(`[MerchantPool] This payment was missed by webhook! Address reserved ${minutesSinceReserved.toFixed(1)} minutes ago.`);
-          
-          // Log to help debug - the actual processing will happen via the webhook
-          // or manual intervention. We just detect and alert here.
-          cronLogger?.info?.("Missed payment detected", {
-            address: walletAddress,
-            currency: walletType,
-            balance,
-            minutesSinceReserved,
-            tempAddressId: addr.dataValues.temp_address_id,
-          });
-          
-          result.processed++;
+        // If no balance, customer hasn't paid yet - skip
+        if (balance <= 0) {
+          console.log(`[MerchantPool] ⏭️ ${walletAddress} - no balance (customer hasn't paid)`);
+          continue;
         }
+
+        console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${balance} ${walletType}`);
+
+        // Step 2: Check if webhook already processed this (Redis has txId)
+        const redisData = await getRedisItem("crypto-" + walletAddress);
+        if (redisData?.txId) {
+          console.log(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
+          result.alreadyProcessed++;
+          continue;
+        }
+
+        // Step 3: Check database for completed transaction
+        if (currentPaymentId) {
+          const existingTx = await customerTransactionModel.findOne({
+            where: {
+              [Op.or]: [
+                { transaction_reference: currentPaymentId },
+                { transaction_reference: { [Op.like]: `%${walletAddress}%` } }
+              ],
+              status: { [Op.in]: ['successful', 'completed', 'confirmed'] }
+            }
+          });
+
+          if (existingTx) {
+            console.log(`[MerchantPool] ⏭️ ${walletAddress} - Already processed in DB (tx: ${existingTx.dataValues.transaction_reference})`);
+            result.alreadyProcessed++;
+            continue;
+          }
+        }
+
+        // Step 4: Check merchant pool transaction records
+        const poolTx = await merchantPoolTransactionModel.findOne({
+          where: {
+            pool_address: walletAddress,
+            status: { [Op.in]: ['completed', 'swept'] }
+          },
+          order: [['created_at', 'DESC']]
+        });
+
+        if (poolTx) {
+          const txCreatedAt = new Date(poolTx.dataValues.created_at);
+          const hoursSinceTx = (now.getTime() - txCreatedAt.getTime()) / 3600000;
+          
+          // If a completed transaction exists from recent reservation period, it's not missed
+          if (hoursSinceTx < 1) {
+            console.log(`[MerchantPool] ⏭️ ${walletAddress} - Recent pool transaction exists (${hoursSinceTx.toFixed(1)}h ago)`);
+            result.alreadyProcessed++;
+            continue;
+          }
+        }
+
+        // If we reach here: balance > 0, no txId in Redis, no completed DB record
+        // THIS IS A GENUINE MISSED PAYMENT
+        result.found++;
+        console.log(`[MerchantPool] ⚠️ MISSED PAYMENT DETECTED: ${walletAddress}`);
+        console.log(`[MerchantPool]   - Balance: ${balance} ${walletType}`);
+        console.log(`[MerchantPool]   - Expected: ${expectedAmount} ${walletType}`);
+        console.log(`[MerchantPool]   - Payment ID: ${currentPaymentId || 'N/A'}`);
+        console.log(`[MerchantPool]   - Reserved ${minutesSinceReserved.toFixed(1)} min ago`);
+        console.log(`[MerchantPool]   - Webhook likely failed! Manual intervention may be needed.`);
+        
+        // Log for alerting
+        cronLogger?.info?.("MISSED PAYMENT - Webhook likely failed", {
+          address: walletAddress,
+          currency: walletType,
+          balance,
+          expectedAmount,
+          paymentId: currentPaymentId,
+          minutesSinceReserved,
+          tempAddressId: addr.dataValues.temp_address_id,
+          ownerId: addr.dataValues.owner_user_id,
+          companyId: addr.dataValues.current_company_id,
+        });
+        
+        result.processed++;
+        
       } catch (error) {
-        console.error(`[MerchantPool] ❌ Error checking balance for ${walletAddress}:`, error.message);
-        result.errors.push(`Balance check failed for ${walletAddress}: ${error.message}`);
+        console.error(`[MerchantPool] ❌ Error checking ${walletAddress}:`, error.message);
+        result.errors.push(`Check failed for ${walletAddress}: ${error.message}`);
       }
     }
 
-    console.log(`[MerchantPool] ✅ Missed payment check complete: ${result.checked} checked, ${result.found} found`);
+    console.log(`[MerchantPool] ✅ Missed payment check complete:`);
+    console.log(`[MerchantPool]   - Checked: ${result.checked}`);
+    console.log(`[MerchantPool]   - Already processed: ${result.alreadyProcessed}`);
+    console.log(`[MerchantPool]   - Missed payments found: ${result.found}`);
+    
   } catch (error) {
     console.error("[MerchantPool] ❌ Missed payment check failed:", error.message);
     result.errors.push(`Global error: ${error.message}`);
