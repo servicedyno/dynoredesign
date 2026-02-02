@@ -260,11 +260,15 @@ const createWallets = async (req: express.Request, res: express.Response) => {
 const login = async (req: express.Request, res: express.Response) => {
   try {
     const { email, password } = req.body;
-    const newPassword = sha256(password).toString();
+    const hashedPassword = sha256(password).toString();
+    
+    // Use parameterized query to prevent SQL injection
     const data = await sequelize.query(
-      `select * from tbl_admin where email='${email}' 
-      and password='${newPassword}'`,
-      { type: QueryTypes.SELECT }
+      `SELECT * FROM tbl_admin WHERE email = :email AND password = :password`,
+      { 
+        replacements: { email, password: hashedPassword },
+        type: QueryTypes.SELECT 
+      }
     );
 
     if (data.length > 0) {
