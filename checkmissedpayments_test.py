@@ -263,7 +263,8 @@ class DynoPayTester:
                 self.log_test("URL Retrieval Logic", False, "URL retrieval logic not found")
             
             # Check event payload structure
-            if 'payment.confirmed' in webhook_content and 'payment_id' in webhook_content and 'transaction_reference' in webhook_content:
+            if ('event: "payment.confirmed"' in payment_content or 'event.*payment.confirmed' in payment_content) and \
+               'payment_id' in payment_content and 'transaction_reference' in payment_content:
                 self.log_test("Event Payload Structure", True, "Found required event payload fields")
             else:
                 self.log_test("Event Payload Structure", False, "Required payload fields not found")
