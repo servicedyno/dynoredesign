@@ -7,6 +7,19 @@
 user_problem_statement: "Phase 12 - Incomplete Payment Currency Lock + Processing Fee Display Fixes. Comprehensive testing of: (1) Payment confirmation and fund distribution, (2) Email notifications to merchant/admin/customer, (3) Fee payer modes (customer vs company), (4) Tax enabled/disabled scenarios, (5) Underpayment handling, (6) Payment link updates, (7) Incomplete payment currency lock mechanism."
 
 current_test_task:
+  - task: "Payment Confirmation and Fund Distribution Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/controller/paymentController.ts, /app/backend/webhooks/index.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test payment confirmation and fund distribution for both Payment Link and Merchant API flows. Test scope: (1) Payment link creation stores fee_payer and merchant_amount in Redis, (2) Merchant API (cryptoPayment) stores fee_payer and merchant_amount in Redis, (3) Webhook handler extracts tempData correctly including fee_payer/merchant_amount, (4) cryptoVerification distributes funds correctly for both fee_payer modes (customer/company), (5) Redis data consistency across the full payment flow. Credentials: john@dyno.pt / Katiekendra123@, company_id: 38."
+
+previous_test_tasks:
   - task: "BlockBee-Style Webhook Multi-Tenant Routing Testing"
     implemented: true
     working: true
