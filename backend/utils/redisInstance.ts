@@ -80,8 +80,11 @@ setInterval(() => {
 // ============================================
 
 const setRedisItem = async (key: string, value: any) => {
+  // Use shorter TTL for crypto payment keys (5 seconds) to ensure fresh status reads
+  const cacheTTL = key.startsWith('crypto-') ? 5 : 30;
+  
   // Also store in memory cache for fast access
-  setMemoryCache(key, value, 30);
+  setMemoryCache(key, value, cacheTTL);
   
   // Store as JSON string for complex objects
   if (typeof value === 'object') {
