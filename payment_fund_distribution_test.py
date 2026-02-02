@@ -126,7 +126,7 @@ class DynoPayTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success'):
+                if 'data' in data:
                     payment_info = data['data']
                     self.log(f"✅ Payment data retrieved successfully")
                     self.log(f"   - Fee Payer: {payment_info.get('fee_payer', 'N/A')}")
