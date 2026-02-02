@@ -51,9 +51,9 @@ class DynoPayTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success') and 'data' in data:
-                    self.auth_token = data['data']['token']
-                    self.user_data = data['data']
+                if 'data' in data and 'accessToken' in data['data']:
+                    self.auth_token = data['data']['accessToken']
+                    self.user_data = data['data']['userData']
                     self.session.headers.update({
                         'Authorization': f'Bearer {self.auth_token}'
                     })
