@@ -225,16 +225,20 @@ class BlockBeeWebhookTester:
             if response.status_code == 200:
                 payment_result = response.json()
                 
-                # Extract payment reference for later use
-                if 'reference' in payment_result:
-                    self.payment_reference = payment_result['reference']
+                # Extract payment reference from payment_link URL
+                if 'data' in payment_result and 'payment_link' in payment_result['data']:
+                    payment_link = payment_result['data']['payment_link']
+                    # Extract reference from URL like: https://domain/pay?d=reference
+                    if '?d=' in payment_link:
+                        self.payment_reference = payment_link.split('?d=')[1]
                     
                     payment_info = {
-                        'reference': payment_result.get('reference'),
-                        'link_id': payment_result.get('link_id'),
-                        'transaction_id': payment_result.get('transaction_id'),
-                        'amount': payment_result.get('amount'),
-                        'currency': payment_result.get('base_currency')
+                        'reference': getattr(self, 'payment_reference', 'N/A'),
+                        'link_id': payment_result['data'].get('link_id'),
+                        'transaction_id': payment_result['data'].get('transaction_id'),
+                        'amount': payment_result['data'].get('base_amount'),
+                        'currency': payment_result['data'].get('base_currency'),
+                        'payment_link': payment_result['data'].get('payment_link')
                     }
                     
                     self.log_test(
@@ -247,7 +251,7 @@ class BlockBeeWebhookTester:
                     self.log_test(
                         "Payment Link Creation", 
                         False, 
-                        "No reference in payment link response"
+                        "No payment_link in response data"
                     )
                     return False
             else:
