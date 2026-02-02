@@ -119,6 +119,9 @@ const setRedisTTL = async (key: string, ttlSeconds: number) => {
 };
 
 const getRedisItem = async (key: string) => {
+  // Use shorter TTL for crypto payment keys (5 seconds) to ensure fresh status reads
+  const cacheTTL = key.startsWith('crypto-') ? 5 : 30;
+  
   // Check memory cache first (< 1ms)
   const memCached = getMemoryCache(key);
   if (memCached && Object.keys(memCached).length > 0) {
@@ -131,7 +134,7 @@ const getRedisItem = async (key: string) => {
   if (jsonValue) {
     try {
       const parsed = JSON.parse(jsonValue);
-      setMemoryCache(key, parsed, 30); // Cache in memory
+      setMemoryCache(key, parsed, cacheTTL); // Cache in memory with appropriate TTL
       return parsed;
     } catch (e) {
       console.log(`[Cache] JSON parse error for ${key}:json, falling back to hash`);
@@ -142,7 +145,7 @@ const getRedisItem = async (key: string) => {
   // Fall back to hash storage (only if JSON doesn't exist)
   const hashValue = await redisClient.hGetAll(key);
   if (hashValue && Object.keys(hashValue).length > 0) {
-    setMemoryCache(key, hashValue, 30); // Cache in memory
+    setMemoryCache(key, hashValue, cacheTTL); // Cache in memory with appropriate TTL
     return hashValue;
   }
   
