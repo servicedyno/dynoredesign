@@ -708,6 +708,88 @@ const createSubscriptionWithUrl = async (address: string, currency: string, cust
   }
 };
 
+/**
+ * BlockBee Style: Create subscription with company_id encoded in webhook URL
+ * This enables multi-tenant routing without per-company backends
+ * 
+ * URL Format: https://SERVER_URL/api/tatum-crypto-webhook?company_id=38&address_id=5&user_id=28
+ */
+const createSubscriptionBlockBeeStyle = async (
+  address: string, 
+  currency: string, 
+  companyId: number,
+  userId: number,
+  addressId: number
+) => {
+  try {
+    const headers = await getTatumHeaders();
+
+    const chain =
+      currency === "USDT-ERC20" || currency === "USDC-ERC20"
+        ? "ETH"
+        : currency === "USDT-TRC20"
+        ? "TRON"
+        : currency === "TRX"
+        ? "TRON"
+        : currency;
+
+    // BlockBee Style: Encode company info in webhook URL
+    const baseUrl = (process.env.SERVER_URL || '').replace(/\/$/, '');
+    const webhookUrl = `${baseUrl}/api/tatum-crypto-webhook?company_id=${companyId}&user_id=${userId}&address_id=${addressId}`;
+    
+    console.log(`[createSubscriptionBlockBeeStyle] Address: ${address}, Chain: ${chain}`);
+    console.log(`[createSubscriptionBlockBeeStyle] Webhook URL: ${webhookUrl}`);
+
+    // Check for existing subscription
+    const { data: existingData } = await axios.get(
+      "https://api.tatum.io/v4/subscription?pageSize=10&address=" + address,
+      { headers }
+    );
+
+    let resData = { id: null as string | null, url: webhookUrl };
+
+    if (existingData?.length > 0) {
+      resData.id = existingData[0]?.id;
+      const existingUrl = existingData[0]?.attr?.url;
+      
+      console.log(`[createSubscriptionBlockBeeStyle] Existing subscription ${resData.id}`);
+      console.log(`[createSubscriptionBlockBeeStyle] Current URL: ${existingUrl}`);
+      
+      // Always update URL to ensure company_id params are current
+      if (existingUrl !== webhookUrl) {
+        console.log(`[createSubscriptionBlockBeeStyle] Updating URL with new company info`);
+        await axios.put(
+          "https://api.tatum.io/v4/subscription/" + resData.id,
+          { url: webhookUrl },
+          { headers }
+        );
+        console.log(`[createSubscriptionBlockBeeStyle] ✅ URL updated`);
+      }
+    } else {
+      // Create new subscription
+      const { data: newData } = await axios.post(
+        "https://api.tatum.io/v4/subscription",
+        {
+          type: "ADDRESS_EVENT",
+          attr: {
+            address,
+            chain,
+            url: webhookUrl,
+          },
+        },
+        { headers }
+      );
+      console.log(`[createSubscriptionBlockBeeStyle] ✅ New subscription created: ${newData?.id}`);
+      resData.id = newData?.id;
+    }
+    
+    return resData;
+  } catch (e: any) {
+    console.error("[createSubscriptionBlockBeeStyle] Error:", e.response?.data || e.message);
+    throw e;
+  }
+};
+
 const deleteSubscription = async (id) => {
   try {
     if (id) {
