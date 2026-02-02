@@ -1,0 +1,31 @@
+--- a/Components/Page/Pay3Components/cryptoTransfer.tsx
++++ b/Components/Page/Pay3Components/cryptoTransfer.tsx
+@@ -42,10 +42,11 @@ import { formatWithSeparators, formatCryptoAmount } from "@/utils/currencyFormat
+ 
+ // Payment status types
+ type PaymentStatusType =
+-  | "waiting"      // No payment detected yet
+-  | "pending"      // Payment detected, awaiting confirmation
+-  | "confirmed"    // Payment confirmed successfully
+-  | "underpaid"    // Partial payment received
+-  | "overpaid"     // More than expected was paid
+-  | "expired";     // Payment window expired
++  | "waiting"       // No payment detected yet
++  | "pending"       // Payment detected, awaiting confirmation
++  | "confirmed"     // Payment confirmed successfully
++  | "underpaid"     // Partial payment received
++  | "overpaid"      // More than expected was paid
++  | "expired"       // Payment window expired
++  | "failed";       // Payment processing failed
+ 
+ // Merchant settings from backend
+ interface MerchantSettings {
+@@ -173,7 +174,7 @@ const CryptoTransfer = ({
+   // Merchant settings from backend (with defaults)
+   const [merchantSettings, setMerchantSettings] = useState<MerchantSettings>({
+     overpayment_threshold_usd: 5,  // Default $5, will be updated from backend
+-    grace_period_minutes: 15       // Default 15 min, will be updated from backend
++    grace_period_minutes: 30       // Default 30 min, will be updated from backend (matches backend default)
+   });
+ 
+   // Polling trigger to restart polling after underpayment
