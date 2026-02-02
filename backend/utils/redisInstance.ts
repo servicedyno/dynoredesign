@@ -86,6 +86,8 @@ const setRedisItem = async (key: string, value: any) => {
   // Store as JSON string for complex objects
   if (typeof value === 'object') {
     await redisClient.set(key + ':json', JSON.stringify(value));
+    // Also delete any old hash data to prevent stale reads
+    await redisClient.del(key);
   } else {
     for (const [field, val] of Object.entries(value)) {
       if (val !== undefined && val !== null) {
