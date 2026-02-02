@@ -229,13 +229,13 @@ Payments are forwarded when the USD value exceeds these thresholds:
 
 ### Method 1: Check Existing Wallets
 ```bash
-curl -X GET "https://dep-setup-5.preview.emergentagent.com/api/wallet/getWallet?company_id=1" \
+curl -X GET "https://setup-hub-3.preview.emergentagent.com/api/wallet/getWallet?company_id=1" \
   -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
 ```
 
 ### Method 2: Try Adding Duplicate
 ```bash
-curl -X POST "https://dep-setup-5.preview.emergentagent.com/api/wallet/validateWalletAddress" \
+curl -X POST "https://setup-hub-3.preview.emergentagent.com/api/wallet/validateWalletAddress" \
   -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{
