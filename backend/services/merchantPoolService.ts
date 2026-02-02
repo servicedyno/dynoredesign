@@ -1986,7 +1986,7 @@ export const checkMissedPayments = async (): Promise<{
       where: {
         status: 'RESERVED',
       },
-      attributes: ['temp_address_id', 'wallet_address', 'wallet_type', 'owner_user_id', 'company_id', 'reserved_at'],
+      attributes: ['temp_address_id', 'wallet_address', 'wallet_type', 'owner_user_id', 'current_company_id', 'reserved_until'],
     });
 
     console.log(`[MerchantPool] 📋 Found ${reservedAddresses.length} reserved addresses to check`);
