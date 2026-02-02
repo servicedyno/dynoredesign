@@ -165,15 +165,17 @@ class BlockBeeWebhookTester:
             
             if response.status_code == 200:
                 auth_result = response.json()
-                if 'token' in auth_result:
+                if 'data' in auth_result and 'accessToken' in auth_result['data']:
                     self.session.headers.update({
-                        'Authorization': f"Bearer {auth_result['token']}"
+                        'Authorization': f"Bearer {auth_result['data']['accessToken']}"
                     })
                     
+                    user_data = auth_result['data']['userData']
                     user_info = {
-                        'user_id': auth_result.get('user_id'),
-                        'name': auth_result.get('name'),
-                        'email': auth_result.get('email')
+                        'user_id': user_data.get('user_id'),
+                        'name': user_data.get('name'),
+                        'email': user_data.get('email'),
+                        'username': user_data.get('username')
                     }
                     
                     self.log_test(
@@ -184,7 +186,7 @@ class BlockBeeWebhookTester:
                     )
                     
                     # Store user_id for later use
-                    self.user_id = auth_result.get('user_id')
+                    self.user_id = user_data.get('user_id')
                 else:
                     self.log_test(
                         "User Authentication", 
