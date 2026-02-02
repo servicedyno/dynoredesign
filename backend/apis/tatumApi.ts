@@ -1860,9 +1860,9 @@ const getIncomingTransactions = async (
       }
     } else if (currency === "LTC") {
       const txData = await tatumSdk.blockchain.ltc.ltcGetTxByAddress(
-        address, limit, 0, null, null, "incoming"
+        address, limit, 0
       );
-      for (const tx of txData || []) {
+      for (const tx of (txData as any[]) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
@@ -1879,9 +1879,9 @@ const getIncomingTransactions = async (
       }
     } else if (currency === "DOGE") {
       const txData = await tatumSdk.blockchain.doge.dogeGetTxByAddress(
-        address, limit, 0, null, null, "incoming"
+        address, limit, 0
       );
-      for (const tx of txData || []) {
+      for (const tx of (txData as any[]) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
@@ -1898,9 +1898,9 @@ const getIncomingTransactions = async (
       }
     } else if (currency === "BCH") {
       const txData = await tatumSdk.blockchain.bcash.bchGetTxByAddress(
-        address, limit, 0
+        address, limit
       );
-      for (const tx of txData || []) {
+      for (const tx of (txData as any[]) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
