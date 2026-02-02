@@ -4162,16 +4162,20 @@ const createPaymentLink = async (
     console.log("userData============>", userData);
     
     // Calculate expires_at based on expire option
+    // DEFAULT: 7 days if not specified (for security and cleanup)
     let expires_at = null;
-    if (expire && expire !== "No") {
-      const now = new Date();
-      if (expire === "24h") {
-        expires_at = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      } else if (expire === "7d") {
-        expires_at = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      } else if (expire === "30d") {
-        expires_at = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      }
+    const now = new Date();
+    
+    if (expire === "No") {
+      // Explicitly set to never expire
+      expires_at = null;
+    } else if (expire === "24h") {
+      expires_at = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    } else if (expire === "30d") {
+      expires_at = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    } else {
+      // Default to 7 days if not specified or explicitly set to "7d"
+      expires_at = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     }
     
     // company_id is REQUIRED - validate it exists
