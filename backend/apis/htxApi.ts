@@ -1,20 +1,20 @@
 import { HmacSHA256 } from "crypto-js";
 import CryptoJS from "crypto-js";
 
-const sign_sha = (method, baseurl, path, data) => {
-  var pars = [];
-  for (let item in data) {
+/**
+ * HTX API signature generation
+ * Used for authenticated requests to HTX (formerly Huobi) exchange
+ */
+const sign_sha = (method: string, baseurl: string, path: string, data: Record<string, any>): string => {
+  const pars: string[] = [];
+  for (const item in data) {
     pars.push(item + "=" + encodeURIComponent(data[item]));
   }
-  var p = pars.sort().join("&");
-  var meta = [method, baseurl, path, p].join("\n");
-  console.log(meta);
-  var hash = HmacSHA256(meta, process.env.CRYPTO_SECRET_KEY);
-  var Signature = encodeURIComponent(CryptoJS.enc.Base64.stringify(hash));
-  console.log(`Signature: ${Signature}`);
-  p += `&Signature=${Signature}`;
-  console.log(p);
-  return p;
+  const p = pars.sort().join("&");
+  const meta = [method, baseurl, path, p].join("\n");
+  const hash = HmacSHA256(meta, process.env.CRYPTO_SECRET_KEY || '');
+  const signature = encodeURIComponent(CryptoJS.enc.Base64.stringify(hash));
+  return `${p}&Signature=${signature}`;
 };
 
 export default sign_sha;
