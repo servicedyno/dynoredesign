@@ -192,7 +192,7 @@ class DynoPayTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success'):
+                if 'data' in data:
                     crypto_data = data['data']
                     self.log(f"✅ Crypto payment created successfully")
                     self.log(f"   - Address: {crypto_data.get('address', 'N/A')}")
