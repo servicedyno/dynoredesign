@@ -1987,6 +1987,7 @@ export default {
   getAddressBalance,
   validateTronAddress,
   getCurrentPaymentStatus,
+  getIncomingTransactions,
   encryptSymmetric,
   decryptSymmetric,
   waitForTransactionConfirmation,
