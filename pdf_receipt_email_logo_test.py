@@ -23,7 +23,7 @@ import base64
 import re
 
 # Configuration
-BACKEND_URL = "https://dependency-hub-5.preview.emergentagent.com"
+BACKEND_URL = "https://dep-setup-5.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Test credentials

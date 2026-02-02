@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://dependency-hub-5.preview.emergentagent.com/api/docs
+Go to: https://dep-setup-5.preview.emergentagent.com/api/docs
 
 ---
 
