@@ -191,7 +191,7 @@ class BlockBeeWebhookTester:
                     self.log_test(
                         "User Authentication", 
                         False, 
-                        "No token in response"
+                        "No access token in response"
                     )
                     return False
             else:
