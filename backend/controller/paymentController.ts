@@ -4159,19 +4159,30 @@ const createPaymentLink = async (
       }
     }
     
-    // Phase 10 Fix: If company_id not provided, default to user's first company
-    let resolvedCompanyId = company_id;
-    if (!resolvedCompanyId) {
-      const userDefaultCompany = await companyModel.findOne({
-        where: { user_id: userData.user_id },
-        order: [['createdAt', 'ASC']]  // Get the first/oldest company
+    // company_id is REQUIRED - validate it exists
+    if (!company_id) {
+      return res.status(400).json({
+        message: "company_id is required. Please specify which company this payment link belongs to.",
+        error: "COMPANY_ID_REQUIRED"
       });
-      
-      if (userDefaultCompany) {
-        resolvedCompanyId = userDefaultCompany.dataValues.company_id;
-        console.log(`[createPaymentLink] No company_id provided, defaulting to user's first company: ${resolvedCompanyId}`);
-      }
     }
+    
+    // Verify the company belongs to this user
+    const userCompany = await companyModel.findOne({
+      where: { 
+        company_id: company_id,
+        user_id: userData.user_id 
+      }
+    });
+    
+    if (!userCompany) {
+      return res.status(400).json({
+        message: "Invalid company_id. The specified company does not exist or does not belong to you.",
+        error: "INVALID_COMPANY_ID"
+      });
+    }
+    
+    console.log(`[createPaymentLink] Using company_id: ${company_id} for user: ${userData.user_id}`);
     
     // Default modes if not provided
     const allowedModes = modes ? modes.join(",") : "crypto,card";
@@ -4184,7 +4195,7 @@ const createPaymentLink = async (
       base_currency: normalizedCurrency,
       user_id: userData.user_id,
       adm_id: userData.user_id,  // Add adm_id for crypto payment compatibility
-      company_id: resolvedCompanyId || null,  // Phase 10 Fix: Include company_id (defaults to first company)
+      company_id: company_id,  // REQUIRED field
       payment_link: (process.env.CHECKOUT_URL || '').replace(/\/$/, '') + "/pay?d=" + uniqueRef,
       description: description || null,
       expires_at: expires_at,
