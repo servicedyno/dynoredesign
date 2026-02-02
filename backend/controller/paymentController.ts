@@ -2657,8 +2657,9 @@ const verifyCryptoPayment = async (
     let remainingSeconds = 15 * 60; // Default 15 minutes
     let gracePeriodMinutes = 30; // Default grace period for underpayment completion
     
-    // Default merchant settings - $5 overpayment threshold if merchant didn't set it
-    let merchantOverpaymentThreshold = 5; // Default $5
+    // Default merchant settings
+    let merchantOverpaymentThreshold = 5; // Default $5 overpayment threshold
+    let merchantUnderpaymentThreshold = 1; // Default $1 underpayment threshold
     
     // Try to fetch merchant-specific settings from company
     if (customerData?.company_id || tempData?.company_id) {
@@ -2669,6 +2670,10 @@ const verifyCryptoPayment = async (
         if (company?.dataValues?.overpayment_threshold_usd !== undefined && 
             company?.dataValues?.overpayment_threshold_usd !== null) {
           merchantOverpaymentThreshold = parseFloat(company.dataValues.overpayment_threshold_usd);
+        }
+        if (company?.dataValues?.underpayment_threshold_usd !== undefined && 
+            company?.dataValues?.underpayment_threshold_usd !== null) {
+          merchantUnderpaymentThreshold = parseFloat(company.dataValues.underpayment_threshold_usd);
         }
         if (company?.dataValues?.grace_period_minutes !== undefined && 
             company?.dataValues?.grace_period_minutes !== null) {
@@ -2681,6 +2686,7 @@ const verifyCryptoPayment = async (
     
     const merchantSettings = {
       overpayment_threshold_usd: merchantOverpaymentThreshold,
+      underpayment_threshold_usd: merchantUnderpaymentThreshold,
       grace_period_minutes: gracePeriodMinutes,
     };
     
