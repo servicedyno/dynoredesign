@@ -2278,6 +2278,7 @@ export const checkMissedPayments = async (): Promise<{
 
     console.log(`[MerchantPool] ✅ Missed payment check complete:`);
     console.log(`[MerchantPool]   - Checked: ${result.checked}`);
+    console.log(`[MerchantPool]   - Skipped (too recent): ${result.skippedTooRecent}`);
     console.log(`[MerchantPool]   - Already processed: ${result.alreadyProcessed}`);
     console.log(`[MerchantPool]   - Missed found: ${result.found}`);
     console.log(`[MerchantPool]   - Successfully processed: ${result.processed}`);
