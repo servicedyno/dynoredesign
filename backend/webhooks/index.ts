@@ -537,17 +537,52 @@ const tatumCryptoWebHook = async (
       const isUnderpayment = totalReceivedAmount < expectedAmount && expectedAmount > 0;
       const isOverpayment = totalReceivedAmount > expectedAmount && expectedAmount > 0;
       
+      // Calculate underpayment amount in USD for threshold comparison
+      let underpaymentAmountUsd = 0;
+      let underpaymentThresholdUsd = 1; // Default $1 threshold
+      
+      if (isUnderpayment) {
+        const shortfallCrypto = expectedAmount - totalReceivedAmount;
+        // Calculate USD value of shortfall using base amount ratio
+        const baseAmountUsd = parseFloat(items?.base_amount || customerData?.base_amount || '0');
+        if (baseAmountUsd > 0 && expectedAmount > 0) {
+          underpaymentAmountUsd = (shortfallCrypto / expectedAmount) * baseAmountUsd;
+        }
+        
+        // Fetch merchant's underpayment threshold if set
+        if (customerData?.company_id) {
+          try {
+            const { companyModel } = await import("../models");
+            const company = await companyModel.findOne({
+              where: { company_id: customerData.company_id }
+            });
+            if (company?.dataValues?.underpayment_threshold_usd !== undefined && 
+                company?.dataValues?.underpayment_threshold_usd !== null) {
+              underpaymentThresholdUsd = parseFloat(company.dataValues.underpayment_threshold_usd);
+            }
+          } catch (e) {
+            console.log("[tatumCryptoWebHook] Could not fetch underpayment threshold:", e);
+          }
+        }
+      }
+      
+      // Check if underpayment is within acceptable threshold (treat as full payment)
+      const isMinorUnderpayment = isUnderpayment && underpaymentAmountUsd <= underpaymentThresholdUsd;
+      
       console.log(`[tatumCryptoWebHook] Payment analysis:
         - Expected: ${expectedAmount} ${items?.currency || payload.asset}
         - Received (this payment): ${incomingAmount} ${items?.currency || payload.asset}
         - Total Received: ${totalReceivedAmount} ${items?.currency || payload.asset}
         - Is Underpayment: ${isUnderpayment}
-        - Is Overpayment: ${isOverpayment}`);
+        - Is Overpayment: ${isOverpayment}
+        - Underpayment USD: $${underpaymentAmountUsd.toFixed(2)}
+        - Underpayment Threshold: $${underpaymentThresholdUsd}
+        - Is Minor Underpayment (within threshold): ${isMinorUnderpayment}`);
       
       // UNDERPAYMENT: Set incomplete flag and DON'T process as full payment
-      // This allows the checkout page to display the underpayment screen
-      if (isUnderpayment) {
-        console.log("[tatumCryptoWebHook] UNDERPAYMENT detected - setting incomplete flag");
+      // UNLESS it's within the acceptable threshold
+      if (isUnderpayment && !isMinorUnderpayment) {
+        console.log("[tatumCryptoWebHook] UNDERPAYMENT detected (exceeds threshold) - setting incomplete flag");
         
         const remainingAmount = expectedAmount - totalReceivedAmount;
         
