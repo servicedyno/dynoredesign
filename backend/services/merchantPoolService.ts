@@ -2204,7 +2204,28 @@ export const checkMissedPayments = async (): Promise<{
         console.log(`[MerchantPool]   - Payment ID: ${currentPaymentId || 'N/A'}`);
         console.log(`[MerchantPool]   - Reserved ${minutesSinceReserved.toFixed(1)} min ago`);
         
-        // Step 5: Fetch actual transaction from blockchain
+        // Step 5: Check if this is an UNDERPAYMENT that needs more time
+        // Allow 1% tolerance for blockchain fee variations
+        const tolerance = expectedAmount * 0.01;
+        const isUnderpayment = balance < (expectedAmount - tolerance);
+        
+        if (isUnderpayment && minutesSinceReserved < 25) {
+          // Payment link typically has 30 min expiry - wait until closer to expiry
+          console.log(`[MerchantPool] ⏸️ UNDERPAYMENT detected - waiting for customer to send remaining`);
+          console.log(`[MerchantPool]    - Received: ${balance} ${walletType}`);
+          console.log(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
+          console.log(`[MerchantPool]    - Shortfall: ${(expectedAmount - balance).toFixed(8)} ${walletType}`);
+          console.log(`[MerchantPool]    - Reserved ${minutesSinceReserved.toFixed(1)} min ago (waiting until 25 min)`);
+          result.skippedTooRecent++;
+          continue;
+        }
+        
+        if (isUnderpayment) {
+          console.log(`[MerchantPool] ⚠️ UNDERPAYMENT - processing as partial (reservation expired)`);
+          console.log(`[MerchantPool]    - Received: ${balance} ${walletType} (${((balance/expectedAmount)*100).toFixed(1)}% of expected)`);
+        }
+        
+        // Step 6: Fetch actual transaction from blockchain
         console.log(`[MerchantPool] 🔄 Fetching transaction details from blockchain...`);
         const incomingTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 5);
         
@@ -2214,11 +2235,16 @@ export const checkMissedPayments = async (): Promise<{
           continue;
         }
 
-        // Get the most recent transaction
+        // Get the most recent transaction (or sum all if multiple partial payments)
         const latestTx = incomingTxs[0];
-        console.log(`[MerchantPool] 📝 Found transaction: txId=${latestTx.txId}, amount=${latestTx.amount} ${walletType}`);
+        
+        // Calculate total received from all transactions (in case of multiple partial payments)
+        const totalFromTxs = incomingTxs.reduce((sum, tx) => sum + tx.amount, 0);
+        console.log(`[MerchantPool] 📝 Found ${incomingTxs.length} transaction(s): latest txId=${latestTx.txId}`);
+        console.log(`[MerchantPool]    - Latest tx amount: ${latestTx.amount} ${walletType}`);
+        console.log(`[MerchantPool]    - Total from all txs: ${totalFromTxs} ${walletType}`);
 
-        // Step 6: Check if this txId was already processed (duplicate prevention)
+        // Step 7: Check if this txId was already processed (duplicate prevention)
         const processedTxKey = `processed-tx-${latestTx.txId}`;
         const alreadyProcessedTx = await getRedisItem(processedTxKey);
         if (alreadyProcessedTx && Object.keys(alreadyProcessedTx).length > 0) {
@@ -2227,7 +2253,7 @@ export const checkMissedPayments = async (): Promise<{
           continue;
         }
 
-        // Step 7: Validate Redis data exists for this payment
+        // Step 8: Validate Redis data exists for this payment
         if (!redisData || Object.keys(redisData).length === 0) {
           console.log(`[MerchantPool] ⚠️ No Redis data for ${walletAddress}, attempting to reconstruct...`);
           
