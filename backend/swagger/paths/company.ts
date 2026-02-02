@@ -83,6 +83,20 @@
  *                 type: string
  *                 format: binary
  *                 description: Company logo (optional, PNG/JPG)
+ *               overpayment_threshold_usd:
+ *                 type: number
+ *                 format: float
+ *                 description: '💰 Min overpayment (USD) to trigger special handling. Default: $5.00'
+ *                 example: 5.00
+ *               underpayment_threshold_usd:
+ *                 type: number
+ *                 format: float
+ *                 description: '💰 Max underpayment (USD) to accept as full payment. Default: $1.00'
+ *                 example: 1.00
+ *               grace_period_minutes:
+ *                 type: integer
+ *                 description: '⏱️ Time (minutes) for partial payment completion. Default: 30'
+ *                 example: 30
  *     responses:
  *       200:
  *         description: Company created successfully
