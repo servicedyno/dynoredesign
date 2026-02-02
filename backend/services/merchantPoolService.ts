@@ -1966,7 +1966,7 @@ export const ensurePoolSubscriptions = async (): Promise<{
 
 /**
  * Fallback mechanism to check for missed payments when webhooks fail
- * Runs every 5 minutes to detect payments that may have been missed
+ * Runs every 5 minutes to detect AND PROCESS payments that may have been missed
  * 
  * LOGIC:
  * 1. Only check addresses with status='RESERVED' (awaiting payment)
@@ -1975,7 +1975,10 @@ export const ensurePoolSubscriptions = async (): Promise<{
  *    - Redis for existing txId (webhook already fired)
  *    - Database for completed transaction records
  *    - Address status (IN_USE means already being processed)
- * 4. Only flag as "missed" if balance exists AND no processing evidence found
+ * 4. If genuine missed payment found:
+ *    - Fetch actual transaction from blockchain (get txId, amount)
+ *    - Update Redis with transaction data
+ *    - Call cryptoVerification to distribute funds to merchant/admin
  */
 export const checkMissedPayments = async (): Promise<{
   checked: number;
@@ -2023,6 +2026,8 @@ export const checkMissedPayments = async (): Promise<{
       const walletType = addr.dataValues.wallet_type;
       const currentPaymentId = addr.dataValues.current_payment_id;
       const expectedAmount = parseFloat(addr.dataValues.expected_amount || '0');
+      const ownerId = addr.dataValues.owner_user_id;
+      const companyId = addr.dataValues.current_company_id;
       const reservedUntil = addr.dataValues.reserved_until ? new Date(addr.dataValues.reserved_until) : null;
       const now = new Date();
       
@@ -2056,7 +2061,7 @@ export const checkMissedPayments = async (): Promise<{
         console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${balance} ${walletType}`);
 
         // Step 2: Check if webhook already processed this (Redis has txId)
-        const redisData = await getRedisItem("crypto-" + walletAddress);
+        let redisData = await getRedisItem("crypto-" + walletAddress);
         if (redisData?.txId) {
           console.log(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
           result.alreadyProcessed++;
@@ -2103,43 +2108,154 @@ export const checkMissedPayments = async (): Promise<{
           }
         }
 
-        // If we reach here: balance > 0, no txId in Redis, no completed DB record
-        // THIS IS A GENUINE MISSED PAYMENT
+        // ============================================
+        // GENUINE MISSED PAYMENT DETECTED - PROCESS IT
+        // ============================================
         result.found++;
         console.log(`[MerchantPool] ⚠️ MISSED PAYMENT DETECTED: ${walletAddress}`);
         console.log(`[MerchantPool]   - Balance: ${balance} ${walletType}`);
         console.log(`[MerchantPool]   - Expected: ${expectedAmount} ${walletType}`);
         console.log(`[MerchantPool]   - Payment ID: ${currentPaymentId || 'N/A'}`);
         console.log(`[MerchantPool]   - Reserved ${minutesSinceReserved.toFixed(1)} min ago`);
-        console.log(`[MerchantPool]   - Webhook likely failed! Manual intervention may be needed.`);
         
-        // Log for alerting
-        cronLogger?.info?.("MISSED PAYMENT - Webhook likely failed", {
+        // Step 5: Fetch actual transaction from blockchain
+        console.log(`[MerchantPool] 🔄 Fetching transaction details from blockchain...`);
+        const incomingTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 5);
+        
+        if (!incomingTxs || incomingTxs.length === 0) {
+          console.log(`[MerchantPool] ❌ No incoming transactions found despite balance > 0. Skipping.`);
+          result.errors.push(`No transactions found for ${walletAddress} despite balance ${balance}`);
+          continue;
+        }
+
+        // Get the most recent transaction
+        const latestTx = incomingTxs[0];
+        console.log(`[MerchantPool] 📝 Found transaction: txId=${latestTx.txId}, amount=${latestTx.amount} ${walletType}`);
+
+        // Step 6: Check if this txId was already processed (duplicate prevention)
+        const processedTxKey = `processed-tx-${latestTx.txId}`;
+        const alreadyProcessedTx = await getRedisItem(processedTxKey);
+        if (alreadyProcessedTx && Object.keys(alreadyProcessedTx).length > 0) {
+          console.log(`[MerchantPool] ⏭️ Transaction ${latestTx.txId} already processed previously. Skipping.`);
+          result.alreadyProcessed++;
+          continue;
+        }
+
+        // Step 7: Validate Redis data exists for this payment
+        if (!redisData || Object.keys(redisData).length === 0) {
+          console.log(`[MerchantPool] ⚠️ No Redis data for ${walletAddress}, attempting to reconstruct...`);
+          
+          // Try to reconstruct minimal Redis data from pool address info
+          redisData = {
+            mode: 'CRYPTO',
+            amount: expectedAmount,
+            status: 'pending',
+            currency: walletType,
+            payment_id: currentPaymentId,
+            is_merchant_pool: 'true',
+            adm_id: ownerId,
+            company_id: companyId,
+          };
+          
+          // Check if we have customer ref data
+          const customerRef = `customer-${currentPaymentId}`;
+          let customerData = await getRedisItem(customerRef);
+          
+          if (!customerData || Object.keys(customerData).length === 0) {
+            // Reconstruct customer data from pool address
+            customerData = {
+              adm_id: ownerId,
+              company_id: companyId,
+              base_currency: 'USD',
+            };
+            await setRedisItem(customerRef, customerData);
+            console.log(`[MerchantPool] 📝 Reconstructed customer data: ${customerRef}`);
+          }
+          
+          redisData.ref = customerRef;
+        }
+
+        // Step 8: Update Redis with transaction data (mimic webhook behavior)
+        const receivedAmount = latestTx.amount;
+        const updatedRedisData = {
+          ...redisData,
+          status: 'processing',
+          receivedAmount: receivedAmount,
+          txId: latestTx.txId,
+          originalExpectedAmount: expectedAmount,
+          retryCount: '0',
+          lastAttempt: new Date().toISOString(),
+          processedByFallback: 'true',  // Mark that this was processed by fallback
+        };
+        
+        await setRedisItem("crypto-" + walletAddress, updatedRedisData);
+        console.log(`[MerchantPool] 📝 Updated Redis with txId: ${latestTx.txId}`);
+
+        // Step 9: Mark txId as processed to prevent duplicates
+        await setRedisItem(processedTxKey, {
           address: walletAddress,
-          currency: walletType,
-          balance,
-          expectedAmount,
-          paymentId: currentPaymentId,
-          minutesSinceReserved,
-          tempAddressId: addr.dataValues.temp_address_id,
-          ownerId: addr.dataValues.owner_user_id,
-          companyId: addr.dataValues.current_company_id,
+          amount: receivedAmount,
+          processedAt: new Date().toISOString(),
+          processedBy: 'checkMissedPayments',
         });
+
+        // Step 10: Call cryptoVerification to process the payment
+        console.log(`[MerchantPool] 🚀 Processing missed payment via cryptoVerification...`);
         
-        result.processed++;
+        try {
+          const verificationResult = await paymentController.cryptoVerification(walletAddress, true);
+          
+          if (verificationResult?.duplicate) {
+            console.log(`[MerchantPool] ⏭️ Payment was already processed (duplicate detected)`);
+            result.alreadyProcessed++;
+          } else if (verificationResult?.status === 200 || verificationResult?.paymentStatus === 'completed') {
+            console.log(`[MerchantPool] ✅ MISSED PAYMENT SUCCESSFULLY PROCESSED!`);
+            console.log(`[MerchantPool]   - Address: ${walletAddress}`);
+            console.log(`[MerchantPool]   - Amount: ${receivedAmount} ${walletType}`);
+            console.log(`[MerchantPool]   - TxId: ${latestTx.txId}`);
+            result.processed++;
+            
+            // Log success for alerting
+            cronLogger?.info?.("MISSED PAYMENT RECOVERED", {
+              address: walletAddress,
+              currency: walletType,
+              amount: receivedAmount,
+              txId: latestTx.txId,
+              expectedAmount,
+              ownerId,
+              companyId,
+            });
+          } else {
+            console.log(`[MerchantPool] ⚠️ cryptoVerification returned:`, verificationResult);
+            result.errors.push(`Verification returned unexpected result for ${walletAddress}`);
+          }
+        } catch (verifyError: any) {
+          // Check if it's an expected "throw" for incomplete payments
+          if (verifyError?.paymentStatus === 'incomplete') {
+            console.log(`[MerchantPool] 📋 Partial payment detected - ${verifyError.amount} ${walletType} remaining`);
+            result.processed++;
+          } else {
+            console.error(`[MerchantPool] ❌ cryptoVerification failed:`, verifyError.message || verifyError);
+            result.errors.push(`Verification failed for ${walletAddress}: ${verifyError.message || 'Unknown error'}`);
+          }
+        }
         
-      } catch (error) {
-        console.error(`[MerchantPool] ❌ Error checking ${walletAddress}:`, error.message);
-        result.errors.push(`Check failed for ${walletAddress}: ${error.message}`);
+      } catch (error: any) {
+        console.error(`[MerchantPool] ❌ Error processing ${walletAddress}:`, error.message);
+        result.errors.push(`Processing failed for ${walletAddress}: ${error.message}`);
       }
     }
 
     console.log(`[MerchantPool] ✅ Missed payment check complete:`);
     console.log(`[MerchantPool]   - Checked: ${result.checked}`);
     console.log(`[MerchantPool]   - Already processed: ${result.alreadyProcessed}`);
-    console.log(`[MerchantPool]   - Missed payments found: ${result.found}`);
+    console.log(`[MerchantPool]   - Missed found: ${result.found}`);
+    console.log(`[MerchantPool]   - Successfully processed: ${result.processed}`);
+    if (result.errors.length > 0) {
+      console.log(`[MerchantPool]   - Errors: ${result.errors.length}`);
+    }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error("[MerchantPool] ❌ Missed payment check failed:", error.message);
     result.errors.push(`Global error: ${error.message}`);
   }
