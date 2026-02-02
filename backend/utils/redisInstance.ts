@@ -159,6 +159,12 @@ const deleteRedisItem = async (key: string) => {
   await redisClient.del(key + ':json');
 };
 
+// Invalidate memory cache only (useful when external process updates Redis)
+const invalidateCache = (key: string) => {
+  memoryCache.delete(key);
+  console.log(`[MemoryCache] INVALIDATED ${key}`);
+};
+
 // Soft delete - set TTL instead of immediate deletion (for checkout polling)
 const softDeleteRedisItem = async (key: string, ttlSeconds: number = 1800) => {
   // Default 30 minutes TTL to allow checkout to poll for status
@@ -169,4 +175,4 @@ const softDeleteRedisItem = async (key: string, ttlSeconds: number = 1800) => {
   console.log(`[Redis] Soft delete: ${key} will expire in ${ttlSeconds}s`);
 };
 
-export { setRedisItem, setRedisItemWithTTL, setRedisTTL, getRedisItem, deleteRedisItem, softDeleteRedisItem, setMemoryCache, getMemoryCache };
+export { setRedisItem, setRedisItemWithTTL, setRedisTTL, getRedisItem, deleteRedisItem, softDeleteRedisItem, setMemoryCache, getMemoryCache, invalidateCache };
