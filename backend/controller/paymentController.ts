@@ -2759,6 +2759,9 @@ const verifyCryptoPayment = async (
         responseData.excessAmount = parseFloat(overpaymentAmount.toFixed(6));
       }
 
+      // DEBUG: Log the exact response being sent
+      console.log("[verifyCryptoPayment] Sending CONFIRMED response:", JSON.stringify(responseData, null, 2));
+
       return successResponseHelper(res, 200, responseData.message, responseData);
     }
     
