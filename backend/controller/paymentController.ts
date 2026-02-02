@@ -294,6 +294,12 @@ const getData = async (req: express.Request, res: express.Response) => {
     
     // Get company info if company_id exists
     let companyInfo: any = null;
+    let paymentSettings: any = {
+      initial_window_minutes: 15,      // Default: 15 minutes to pay after selecting crypto
+      grace_period_minutes: 30,        // Default: 30 minutes to complete partial payment
+      overpayment_threshold_usd: 5,    // Default: $5 minimum overpayment to handle
+    };
+    
     if (item.company_id) {
       try {
         const company = await companyModel.findByPk(item.company_id);
@@ -303,6 +309,14 @@ const getData = async (req: express.Request, res: express.Response) => {
             company_name: companyData.company_name || null,
             company_logo: companyData.photo || null,  // Only include if available
           };
+          
+          // Override defaults with company-specific settings if configured
+          if (companyData.grace_period_minutes !== undefined && companyData.grace_period_minutes !== null) {
+            paymentSettings.grace_period_minutes = parseInt(companyData.grace_period_minutes);
+          }
+          if (companyData.overpayment_threshold_usd !== undefined && companyData.overpayment_threshold_usd !== null) {
+            paymentSettings.overpayment_threshold_usd = parseFloat(companyData.overpayment_threshold_usd);
+          }
         }
       } catch (companyError) {
         console.warn(`[getData] Failed to fetch company info:`, companyError);
