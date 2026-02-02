@@ -802,44 +802,44 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
                 'Standard Response (No Tax)': {
                   summary: 'Crypto address without tax',
                   value: {
-                    message: 'Crypto payment initiated',
+                    message: 'Payment created successfully',
                     data: {
-                      deposit_address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
-                      crypto_currency: 'BTC',
-                      crypto_amount: 0.00456789,
-                      usd_amount: 199.99,
-                      exchange_rate: 43750.00,
+                      hash: 'customer-a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                      address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+                      amount: 0.00456789,
                       base_amount: 199.99,
                       base_currency: 'USD',
+                      rate: 0.0000228,
                       merchant_amount: 0.00306,
                       fees: 0.00151,
                       fee_payer: 'company',
                       qr_code: 'data:image/png;base64,iVBORw0KGgo...',
-                      expires_at: '2024-01-15T11:30:00Z',
-                      confirmations_required: 1,
-                      network: 'Bitcoin Mainnet'
+                      transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                      temp_id: 1,
+                      is_merchant_pool: true,
+                      remaining_minutes: 15
                     }
                   }
                 },
                 'With Tax (Portuguese Customer)': {
                   summary: 'Crypto amount includes 23% VAT',
                   value: {
-                    message: 'Crypto payment initiated',
+                    message: 'Payment created successfully',
                     data: {
-                      deposit_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE4E',
-                      crypto_currency: 'ETH',
-                      crypto_amount: 0.0615,
-                      usd_amount: 123.00,
-                      exchange_rate: 2000.00,
+                      hash: 'customer-a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                      address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE4E',
+                      amount: 0.0615,
                       base_amount: 100.00,
                       base_currency: 'EUR',
+                      rate: 0.0005,
                       merchant_amount: 0.0515,
                       fees: 0.01,
                       fee_payer: 'company',
                       qr_code: 'data:image/png;base64,iVBORw0KGgo...',
-                      expires_at: '2024-01-15T11:30:00Z',
-                      confirmations_required: 12,
-                      network: 'Ethereum Mainnet',
+                      transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                      temp_id: 2,
+                      is_merchant_pool: true,
+                      remaining_minutes: 15,
                       tax_info: {
                         tax_amount: 23.00,
                         tax_amount_crypto: 0.0115,
@@ -853,21 +853,22 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
                 'USDT-TRC20 Response': {
                   summary: 'USDT TRC20 deposit address',
                   value: {
-                    message: 'Crypto payment initiated',
+                    message: 'Payment created successfully',
                     data: {
-                      deposit_address: 'TN7cWz1s5p5XKT8KJhKjZ8EWPH4v8hGhqN',
-                      crypto_currency: 'USDT-TRC20',
-                      crypto_amount: 199.99,
-                      usd_amount: 199.99,
-                      exchange_rate: 1.00,
+                      hash: 'customer-a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                      address: 'TN7cWz1s5p5XKT8KJhKjZ8EWPH4v8hGhqN',
+                      amount: 199.99,
                       base_amount: 199.99,
                       base_currency: 'USD',
+                      rate: 1.00,
                       merchant_amount: 133.99,
                       fees: 66.00,
                       fee_payer: 'company',
                       qr_code: 'data:image/png;base64,iVBORw0KGgo...',
-                      expires_at: '2024-01-15T11:30:00Z',
-                      confirmations_required: 20,
+                      transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                      temp_id: 3,
+                      is_merchant_pool: true,
+                      remaining_minutes: 15,
                       network: 'Tron (TRC20)'
                     }
                   }
