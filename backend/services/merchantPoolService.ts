@@ -1904,7 +1904,7 @@ export const ensurePoolSubscriptions = async (): Promise<{
 
       // Case 2: Subscription exists in Tatum but DB has wrong/null ID
       if (activeSub && dbSubId !== activeSub.id) {
-        console.log(`[MerchantPool] 🔄 Updating subscription ID for ${walletAddress}: ${dbSubId} -> ${activeSub.id}`);
+        console.log(`[MerchantPool] 🔄 Updating subscription ID for ${walletAddressOriginal}: ${dbSubId} -> ${activeSub.id}`);
         await addr.update({ subscription_id: activeSub.id });
         result.valid++;
         continue;
@@ -1912,10 +1912,11 @@ export const ensurePoolSubscriptions = async (): Promise<{
 
       // Case 3: No subscription in Tatum - need to create one
       if (!activeSub) {
-        console.log(`[MerchantPool] ⚠️ Missing subscription for ${walletAddress} (${walletType}), creating...`);
+        console.log(`[MerchantPool] ⚠️ Missing subscription for ${walletAddressOriginal} (${walletType}), creating...`);
         
         try {
-          const newSub = await tatumApi.createSubscription(walletAddress, walletType, true);
+          // IMPORTANT: Use original case address for Tatum API - addresses are case-sensitive!
+          const newSub = await tatumApi.createSubscription(walletAddressOriginal, walletType, true);
           
           if (newSub?.id) {
             await addr.update({ subscription_id: newSub.id });
