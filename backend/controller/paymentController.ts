@@ -3376,23 +3376,35 @@ const cryptoVerification = async (address, webhook = true) => {
         try {
           const adminEmail = process.env.ADMIN_EMAIL;
           if (adminEmail && adminAmountToSend > 0) {
-            const isUnderThreshold = userAmountToSend === 0 && adminAmountToSend === Number(totalAmountReceived);
+            // RACE CONDITION FIX: Check if admin fee email already sent for this transaction
+            const adminFeeEmailKey = `admin-fee-email-${transactionId}`;
+            const adminFeeEmailSent = await getRedisItem(adminFeeEmailKey);
             
-            await sendAdminFeeReceivedEmail(
-              adminEmail,
-              "DynoPay Admin",
-              Number(adminAmountToSend).toFixed(8),
-              tempCurrency,
-              transactionId,
-              company_data?.company_name || "Unknown Company",
-              Number(userAmountToSend).toFixed(8),
-              Number(totalAmountReceived).toFixed(8)
-            );
-            
-            if (isUnderThreshold) {
-              console.log(`[Admin Fee Notification - UNDER THRESHOLD] Sent email: ${adminAmountToSend} ${tempCurrency} (100%) from Company ${company_data?.company_id || 'N/A'} - Payment below minimum threshold`);
+            if (adminFeeEmailSent && adminFeeEmailSent.sent) {
+              console.log(`[Admin Fee Notification] Email already sent for tx: ${transactionId}, skipping duplicate`);
             } else {
-              console.log(`[Admin Fee Notification] Sent email for ${adminAmountToSend} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
+              // Set flag immediately to prevent duplicates
+              await setRedisItem(adminFeeEmailKey, { sent: true, sentAt: new Date().toISOString() });
+              await setRedisTTL(adminFeeEmailKey, 86400); // 24 hour TTL
+              
+              const isUnderThreshold = userAmountToSend === 0 && adminAmountToSend === Number(totalAmountReceived);
+              
+              await sendAdminFeeReceivedEmail(
+                adminEmail,
+                "DynoPay Admin",
+                Number(adminAmountToSend).toFixed(8),
+                tempCurrency,
+                transactionId,
+                company_data?.company_name || "Unknown Company",
+                Number(userAmountToSend).toFixed(8),
+                Number(totalAmountReceived).toFixed(8)
+              );
+              
+              if (isUnderThreshold) {
+                console.log(`[Admin Fee Notification - UNDER THRESHOLD] Sent email: ${adminAmountToSend} ${tempCurrency} (100%) from Company ${company_data?.company_id || 'N/A'} - Payment below minimum threshold`);
+              } else {
+                console.log(`[Admin Fee Notification] Sent email for ${adminAmountToSend} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
+              }
             }
           }
         } catch (emailError) {
