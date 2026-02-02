@@ -1,5 +1,5 @@
 export const transactionPaths = {
-  "/user/getBalance": {
+  "/api/user/getBalance": {
     get: {
       tags: ["3. Status"],
       summary: "Get wallet balance",
@@ -29,7 +29,7 @@ export const transactionPaths = {
       },
     },
   },
-  "/user/getTransactions": {
+  "/api/user/getTransactions": {
     get: {
       tags: ["3. Status"],
       summary: "List transactions",
@@ -66,7 +66,7 @@ export const transactionPaths = {
       },
     },
   },
-  "/user/getSingleTransaction/{id}": {
+  "/api/user/getSingleTransaction/{id}": {
     get: {
       tags: ["3. Status"],
       summary: "Get transaction details",
@@ -119,7 +119,7 @@ export const transactionPaths = {
       },
     },
   },
-  "/user/getCryptoTransaction/{address}": {
+  "/api/user/getCryptoTransaction/{address}": {
     get: {
       tags: ["3. Status"],
       summary: "Check payment status",

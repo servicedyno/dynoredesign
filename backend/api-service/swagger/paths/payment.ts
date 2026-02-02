@@ -100,7 +100,7 @@ export const paymentPaths = {
       },
     },
   },
-  "/user/createPayment": {
+  "/api/user/createPayment": {
     post: {
       tags: ["2. Payments"],
       summary: "Create checkout link",
@@ -188,7 +188,7 @@ export const paymentPaths = {
       },
     },
   },
-  "/user/addFunds": {
+  "/api/user/addFunds": {
     post: {
       tags: ["3. Status"],
       summary: "Add funds to wallet",
@@ -232,7 +232,7 @@ export const paymentPaths = {
       },
     },
   },
-  "/user/useWallet": {
+  "/api/user/useWallet": {
     post: {
       tags: ["3. Status"],
       summary: "Deduct from wallet",
