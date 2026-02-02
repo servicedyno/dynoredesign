@@ -7,6 +7,19 @@
 user_problem_statement: "Phase 12 - Incomplete Payment Currency Lock + Processing Fee Display Fixes. Comprehensive testing of: (1) Payment confirmation and fund distribution, (2) Email notifications to merchant/admin/customer, (3) Fee payer modes (customer vs company), (4) Tax enabled/disabled scenarios, (5) Underpayment handling, (6) Payment link updates, (7) Incomplete payment currency lock mechanism."
 
 current_test_task:
+  - task: "Callback URL, Webhook URL, and Redirect URL Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/api-service/controller/index.ts, /app/backend/controller/paymentController.ts, /app/backend/webhooks/index.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test callback_url, webhook_url, and redirect_url functionality for both Direct API and Payment Link flows. Test scope: (1) Direct API (cryptoPayment) accepts and stores callback_url/webhook_url in Redis, (2) Payment Link creation stores callback_url/webhook_url/redirect_url in database AND Redis, (3) callMerchantWebhook retrieves URLs correctly from payment_link or company settings, (4) getData returns redirect_url to frontend, (5) Verify URL hierarchy: per-payment > API key config > company default. Credentials: john@dyno.pt / Katiekendra123@, company_id: 38."
+
+previous_test_tasks:
   - task: "Payment Confirmation and Fund Distribution Testing"
     implemented: true
     working: true
