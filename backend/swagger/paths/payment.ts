@@ -588,7 +588,8 @@ When \`apply_tax: true\` was set during payment link creation:
                       payment_settings: {
                         initial_window_minutes: 15,
                         grace_period_minutes: 30,
-                        overpayment_threshold_usd: 5
+                        overpayment_threshold_usd: 5,
+                        underpayment_threshold_usd: 1
                       },
                       fee_info: {
                         fee_payer: 'company'
@@ -631,7 +632,8 @@ When \`apply_tax: true\` was set during payment link creation:
                       payment_settings: {
                         initial_window_minutes: 15,
                         grace_period_minutes: 30,
-                        overpayment_threshold_usd: 5
+                        overpayment_threshold_usd: 5,
+                        underpayment_threshold_usd: 1
                       },
                       fee_info: {
                         fee_payer: 'company'
