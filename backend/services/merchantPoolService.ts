@@ -1942,7 +1942,7 @@ export const ensurePoolSubscriptions = async (): Promise<{
           
           console.error(`[MerchantPool] ❌ Failed to create subscription for ${walletAddressOriginal}: ${subError.message}`);
           result.failed++;
-          result.errors.push(`${walletAddress}: ${subError.message}`);
+          result.errors.push(`${walletAddressOriginal}: ${subError.message}`);
         }
       }
     }
