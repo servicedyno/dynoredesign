@@ -34,6 +34,7 @@ const allPaths = {
   ...companyPaths,
   ...taxPaths,
   ...kycPaths,
+  ...directApiPaths,
 };
 
 const options: swaggerJsdoc.Options = {
