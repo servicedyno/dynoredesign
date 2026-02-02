@@ -89,15 +89,15 @@ class DynoPayTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success'):
+                if 'data' in data:
                     payment_data = data['data']
                     self.log(f"✅ Payment link created successfully")
                     self.log(f"   - Link ID: {payment_data.get('link_id')}")
                     self.log(f"   - Transaction ID: {payment_data.get('transaction_id')}")
-                    self.log(f"   - Payment URL: {payment_data.get('payment_url', 'N/A')}")
+                    self.log(f"   - Payment URL: {payment_data.get('payment_link', 'N/A')}")
                     
                     # Extract reference from payment URL
-                    payment_url = payment_data.get('payment_url', '')
+                    payment_url = payment_data.get('payment_link', '')
                     if '?d=' in payment_url:
                         reference = payment_url.split('?d=')[1]
                         payment_data['reference'] = reference
