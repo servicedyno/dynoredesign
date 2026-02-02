@@ -69,6 +69,16 @@ export const sendPendingPaymentNotification = async (
       console.log(`Pending notification already sent for tx: ${txId}`);
       return false;
     }
+    
+    // RACE CONDITION FIX: Set flag immediately before doing any work
+    // to prevent duplicate notifications from concurrent webhook calls
+    await setRedisItem(pendingKey, {
+      sent: true,
+      sentAt: new Date().toISOString(),
+      txId,
+      address,
+      status: 'sending', // Will be updated to 'completed' after success
+    });
 
     // Get user and company details
     const userResult = await sequelize.query(
