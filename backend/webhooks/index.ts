@@ -446,9 +446,17 @@ const tatumCryptoWebHook = async (
     // FIXED: Process when:
     // 1. First transaction (no txId set)
     // 2. OR this is a completion payment for an underpayment (incomplete=true and this is a NEW txId)
+    // 3. AND payment is NOT already successful
     const isFirstTransaction = !items.txId;
     const isCompletionPayment = String(items.incomplete) === "true" && 
                                 items.txId !== payload.txId;  // New transaction for underpayment completion
+    const isAlreadySuccessful = items.status === "successful" || items.status === "completed";
+    
+    // Skip if payment is already successful (prevents duplicate processing from merchant payout webhooks)
+    if (isAlreadySuccessful) {
+      console.log("[tatumCryptoWebHook] Payment already successful, ignoring webhook for tx:", payload.txId);
+      return res.status(200).end();
+    }
 
     if ((isFirstTransaction || isCompletionPayment) && incomingAmount > 0) {
       if (isCompletionPayment) {
