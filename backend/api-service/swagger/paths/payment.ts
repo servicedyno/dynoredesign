@@ -1,5 +1,5 @@
 export const paymentPaths = {
-  "/user/cryptoPayment": {
+  "/api/user/cryptoPayment": {
     post: {
       tags: ["2. Payments"],
       summary: "Create crypto payment",
@@ -11,7 +11,7 @@ export const paymentPaths = {
           "application/json": {
             schema: {
               type: "object",
-              required: ["amount", "currency", "meta_data"],
+              required: ["amount", "currency"],
               properties: {
                 amount: { 
                   type: "number", 
@@ -26,7 +26,7 @@ export const paymentPaths = {
                 },
                 meta_data: {
                   type: "object",
-                  required: ["product_name"],
+                  description: "Optional metadata for your reference",
                   properties: {
                     product_name: { type: "string", example: "Premium Plan" },
                     order_id: { type: "string", example: "ORD-123" },
