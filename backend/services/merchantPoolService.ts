@@ -1920,7 +1920,7 @@ export const ensurePoolSubscriptions = async (): Promise<{
           
           if (newSub?.id) {
             await addr.update({ subscription_id: newSub.id });
-            console.log(`[MerchantPool] ✅ Created subscription for ${walletAddress}: ${newSub.id}`);
+            console.log(`[MerchantPool] ✅ Created subscription for ${walletAddressOriginal}: ${newSub.id}`);
             result.resubscribed++;
           } else {
             throw new Error("No subscription ID returned");
