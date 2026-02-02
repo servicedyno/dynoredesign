@@ -342,10 +342,21 @@ Modes must be provided in **UPPERCASE**. Valid modes:
     get: {
       tags: ['Payments'],
       summary: 'Get all payment links',
-      description: 'Retrieve all payment links for the authenticated user with pagination and filtering',
+      description: `Retrieve all payment links for the authenticated user with pagination and filtering.
+
+**Multi-Tenant Filtering:**
+- Omit \`company_id\` to get payment links from ALL your companies
+- Provide \`company_id\` to filter payment links for a specific company
+
+**Response includes company_id** for client-side filtering if needed.`,
       security: [{ BearerAuth: [] }],
       parameters: [
-        { in: 'query', name: 'company_id', schema: { type: 'integer' }, description: 'Filter by company' },
+        { 
+          in: 'query', 
+          name: 'company_id', 
+          schema: { type: 'integer' }, 
+          description: '📝 OPTIONAL: Filter by company ID. Omit to get all companies.' 
+        },
         { in: 'query', name: 'status', schema: { type: 'string', enum: ['active', 'paid', 'expired', 'cancelled'] } },
         { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
         { in: 'query', name: 'limit', schema: { type: 'integer', default: 20 } }
