@@ -5,6 +5,36 @@ Analysis of how payment timing (invoice expiry, payment window, grace period) is
 
 ---
 
+## ✅ FIX IMPLEMENTED
+
+### Added `payment_settings` to getData Response
+
+The `getData` endpoint now returns payment timing settings upfront:
+
+```json
+{
+  "data": {
+    "amount": 50,
+    "base_currency": "USD",
+    "merchant": { ... },
+    "payment_settings": {
+      "initial_window_minutes": 15,
+      "grace_period_minutes": 30,
+      "overpayment_threshold_usd": 5
+    },
+    "expiry": { ... }
+  }
+}
+```
+
+### Changes Made:
+1. **Fetch company settings early** in `getData` function
+2. **Pass payment_settings** in all response payloads
+3. **Use dynamic grace_period** for `incomplete_payment.remaining_minutes` calculation
+4. **Updated Swagger documentation** with new field
+
+---
+
 ## Timing Components
 
 ### 1. Invoice/Payment Link Expiry
@@ -15,35 +45,31 @@ Analysis of how payment timing (invoice expiry, payment window, grace period) is
 - 30 days (`expire: '30d'`)
 - No expiry (null)
 
-**Code Location:** `paymentController.ts` lines 4144-4153
-```typescript
-let expires_at = null;
-if (expire === "24h") {
-  expires_at = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-} else if (expire === "7d") {
-  expires_at = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-} else if (expire === "30d") {
-  expires_at = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-}
-```
+**Passed via:** `expiry` field with countdown ✅
 
 ### 2. Payment Window (15 minutes)
 **Purpose:** Time allowed for customer to complete initial payment after selecting crypto
 **Default:** 15 minutes
-**Source:** Hardcoded default in `verifyCryptoPayment`
+**Passed via:** `payment_settings.initial_window_minutes` ✅ (NEW)
 
-### 3. Grace Period (30 minutes)
+### 3. Grace Period (30 minutes default, configurable)
 **Purpose:** Time allowed for customer to complete partial/underpayment
 **Default:** 30 minutes
-**Configurable:** Per-company via `grace_period_minutes` field
-**Source:** `companyModel.ts` line 88-93
+**Configurable:** Per-company via `grace_period_minutes` field in tbl_company
+**Passed via:** `payment_settings.grace_period_minutes` ✅ (NEW)
+
+### 4. Overpayment Threshold
+**Purpose:** Minimum overpayment amount to trigger special handling
+**Default:** $5 USD
+**Configurable:** Per-company via `overpayment_threshold_usd` field in tbl_company
+**Passed via:** `payment_settings.overpayment_threshold_usd` ✅ (NEW)
 
 ---
 
-## Data Flow to Checkout
+## Data Flow to Checkout (UPDATED)
 
 ### Step 1: getData (Initial Page Load)
-**Endpoint:** `GET /api/pay?d={uniqueRef}`
+**Endpoint:** `POST /api/pay/getData`
 **Returns:**
 ```json
 {
@@ -58,125 +84,86 @@ if (expire === "24h") {
       "formatted": "0d : 23h : 45m : 30s"
     }
   },
+  "payment_settings": {
+    "initial_window_minutes": 15,
+    "grace_period_minutes": 30,
+    "overpayment_threshold_usd": 5
+  },
   "incomplete_payment": {
-    "remaining_minutes": 25  // For partial payments only
+    "remaining_minutes": 25  // Uses grace_period_minutes
   }
 }
 ```
-✅ **PASSED CORRECTLY**
+✅ **ALL TIMING INFO NOW PASSED**
 
 ### Step 2: verifyCryptoPayment (Payment Status Polling)
 **Endpoint:** `GET /api/pay/verifyCryptoPayment?address={addr}`
 **Returns:**
 ```json
 {
-  "remaining_seconds": 900,        // ✅ PASSED
-  "grace_period_minutes": 30,      // ✅ PASSED
+  "remaining_seconds": 900,
+  "grace_period_minutes": 30,
   "merchant_settings": {
     "overpayment_threshold_usd": 5,
     "grace_period_minutes": 30
   }
 }
 ```
-✅ **PASSED CORRECTLY**
+✅ **CONSISTENT WITH getData**
 
 ---
 
-## ⚠️ IDENTIFIED ISSUES
+## Checkout Page Integration Guide
 
-### Issue 1: Initial Payment Window Not Explicitly Passed
-**Problem:** The 15-minute payment window is not explicitly communicated in `getData` response.
+### For Checkout Page Developers:
 
-**Current Behavior:**
-- `getData` returns `expiry` (invoice-level expiry: 24h/7d/30d)
-- But does NOT return `payment_window_minutes` (the 15-min crypto payment window)
+```javascript
+// 1. On page load (getData response)
+const { payment_settings, expiry } = response.data;
 
-**Impact:** 
-- Checkout page cannot show accurate countdown for payment window
-- Only invoice expiry is shown, not crypto address validity
+// Display invoice expiry countdown
+if (expiry?.countdown) {
+  showCountdown(expiry.countdown.formatted);  // "6d : 23h : 45m : 30s"
+}
 
-**Location:** `paymentController.ts` getData function (lines 345-378)
+// Store timing settings for later use
+const PAYMENT_WINDOW_MINUTES = payment_settings.initial_window_minutes;  // 15
+const GRACE_PERIOD_MINUTES = payment_settings.grace_period_minutes;      // 30
 
-### Issue 2: Payment Window vs Invoice Expiry Confusion
-**Problem:** Two different timers exist:
-1. **Invoice Expiry:** How long the payment link is valid (24h/7d/30d/never)
-2. **Payment Window:** How long the crypto address is valid (15 min)
+// 2. After customer selects crypto (start payment window timer)
+startTimer(PAYMENT_WINDOW_MINUTES * 60);  // 15 minutes = 900 seconds
 
-**Current State:**
-- Invoice expiry is passed via `expiry` field ✅
-- Payment window (15 min) is only inferred when no `expires_at` exists
-
-### Issue 3: Grace Period Only in verifyCryptoPayment
-**Problem:** `grace_period_minutes` is only returned AFTER payment starts polling.
-
-**Ideal:** Should be passed in initial `getData` so checkout can display policy upfront.
-
----
-
-## RECOMMENDED FIXES
-
-### Fix 1: Add Payment Window to getData Response
-Add a new field to pass payment window timing:
-```typescript
-// In getData response:
-{
-  "payment_settings": {
-    "initial_window_minutes": 15,      // Time to pay after selecting crypto
-    "grace_period_minutes": 30,        // Time to complete partial payment
-    "overpayment_threshold_usd": 5     // Minimum overpayment to handle
-  }
+// 3. On partial payment (extend timer with grace period)
+if (status === 'underpaid') {
+  startTimer(GRACE_PERIOD_MINUTES * 60);  // 30 minutes = 1800 seconds
 }
 ```
 
-### Fix 2: Fetch Company Settings in getData
-Currently company settings are only fetched in `verifyCryptoPayment`. 
-Should also fetch in `getData` for consistent display.
-
-### Fix 3: Document Timing Behavior for Checkout
-Ensure checkout page knows:
-- Invoice expiry = when payment link becomes invalid
-- Payment window = when crypto address expires (15 min default)
-- Grace period = time to complete underpayment (30 min default)
-
 ---
 
-## Files to Modify
+## Files Modified
 
 1. **`/app/backend/controller/paymentController.ts`**
-   - Enhance `getData` to include payment window settings
-   - Fetch company settings (grace_period_minutes) earlier
+   - Lines 295-325: Fetch company settings including grace_period_minutes and overpayment_threshold_usd
+   - Lines 500, 563, 607: Added `payment_settings` to all response payloads
+   - Lines 534, 588, 633: Updated remaining_minutes calculation to use paymentSettings.grace_period_minutes
 
-2. **Checkout Page (separate repo)**
-   - Consume new `payment_settings` field
-   - Show appropriate countdown based on context
+2. **`/app/backend/swagger/paths/payment.ts`**
+   - Updated getData endpoint documentation with payment_settings field
+   - Added examples showing the new field
 
 ---
 
-## Current Timing Flow Summary
+## Summary
 
-```
-1. Invoice Created (createPaymentLink)
-   └── expires_at set (24h/7d/30d or null)
-
-2. Checkout Page Loaded (getData)
-   └── Returns: expiry countdown ✅
-   └── Missing: payment_window_minutes ⚠️
-   └── Missing: grace_period_minutes ⚠️
-
-3. Crypto Selected (getCurrencyRates)
-   └── Address generated
-   └── 15-min window starts (implicit)
-
-4. Payment Polling (verifyCryptoPayment)
-   └── Returns: remaining_seconds ✅
-   └── Returns: grace_period_minutes ✅
-   └── Returns: merchant_settings ✅
-
-5. Partial Payment Detected
-   └── Grace period starts (30 min)
-   └── remaining_minutes passed ✅
-```
+| Timing Info | Before | After |
+|-------------|--------|-------|
+| Invoice expiry | ✅ Passed in getData | ✅ Still passed |
+| Payment window (15 min) | ❌ Not passed | ✅ `payment_settings.initial_window_minutes` |
+| Grace period (30 min) | ❌ Only in verifyCryptoPayment | ✅ `payment_settings.grace_period_minutes` |
+| Overpayment threshold | ❌ Only in verifyCryptoPayment | ✅ `payment_settings.overpayment_threshold_usd` |
 
 ---
 
 Generated: 2026-02-02
+Updated: 2026-02-02 (Post-Fix)
