@@ -554,6 +554,25 @@ const options: swaggerJsdoc.Options = {
       { name: "Company", description: "Company profile management" },
       { name: "Wallet Address Management", description: "CRUD operations for merchant wallet addresses. Create, Update, and Delete require OTP verification." },
       { name: "API Keys", description: "API key management, usage statistics, and rate limits" },
+      { 
+        name: "Direct API - Merchant Integration", 
+        description: `Programmatic API for server-to-server integration. Use these endpoints to create customers, generate payment addresses, and receive webhook notifications.
+
+**Authentication:**
+- \`x-api-key\` header: Your merchant API key (from /api/userApi/addApi)
+- \`Authorization\` header: Bearer token for customer (from /api/user/createUser)
+
+**Typical Flow:**
+1. Create API key via dashboard or /api/userApi/addApi
+2. Create customer: POST /api/user/createUser (with x-api-key)
+3. Generate payment: POST /api/user/cryptoPayment (with x-api-key + customer token)
+4. Receive webhook when payment completes
+
+**URL Configuration (Priority Order):**
+1. Per-payment URLs (callback_url, webhook_url in payment request)
+2. API key's configured webhook_url
+3. Company's default webhook settings` 
+      },
       { name: "Dashboard", description: "Dashboard statistics and charts" },
       { name: "Tax", description: "Tax rates and validation" },
       { name: "Notifications", description: "Notification management" },
