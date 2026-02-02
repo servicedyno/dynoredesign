@@ -2287,8 +2287,11 @@ export const checkMissedPayments = async (): Promise<{
           redisData.ref = customerRef;
         }
 
-        // Step 8: Update Redis with transaction data (mimic webhook behavior)
-        const receivedAmount = latestTx.amount;
+        // Step 9: Update Redis with transaction data (mimic webhook behavior)
+        // Use balance (actual on-chain amount) rather than single tx amount in case of multiple payments
+        const receivedAmount = balance; // Use actual blockchain balance
+        const isPartialPayment = receivedAmount < (expectedAmount - tolerance);
+        
         const updatedRedisData = {
           ...redisData,
           status: 'processing',
@@ -2298,20 +2301,31 @@ export const checkMissedPayments = async (): Promise<{
           retryCount: '0',
           lastAttempt: new Date().toISOString(),
           processedByFallback: 'true',  // Mark that this was processed by fallback
+          // For partial payments, set incomplete flag so cryptoVerification handles it correctly
+          incomplete: isPartialPayment ? 'true' : 'false',
+          ...(isPartialPayment && {
+            partialPaymentTimestamp: new Date().toISOString(),
+            remaining: (expectedAmount - receivedAmount).toFixed(8),
+          }),
         };
         
         await setRedisItem("crypto-" + walletAddress, updatedRedisData);
         console.log(`[MerchantPool] 📝 Updated Redis with txId: ${latestTx.txId}`);
+        if (isPartialPayment) {
+          console.log(`[MerchantPool] 📝 Marked as partial payment - received ${receivedAmount}, expected ${expectedAmount}`);
+        }
 
-        // Step 9: Mark txId as processed to prevent duplicates
+        // Step 10: Mark txId as processed to prevent duplicates
         await setRedisItem(processedTxKey, {
           address: walletAddress,
           amount: receivedAmount,
+          expectedAmount,
+          isPartialPayment,
           processedAt: new Date().toISOString(),
           processedBy: 'checkMissedPayments',
         });
 
-        // Step 10: Call cryptoVerification to process the payment
+        // Step 11: Call cryptoVerification to process the payment
         console.log(`[MerchantPool] 🚀 Processing missed payment via cryptoVerification...`);
         
         try {
@@ -2320,11 +2334,12 @@ export const checkMissedPayments = async (): Promise<{
           if (verificationResult?.duplicate) {
             console.log(`[MerchantPool] ⏭️ Payment was already processed (duplicate detected)`);
             result.alreadyProcessed++;
-          } else if (verificationResult?.status === 200 || verificationResult?.paymentStatus === 'completed') {
+          } else if (verificationResult?.status === 200 || verificationResult?.paymentStatus === 'completed' || verificationResult?.paymentStatus === 'complete') {
             console.log(`[MerchantPool] ✅ MISSED PAYMENT SUCCESSFULLY PROCESSED!`);
             console.log(`[MerchantPool]   - Address: ${walletAddress}`);
             console.log(`[MerchantPool]   - Amount: ${receivedAmount} ${walletType}`);
             console.log(`[MerchantPool]   - TxId: ${latestTx.txId}`);
+            console.log(`[MerchantPool]   - Type: ${isPartialPayment ? 'PARTIAL' : 'FULL'} payment`);
             result.processed++;
             
             // Log success for alerting
@@ -2334,6 +2349,7 @@ export const checkMissedPayments = async (): Promise<{
               amount: receivedAmount,
               txId: latestTx.txId,
               expectedAmount,
+              isPartialPayment,
               ownerId,
               companyId,
             });
