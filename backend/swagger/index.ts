@@ -17,6 +17,7 @@ import { apiUsagePaths } from "./paths/apiUsage";
 import { companyPaths } from "./paths/company";
 import { taxPaths } from "./paths/tax";
 import { kycPaths } from "./paths/kyc";
+import { directApiPaths } from "./paths/directApi";
 
 // Merge all paths
 const allPaths = {
