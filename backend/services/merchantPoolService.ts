@@ -24,11 +24,12 @@ import {
   TOKEN_CHAINS as MODEL_TOKEN_CHAINS,
   GAS_TOKEN_MAPPING,
 } from "../models";
-import { getRedisItem } from "../utils/redisInstance";
+import { getRedisItem, setRedisItem } from "../utils/redisInstance";
 import tatumApi from "../apis/tatumApi";
 import sequelize from "../utils/dbInstance";
 import { cronLogger, log } from "../utils/loggers";
 import { currencyConvert, getErrorMessage } from "../helper";
+import { paymentController } from "../controller";
 
 // Configuration
 const POOL_CONFIG = {
