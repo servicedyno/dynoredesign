@@ -1727,6 +1727,7 @@ export default {
   getAllAccounts,
   generateUserAddress,
   createSubscription,
+  createSubscriptionWithUrl,
   getBitcoinAddress,
   deleteUserAddress,
   sendFeeToAdmin,
