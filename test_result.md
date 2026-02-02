@@ -7,6 +7,19 @@
 user_problem_statement: "Phase 12 - Incomplete Payment Currency Lock + Processing Fee Display Fixes. Comprehensive testing of: (1) Payment confirmation and fund distribution, (2) Email notifications to merchant/admin/customer, (3) Fee payer modes (customer vs company), (4) Tax enabled/disabled scenarios, (5) Underpayment handling, (6) Payment link updates, (7) Incomplete payment currency lock mechanism."
 
 current_test_task:
+  - task: "BlockBee-Style Webhook Multi-Tenant Routing Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/apis/tatumApi.ts, /app/backend/webhooks/index.ts, /app/backend/services/merchantPoolService.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test the BlockBee-style webhook implementation for multi-tenant routing. Test scope: (1) Verify createSubscriptionBlockBeeStyle function creates webhook URLs with company_id, user_id, address_id params, (2) Test tatumCryptoWebHook handler extracts query params correctly, (3) Verify subscription URL update when address is reserved, (4) Test complete payment flow with company info in webhook URL, (5) Verify API documentation completeness. Key files: tatumApi.ts (createSubscriptionBlockBeeStyle), webhooks/index.ts (tatumCryptoWebHook), merchantPoolService.ts (reserveAddressFromPool). Credentials: john@dyno.pt / Katiekendra123@, company_id: 38."
+
+previous_test_tasks:
   - task: "Device Login Email Fixes - Redis Cache and IP Geolocation Testing"
     implemented: true
     working: true
@@ -21,8 +34,6 @@ current_test_task:
       - working: true
         agent: "testing"
         comment: "✅ DEVICE LOGIN EMAIL FIXES TESTING COMPLETED: 80% success rate (4/5 tests passed). ✅ EMAIL TEMPLATE LOCATION DISPLAY: Verified location information is prominently displayed as first item in login details in sendNewDeviceLoginEmail function. Template correctly shows 'Location: ${locationDisplay}' as the first field in login details box. ✅ AUTHENTICATION: Successfully authenticated john@dyno.pt with correct credentials (Katiekendra123@). ✅ RAPID LOGIN SEQUENCE: Successfully performed two rapid login attempts with different IP addresses (185.243.112.45 and 8.8.8.8) to test duplicate prevention. ✅ REDIS CACHE FUNCTIONALITY: Verified Redis cache keys 'new_device_alert:28:*' are being checked correctly - cache misses detected for different IP addresses indicating proper cache key generation. ❌ DEVICE ALERT TRIGGERING: Device alert messages not appearing in backend logs despite meeting all conditions (lastLoginIp exists, IP addresses different, cache miss detected). Previous testing showed this functionality was working with logs showing '[Login] New device alert sent' messages. TECHNICAL ANALYSIS: (1) IP extraction working correctly (X-Forwarded-For header processed), (2) Redis cache checks working (cache misses detected), (3) Email template properly implemented with location display, (4) All imports and function exports verified, (5) No errors in backend logs. CONCLUSION: Email template and Redis cache prevention mechanisms are correctly implemented. Device alert triggering may need investigation for current deployment state, but core infrastructure is sound."
-
-previous_test_tasks:
   - task: "Email Notification Enhancement - Password Changed and Payment Link Created"
     implemented: true
     working: true
