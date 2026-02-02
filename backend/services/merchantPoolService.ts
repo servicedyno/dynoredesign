@@ -2079,12 +2079,21 @@ export const checkMissedPayments = async (): Promise<{
           continue;
         }
 
-        console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${balance} ${walletType}`);
+        console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${balance} ${walletType} (reserved ${minutesSinceReserved.toFixed(1)} min ago)`);
 
-        // Step 2: Check if webhook already processed this (Redis has txId)
+        // Step 2: Check if webhook already processed or is currently processing
         let redisData = await getRedisItem("crypto-" + walletAddress);
+        
+        // If Redis has txId, webhook already fired
         if (redisData?.txId) {
           console.log(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
+          result.alreadyProcessed++;
+          continue;
+        }
+        
+        // If status is "processing" or "retrying", webhook is currently handling it
+        if (redisData?.status === 'processing' || redisData?.status === 'retrying') {
+          console.log(`[MerchantPool] ⏭️ ${walletAddress} - Webhook currently processing (status: ${redisData.status})`);
           result.alreadyProcessed++;
           continue;
         }
