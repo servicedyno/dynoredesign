@@ -1575,56 +1575,109 @@ When you create a payment link with a \`webhook_url\`, DynoPay will POST to YOUR
     }
   },
   
-  '/api/pay/webhook/tatum': {
+  '/api/tatum-crypto-webhook': {
     post: {
       tags: ['Webhooks'],
-      summary: 'Tatum blockchain webhook (Internal)',
-      description: 'Internal endpoint - receives blockchain transaction notifications from Tatum. This is called automatically by Tatum when deposits are detected on monitored addresses.',
+      summary: 'Tatum blockchain webhook (Internal - BlockBee Style)',
+      description: `**Internal endpoint** - receives blockchain transaction notifications from Tatum.
+
+### BlockBee-Style Multi-Tenant Routing
+
+This endpoint uses a BlockBee-style approach for multi-tenant routing. When a crypto address is reserved for a payment, the subscription URL is dynamically updated to include tenant information as query parameters.
+
+**Webhook URL Format:**
+\`\`\`
+/api/tatum-crypto-webhook?company_id={companyId}&user_id={userId}&address_id={addressId}
+\`\`\`
+
+### How it Works:
+1. When \`reserveAddressFromPool\` is called, it updates the Tatum subscription URL with company info
+2. When a deposit is detected, Tatum calls this endpoint with the encoded parameters
+3. The webhook handler extracts \`company_id\`, \`user_id\`, \`address_id\` from query params
+4. Payment is processed and routed to the correct merchant/company
+
+### Benefits:
+- ✅ Multi-tenant routing without per-company backends
+- ✅ Tenant info encoded directly in webhook URL
+- ✅ Subscription URL updated synchronously when address is reserved
+- ✅ Fallback to Redis data if query params missing
+
+### Implementation Files:
+- \`tatumApi.ts\` - \`createSubscriptionBlockBeeStyle()\` creates/updates subscriptions
+- \`merchantPoolService.ts\` - \`reserveAddressFromPool()\` updates subscription URL
+- \`webhooks/index.ts\` - \`tatumCryptoWebHook()\` extracts and uses params`,
+      parameters: [
+        {
+          in: 'query',
+          name: 'company_id',
+          schema: { type: 'integer' },
+          description: 'Company/merchant ID for multi-tenant routing',
+          example: 38
+        },
+        {
+          in: 'query',
+          name: 'user_id',
+          schema: { type: 'integer' },
+          description: 'User ID (merchant owner)',
+          example: 28
+        },
+        {
+          in: 'query',
+          name: 'address_id',
+          schema: { type: 'integer' },
+          description: 'Pool address ID (temp_address_id)',
+          example: 5
+        }
+      ],
       requestBody: {
+        description: 'Tatum ADDRESS_EVENT webhook payload',
         content: {
           'application/json': {
             schema: {
               type: 'object',
               properties: {
-                subscriptionType: { type: 'string' },
-                address: { type: 'string' },
-                txId: { type: 'string' },
-                amount: { type: 'string' },
-                currency: { type: 'string' },
-                blockNumber: { type: 'integer' }
-              }
+                subscriptionType: { type: 'string', description: 'Always ADDRESS_EVENT' },
+                address: { type: 'string', description: 'Crypto address that received deposit' },
+                counterAddress: { type: 'string', description: 'Sender address' },
+                txId: { type: 'string', description: 'Blockchain transaction hash' },
+                amount: { type: 'string', description: 'Amount received' },
+                asset: { type: 'string', description: 'Asset/currency (ETH, BTC, etc.)' },
+                blockNumber: { type: 'integer', description: 'Block number of transaction' }
+              },
+              required: ['address', 'txId', 'amount']
             },
             examples: {
               'BTC Deposit': {
                 summary: 'Bitcoin deposit detected',
                 value: {
-                  subscriptionType: 'ADDRESS_TRANSACTION',
+                  subscriptionType: 'ADDRESS_EVENT',
                   address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
                   txId: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
                   amount: '0.00456789',
-                  currency: 'BTC',
+                  asset: 'BTC',
                   blockNumber: 823456
                 }
               },
               'ETH Deposit': {
                 summary: 'Ethereum deposit detected',
                 value: {
-                  subscriptionType: 'ADDRESS_TRANSACTION',
+                  subscriptionType: 'ADDRESS_EVENT',
                   address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE4E',
+                  counterAddress: '0xSenderAddress123...',
                   txId: '0xabc123def456789...',
                   amount: '0.085',
-                  currency: 'ETH',
+                  asset: 'ETH',
                   blockNumber: 19234567
                 }
               },
               'USDT-TRC20 Deposit': {
                 summary: 'USDT (Tron) deposit detected',
                 value: {
-                  subscriptionType: 'ADDRESS_TRANSACTION',
+                  subscriptionType: 'ADDRESS_EVENT',
                   address: 'TN7cWz1s5p5XKT8KJhKjZ8EWPH4v8hGhqN',
                   txId: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
                   amount: '199.99',
-                  currency: 'USDT',
+                  asset: 'USDT',
                   blockNumber: 58234567
                 }
               }
@@ -1633,7 +1686,14 @@ When you create a payment link with a \`webhook_url\`, DynoPay will POST to YOUR
         }
       },
       responses: {
-        200: { description: 'Webhook processed successfully' }
+        200: { 
+          description: 'Webhook processed successfully',
+          content: {
+            'text/plain': {
+              example: 'OK'
+            }
+          }
+        }
       }
     }
   },
