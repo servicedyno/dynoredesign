@@ -91,6 +91,12 @@ const companyModel = sequelize.define(
       defaultValue: null,
       comment: "Grace period in minutes for partial payment completion. Default 30 if not set.",
     },
+    // Multi-tenant: Company backend URL for webhooks
+    backend_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      comment: "Company's backend URL for Tatum webhook delivery (e.g., https://company1.mysite.com). If null, uses global SERVER_URL.",
+    },
   },
   {
     tableName: "tbl_company",
