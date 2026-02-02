@@ -79,14 +79,12 @@ log(`Railway Environment: ${process.env.RAILWAY_ENVIRONMENT || 'not detected'}`,
 const app = express();
 const port = process.env.PORT || 3300;
 
-// CORS Configuration
+// CORS Configuration - Allow all origins for testing
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? allowedOrigins
-    : '*',
-  credentials: true,
+  origin: '*',
+  credentials: false, // Must be false when origin is '*'
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-Requested-With', 'Accept', 'Origin']
 }));
 app.use(express.json());
 app.use(helmet({
