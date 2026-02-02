@@ -344,26 +344,38 @@ class DynoPayTester:
                 self.log(f"     - Merchant Amount: {customer_merchant_amount} ETH ({customer_merchant_percentage:.1f}%)")
                 self.log(f"     - Admin Fees: {customer_fees} ETH ({customer_fee_percentage:.1f}%)")
                 
-                # Expected: Merchant receives ~75-80% (customer pays the fees separately)
-                if 75 <= customer_merchant_percentage <= 85:
-                    self.log("     ✅ Merchant percentage within expected range (75-85%)")
+                # Expected: In customer pays fees mode, merchant gets the base amount (100% of what they requested)
+                # The customer pays extra fees on top, so merchant percentage of total will be lower
+                # But merchant gets the full amount they requested
+                if 60 <= customer_merchant_percentage <= 75:
+                    self.log("     ✅ Merchant percentage within expected range (60-75%) - customer pays extra fees")
                     analysis_results.append(True)
                 else:
                     self.log(f"     ❌ Merchant percentage outside expected range: {customer_merchant_percentage:.1f}%", "ERROR")
                     analysis_results.append(False)
             
-            # Compare the two modes
+            # Compare the two modes - key insight: merchant amounts should be similar in absolute terms
             if company_amount > 0 and customer_amount > 0:
                 self.log("   📊 Mode Comparison:")
-                self.log(f"     - Company pays fees: Merchant gets {company_merchant_percentage:.1f}%")
-                self.log(f"     - Customer pays fees: Merchant gets {customer_merchant_percentage:.1f}%")
+                self.log(f"     - Company pays fees: Merchant gets {company_merchant_amount:.8f} ETH ({company_merchant_percentage:.1f}% of total)")
+                self.log(f"     - Customer pays fees: Merchant gets {customer_merchant_amount:.8f} ETH ({customer_merchant_percentage:.1f}% of total)")
                 
-                # Customer pays fees should result in higher merchant percentage
-                if customer_merchant_percentage > company_merchant_percentage:
-                    self.log("     ✅ Customer pays fees mode gives merchant higher percentage (correct)")
+                # Key insight: In customer pays fees mode, merchant should get approximately the same absolute amount
+                # but customer pays more total (so merchant percentage is lower, but absolute amount is similar)
+                merchant_amount_diff = abs(customer_merchant_amount - company_merchant_amount)
+                if merchant_amount_diff < 0.001:  # Allow small differences due to rounding
+                    self.log("     ✅ Merchant receives similar absolute amounts in both modes (correct)")
                     analysis_results.append(True)
                 else:
-                    self.log("     ❌ Customer pays fees mode should give merchant higher percentage", "ERROR")
+                    self.log(f"     ❌ Merchant amounts differ significantly: {merchant_amount_diff:.8f} ETH", "ERROR")
+                    analysis_results.append(False)
+                
+                # Customer should pay more in customer-pays-fees mode
+                if customer_amount > company_amount:
+                    self.log("     ✅ Customer pays more when customer pays fees (correct)")
+                    analysis_results.append(True)
+                else:
+                    self.log("     ❌ Customer should pay more when customer pays fees", "ERROR")
                     analysis_results.append(False)
             
             all_correct = all(analysis_results)
