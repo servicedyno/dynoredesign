@@ -2098,6 +2098,62 @@ export const checkMissedPayments = async (): Promise<{
           continue;
         }
 
+        // Step 2.5: CHECK FOR PARTIAL PAYMENT - System might be waiting for completion
+        // If incomplete flag is set, customer hasn't paid full amount yet
+        if (redisData?.incomplete === 'true' || redisData?.incomplete === true) {
+          const receivedSoFar = parseFloat(redisData?.receivedAmount || '0');
+          const originalExpected = parseFloat(redisData?.originalExpectedAmount || redisData?.amount || '0');
+          const remaining = originalExpected - receivedSoFar;
+          
+          console.log(`[MerchantPool] ⏸️ ${walletAddress} - PARTIAL PAYMENT in progress`);
+          console.log(`[MerchantPool]    - Received so far: ${receivedSoFar} ${walletType}`);
+          console.log(`[MerchantPool]    - Expected: ${originalExpected} ${walletType}`);
+          console.log(`[MerchantPool]    - Remaining: ${remaining} ${walletType}`);
+          
+          // Check how long since partial payment was received
+          const partialTimestamp = redisData?.partialPaymentTimestamp;
+          if (partialTimestamp) {
+            const partialTime = new Date(partialTimestamp);
+            const minutesSincePartial = (now.getTime() - partialTime.getTime()) / 60000;
+            
+            // If partial payment is less than 20 minutes old, wait for customer to complete
+            if (minutesSincePartial < 20) {
+              console.log(`[MerchantPool] ⏭️ Waiting for completion - partial received ${minutesSincePartial.toFixed(1)} min ago`);
+              result.skippedTooRecent++;
+              continue;
+            } else {
+              console.log(`[MerchantPool] ⚠️ Partial payment expired (${minutesSincePartial.toFixed(1)} min) - will process as-is`);
+              // Continue to process the partial amount
+            }
+          }
+        }
+
+        // Step 2.6: Check database temp address for partial payment flag
+        const poolAddressRecord = await merchantTempAddressModel.findOne({
+          where: { wallet_address: walletAddress }
+        });
+        
+        if (poolAddressRecord?.dataValues?.is_partial_payment === true) {
+          const dbReceivedAmount = parseFloat(poolAddressRecord.dataValues.received_amount || '0');
+          const dbExpectedAmount = parseFloat(poolAddressRecord.dataValues.expected_amount || '0');
+          const partialTimestamp = poolAddressRecord.dataValues.partial_payment_timestamp;
+          
+          console.log(`[MerchantPool] ⏸️ ${walletAddress} - DB shows partial payment`);
+          console.log(`[MerchantPool]    - DB Received: ${dbReceivedAmount}, Expected: ${dbExpectedAmount}`);
+          
+          if (partialTimestamp) {
+            const partialTime = new Date(partialTimestamp);
+            const minutesSincePartial = (now.getTime() - partialTime.getTime()) / 60000;
+            
+            // Wait 20 minutes for customer to complete partial payment
+            if (minutesSincePartial < 20) {
+              console.log(`[MerchantPool] ⏭️ Waiting for completion - DB partial ${minutesSincePartial.toFixed(1)} min ago`);
+              result.skippedTooRecent++;
+              continue;
+            }
+          }
+        }
+
         // Step 3: Check database for completed transaction
         if (currentPaymentId) {
           const existingTx = await customerTransactionModel.findOne({
