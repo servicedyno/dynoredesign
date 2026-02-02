@@ -1,5 +1,5 @@
 export const customerPaths = {
-  "/user/createUser": {
+  "/api/user/createUser": {
     post: {
       tags: ["1. Customer"],
       summary: "Create a customer",
