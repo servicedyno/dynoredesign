@@ -640,6 +640,74 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
   }
 };
 
+/**
+ * Create subscription with custom webhook URL (for multi-tenant company pools)
+ * This allows each company to have its own webhook endpoint
+ */
+const createSubscriptionWithUrl = async (address: string, currency: string, customUrl: string) => {
+  try {
+    const headers = await getTatumHeaders();
+
+    const chain =
+      currency === "USDT-ERC20" || currency === "USDC-ERC20"
+        ? "ETH"
+        : currency === "USDT-TRC20"
+        ? "TRON"
+        : currency === "TRX"
+        ? "TRON"
+        : currency;
+
+    console.log(`[createSubscriptionWithUrl] Address: ${address}, Chain: ${chain}, URL: ${customUrl}`);
+
+    // Check for existing subscription
+    const { data: existingData } = await axios.get(
+      "https://api.tatum.io/v4/subscription?pageSize=10&address=" + address,
+      { headers }
+    );
+
+    let resData = { id: null as string | null };
+
+    if (existingData?.length > 0) {
+      resData = { id: existingData[0]?.id };
+      const existingUrl = existingData[0]?.attr?.url;
+      
+      console.log(`[createSubscriptionWithUrl] Existing subscription ${resData.id}, URL: ${existingUrl}`);
+      
+      // Update URL if different
+      if (existingUrl !== customUrl) {
+        console.log(`[createSubscriptionWithUrl] Updating URL: ${existingUrl} -> ${customUrl}`);
+        await axios.put(
+          "https://api.tatum.io/v4/subscription/" + resData.id,
+          { url: customUrl },
+          { headers }
+        );
+        console.log(`[createSubscriptionWithUrl] ✅ URL updated for subscription ${resData.id}`);
+      }
+    } else {
+      // Create new subscription
+      const { data: newData } = await axios.post(
+        "https://api.tatum.io/v4/subscription",
+        {
+          type: "ADDRESS_EVENT",
+          attr: {
+            address,
+            chain,
+            url: customUrl,
+          },
+        },
+        { headers }
+      );
+      console.log(`[createSubscriptionWithUrl] ✅ New subscription created: ${newData?.id}`);
+      resData = newData;
+    }
+    
+    return resData;
+  } catch (e: any) {
+    console.log("[createSubscriptionWithUrl] Error:", JSON.stringify(e.response?.data || e.message, null, 2));
+    throw e;
+  }
+};
+
 const deleteSubscription = async (id) => {
   try {
     if (id) {
