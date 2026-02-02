@@ -103,7 +103,15 @@ const getAccessToken = async (id) => {
 const createPayment = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as any;
   try {
-    const { amount, redirect_uri, meta_data, fee_payer } = req.body;
+    // Support per-payment callback URLs (BlockBee style)
+    const { 
+      amount, 
+      redirect_uri, 
+      meta_data, 
+      fee_payer,
+      callback_url,   // Per-payment callback URL (optional, overrides API key setting)
+      webhook_url,    // Per-payment webhook URL (optional, overrides API key setting)
+    } = req.body;
 
     const data = res.locals.apiKeyData;
 
@@ -126,6 +134,16 @@ const createPayment = async (req: express.Request, res: express.Response) => {
       },
     });
 
+    // Determine webhook URL: per-payment > API key config > company default
+    const effectiveWebhookUrl = webhook_url || data.webhook_url || null;
+    const effectiveWebhookSecret = data.webhook_secret || null;
+    
+    console.log(`[createPayment] Webhook config:`, {
+      perPayment: webhook_url || 'not set',
+      apiKeyLevel: data.webhook_url || 'not set',
+      effective: effectiveWebhookUrl || 'none',
+    });
+
     const redisPayload = {
       customer_id: customerData.dataValues.customer_id,
       company_id: data.company_id,
@@ -137,6 +155,10 @@ const createPayment = async (req: express.Request, res: express.Response) => {
       pathType: "createPayment",
       fee_payer: fee_payer || 'company',  // Who pays fees: 'customer' or 'company'
       available_currencies: availableCurrencies,  // Phase 11: Store available currencies
+      // Webhook support - for merchant notifications
+      webhook_url: effectiveWebhookUrl,
+      webhook_secret: effectiveWebhookSecret,
+      callback_url: callback_url || null,
       ...(meta_data && { meta_data: JSON.stringify(meta_data) }),
     };
 
@@ -154,7 +176,12 @@ const createPayment = async (req: express.Request, res: express.Response) => {
 
     const redirect_url = process.env.CHECKOUT_URL + "/pay?d=" + transactionId;
 
-    successResponseHelper(res, 200, "Link Generated!", { redirect_url, fee_payer: redisPayload.fee_payer, available_currencies: availableCurrencies });
+    successResponseHelper(res, 200, "Link Generated!", { 
+      redirect_url, 
+      fee_payer: redisPayload.fee_payer, 
+      available_currencies: availableCurrencies,
+      webhook_url: effectiveWebhookUrl ? 'configured' : 'not configured',
+    });
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     customerLogger.error(
