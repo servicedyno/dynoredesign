@@ -1575,24 +1575,24 @@ When you create a payment link with a \`webhook_url\`, DynoPay will POST to YOUR
     }
   },
   
-  '/api/tatum-crypto-webhook': {
+  '/api/crypto-webhook': {
     post: {
       tags: ['Webhooks'],
-      summary: 'Tatum blockchain webhook (Internal - BlockBee Style)',
-      description: `**Internal endpoint** - receives blockchain transaction notifications from Tatum.
+      summary: 'Blockchain webhook (Internal)',
+      description: `**Internal endpoint** - receives blockchain transaction notifications.
 
-### BlockBee-Style Multi-Tenant Routing
+### Multi-Tenant Routing
 
-This endpoint uses a BlockBee-style approach for multi-tenant routing. When a crypto address is reserved for a payment, the subscription URL is dynamically updated to include tenant information as query parameters.
+This endpoint uses multi-tenant routing for payment processing. When a crypto address is reserved for a payment, the subscription URL is dynamically updated to include tenant information as query parameters.
 
 **Webhook URL Format:**
 \`\`\`
-/api/tatum-crypto-webhook?company_id={companyId}&user_id={userId}&address_id={addressId}
+/api/crypto-webhook?company_id={companyId}&user_id={userId}&address_id={addressId}
 \`\`\`
 
 ### How it Works:
-1. When \`reserveAddressFromPool\` is called, it updates the Tatum subscription URL with company info
-2. When a deposit is detected, Tatum calls this endpoint with the encoded parameters
+1. When \`reserveAddressFromPool\` is called, it updates the subscription URL with company info
+2. When a deposit is detected, the blockchain provider calls this endpoint with the encoded parameters
 3. The webhook handler extracts \`company_id\`, \`user_id\`, \`address_id\` from query params
 4. Payment is processed and routed to the correct merchant/company
 
@@ -1600,12 +1600,7 @@ This endpoint uses a BlockBee-style approach for multi-tenant routing. When a cr
 - ✅ Multi-tenant routing without per-company backends
 - ✅ Tenant info encoded directly in webhook URL
 - ✅ Subscription URL updated synchronously when address is reserved
-- ✅ Fallback to Redis data if query params missing
-
-### Implementation Files:
-- \`tatumApi.ts\` - \`createSubscriptionBlockBeeStyle()\` creates/updates subscriptions
-- \`merchantPoolService.ts\` - \`reserveAddressFromPool()\` updates subscription URL
-- \`webhooks/index.ts\` - \`tatumCryptoWebHook()\` extracts and uses params`,
+- ✅ Fallback to Redis data if query params missing`,
       parameters: [
         {
           in: 'query',
@@ -1630,7 +1625,7 @@ This endpoint uses a BlockBee-style approach for multi-tenant routing. When a cr
         }
       ],
       requestBody: {
-        description: 'Tatum ADDRESS_EVENT webhook payload',
+        description: 'Blockchain ADDRESS_EVENT webhook payload',
         content: {
           'application/json': {
             schema: {
