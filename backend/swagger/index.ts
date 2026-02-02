@@ -572,7 +572,7 @@ const options: swaggerJsdoc.Options = {
 
 **Merchant Webhooks**: Configure your webhook_url when creating payment links to receive payment status updates.
 
-**BlockBee-Style Multi-Tenant Routing**: DynoPay uses a BlockBee-inspired architecture where tenant info (company_id, user_id, address_id) is encoded in Tatum subscription webhook URLs. This enables:
+**Multi-Tenant Routing**: DynoPay uses a multi-tenant architecture where tenant info (company_id, user_id, address_id) is encoded in webhook URLs. This enables:
 - Multi-tenant payment routing without per-company backends
 - Synchronous URL updates when addresses are reserved
 - Automatic tenant identification from URL query parameters` 
