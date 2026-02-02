@@ -1778,7 +1778,7 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.blockchain.bitcoin.btcGetTxByAddress(
         address, limit, 0, null, null, "incoming"
       );
-      for (const tx of txData || []) {
+      for (const tx of (txData as any[]) || []) {
         // Find the output for our address
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
@@ -1795,10 +1795,11 @@ const getIncomingTransactions = async (
         }
       }
     } else if (currency === "ETH") {
-      const txData = await tatumSdk.blockchain.eth.ethGetAccountTransactions(
+      // Note: ethGetAccountTransactions may not exist in newer SDK - use alternative
+      const txData = await (tatumSdk.blockchain.eth as any).ethGetAccountTransactions?.(
         address, 0, limit
-      );
-      for (const tx of txData || []) {
+      ) || await tatumSdk.blockchain.eth.ethGetTransaction(address).catch(() => []);
+      for (const tx of (txData as any[]) || []) {
         // Only incoming transactions (where we are the recipient)
         if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
           transactions.push({
@@ -1810,9 +1811,9 @@ const getIncomingTransactions = async (
       }
     } else if (currency === "TRX") {
       const result = await tatumSdk.blockchain.tron.tronAccountTx(
-        address, null, null, true
+        address, undefined, undefined, true
       );
-      for (const tx of result?.transactions || []) {
+      for (const tx of (result as any)?.transactions || []) {
         // Check if this is a TRX transfer to our address
         const contract = tx.rawData?.contract?.[0];
         if (contract?.type === 'TransferContract') {
@@ -1831,9 +1832,9 @@ const getIncomingTransactions = async (
       }
     } else if (currency === "USDT-TRC20") {
       const result = await tatumSdk.blockchain.tron.tronAccountTx20(
-        address, null, null, true
+        address, undefined, undefined, true
       );
-      for (const tx of result?.transactions || []) {
+      for (const tx of (result as any)?.transactions || []) {
         // TRC20 transfers
         if (tx.to === address && parseFloat(tx.value || '0') > 0) {
           transactions.push({
@@ -1846,14 +1847,14 @@ const getIncomingTransactions = async (
     } else if (currency === "USDT-ERC20") {
       const contractAddress = process.env.ETH_CONTRACT;
       const txData = await tatumSdk.fungibleToken.erc20GetTransactionByAddress(
-        "ETH", address, contractAddress, limit, null, null, null, "DESC"
+        "ETH", address, contractAddress, limit
       );
-      for (const tx of txData || []) {
+      for (const tx of (txData as any[]) || []) {
         if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
           transactions.push({
-            txId: tx.transactionHash || tx.txId,
+            txId: tx.transactionHash || tx.txId || tx.hash,
             amount: parseFloat(tx.value) / 1e6, // USDT has 6 decimals
-            timestamp: tx.timestamp || Date.now()
+            timestamp: tx.timestamp || tx.blockTimestamp || Date.now()
           });
         }
       }
