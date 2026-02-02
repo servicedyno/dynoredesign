@@ -8,7 +8,7 @@ import json
 import os
 
 # Get backend URL
-BACKEND_URL = "https://deps-setup-4.preview.emergentagent.com"
+BACKEND_URL = "https://setup-tooling.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 def authenticate():
