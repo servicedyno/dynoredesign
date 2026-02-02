@@ -821,7 +821,14 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             company_id: items.company_id,  // Pass company_id for proper wallet filtering
           }, true);  // Use crypto-specific webhook for proper verification
           console.log("paymentRes=============>", paymentRes, uniqueRef);
-          finalRes = { hash: uniqueRef, ...paymentRes };
+          
+          // Calculate remaining minutes for crypto invoice (default 15 minutes from now)
+          const CRYPTO_INVOICE_MINUTES = 15;
+          finalRes = { 
+            hash: uniqueRef, 
+            ...paymentRes,
+            remaining_minutes: CRYPTO_INVOICE_MINUTES,  // Frontend uses this for invoice countdown timer
+          };
           
           // Get fee_payer mode from original payment link data
           const fee_payer = items.fee_payer || 'company';
