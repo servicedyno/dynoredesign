@@ -384,11 +384,26 @@ const tatumCryptoWebHook = async (
 
     // Check for duplicate txId (prevent processing same blockchain tx twice)
     const processedTxKey = `processed-tx-${payload.txId}`;
+    const processingLockKey = `processing-lock-${payload.txId}`;
+    
     const alreadyProcessed = await getRedisItem(processedTxKey);
     if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
       console.log("[tatumCryptoWebHook] Transaction already processed, ignoring duplicate:", payload.txId);
       return res.status(200).end();
     }
+
+    // RACE CONDITION FIX: Acquire processing lock BEFORE doing any work
+    // This prevents multiple simultaneous webhooks from all processing the same transaction
+    const existingLock = await getRedisItem(processingLockKey);
+    if (existingLock && existingLock.locked) {
+      console.log("[tatumCryptoWebHook] Transaction already being processed by another request, ignoring:", payload.txId);
+      return res.status(200).end();
+    }
+    
+    // Set processing lock immediately (expires in 5 minutes as safety)
+    await setRedisItem(processingLockKey, { locked: true, startedAt: new Date().toISOString() });
+    await setRedisTTL(processingLockKey, 300); // 5 minute TTL
+    console.log("[tatumCryptoWebHook] Acquired processing lock for tx:", payload.txId);
 
     let address = payload.address;
     let items = await getRedisItem("crypto-" + address);
