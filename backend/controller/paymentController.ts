@@ -3786,11 +3786,6 @@ const cryptoVerification = async (address, webhook = true) => {
 
 const timer = (ms) => new Promise((res) => setTimeout(res, ms));
 
-// DEPRECATED: Legacy callWebHook function - use callMerchantWebhook from webhooks/index.ts instead
-// This function incorrectly used redirect_uri for webhooks
-// Kept for reference but no longer used
-// const callWebHook = async (customerData, transferDetails) => { ... }
-
 const userWallet = async (data: IFundData, tokenData: IUserType) => {
   const id = tokenData.id;
   const customer_id = (await customerModel.findOne({ where: { id } }))
