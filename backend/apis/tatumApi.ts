@@ -1776,14 +1776,14 @@ const getIncomingTransactions = async (
   try {
     if (currency === "BTC") {
       const txData = await tatumSdk.blockchain.bitcoin.btcGetTxByAddress(
-        address, limit, 0, null, null, "incoming"
+        address, limit, 0
       );
       for (const tx of (txData as any[]) || []) {
         // Find the output for our address
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
-            receivedAmount += parseFloat(output.value || '0');
+            receivedAmount += parseFloat(String(output.value || '0'));
           }
         }
         if (receivedAmount > 0) {
