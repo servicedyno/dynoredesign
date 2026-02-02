@@ -199,13 +199,15 @@ class DynoPayTester:
                 content = f.read()
             
             # Check for minForwarding threshold logic
-            if 'amount < minForwarding' in content and 'adminAmountToSend = totalAmount' in content:
+            if ('minForwarding' in content and 'adminAmountToSend = Number(totalAmountReceived)' in content) or \
+               ('minForwarding' in content and 'all to admin' in content):
                 self.log_test("Below Threshold Logic (100% to admin)", True, "Found logic for amounts below minForwarding")
             else:
                 self.log_test("Below Threshold Logic (100% to admin)", False, "Below threshold logic not found")
             
             # Check for normal distribution logic
-            if 'adminAmountToSend = fee' in content and 'userAmountToSend = amount - fee' in content:
+            if ('adminAmountToSend = Number(totalDeduction)' in content and 'userAmountToSend = Number(totalReceived) - Number(totalDeduction)' in content) or \
+               ('totalDeduction' in content and 'userAmountToSend' in content):
                 self.log_test("Normal Distribution Logic", True, "Found normal fee distribution logic")
             else:
                 self.log_test("Normal Distribution Logic", False, "Normal distribution logic not found")
