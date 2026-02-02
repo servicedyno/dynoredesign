@@ -7,6 +7,19 @@
 user_problem_statement: "checkMissedPayments Feature - Comprehensive Testing. Test the webhook fallback mechanism to ensure: (1) Minimum forwarding threshold is respected, (2) Funds forwarded to admin when below threshold, (3) Partial payment handling works correctly, (4) Feature works exactly like webhook-triggered processing, (5) Merchant webhook callbacks are sent, (6) Fund distribution to merchant and admin is correct."
 
 current_test_task:
+  - task: "Comprehensive System Functionality Test - All Critical Flows"
+    implemented: true
+    working: "NA"
+    file: "/app/backend"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Comprehensive testing of all DynoPay functionalities. Test scope: (1) End-to-End Payment Flow - payment link creation, crypto address generation, getData API, (2) Threshold Tests - below $5 USD (admin only), above threshold (merchant/admin split), (3) Multi-Tenant Isolation - company ownership validation, cross-tenant prevention, (4) Fee Calculations - fee_payer customer vs company modes, tax calculations by geolocation, (5) Authentication - JWT login, API key auth (dev/prod), (6) Webhook Processing - Tatum webhook endpoint, merchant callback delivery, (7) Cron Jobs - checkMissedPayments, processIncompletePayments, sweeps, (8) Financial Accuracy - currency conversion, fee breakdown, (9) API Endpoints - all CRUD operations for companies, wallets, payment links. Test credentials: john@dyno.pt / Katiekendra123@, company_id: 38."
+
+previous_test_tasks:
   - task: "checkMissedPayments Feature - Comprehensive Payment Processing Test"
     implemented: true
     working: true
