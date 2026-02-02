@@ -1,7 +1,7 @@
 import { load } from "cheerio";
-import request from "request";
+import axios from "axios";
 
-const replaceAll = (text, queryString, replaceString) => {
+const replaceAll = (text: string, queryString: string, replaceString: string): string => {
   let text_ = "";
   for (let i = 0; i < text.length; i++) {
     if (text[i] === queryString) {
@@ -13,32 +13,34 @@ const replaceAll = (text, queryString, replaceString) => {
   return text_;
 };
 
-const currencyConvert = async ({ from, to, amount }) => {
-  return new Promise((resolve, reject) => {
-    request(
+/**
+ * Currency conversion using Google search (legacy fallback)
+ * Note: Main backend uses CoinGecko/FastForex APIs - this is a fallback for api-service
+ */
+const currencyConvert = async ({ from, to, amount }: { from: string; to: string; amount: number }): Promise<number> => {
+  try {
+    const response = await axios.get(
       `https://www.google.com/search?q=${amount}+${from}+to+${to}+&hl=en`,
-      function (error, response, body) {
-        if (error) {
-          return reject(error);
-        } else {
-          resolve(body);
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       }
     );
-  })
-    .then((body: any) => {
-      return load(body);
-    })
-    .then(($) => {
-      return $(".iBp4i").text().split(" ")[0];
-    })
-    .then((rates: any) => {
-      if (rates.includes(",")) rates = replaceAll(rates, ",", "");
-
-      rates = parseFloat(rates) / amount;
-
-      return rates;
-    });
+    
+    const $ = load(response.data);
+    let rates: any = $(".iBp4i").text().split(" ")[0];
+    
+    if (rates.includes(",")) {
+      rates = replaceAll(rates, ",", "");
+    }
+    
+    rates = parseFloat(rates) / amount;
+    return rates;
+  } catch (error) {
+    console.error('[currencyConvert] Error fetching rate:', error);
+    throw error;
+  }
 };
 
 export default currencyConvert;
