@@ -40,7 +40,7 @@ import {
   userTempAddressModel,
 } from "../models/userModels";
 import tatumApi from "../apis/tatumApi";
-import localStorage from "../utils/localStorage";
+// localStorage import removed - OTP now uses Redis
 import blockchairApi from "../apis/blockchairApi";
 import { getTransactionFee, getBlockchainFee } from ".";
 import mailTransporter from "../utils/mailTransporter";
