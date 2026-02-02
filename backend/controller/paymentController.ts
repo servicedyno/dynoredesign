@@ -4159,6 +4159,20 @@ const createPaymentLink = async (
       }
     }
     
+    // Phase 10 Fix: If company_id not provided, default to user's first company
+    let resolvedCompanyId = company_id;
+    if (!resolvedCompanyId) {
+      const userDefaultCompany = await companyModel.findOne({
+        where: { user_id: userData.user_id },
+        order: [['createdAt', 'ASC']]  // Get the first/oldest company
+      });
+      
+      if (userDefaultCompany) {
+        resolvedCompanyId = userDefaultCompany.dataValues.company_id;
+        console.log(`[createPaymentLink] No company_id provided, defaulting to user's first company: ${resolvedCompanyId}`);
+      }
+    }
+    
     // Default modes if not provided
     const allowedModes = modes ? modes.join(",") : "crypto,card";
     
@@ -4170,7 +4184,7 @@ const createPaymentLink = async (
       base_currency: normalizedCurrency,
       user_id: userData.user_id,
       adm_id: userData.user_id,  // Add adm_id for crypto payment compatibility
-      company_id: company_id || null,  // Phase 10 Fix: Include company_id
+      company_id: resolvedCompanyId || null,  // Phase 10 Fix: Include company_id (defaults to first company)
       payment_link: (process.env.CHECKOUT_URL || '').replace(/\/$/, '') + "/pay?d=" + uniqueRef,
       description: description || null,
       expires_at: expires_at,
