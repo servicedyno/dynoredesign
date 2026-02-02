@@ -229,6 +229,8 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
       currency,
       redirect_uri,
       fee_payer,  // Who pays fees: 'customer' or 'company' (default)
+      callback_url,   // Per-payment callback URL (optional)
+      webhook_url,    // Per-payment webhook URL (optional)
     } = req.body;
 
     const data = res.locals.apiKeyData;
@@ -262,6 +264,16 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
 
     const localCurrency = currency.includes("USDT") ? "usdt" : currency;
 
+    // Determine webhook URL: per-payment > API key config > company default
+    const effectiveWebhookUrl = webhook_url || data.webhook_url || null;
+    const effectiveWebhookSecret = data.webhook_secret || null;
+    
+    console.log(`[cryptoPayment] Webhook config:`, {
+      perPayment: webhook_url || 'not set',
+      apiKeyLevel: data.webhook_url || 'not set',
+      effective: effectiveWebhookUrl || 'none',
+    });
+
     // Pass fee_payer to getCurrencyRates for proper amount calculation
     const currencyData = await axios.post(
       getBackendURL() + "/api/pay/getCurrencyRatesInternal",
@@ -290,6 +302,10 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
       redirect_uri,
       fee_payer: fee_payer || 'company',  // Store fee_payer
       available_currencies: availableCurrencies,  // Phase 11: Store available currencies
+      // Webhook support - for merchant notifications
+      webhook_url: effectiveWebhookUrl,
+      webhook_secret: effectiveWebhookSecret,
+      callback_url: callback_url || null,
       ...(meta_data && { meta_data: JSON.stringify(meta_data) }),
     };
 
