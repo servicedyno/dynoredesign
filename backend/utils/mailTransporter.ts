@@ -1,21 +1,4 @@
-// import { Infobip, AuthType } from "@infobip-api/sdk";
-
 import axios from "axios";
-
-// const mailTransporter = new Infobip({
-//   baseUrl: "2v86nm.api.infobip.com",
-//   apiKey: process.env.INFOBIP_API_KEY,
-//   authType: AuthType.ApiKey,
-// });
-
-// const brevo = require("@getbrevo/brevo");
-// const defaultClient = brevo.ApiClient.instance;
-
-// const apiKey = defaultClient.authentications["api-key"];
-// apiKey.apiKey = "xkeysib-YOUR_API_KEY";
-
-// const mailTransporter = new brevo.TransactionalEmailsApi();
-// const smtpTemplate = new brevo.SendSmtpEmail();
 
 interface Attachment {
   name: string;
@@ -43,6 +26,9 @@ const stripHtml = (html: string): string => {
     .trim();
 };
 
+/**
+ * Send email using Brevo (formerly Sendinblue) API
+ */
 const mailTransporter = async ({ to, subject, body, name, attachments }: mailOptions) => {
   const payload: any = {
     sender: {
