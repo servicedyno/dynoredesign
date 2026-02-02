@@ -122,9 +122,9 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 expire: {
                   type: 'string',
                   enum: ['24h', '7d', '30d', 'No'],
-                  description: '📝 OPTIONAL: Link expiration period (defaults to "No" - never expires)',
-                  example: '24h',
-                  default: 'No'
+                  description: '📝 OPTIONAL: Link expiration period. Defaults to "7d" (7 days) if not specified. Use "No" for never expires.',
+                  example: '7d',
+                  default: '7d'
                 },
                 callback_url: { 
                   type: 'string', 
