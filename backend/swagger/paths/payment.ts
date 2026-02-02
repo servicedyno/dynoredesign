@@ -533,6 +533,13 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 - Tax calculation (if merchant enabled \`apply_tax\`)
 - Link expiry with countdown
 - Redirect URL for post-payment
+- **Payment timing settings** (new!)
+
+**Payment Timing Settings:**
+The response includes \`payment_settings\` object with:
+- \`initial_window_minutes\`: Time to complete payment after selecting crypto (default: 15 min)
+- \`grace_period_minutes\`: Time to complete partial payment (default: 30 min, configurable per company)
+- \`overpayment_threshold_usd\`: Minimum overpayment to trigger special handling (default: $5)
 
 **Tax Calculation:**
 When \`apply_tax: true\` was set during payment link creation:
@@ -580,6 +587,11 @@ When \`apply_tax: true\` was set during payment link creation:
                         company_name: 'My Online Store',
                         company_logo: 'https://mystore.com/logo.png'
                       },
+                      payment_settings: {
+                        initial_window_minutes: 15,
+                        grace_period_minutes: 30,
+                        overpayment_threshold_usd: 5
+                      },
                       fee_info: {
                         fee_payer: 'company'
                       },
@@ -617,6 +629,11 @@ When \`apply_tax: true\` was set during payment link creation:
                       merchant: {
                         company_name: 'SaaS Company',
                         company_logo: 'https://saas.com/logo.png'
+                      },
+                      payment_settings: {
+                        initial_window_minutes: 15,
+                        grace_period_minutes: 30,
+                        overpayment_threshold_usd: 5
                       },
                       fee_info: {
                         fee_payer: 'company'
