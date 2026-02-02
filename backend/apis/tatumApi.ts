@@ -2076,6 +2076,7 @@ export default {
   validateTronAddress,
   getCurrentPaymentStatus,
   getIncomingTransactions,
+  getTransactionConfirmations,
   encryptSymmetric,
   decryptSymmetric,
   waitForTransactionConfirmation,
