@@ -1810,6 +1810,7 @@ export default {
   generateUserAddress,
   createSubscription,
   createSubscriptionWithUrl,
+  createSubscriptionBlockBeeStyle,
   getBitcoinAddress,
   deleteUserAddress,
   sendFeeToAdmin,
