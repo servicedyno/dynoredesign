@@ -171,9 +171,14 @@
  *       - Company Management
  *     summary: Update company information
  *     description: |
- *       Update an existing company profile.
+ *       Update an existing company profile including payment threshold settings.
  *       
  *       **Required Fields:** company_name and email must always be provided
+ *       
+ *       **💰 Payment Settings:**
+ *       - `overpayment_threshold_usd`: Min overpayment to trigger handling (default: $5)
+ *       - `underpayment_threshold_usd`: Max underpayment to accept as full (default: $1)
+ *       - `grace_period_minutes`: Time for customer to complete partial payment (default: 30 min)
  *       
  *       **💡 Swagger UI Usage:**
  *       1. Click "Try it out"
