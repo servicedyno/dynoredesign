@@ -3,10 +3,19 @@ export const notificationPaths = {
     get: {
       tags: ['Notifications'],
       summary: 'Get all notifications',
-      description: 'Retrieve paginated list of user notifications',
+      description: `Retrieve paginated list of user notifications.
+
+**Multi-Tenant Filtering:**
+- Omit \`company_id\` to get notifications from ALL your companies
+- Provide \`company_id\` to filter notifications for a specific company`,
       security: [{ BearerAuth: [] }],
       parameters: [
-        { in: 'query', name: 'company_id', schema: { type: 'integer' } },
+        { 
+          in: 'query', 
+          name: 'company_id', 
+          schema: { type: 'integer' },
+          description: '📝 OPTIONAL: Filter by company ID. Omit to get all companies.'
+        },
         { in: 'query', name: 'type', schema: { type: 'string' } },
         { in: 'query', name: 'is_read', schema: { type: 'boolean' } },
         { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
