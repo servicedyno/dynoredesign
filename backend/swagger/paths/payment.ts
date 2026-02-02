@@ -43,9 +43,9 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 
 **EXPIRATION OPTIONS:**
 - \`24h\` - Link expires in 24 hours
-- \`7d\` - Link expires in 7 days
+- \`7d\` - Link expires in 7 days (DEFAULT if not specified)
 - \`30d\` - Link expires in 30 days
-- \`No\` - Link never expires (default)`,
+- \`No\` - Link never expires`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
