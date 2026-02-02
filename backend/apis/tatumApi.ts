@@ -1965,6 +1965,94 @@ const waitForTransactionConfirmation = async (
   return { confirmed: false };
 };
 
+/**
+ * Check if a transaction has enough confirmations to be safely processed
+ * Different blockchains require different confirmation counts:
+ * - BTC: 1 confirmation (10 min avg block time)
+ * - LTC: 3 confirmations (2.5 min avg block time)
+ * - DOGE: 6 confirmations (1 min avg block time)
+ * - BCH: 1 confirmation (10 min avg block time)
+ * - ETH: 12 confirmations (12 sec avg block time)
+ * - TRX: 19 confirmations (3 sec avg block time)
+ * 
+ * Returns: { confirmed: boolean, confirmations: number, required: number }
+ */
+const getTransactionConfirmations = async (
+  txHash: string,
+  currency: string
+): Promise<{ confirmed: boolean; confirmations: number; required: number }> => {
+  const tatumSdk = await getTatumSDK();
+  
+  // Required confirmations per blockchain
+  const REQUIRED_CONFIRMATIONS: { [key: string]: number } = {
+    'BTC': 1,
+    'LTC': 3,
+    'DOGE': 6,
+    'BCH': 1,
+    'ETH': 12,
+    'USDT-ERC20': 12,
+    'USDC-ERC20': 12,
+    'TRX': 19,
+    'USDT-TRC20': 19,
+  };
+  
+  const required = REQUIRED_CONFIRMATIONS[currency] || 1;
+  
+  try {
+    let confirmations = 0;
+    
+    if (currency === 'BTC') {
+      const txData = await tatumSdk.blockchain.bitcoin.btcGetRawTransaction(txHash);
+      if (txData && txData.confirmations !== undefined) {
+        confirmations = txData.confirmations;
+      } else if (txData && txData.blockNumber) {
+        // If confirmations not directly available, calculate from block height
+        const blockInfo = await tatumSdk.blockchain.bitcoin.btcGetBlockChainInfo();
+        confirmations = blockInfo.blocks - txData.blockNumber + 1;
+      }
+    } else if (currency === 'LTC') {
+      const txData = await tatumSdk.blockchain.ltc.ltcGetRawTransaction(txHash);
+      if (txData && txData.confirmations !== undefined) {
+        confirmations = txData.confirmations;
+      }
+    } else if (currency === 'DOGE') {
+      const txData = await tatumSdk.blockchain.doge.dogeGetRawTransaction(txHash);
+      if (txData && txData.confirmations !== undefined) {
+        confirmations = txData.confirmations;
+      }
+    } else if (currency === 'BCH') {
+      const txData = await tatumSdk.blockchain.bcash.bchGetRawTransaction(txHash);
+      if (txData && txData.confirmations !== undefined) {
+        confirmations = txData.confirmations;
+      }
+    } else if (currency === 'ETH' || currency === 'USDT-ERC20' || currency === 'USDC-ERC20') {
+      const txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);
+      if (txData && txData.blockNumber) {
+        const currentBlock = await tatumSdk.blockchain.eth.ethGetBlockNumber();
+        confirmations = currentBlock - txData.blockNumber + 1;
+      }
+    } else if (currency === 'TRX' || currency === 'USDT-TRC20') {
+      const txData = await tatumSdk.blockchain.tron.tronGetTransaction(txHash);
+      if (txData && txData.blockNumber) {
+        const blockInfo = await tatumSdk.blockchain.tron.tronGetCurrentBlock();
+        confirmations = blockInfo.block_header?.raw_data?.number - txData.blockNumber + 1;
+      }
+    }
+    
+    console.log(`[getTransactionConfirmations] ${currency} TX ${txHash}: ${confirmations}/${required} confirmations`);
+    
+    return {
+      confirmed: confirmations >= required,
+      confirmations,
+      required
+    };
+  } catch (error) {
+    console.error(`[getTransactionConfirmations] Error checking ${currency} TX ${txHash}:`, error.message);
+    // If we can't check, assume not confirmed to be safe
+    return { confirmed: false, confirmations: 0, required };
+  }
+};
+
 export default {
   generateWallet,
   createVirtualAccount,
