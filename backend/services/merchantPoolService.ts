@@ -1996,11 +1996,21 @@ export const checkMissedPayments = async (): Promise<{
       
       const walletAddress = addr.dataValues.wallet_address;
       const walletType = addr.dataValues.wallet_type;
-      const reservedAt = new Date(addr.dataValues.reserved_at);
+      const reservedUntil = addr.dataValues.reserved_until ? new Date(addr.dataValues.reserved_until) : null;
       const now = new Date();
       
+      // Skip if no reservation timestamp
+      if (!reservedUntil) {
+        console.log(`[MerchantPool] ⏭️ Skipping ${walletAddress} - no reserved_until timestamp`);
+        continue;
+      }
+      
+      // Calculate time since reservation started (reserved_until is typically 30 min from start)
+      // So if reserved_until is 25 min from now, reservation started 5 min ago
+      const minutesUntilExpiry = (reservedUntil.getTime() - now.getTime()) / 60000;
+      const minutesSinceReserved = 30 - minutesUntilExpiry; // Assuming 30 min reservation window
+      
       // Only check addresses reserved more than 2 minutes ago (give webhook time to fire)
-      const minutesSinceReserved = (now.getTime() - reservedAt.getTime()) / 60000;
       if (minutesSinceReserved < 2) {
         console.log(`[MerchantPool] ⏭️ Skipping ${walletAddress} - only reserved ${minutesSinceReserved.toFixed(1)} min ago`);
         continue;
