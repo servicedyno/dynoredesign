@@ -129,13 +129,14 @@ export const sendPendingPaymentNotification = async (
       confirmationsRequired
     );
 
-    // Mark notification as sent in Redis (expires in 24 hours)
+    // Mark notification as completed in Redis (expires in 24 hours)
     await setRedisItem(pendingKey, {
       sent: true,
       sentAt: new Date().toISOString(),
       txId,
       address,
       userId: user.user_id,
+      status: 'completed',
     });
 
     console.log(`Pending payment notification sent for tx: ${txId}`);
