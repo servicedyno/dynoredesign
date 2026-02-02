@@ -471,5 +471,4 @@ export {
   companyAddressPoolModel,
   companyPoolTransactionModel,
   companyPoolSweepModel,
-  COMPANY_POOL_CRYPTO_TYPES,
 };
