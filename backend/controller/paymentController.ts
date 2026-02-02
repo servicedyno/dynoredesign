@@ -3711,21 +3711,36 @@ const cryptoVerification = async (address, webhook = true) => {
           })
         )?.dataValues;
 
-        // Always send email notification for payment received
+        // RACE CONDITION FIX: Check if payment received email already sent for this transaction
+        const paymentReceivedEmailKey = `payment-received-email-${transactionId}`;
+        const paymentReceivedEmailSent = await getRedisItem(paymentReceivedEmailKey);
+        
+        if (paymentReceivedEmailSent && paymentReceivedEmailSent.sent) {
+          console.log(`[cryptoVerification] Payment received email already sent for tx: ${transactionId}, skipping duplicate`);
+        } else {
+          // Set flag immediately to prevent duplicates
+          await setRedisItem(paymentReceivedEmailKey, { sent: true, sentAt: new Date().toISOString() });
+          await setRedisTTL(paymentReceivedEmailKey, 86400); // 24 hour TTL
+          
+          // Send email notification for payment received
+          const companyName = company_data?.company_name ?? "";
+          const paymentDateTime = new Date();
+          const paymentDateStr = paymentDateTime.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+          const paymentTimeStr = paymentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          await sendPaymentReceivedEmail(
+            userData?.email,
+            userData?.name,
+            userAmountToSend.toString(),  // amount
+            tempCurrency,                 // currency
+            companyName,                  // companyName
+            transactionId,                // transactionId
+            paymentDateStr,               // date
+            paymentTimeStr                // time
+          );
+        }
+
+        // Get company name for notifications (used below)
         const companyName = company_data?.company_name ?? "";
-        const paymentDateTime = new Date();
-        const paymentDateStr = paymentDateTime.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        const paymentTimeStr = paymentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        await sendPaymentReceivedEmail(
-          userData?.email,
-          userData?.name,
-          userAmountToSend.toString(),  // amount
-          tempCurrency,                 // currency
-          companyName,                  // companyName
-          transactionId,                // transactionId
-          paymentDateStr,               // date
-          paymentTimeStr                // time
-        );
 
         // Send large transaction alert if amount > $1000 USD equivalent
         const baseAmount = customerData?.base_amount || tempData?.base_amount || 0;
