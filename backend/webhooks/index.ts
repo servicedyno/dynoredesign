@@ -364,12 +364,22 @@ const tatumCryptoWebHook = async (
 ) => {
   try {
     const payload: ITatumWebHook = req.body;
+    
+    // BLOCKBEE STYLE: Extract company info from query params
+    // URL format: /api/tatum-crypto-webhook?company_id=38&user_id=28&address_id=5
+    const queryCompanyId = req.query.company_id ? Number(req.query.company_id) : null;
+    const queryUserId = req.query.user_id ? Number(req.query.user_id) : null;
+    const queryAddressId = req.query.address_id ? Number(req.query.address_id) : null;
 
     console.log("[tatumCryptoWebHook] Received webhook:", {
       address: payload.address,
       amount: payload.amount,
       currency: (payload as any).currency || payload.asset,
-      txId: payload.txId
+      txId: payload.txId,
+      // BlockBee style params from URL
+      queryCompanyId,
+      queryUserId,
+      queryAddressId,
     });
 
     // Check for duplicate txId (prevent processing same blockchain tx twice)
@@ -393,11 +403,22 @@ const tatumCryptoWebHook = async (
       console.log("[tatumCryptoWebHook] No Redis data found, ignoring webhook");
       return res.status(200).end();
     }
+    
+    // BLOCKBEE STYLE: Enrich items with company info from URL if not present
+    if (queryCompanyId && !items.company_id) {
+      items.company_id = queryCompanyId;
+      console.log(`[tatumCryptoWebHook] Added company_id from URL: ${queryCompanyId}`);
+    }
+    if (queryUserId && !items.user_id) {
+      items.user_id = queryUserId;
+      console.log(`[tatumCryptoWebHook] Added user_id from URL: ${queryUserId}`);
+    }
 
     console.log("[tatumCryptoWebHook] Redis data found:", {
       currency: items.currency,
       expectedAmount: items.amount,
       payment_id: items.payment_id,
+      company_id: items.company_id || queryCompanyId,
       hasTxId: !!items.txId
     });
 
