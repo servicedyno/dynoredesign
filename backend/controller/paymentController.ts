@@ -298,6 +298,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       initial_window_minutes: 15,      // Default: 15 minutes to pay after selecting crypto
       grace_period_minutes: 30,        // Default: 30 minutes to complete partial payment
       overpayment_threshold_usd: 5,    // Default: $5 minimum overpayment to handle
+      underpayment_threshold_usd: 1,   // Default: $1 maximum underpayment to accept as full payment
     };
     
     if (item.company_id) {
@@ -316,6 +317,9 @@ const getData = async (req: express.Request, res: express.Response) => {
           }
           if (companyData.overpayment_threshold_usd !== undefined && companyData.overpayment_threshold_usd !== null) {
             paymentSettings.overpayment_threshold_usd = parseFloat(companyData.overpayment_threshold_usd);
+          }
+          if (companyData.underpayment_threshold_usd !== undefined && companyData.underpayment_threshold_usd !== null) {
+            paymentSettings.underpayment_threshold_usd = parseFloat(companyData.underpayment_threshold_usd);
           }
         }
       } catch (companyError) {
