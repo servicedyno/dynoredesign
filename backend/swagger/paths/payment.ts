@@ -95,7 +95,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 },
                 company_id: { 
                   type: 'integer', 
-                  description: '📝 OPTIONAL: Company ID (defaults to user\'s first company). Recommended for multi-company accounts',
+                  description: '📝 OPTIONAL: Company ID. If not provided, defaults to user\'s first/oldest company. Recommended for multi-company accounts to explicitly specify which company.',
                   example: 1
                 },
                 email: {
