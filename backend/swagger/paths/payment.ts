@@ -53,7 +53,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
           'application/json': {
             schema: {
               type: 'object',
-              required: ['amount'],
+              required: ['amount', 'company_id'],
               properties: {
                 amount: { 
                   type: 'number', 
