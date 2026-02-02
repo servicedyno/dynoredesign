@@ -1,35 +1,72 @@
-/**
- * Manual trigger for crypto verification
- * Run via: ts-node manual_trigger_payment.ts
- */
+import { paymentController } from '../controller';
+import { setRedisItem, getRedisItem } from '../utils/redisInstance';
+import sequelize from '../utils/dbInstance';
+import { QueryTypes } from 'sequelize';
 
-import dotenv from 'dotenv';
-import { Sequelize } from 'sequelize';
-import axios from 'axios';
-
-dotenv.config();
-
-async function triggerPayment() {
-  console.log('='.repeat(80));
-  console.log('MANUAL PAYMENT TRIGGER');
-  console.log('='.repeat(80));
-  console.log();
-  
-  const address = '0xf6dc2d96fa94a4de7fe78aff63e3e2a1fe7cba51';
+async function main() {
+  const address = '0x5c8282c96a89f002b908668bab6d5d30c68b610e';
   
   try {
-    // Trigger via internal API call
-    console.log('Calling cryptoVerification endpoint...');
+    // First, check and update Redis with the payment info
+    let cryptoData = await getRedisItem('crypto-' + address);
+    console.log('=== CURRENT REDIS DATA ===');
+    console.log(JSON.stringify(cryptoData, null, 2));
     
-    const response = await axios.post('http://localhost:8001/api/pay/verifyCryptoPayment', {
-      address: address
-    });
+    // If Redis doesn't have complete data, reconstruct it from DB
+    if (!cryptoData || Object.keys(cryptoData).length === 0) {
+      console.log('Redis data missing, reconstructing from DB...');
+      
+      // Get temp address info
+      const [tempAddr] = await sequelize.query(
+        `SELECT * FROM tbl_merchant_temp_address WHERE wallet_address = :address`,
+        { replacements: { address }, type: QueryTypes.SELECT }
+      ) as any[];
+      
+      if (!tempAddr) {
+        console.error('No temp address found in DB');
+        return;
+      }
+      
+      cryptoData = {
+        mode: 'CRYPTO',
+        amount: tempAddr.expected_amount,
+        status: 'pending',
+        currency: 'ETH',
+        payment_id: tempAddr.current_payment_id,
+        unique_tx_id: tempAddr.current_payment_id,
+        temp_id: tempAddr.temp_address_id,
+        is_merchant_pool: 'true',
+        ref: `customer-${tempAddr.current_payment_id}`,
+      };
+      
+      await setRedisItem('crypto-' + address, cryptoData);
+      console.log('Reconstructed Redis data:', cryptoData);
+    }
     
-    console.log('✅ Response:', response.data);
+    console.log('\n=== CALLING cryptoVerification ===');
+    await paymentController.cryptoVerification(address, true);
+    console.log('=== cryptoVerification COMPLETED ===');
+    
+    // Check the result
+    const updatedCryptoData = await getRedisItem('crypto-' + address);
+    console.log('\n=== UPDATED REDIS DATA ===');
+    console.log(JSON.stringify(updatedCryptoData, null, 2));
+    
+    // Check DB state
+    const [updatedTempAddr] = await sequelize.query(
+      `SELECT status, received_amount, is_partial_payment FROM tbl_merchant_temp_address WHERE wallet_address = :address`,
+      { replacements: { address }, type: QueryTypes.SELECT }
+    ) as any[];
+    console.log('\n=== UPDATED DB STATE ===');
+    console.log(JSON.stringify(updatedTempAddr, null, 2));
     
   } catch (error: any) {
-    console.error('❌ Error:', error.response?.data || error.message);
+    console.error('Error:', error.message || error);
+    console.error(error.stack);
+  } finally {
+    // Don't close connections, just exit
+    process.exit(0);
   }
 }
 
-triggerPayment();
+main();
