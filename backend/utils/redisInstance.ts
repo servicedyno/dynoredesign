@@ -123,7 +123,7 @@ const getRedisItem = async (key: string) => {
     return memCached;
   }
   
-  // Check for JSON stored object
+  // Check for JSON stored object FIRST (preferred storage for objects)
   const jsonValue = await redisClient.get(key + ':json');
   if (jsonValue) {
     try {
@@ -131,16 +131,20 @@ const getRedisItem = async (key: string) => {
       setMemoryCache(key, parsed, 30); // Cache in memory
       return parsed;
     } catch (e) {
-      // Not JSON, fall through to hash
+      console.log(`[Cache] JSON parse error for ${key}:json, falling back to hash`);
+      // Not JSON or parse error, fall through to hash
     }
   }
   
-  // Fall back to hash storage
+  // Fall back to hash storage (only if JSON doesn't exist)
   const hashValue = await redisClient.hGetAll(key);
   if (hashValue && Object.keys(hashValue).length > 0) {
     setMemoryCache(key, hashValue, 30); // Cache in memory
+    return hashValue;
   }
-  return hashValue;
+  
+  // No data found
+  return {};
 };
 
 const deleteRedisItem = async (key: string) => {
