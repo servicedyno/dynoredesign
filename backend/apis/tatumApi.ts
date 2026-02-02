@@ -1762,6 +1762,168 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
 };
 
 /**
+ * Get incoming transactions for an address to detect missed payments
+ * Returns the most recent incoming transaction with txId and amount
+ */
+const getIncomingTransactions = async (
+  address: string, 
+  currency: string,
+  limit: number = 10
+): Promise<{ txId: string; amount: number; timestamp: number }[]> => {
+  const tatumSdk = await getTatumSDK();
+  const transactions: { txId: string; amount: number; timestamp: number }[] = [];
+
+  try {
+    if (currency === "BTC") {
+      const txData = await tatumSdk.blockchain.bitcoin.btcGetTxByAddress(
+        address, limit, 0, null, null, "incoming"
+      );
+      for (const tx of txData || []) {
+        // Find the output for our address
+        let receivedAmount = 0;
+        for (const output of tx.outputs || []) {
+          if (output.address === address) {
+            receivedAmount += parseFloat(output.value || '0');
+          }
+        }
+        if (receivedAmount > 0) {
+          transactions.push({
+            txId: tx.hash,
+            amount: receivedAmount,
+            timestamp: tx.time?.toString().length > 10 ? tx.time : tx.time * 1000
+          });
+        }
+      }
+    } else if (currency === "ETH") {
+      const txData = await tatumSdk.blockchain.eth.ethGetAccountTransactions(
+        address, 0, limit
+      );
+      for (const tx of txData || []) {
+        // Only incoming transactions (where we are the recipient)
+        if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
+          transactions.push({
+            txId: tx.hash,
+            amount: parseFloat(tx.value) / 1e18, // Convert wei to ETH
+            timestamp: tx.timestamp || Date.now()
+          });
+        }
+      }
+    } else if (currency === "TRX") {
+      const result = await tatumSdk.blockchain.tron.tronAccountTx(
+        address, null, null, true
+      );
+      for (const tx of result?.transactions || []) {
+        // Check if this is a TRX transfer to our address
+        const contract = tx.rawData?.contract?.[0];
+        if (contract?.type === 'TransferContract') {
+          const params = contract.parameter?.value;
+          if (params?.to_address === address || params?.toAddress === address) {
+            const amount = (params.amount || 0) / 1e6; // Convert sun to TRX
+            if (amount > 0) {
+              transactions.push({
+                txId: tx.txID,
+                amount,
+                timestamp: tx.rawData?.timestamp || Date.now()
+              });
+            }
+          }
+        }
+      }
+    } else if (currency === "USDT-TRC20") {
+      const result = await tatumSdk.blockchain.tron.tronAccountTx20(
+        address, null, null, true
+      );
+      for (const tx of result?.transactions || []) {
+        // TRC20 transfers
+        if (tx.to === address && parseFloat(tx.value || '0') > 0) {
+          transactions.push({
+            txId: tx.txID || tx.transaction_id,
+            amount: parseFloat(tx.value) / 1e6, // USDT has 6 decimals
+            timestamp: tx.block_timestamp || Date.now()
+          });
+        }
+      }
+    } else if (currency === "USDT-ERC20") {
+      const contractAddress = process.env.ETH_CONTRACT;
+      const txData = await tatumSdk.fungibleToken.erc20GetTransactionByAddress(
+        "ETH", address, contractAddress, limit, null, null, null, "DESC"
+      );
+      for (const tx of txData || []) {
+        if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
+          transactions.push({
+            txId: tx.transactionHash || tx.txId,
+            amount: parseFloat(tx.value) / 1e6, // USDT has 6 decimals
+            timestamp: tx.timestamp || Date.now()
+          });
+        }
+      }
+    } else if (currency === "LTC") {
+      const txData = await tatumSdk.blockchain.ltc.ltcGetTxByAddress(
+        address, limit, 0, null, null, "incoming"
+      );
+      for (const tx of txData || []) {
+        let receivedAmount = 0;
+        for (const output of tx.outputs || []) {
+          if (output.address === address) {
+            receivedAmount += parseFloat(output.value || '0');
+          }
+        }
+        if (receivedAmount > 0) {
+          transactions.push({
+            txId: tx.hash,
+            amount: receivedAmount,
+            timestamp: tx.time?.toString().length > 10 ? tx.time : tx.time * 1000
+          });
+        }
+      }
+    } else if (currency === "DOGE") {
+      const txData = await tatumSdk.blockchain.doge.dogeGetTxByAddress(
+        address, limit, 0, null, null, "incoming"
+      );
+      for (const tx of txData || []) {
+        let receivedAmount = 0;
+        for (const output of tx.outputs || []) {
+          if (output.address === address) {
+            receivedAmount += parseFloat(output.value || '0');
+          }
+        }
+        if (receivedAmount > 0) {
+          transactions.push({
+            txId: tx.hash,
+            amount: receivedAmount,
+            timestamp: tx.time?.toString().length > 10 ? tx.time : tx.time * 1000
+          });
+        }
+      }
+    } else if (currency === "BCH") {
+      const txData = await tatumSdk.blockchain.bcash.bchGetTxByAddress(
+        address, limit, 0
+      );
+      for (const tx of txData || []) {
+        let receivedAmount = 0;
+        for (const output of tx.outputs || []) {
+          if (output.address === address) {
+            receivedAmount += parseFloat(output.value || '0');
+          }
+        }
+        if (receivedAmount > 0) {
+          transactions.push({
+            txId: tx.hash,
+            amount: receivedAmount,
+            timestamp: tx.time?.toString().length > 10 ? tx.time : tx.time * 1000
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`[getIncomingTransactions] Error fetching transactions for ${currency}:`, error.message);
+  }
+
+  // Sort by timestamp descending (most recent first)
+  return transactions.sort((a, b) => b.timestamp - a.timestamp);
+};
+
+/**
  * Wait for a transaction to be confirmed on the blockchain
  * Returns true if confirmed within timeout, false if still pending
  */
