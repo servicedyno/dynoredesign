@@ -496,6 +496,8 @@ const getData = async (req: express.Request, res: express.Response) => {
         order_reference: orderReference,
         description: item.description || null,
         merchant: companyInfo,
+        // Payment timing settings - passed upfront for checkout to display
+        payment_settings: paymentSettings,
         // Simplified fee info - always include subtotal and total with tax
         fee_info: {
           fee_payer: item.fee_payer || 'company',
@@ -529,7 +531,7 @@ const getData = async (req: express.Request, res: express.Response) => {
             pending_amount: item.incomplete_payment.pending_amount,
             pending_usd: item.incomplete_payment.pending_amount, // TODO: Convert to USD if needed
             timestamp: item.incomplete_payment.timestamp,
-            remaining_minutes: Math.max(0, Math.ceil((new Date(item.incomplete_payment.timestamp).getTime() + 30 * 60 * 1000 - Date.now()) / 60000)),
+            remaining_minutes: Math.max(0, Math.ceil((new Date(item.incomplete_payment.timestamp).getTime() + paymentSettings.grace_period_minutes * 60 * 1000 - Date.now()) / 60000)),
             qr_code: item.incomplete_payment.qr_code,
           }
         }),
