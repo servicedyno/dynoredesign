@@ -1968,23 +1968,36 @@ export const ensurePoolSubscriptions = async (): Promise<{
  * Fallback mechanism to check for missed payments when webhooks fail
  * Runs every 5 minutes to detect AND PROCESS payments that may have been missed
  * 
+ * IMPORTANT TIMING:
+ * - Webhooks typically arrive within 1-3 minutes of blockchain confirmation
+ * - We wait 10 MINUTES before considering a payment "missed" to give webhooks priority
+ * - This prevents race conditions where we process before webhook arrives
+ * 
  * LOGIC:
  * 1. Only check addresses with status='RESERVED' (awaiting payment)
- * 2. Check blockchain balance
- * 3. If balance > 0, verify it's NOT already processed by checking:
+ * 2. Only process if reserved for MORE than 10 minutes (webhook should have arrived by now)
+ * 3. Check blockchain balance
+ * 4. If balance > 0, verify it's NOT already processed by checking:
  *    - Redis for existing txId (webhook already fired)
+ *    - Redis for "processing" status (webhook currently handling)
  *    - Database for completed transaction records
- *    - Address status (IN_USE means already being processed)
- * 4. If genuine missed payment found:
+ * 5. If genuine missed payment found:
  *    - Fetch actual transaction from blockchain (get txId, amount)
+ *    - Double-check txId not already processed
  *    - Update Redis with transaction data
  *    - Call cryptoVerification to distribute funds to merchant/admin
  */
+
+// Minimum time to wait before considering a webhook "failed" (in minutes)
+// This gives Tatum webhooks plenty of time to arrive and process
+const WEBHOOK_GRACE_PERIOD_MINUTES = 10;
+
 export const checkMissedPayments = async (): Promise<{
   checked: number;
   found: number;
   processed: number;
   alreadyProcessed: number;
+  skippedTooRecent: number;
   errors: string[];
 }> => {
   const result = {
@@ -1992,11 +2005,13 @@ export const checkMissedPayments = async (): Promise<{
     found: 0,
     processed: 0,
     alreadyProcessed: 0,
+    skippedTooRecent: 0,
     errors: [] as string[],
   };
 
   try {
     console.log("[MerchantPool] 🔍 Checking for missed payments (webhook fallback)...");
+    console.log(`[MerchantPool] ⏱️ Webhook grace period: ${WEBHOOK_GRACE_PERIOD_MINUTES} minutes`);
 
     // Get addresses that are currently RESERVED (awaiting payment)
     // Note: IN_USE status means payment received and being processed - NOT missed
@@ -2038,12 +2053,18 @@ export const checkMissedPayments = async (): Promise<{
       }
       
       // Calculate time since reservation started
+      // reserved_until is typically 30 min from reservation start
       const minutesUntilExpiry = (reservedUntil.getTime() - now.getTime()) / 60000;
       const minutesSinceReserved = 30 - minutesUntilExpiry;
       
-      // Only check addresses reserved more than 2 minutes ago (give webhook time to fire)
-      if (minutesSinceReserved < 2) {
-        console.log(`[MerchantPool] ⏭️ Skipping ${walletAddress} - only reserved ${minutesSinceReserved.toFixed(1)} min ago`);
+      // CRITICAL: Only process if reserved for MORE than grace period
+      // This ensures webhooks have plenty of time to arrive first
+      if (minutesSinceReserved < WEBHOOK_GRACE_PERIOD_MINUTES) {
+        result.skippedTooRecent++;
+        // Only log if there might be something to check (> 5 min old)
+        if (minutesSinceReserved > 5) {
+          console.log(`[MerchantPool] ⏭️ ${walletAddress} - reserved ${minutesSinceReserved.toFixed(1)} min ago (waiting for ${WEBHOOK_GRACE_PERIOD_MINUTES} min grace period)`);
+        }
         continue;
       }
 
