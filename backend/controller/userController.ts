@@ -21,7 +21,7 @@ import sequelize from "../utils/dbInstance";
 import { QueryTypes, Op } from "sequelize";
 import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
-import localStorage from "../utils/localStorage";
+// OTP storage moved to Redis - localStorage import removed
 import axios from "axios";
 import tatumApi from "../apis/tatumApi";
 import { userLogger } from "../utils/loggers";
