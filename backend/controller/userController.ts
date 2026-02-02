@@ -594,7 +594,15 @@ const confirmOTP = async (req: express.Request, res: express.Response) => {
           errorResponseHelper(res, 400, "OTP did not match!");
         }
       } else {
-        const item = await localStorage.getData("/" + email);
+        // Get OTP from Redis instead of localStorage
+        const otpKey = `otp:${email}`;
+        const item: any = await getRedisItem(otpKey);
+        
+        if (!item || !item.otp) {
+          errorResponseHelper(res, 400, "OTP expired or not found!");
+          return;
+        }
+        
         const createdTime = new Date(item.createdAt);
         const currentTime = new Date();
         const diff = getMinutesBetweenDates(currentTime, createdTime);
@@ -605,12 +613,16 @@ const confirmOTP = async (req: express.Request, res: express.Response) => {
                 email,
               },
             });
+            // Delete OTP after successful verification
+            await deleteRedisItem(otpKey);
             const resData = await getAccessToken(userData.dataValues.user_id);
             successResponseHelper(res, 200, "Login Successful!", resData);
           } else {
             errorResponseHelper(res, 400, "OTP did not match!");
           }
         } else {
+          // Delete expired OTP
+          await deleteRedisItem(otpKey);
           errorResponseHelper(res, 400, "OTP expired!");
         }
       }
