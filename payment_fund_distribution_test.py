@@ -174,7 +174,7 @@ class DynoPayTester:
                 return None
             
             rates_data = rates_response.json()
-            if not rates_data.get('success'):
+            if 'data' not in rates_data:
                 self.log(f"❌ Currency rates failed: {rates_data.get('message', 'Unknown error')}", "ERROR")
                 return None
             
