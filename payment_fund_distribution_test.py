@@ -354,20 +354,19 @@ class DynoPayTester:
                     self.log(f"     ❌ Merchant percentage outside expected range: {customer_merchant_percentage:.1f}%", "ERROR")
                     analysis_results.append(False)
             
-            # Compare the two modes - key insight: merchant amounts should be similar in absolute terms
+            # Compare the two modes - key insight: merchant amounts should be different
             if company_amount > 0 and customer_amount > 0:
                 self.log("   📊 Mode Comparison:")
                 self.log(f"     - Company pays fees: Merchant gets {company_merchant_amount:.8f} ETH ({company_merchant_percentage:.1f}% of total)")
                 self.log(f"     - Customer pays fees: Merchant gets {customer_merchant_amount:.8f} ETH ({customer_merchant_percentage:.1f}% of total)")
                 
-                # Key insight: In customer pays fees mode, merchant should get approximately the same absolute amount
-                # but customer pays more total (so merchant percentage is lower, but absolute amount is similar)
-                merchant_amount_diff = abs(customer_merchant_amount - company_merchant_amount)
-                if merchant_amount_diff < 0.001:  # Allow small differences due to rounding
-                    self.log("     ✅ Merchant receives similar absolute amounts in both modes (correct)")
+                # Key insight: In customer pays fees mode, merchant should get MORE absolute amount
+                # because they get the full base amount, while in company pays fees mode they get base minus fees
+                if customer_merchant_amount > company_merchant_amount:
+                    self.log("     ✅ Customer pays fees mode: merchant gets more absolute amount (correct)")
                     analysis_results.append(True)
                 else:
-                    self.log(f"     ❌ Merchant amounts differ significantly: {merchant_amount_diff:.8f} ETH", "ERROR")
+                    self.log(f"     ❌ Customer pays fees mode should give merchant more absolute amount", "ERROR")
                     analysis_results.append(False)
                 
                 # Customer should pay more in customer-pays-fees mode
