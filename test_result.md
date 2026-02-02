@@ -7,6 +7,19 @@
 user_problem_statement: "Phase 12 - Incomplete Payment Currency Lock + Processing Fee Display Fixes. Comprehensive testing of: (1) Payment confirmation and fund distribution, (2) Email notifications to merchant/admin/customer, (3) Fee payer modes (customer vs company), (4) Tax enabled/disabled scenarios, (5) Underpayment handling, (6) Payment link updates, (7) Incomplete payment currency lock mechanism."
 
 current_test_task:
+  - task: "Memory Cache Bug Fix - Payment Status Not Updating to Confirmed"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/utils/redisInstance.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed memory cache bug causing checkout page to show 'payment detected' instead of 'confirmed'. Root cause: (1) Memory cache had 30-second TTL serving stale data while Redis was updated, (2) softDeleteRedisItem didn't clear memory cache, (3) setRedisItem stored JSON but didn't delete old hash data. Fixes applied: (1) Reduced cache TTL to 5 seconds for crypto-* keys, (2) softDeleteRedisItem now clears memory cache, (3) setRedisItem now deletes old hash data when storing JSON, (4) Added invalidateCache function. Test by creating new payment link, sending payment, and verifying checkout shows 'confirmed' status within 5-10 seconds of webhook receipt."
+
+previous_test_tasks:
   - task: "Callback URL, Webhook URL, and Redirect URL Testing"
     implemented: true
     working: true
