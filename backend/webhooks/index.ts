@@ -626,7 +626,12 @@ const tatumCryptoWebHook = async (
         return res.status(200).end();
       }
       
-      // FULL or OVERPAYMENT: Process normally
+      // Log if minor underpayment was accepted
+      if (isMinorUnderpayment) {
+        console.log(`[tatumCryptoWebHook] Minor underpayment ($${underpaymentAmountUsd.toFixed(2)}) within threshold ($${underpaymentThresholdUsd}) - accepting as full payment`);
+      }
+      
+      // FULL, OVERPAYMENT, or MINOR UNDERPAYMENT: Process normally
       // For completion payments, store the cumulative amount
       const finalReceivedAmount = isCompletionPayment ? totalReceivedAmount : incomingAmount;
       console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address, "final amount:", finalReceivedAmount);
