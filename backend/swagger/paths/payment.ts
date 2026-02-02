@@ -747,6 +747,13 @@ When \`apply_tax: true\` was set during payment link creation:
       summary: 'Initiate crypto payment',
       description: `Customer selects cryptocurrency and receives a deposit address. The system monitors this address for incoming payments.
 
+**Authentication:**
+This endpoint requires a **customer token** (not merchant JWT). The customer token is returned in the \`getData\` response as the \`token\` field.
+
+**Request Parameters:**
+- \`uniqueRef\`: The payment reference (same as the "d" URL parameter from payment link)
+- \`currency\`: The cryptocurrency to pay with (BTC, ETH, USDT-TRC20, etc.)
+
 **Tax Handling:**
 If the payment link has \`apply_tax: true\`, the crypto amount will include the calculated tax based on customer's detected location.
 
