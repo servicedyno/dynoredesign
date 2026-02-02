@@ -196,42 +196,36 @@ Modes must be provided in **UPPERCASE**. Valid modes:
               }
             },
             examples: {
-              'Minimal - Just Amount': {
-                summary: '⚡ SIMPLEST: Only amount required (uses all defaults)',
+              'Minimal Required': {
+                summary: '⚡ MINIMAL: Required fields only (amount + company_id)',
                 value: {
-                  amount: 10.00
+                  amount: 10.00,
+                  company_id: 1
                 }
               },
               'With Customer Email': {
-                summary: '📧 SIMPLE: Amount + customer email',
+                summary: '📧 SIMPLE: Amount + company + customer email',
                 value: {
                   amount: 50.00,
+                  company_id: 1,
                   email: 'customer@example.com'
                 }
               },
               'Standard Payment': {
-                summary: '💡 STANDARD: Common use case',
+                summary: '💡 STANDARD: Common use case with description',
                 value: {
                   amount: 100.00,
+                  company_id: 1,
                   currency: 'USD',
                   email: 'customer@example.com',
                   description: 'Order #12345'
-                }
-              },
-              'With Company ID': {
-                summary: '🏢 MULTI-COMPANY: Specify which company',
-                value: {
-                  amount: 100.00,
-                  company_id: 38,
-                  email: 'customer@example.com',
-                  modes: ['CRYPTO'],
-                  description: 'Payment for Company #38'
                 }
               },
               'With Tax Enabled': {
                 summary: '🧾 TAX: Auto-calculate tax based on customer location',
                 value: {
                   amount: 100.00,
+                  company_id: 1,
                   currency: 'EUR',
                   email: 'customer@example.com',
                   description: 'Digital Product - Pro Plan',
@@ -242,6 +236,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 summary: '💰 FEES: Customer pays processing fees',
                 value: {
                   amount: 50.00,
+                  company_id: 1,
                   email: 'customer@example.com',
                   fee_payer: 'customer',
                   description: 'Service Fee - Customer Absorbs Fees'
@@ -251,6 +246,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 summary: '⏰ EXPIRY: Link expires in 24 hours',
                 value: {
                   amount: 199.99,
+                  company_id: 1,
                   email: 'customer@example.com',
                   description: 'Limited Time Offer',
                   expire: '24h'
@@ -277,6 +273,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 summary: '₿ CRYPTO: Bitcoin payment with webhook',
                 value: {
                   amount: 0.001,
+                  company_id: 1,
                   currency: 'BTC',
                   email: 'crypto@example.com',
                   description: 'BTC Payment - Invoice #001',
