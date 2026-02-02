@@ -758,10 +758,10 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
           'application/json': {
             schema: {
               type: 'object',
-              required: ['transaction_id', 'crypto_currency'],
+              required: ['uniqueRef', 'currency'],
               properties: {
-                transaction_id: { type: 'string', format: 'uuid' },
-                crypto_currency: { type: 'string', enum: ['BTC', 'ETH', 'USDT-TRC20', 'USDT-ERC20', 'TRX', 'LTC', 'DOGE'] },
+                uniqueRef: { type: 'string', description: 'Payment reference from getData response (the "d" URL parameter)' },
+                currency: { type: 'string', enum: ['BTC', 'ETH', 'USDT-TRC20', 'USDT-ERC20', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDC-ERC20'], description: 'Cryptocurrency to pay with' },
                 customer_email: { type: 'string', format: 'email', description: 'Optional: for payment receipt' }
               }
             },
@@ -769,23 +769,23 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
               'Bitcoin Payment': {
                 summary: 'Pay with BTC',
                 value: {
-                  transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-                  crypto_currency: 'BTC',
+                  uniqueRef: 'a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                  currency: 'BTC',
                   customer_email: 'customer@example.com'
                 }
               },
               'USDT on Tron': {
                 summary: 'Pay with USDT (TRC20)',
                 value: {
-                  transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-                  crypto_currency: 'USDT-TRC20'
+                  uniqueRef: 'a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                  currency: 'USDT-TRC20'
                 }
               },
               'Ethereum Payment': {
                 summary: 'Pay with ETH',
                 value: {
-                  transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-                  crypto_currency: 'ETH',
+                  uniqueRef: 'a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                  currency: 'ETH',
                   customer_email: 'customer@example.com'
                 }
               }
