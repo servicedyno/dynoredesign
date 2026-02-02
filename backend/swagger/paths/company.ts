@@ -147,7 +147,13 @@
  *     tags:
  *       - Company Management
  *     summary: Get company by ID
- *     description: Retrieve a specific company by its ID
+ *     description: |
+ *       Retrieve a specific company by its ID.
+ *       
+ *       **Payment Settings in Response:**
+ *       - `overpayment_threshold_usd`: Min overpayment to trigger handling (null = default $5)
+ *       - `underpayment_threshold_usd`: Max underpayment to accept as full (null = default $1)
+ *       - `grace_period_minutes`: Time for partial payment completion (null = default 30 min)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -160,6 +166,40 @@
  *     responses:
  *       200:
  *         description: Company details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     company_id:
+ *                       type: integer
+ *                       example: 38
+ *                     company_name:
+ *                       type: string
+ *                       example: "My Company"
+ *                     email:
+ *                       type: string
+ *                       example: "contact@company.com"
+ *                     overpayment_threshold_usd:
+ *                       type: number
+ *                       nullable: true
+ *                       description: "Minimum overpayment (USD) to trigger handling. null = default $5"
+ *                       example: 5.00
+ *                     underpayment_threshold_usd:
+ *                       type: number
+ *                       nullable: true
+ *                       description: "Maximum underpayment (USD) to accept as full. null = default $1"
+ *                       example: 1.00
+ *                     grace_period_minutes:
+ *                       type: integer
+ *                       nullable: true
+ *                       description: "Time (minutes) for partial payment. null = default 30"
+ *                       example: 30
  *       404:
  *         description: Company not found
  *       401:
