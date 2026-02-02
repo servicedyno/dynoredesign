@@ -541,10 +541,13 @@ const generateOTP = async (req: express.Request, res: express.Response) => {
             "OTP for login",
             "Here is your login code: " + randomNumberOTP
           );
-          await localStorage.push("/" + email, {
+          // Store OTP in Redis with 10-minute TTL (more secure than file-based localStorage)
+          const otpKey = `otp:${email}`;
+          await setRedisItem(otpKey, {
             otp: randomNumberOTP.toString(),
             createdAt: new Date().toISOString(),
           });
+          await setRedisTTL(otpKey, 600); // 10 minutes TTL
           successResponseHelper(res, 200, "OTP sent successfully!");
         } else {
           errorResponseHelper(res, 404, "Please enter a registered email!");
