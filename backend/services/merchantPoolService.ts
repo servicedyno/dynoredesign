@@ -1890,10 +1890,11 @@ export const ensurePoolSubscriptions = async (): Promise<{
     for (const addr of poolAddresses) {
       result.checked++;
       
-      const walletAddress = addr.dataValues.wallet_address.toLowerCase();
+      const walletAddressOriginal = addr.dataValues.wallet_address; // Keep original case for API calls
+      const walletAddressLower = walletAddressOriginal.toLowerCase(); // Lowercase for map lookup only
       const dbSubId = addr.dataValues.subscription_id;
       const walletType = addr.dataValues.wallet_type;
-      const activeSub = activeSubsMap.get(walletAddress);
+      const activeSub = activeSubsMap.get(walletAddressLower);
 
       // Case 1: Valid subscription exists and matches
       if (activeSub && dbSubId === activeSub.id) {
