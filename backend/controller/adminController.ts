@@ -430,18 +430,24 @@ const changePassword = async (req: express.Request, res: express.Response) => {
   try {
     const { oldPassword, newPassword } = req.body;
     const adminData: any = jwt.decode(res.locals.token);
-    const password = oldPassword ? sha256(oldPassword).toString() : null;
+    const hashedOldPassword = oldPassword ? sha256(oldPassword).toString() : null;
 
+    // Use parameterized query to prevent SQL injection
     const data = await sequelize.query(
-      `select * from tbl_admin where email='${adminData?.email}' 
-      and password='${password}'`,
-      { type: QueryTypes.SELECT }
+      `SELECT * FROM tbl_admin WHERE email = :email AND password = :password`,
+      { 
+        replacements: { email: adminData?.email, password: hashedOldPassword },
+        type: QueryTypes.SELECT 
+      }
     );
+    
     if (data.length > 0) {
-      const newPass = sha256(newPassword).toString();
+      const hashedNewPassword = sha256(newPassword).toString();
+      // Use parameterized query for UPDATE
       await sequelize.query(
-        `update tbl_admin set password='${newPass}' where email='${adminData?.email}'`,
+        `UPDATE tbl_admin SET password = :newPassword WHERE email = :email`,
         {
+          replacements: { newPassword: hashedNewPassword, email: adminData?.email },
           type: QueryTypes.UPDATE,
         }
       );
