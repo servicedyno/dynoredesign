@@ -537,6 +537,7 @@ The response includes \`payment_settings\` object with:
 - \`initial_window_minutes\`: Time to complete payment after selecting crypto (default: 15 min)
 - \`grace_period_minutes\`: Time to complete partial payment (default: 30 min, configurable per company)
 - \`overpayment_threshold_usd\`: Minimum overpayment to trigger special handling (default: $5)
+- \`underpayment_threshold_usd\`: Maximum underpayment to accept as full payment (default: $1)
 
 **Tax Calculation:**
 When \`apply_tax: true\` was set during payment link creation:
