@@ -58,7 +58,7 @@ export const sendPendingPaymentNotification = async (
   txId: string,
   amount: number,
   currency: string,
-  customerData: any
+  customerData: { name?: string; email?: string; phone?: string; metadata?: Record<string, unknown> }
 ): Promise<boolean> => {
   try {
     // Check if we already sent a pending notification for this transaction
@@ -156,7 +156,7 @@ export const sendConfirmationProgressNotification = async (
   txId: string,
   currentConfirmations: number,
   currency: string,
-  customerData: any
+  customerData: { name?: string; email?: string; phone?: string; metadata?: Record<string, unknown> }
 ): Promise<boolean> => {
   try {
     const requiredConfirmations = CONFIRMATION_REQUIREMENTS[currency] || 1;
@@ -301,7 +301,7 @@ export const sendPartialPaymentNotification = async (
   receivedAmount: number,
   expectedAmount: number,
   currency: string,
-  customerData: any,
+  customerData: { name?: string; email?: string; phone?: string; metadata?: Record<string, unknown> },
   gracePeriodMinutes: number = 30
 ): Promise<boolean> => {
   try {

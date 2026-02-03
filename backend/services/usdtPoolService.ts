@@ -556,7 +556,7 @@ export const handleLatePayment = async (
   walletAddress: string,
   amount: number,
   txId: string
-): Promise<{ handled: boolean; action: string; details: any }> => {
+): Promise<{ handled: boolean; action: string; details: Record<string, unknown> }> => {
   try {
     const poolAddress = await usdtPoolAddressModel.findOne({
       where: { wallet_address: walletAddress },
@@ -898,7 +898,7 @@ export const releaseAddress = async (
  * Fund gas to a pool address if needed
  */
 export const fundGasIfNeeded = async (
-  poolAddress: any,
+  poolAddress: string,
   walletType: "USDT-TRC20" | "USDT-ERC20"
 ): Promise<{ funded: boolean; amount: number; txId?: string }> => {
   try {

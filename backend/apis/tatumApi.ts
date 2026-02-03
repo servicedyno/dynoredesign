@@ -817,7 +817,7 @@ const deleteSubscription = async (id) => {
 const listAllSubscriptions = async (): Promise<any[]> => {
   try {
     const headers = await getTatumHeaders();
-    const allSubscriptions: any[] = [];
+    const allSubscriptions: Array<Record<string, unknown>> = [];
     let offset = 0;
     const pageSize = 50;
     
@@ -888,7 +888,7 @@ const feeEstimation = async (
       to: [{ address: toAddress, value: Number(amount) }],
     });
   } else if (["ETH", "BSC", "USDT-ERC20"].indexOf(currency) !== -1) {
-    const localAmount: any = Number(amount);
+    const localAmount: number = Number(amount);
     const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
       chain: currency === "USDT-ERC20" ? "ETH" : currency,
       type: currency === "USDT-ERC20" ? "TRANSFER_ERC20" : "TRANSFER_NFT",
@@ -1206,7 +1206,7 @@ const assetBatchAddressesToOtherAddress = async ({
     });
 
     // Send assets to address and handle extra assets in user's paremanent address
-    const result: any = await tatumSdk.blockchain.bitcoin.btcTransferBlockchain(
+    const result = await tatumSdk.blockchain.bitcoin.btcTransferBlockchain(
       {
         fromAddress: fromAddress.map((address) => ({
           address: address.address,
@@ -1248,8 +1248,7 @@ const assetBatchAddressesToOtherAddress = async ({
             },
             currency: currency === "ETH" ? "ETH" : "USDT",
           });
-          const result: any =
-            await tatumSdk.blockchain.eth.ethBlockchainTransfer({
+          const result = await tatumSdk.blockchain.eth.ethBlockchainTransfer({
               fromPrivateKey: fromAddr.privateKey,
               to: destinationAddress,
               amount: Number(fromAddr.value).toFixed(8).toString(),
@@ -1290,7 +1289,7 @@ const assetBatchAddressesToOtherAddress = async ({
             to: destinationAddress,
             amount: Number(fromAddr.value).toFixed(8).toString(),
           });
-          const result: any = await tatumSdk.blockchain.tron.tronTransfer({
+          const result = await tatumSdk.blockchain.tron.tronTransfer({
             fromPrivateKey: fromAddr.privateKey,
             to: destinationAddress,
             amount: Number(fromAddr.value).toFixed(8).toString(),
@@ -1330,7 +1329,7 @@ const assetBatchAddressesToOtherAddress = async ({
             to: destinationAddress,
             tokenAddress: process.env.TRX_CONTRACT,
           });
-          const result: any = await tatumSdk.blockchain.tron.tronTransferTrc20({
+          const result = await tatumSdk.blockchain.tron.tronTransferTrc20({
             amount: Number(fromAddr.value).toFixed(2).toString(),
             feeLimit: 50,
             fromPrivateKey: fromAddr.privateKey,
@@ -1374,8 +1373,7 @@ const assetBatchAddressesToOtherAddress = async ({
               gasLimit: fee?.gasLimit.toString(),
             },
           });
-          const result: any =
-            await tatumSdk.blockchain.bsc.bscBlockchainTransfer({
+          const result = await tatumSdk.blockchain.bsc.bscBlockchainTransfer({
               currency,
               amount: Number(fromAddr.value).toFixed(8).toString(),
               fromPrivateKey: fromAddr.privateKey,
@@ -1422,7 +1420,7 @@ const assetBatchAddressesToOtherAddress = async ({
         ? permanentUserWalletAddress
         : destinationAddress,
     });
-    const result: any = await tatumSdk.blockchain.doge.dogeTransferBlockchain({
+    const result = await tatumSdk.blockchain.doge.dogeTransferBlockchain({
       fromAddress: fromAddress.map((address) => ({
         address: address.address,
         privateKey: address.privateKey,
@@ -1459,7 +1457,7 @@ const assetBatchAddressesToOtherAddress = async ({
         ? permanentUserWalletAddress
         : destinationAddress,
     });
-    const result: any = await tatumSdk.blockchain.ltc.ltcTransferBlockchain({
+    const result = await tatumSdk.blockchain.ltc.ltcTransferBlockchain({
       fromAddress: fromAddress.map((address) => ({
         address: address.address,
         privateKey: address.privateKey,
@@ -1492,7 +1490,7 @@ const assetBatchAddressesToOtherAddress = async ({
         ? destinationAddress
         : "bitcoincash:" + destinationAddress,
     });
-    const result: any = await tatumSdk.blockchain.bcash.bchTransferBlockchain({
+    const result = await tatumSdk.blockchain.bcash.bchTransferBlockchain({
       fromUTXO,
       to: toUTXO,
       fee: fee,
@@ -2006,31 +2004,31 @@ const getTransactionConfirmations = async (
     let confirmations = 0;
     
     if (currency === 'BTC') {
-      const txData: any = await tatumSdk.blockchain.bitcoin.btcGetRawTransaction(txHash);
+      const txData = await tatumSdk.blockchain.bitcoin.btcGetRawTransaction(txHash);
       if (txData && txData.confirmations !== undefined) {
         confirmations = txData.confirmations;
       } else if (txData && txData.blockNumber) {
         // If confirmations not directly available, calculate from block height
-        const blockInfo: any = await tatumSdk.blockchain.bitcoin.btcGetBlockChainInfo();
+        const blockInfo = await tatumSdk.blockchain.bitcoin.btcGetBlockChainInfo();
         confirmations = blockInfo.blocks - txData.blockNumber + 1;
       }
     } else if (currency === 'LTC') {
-      const txData: any = await tatumSdk.blockchain.ltc.ltcGetRawTransaction(txHash);
+      const txData = await tatumSdk.blockchain.ltc.ltcGetRawTransaction(txHash);
       if (txData && txData.confirmations !== undefined) {
         confirmations = txData.confirmations;
       }
     } else if (currency === 'DOGE') {
-      const txData: any = await tatumSdk.blockchain.doge.dogeGetRawTransaction(txHash);
+      const txData = await tatumSdk.blockchain.doge.dogeGetRawTransaction(txHash);
       if (txData && txData.confirmations !== undefined) {
         confirmations = txData.confirmations;
       }
     } else if (currency === 'BCH') {
-      const txData: any = await tatumSdk.blockchain.bcash.bchGetRawTransaction(txHash);
+      const txData = await tatumSdk.blockchain.bcash.bchGetRawTransaction(txHash);
       if (txData && txData.confirmations !== undefined) {
         confirmations = txData.confirmations;
       }
     } else if (currency === 'ETH' || currency === 'USDT-ERC20' || currency === 'USDC-ERC20') {
-      const txData: any = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);
+      const txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);
       if (txData && txData.blockNumber) {
         const currentBlock: any = await (tatumSdk.blockchain.eth as any).ethGetBlockNumber?.() || 0;
         if (currentBlock) {
@@ -2038,9 +2036,9 @@ const getTransactionConfirmations = async (
         }
       }
     } else if (currency === 'TRX' || currency === 'USDT-TRC20') {
-      const txData: any = await tatumSdk.blockchain.tron.tronGetTransaction(txHash);
+      const txData = await tatumSdk.blockchain.tron.tronGetTransaction(txHash);
       if (txData && txData.blockNumber) {
-        const blockInfo: any = await tatumSdk.blockchain.tron.tronGetCurrentBlock();
+        const blockInfo = await tatumSdk.blockchain.tron.tronGetCurrentBlock();
         const currentBlockNumber = blockInfo?.block_header?.raw_data?.number || blockInfo?.blockNumber || 0;
         confirmations = currentBlockNumber - txData.blockNumber + 1;
       }

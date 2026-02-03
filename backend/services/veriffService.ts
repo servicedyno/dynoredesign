@@ -51,7 +51,7 @@ interface VerificationDecision {
       idNumber: string;
       dateOfBirth: string;
       nationality: string;
-      addresses: any[];
+      addresses: Array<Record<string, unknown>>;
     };
     document: {
       number: string;
@@ -66,7 +66,7 @@ interface VerificationDecision {
     acceptanceTime: string;
     reason: string;
     reasonCode: number;
-    comments: any[];
+    comments: Array<Record<string, unknown>>;
   };
 }
 
@@ -93,7 +93,7 @@ class VeriffService {
    * Required for POST requests to Veriff API
    * Uses crypto-js for HMAC-SHA256 signature generation
    */
-  private generateSignature(payload: any): string {
+  private generateSignature(payload: unknown): string {
     const payloadString = JSON.stringify(payload);
     const signature = CryptoJS.HmacSHA256(payloadString, this.apiSecret).toString(CryptoJS.enc.Hex);
     return signature.toLowerCase();
@@ -181,7 +181,7 @@ class VeriffService {
    * Verify webhook signature
    * Ensures webhook requests are authentic
    */
-  verifyWebhookSignature(payload: any, signature: string): boolean {
+  verifyWebhookSignature(payload: unknown, signature: string): boolean {
     try {
       const expectedSignature = this.generateSignature(payload);
       return signature.toLowerCase() === expectedSignature;
@@ -195,13 +195,13 @@ class VeriffService {
    * Parse webhook payload
    * Extract relevant information from Veriff webhook
    */
-  parseWebhookPayload(payload: any): {
+  parseWebhookPayload(payload: Record<string, unknown>): {
     verificationId: string;
     status: string;
     decision: string;
     decisionCode: string;
     reason: string;
-    vendorData: any;
+    vendorData: Record<string, unknown>;
   } {
     const verification = payload.verification || {};
     

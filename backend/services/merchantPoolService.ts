@@ -498,7 +498,7 @@ export const reserveAddress = async (
           console.log(`[MerchantPool] ✅ Subscription updated with company info: ${subscriptionId}`);
           console.log(`[MerchantPool]    URL: ${subResult.url}`);
         }
-      } catch (subError: any) {
+      } catch (subError: unknown) {
         console.error(`[MerchantPool] ⚠️ Subscription update failed:`, subError.message);
         // Continue with existing subscription if update fails
       }
@@ -887,7 +887,7 @@ export const releaseAddress = async (
  * @param recipientAddress - Optional: The recipient address (for better estimation)
  */
 export const fundGasIfNeeded = async (
-  poolAddress: any,
+  poolAddress: string,
   walletType: string,
   transferAmount?: number,
   recipientAddress?: string
@@ -1132,7 +1132,7 @@ interface ProfitabilityResult {
 const checkSweepProfitability = async (
   walletType: string,
   balance: number,
-  feeData: any
+  feeData: { fixedFee: number; transactionFee: number; blockchainBuffer: number; totalDeduction: number }
 ): Promise<ProfitabilityResult> => {
   try {
     // Get fee amount from feeData
@@ -1828,7 +1828,7 @@ export const ensurePoolSubscriptions = async (): Promise<{
           } else {
             throw new Error("No subscription ID returned");
           }
-        } catch (subError: any) {
+        } catch (subError: unknown) {
           // Handle "subscription already exists" error - extract ID from error message
           const errorData = subError.response?.data;
           if (errorData?.errorCode === 'subscription.exists.on.address-and-currency') {
@@ -2249,7 +2249,7 @@ export const checkMissedPayments = async (): Promise<{
         console.log(`[MerchantPool] 🚀 Processing missed payment via cryptoVerification...`);
         
         try {
-          const verificationResult: any = await paymentController.cryptoVerification(walletAddress, true);
+          const verificationResult = await paymentController.cryptoVerification(walletAddress, true);
           
           if (verificationResult?.duplicate) {
             console.log(`[MerchantPool] ⏭️ Payment was already processed (duplicate detected)`);
@@ -2277,7 +2277,7 @@ export const checkMissedPayments = async (): Promise<{
             console.log(`[MerchantPool] ⚠️ cryptoVerification returned:`, verificationResult);
             result.errors.push(`Verification returned unexpected result for ${walletAddress}`);
           }
-        } catch (verifyError: any) {
+        } catch (verifyError: unknown) {
           // Check if it's an expected "throw" for incomplete payments
           if (verifyError?.paymentStatus === 'incomplete') {
             console.log(`[MerchantPool] 📋 Partial payment detected - ${verifyError.amount} ${walletType} remaining`);
