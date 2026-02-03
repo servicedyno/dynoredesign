@@ -1901,7 +1901,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             redirect_uri,
           };
           // FIXED: Use soft delete with TTL for checkout status polling
-          await softDeleteRedisItem(uniqueRef, 1800);
+          await softDeleteRedisItem(uniqueRef, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS);
           successResponseHelper(
             res,
             200,
@@ -1951,7 +1951,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             redirect_uri,
           };
           // FIXED: Use soft delete with TTL for checkout status polling
-          await softDeleteRedisItem(uniqueRef, 1800);
+          await softDeleteRedisItem(uniqueRef, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS);
           successResponseHelper(
             res,
             200,
