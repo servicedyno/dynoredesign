@@ -4716,14 +4716,31 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
       ...(usePagination && { limit: limitNum, offset: offset }),
     });
 
+    // Define interface for payment link data
+    interface PaymentLinkData {
+      link_id: number;
+      transaction_id: string;
+      description?: string;
+      base_amount: number;
+      base_currency: string;
+      createdAt: Date | string;
+      expires_at?: Date | string;
+      status?: string;
+      times_used?: number;
+      payment_link: string;
+      email?: string;
+      allowedModes?: string;
+      company_id?: number;
+    }
+
     // Format for UI with computed status
-    const formattedLinks = links.map((link: Record<string, unknown>) => {
+    const formattedLinks = (links as Array<{ dataValues: PaymentLinkData }>).map((link) => {
       const linkData = link.dataValues;
       const now = new Date();
       
       // Calculate status
       let status = "Active";
-      if (linkData.expires_at && new Date(linkData.expires_at) <= now) {
+      if (linkData.expires_at && new Date(linkData.expires_at as string) <= now) {
         status = "Expired";
       }
       if (linkData.status === "completed" || linkData.status === "successful") {
@@ -4731,7 +4748,7 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
       }
 
       // Format dates
-      const formatDate = (date) => {
+      const formatDate = (date: Date | string | undefined | null): string => {
         if (!date) return "Never";
         const d = new Date(date);
         return d.toLocaleString('en-GB', {
