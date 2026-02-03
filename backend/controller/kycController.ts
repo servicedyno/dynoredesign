@@ -327,15 +327,17 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
     const companyId = kycRecord.get("company_id") as number | null;
 
     // Get user details for notifications
-    const userResult = await sequelize.query(
+    const userResult = await sequelize.query<{ name: string; email: string }>(
       `SELECT name, email FROM tbl_user WHERE user_id = :userId`,
       {
         replacements: { userId },
         type: QueryTypes.SELECT,
       }
-    ) as Array<Record<string, unknown>>;
+    );
 
     const user = userResult[0];
+    const userEmail = user?.email || '';
+    const userName = user?.name || '';
 
     // Send notifications based on decision
     if (decision === "approved") {
@@ -350,7 +352,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
       );
 
       // Send approval email
-      await sendKYCApprovedEmail(user.email, user.name);
+      await sendKYCApprovedEmail(userEmail, userName);
 
     } else if (decision === "declined") {
       // Create rejection notification
@@ -367,7 +369,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
       );
 
       // Send rejection email
-      await sendKYCRejectedEmail(user.email, user.name, reason);
+      await sendKYCRejectedEmail(userEmail, userName, reason);
 
     } else if (decision === "resubmission_requested") {
       // Create resubmission notification
@@ -384,7 +386,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
       );
 
       // Send resubmission required email
-      await sendKYCResubmissionRequiredEmail(user.email, user.name, reason || "Additional documents required for verification");
+      await sendKYCResubmissionRequiredEmail(userEmail, userName, reason || "Additional documents required for verification");
     }
 
     return successResponseHelper(res, 200, "Webhook processed successfully", {});
