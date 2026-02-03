@@ -705,7 +705,8 @@ const createSubscriptionWithUrl = async (address: string, currency: string, cust
     
     return resData;
   } catch (e: unknown) {
-    console.log("[createSubscriptionWithUrl] Error:", JSON.stringify(e.response?.data || e.message, null, 2));
+    const error = e as { response?: { data?: unknown }; message?: string };
+    console.log("[createSubscriptionWithUrl] Error:", JSON.stringify(error.response?.data || error.message, null, 2));
     throw e;
   }
 };
