@@ -168,6 +168,19 @@ const addCompany = async (req: express.Request, res: express.Response) => {
       const serverUrl = process.env.SERVER_URL?.endsWith('/') ? process.env.SERVER_URL : process.env.SERVER_URL + '/';
       photo = serverUrl + "images/" + file.filename;
     }
+    
+    // Auto-suggest country from VAT number if country is missing
+    if (data.vat_number && data.vat_number.trim() !== "" && (!data.country || data.country.trim() === "")) {
+      const suggestedCountry = suggestCountryFromVAT(data.vat_number);
+      if (suggestedCountry) {
+        data.country = suggestedCountry;
+        companyLogger.info(
+          `Auto-suggested country ${suggestedCountry} (${getCountryName(suggestedCountry)}) based on VAT number ${data.vat_number}`,
+          { user_id: userData.user_id, email: userData.email }
+        );
+      }
+    }
+    
     let taxValidation = null;
     if (data.vat_number && data.vat_number.trim() !== "" && data.country && data.country.trim() !== "") {
       // Extract VAT country code from VAT number (first 2 characters for most formats)
