@@ -164,7 +164,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     const totalWallets = walletsWithCompanyName.length;
     const message = totalWallets === 0 
       ? "No wallets found. Add your first wallet address to start receiving payments."
-      : `Successfully retrieved ${totalWallets} wallet${totalWallets === 1 ? '' : 's'} from ${returnData.length} company${returnData.length === 1 ? '' : 'ies'}`;
+      : `Successfully retrieved ${totalWallets} wallet${totalWallets === 1 ? '' : 's'} from ${returnData.length} compan${returnData.length === 1 ? 'y' : 'ies'}`;
     
     // Cache the result
     await setRedisItem(cacheKey, returnData);
