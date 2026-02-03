@@ -1775,10 +1775,10 @@ export const ensurePoolSubscriptions = async (): Promise<{
     
     // Create a map of address -> subscription for quick lookup
     const activeSubsMap = new Map<string, Record<string, unknown>>();
-    for (const sub of activeSubscriptions) {
+    for (const sub of activeSubscriptions as Array<{ attr?: { address?: string }; id?: string }>) {
       const address = sub.attr?.address?.toLowerCase();
       if (address) {
-        activeSubsMap.set(address, sub);
+        activeSubsMap.set(address, sub as Record<string, unknown>);
       }
     }
     
