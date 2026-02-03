@@ -56,9 +56,9 @@ export const getMyReferralCode = async (req: Request, res: Response) => {
     }
 
     // If user doesn't have a referral code, generate one
-    let referralCode = (user as { referral_code?: string }).referral_code;
+    let referralCode = (user as { dataValues: { referral_code?: string; name?: string; email?: string; referral_bonus_earned?: number } }).dataValues.referral_code;
     if (!referralCode) {
-      referralCode = generateReferralCode(userId, (user as Record<string, unknown>).name || 'USER');
+      referralCode = generateReferralCode(userId, String(user.dataValues.name || 'USER'));
       await User.update(
         { referral_code: referralCode },
         { where: { user_id: userId } }
@@ -83,7 +83,7 @@ export const getMyReferralCode = async (req: Request, res: Response) => {
       pending_referrals: referrals.filter(r => r.status === 'pending').length,
       active_referrals: referrals.filter(r => r.status === 'active').length,
       rewarded_referrals: referrals.filter(r => r.status === 'rewarded').length,
-      total_earnings: (user as Record<string, unknown>).referral_bonus_earned || 0,
+      total_earnings: user.dataValues.referral_bonus_earned || 0,
     };
 
     return res.status(200).json({
@@ -93,8 +93,8 @@ export const getMyReferralCode = async (req: Request, res: Response) => {
         referral_link: `${process.env.SERVER_URL}/signup?ref=${referralCode}`,
         stats,
         user: {
-          name: (user as Record<string, unknown>).name,
-          email: (user as Record<string, unknown>).email,
+          name: user.dataValues.name,
+          email: user.dataValues.email,
         },
       },
     });
