@@ -457,13 +457,13 @@ Wallet address is saved and ready to receive payments!`,
 
 ## What Can Be Updated:
 - Wallet address (to new crypto address)
-- Wallet name (custom label)
+- Wallet name (custom display name)
 - Currency type (blockchain)
 
 ## Multi-Tenant:
 ✅ Uses company_id for security
 
-**Table:** tbl_user_wallet (Main payment system)`,
+**Table:** tbl_user_wallet`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
