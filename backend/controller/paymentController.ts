@@ -2414,13 +2414,14 @@ const Crypto = async (
     // 2. Initialize pool if empty
     // 3. Find available address with highest admin_fee_balance
     // 4. Reserve it for this payment
-    const poolAddress = await merchantPoolService.reserveAddress(
+    const poolAddressResult = await merchantPoolService.reserveAddress(
       currency,
       paymentId,
       Number(userId),
       parsedCompanyId || 0,  // Pass 0 if no company_id (will be treated as null in DB)
       Number(data.amount) || 0
     );
+    const poolAddress = poolAddressResult as { dataValues: { wallet_address: string; temp_address_id: number } };
     
     const address = poolAddress.dataValues.wallet_address;
     console.log(`[Crypto] ✅ Reserved merchant pool address: ${address}`);
