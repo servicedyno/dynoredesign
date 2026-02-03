@@ -25,7 +25,7 @@ const getBackendURL = () => {
 
 // Phase 11: Helper function to get available crypto currencies for a company
 const getAvailableCurrencies = async (userId: number, companyId: number): Promise<string[]> => {
-  const wallets: any[] = await sequelize.query(
+  const wallets: Array<unknown> = await sequelize.query(
     `SELECT DISTINCT wallet_type FROM tbl_user_wallet 
      WHERE user_id = :userId 
      AND company_id = :companyId 
@@ -36,7 +36,7 @@ const getAvailableCurrencies = async (userId: number, companyId: number): Promis
       type: QueryTypes.SELECT,
     }
   );
-  return wallets.map((w: any) => w.wallet_type);
+  return wallets.map((w: unknown) => w.wallet_type);
 };
 
 const createUser = async (req: express.Request, res: express.Response) => {
@@ -205,7 +205,7 @@ const getSupportedCurrency = async (
       { type: QueryTypes.SELECT }
     );
 
-    const currencyList = tempData.map((x: any) => x.wallet_type);
+    const currencyList = tempData.map((x: unknown) => x.wallet_type);
 
     successResponseHelper(res, 200, "", [...currencyList]);
   } catch (e) {
@@ -613,7 +613,7 @@ const useWallet = async (req: express.Request, res: express.Response) => {
 
       const customer_id = customerData.dataValues.customer_id;
 
-      const companyData: any[] = await sequelize.query(
+      const companyData: Array<unknown> = await sequelize.query(
         "select * from tbl_company where company_id=" + tempData.company_id,
         { type: QueryTypes.SELECT }
       );

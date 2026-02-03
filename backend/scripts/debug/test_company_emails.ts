@@ -13,7 +13,7 @@ async function testCompanyEmails() {
         'Test Company Ltd'
       );
       console.log('   ✅ Company profile created email sent successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log('   ❌ Error:', error.message);
     }
     
@@ -26,13 +26,13 @@ async function testCompanyEmails() {
         'Test User'
       );
       console.log('   ✅ Company contact welcome email sent successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log('   ❌ Error:', error.message);
     }
     
     console.log('\n=== Test Complete ===');
     process.exit(0);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Test failed:', error.message);
     process.exit(1);
   }

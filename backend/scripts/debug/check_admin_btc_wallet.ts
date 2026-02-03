@@ -53,7 +53,7 @@ async function checkAdminBTCWallet() {
             console.log(`\n⚠️  Unknown xpub type: ${walletInfo.xpub.substring(0, 4)}`);
           }
         }
-      } catch (decryptError: any) {
+      } catch (decryptError: unknown) {
         console.log(`\n❌ Could not decrypt: ${decryptError.message}`);
       }
     }
@@ -63,7 +63,7 @@ async function checkAdminBTCWallet() {
     console.log(`TATUM_TESTNET_TYPE: ${process.env.TATUM_TESTNET_TYPE}`);
     console.log(`TATUM_TESTNET_KEY: ${process.env.TATUM_TESTNET_KEY?.substring(0, 20)}...`);
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error:', error.message);
   }
 }

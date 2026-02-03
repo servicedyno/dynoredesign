@@ -64,7 +64,7 @@ async function main() {
           );
           const onChainBalance = parseFloat(response.data.balance || '0');
           console.log(`${addr.wallet_address.substring(0,20)}...: ${onChainBalance.toFixed(8)} ETH on-chain (DB fee: ${addr.admin_fee_balance || '0'})`);
-        } catch (e: any) {
+        } catch (e: unknown) {
           console.log(`${addr.wallet_address.substring(0,20)}...: Error fetching balance`);
         }
       }

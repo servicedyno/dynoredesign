@@ -14,7 +14,7 @@ async function checkUserTable() {
       ORDER BY ordinal_position
     `, { type: QueryTypes.SELECT });
 
-    userColumns.forEach((col: any) => {
+    userColumns.forEach((col: unknown) => {
       console.log(`  ${col.column_name} (${col.data_type})`);
     });
 

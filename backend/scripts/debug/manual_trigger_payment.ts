@@ -60,7 +60,7 @@ async function main() {
     console.log('\n=== UPDATED DB STATE ===');
     console.log(JSON.stringify(updatedTempAddr, null, 2));
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error:', error.message || error);
     console.error(error.stack);
   } finally {

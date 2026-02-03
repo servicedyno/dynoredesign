@@ -42,7 +42,7 @@ async function manualProcessPayment() {
       throw new Error('Payment address not found in database');
     }
     
-    const poolAddress: any = poolAddresses[0];
+    const poolAddress: unknown = poolAddresses[0];
     console.log('✅ Found pool address');
     console.log('   Temp ID:', poolAddress.temp_address_id);
     console.log('   Status:', poolAddress.status);
@@ -91,7 +91,7 @@ async function manualProcessPayment() {
     
     if (newTxs && newTxs.length > 0) {
       console.log('✅ Transaction recorded in database:');
-      const tx: any = newTxs[0];
+      const tx: unknown = newTxs[0];
       console.log('   Merchant Amount:', tx.merchant_amount_crypto, 'ETH');
       console.log('   USD Value: $' + tx.merchant_amount_usd);
       console.log('   TX ID:', tx.merchant_payout_tx_id);
@@ -101,7 +101,7 @@ async function manualProcessPayment() {
     await sequelize.close();
     process.exit(0);
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error:', error.message);
     console.error(error.stack);
     await sequelize.close();

@@ -55,7 +55,7 @@ async function checkAllAdminWallets() {
           } else {
             console.log('Mnemonic-only (no xpub)');
           }
-        } catch (decryptError: any) {
+        } catch (decryptError: unknown) {
           console.log(`❌ Could not decrypt: ${decryptError.message}`);
         }
       }
@@ -72,7 +72,7 @@ async function checkAllAdminWallets() {
     console.log('ETH/TRX: Same xpub format, network determined by API key/RPC');
     console.log('');
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error:', error.message);
   }
 }

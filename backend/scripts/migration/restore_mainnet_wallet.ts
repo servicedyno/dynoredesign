@@ -66,7 +66,7 @@ async function restoreMainnetBTCWallet() {
       console.log('❌ No records updated. Check if BTC wallet exists in admin_wallet table');
     }
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('\n❌ Error:', error.message);
     if (error.stack) {
       console.error(error.stack);

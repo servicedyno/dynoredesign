@@ -380,7 +380,7 @@ testRouter.post("/diagnose-temp-address", authMiddleware, async (req, res) => {
       const wallet = new ethers.Wallet(decryptedKey);
       derivedAddress = wallet.address;
       addressMatch = expectedAddress.toLowerCase() === derivedAddress.toLowerCase();
-    } catch (decryptErr: any) {
+    } catch (decryptErr: unknown) {
       return errorResponseHelper(res, 500, `Decryption error: ${decryptErr.message}`);
     }
     

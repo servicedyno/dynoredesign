@@ -7,7 +7,7 @@ async function addApplyTaxColumn() {
       ADD COLUMN IF NOT EXISTS apply_tax BOOLEAN DEFAULT false NOT NULL
     `);
     console.log('✅ apply_tax column added to tbl_payment_link');
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error.message.includes('already exists') || error.message.includes('duplicate')) {
       console.log('✅ apply_tax column already exists');
     } else {

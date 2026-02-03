@@ -51,7 +51,7 @@ async function checkDatabase() {
         const [rows] = await sequelize.query(`SELECT COUNT(*) as count FROM ${tableName}`);
         const count = rows[0] ? (rows[0] as any).count : 0;
         console.log(`   ✅ ${tableName}: ${count} rows`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.log(`   ❌ ${tableName}: ${err.message.split('\n')[0]}`);
       }
     }
@@ -62,7 +62,7 @@ async function checkDatabase() {
     console.log('\n✅ Database has data and is accessible');
     console.log('✅ Ready to run schema sync to add missing columns\n');
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('\n❌ Error:', error.message);
     process.exit(1);
   }

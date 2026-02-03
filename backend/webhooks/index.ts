@@ -15,7 +15,7 @@ import { QueryTypes } from "sequelize";
  * @param secret - The webhook secret key
  * @returns Hex-encoded HMAC signature
  */
-const generateWebhookSignature = (payload: any, secret: string): string => {
+const generateWebhookSignature = (payload: unknown, secret: string): string => {
   const payloadString = JSON.stringify(payload);
   const hmac = crypto.createHmac('sha256', secret);
   hmac.update(payloadString);
@@ -45,7 +45,7 @@ const logWebhookDelivery = async (
   webhookUrl: string,
   eventType: string,
   webhookId: string,
-  payload: any,
+  payload: unknown,
   status: 'success' | 'failed',
   responseStatus: number | null,
   responseTimeMs: number,
@@ -685,7 +685,7 @@ const tatumCryptoWebHook = async (
             console.log("[tatumCryptoWebHook] cryptoVerification completed successfully");
             lastError = null;
             break;
-          } catch (retryError: any) {
+          } catch (retryError: unknown) {
             lastError = retryError;
             
             // SMART RETRY: Check if error is retryable
@@ -763,7 +763,7 @@ const tatumCryptoWebHook = async (
         // This prevents duplicate webhook delivery
         console.log("[tatumCryptoWebHook] Payment confirmed - webhook handled by cryptoVerification");
 
-      } catch (verifyError: any) {
+      } catch (verifyError: unknown) {
         console.error("[tatumCryptoWebHook] Error in cryptoVerification after retries:", verifyError);
         
         // PERSISTENCE: Store failed state for manual recovery or cron retry

@@ -25,7 +25,7 @@ async function main() {
       { type: QueryTypes.SELECT }
     );
     console.log('\n=== RECENT USER TRANSACTIONS ===');
-    transactions.forEach((tx: any) => {
+    transactions.forEach((tx: unknown) => {
       console.log(`ID: ${tx.id}, Status: ${tx.status}, Amount: ${tx.base_amount} ${tx.base_currency}`);
     });
 

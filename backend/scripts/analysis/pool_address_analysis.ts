@@ -129,25 +129,25 @@ async function runPoolAddressAnalysis() {
     }
 
     // Parse timestamps for analysis
-    const poolTimes = poolAddresses.map((addr: any) => ({
+    const poolTimes = poolAddresses.map((addr: unknown) => ({
       timestamp: new Date(addr.created_at),
       wallet_type: addr.wallet_type,
       address_id: addr.temp_address_id
     })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-    const merchantTimes = merchantWallets.map((wallet: any) => ({
+    const merchantTimes = merchantWallets.map((wallet: unknown) => ({
       timestamp: new Date(wallet.created_at),
       wallet_type: wallet.wallet_type,
       wallet_id: wallet.wallet_id
     })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-    const userWalletTimes = userWallets.map((wallet: any) => ({
+    const userWalletTimes = userWallets.map((wallet: unknown) => ({
       timestamp: new Date(wallet.createdAt),
       wallet_type: wallet.wallet_type,
       wallet_id: wallet.wallet_id
     })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-    const transactionTimes = poolTransactions.map((tx: any) => ({
+    const transactionTimes = poolTransactions.map((tx: unknown) => ({
       timestamp: new Date(tx.created_at),
       wallet_type: tx.wallet_type,
       tx_id: tx.pool_tx_id

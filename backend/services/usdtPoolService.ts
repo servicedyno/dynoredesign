@@ -81,7 +81,7 @@ export const initializePool = async (walletType: "USDT-TRC20" | "USDT-ERC20"): P
 /**
  * Generate a new address and add it to the pool
  */
-export const addAddressToPool = async (walletType: "USDT-TRC20" | "USDT-ERC20"): Promise<any> => {
+export const addAddressToPool = async (walletType: "USDT-TRC20" | "USDT-ERC20"): Promise<unknown> => {
   try {
     const baseCurrency = walletType === "USDT-TRC20" ? "TRX" : "ETH";
     
@@ -176,7 +176,7 @@ export const reserveAddress = async (
   companyId: number,
   userId: number,
   expectedAmount: number
-): Promise<any> => {
+): Promise<unknown> => {
   const transaction = await sequelize.transaction();
   
   try {
@@ -277,7 +277,7 @@ export const reserveAddress = async (
 export const getAvailableAddress = async (
   walletType: "USDT-TRC20" | "USDT-ERC20",
   paymentId?: string
-): Promise<any> => {
+): Promise<unknown> => {
   // For backward compatibility, use default values
   return reserveAddress(walletType, paymentId || `legacy-${Date.now()}`, 0, 0, 0);
 };
@@ -1071,7 +1071,7 @@ export const cleanupStaleAddresses = async (
 /**
  * Sweep accumulated admin fees from pool addresses to admin wallet
  */
-export const sweepPoolAddress = async (poolAddressId: number): Promise<any> => {
+export const sweepPoolAddress = async (poolAddressId: number): Promise<unknown> => {
   const transaction = await sequelize.transaction();
   
   try {
@@ -1280,7 +1280,7 @@ export const recordPoolTransaction = async (data: {
   merchantTxId?: string;
   gasFundingTxId?: string;
   status: string;
-}): Promise<any> => {
+}): Promise<unknown> => {
   return await usdtPoolTransactionModel.create({
     pool_address_id: data.poolAddressId,
     temp_id: data.tempId,
@@ -1304,7 +1304,7 @@ export const recordPoolTransaction = async (data: {
 /**
  * Get pool status for admin dashboard
  */
-export const getPoolStatus = async (): Promise<any> => {
+export const getPoolStatus = async (): Promise<unknown> => {
   const [trc20Stats, erc20Stats] = await Promise.all([
     usdtPoolAddressModel.findAll({
       where: { wallet_type: "USDT-TRC20" },

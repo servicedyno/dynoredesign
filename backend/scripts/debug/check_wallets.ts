@@ -11,7 +11,7 @@ async function main() {
       { type: QueryTypes.SELECT }
     );
     console.log('=== USER 28 WALLETS ===');
-    wallets.forEach((w: any) => {
+    wallets.forEach((w: unknown) => {
       console.log(`- ${w.wallet_type}: ${w.wallet_address?.substring(0,20)}... (company: ${w.company_id})`);
     });
 
@@ -24,7 +24,7 @@ async function main() {
       { type: QueryTypes.SELECT }
     );
     console.log('\n=== AVAILABLE MERCHANT TEMP ADDRESSES ===');
-    tempAddrs.forEach((t: any) => {
+    tempAddrs.forEach((t: unknown) => {
       console.log(`- ${t.crypto_type}: ${t.wallet_address?.substring(0,20)}... (status: ${t.status})`);
     });
 

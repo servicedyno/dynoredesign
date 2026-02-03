@@ -71,7 +71,7 @@ async function checkETHWalletAddresses() {
       console.log('      until batch sweep process moves them to admin wallet.');
     }
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error:', error.message);
   }
 }

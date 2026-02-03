@@ -33,7 +33,7 @@ async function fixPayment() {
     console.log();
     console.log('Check logs: tail -f /var/log/supervisor/backend.out.log | grep cryptoVerification');
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error:', error.response?.data || error.message);
   }
 }

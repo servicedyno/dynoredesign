@@ -54,7 +54,7 @@ async function syncDatabase() {
     console.log('✅ All model columns have been added to tables');
     console.log('✅ You can now restart the backend service\n');
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('\n❌ Error during sync:', error.message);
     if (error.original) {
       console.error('   Original error:', error.original.message);

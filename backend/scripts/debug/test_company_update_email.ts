@@ -13,7 +13,7 @@ async function testCompanyUpdateEmail() {
     
     console.log('✅ Company profile updated email sent successfully');
     process.exit(0);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error:', error.message);
     process.exit(1);
   }

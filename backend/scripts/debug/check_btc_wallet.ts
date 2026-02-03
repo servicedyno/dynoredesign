@@ -49,7 +49,7 @@ async function checkAndFixBTCWallet() {
     console.log(`TATUM_TESTNET: ${process.env.TATUM_TESTNET}`);
     console.log(`TATUM_TESTNET_TYPE: ${process.env.TATUM_TESTNET_TYPE}`);
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error:', error.message);
   }
 }

@@ -2030,7 +2030,7 @@ const getTransactionConfirmations = async (
     } else if (currency === 'ETH' || currency === 'USDT-ERC20' || currency === 'USDC-ERC20') {
       const txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);
       if (txData && txData.blockNumber) {
-        const currentBlock: any = await (tatumSdk.blockchain.eth as any).ethGetBlockNumber?.() || 0;
+        const currentBlock: unknown = await (tatumSdk.blockchain.eth as any).ethGetBlockNumber?.() || 0;
         if (currentBlock) {
           confirmations = currentBlock - txData.blockNumber + 1;
         }

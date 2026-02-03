@@ -316,7 +316,7 @@ export const addAddressToMerchantPool = async (
   userId: number,
   walletType: string,
   transaction?: Transaction
-): Promise<any> => {
+): Promise<unknown> => {
   try {
     // Get or create merchant's wallet
     const { xpub, mnemonic } = await getOrCreateMerchantWallet(userId, walletType);
@@ -436,7 +436,7 @@ export const reserveAddress = async (
   userId: number,
   companyId: number | null,
   expectedAmount: number
-): Promise<any> => {
+): Promise<unknown> => {
   // Use distributed lock to prevent race conditions across multiple instances
   const lockKey = `reserve-address:${userId}:${walletType}`;
   
@@ -1198,7 +1198,7 @@ const checkSweepProfitability = async (
  * Sweep admin fees from pool address to admin wallet
  * FIXED: Better transaction consistency - blockchain transfer first, then DB update
  */
-export const sweepPoolAddress = async (tempAddressId: number): Promise<any> => {
+export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> => {
   let dbTransaction;
   
   try {
@@ -1644,7 +1644,7 @@ export const recordPoolTransaction = async (data: {
   merchantTxId?: string;
   gasFundingTxId?: string;
   status: string;
-}): Promise<any> => {
+}): Promise<unknown> => {
   return await merchantPoolTransactionModel.create({
     temp_address_id: data.tempAddressId,
     owner_user_id: data.ownerUserId,
@@ -1667,7 +1667,7 @@ export const recordPoolTransaction = async (data: {
 /**
  * Get pool status for dashboard
  */
-export const getPoolStatus = async (userId?: number): Promise<any> => {
+export const getPoolStatus = async (userId?: number): Promise<unknown> => {
   const whereClause: Record<string, unknown> = {};
   if (userId) whereClause.owner_user_id = userId;
 

@@ -56,7 +56,7 @@ const getTatumKey = (): string => {
 /**
  * Fetch real-time fee from Tatum API
  */
-const fetchTatumFee = async (chain: string): Promise<any> => {
+const fetchTatumFee = async (chain: string): Promise<unknown> => {
   const tatumKey = getTatumKey();
   
   // Map our chain names to Tatum's expected format
@@ -101,7 +101,7 @@ const fetchTatumFee = async (chain: string): Promise<any> => {
 /**
  * Fetch TRON network parameters for fee calculation
  */
-const fetchTronFee = async (): Promise<any> => {
+const fetchTronFee = async (): Promise<unknown> => {
   const tatumKey = getTatumKey();
   
   try {

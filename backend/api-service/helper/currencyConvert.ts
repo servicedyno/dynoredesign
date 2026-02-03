@@ -29,7 +29,7 @@ const currencyConvert = async ({ from, to, amount }: { from: string; to: string;
     );
     
     const $ = load(response.data);
-    let rates: any = $(".iBp4i").text().split(" ")[0];
+    let rates: unknown = $(".iBp4i").text().split(" ")[0];
     
     if (rates.includes(",")) {
       rates = replaceAll(rates, ",", "");

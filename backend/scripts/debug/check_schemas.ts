@@ -24,7 +24,7 @@ async function checkTableSchemas() {
           ORDER BY ordinal_position
         `, { type: QueryTypes.SELECT });
 
-        columns.forEach((col: any) => {
+        columns.forEach((col: unknown) => {
           console.log(`  ${col.column_name} (${col.data_type})`);
         });
       } catch (error) {

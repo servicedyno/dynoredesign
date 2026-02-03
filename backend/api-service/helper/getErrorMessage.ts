@@ -1,4 +1,4 @@
-const getErrorMessage = (e: any) => {
+const getErrorMessage = (e: unknown) => {
   return (
     e?.response?.data?.error?.message ??
     e?.response?.data?.message ??

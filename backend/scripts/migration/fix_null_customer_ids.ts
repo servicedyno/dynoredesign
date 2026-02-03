@@ -30,7 +30,7 @@ async function fixNullCustomerIds() {
     });
     
     console.log('\n📋 Sample NULL customer_id records:');
-    sampleNullRecords.forEach((record: any) => {
+    sampleNullRecords.forEach((record: unknown) => {
       const data = record.dataValues;
       console.log(`  ID: ${data.id}, TX: ${data.transaction_id}, Company: ${data.company_id}, Mode: ${data.payment_mode}, Amount: ${data.base_amount}`);
     });
@@ -106,7 +106,7 @@ async function fixNullCustomerIds() {
       console.log('\n⚠️  Some NULL values remain. Manual intervention may be needed.');
     }
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('\n❌ Error:', error.message);
     if (error.stack) {
       console.error(error.stack);
@@ -128,7 +128,7 @@ async function deleteNullRecords() {
     console.log(`🗑️  Deleted ${deleteCount} records with NULL customer_id`);
     console.log('✅ Database cleaned. Restart the other repository.');
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error:', error.message);
   }
 }
