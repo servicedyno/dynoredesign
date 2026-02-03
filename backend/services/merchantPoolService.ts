@@ -431,105 +431,116 @@ export const reserveAddress = async (
   companyId: number | null,
   expectedAmount: number
 ): Promise<any> => {
-  const transaction = await sequelize.transaction();
+  // Use distributed lock to prevent race conditions across multiple instances
+  const lockKey = `reserve-address:${userId}:${walletType}`;
+  
+  const lockResult = await withLock(lockKey, async () => {
+    const transaction = await sequelize.transaction();
 
-  try {
-    // Handle companyId - convert 0 to null for database
-    const effectiveCompanyId = companyId && companyId > 0 ? companyId : null;
-    
-    // First, release any expired reservations
-    await releaseExpiredReservations(userId, walletType, transaction);
-
-    // Find available address from merchant's pool
-    // Priority: most active first, then highest balance (for threshold-based sweeps like USDT/USDC)
-    let poolAddress = await merchantTempAddressModel.findOne({
-      where: {
-        owner_user_id: userId,
-        wallet_type: walletType,
-        status: "AVAILABLE",
-      },
-      order: [
-        ["total_transactions", "DESC"],
-        ["admin_fee_balance", "DESC"],
-      ],
-      lock: transaction.LOCK.UPDATE,
-      transaction,
-    });
-
-    // If no address available, create new one
-    if (!poolAddress) {
-      console.log(`[MerchantPool] No available ${walletType} address for merchant ${userId}, creating new...`);
-      poolAddress = await addAddressToMerchantPool(userId, walletType, transaction);
-    }
-
-    // BLOCKBEE STYLE: Always update subscription URL with current company info
-    // This ensures webhook URL contains the correct company_id for multi-tenant routing
-    const addressToSubscribe = poolAddress.dataValues.wallet_address;
-    const addressId = poolAddress.dataValues.temp_address_id;
-    
-    console.log(`[MerchantPool] 🔄 Updating subscription with company info for ${addressToSubscribe}`);
-    console.log(`[MerchantPool]    Company: ${effectiveCompanyId}, User: ${userId}, AddressId: ${addressId}`);
-    
-    // Update subscription URL synchronously to ensure webhook routing is correct
-    // This is critical - if async, webhook might arrive before URL is updated
-    let subscriptionId = poolAddress.dataValues.subscription_id;
-    
     try {
-      const subResult = await tatumApi.createSubscriptionBlockBeeStyle(
-        addressToSubscribe,
-        walletType,
-        effectiveCompanyId || 0,  // Use 0 if no company (shouldn't happen)
-        userId,
-        addressId
-      );
+      // Handle companyId - convert 0 to null for database
+      const effectiveCompanyId = companyId && companyId > 0 ? companyId : null;
       
-      if (subResult?.id) {
-        subscriptionId = subResult.id;
-        console.log(`[MerchantPool] ✅ Subscription updated with company info: ${subscriptionId}`);
-        console.log(`[MerchantPool]    URL: ${subResult.url}`);
+      // First, release any expired reservations
+      await releaseExpiredReservations(userId, walletType, transaction);
+
+      // Find available address from merchant's pool
+      // Priority: most active first, then highest balance (for threshold-based sweeps like USDT/USDC)
+      let poolAddress = await merchantTempAddressModel.findOne({
+        where: {
+          owner_user_id: userId,
+          wallet_type: walletType,
+          status: "AVAILABLE",
+        },
+        order: [
+          ["total_transactions", "DESC"],
+          ["admin_fee_balance", "DESC"],
+        ],
+        lock: transaction.LOCK.UPDATE,
+        transaction,
+      });
+
+      // If no address available, create new one
+      if (!poolAddress) {
+        console.log(`[MerchantPool] No available ${walletType} address for merchant ${userId}, creating new...`);
+        poolAddress = await addAddressToMerchantPool(userId, walletType, transaction);
       }
-    } catch (subError: any) {
-      console.error(`[MerchantPool] ⚠️ Subscription update failed:`, subError.message);
-      // Continue with existing subscription if update fails
+
+      // BLOCKBEE STYLE: Always update subscription URL with current company info
+      // This ensures webhook URL contains the correct company_id for multi-tenant routing
+      const addressToSubscribe = poolAddress.dataValues.wallet_address;
+      const addressId = poolAddress.dataValues.temp_address_id;
+      
+      console.log(`[MerchantPool] 🔄 Updating subscription with company info for ${addressToSubscribe}`);
+      console.log(`[MerchantPool]    Company: ${effectiveCompanyId}, User: ${userId}, AddressId: ${addressId}`);
+      
+      // Update subscription URL synchronously to ensure webhook routing is correct
+      // This is critical - if async, webhook might arrive before URL is updated
+      let subscriptionId = poolAddress.dataValues.subscription_id;
+      
+      try {
+        const subResult = await tatumApi.createSubscriptionBlockBeeStyle(
+          addressToSubscribe,
+          walletType,
+          effectiveCompanyId || 0,  // Use 0 if no company (shouldn't happen)
+          userId,
+          addressId
+        );
+        
+        if (subResult?.id) {
+          subscriptionId = subResult.id;
+          console.log(`[MerchantPool] ✅ Subscription updated with company info: ${subscriptionId}`);
+          console.log(`[MerchantPool]    URL: ${subResult.url}`);
+        }
+      } catch (subError: any) {
+        console.error(`[MerchantPool] ⚠️ Subscription update failed:`, subError.message);
+        // Continue with existing subscription if update fails
+      }
+
+      // Reserve the address
+      const reservedUntil = new Date();
+      reservedUntil.setMinutes(reservedUntil.getMinutes() + POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES);
+
+      await poolAddress.update(
+        {
+          status: "RESERVED",
+          current_payment_id: paymentId,
+          current_company_id: effectiveCompanyId,
+          expected_amount: expectedAmount,
+          received_amount: 0,
+          is_partial_payment: false,
+          partial_payment_timestamp: null,
+          reserved_until: reservedUntil,
+          locked_at: new Date(),
+          subscription_id: subscriptionId,  // Update subscription ID
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+
+      console.log(`[MerchantPool] ✅ Reserved ${walletType} address for payment ${paymentId}`);
+      console.log(`[MerchantPool]    - Merchant: ${userId}`);
+      console.log(`[MerchantPool]    - Company: ${effectiveCompanyId}`);
+      console.log(`[MerchantPool]    - Address: ${poolAddress.dataValues.wallet_address}`);
+      console.log(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
+      console.log(`[MerchantPool]    - Reserved until: ${reservedUntil}`);
+      console.log(`[MerchantPool]    - Subscription: ${subscriptionId}`);
+
+      return poolAddress;
+    } catch (error) {
+      await transaction.rollback();
+      const message = getErrorMessage(error);
+      console.error(`[MerchantPool] ❌ Failed to reserve address:`, message);
+      throw error;
     }
-
-    // Reserve the address
-    const reservedUntil = new Date();
-    reservedUntil.setMinutes(reservedUntil.getMinutes() + POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES);
-
-    await poolAddress.update(
-      {
-        status: "RESERVED",
-        current_payment_id: paymentId,
-        current_company_id: effectiveCompanyId,
-        expected_amount: expectedAmount,
-        received_amount: 0,
-        is_partial_payment: false,
-        partial_payment_timestamp: null,
-        reserved_until: reservedUntil,
-        locked_at: new Date(),
-        subscription_id: subscriptionId,  // Update subscription ID
-      },
-      { transaction }
-    );
-
-    await transaction.commit();
-
-    console.log(`[MerchantPool] ✅ Reserved ${walletType} address for payment ${paymentId}`);
-    console.log(`[MerchantPool]    - Merchant: ${userId}`);
-    console.log(`[MerchantPool]    - Company: ${effectiveCompanyId}`);
-    console.log(`[MerchantPool]    - Address: ${poolAddress.dataValues.wallet_address}`);
-    console.log(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
-    console.log(`[MerchantPool]    - Reserved until: ${reservedUntil}`);
-    console.log(`[MerchantPool]    - Subscription: ${subscriptionId}`);
-
-    return poolAddress;
-  } catch (error) {
-    await transaction.rollback();
-    const message = getErrorMessage(error);
-    console.error(`[MerchantPool] ❌ Failed to reserve address:`, message);
-    throw error;
+  }, 60); // 60 second lock timeout
+  
+  if (!lockResult.success) {
+    throw new Error(`Address reservation busy for merchant ${userId}. Please try again.`);
   }
+  
+  return lockResult.result;
 };
 
 /**
