@@ -256,7 +256,9 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
       data = req.body.data;
     } 
     // Format 3: Individual form fields (NEW - Swagger UI friendly)
-    else if (req.body.company_name || req.body.email || req.body.mobile) {
+    else if (req.body.company_name || req.body.email || req.body.mobile || req.body.website || 
+             req.body.address_line1 || req.body.city || req.body.state || req.body.country || 
+             req.body.zip_code || req.body.vat_number) {
       data = {
         company_name: req.body.company_name,
         email: req.body.email,
