@@ -243,16 +243,16 @@ const getApi = async (req: express.Request, res: express.Response) => {
     // Parse permissions and test_mode_restrictions JSON for each API
     const formattedData = resData.map((api: Record<string, unknown>) => ({
       ...api,
-      permissions: api.permissions ? JSON.parse(api.permissions) : ["payments", "transactions", "webhooks", "wallets"],
-      test_mode_restrictions: api.test_mode_restrictions ? JSON.parse(api.test_mode_restrictions) : null,
+      permissions: api.permissions ? JSON.parse(String(api.permissions)) : ["payments", "transactions", "webhooks", "wallets"],
+      test_mode_restrictions: api.test_mode_restrictions ? JSON.parse(String(api.test_mode_restrictions)) : null,
       // Mask sensitive parts of the API key for display
-      apiKey_masked: api.apiKey ? maskApiKey(api.apiKey, api.environment) : null,
+      apiKey_masked: api.apiKey ? maskApiKey(String(api.apiKey), String(api.environment || '')) : null,
     }));
     
     // Group by environment for better organization
     const grouped = {
-      production: formattedData.filter((api: { environment?: string }) => api.environment === 'production' || !api.environment),
-      development: formattedData.filter((api: { environment?: string }) => api.environment === 'development'),
+      production: formattedData.filter((api) => api.environment === 'production' || !api.environment),
+      development: formattedData.filter((api) => api.environment === 'development'),
     };
     
     successResponseHelper(res, 200, "API keys retrieved successfully", {
