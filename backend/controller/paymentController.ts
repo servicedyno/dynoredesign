@@ -1017,19 +1017,20 @@ const createCryptoPayment = async (
   res: express.Response
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
-  console.log('[DEBUG] Step 1: JWT decoded successfully');
+  const DEBUG = process.env.DEBUG_MODE === 'true';
+  if (DEBUG) console.log('[DEBUG] Step 1: JWT decoded successfully');
   
   try {
     const data: IFundData = req.body;
-    console.log('[DEBUG] Step 2: Request body parsed:', { uniqueRef: data?.uniqueRef, currency: data?.currency });
+    if (DEBUG) console.log('[DEBUG] Step 2: Request body parsed:', { uniqueRef: data?.uniqueRef, currency: data?.currency });
     
     if (data) {
       let finalRes;
-      console.log('[DEBUG] Step 3: About to call getRedisItem with key:', "customer-" + data.uniqueRef);
+      if (DEBUG) console.log('[DEBUG] Step 3: About to call getRedisItem with key:', "customer-" + data.uniqueRef);
       
       const items = await getRedisItem("customer-" + data.uniqueRef);
       
-      console.log('[DEBUG] Step 4: Redis item retrieved successfully:', { adm_id: items?.adm_id, company_id: items?.company_id });
+      if (DEBUG) console.log('[DEBUG] Step 4: Redis item retrieved successfully:', { adm_id: items?.adm_id, company_id: items?.company_id });
 
       // Check if payment link has expired
       if (items.expires_at) {
