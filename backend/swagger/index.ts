@@ -666,14 +666,14 @@ Response contains \`accessToken\` - use this in the \`Authorization: Bearer <tok
 const swaggerSpec = swaggerJsdoc(options);
 
 export const setupSwagger = (app: Express) => {
-  // Serve Swagger UI
-  app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  // Serve Swagger UI - use type assertion to handle swagger-ui-express type issues
+  app.use("/api/docs", ...swaggerUi.serve as unknown as Parameters<Express['use']>, swaggerUi.setup(swaggerSpec, {
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: "DynoPay API Documentation",
     swaggerOptions: {
       persistAuthorization: true, // Keep authorization token on page refresh
     },
-  }));
+  }) as unknown as Parameters<Express['use']>[1]);
 
   // Serve raw OpenAPI spec
   app.get("/api/docs.json", (req, res) => {
