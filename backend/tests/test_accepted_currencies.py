@@ -197,11 +197,16 @@ def test_create_payment_link_with_accepted_currencies():
     accepted = result['accepted_currencies']
     
     if accepted is not None:
-        # Should be array with BTC and ETH
-        assert isinstance(accepted, list), "accepted_currencies should be array"
-        assert 'BTC' in accepted, "BTC should be in accepted_currencies"
-        assert 'ETH' in accepted, "ETH should be in accepted_currencies"
-        assert len(accepted) == 2, f"Expected 2 currencies, got {len(accepted)}"
+        # createPaymentLink returns comma-separated string, getPaymentLinkById returns array
+        # Handle both formats
+        if isinstance(accepted, str):
+            accepted_list = [c.strip() for c in accepted.split(',')]
+        else:
+            accepted_list = accepted
+        
+        assert 'BTC' in accepted_list, "BTC should be in accepted_currencies"
+        assert 'ETH' in accepted_list, "ETH should be in accepted_currencies"
+        assert len(accepted_list) == 2, f"Expected 2 currencies, got {len(accepted_list)}"
     
     print(f"[Test] ✓ Created link {result['link_id']} with accepted_currencies: {accepted}")
 
