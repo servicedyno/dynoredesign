@@ -900,10 +900,11 @@ const feeEstimation = async (
 
     console.log(gasFees);
 
-    // FIX: Ensure minimum gas price of 10 Gwei to prevent stuck transactions
-    // Cap at 50 Gwei for cost control (increased from 30 for reliability)
-    const MIN_GAS_PRICE = 10;
-    const MAX_GAS_PRICE = 50;
+    // Gas price bounds - follows DynoBackend approach for cost efficiency
+    // MIN: 3 Gwei (network minimum), MAX: 30 Gwei (cost control)
+    // Admin fee buffer (+2) is added separately and goes to admin, not blockchain
+    const MIN_GAS_PRICE = 3;
+    const MAX_GAS_PRICE = 30;
     let gasPrice = Math.max(MIN_GAS_PRICE, Math.min(MAX_GAS_PRICE, Math.ceil(gasFees?.gasPrice || MIN_GAS_PRICE)));
     const gas_fee_for_amount = gasPrice + 2; // Add buffer for priority
     fees = {
