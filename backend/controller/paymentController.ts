@@ -314,8 +314,8 @@ const calculateTaxForCheckout = async (
             standard_rate: taxRate,
           }).catch(() => {}); // Ignore cache errors
         }
-      } catch (apiError: any) {
-        console.log(`[Tax] API error for ${upperCountryCode}, using fallback:`, apiError.message);
+      } catch (apiError: unknown) {
+        console.log(`[Tax] API error for ${upperCountryCode}, using fallback:`, getErrorMessage(apiError));
         taxRate = FALLBACK_TAX_RATES[upperCountryCode] || 0;
       }
     } else {
