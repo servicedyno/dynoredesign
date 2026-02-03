@@ -2046,5 +2046,75 @@ This endpoint uses multi-tenant routing for payment processing. When a crypto ad
         401: { description: 'Unauthorized - Invalid or missing customer token' }
       }
     }
+  },
+
+  // ==================== MERCHANT CURRENCY CONFIGURATION ====================
+  '/api/pay/company-currencies/{company_id}': {
+    get: {
+      tags: ['Payments'],
+      summary: 'Get company configured currencies (Merchant)',
+      description: `Returns all supported cryptocurrencies with their configuration status for a specific company.
+
+**🔐 AUTHENTICATION:**
+This endpoint requires **JWT Token** authentication (merchant login).
+
+**Use Case:** 
+Called by merchant dashboard when creating/editing payment links to show which currencies can be selected.
+
+**Response includes for each currency:**
+- \`type\` - Currency code (e.g., "BTC", "ETH")
+- \`name\` - Full name (e.g., "Bitcoin", "Ethereum")
+- \`symbol\` - Currency symbol (e.g., "₿", "Ξ")
+- \`configured\` - Boolean: true if wallet is set up
+- \`wallet_address\` - The configured wallet address (or null)
+
+**Business Logic:**
+- Only currencies with \`configured: true\` can be selected for payment links
+- If no currencies are selected during payment link creation, ALL configured currencies are accepted`,
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          name: 'company_id',
+          in: 'path',
+          required: true,
+          schema: { type: 'integer' },
+          description: 'Company ID to get currencies for'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'Company currencies retrieved successfully',
+          content: {
+            'application/json': {
+              example: {
+                message: 'Configured currencies retrieved successfully',
+                data: {
+                  company_id: 38,
+                  company_name: 'Acme Corp',
+                  total_available: 9,
+                  total_configured: 7,
+                  currencies: [
+                    { type: 'BTC', name: 'Bitcoin', symbol: '₿', configured: true, wallet_address: '1JH5TnZzjYTf1...' },
+                    { type: 'ETH', name: 'Ethereum', symbol: 'Ξ', configured: true, wallet_address: '0x9a7221b5e32d...' },
+                    { type: 'LTC', name: 'Litecoin', symbol: 'Ł', configured: true, wallet_address: 'LbTjMGN7gELw4...' },
+                    { type: 'DOGE', name: 'Dogecoin', symbol: 'Ð', configured: true, wallet_address: 'DEReH1ES1zT8M...' },
+                    { type: 'TRX', name: 'Tron', symbol: '◎', configured: true, wallet_address: 'TTve8v6Y48ChsC...' },
+                    { type: 'BCH', name: 'Bitcoin Cash', symbol: '₿', configured: false, wallet_address: null },
+                    { type: 'USDT-TRC20', name: 'USDT (TRC-20)', symbol: '₮', configured: true, wallet_address: 'TTve8v6Y48ChsC...' },
+                    { type: 'USDT-ERC20', name: 'USDT (ERC-20)', symbol: '₮', configured: true, wallet_address: '0x9a7221b5e32d...' },
+                    { type: 'USDC-ERC20', name: 'USDC (ERC-20)', symbol: '$', configured: false, wallet_address: null }
+                  ],
+                  configured: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'USDT-TRC20', 'USDT-ERC20'],
+                  unconfigured: ['BCH', 'USDC-ERC20']
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid company_id' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Company not found or does not belong to user' }
+      }
+    }
   }
 };
