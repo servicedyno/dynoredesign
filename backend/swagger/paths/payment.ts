@@ -6,6 +6,12 @@ export const paymentPaths = {
       summary: 'Create payment link',
       description: `Create a new payment link for accepting crypto or fiat payments. The link can be shared with customers to collect payments.
 
+**🔐 AUTHENTICATION:**
+This endpoint requires **JWT Token** authentication (not API Key).
+1. Login via \`POST /api/user/login\` to get your JWT token
+2. Click "Authorize" button and enter your token
+3. Then call this endpoint
+
 **🎁 REFEREE CODE FEATURE:**
 When you provide a customer email, the system will automatically:
 - Check if the email already has a DynoPay account (skips if yes)
