@@ -1338,13 +1338,13 @@ const createCryptoPayment = async (
         );
       }
 
-      const tokenData: Record<string, unknown> = {
+      const tokenData: Partial<IUserType> = {
         ref: data.uniqueRef,
         adm_id: items.adm_id,
         customer_id: items.customer_id,
         company_id: items.company_id || hasWallet.dataValues.company_id,  // Include company_id from Redis or wallet
       };
-      const { paymentRes, uniqueRef } = await Crypto(data, tokenData, true);
+      const { paymentRes, uniqueRef } = await Crypto(data, tokenData as IUserType, true);
       
       // Determine fee_payer mode
       const fee_payer = items.fee_payer || 'company';
