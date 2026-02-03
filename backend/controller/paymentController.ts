@@ -5134,7 +5134,7 @@ const sweepNativeAdminFees = async () => {
        AND ut.status = 'successful'
        AND ut.admin_status = 'pending_sweep'
        AND ut.amount > 0
-       AND ut."createdAt" >= NOW() - INTERVAL '30 days'`,
+       AND ut."createdAt" >= NOW() - INTERVAL '${PAYMENT_TIMING.SQL_INTERVALS.MONTHLY_TRANSACTIONS}'`,
       {
         type: QueryTypes.SELECT,
       }
