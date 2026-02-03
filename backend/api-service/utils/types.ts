@@ -179,3 +179,22 @@ export interface virtualAccount {
   xpub: string;
   customerId: string;
 }
+
+// JWT Token payload type for customer API service
+export interface CustomerJwtPayload {
+  id?: number;
+  user_id?: number;
+  customer_id?: string;
+  email?: string;
+  name?: string;
+  company_id?: number;
+}
+
+// Company data type from API key
+export interface CompanyData {
+  company_id: number;
+  company_name: string;
+  user_id: number;
+  webhook_url?: string;
+  webhook_secret?: string;
+}
