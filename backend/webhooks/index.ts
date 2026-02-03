@@ -140,20 +140,21 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
     
     // Call callback_url first (instant notification, synchronous)
     if (callbackUrl) {
-      await callUrlWithPayload(callbackUrl, eventData, webhookSecret, companyId, 'callback');
+      await callUrlWithPayload(callbackUrl, eventData, webhookSecret, Number(companyId), 'callback');
     }
     
     // Then call webhook_url (transaction updates, can be same or different)
     if (webhookUrl && webhookUrl !== callbackUrl) {
-      await callUrlWithPayload(webhookUrl, eventData, webhookSecret, companyId, 'webhook');
+      await callUrlWithPayload(webhookUrl, eventData, webhookSecret, Number(companyId), 'webhook');
     } else if (webhookUrl && !callbackUrl) {
       // If only webhook_url is configured (no callback_url)
-      await callUrlWithPayload(webhookUrl, eventData, webhookSecret, companyId, 'webhook');
+      await callUrlWithPayload(webhookUrl, eventData, webhookSecret, Number(companyId), 'webhook');
     }
     
   } catch (error: unknown) {
     // Log but don't throw - webhook failure shouldn't block payment processing
-    console.error(`[callMerchantWebhook] Failed to send webhook: ${error.message}`);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[callMerchantWebhook] Failed to send webhook: ${errorMsg}`);
   }
 };
 
