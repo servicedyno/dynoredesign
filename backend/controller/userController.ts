@@ -863,7 +863,7 @@ const facebookSignIn = async (req: express.Request, res: express.Response) => {
     }
 
     // Verify token and get user info from Facebook
-    let facebookUserInfo: Record<string, unknown>;
+    let facebookUserInfo: { id?: string; name?: string; email?: string; picture?: { data?: { url?: string } } };
     try {
       const response = await axios.get(
         `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`
