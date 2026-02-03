@@ -43,7 +43,67 @@ const options: swaggerJsdoc.Options = {
     info: {
       title: "DynoPay API Documentation",
       version: "1.0.0",
-      description: "Crypto Payment Gateway API - Accept cryptocurrency payments with ease",
+      description: `# DynoPay - Crypto Payment Gateway API
+
+Accept cryptocurrency payments with ease using DynoPay's comprehensive API.
+
+---
+
+## 🔐 Authentication Guide
+
+DynoPay uses **two types of authentication** depending on your use case:
+
+### 1. JWT Token (Bearer Authentication)
+**Use for:** Dashboard operations, managing your account, companies, payment links, wallets
+
+| Operation | Auth Required |
+|-----------|---------------|
+| Create/Update Company | ✅ JWT Token |
+| Create Payment Link | ✅ JWT Token |
+| Manage Wallets | ✅ JWT Token |
+| View Dashboard | ✅ JWT Token |
+| Manage Profile | ✅ JWT Token |
+
+**How to get JWT Token:**
+\`\`\`
+POST /api/user/login
+{
+  "email": "your@email.com",
+  "password": "yourpassword"
+}
+\`\`\`
+Response contains \`accessToken\` - use this in the \`Authorization: Bearer <token>\` header.
+
+### 2. API Key (x-api-key Header)
+**Use for:** Server-to-server integration, programmatic payment creation
+
+| Operation | Auth Required |
+|-----------|---------------|
+| Create Customer | ✅ API Key |
+| Direct Crypto Payment | ✅ API Key + Customer Token |
+
+**How to get API Key:**
+1. Login to dashboard
+2. Go to API Keys section
+3. Create new API key via \`POST /api/userApi/addApi\`
+
+---
+
+## 🚀 Quick Start
+
+**For Dashboard Users (JWT Auth):**
+1. Login: \`POST /api/user/login\` → Get JWT token
+2. Create Company: \`POST /api/company/addCompany\` (if needed)
+3. Create Payment Link: \`POST /api/pay/createPaymentLink\`
+4. Share the payment link with your customers
+
+**For Developers (API Key Auth):**
+1. Get API Key from dashboard or \`POST /api/userApi/addApi\`
+2. Create Customer: \`POST /api/user/createUser\` (with x-api-key)
+3. Generate Payment: \`POST /api/user/cryptoPayment\` (with x-api-key + customer token)
+4. Receive webhook when payment completes
+
+---`,
       contact: {
         name: "DynoPay Support",
         url: "https://dynopay.com/support",
@@ -66,13 +126,13 @@ const options: swaggerJsdoc.Options = {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Enter your JWT token",
+          description: "JWT Token - Get from POST /api/user/login. Use for: Dashboard operations, company management, payment links, wallets.",
         },
         ApiKeyAuth: {
           type: "apiKey",
           in: "header",
           name: "x-api-key",
-          description: "Enter your API key",
+          description: "API Key - Get from dashboard or POST /api/userApi/addApi. Use for: Server-to-server integration, programmatic payments.",
         },
       },
       schemas: {
