@@ -6418,13 +6418,16 @@ const getConfiguredCurrenciesForCheckout = async (
     const response: Record<string, unknown> = {
       configured_currencies: currencies,
       wallet_count: configuredWallets.length,
-      wallets: configuredWallets.map((w: Record<string, unknown>) => ({
-        currency: w.wallet_type,
-        label: w.wallet_name,
-        address_masked: w.wallet_address ? 
-          `${w.wallet_address.substring(0, 6)}...${w.wallet_address.substring(w.wallet_address.length - 4)}` : 
-          null
-      })),
+      wallets: configuredWallets.map((w) => {
+        const walletData = w.dataValues as { wallet_type: string; wallet_name?: string; wallet_address?: string };
+        return {
+          currency: walletData.wallet_type,
+          label: walletData.wallet_name,
+          address_masked: walletData.wallet_address ? 
+            `${walletData.wallet_address.substring(0, 6)}...${walletData.wallet_address.substring(walletData.wallet_address.length - 4)}` : 
+            null
+        };
+      }),
       skip_selection: currencies.length === 1,
       // Payment link ID
       link_id: linkId,
