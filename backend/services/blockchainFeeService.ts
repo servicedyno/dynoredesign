@@ -292,7 +292,7 @@ const calculateTronFee = async (
     };
   }
 
-  const tronData = await fetchTronFee();
+  const tronData = await fetchTronFee() as { bandwidthPrice?: number; energyPrice?: number };
   
   let feeInTRX: number;
   
