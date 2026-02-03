@@ -1,8 +1,18 @@
-const getErrorMessage = (e: unknown) => {
+const getErrorMessage = (e: unknown): string => {
+  const error = e as {
+    response?: {
+      data?: {
+        error?: { message?: string };
+        message?: string;
+      };
+    };
+    message?: string;
+  };
+  
   return (
-    e?.response?.data?.error?.message ??
-    e?.response?.data?.message ??
-    e?.message ??
+    error?.response?.data?.error?.message ??
+    error?.response?.data?.message ??
+    error?.message ??
     "Internal Server Error"
   );
 };
