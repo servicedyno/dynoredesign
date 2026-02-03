@@ -312,8 +312,8 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     // Format chart data
     const formattedChartData = chartData.map((item: Record<string, unknown>) => ({
       date: item.date,
-      volume: Math.round(parseFloat(item.volume) * 100) / 100,
-      transaction_count: parseInt(item.transaction_count),
+      volume: Math.round(parseFloat(String(item.volume || '0')) * 100) / 100,
+      transaction_count: parseInt(String(item.transaction_count || '0')),
     }));
 
     // Fill in missing dates with zero values
@@ -327,12 +327,12 @@ const getChartData = async (req: express.Request, res: express.Response) => {
       chart_data: filledChartData,
       currency_breakdown: currencyBreakdown.map((c: Record<string, unknown>) => ({
         currency: c.base_currency,
-        count: parseInt(c.count),
-        volume: Math.round(parseFloat(c.volume) * 100) / 100,
+        count: parseInt(String(c.count || '0')),
+        volume: Math.round(parseFloat(String(c.volume || '0')) * 100) / 100,
       })),
       status_breakdown: statusBreakdown.map((s: Record<string, unknown>) => ({
         status: s.status,
-        count: parseInt(s.count),
+        count: parseInt(String(s.count || '0')),
       })),
     };
 
