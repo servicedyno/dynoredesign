@@ -353,7 +353,8 @@ export const processReferrerReward = async (params: {
 
   // Check if referrer has existing discount
   const referrer = await User.findByPk(referral.referrer_user_id);
-  const currentExpiry = (referrer as Record<string, unknown> | null)?.fee_discount_expires_at;
+  const referrerData = referrer as unknown as Record<string, unknown> | null;
+  const currentExpiry = referrerData?.fee_discount_expires_at as Date | null;
 
   // Only apply if no current discount or current discount expired
   if (!currentExpiry || new Date() > currentExpiry) {
