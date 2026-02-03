@@ -2527,7 +2527,14 @@ const settleCryptoTransaction = async ({
   userAddress,
   isMerchantPool,
 }: {
-  tempAddressData: any;
+  tempAddressData: {
+    address: string;
+    private_key?: string;
+    privateKey?: string;
+    wallet_type?: string;
+    is_merchant_pool?: boolean;
+    payment_id?: string;
+  };
   receivedAmount: number;  // This is the admin fee amount
   currency: string;
   transactionId: string;
