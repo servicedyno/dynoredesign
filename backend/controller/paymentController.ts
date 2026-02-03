@@ -1319,8 +1319,8 @@ const createCryptoPayment = async (
       }
       
       // Add crypto amount and rate to response
-      // Calculate remaining minutes for crypto invoice (default 15 minutes from now)
-      const CRYPTO_INVOICE_MINUTES = 15;
+      // Calculate remaining minutes for crypto invoice (uses centralized config)
+      const CRYPTO_INVOICE_MINUTES = PAYMENT_TIMING.CRYPTO_INVOICE_MINUTES;
       finalRes = { 
         hash: uniqueRef, 
         ...paymentRes,
