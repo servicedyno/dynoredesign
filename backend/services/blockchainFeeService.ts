@@ -137,11 +137,24 @@ const fetchTronFee = async (): Promise<unknown> => {
  */
 const getCryptoPrice = async (symbol: string): Promise<number> => {
   const cacheKey = `price_${symbol}`;
-  const cached = await getRedisItem(cacheKey) as { price?: string; timestamp?: string } | null;
+  const cached = await getRedisItem(cacheKey) as { price?: string | number; timestamp?: string | number } | null;
   
-  if (cached?.price && Number(cached?.timestamp) > Date.now() - 60000) {
+  // Check cache - use 5 minute cache to reduce API calls
+  if (cached?.price && Number(cached?.timestamp) > Date.now() - 300000) {
     return Number(cached.price);
   }
+
+  // Fallback prices in case of API failure
+  const fallbackPrices: Record<string, number> = {
+    'BTC': 95000,
+    'ETH': 2300,
+    'LTC': 100,
+    'DOGE': 0.35,
+    'TRX': 0.25,
+    'USDT': 1,
+    'BCH': 450,
+    'USDC': 1,
+  };
 
   try {
     // Use CoinGecko free API for prices
@@ -157,24 +170,35 @@ const getCryptoPrice = async (symbol: string): Promise<number> => {
 
     const coinId = idMap[symbol] || symbol.toLowerCase();
     const response = await axios.get(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`,
+      { timeout: 5000 } // 5 second timeout
     );
     
     const price = response.data[coinId]?.usd || 0;
-    await setRedisItem(cacheKey, { price, timestamp: Date.now() });
-    return price;
-  } catch (error) {
-    console.error(`[BlockchainFeeService] Error fetching ${symbol} price:`, error);
-    // Return cached or fallback prices
-    const fallbackPrices: Record<string, number> = {
-      'BTC': 95000,
-      'ETH': 3300,
-      'LTC': 100,
-      'DOGE': 0.35,
-      'TRX': 0.25,
-      'USDT': 1,
-      'BCH': 450,
-    };
+    if (price > 0) {
+      await setRedisItem(cacheKey, { price, timestamp: Date.now() });
+      return price;
+    }
+    
+    // If price is 0, use fallback
+    console.warn(`[BlockchainFeeService] Got 0 price for ${symbol}, using fallback`);
+    return fallbackPrices[symbol] || 0;
+  } catch (error: unknown) {
+    const err = error as { response?: { status?: number }; message?: string };
+    // Only log non-429 errors as errors (429 is expected rate limiting)
+    if (err.response?.status === 429) {
+      console.warn(`[BlockchainFeeService] Rate limited fetching ${symbol} price, using fallback`);
+    } else {
+      console.error(`[BlockchainFeeService] Error fetching ${symbol} price:`, err.message || error);
+    }
+    
+    // Use cached price if available (even if stale)
+    if (cached?.price) {
+      console.log(`[BlockchainFeeService] Using stale cached price for ${symbol}: ${cached.price}`);
+      return Number(cached.price);
+    }
+    
+    // Return fallback prices
     return fallbackPrices[symbol] || 0;
   }
 };
