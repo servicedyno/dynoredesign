@@ -3299,7 +3299,7 @@ const cryptoVerification = async (address, webhook = true) => {
           paymentStatus: "incomplete",
           amount: pendingAmount,
           currency: tempCurrency,
-          message: `Partial payment detected! Please pay remaining ${pendingAmount} ${tempCurrency} to complete this payment. You have 30 minutes to complete the payment.`,
+          message: `Partial payment detected! Please pay remaining ${pendingAmount} ${tempCurrency} to complete this payment. You have ${PAYMENT_TIMING.GRACE_PERIOD_MINUTES} minutes to complete the payment.`,
           commit: true,
         };
       }
