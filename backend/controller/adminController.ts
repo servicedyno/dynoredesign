@@ -465,7 +465,7 @@ const changePassword = async (req: express.Request, res: express.Response) => {
 const updateEmail = async (req: express.Request, res: express.Response) => {
   try {
     const { email, otp } = req.body;
-    const adminData: Record<string, unknown> = jwt.decode(res.locals.token);
+    const adminData = jwt.decode(res.locals.token) as { email?: string } | null;
     if (!otp) {
       const data = await sequelize.query(
         `select * from tbl_admin where email='${adminData?.email}'`,
