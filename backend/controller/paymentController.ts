@@ -3041,7 +3041,7 @@ const verifyCryptoPayment = async (
       // DEBUG: Log the exact response being sent
       console.log("[verifyCryptoPayment] Sending CONFIRMED response:", JSON.stringify(responseData, null, 2));
 
-      return successResponseHelper(res, 200, responseData.message, responseData);
+      return successResponseHelper(res, 200, responseData.message as string, responseData);
     }
     
     // Check if this is a partial payment scenario (incomplete flag set OR underpaid status)
