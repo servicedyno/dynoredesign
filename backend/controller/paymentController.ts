@@ -4449,7 +4449,7 @@ const createPaymentLink = async (
     }
     
     // Get unique list of ALL configured currencies for this company
-    const allConfiguredCurrencies = [...new Set(configuredWallets.map((w: { wallet_type: string }) => w.wallet_type))];
+    const allConfiguredCurrencies = [...new Set(configuredWallets.map((w) => (w.dataValues as { wallet_type: string }).wallet_type))];
     console.log(`[Phase 11] All configured currencies for company_id ${company_id}:`, allConfiguredCurrencies);
     
     // Validate and process accepted_currencies if provided
