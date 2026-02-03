@@ -187,13 +187,13 @@ export const getCurrentServiceStatus = async (): Promise<Array<{
   latency_ms: number;
   last_check: Date;
 }>> => {
-  const results = await sequelize.query(
+  const results = await sequelize.query<{ service_id: string; service_name: string; status: string; latency_ms: number; last_check: Date }>(
     `SELECT DISTINCT ON (service_id) 
       service_id, service_name, status, latency_ms, check_timestamp as last_check
     FROM tbl_service_health
     ORDER BY service_id, check_timestamp DESC`,
     { type: QueryTypes.SELECT }
-  ) as Array<Record<string, unknown>>;
+  );
   
   return results;
 };
