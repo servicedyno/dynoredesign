@@ -12,7 +12,7 @@ import LoginHistory from './securityModels/loginHistoryModel';
 import SecurityLog from './securityModels/securityLogModel';
 
 // Check if associations have already been set up
-const associationsSetUp = (User as any).associations && Object.keys((User as any).associations).length > 5;
+const associationsSetUp = (User as unknown as { associations?: Record<string, unknown> }).associations && Object.keys((User as unknown as { associations?: Record<string, unknown> }).associations).length > 5;
 
 if (!associationsSetUp) {
   // Referral associations

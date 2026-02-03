@@ -25,7 +25,7 @@ async function runPoolAddressAnalysis() {
     `, { type: QueryTypes.SELECT });
 
     console.log(`Found ${poolAddresses.length} pool addresses:`);
-    poolAddresses.forEach((addr: any, index) => {
+    poolAddresses.forEach((addr: Record<string, unknown>, index) => {
       console.log(`${index + 1}. ${addr.wallet_type} - Created: ${addr.created_at} (ID: ${addr.temp_address_id})`);
     });
 
@@ -45,7 +45,7 @@ async function runPoolAddressAnalysis() {
     `, { type: QueryTypes.SELECT });
 
     console.log(`Found ${merchantWallets.length} merchant wallets:`);
-    merchantWallets.forEach((wallet: any, index) => {
+    merchantWallets.forEach((wallet: Record<string, unknown>, index) => {
       console.log(`${index + 1}. ${wallet.wallet_type} - Created: ${wallet.created_at} (ID: ${wallet.wallet_id})`);
     });
 
@@ -63,7 +63,7 @@ async function runPoolAddressAnalysis() {
     `, { type: QueryTypes.SELECT });
 
     console.log(`Found ${userWallets.length} user wallets:`);
-    userWallets.forEach((wallet: any, index) => {
+    userWallets.forEach((wallet: Record<string, unknown>, index) => {
       console.log(`${index + 1}. ${wallet.wallet_type} - Created: ${wallet.createdAt} (ID: ${wallet.wallet_id})`);
     });
 
@@ -83,7 +83,7 @@ async function runPoolAddressAnalysis() {
     `, { type: QueryTypes.SELECT });
 
     console.log(`Found ${poolTransactions.length} pool transactions:`);
-    poolTransactions.forEach((tx: any, index) => {
+    poolTransactions.forEach((tx: Record<string, unknown>, index) => {
       console.log(`${index + 1}. ${tx.wallet_type} - ${tx.payment_amount} - Created: ${tx.created_at} (${tx.status})`);
     });
 
@@ -107,10 +107,10 @@ async function runPoolAddressAnalysis() {
       `, { type: QueryTypes.SELECT });
       
       console.log(`\n📊 SYSTEM-WIDE POOL ADDRESS STATUS:`);
-      console.log(`   • Total pool addresses in system: ${(anyPoolAddresses[0] as any).total_count}`);
-      console.log(`   • Users with pool addresses: ${(anyPoolAddresses[0] as any).unique_users}`);
+      console.log(`   • Total pool addresses in system: ${(anyPoolAddresses[0] as Record<string, unknown>).total_count}`);
+      console.log(`   • Users with pool addresses: ${(anyPoolAddresses[0] as Record<string, unknown>).unique_users}`);
       
-      if ((anyPoolAddresses[0] as any).total_count > 0) {
+      if ((anyPoolAddresses[0] as Record<string, unknown>).total_count > 0) {
         // Show some examples
         const sampleAddresses = await sequelize.query(`
           SELECT owner_user_id, wallet_type, created_at
@@ -120,7 +120,7 @@ async function runPoolAddressAnalysis() {
         `, { type: QueryTypes.SELECT });
         
         console.log(`\n📋 SAMPLE POOL ADDRESSES (most recent):`);
-        sampleAddresses.forEach((addr: any, index) => {
+        sampleAddresses.forEach((addr: Record<string, unknown>, index) => {
           console.log(`   ${index + 1}. User ${addr.owner_user_id} - ${addr.wallet_type} - ${addr.created_at}`);
         });
       }

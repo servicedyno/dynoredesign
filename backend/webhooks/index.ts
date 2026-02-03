@@ -91,7 +91,7 @@ const logWebhookDelivery = async (
  * 
  * Note: webhook_secret is OPTIONAL. If not configured, X-DynoPay-Signature will not be included.
  */
-const callMerchantWebhook = async (customerData: any, eventData: any): Promise<void> => {
+const callMerchantWebhook = async (customerData: Record<string, unknown>, eventData: Record<string, unknown>): Promise<void> => {
   try {
     // Get webhook URL, callback URL, and secret from payment link or company settings
     const sequelize = require('../utils/dbInstance').default;
@@ -161,7 +161,7 @@ const callMerchantWebhook = async (customerData: any, eventData: any): Promise<v
  */
 const callUrlWithPayload = async (
   url: string, 
-  eventData: any, 
+  eventData: Record<string, unknown>, 
   webhookSecret: string | null, 
   companyId: number | null,
   urlType: 'webhook' | 'callback'
@@ -374,7 +374,7 @@ const tatumCryptoWebHook = async (
     console.log("[tatumCryptoWebHook] Received webhook:", {
       address: payload.address,
       amount: payload.amount,
-      currency: (payload as any).currency || payload.asset,
+      currency: (payload as Record<string, unknown>).currency || payload.asset,
       txId: payload.txId,
       // BlockBee style params from URL
       queryCompanyId,

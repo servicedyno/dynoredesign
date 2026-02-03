@@ -9,7 +9,7 @@ interface SecurityLogAttributes {
   ip_address?: string;
   user_agent?: string;
   status: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   createdAt?: Date;
 }
 
@@ -23,7 +23,7 @@ class SecurityLog extends Model<SecurityLogAttributes, SecurityLogCreationAttrib
   public ip_address?: string;
   public user_agent?: string;
   public status!: string;
-  public metadata?: any;
+  public metadata?: Record<string, unknown>;
   public readonly createdAt!: Date;
 }
 

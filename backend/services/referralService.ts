@@ -95,7 +95,7 @@ export const createRefereeCode = async (params: {
     discount_duration_days: 90,
     sent_at: new Date(),
     expires_at: expiresAt,
-  } as any);
+  } as Record<string, unknown>);
 
   console.log(`[RefereeCode] Created code ${code} for ${email}`);
 
@@ -175,8 +175,8 @@ export const redeemRefereeCode = async (params: {
 
   // Check if referrer already has a better discount
   const referrer = await User.findByPk(refereeCode.referrer_user_id);
-  const currentDiscount = (referrer as any)?.fee_discount_percent || 0;
-  const currentExpiry = (referrer as any)?.fee_discount_expires_at;
+  const currentDiscount = (referrer as Record<string, unknown> | null)?.fee_discount_percent || 0;
+  const currentExpiry = (referrer as Record<string, unknown> | null)?.fee_discount_expires_at;
 
   // Stack discounts or extend - use the better deal
   if (!currentExpiry || new Date() > currentExpiry || currentDiscount < 10) {
@@ -281,7 +281,7 @@ export const redeemUserReferralCode = async (params: {
     referee_discount_duration_days: 30,
     referred_at: new Date(),
     expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days to complete qualifying transaction
-  } as any);
+  } as Record<string, unknown>);
 
   // Apply immediate discount to referee (50% for 30 days)
   const refereeDiscountExpiry = new Date();
@@ -352,7 +352,7 @@ export const processReferrerReward = async (params: {
 
   // Check if referrer has existing discount
   const referrer = await User.findByPk(referral.referrer_user_id);
-  const currentExpiry = (referrer as any)?.fee_discount_expires_at;
+  const currentExpiry = (referrer as Record<string, unknown> | null)?.fee_discount_expires_at;
 
   // Only apply if no current discount or current discount expired
   if (!currentExpiry || new Date() > currentExpiry) {

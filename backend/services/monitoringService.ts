@@ -171,7 +171,7 @@ export const getDailyServiceStatus = async (
       replacements: { serviceId, startDate: startDate.toISOString().split('T')[0] },
       type: QueryTypes.SELECT
     }
-  ) as any[];
+  ) as Array<Record<string, unknown>>;
   
   return results;
 };
@@ -192,7 +192,7 @@ export const getCurrentServiceStatus = async (): Promise<Array<{
     FROM tbl_service_health
     ORDER BY service_id, check_timestamp DESC`,
     { type: QueryTypes.SELECT }
-  ) as any[];
+  ) as Array<Record<string, unknown>>;
   
   return results;
 };
@@ -219,7 +219,7 @@ export const calculateServiceUptime = async (
       replacements: { serviceId, startDate: startDate.toISOString().split('T')[0] },
       type: QueryTypes.SELECT
     }
-  ) as any[];
+  ) as Array<Record<string, unknown>>;
   
   const data = results[0] || { total_checks: 0, operational_checks: 0, failed_checks: 0 };
   const total = parseInt(data.total_checks) || 0;

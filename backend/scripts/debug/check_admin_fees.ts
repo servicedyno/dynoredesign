@@ -21,7 +21,7 @@ async function main() {
        WHERE current_company_id = 38 OR owner_user_id = 28
        ORDER BY updated_at DESC`,
       { type: QueryTypes.SELECT }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
     
     console.log('=== MERCHANT POOL ADDRESSES (Company 38 / User 28) ===\n');
     

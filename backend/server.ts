@@ -45,12 +45,12 @@ if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
   // Force unbuffered output for Railway
   if (process.stdout.isTTY === false) {
     const originalWrite = process.stdout.write.bind(process.stdout);
-    process.stdout.write = (chunk: any, encoding?: any, callback?: any) => {
+    process.stdout.write = (chunk: string | Uint8Array, encoding?: BufferEncoding | ((err?: Error) => void), callback?: (err?: Error) => void) => {
       const result = originalWrite(chunk, encoding, callback);
       // Force flush after each write
       if (process.stdout.writable) {
         try {
-          (process.stdout as any)._handle?.flush?.();
+          (process.stdout as unknown as { _handle?: { flush?: () => void } })._handle?.flush?.();
         } catch (e) {
           // Ignore flush errors
         }

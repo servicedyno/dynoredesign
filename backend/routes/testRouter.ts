@@ -356,7 +356,7 @@ testRouter.post("/diagnose-temp-address", authMiddleware, async (req, res) => {
     const { temp_id } = req.body;
     
     // Get temp address from database
-    const [result]: any = await sequelize.query(
+    const [result]: Array<Record<string, unknown>> = await sequelize.query(
       'SELECT temp_id, wallet_address, "privateKey", wallet_type FROM tbl_user_temp_address WHERE temp_id = :temp_id',
       { replacements: { temp_id } }
     );
@@ -407,7 +407,7 @@ testRouter.post("/manual-transfer", authMiddleware, async (req, res) => {
     const { temp_id, to_address, amount } = req.body;
     
     // Get temp address from database
-    const [result]: any = await sequelize.query(
+    const [result]: Array<Record<string, unknown>> = await sequelize.query(
       'SELECT temp_id, wallet_address, "privateKey", wallet_type FROM tbl_user_temp_address WHERE temp_id = :temp_id',
       { replacements: { temp_id } }
     );

@@ -555,7 +555,7 @@ export const reserveAddress = async (
 export const getAvailableAddress = async (
   userId: number,
   walletType: string
-): Promise<any | null> => {
+): Promise<Record<string, unknown> | null> => {
   return await merchantTempAddressModel.findOne({
     where: {
       owner_user_id: userId,
@@ -1688,14 +1688,14 @@ export const getPoolStatus = async (userId?: number): Promise<unknown> => {
   });
 
   // Group by wallet type
-  const byType: Record<string, any[]> = {};
+  const byType: Record<string, Array<Record<string, unknown>>> = {};
   for (const addr of addresses) {
     const type = addr.dataValues.wallet_type;
     if (!byType[type]) byType[type] = [];
     byType[type].push(addr.dataValues);
   }
 
-  const result: Record<string, any> = {};
+  const result: Record<string, unknown> = {};
   for (const [type, addrs] of Object.entries(byType)) {
     const totalFees = addrs.reduce((sum, a) => sum + parseFloat(a.admin_fee_balance || 0), 0);
     result[type] = {
@@ -1720,7 +1720,7 @@ export const getPoolStatus = async (userId?: number): Promise<unknown> => {
 /**
  * Find pool address by wallet address
  */
-export const findByWalletAddress = async (walletAddress: string): Promise<any | null> => {
+export const findByWalletAddress = async (walletAddress: string): Promise<Record<string, unknown> | null> => {
   return await merchantTempAddressModel.findOne({
     where: { wallet_address: walletAddress },
   });
@@ -1772,7 +1772,7 @@ export const ensurePoolSubscriptions = async (): Promise<{
     const activeSubscriptions = await tatumApi.listAllSubscriptions();
     
     // Create a map of address -> subscription for quick lookup
-    const activeSubsMap = new Map<string, any>();
+    const activeSubsMap = new Map<string, Record<string, unknown>>();
     for (const sub of activeSubscriptions) {
       const address = sub.attr?.address?.toLowerCase();
       if (address) {

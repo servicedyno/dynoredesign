@@ -90,7 +90,7 @@ export const sendPendingPaymentNotification = async (
         replacements: { userId: customerData.adm_id },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     if (!userResult || userResult.length === 0) {
       console.log("User not found for pending notification");
@@ -186,7 +186,7 @@ export const sendConfirmationProgressNotification = async (
         replacements: { userId: customerData.adm_id },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     if (!userResult || userResult.length === 0) {
       return false;
@@ -324,7 +324,7 @@ export const sendPartialPaymentNotification = async (
         replacements: { userId: customerData.adm_id },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     if (!userResult || userResult.length === 0) {
       console.log("User not found for partial payment notification");
@@ -413,7 +413,7 @@ export const sendPartialPaymentExpiredNotification = async (
         replacements: { userId },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     if (!userResult || userResult.length === 0) {
       console.log("User not found for partial expired notification");

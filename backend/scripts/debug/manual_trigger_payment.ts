@@ -20,7 +20,7 @@ async function main() {
       const [tempAddr] = await sequelize.query(
         `SELECT * FROM tbl_merchant_temp_address WHERE wallet_address = :address`,
         { replacements: { address }, type: QueryTypes.SELECT }
-      ) as any[];
+      ) as Array<Record<string, unknown>>;
       
       if (!tempAddr) {
         console.error('No temp address found in DB');
@@ -56,7 +56,7 @@ async function main() {
     const [updatedTempAddr] = await sequelize.query(
       `SELECT status, received_amount, is_partial_payment FROM tbl_merchant_temp_address WHERE wallet_address = :address`,
       { replacements: { address }, type: QueryTypes.SELECT }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
     console.log('\n=== UPDATED DB STATE ===');
     console.log(JSON.stringify(updatedTempAddr, null, 2));
     

@@ -30,7 +30,7 @@ async function checkDatabase() {
     `);
     
     console.log(`\n📊 Found ${tables.length} tables:\n`);
-    tables.forEach((table: any, i) => {
+    tables.forEach((table: Record<string, unknown>, i) => {
       console.log(`   ${i + 1}. ${table.table_name} (${table.column_count} columns)`);
     });
     
@@ -49,7 +49,7 @@ async function checkDatabase() {
     for (const tableName of keyTables) {
       try {
         const [rows] = await sequelize.query(`SELECT COUNT(*) as count FROM ${tableName}`);
-        const count = rows[0] ? (rows[0] as any).count : 0;
+        const count = rows[0] ? (rows[0] as Record<string, unknown>).count as number : 0;
         console.log(`   ✅ ${tableName}: ${count} rows`);
       } catch (err: unknown) {
         console.log(`   ❌ ${tableName}: ${err.message.split('\n')[0]}`);
