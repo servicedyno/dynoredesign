@@ -1864,9 +1864,10 @@ export const ensurePoolSubscriptions = async (): Promise<{
     }
 
   } catch (error: unknown) {
-    console.error("[MerchantPool] ❌ Subscription health check failed:", error.message);
-    cronLogger?.error?.("Subscription health check failed", {}, error);
-    result.errors.push(`Global error: ${error.message}`);
+    const err = error as { message?: string };
+    console.error("[MerchantPool] ❌ Subscription health check failed:", err.message);
+    cronLogger?.error?.("Subscription health check failed", {}, error as Error);
+    result.errors.push(`Global error: ${err.message}`);
   }
 
   return result;
