@@ -13,7 +13,7 @@ import customerTransactionModel from "../models/customerTransactionModel";
 import sequelize from "../utils/dbInstance";
 import { QueryTypes, Op } from "sequelize";
 import axios from "axios";
-import { Authorization, CustomerJwtPayload, CompanyData } from "../utils/types";
+import { CustomerJwtPayload, CompanyData } from "../utils/types";
 
 // Supported crypto types (updated to include USDC-ERC20)
 const CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
@@ -106,7 +106,7 @@ const getAccessToken = async (id) => {
 };
 
 const createPayment = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id?: number; customer_id?: string; email?: string };
+  const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     // Support per-payment callback URLs (BlockBee style)
     const { 
@@ -202,7 +202,7 @@ const getSupportedCurrency = async (
   req: express.Request,
   res: express.Response
 ) => {
-  const userData = jwt.decode(res.locals.token) as { user_id?: number; customer_id?: string; email?: string };
+  const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const data = res.locals.apiKeyData;
     const tempData = await sequelize.query(
@@ -225,7 +225,7 @@ const getSupportedCurrency = async (
 };
 
 const cryptoPayment = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id?: number; customer_id?: string; email?: string };
+  const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const {
       amount,
@@ -368,7 +368,7 @@ const getCryptoTransaction = async (
   req: express.Request,
   res: express.Response
 ) => {
-  const userData = jwt.decode(res.locals.token) as { user_id?: number; customer_id?: string; email?: string };
+  const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const { address } = req.params;
     if (address) {
@@ -410,7 +410,7 @@ const getCryptoTransaction = async (
 };
 
 const addFunds = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id?: number; customer_id?: string; email?: string };
+  const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const { amount, redirect_uri, fee_payer } = req.body;
 
@@ -475,7 +475,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
 };
 
 const getTransactions = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id?: number; customer_id?: string; email?: string };
+  const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const customer = await customerModel.findOne({
       where: {
@@ -520,7 +520,7 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
 };
 
 const getBalance = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id?: number; customer_id?: string; email?: string };
+  const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const customer = await customerModel.findOne({
       where: {
@@ -555,7 +555,7 @@ const getSingleTransaction = async (
   req: express.Request,
   res: express.Response
 ) => {
-  const userData = jwt.decode(res.locals.token) as { user_id?: number; customer_id?: string; email?: string };
+  const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const id = req.params?.id;
     if (id) {
@@ -604,7 +604,7 @@ const getSingleTransaction = async (
 };
 
 const useWallet = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id?: number; customer_id?: string; email?: string };
+  const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const { amount } = req.body;
     if (amount) {
