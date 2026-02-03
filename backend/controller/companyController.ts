@@ -846,11 +846,13 @@ const getWebhookSettings = async (req: express.Request, res: express.Response) =
       return errorResponseHelper(res, 404, "Company not found or unauthorized");
     }
 
+    const companyData = result.dataValues as { webhook_url?: string; webhook_secret?: string };
+    
     successResponseHelper(res, 200, "Webhook settings retrieved", {
       company_id,
-      webhook_url: result.dataValues.webhook_url || null,
-      webhook_secret_set: !!result.dataValues.webhook_secret,
-      webhook_secret_preview: result.dataValues.webhook_secret ? '***' + String(result.dataValues.webhook_secret).slice(-8) : null,
+      webhook_url: companyData.webhook_url || null,
+      webhook_secret_set: !!companyData.webhook_secret,
+      webhook_secret_preview: companyData.webhook_secret ? '***' + companyData.webhook_secret.slice(-8) : null,
     });
 
   } catch (e) {
