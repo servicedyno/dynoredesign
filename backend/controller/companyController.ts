@@ -1211,8 +1211,8 @@ const getWebhookStats = async (req: express.Request, res: express.Response) => {
       { replacements: { company_id }, type: QueryTypes.SELECT }
     );
 
-    const total = parseInt(overallStats.total_deliveries) || 0;
-    const successful = parseInt(overallStats.successful) || 0;
+    const total = parseInt(String(overallStats.total_deliveries || '0')) || 0;
+    const successful = parseInt(String(overallStats.successful || '0')) || 0;
     const successRate = total > 0 ? ((successful / total) * 100).toFixed(1) : '0';
 
     successResponseHelper(res, 200, "Webhook statistics retrieved", {
@@ -1221,9 +1221,9 @@ const getWebhookStats = async (req: express.Request, res: express.Response) => {
       summary: {
         total_deliveries: total,
         successful,
-        failed: parseInt(overallStats.failed) || 0,
+        failed: parseInt(String(overallStats.failed || '0')) || 0,
         success_rate: `${successRate}%`,
-        avg_response_time_ms: parseInt(overallStats.avg_response_time_ms) || 0,
+        avg_response_time_ms: parseInt(String(overallStats.avg_response_time_ms || '0')) || 0,
         last_delivery: overallStats.last_delivery,
       },
       by_event_type: eventStats,
