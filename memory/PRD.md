@@ -28,18 +28,21 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
   - API endpoints: POST/PUT /api/pay/links, GET /api/pay/company-currencies/:company_id
   - Swagger documentation updated
   - Feature defaults to all company wallets if not specified
-- ✅ **TypeScript Error Reduction**: 482 → 282 errors (41% reduction)
-  - Fixed: paymentController.ts, api-service/controller/index.ts, tatumApi.ts
-  - Added type interfaces: ITemporaryAddress, PaymentLinkData, PaymentUserJwtPayload
+- ✅ **TypeScript Error Reduction**: 482 → 139 errors (71% reduction / 343 errors fixed)
+  - Completely fixed: `paymentController.ts`, `merchantPoolService.ts`, `webhooks/index.ts`, `tatumApi.ts`, `api-service/controller/index.ts`
+  - Partially fixed: `pendingPaymentService.ts`, `cronJobs.ts`, `adminController.ts`, `dashboardController.ts`, `companyController.ts`, `veriffService.ts`, `monitoringService.ts`, `walletController.ts`, `testRouter.ts`
+  - Added type interfaces: `ITemporaryAddress`, `PaymentLinkData`, `PaymentUserJwtPayload`, `CustomerJwtPayload`
 
 ## Prioritized Backlog
 
 ### P0 (Critical)
-- [ ] Fix remaining 282 TypeScript errors to achieve 100% type safety
-  - merchantPoolService.ts (32 errors)
-  - referralController.ts (19 errors)
-  - walletController.ts (16 errors)
-  - Other controllers and services
+- [ ] Fix remaining 139 TypeScript errors to achieve 100% type safety
+  - referralController.ts (14 errors)
+  - kycController.ts (12 errors)
+  - userController.ts (11 errors)
+  - walletController.ts (10 errors)
+  - controller/index.ts (10 errors)
+  - Other services and controllers
 
 ### P1 (High)
 - [ ] Frontend implementation for accepted_currencies selector
