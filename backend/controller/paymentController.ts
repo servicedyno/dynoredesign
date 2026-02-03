@@ -364,7 +364,41 @@ const getData = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 400, "Payment reference is required");
     }
 
-    const item = await getRedisItem("customer-" + data);
+    // Define interface for incomplete payment data
+    interface IncompletePaymentData {
+      currency: string;
+      address: string;
+      pending_amount: number | string;
+      timestamp: string | Date;
+      qr_code?: string;
+    }
+
+    // Define interface for Redis payment item
+    interface RedisPaymentItem {
+      pathType?: string;
+      company_id?: number;
+      base_amount?: number;
+      amount?: number;
+      base_currency?: string;
+      email?: string;
+      transaction_id?: string;
+      link_id?: number;
+      description?: string;
+      allowedModes?: string;
+      fee_payer?: 'customer' | 'company';
+      apply_tax?: boolean;
+      expires_at?: string | Date;
+      redirect_url?: string;
+      callback_url?: string;
+      webhook_url?: string;
+      createdAt?: string | Date;
+      customer_id?: string;
+      incomplete_payment?: IncompletePaymentData;
+      available_currencies?: string[];
+      accepted_currencies?: string;
+    }
+
+    const item = await getRedisItem("customer-" + data) as RedisPaymentItem | null;
 
     // Only log for debugging when item exists or in development
     if (process.env.NODE_ENV === 'development' || (item && Object.keys(item).length > 0)) {
@@ -378,7 +412,7 @@ const getData = async (req: express.Request, res: express.Response) => {
     
     // Get company info if company_id exists
     let companyInfo: Record<string, unknown> | null = null;
-    let paymentSettings: Record<string, unknown> = {
+    let paymentSettings = {
       initial_window_minutes: PAYMENT_TIMING.CRYPTO_INVOICE_MINUTES,      // Default: 15 minutes to pay after selecting crypto
       grace_period_minutes: PAYMENT_TIMING.GRACE_PERIOD_MINUTES,        // Default: 30 minutes to complete partial payment
       overpayment_threshold_usd: 5,    // Default: $5 minimum overpayment to handle
