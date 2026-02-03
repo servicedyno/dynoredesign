@@ -116,7 +116,7 @@ const getWallets = async (req: express.Request, res: express.Response) => {
     });
     const currencyList = [];
 
-    const allUserWalletData: unknown[] = await sequelize.query(
+    const allUserWalletData = await sequelize.query<{ total_balance: number; wallet_type: string }>(
       "select sum(amount) as total_balance,wallet_type from tbl_user_wallet group by wallet_type",
       { type: QueryTypes.SELECT }
     );
