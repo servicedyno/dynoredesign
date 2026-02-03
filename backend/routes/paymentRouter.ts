@@ -120,4 +120,12 @@ paymentRouter.get(
   paymentController.getFeePreview
 );
 
+// Get configured currencies for a company (merchant dashboard)
+// Used when creating/editing payment links to show available currencies
+paymentRouter.get(
+  "/company-currencies/:company_id",
+  authMiddleware,
+  paymentController.getCompanyConfiguredCurrencies
+);
+
 export default paymentRouter;
