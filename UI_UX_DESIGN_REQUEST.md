@@ -4,17 +4,19 @@ Hi Team,
 
 We need your help designing some new screens and features for DynoPay. Below is everything you need to know, written in plain language with clear visual examples.
 
+**✅ BACKEND STATUS: All features below are fully implemented and tested. API documentation is up-to-date.**
+
 ---
 
 ## Quick Summary
 
-| Screen | What's Needed | Priority |
-|--------|---------------|----------|
-| Company Settings | Add Webhook, Thresholds sections | HIGH |
-| Create Payment Link | Add crypto selector + tax toggle | HIGH |
-| Edit Payment Link | New screen (similar to Create) | HIGH |
-| Payment Links List | Add Edit button | MEDIUM |
-| Checkout Page | Show tax breakdown (already exists, just verify) | LOW |
+| Screen | What's Needed | Priority | Backend Status |
+|--------|---------------|----------|----------------|
+| Company Settings | Add Webhook, Thresholds sections | HIGH | ✅ Ready |
+| Create Payment Link | Add crypto selector + tax toggle | HIGH | ✅ Ready |
+| Edit Payment Link | New screen (similar to Create) | HIGH | ✅ Ready |
+| Payment Links List | Add Edit button | MEDIUM | ✅ Ready |
+| Checkout Page | Show tax breakdown (already exists, just verify) | LOW | ✅ Ready |
 
 ---
 
