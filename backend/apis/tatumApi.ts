@@ -1957,11 +1957,11 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.fungibleToken.erc20GetTransactionByAddress(
         "ETH", address, contractAddress, limit
       );
-      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
+      for (const tx of (txData as ERC20Transaction[]) || []) {
         if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
           transactions.push({
-            txId: tx.transactionHash || tx.txId || tx.hash,
-            amount: parseFloat(tx.value) / 1e6, // USDT has 6 decimals
+            txId: tx.transactionHash || tx.txId || tx.hash || '',
+            amount: parseFloat(tx.value || '0') / 1e6, // USDT has 6 decimals
             timestamp: tx.timestamp || tx.blockTimestamp || Date.now()
           });
         }
@@ -1970,7 +1970,7 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.blockchain.ltc.ltcGetTxByAddress(
         address, limit, 0
       );
-      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
+      for (const tx of (txData as UTXOTransaction[]) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
@@ -1979,9 +1979,9 @@ const getIncomingTransactions = async (
         }
         if (receivedAmount > 0) {
           transactions.push({
-            txId: tx.hash,
+            txId: tx.hash || '',
             amount: receivedAmount,
-            timestamp: tx.time?.toString().length > 10 ? tx.time : tx.time * 1000
+            timestamp: tx.time && tx.time.toString().length > 10 ? tx.time : (tx.time || 0) * 1000
           });
         }
       }
@@ -1989,7 +1989,7 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.blockchain.doge.dogeGetTxByAddress(
         address, limit, 0
       );
-      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
+      for (const tx of (txData as UTXOTransaction[]) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
@@ -1998,9 +1998,9 @@ const getIncomingTransactions = async (
         }
         if (receivedAmount > 0) {
           transactions.push({
-            txId: tx.hash,
+            txId: tx.hash || '',
             amount: receivedAmount,
-            timestamp: tx.time?.toString().length > 10 ? tx.time : tx.time * 1000
+            timestamp: tx.time && tx.time.toString().length > 10 ? tx.time : (tx.time || 0) * 1000
           });
         }
       }
@@ -2008,7 +2008,7 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.blockchain.bcash.bchGetTxByAddress(
         address, limit
       );
-      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
+      for (const tx of (txData as UTXOTransaction[]) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
@@ -2017,9 +2017,9 @@ const getIncomingTransactions = async (
         }
         if (receivedAmount > 0) {
           transactions.push({
-            txId: tx.hash,
+            txId: tx.hash || '',
             amount: receivedAmount,
-            timestamp: tx.time?.toString().length > 10 ? tx.time : tx.time * 1000
+            timestamp: tx.time && tx.time.toString().length > 10 ? tx.time : (tx.time || 0) * 1000
           });
         }
       }
