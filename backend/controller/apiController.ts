@@ -783,7 +783,8 @@ const updatePlan = async (req: express.Request, res: express.Response) => {
     // Update in Flutterwave if amount or interval changed
     if (amount !== undefined || interval !== undefined) {
       try {
-        await flw.PaymentPlan.update(existingPlan.dataValues.flw_plan_id, {
+        await flw.PaymentPlan.update({
+          id: existingPlan.dataValues.flw_plan_id,
           name: plan_name || existingPlan.dataValues.plan_name,
           amount: amount || existingPlan.dataValues.amount,
         });
