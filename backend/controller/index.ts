@@ -184,7 +184,7 @@ export const calculateTransactionFeesWithDiscount = async (
   // Find the matching tier based on amount
   const tiers = config.tiers || [];
   const matchingTier = tiers.find(
-    (tier: { min: number; max: number | null; fixed: number; buffer: number }) =>
+    (tier: { min_amount: number; max_amount: number | null; fixed_fee: number; blockchain_buffer_percent: number; id?: number }) =>
       amount >= tier.min_amount &&
       (tier.max_amount === null || amount <= tier.max_amount)
   );
