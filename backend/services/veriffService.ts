@@ -205,9 +205,16 @@ class VeriffService {
     reason: string;
     vendorData: Record<string, unknown>;
   } {
-    const verification = payload.verification || {};
+    const verification = (payload.verification || {}) as {
+      id?: string;
+      status?: string;
+      decision?: string;
+      code?: number;
+      reason?: string;
+      vendorData?: string;
+    };
     
-    let vendorData = {};
+    let vendorData: Record<string, unknown> = {};
     try {
       vendorData = JSON.parse(verification.vendorData || "{}");
     } catch (e) {
