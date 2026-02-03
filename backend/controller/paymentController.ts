@@ -322,8 +322,8 @@ const getData = async (req: express.Request, res: express.Response) => {
     // Get company info if company_id exists
     let companyInfo: any = null;
     let paymentSettings: any = {
-      initial_window_minutes: 15,      // Default: 15 minutes to pay after selecting crypto
-      grace_period_minutes: 30,        // Default: 30 minutes to complete partial payment
+      initial_window_minutes: PAYMENT_TIMING.CRYPTO_INVOICE_MINUTES,      // Default: 15 minutes to pay after selecting crypto
+      grace_period_minutes: PAYMENT_TIMING.GRACE_PERIOD_MINUTES,        // Default: 30 minutes to complete partial payment
       overpayment_threshold_usd: 5,    // Default: $5 minimum overpayment to handle
       underpayment_threshold_usd: 1,   // Default: $1 maximum underpayment to accept as full payment
     };
