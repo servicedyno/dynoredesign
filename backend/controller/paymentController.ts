@@ -4993,6 +4993,17 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
         const existingRedisData = await getRedisItem("customer-" + uniqueRef);
         
         if (existingRedisData && Object.keys(existingRedisData).length > 0) {
+          // Calculate new available_currencies based on accepted_currencies
+          let newAvailableCurrencies = existingRedisData.available_currencies || existingRedisData.all_configured_currencies || [];
+          
+          if (linkData.accepted_currencies) {
+            // Use merchant's selection
+            newAvailableCurrencies = linkData.accepted_currencies.split(',').map((c: string) => c.trim());
+          } else if (existingRedisData.all_configured_currencies) {
+            // No selection, use all configured
+            newAvailableCurrencies = existingRedisData.all_configured_currencies;
+          }
+          
           // Merge updated fields with existing Redis data
           const updatedRedisPayload = {
             ...existingRedisData,
@@ -5008,11 +5019,13 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
             fee_payer: linkData.fee_payer,
             apply_tax: linkData.apply_tax,
             allowedModes: linkData.allowedModes,
+            accepted_currencies: linkData.accepted_currencies,
+            available_currencies: newAvailableCurrencies,
             updatedAt: new Date().toISOString(),
           };
           
           await setRedisItem("customer-" + uniqueRef, updatedRedisPayload);
-          console.log(`[updatePaymentLink] Redis updated for key: customer-${uniqueRef}`);
+          console.log(`[updatePaymentLink] Redis updated for key: customer-${uniqueRef}, available_currencies: ${JSON.stringify(newAvailableCurrencies)}`);
         } else {
           console.warn(`[updatePaymentLink] No existing Redis data found for key: customer-${uniqueRef}`);
         }
