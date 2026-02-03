@@ -690,17 +690,18 @@ const tatumCryptoWebHook = async (
             lastError = null;
             break;
           } catch (retryError: unknown) {
-            lastError = retryError;
+            const err = retryError as { message?: string };
+            lastError = new Error(err.message || 'Unknown error');
             
             // SMART RETRY: Check if error is retryable
-            if (!isRetryable(retryError)) {
-              console.error(`[tatumCryptoWebHook] Non-retryable error, stopping: ${retryError.message}`);
+            if (!isRetryable(lastError)) {
+              console.error(`[tatumCryptoWebHook] Non-retryable error, stopping: ${err.message}`);
               break; // Don't retry hard failures
             }
             
             if (attempt < maxRetries) {
               const waitTime = 2000 * Math.pow(2, attempt - 1); // Exponential backoff: 2s, 4s, 8s
-              console.warn(`[tatumCryptoWebHook] cryptoVerification failed (attempt ${attempt}/${maxRetries}): ${retryError.message}`);
+              console.warn(`[tatumCryptoWebHook] cryptoVerification failed (attempt ${attempt}/${maxRetries}): ${err.message}`);
               console.warn(`[tatumCryptoWebHook] Retrying in ${waitTime}ms...`);
               
               // Update retry state in Redis (persistence)
@@ -711,7 +712,7 @@ const tatumCryptoWebHook = async (
                 txId: payload.txId,
                 retryCount: String(attempt),
                 lastAttempt: new Date().toISOString(),
-                lastError: retryError.message,
+                lastError: err.message,
               });
               
               await new Promise(resolve => setTimeout(resolve, waitTime));
