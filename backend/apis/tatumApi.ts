@@ -13,6 +13,43 @@ import tronweb from "tronweb";
 import { Crc32c } from "@aws-crypto/crc32c";
 import { buildUrl } from "../helper";
 
+// Type interfaces for blockchain transaction data
+interface ERC20Transaction {
+  to?: string;
+  from?: string;
+  value?: string;
+  transactionHash?: string;
+  txId?: string;
+  hash?: string;
+  timestamp?: number;
+  blockTimestamp?: number;
+}
+
+interface UTXOOutput {
+  address?: string;
+  value?: string;
+}
+
+interface UTXOTransaction {
+  hash?: string;
+  outputs?: UTXOOutput[];
+  time?: number;
+}
+
+interface BlockchainTxWithConfirmations {
+  confirmations?: number;
+  blockNumber?: number;
+}
+
+interface TronBlockInfo {
+  block_header?: {
+    raw_data?: {
+      number?: number;
+    };
+  };
+  blockNumber?: number;
+}
+
 // Type guard for TransactionHash (has txId)
 const isTransactionHash = (result: TransactionHash | SignatureId): result is TransactionHash => {
   return 'txId' in result;
