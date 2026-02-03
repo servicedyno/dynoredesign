@@ -9,21 +9,41 @@ export const walletPaths = {
   '/api/wallet/getWallet': {
     get: {
       tags: ['Wallet Address Management'],
-      summary: '📖 Get Wallet Addresses (RECOMMENDED - Use This)',
-      description: `✅ **RECOMMENDED ENDPOINT** - Retrieve all cryptocurrency wallet addresses configured for your account.
+      summary: '📖 Get Wallet Addresses - Grouped by Company',
+      description: `✅ **RECOMMENDED ENDPOINT** - Retrieve all cryptocurrency wallet addresses grouped by company.
 
 **This is the main wallet system** that integrates with payment forwarding.
 
 ## Features:
-- ✅ Returns OTP-verified wallet addresses
-- ✅ Includes balance information
-- ✅ Shows current crypto transfer rates
+- ✅ Returns **CRYPTO wallets only** (FIAT excluded)
+- ✅ **Grouped by company** with company_name included
+- ✅ Includes balance information & current crypto transfer rates
 - ✅ Integrated with payment forwarding system
-- ✅ Enforces one-wallet-per-blockchain rule
 
 **No OTP Required** - This is a read-only operation.
 
-**Multi-tenancy:** Optionally filter by company_id, or omit to get all companies.
+## Response Format:
+Wallets are grouped by company for easy organization:
+\`\`\`json
+{
+  "data": [
+    {
+      "company_id": 38,
+      "company_name": "Bozzmail",
+      "wallets": [{ wallet_id, wallet_type, wallet_address, ... }]
+    },
+    {
+      "company_id": 39,
+      "company_name": "Nameword",
+      "wallets": [{ ... }]
+    }
+  ]
+}
+\`\`\`
+
+**Multi-tenancy:** 
+- Omit company_id → Returns all companies' wallets (grouped)
+- Provide company_id → Returns only that company's wallets
 
 **Table:** tbl_user_wallet (Main payment system)`,
       security: [{ BearerAuth: [] }],
@@ -31,67 +51,116 @@ export const walletPaths = {
         in: 'query',
         name: 'company_id',
         schema: { type: 'integer' },
-        description: '(Optional) Filter by company ID. If omitted, returns wallets for all companies.',
+        description: '(Optional) Filter by company ID. If omitted, returns wallets for ALL companies grouped.',
         example: 38
       }],
       responses: {
         200: {
-          description: 'Wallet addresses retrieved successfully',
+          description: 'Wallet addresses retrieved successfully (grouped by company)',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Successfully retrieved 2 wallet' },
+                  message: { type: 'string', example: 'Successfully retrieved 14 wallets from 2 companies' },
                   data: {
                     type: 'array',
+                    description: 'Array of companies with their wallets',
                     items: {
                       type: 'object',
                       properties: {
-                        wallet_id: { type: 'integer', example: 145, description: '⚠️ REQUIRED for delete operations' },
-                        user_id: { type: 'integer', example: 28 },
                         company_id: { type: 'integer', example: 38 },
-                        wallet_type: { type: 'string', example: 'ETH', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'] },
-                        wallet_address: { type: 'string', example: '0x9a7221b5e32d5f99e8da95585835442e29afb38f' },
-                        wallet_name: { type: 'string', example: 'ETH Main Wallet' },
-                        amount: { type: 'string', example: '0.00' },
-                        balance_in_usd: { type: 'string', example: '0.00' },
-                        transfer_rate: { type: 'number', example: 0.00035729, description: 'Current crypto-to-USD rate' },
-                        createdAt: { type: 'string', example: '2026-01-25T18:18:05.691Z' },
-                        updatedAt: { type: 'string', example: '2026-01-25T23:17:20.112Z' }
+                        company_name: { type: 'string', example: 'Bozzmail' },
+                        wallets: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              wallet_id: { type: 'integer', example: 431, description: '⚠️ REQUIRED for update/delete operations' },
+                              user_id: { type: 'integer', example: 28 },
+                              company_id: { type: 'integer', example: 38 },
+                              wallet_type: { type: 'string', example: 'ETH', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20'] },
+                              wallet_address: { type: 'string', example: '0x9a7221b5e32d5f99e8da95585835442e29afb38f' },
+                              wallet_name: { type: 'string', example: 'ETH Main Wallet', nullable: true },
+                              amount: { type: 'number', example: 0 },
+                              amount_in_usd: { type: 'string', example: '0.00' },
+                              transfer_rate: { type: 'number', example: 0.00043604, description: 'Current crypto-to-USD rate' },
+                              currency_type: { type: 'string', example: 'CRYPTO' },
+                              createdAt: { type: 'string', example: '2026-01-25T18:17:48.857Z' },
+                              updatedAt: { type: 'string', example: '2026-02-02T18:34:43.844Z' }
+                            }
+                          }
+                        }
                       }
                     }
                   }
                 }
               },
               examples: {
-                'success': {
-                  summary: 'Successful response',
+                'all_companies': {
+                  summary: 'All companies (no filter)',
                   value: {
-                    "message": "Successfully retrieved 2 wallet",
+                    "message": "Successfully retrieved 14 wallets from 2 companies",
                     "data": [
                       {
-                        "wallet_id": 431,
-                        "user_id": 28,
                         "company_id": 38,
-                        "wallet_type": "ETH",
-                        "wallet_address": "0x9a7221b5e32d5f99e8da95585835442e29afb38f",
-                        "wallet_name": "ETH Main Wallet",
-                        "amount": "0.00",
-                        "balance_in_usd": "0.00",
-                        "transfer_rate": 0.00035729
+                        "company_name": "Bozzmail",
+                        "wallets": [
+                          {
+                            "wallet_id": 431,
+                            "wallet_type": "ETH",
+                            "wallet_address": "0x9a7221b5e32d5f99e8da95585835442e29afb38f",
+                            "wallet_name": null,
+                            "amount": 0.027,
+                            "amount_in_usd": "63.49",
+                            "transfer_rate": 0.00043604,
+                            "currency_type": "CRYPTO"
+                          },
+                          {
+                            "wallet_id": 430,
+                            "wallet_type": "BTC",
+                            "wallet_address": "1JH5TnZzjYTf1yYwBDLjWoHgkAcCHc1Do7",
+                            "wallet_name": null,
+                            "amount": 0,
+                            "amount_in_usd": "0.00",
+                            "transfer_rate": 0.00001278,
+                            "currency_type": "CRYPTO"
+                          }
+                        ]
                       },
                       {
-                        "wallet_id": 430,
-                        "user_id": 28,
+                        "company_id": 39,
+                        "company_name": "Nameword",
+                        "wallets": [
+                          {
+                            "wallet_id": 490,
+                            "wallet_type": "ETH",
+                            "wallet_address": "0x9a7221b5e32d5f99e8da95585835442e29afb38f",
+                            "wallet_name": null,
+                            "amount": 0,
+                            "amount_in_usd": "0.00",
+                            "transfer_rate": 0.00043604,
+                            "currency_type": "CRYPTO"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                'single_company': {
+                  summary: 'Single company (with filter)',
+                  value: {
+                    "message": "Successfully retrieved 7 wallets from 1 company",
+                    "data": [
+                      {
                         "company_id": 38,
-                        "wallet_type": "BTC",
-                        "wallet_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
-                        "wallet_name": "BTC Main Wallet",
-                        "amount": "0.00",
-                        "balance_in_usd": "0.00",
-                        "transfer_rate": 0.00001159
+                        "company_name": "Bozzmail",
+                        "wallets": [
+                          { "wallet_id": 430, "wallet_type": "BTC", "wallet_address": "1JH5TnZ..." },
+                          { "wallet_id": 431, "wallet_type": "ETH", "wallet_address": "0x9a722..." },
+                          { "wallet_id": 432, "wallet_type": "LTC", "wallet_address": "LbTjMGN..." }
+                        ]
                       }
                     ]
                   }
@@ -101,6 +170,119 @@ export const walletPaths = {
           }
         },
         401: { description: 'Unauthorized - Invalid or missing token' }
+      }
+    }
+  },
+
+  // UPDATE - Edit wallet name (NO OTP) or address (OTP required)
+  '/api/wallet/address/{id}': {
+    put: {
+      tags: ['Wallet Address Management'],
+      summary: '✏️ Update Wallet Name or Address',
+      description: `**Update wallet name (no OTP) or wallet address (OTP required)**
+
+## OTP Requirements:
+| Update Type | OTP Required |
+|-------------|--------------|
+| **wallet_name only** | ❌ No OTP needed |
+| **wallet_address** | ✅ OTP required |
+| **Both** | ✅ OTP required |
+
+## To update wallet_name only:
+Simply send the request with \`wallet_name\` - no OTP needed.
+
+## To update wallet_address:
+1. First call \`POST /api/wallet/address/{id}/send-otp\` to receive OTP
+2. Then call this endpoint with \`wallet_address\` and \`otp\`
+
+**Table:** tbl_user_addresses`,
+      security: [{ BearerAuth: [] }],
+      parameters: [{
+        in: 'path',
+        name: 'id',
+        required: true,
+        schema: { type: 'integer' },
+        description: 'Wallet address ID (user_address_id)',
+        example: 123
+      }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                wallet_name: {
+                  type: 'string',
+                  description: 'New wallet name (NO OTP required)',
+                  example: 'My Primary BTC Wallet'
+                },
+                wallet_address: {
+                  type: 'string',
+                  description: 'New wallet address (OTP REQUIRED)',
+                  example: '1NewBTCAddress...'
+                },
+                otp: {
+                  type: 'string',
+                  description: 'Required ONLY when changing wallet_address',
+                  example: '123456',
+                  pattern: '^[0-9]{6}$'
+                }
+              }
+            },
+            examples: {
+              'update_name_only': {
+                summary: 'Update wallet name (no OTP)',
+                value: {
+                  "wallet_name": "My Primary BTC Wallet"
+                }
+              },
+              'update_address': {
+                summary: 'Update wallet address (OTP required)',
+                value: {
+                  "wallet_address": "1NewBTCAddressHere...",
+                  "otp": "123456"
+                }
+              },
+              'update_both': {
+                summary: 'Update both (OTP required)',
+                value: {
+                  "wallet_name": "Updated Wallet",
+                  "wallet_address": "1NewBTCAddressHere...",
+                  "otp": "123456"
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Wallet updated successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Wallet updated successfully' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      user_address_id: { type: 'integer', example: 123 },
+                      wallet_name: { type: 'string', example: 'My Primary BTC Wallet' },
+                      wallet_address: { type: 'string', example: '1JH5TnZzjYTf1yYwBDLjWoHgk...' },
+                      currency: { type: 'string', example: 'BTC' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'OTP is required to update wallet address / Invalid OTP' },
+        401: { description: 'Unauthorized' },
+        404: { description: 'Wallet address not found' }
       }
     }
   },
