@@ -53,6 +53,30 @@ A full-stack crypto payment gateway called "Dynopay" with:
 
 ### Session: February 2026
 
+#### Accepted Currencies Feature - COMPLETED ✅
+**Date:** February 2026
+
+**Feature:** Merchants can now select which cryptocurrencies to accept per payment link
+
+**Changes Made:**
+1. **Database:** Added `accepted_currencies` column to `tbl_payment_link` (TEXT, nullable)
+2. **API - Create Payment Link:** Now accepts `accepted_currencies` array parameter
+3. **API - Update Payment Link:** Can update `accepted_currencies` 
+4. **API - Get Payment Link:** Returns `accepted_currencies` as array (or null for all)
+5. **New API:** `GET /api/pay/company-currencies/:company_id` - Returns all currencies with configuration status
+
+**Validation:**
+- Validates currencies are valid types (BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20)
+- Validates merchant has configured wallets for selected currencies
+- If no selection, all configured wallets are accepted
+
+**Files Modified:**
+- `/app/backend/models/userModels/paymentLinkModel.ts` - Added column
+- `/app/backend/controller/paymentController.ts` - Added logic + new endpoint
+- `/app/backend/routes/paymentRouter.ts` - Added route
+
+---
+
 #### UI/UX Design Document for Missing Screens - COMPLETED ✅
 **Date:** February 2026
 
