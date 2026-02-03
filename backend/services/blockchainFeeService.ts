@@ -93,7 +93,8 @@ const fetchTatumFee = async (chain: string): Promise<unknown> => {
     );
     return response.data;
   } catch (error: unknown) {
-    console.error(`[BlockchainFeeService] Error fetching ${chain} fee:`, error.message);
+    const err = error as { message?: string };
+    console.error(`[BlockchainFeeService] Error fetching ${chain} fee:`, err.message);
     throw error;
   }
 };
@@ -119,7 +120,8 @@ const fetchTronFee = async (): Promise<unknown> => {
       chain: 'TRON',
     };
   } catch (error: unknown) {
-    console.error('[BlockchainFeeService] Error fetching TRON fee:', error.message);
+    const err = error as { message?: string };
+    console.error('[BlockchainFeeService] Error fetching TRON fee:', err.message);
     // Return default TRON fees if API fails
     return {
       chain: 'TRON',
