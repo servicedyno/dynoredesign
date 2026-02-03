@@ -189,6 +189,80 @@ export const sendCompanyContactWelcomeEmail = async (
 };
 
 /**
+ * Template 2b: User Profile Updated Email
+ * Trigger: User profile updated (name, username, email, mobile)
+ * Recipient: User's email (both old and new if email changed)
+ */
+export const sendUserProfileUpdatedEmail = async (
+  email: string,
+  name: string,
+  updatedFields: string[],
+  oldEmail?: string
+) => {
+  try {
+    const subject = "Account Profile Updated";
+    const now = new Date();
+    const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    
+    const fieldsList = updatedFields.length > 0 
+      ? `<ul>${updatedFields.map(field => `<li>${field}</li>`).join('')}</ul>`
+      : '<p>General profile information</p>';
+    
+    const content = `<p class="message">Hey ${name},</p>
+    <p class="message">Your account profile has been updated successfully. ✅</p>
+    <div class="highlight-box">
+      <p><strong>Updated Information:</strong></p>
+      ${fieldsList}
+      <p style="margin-top: 15px; font-size: 12px; color: #666;">
+        <strong>Date:</strong> ${date}<br/>
+        <strong>Time:</strong> ${time}
+      </p>
+    </div>
+    <p class="message" style="color: #e74c3c;"><strong>⚠️ Security Notice:</strong> If you didn't make these changes, please reset your password immediately and contact our support team.</p>`;
+
+    const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", "https://dynopay.com/dashboard/profile");
+    
+    // Send to current email
+    await mailTransporter({
+      to: email,
+      name,
+      subject,
+      body: html,
+    });
+    
+    // If email was changed, also notify the old email
+    if (oldEmail && oldEmail !== email) {
+      const oldEmailContent = `<p class="message">Hey ${name},</p>
+      <p class="message">Your account email has been changed from <strong>${oldEmail}</strong> to <strong>${email}</strong>.</p>
+      <div class="highlight-box" style="background-color: #fff3cd; border-color: #ffc107;">
+        <p><strong>⚠️ Important:</strong></p>
+        <p>If you did not make this change, your account may be compromised. Please contact our support team immediately.</p>
+        <p style="margin-top: 15px; font-size: 12px; color: #666;">
+          <strong>Date:</strong> ${date}<br/>
+          <strong>Time:</strong> ${time}
+        </p>
+      </div>`;
+
+      const oldEmailHtml = dynoPayEmailTemplate("Email Address Changed", oldEmailContent, true, "Contact Support", "https://dynopay.com/support");
+      
+      await mailTransporter({
+        to: oldEmail,
+        name,
+        subject: "Your DynoPay Email Address Has Been Changed",
+        body: oldEmailHtml,
+      });
+      
+      console.log(`[ProfileUpdate] Email change notification sent to old email: ${oldEmail}`);
+    }
+    
+    console.log(`[ProfileUpdate] Profile updated email sent to ${email}`);
+  } catch (e) {
+    console.error("[ProfileUpdate] Email error:", e);
+  }
+};
+
+/**
  * Template 2c: Company Profile Updated Email
  * Trigger: Company profile updated
  * Recipient: Account holder email
