@@ -18,6 +18,11 @@ import { Authorization } from "../utils/types";
 // Supported crypto types (updated to include USDC-ERC20)
 const CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
 
+// Type for wallet query result
+interface WalletTypeResult {
+  wallet_type: string;
+}
+
 // Use internal backend URL for service-to-service communication
 const getBackendURL = () => {
   return process.env.INTERNAL_BACKEND_URL || process.env.SERVER_URL || 'http://localhost:3300';
@@ -25,7 +30,7 @@ const getBackendURL = () => {
 
 // Phase 11: Helper function to get available crypto currencies for a company
 const getAvailableCurrencies = async (userId: number, companyId: number): Promise<string[]> => {
-  const wallets: Array<unknown> = await sequelize.query(
+  const wallets = await sequelize.query<WalletTypeResult>(
     `SELECT DISTINCT wallet_type FROM tbl_user_wallet 
      WHERE user_id = :userId 
      AND company_id = :companyId 
@@ -36,7 +41,7 @@ const getAvailableCurrencies = async (userId: number, companyId: number): Promis
       type: QueryTypes.SELECT,
     }
   );
-  return wallets.map((w: unknown) => w.wallet_type);
+  return wallets.map((w) => w.wallet_type);
 };
 
 const createUser = async (req: express.Request, res: express.Response) => {
