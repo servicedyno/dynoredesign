@@ -53,7 +53,7 @@ const generateInvoiceNumber = async (): Promise<string> => {
 export const autoGenerateInvoice = async (
   transactionId: number,
   companyId: number
-): Promise<Record<string, unknown>> => {
+): Promise<unknown> => {
   try {
     // Check if invoice already exists
     const existingInvoice = await invoiceModel.findOne({
