@@ -196,7 +196,7 @@ export const triggerWeeklySummary = async (userId?: number) => {
          AND "createdAt" <= :endDate`,
         {
           replacements: { 
-            userId: user.user_id, 
+            userId: String(user.user_id), 
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString()
           },
@@ -206,23 +206,35 @@ export const triggerWeeklySummary = async (userId?: number) => {
 
       const stats = summary[0];
 
+      // Define interface for stats
+      interface SummaryStats {
+        transaction_count: string | number;
+        total_volume: string | number;
+        completed_count: string | number;
+        pending_count: string | number;
+        failed_count: string | number;
+      }
+
+      const typedStats = stats as SummaryStats;
+      const totalVolume = parseFloat(String(typedStats.total_volume || 0));
+
       const notificationData = {
         period_start: startDate.toISOString().split('T')[0],
         period_end: endDate.toISOString().split('T')[0],
-        transaction_count: parseInt(stats.transaction_count),
-        total_volume: parseFloat(stats.total_volume),
-        completed_count: parseInt(stats.completed_count),
-        pending_count: parseInt(stats.pending_count),
-        failed_count: parseInt(stats.failed_count),
+        transaction_count: parseInt(String(typedStats.transaction_count)),
+        total_volume: totalVolume,
+        completed_count: parseInt(String(typedStats.completed_count)),
+        pending_count: parseInt(String(typedStats.pending_count)),
+        failed_count: parseInt(String(typedStats.failed_count)),
       };
 
       const notification = await createNotification(
-        user.user_id,
+        Number(user.user_id),
         NOTIFICATION_TYPES.WEEKLY_SUMMARY,
         "Your Weekly Summary",
-        `This week you had ${stats.transaction_count} transactions with a total volume of $${parseFloat(stats.total_volume).toFixed(2)}.`,
+        `This week you had ${typedStats.transaction_count} transactions with a total volume of $${totalVolume.toFixed(2)}.`,
         notificationData,
-        user.company_id
+        Number(user.company_id)
       );
 
       results.push({
