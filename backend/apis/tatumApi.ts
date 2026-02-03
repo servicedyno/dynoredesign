@@ -2111,7 +2111,7 @@ const getTransactionConfirmations = async (
     let confirmations = 0;
     
     if (currency === 'BTC') {
-      const txData = await tatumSdk.blockchain.bitcoin.btcGetRawTransaction(txHash);
+      const txData = await tatumSdk.blockchain.bitcoin.btcGetRawTransaction(txHash) as BlockchainTxWithConfirmations & { blockNumber?: number };
       if (txData && txData.confirmations !== undefined) {
         confirmations = txData.confirmations;
       } else if (txData && txData.blockNumber) {
@@ -2120,32 +2120,32 @@ const getTransactionConfirmations = async (
         confirmations = blockInfo.blocks - txData.blockNumber + 1;
       }
     } else if (currency === 'LTC') {
-      const txData = await tatumSdk.blockchain.ltc.ltcGetRawTransaction(txHash);
+      const txData = await tatumSdk.blockchain.ltc.ltcGetRawTransaction(txHash) as BlockchainTxWithConfirmations;
       if (txData && txData.confirmations !== undefined) {
         confirmations = txData.confirmations;
       }
     } else if (currency === 'DOGE') {
-      const txData = await tatumSdk.blockchain.doge.dogeGetRawTransaction(txHash);
+      const txData = await tatumSdk.blockchain.doge.dogeGetRawTransaction(txHash) as BlockchainTxWithConfirmations;
       if (txData && txData.confirmations !== undefined) {
         confirmations = txData.confirmations;
       }
     } else if (currency === 'BCH') {
-      const txData = await tatumSdk.blockchain.bcash.bchGetRawTransaction(txHash);
+      const txData = await tatumSdk.blockchain.bcash.bchGetRawTransaction(txHash) as BlockchainTxWithConfirmations;
       if (txData && txData.confirmations !== undefined) {
         confirmations = txData.confirmations;
       }
     } else if (currency === 'ETH' || currency === 'USDT-ERC20' || currency === 'USDC-ERC20') {
       const txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);
       if (txData && txData.blockNumber) {
-        const currentBlock: unknown = await (tatumSdk.blockchain.eth as unknown as { ethGetAccountTransactions?: (address: string) => Promise<unknown>; ethGetBlockNumber?: () => Promise<number> }).ethGetBlockNumber?.() || 0;
+        const currentBlock = await (tatumSdk.blockchain.eth as { ethGetBlockNumber?: () => Promise<number> }).ethGetBlockNumber?.() || 0;
         if (currentBlock) {
-          confirmations = currentBlock - txData.blockNumber + 1;
+          confirmations = Number(currentBlock) - txData.blockNumber + 1;
         }
       }
     } else if (currency === 'TRX' || currency === 'USDT-TRC20') {
       const txData = await tatumSdk.blockchain.tron.tronGetTransaction(txHash);
       if (txData && txData.blockNumber) {
-        const blockInfo = await tatumSdk.blockchain.tron.tronGetCurrentBlock();
+        const blockInfo = await tatumSdk.blockchain.tron.tronGetCurrentBlock() as TronBlockInfo;
         const currentBlockNumber = blockInfo?.block_header?.raw_data?.number || blockInfo?.blockNumber || 0;
         confirmations = currentBlockNumber - txData.blockNumber + 1;
       }
