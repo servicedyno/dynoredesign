@@ -788,12 +788,13 @@ const createSubscriptionBlockBeeStyle = async (
     
     return resData;
   } catch (e: unknown) {
-    console.error("[createSubscriptionBlockBeeStyle] Error:", e.response?.data || e.message);
+    const error = e as { response?: { data?: unknown }; message?: string };
+    console.error("[createSubscriptionBlockBeeStyle] Error:", error.response?.data || error.message);
     throw e;
   }
 };
 
-const deleteSubscription = async (id) => {
+const deleteSubscription = async (id: string | number | null): Promise<unknown> => {
   try {
     if (id) {
       const headers = await getTatumHeaders();
@@ -806,7 +807,7 @@ const deleteSubscription = async (id) => {
       return resData.data;
     }
     return null;
-  } catch (e) {
+  } catch (e: unknown) {
     console.log(e);
   }
 };
