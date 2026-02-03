@@ -457,6 +457,75 @@ These screens already exist and don't need redesign:
 
 ---
 
+## API Endpoints Reference (For Frontend Integration)
+
+### 1. Get Company Configured Currencies
+```
+GET /api/pay/company-currencies/:company_id
+Authorization: Bearer <token>
+
+Response:
+{
+  "company_id": 38,
+  "company_name": "Acme Corp",
+  "total_available": 9,
+  "total_configured": 7,
+  "currencies": [
+    { "type": "BTC", "name": "Bitcoin", "symbol": "₿", "configured": true, "wallet_address": "1JH5..." },
+    { "type": "BCH", "name": "Bitcoin Cash", "symbol": "₿", "configured": false, "wallet_address": null },
+    ...
+  ],
+  "configured": ["BTC", "ETH", "LTC", ...],
+  "unconfigured": ["BCH", "USDC-ERC20"]
+}
+```
+
+### 2. Create Payment Link (with currency selection)
+```
+POST /api/pay/createPaymentLink
+Authorization: Bearer <token>
+
+Request:
+{
+  "base_amount": 100,
+  "base_currency": "USD",
+  "company_id": 38,
+  "description": "Product purchase",
+  "accepted_currencies": ["BTC", "ETH", "USDT-TRC20"],  // Optional - null = all configured
+  "apply_tax": false,
+  "fee_payer": "company"
+}
+```
+
+### 3. Update Payment Link (including currencies)
+```
+PUT /api/pay/links/:link_id
+Authorization: Bearer <token>
+
+Request:
+{
+  "accepted_currencies": ["BTC", "LTC"],  // Change accepted currencies
+  "apply_tax": true,
+  "description": "Updated description"
+}
+```
+
+### 4. Get Payment Link (returns accepted_currencies as array)
+```
+GET /api/pay/links/:link_id
+Authorization: Bearer <token>
+
+Response includes:
+{
+  ...
+  "accepted_currencies": ["BTC", "ETH", "USDT-TRC20"],  // Array or null (all)
+  "apply_tax": false,
+  "fee_payer": "company"
+}
+```
+
+---
+
 ## Questions?
 
 Let me know if you need:
