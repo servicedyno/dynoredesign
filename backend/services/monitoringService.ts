@@ -125,7 +125,8 @@ export const runHealthChecks = async (): Promise<void> => {
       
       log(`[Monitor] ${service.name}: ${status} (${result.latency}ms)`, "info");
     } catch (error: unknown) {
-      log(`[Monitor] Error checking ${service.name}: ${error.message}`, "error");
+      const err = error as { message?: string };
+      log(`[Monitor] Error checking ${service.name}: ${err.message}`, "error");
       
       // Store the failure
       await serviceHealthModel.create({
@@ -133,7 +134,7 @@ export const runHealthChecks = async (): Promise<void> => {
         service_name: service.name,
         status: "outage",
         latency_ms: 0,
-        error_message: error.message,
+        error_message: err.message,
         check_date: today,
         check_timestamp: new Date(),
       });
