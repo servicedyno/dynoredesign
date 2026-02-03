@@ -1799,12 +1799,36 @@ const getIncomingTransactions = async (
   const tatumSdk = await getTatumSDK();
   const transactions: { txId: string; amount: number; timestamp: number }[] = [];
 
+  // Define interfaces for transaction data
+  interface BTCTransaction {
+    hash?: string;
+    outputs?: Array<{ address?: string; value?: string | number }>;
+    time?: number;
+  }
+
+  interface ETHTransaction {
+    hash?: string;
+    to?: string;
+    value?: string | number;
+    blockNumber?: number;
+    timestamp?: number;
+  }
+
+  interface TRXTransaction {
+    hash?: string;
+    txID?: string;
+    to?: string;
+    raw_data?: { contract?: Array<{ parameter?: { value?: { to_address?: string; amount?: number } } }> };
+    block_timestamp?: number;
+    ret?: Array<{ contractRet?: string }>;
+  }
+
   try {
     if (currency === "BTC") {
       const txData = await tatumSdk.blockchain.bitcoin.btcGetTxByAddress(
         address, limit, 0
-      );
-      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
+      ) as BTCTransaction[] | undefined;
+      for (const tx of txData || []) {
         // Find the output for our address
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
@@ -1814,20 +1838,25 @@ const getIncomingTransactions = async (
         }
         if (receivedAmount > 0) {
           transactions.push({
-            txId: tx.hash,
+            txId: tx.hash || '',
             amount: receivedAmount,
-            timestamp: tx.time?.toString().length > 10 ? tx.time : tx.time * 1000
+            timestamp: tx.time ? (String(tx.time).length > 10 ? tx.time : tx.time * 1000) : Date.now()
           });
         }
       }
     } else if (currency === "ETH") {
       // Note: ethGetAccountTransactions may not exist in newer SDK - use alternative
-      const txData = await (tatumSdk.blockchain.eth as unknown as { ethGetAccountTransactions?: (address: string) => Promise<unknown>; ethGetBlockNumber?: () => Promise<number> }).ethGetAccountTransactions?.(
+      interface EthBlockchain {
+        ethGetAccountTransactions?: (address: string, offset?: number, limit?: number) => Promise<ETHTransaction[]>;
+        ethGetTransaction: (hash: string) => Promise<unknown>;
+      }
+      const ethApi = tatumSdk.blockchain.eth as unknown as EthBlockchain;
+      const txData = await ethApi.ethGetAccountTransactions?.(
         address, 0, limit
-      ) || await tatumSdk.blockchain.eth.ethGetTransaction(address).catch(() => []);
-      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
+      ) || [];
+      for (const tx of txData as ETHTransaction[] || []) {
         // Only incoming transactions (where we are the recipient)
-        if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
+        if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(String(tx.value || '0')) > 0) {
           transactions.push({
             txId: tx.hash,
             amount: parseFloat(tx.value) / 1e18, // Convert wei to ETH
