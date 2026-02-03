@@ -2844,7 +2844,7 @@ const settleCryptoTransaction = async ({
         userAmount,
         error: message,
       },
-      new Error(error)
+      new Error(error instanceof Error ? error.message : String(error))
     );
     throw error;
   }
