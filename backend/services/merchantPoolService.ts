@@ -1831,8 +1831,9 @@ export const ensurePoolSubscriptions = async (): Promise<{
             throw new Error("No subscription ID returned");
           }
         } catch (subError: unknown) {
+          const err = subError as { response?: { data?: { errorCode?: string; message?: string } }; message?: string };
           // Handle "subscription already exists" error - extract ID from error message
-          const errorData = subError.response?.data;
+          const errorData = err.response?.data;
           if (errorData?.errorCode === 'subscription.exists.on.address-and-currency') {
             // Extract subscription ID from error message using regex
             const match = errorData.message?.match(/already exists \(([a-f0-9]+)\)/);
@@ -1845,9 +1846,9 @@ export const ensurePoolSubscriptions = async (): Promise<{
             }
           }
           
-          console.error(`[MerchantPool] ❌ Failed to create subscription for ${walletAddressOriginal}: ${subError.message}`);
+          console.error(`[MerchantPool] ❌ Failed to create subscription for ${walletAddressOriginal}: ${err.message}`);
           result.failed++;
-          result.errors.push(`${walletAddressOriginal}: ${subError.message}`);
+          result.errors.push(`${walletAddressOriginal}: ${err.message}`);
         }
       }
     }
