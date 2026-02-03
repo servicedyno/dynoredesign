@@ -208,7 +208,7 @@ export const calculateServiceUptime = async (
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   
-  const results = await sequelize.query(
+  const results = await sequelize.query<{ total_checks: string; operational_checks: string; failed_checks: string }>(
     `SELECT 
       COUNT(*) as total_checks,
       SUM(CASE WHEN status = 'operational' THEN 1 ELSE 0 END) as operational_checks,
@@ -220,7 +220,7 @@ export const calculateServiceUptime = async (
       replacements: { serviceId, startDate: startDate.toISOString().split('T')[0] },
       type: QueryTypes.SELECT
     }
-  ) as Array<Record<string, unknown>>;
+  );
   
   const data = results[0] || { total_checks: 0, operational_checks: 0, failed_checks: 0 };
   const total = parseInt(data.total_checks) || 0;
