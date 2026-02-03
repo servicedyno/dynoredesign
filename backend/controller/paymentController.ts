@@ -6349,6 +6349,96 @@ const getFeePreview = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Get configured cryptocurrencies for a company (merchant dashboard)
+ * GET /api/pay/configured-currencies/:company_id
+ * 
+ * Returns list of crypto wallets configured for this company with their status
+ * Used by frontend when creating/editing payment links to show available currencies
+ */
+const getCompanyConfiguredCurrencies = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  try {
+    const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
+    const { company_id } = req.params;
+
+    if (!company_id) {
+      return errorResponseHelper(res, 400, "company_id is required");
+    }
+
+    // Verify company belongs to user
+    const company = await companyModel.findOne({
+      where: { 
+        company_id: parseInt(company_id),
+        user_id: userData.user_id 
+      },
+      attributes: ['company_id', 'company_name'],
+    });
+
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found or does not belong to you");
+    }
+
+    // All supported crypto types
+    const allCryptoTypes = [
+      { type: 'BTC', name: 'Bitcoin', symbol: '₿' },
+      { type: 'ETH', name: 'Ethereum', symbol: 'Ξ' },
+      { type: 'LTC', name: 'Litecoin', symbol: 'Ł' },
+      { type: 'DOGE', name: 'Dogecoin', symbol: 'Ð' },
+      { type: 'TRX', name: 'Tron', symbol: '◎' },
+      { type: 'BCH', name: 'Bitcoin Cash', symbol: '₿' },
+      { type: 'USDT-TRC20', name: 'USDT (TRC-20)', symbol: '₮' },
+      { type: 'USDT-ERC20', name: 'USDT (ERC-20)', symbol: '₮' },
+      { type: 'USDC-ERC20', name: 'USDC (ERC-20)', symbol: '$' },
+    ];
+
+    // Get configured wallets for this company
+    const configuredWallets = await userWalletModel.findAll({
+      where: {
+        user_id: userData.user_id,
+        company_id: parseInt(company_id),
+        wallet_address: { [Op.not]: null },
+        wallet_type: { [Op.in]: allCryptoTypes.map(c => c.type) },
+      },
+      attributes: ['wallet_type', 'wallet_address', 'wallet_name'],
+    });
+
+    // Create a set of configured wallet types
+    const configuredTypes = new Set(configuredWallets.map((w: { wallet_type: string }) => w.wallet_type));
+
+    // Build response with all crypto types and their configuration status
+    const currencies = allCryptoTypes.map(crypto => ({
+      type: crypto.type,
+      name: crypto.name,
+      symbol: crypto.symbol,
+      configured: configuredTypes.has(crypto.type),
+      wallet_address: configuredTypes.has(crypto.type) 
+        ? configuredWallets.find((w: { wallet_type: string }) => w.wallet_type === crypto.type)?.wallet_address 
+        : null,
+    }));
+
+    // Separate into configured and unconfigured
+    const configuredCurrencies = currencies.filter(c => c.configured);
+    const unconfiguredCurrencies = currencies.filter(c => !c.configured);
+
+    return successResponseHelper(res, 200, "Configured currencies retrieved successfully", {
+      company_id: parseInt(company_id),
+      company_name: (company as { dataValues: Record<string, unknown> }).dataValues.company_name,
+      total_available: allCryptoTypes.length,
+      total_configured: configuredCurrencies.length,
+      currencies: currencies,
+      configured: configuredCurrencies.map(c => c.type),
+      unconfigured: unconfiguredCurrencies.map(c => c.type),
+    });
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    apiLogger.error(errorMessage, {}, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 export default {
   getData,
   addPayment,
