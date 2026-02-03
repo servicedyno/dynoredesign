@@ -972,10 +972,10 @@ const verifyCryptoPayment = async (
             address,
             adminWalletAddress,
             Number(receivedAmount)
-          );
+          ) as { slow?: string | number };
 
           sendAmount = Number(
-            Number(receivedAmount) - Number(fees?.slow)
+            Number(receivedAmount) - Number(fees?.slow || 0)
           ).toFixed(8);
         }
 
@@ -985,10 +985,10 @@ const verifyCryptoPayment = async (
             "bitcoincash" + address,
             adminWalletAddress,
             Number(receivedAmount)
-          );
+          ) as { slow?: string | number };
           sendAmount = (
             Number(receivedAmount) -
-            Number(fees?.slow) -
+            Number(fees?.slow || 0) -
             0.00005
           ).toFixed(8);
         }
@@ -1019,7 +1019,7 @@ const verifyCryptoPayment = async (
           const finalFees =
             ["ETH", "BSC", "USDT-ERC20"].indexOf(tempData.currency) !== -1
               ? fees
-              : fees?.slow;
+              : (fees as { slow?: string | number })?.slow;
 
           transactionDetails = await tatumApi.assetToOtherAddress({
             currency: tempData.currency,
