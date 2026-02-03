@@ -3595,7 +3595,7 @@ const cryptoVerification = async (address, webhook = true) => {
               status: "overpayment",
               completedAt: new Date().toISOString(),
             });
-            await softDeleteRedisItem("crypto-" + address, 1800);
+            await softDeleteRedisItem("crypto-" + address, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS);
             throw {
               status: 200,
               paymentStatus: "overpayment",
