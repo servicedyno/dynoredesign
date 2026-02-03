@@ -1305,21 +1305,25 @@ const assetBatchAddressesToOtherAddress = async ({
             amount: Number(fromAddr.value).toFixed(8).toString(),
           });
           console.log("###result", result);
+          const ethTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
           transactionResponse.push({
-            txId: result?.txId,
+            txId: ethTxId,
             status: "success",
             reason: null,
             fromAddress: fromAddr,
           });
-        } catch (error) {
+        } catch (error: unknown) {
+          const err = error as { body?: { message?: string; cause?: string }; message?: string };
           console.log("###error: ", error);
           transactionResponse.push({
+            txId: '',
             fromAddress: fromAddr.address,
             toAddress: destinationAddress,
             status: "failed",
-            errorMessage: error.body.message,
-            error: error.message,
-            cause: error.body.cause,
+            errorMessage: err.body?.message || '',
+            error: err.message || '',
+            cause: err.body?.cause || '',
+            reason: err.message || null,
           });
         }
       })
@@ -1327,7 +1331,7 @@ const assetBatchAddressesToOtherAddress = async ({
     console.log("###transactionResponse", transactionResponse);
     transactions = transactionResponse;
   } else if (currency === "USDT-TRC20") {
-    let transactionResponse = [];
+    let transactionResponse: Array<{ txId: string; status: string; reason: string | null; fromAddress: unknown }> = [];
     // Send assets from all addresses to one address
     await Promise.allSettled(
       fromAddress.map(async (fromAddr) => {
@@ -1347,21 +1351,25 @@ const assetBatchAddressesToOtherAddress = async ({
             tokenAddress: process.env.TRX_CONTRACT,
           });
           console.log("###result", result);
+          const trc20TxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
           transactionResponse.push({
-            txId: result?.txId,
+            txId: trc20TxId,
             status: "success",
             reason: null,
             fromAddress: fromAddr,
           });
-        } catch (error) {
+        } catch (error: unknown) {
+          const err = error as { body?: { message?: string; cause?: string }; message?: string };
           console.log("###error: ", error);
           transactionResponse.push({
+            txId: '',
             fromAddress: fromAddr.address,
             toAddress: destinationAddress,
             status: "failed",
-            errorMessage: error.body.message,
-            error: error.message,
-            cause: error.body.cause,
+            errorMessage: err.body?.message || '',
+            error: err.message || '',
+            cause: err.body?.cause || '',
+            reason: err.message || null,
           });
         }
       })
