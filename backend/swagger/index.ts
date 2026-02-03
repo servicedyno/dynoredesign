@@ -667,13 +667,13 @@ const swaggerSpec = swaggerJsdoc(options);
 
 export const setupSwagger = (app: Express) => {
   // Serve Swagger UI
-  app.use("/api/docs", swaggerUi.serve as unknown as Express.Application[], swaggerUi.setup(swaggerSpec, {
+  app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: "DynoPay API Documentation",
     swaggerOptions: {
       persistAuthorization: true, // Keep authorization token on page refresh
     },
-  }) as unknown as Express.Application);
+  }));
 
   // Serve raw OpenAPI spec
   app.get("/api/docs.json", (req, res) => {

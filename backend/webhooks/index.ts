@@ -222,7 +222,7 @@ const callUrlWithPayload = async (
           await logWebhookDelivery(
             companyId,
             url,
-            eventData.event,
+            String(eventData.event || ''),
             webhookPayload.webhook_id,
             webhookPayload,
             'success',

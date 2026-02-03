@@ -119,10 +119,10 @@ export const setupWeeklySummaryCron = () => {
               String(user.name || ''),
               periodStart,
               periodEnd,
-              String(typedStats.total_count || typedStats.transaction_count || 0),
+              Number(typedStats.total_count || typedStats.transaction_count || 0),
               totalVolume.toFixed(2),
-              String(typedStats.completed_count || 0),
-              String(typedStats.pending_count || 0),
+              Number(typedStats.completed_count || 0),
+              Number(typedStats.pending_count || 0),
               String(typedStats.top_currency || "N/A")
             );
             log(`Weekly summary email sent to ${user.email}`, "info");
