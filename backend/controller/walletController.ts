@@ -488,7 +488,7 @@ const getAllTransactions = async (
       selfWhereClause.base_currency = currency;
     }
     if (search) {
-      selfWhereClause[Op.or] = [
+      (selfWhereClause as Record<string, unknown>)[Op.or as unknown as string] = [
         { id: { [Op.iLike]: `%${search}%` } },
         { transaction_reference: { [Op.iLike]: `%${search}%` } }
       ];
@@ -501,7 +501,7 @@ const getAllTransactions = async (
       ...(offset !== undefined && limit && { offset, limit }),
     });
 
-    const total = (countData[0] as Record<string, unknown> | undefined)?.total as number || 0;
+    const total = Number((countData[0] as Record<string, unknown> | undefined)?.total) || 0;
     const totalPages = limit ? Math.ceil(total / limit) : 1;
 
     const message = total === 0
@@ -512,7 +512,7 @@ const getAllTransactions = async (
       customers_transactions: customer_data,
       self_transactions: selfData,
       pagination: {
-        total: parseInt(total),
+        total: total,
         page: page || 1,
         rowsPerPage: limit || customer_data.length,
         totalPages
