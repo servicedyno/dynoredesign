@@ -14,23 +14,37 @@ from urllib.parse import urlparse
 load_dotenv('/app/backend/.env')
 
 def get_db_connection():
-    """Create database connection from MONGO_URL (which is actually PostgreSQL)"""
-    # Parse the connection string from MONGO_URL
+    """Create database connection from environment variables"""
+    # Try MONGO_URL first (for backward compatibility)
     mongo_url = os.getenv('MONGO_URL')
     
-    if not mongo_url:
-        raise ValueError("MONGO_URL environment variable not set")
+    if mongo_url:
+        # Parse the PostgreSQL connection URL
+        parsed = urlparse(mongo_url)
+        return psycopg2.connect(
+            host=parsed.hostname,
+            database=parsed.path[1:] if parsed.path else os.getenv('DB_NAME'),
+            user=parsed.username,
+            password=parsed.password,
+            port=parsed.port or os.getenv('DB_PORT', 5432)
+        )
     
-    # Parse the PostgreSQL connection URL
-    # Format: postgresql://user:password@host:port/database
-    parsed = urlparse(mongo_url)
+    # Fall back to individual environment variables
+    host = os.getenv('HOST') or os.getenv('DB_HOST', 'localhost')
+    database = os.getenv('DB_NAME')
+    user = os.getenv('USER_NAME') or os.getenv('DB_USER', 'postgres')
+    password = os.getenv('PASSWORD') or os.getenv('DB_PASSWORD')
+    port = os.getenv('DB_PORT', 5432)
+    
+    if not database:
+        raise ValueError("DB_NAME environment variable not set")
     
     return psycopg2.connect(
-        host=parsed.hostname,
-        database=parsed.path[1:] if parsed.path else os.getenv('DB_NAME'),  # Remove leading /
-        user=parsed.username,
-        password=parsed.password,
-        port=parsed.port or os.getenv('DB_PORT', 5432)
+        host=host,
+        database=database,
+        user=user,
+        password=password,
+        port=port
     )
 
 def audit_vat_country_consistency():
