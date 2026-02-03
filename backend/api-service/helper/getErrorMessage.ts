@@ -1,8 +1,21 @@
-const getErrorMessage = (e: unknown) => {
+interface ErrorWithResponse {
+  response?: {
+    data?: {
+      error?: {
+        message?: string;
+      };
+      message?: string;
+    };
+  };
+  message?: string;
+}
+
+const getErrorMessage = (e: unknown): string => {
+  const error = e as ErrorWithResponse;
   return (
-    e?.response?.data?.error?.message ??
-    e?.response?.data?.message ??
-    e?.message ??
+    error?.response?.data?.error?.message ??
+    error?.response?.data?.message ??
+    error?.message ??
     "Internal Server Error"
   );
 };
