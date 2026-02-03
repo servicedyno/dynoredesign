@@ -40,8 +40,8 @@ def authenticate():
     
     if response.status_code == 200:
         data = response.json()
-        token = data.get("data", {}).get("token")
-        user_info = data.get("data", {})
+        token = data.get("data", {}).get("accessToken")
+        user_info = data.get("data", {}).get("userData", {})
         print_test("Authentication", True, f"Logged in as {user_info.get('name', 'User')}")
         return token
     else:
