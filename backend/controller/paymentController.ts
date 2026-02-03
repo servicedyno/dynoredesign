@@ -6384,15 +6384,15 @@ const getConfiguredCurrenciesForCheckout = async (
         attributes: ['link_id', 'base_amount', 'base_currency', 'fee_payer'],
       });
       if (paymentLink) {
-        linkId = (paymentLink as Record<string, unknown>).link_id;
-        if (!transactionAmount && (paymentLink as Record<string, unknown>).base_amount) {
-          transactionAmount = parseFloat((paymentLink as Record<string, unknown>).base_amount);
+        linkId = paymentLink.dataValues.link_id as number;
+        if (!transactionAmount && paymentLink.dataValues.base_amount) {
+          transactionAmount = parseFloat(String(paymentLink.dataValues.base_amount));
         }
-        if ((paymentLink as Record<string, unknown>).base_currency) {
-          transactionCurrency = (paymentLink as Record<string, unknown>).base_currency;
+        if (paymentLink.dataValues.base_currency) {
+          transactionCurrency = paymentLink.dataValues.base_currency as string;
         }
-        if ((paymentLink as Record<string, unknown>).fee_payer) {
-          feeInfo.fee_payer = (paymentLink as Record<string, unknown>).fee_payer;
+        if (paymentLink.dataValues.fee_payer) {
+          feeInfo.fee_payer = paymentLink.dataValues.fee_payer as string;
         }
       }
     }
