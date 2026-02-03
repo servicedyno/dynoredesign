@@ -375,7 +375,7 @@ export const triggerWalletReminder = async (userId?: number) => {
 
     const results = [];
 
-    for (const user of users) {
+    for (const user of users as Array<{ user_id: number; email: string; name: string; company_name: string }>) {
       const { sendAddWalletReminderEmail } = await import("../services/emailService");
       await sendAddWalletReminderEmail(user.email, user.name, user.company_name);
 
