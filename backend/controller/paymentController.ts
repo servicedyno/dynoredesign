@@ -1238,8 +1238,8 @@ const createCryptoPayment = async (
       // Determine fee_payer mode
       const fee_payer = items.fee_payer || 'company';
       
-      // Fee percentage (33% admin fee)
-      const ADMIN_FEE_PERCENT = 0.33;
+      // Fee percentage from centralized config
+      const ADMIN_FEE_PERCENT = FEE_CONFIG.ADMIN_FEE_PERCENT;
       
       // Calculate crypto amount using FastForex
       let baseAmountUSD = Number(items.base_amount || items.amount || 0);
