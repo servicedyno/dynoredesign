@@ -1494,9 +1494,10 @@ const assetBatchAddressesToOtherAddress = async ({
         ? permanentUserWalletAddress
         : destinationAddress,
     });
+    const ltcTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
     fromAddress.forEach((fromAdd) => {
       transactions.push({
-        txId: result?.txId,
+        txId: ltcTxId,
         status: "success",
         reason: null,
         fromAddress: fromAdd,
@@ -1523,9 +1524,10 @@ const assetBatchAddressesToOtherAddress = async ({
         ? destinationAddress
         : "bitcoincash:" + destinationAddress,
     });
+    const bchTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
     fromAddress.forEach((fromAdd) => {
       transactions.push({
-        txId: result?.txId,
+        txId: bchTxId,
         status: "success",
         reason: null,
         fromAddress: fromAdd,
