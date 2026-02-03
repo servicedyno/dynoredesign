@@ -4036,31 +4036,44 @@ const cryptoVerification = async (address, webhook = true) => {
         try {
           const customerEmail = customerData?.email || tempData?.email;
           if (customerEmail && customerEmail.trim() !== "") {
-            const paymentDate = new Date();
-            const description = customerData?.description || tempData?.description || null;
-            const baseAmount = customerData?.base_amount || tempData?.base_amount;
-            const baseCurrency = customerData?.base_currency || tempData?.base_currency || "USD";
+            // DUPLICATE PREVENTION: Check if customer receipt email already sent
+            const customerReceiptKey = `customer-receipt-email-${transactionId}`;
+            const customerReceiptSent = await getRedisItem(customerReceiptKey);
             
-            await sendCustomerPaymentConfirmationEmail(
-              customerEmail,
-              null, // Customer name often not available
-              companyName,
-              `${baseAmount}`,
-              baseCurrency,
-              customerPayload.id || transactionId,
-              description,
-              paymentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-              paymentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-              totalAmountReceived.toString(), // Crypto amount
-              tempCurrency, // Crypto currency
-              transactionId // Blockchain transaction reference
-            );
-            console.log(`[cryptoVerification] Customer payment confirmation email sent to ${customerEmail} with PDF receipt`);
+            if (customerReceiptSent && customerReceiptSent.sent) {
+              console.log(`[cryptoVerification] Customer receipt email already sent for tx: ${transactionId}, skipping duplicate`);
+            } else {
+              // Set flag immediately to prevent duplicates
+              await setRedisItem(customerReceiptKey, { sent: true, sentAt: new Date().toISOString() });
+              await setRedisTTL(customerReceiptKey, 86400); // 24 hour TTL
+              
+              const paymentDate = new Date();
+              const description = customerData?.description || tempData?.description || null;
+              const baseAmount = customerData?.base_amount || tempData?.base_amount;
+              const baseCurrency = customerData?.base_currency || tempData?.base_currency || "USD";
+              
+              await sendCustomerPaymentConfirmationEmail(
+                customerEmail,
+                null, // Customer name often not available
+                companyName,
+                `${baseAmount}`,
+                baseCurrency,
+                customerPayload.id || transactionId,
+                description,
+                paymentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                paymentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                totalAmountReceived.toString(), // Crypto amount
+                tempCurrency, // Crypto currency
+                transactionId // Blockchain transaction reference
+              );
+              console.log(`[cryptoVerification] Customer payment confirmation email sent to ${customerEmail} with PDF receipt`);
+            }
           } else {
             console.log(`[cryptoVerification] No customer email available for payment confirmation`);
           }
-        } catch (customerEmailError) {
-          console.error("[cryptoVerification] Customer payment confirmation email failed:", customerEmailError.message);
+        } catch (customerEmailError: unknown) {
+          const err = customerEmailError as { message?: string };
+          console.error("[cryptoVerification] Customer payment confirmation email failed:", err.message);
           // Don't fail the transaction if email fails
         }
       }
