@@ -719,18 +719,47 @@ export const sendPaymentLinkCreatedEmail = async (
 ) => {
   try {
     const subject = `Payment link ready — ${amount} ${currency}`;
+    
+    // Create shortened display URL for cleaner appearance
+    // e.g., "checkout.dynopay.com/pay/...f939" 
+    let shortDisplayUrl = paymentLink;
+    try {
+      const url = new URL(paymentLink);
+      const pathParts = url.pathname + url.search;
+      if (pathParts.length > 20) {
+        const lastChars = pathParts.slice(-8);
+        shortDisplayUrl = `${url.host}/pay/...${lastChars}`;
+      }
+    } catch {
+      // Keep original if URL parsing fails
+    }
+    
     const content = `<p class="message">Hey ${name},</p>
     <p class="message">Your payment link has been created successfully! 🔗</p>
     <div class="highlight-box">
-      <p><strong>Payment Link Details:</strong></p>
-      <p>Amount: <strong>${amount} ${currency}</strong><br />
-      Description: ${description}<br />
-      ${expiresAt ? `Expires: ${expiresAt}` : 'Expires: Never'}</p>
+      <p><strong>Payment Details:</strong></p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+        <tr>
+          <td style="padding: 4px 0; color: #666;">Amount:</td>
+          <td style="padding: 4px 0; font-weight: 600; color: #1034a6;">${amount} ${currency}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: #666;">Description:</td>
+          <td style="padding: 4px 0;">${description}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: #666;">Expires:</td>
+          <td style="padding: 4px 0;">${expiresAt || 'Never'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: #666;">Link:</td>
+          <td style="padding: 4px 0;"><a href="${paymentLink}" style="color: #1034a6; text-decoration: none;">${shortDisplayUrl}</a></td>
+        </tr>
+      </table>
     </div>
-    <p class="message">Payment Link:<br /><a href="${paymentLink}" style="color: #1034a6; word-break: break-all;">${paymentLink}</a></p>
-    <p class="message">Share this link with your customer to receive payment.</p>`;
+    <p class="message">Share this link with your customer to receive payment. Click the button below to copy the full link.</p>`;
 
-    const html = dynoPayEmailTemplate("Payment Link Created", content, true, "Copy Link", paymentLink);
+    const html = dynoPayEmailTemplate("Payment Link Created", content, true, "Open Payment Link", paymentLink);
     
     await mailTransporter({
       to: email,
