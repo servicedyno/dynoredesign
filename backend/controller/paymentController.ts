@@ -5797,7 +5797,7 @@ const removeUnwantedSubscriptions = async () => {
 const processIncompletePayments = async () => {
   try {
     // Use centralized SQL interval for grace period
-    const pendingTransactions: unknown[] = await sequelize.query(
+    const pendingTransactions = await sequelize.query<ITemporaryAddress>(
       `SELECT * FROM tbl_user_temp_address 
        WHERE status = 'partial' 
        AND "txId" IS NOT NULL
@@ -5834,11 +5834,11 @@ const processIncompletePayments = async () => {
               throw new Error(`Merchant wallet not found for user ${tempTx.user_id}`);
             }
 
-            const totalReceived = Number(tempTx.amount) + Number(actualBalance);
+            const totalReceived = Number(tempTx.amount || 0) + Number(actualBalance);
 
             // Check fee_payer mode from temp address record
             const fee_payer = tempTx.fee_payer || 'company';
-            const merchant_amount = tempTx.merchant_amount;
+            const merchant_amount = tempTx.merchant_amount || 0;
 
             let adminAmountToSend, userAmountToSend;
 
