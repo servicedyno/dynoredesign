@@ -947,8 +947,8 @@ const verifyCryptoPayment = async (
 
       console.log(adminWallet[0], userSettledAmount);
 
-      let fees,
-        sendAmount: number = Number(receivedAmount);
+      let fees: unknown;
+      let sendAmount: string | number = Number(receivedAmount);
       let transactionDetails;
       if (["USDT-TRC20", "USDT-ERC20"].indexOf(tempData.currency) === -1) {
         if (["BTC", "LTC", "DOGE"].indexOf(tempData.currency) !== -1) {
