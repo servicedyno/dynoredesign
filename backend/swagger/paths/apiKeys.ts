@@ -13,7 +13,11 @@ export const apiKeyPaths = {
 
 **⚠️ MULTI-TENANT REQUIREMENT:**
 - \`company_id\` is **REQUIRED** for proper data isolation
-- \`base_currency\` is **REQUIRED** for transaction processing`,
+- \`base_currency\` is **REQUIRED** for transaction processing
+
+**Optional Fields:**
+- \`api_name\` - Custom name (defaults to "{Company Name} {Environment} API")
+- \`environment\` - production or development (defaults to "production")`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -21,17 +25,12 @@ export const apiKeyPaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['api_name', 'company_id', 'base_currency'],
+              required: ['company_id', 'base_currency'],
               properties: {
-                api_name: {
-                  type: 'string',
-                  description: '✅ REQUIRED: Friendly name for the API key',
-                  example: 'Production API'
-                },
                 company_id: {
                   type: 'integer',
                   description: '✅ REQUIRED: Company ID for multi-tenant isolation. Get from GET /api/company/getCompany',
-                  example: 1
+                  example: 38
                 },
                 base_currency: {
                   type: 'string',
@@ -39,12 +38,23 @@ export const apiKeyPaths = {
                   description: '✅ REQUIRED: Default currency for transactions',
                   example: 'USD'
                 },
+                api_name: {
+                  type: 'string',
+                  description: '📝 OPTIONAL: Custom name for the API key. Defaults to "{Company Name} Production/Development API"',
+                  example: 'Bozzmail Payment API'
+                },
                 environment: {
                   type: 'string',
                   enum: ['development', 'production'],
                   description: '📝 OPTIONAL: API key environment (defaults to "production")',
                   default: 'production',
                   example: 'production'
+                },
+                permissions: {
+                  type: 'array',
+                  items: { type: 'string', enum: ['payments', 'transactions', 'webhooks', 'wallets', 'invoices', 'customers'] },
+                  description: '📝 OPTIONAL: API permissions (defaults to ["payments", "transactions", "webhooks", "wallets"])',
+                  example: ['payments', 'transactions', 'webhooks']
                 },
                 webhook_url: {
                   type: 'string',
@@ -62,19 +72,26 @@ export const apiKeyPaths = {
             },
             examples: {
               'Minimal': {
-                summary: '⚡ REQUIRED FIELDS ONLY',
+                summary: '⚡ REQUIRED FIELDS ONLY (name auto-generated)',
                 value: {
-                  api_name: 'My API Key',
-                  company_id: 1,
+                  company_id: 38,
                   base_currency: 'USD'
+                }
+              },
+              'With Custom Name': {
+                summary: '📝 With custom API name',
+                value: {
+                  company_id: 38,
+                  base_currency: 'USD',
+                  api_name: 'Bozzmail Payment Gateway'
                 }
               },
               'Production Key': {
                 summary: '🚀 PRODUCTION: Ready for live use',
                 value: {
-                  api_name: 'Production API',
-                  company_id: 1,
+                  company_id: 38,
                   base_currency: 'USD',
+                  api_name: 'Production API',
                   environment: 'production',
                   webhook_url: 'https://myapp.com/webhooks/dynopay'
                 }
@@ -82,9 +99,9 @@ export const apiKeyPaths = {
               'Development Key': {
                 summary: '🔧 DEV: For testing',
                 value: {
-                  api_name: 'Test API',
-                  company_id: 1,
+                  company_id: 38,
                   base_currency: 'USD',
+                  api_name: 'Test API',
                   environment: 'development'
                 }
               }
@@ -105,9 +122,10 @@ export const apiKeyPaths = {
                     type: 'object',
                     properties: {
                       api_id: { type: 'integer' },
-                      api_key: { type: 'string', description: '⚠️ SAVE THIS - Only shown once!' },
-                      api_name: { type: 'string' },
-                      is_active: { type: 'boolean' }
+                      apiKey: { type: 'string', description: '⚠️ SAVE THIS - Only shown once!' },
+                      api_name: { type: 'string', description: 'API key name (auto-generated if not provided)' },
+                      environment: { type: 'string', enum: ['production', 'development'] },
+                      status: { type: 'string', example: 'active' }
                     }
                   }
                 }
@@ -115,7 +133,7 @@ export const apiKeyPaths = {
             }
           }
         },
-        400: { description: 'Invalid API configuration' },
+        400: { description: 'Invalid API configuration / At least one wallet required for production keys' },
         401: { description: 'Unauthorized' }
       }
     }
