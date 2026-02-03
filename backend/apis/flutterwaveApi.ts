@@ -44,6 +44,7 @@ interface FlutterwaveMobileMoney {
   rwanda: (params: Record<string, unknown>) => Promise<unknown>;
   zambia: (params: Record<string, unknown>) => Promise<unknown>;
   francophone: (params: Record<string, unknown>) => Promise<unknown>;
+  mpesa: (params: Record<string, unknown>) => Promise<unknown>;
 }
 
 export interface FlutterwaveInstance {
