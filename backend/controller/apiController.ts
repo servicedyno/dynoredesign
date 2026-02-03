@@ -545,7 +545,7 @@ const getApiById = async (req: express.Request, res: express.Response) => {
     const api = resData[0] as Record<string, unknown>;
     const formattedData = {
       ...api,
-      permissions: api.permissions ? JSON.parse(api.permissions) : ["payments", "transactions", "webhooks", "wallets"],
+      permissions: api.permissions ? JSON.parse(String(api.permissions)) : ["payments", "transactions", "webhooks", "wallets"],
     };
 
     successResponseHelper(res, 200, "API retrieved successfully", formattedData);
@@ -554,7 +554,7 @@ const getApiById = async (req: express.Request, res: express.Response) => {
     apiLogger.error(
       message,
       { user_id: userData.user_id, email: userData.email },
-      new Error(e)
+      new Error(message)
     );
     errorResponseHelper(res, 500, message);
   }
