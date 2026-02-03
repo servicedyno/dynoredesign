@@ -2552,19 +2552,25 @@ const getUserAnalytics = async (
       }
     );
 
+    interface TempTrendItem {
+      month_name: string;
+      [key: string]: unknown;
+    }
+
     for (let i = 0; i < tempTrends.length; i++) {
+      const trendItem = tempTrends[i] as TempTrendItem;
       const keys = Object.keys(historicalTrends);
-      if (keys.indexOf(tempTrends[i].month_name) !== -1) {
-        const { month_name, ...restData } = tempTrends[i];
-        const tempArray = [...historicalTrends[month_name]];
+      if (keys.indexOf(trendItem.month_name) !== -1) {
+        const { month_name, ...restData } = trendItem;
+        const tempArray = [...(historicalTrends[month_name] || [])];
         historicalTrends[month_name] = [...tempArray, restData];
       } else {
-        const { month_name, ...restData } = tempTrends[i];
+        const { month_name, ...restData } = trendItem;
         historicalTrends[month_name] = [restData];
       }
     }
 
-    const revenue_performance = [];
+    const revenue_performance: unknown[] = [];
     const totalIncome: unknown[] = await sequelize.query(
       `select base_currency,sum(base_amount) as amount from tbl_user_transaction ut ${where} group by base_currency`,
       { type: QueryTypes.SELECT }
