@@ -80,7 +80,7 @@ Wallets are grouped by company for easy organization:
                               wallet_id: { type: 'integer', example: 431, description: '⚠️ REQUIRED for update/delete operations' },
                               user_id: { type: 'integer', example: 28 },
                               company_id: { type: 'integer', example: 38 },
-                              wallet_type: { type: 'string', example: 'ETH', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20'] },
+                              wallet_type: { type: 'string', example: 'ETH', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'] },
                               wallet_address: { type: 'string', example: '0x9a7221b5e32d5f99e8da95585835442e29afb38f' },
                               wallet_name: { type: 'string', example: 'ETH Main Wallet', nullable: true },
                               amount: { type: 'number', example: 0 },
@@ -326,7 +326,7 @@ Check your email for a 6-digit OTP code and call \`/api/wallet/verifyOtp\` with 
                 },
                 currency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'],
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
                   description: '✅ REQUIRED: Cryptocurrency type',
                   example: 'BTC'
                 },
@@ -404,7 +404,7 @@ Wallet address is saved and ready to receive payments!`,
                 },
                 currency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'],
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
                   description: '✅ REQUIRED: Same currency from Step 1',
                   example: 'BTC'
                 },
@@ -574,7 +574,7 @@ Wallet address is saved and ready to receive payments!`,
                 },
                 currency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'],
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
                   description: 'New currency type (optional)',
                   example: 'BTC'
                 },
