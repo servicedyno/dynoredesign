@@ -222,10 +222,10 @@ export const calculateServiceUptime = async (
     }
   );
   
-  const data = results[0] || { total_checks: 0, operational_checks: 0, failed_checks: 0 };
-  const total = parseInt(data.total_checks) || 0;
-  const operational = parseInt(data.operational_checks) || 0;
-  const failed = parseInt(data.failed_checks) || 0;
+  const data = results[0] || { total_checks: '0', operational_checks: '0', failed_checks: '0' };
+  const total = parseInt(String(data.total_checks)) || 0;
+  const operational = parseInt(String(data.operational_checks)) || 0;
+  const failed = parseInt(String(data.failed_checks)) || 0;
   
   return {
     uptime_percentage: total > 0 ? (operational / total) * 100 : 100,
