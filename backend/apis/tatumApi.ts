@@ -153,8 +153,9 @@ const getTatumSDK = async () => {
           client_email: process.env.GOOGLE_CLIENT_EMAIL,
         } as any,
       });
+      const gcpProjectId = process.env.GCP_PROJECT_ID || process.env.PROJECT_ID || '163670787265';
       const [version] = await client.accessSecretVersion({
-        name: "projects/163670787265/secrets/DynoPay_Tatum/versions/latest",
+        name: `projects/${gcpProjectId}/secrets/DynoPay_Tatum/versions/latest`,
       });
       const payload = version.payload.data.toString();
       tatumKey = payload;
