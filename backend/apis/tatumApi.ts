@@ -1456,9 +1456,10 @@ const assetBatchAddressesToOtherAddress = async ({
         ? permanentUserWalletAddress
         : destinationAddress,
     });
+    const dogeTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
     fromAddress.forEach((fromAdd) => {
       transactions.push({
-        txId: result?.txId,
+        txId: dogeTxId,
         status: "success",
         reason: null,
         fromAddress: fromAdd,
