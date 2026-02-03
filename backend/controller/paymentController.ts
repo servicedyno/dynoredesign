@@ -4144,7 +4144,7 @@ const getCurrencyRates = async (
       console.log(`[getCurrencyRates] Pre-fetched blockchain fees for ${Object.keys(allBlockchainFees).length} chains`);
       
       const enhancedRates = await Promise.all(
-        currencyRateList.map(async (rate: { currency: string; amount: number }) => {
+        currencyRateList.map(async (rate: { currency: string; amount: number; transferRate?: number }) => {
           try {
             // Check if this is a fiat currency (not crypto)
             const fiatCurrencies = ['USD', 'EUR', 'GBP', 'CNY', 'JPY', 'AUD', 'CAD', 'CHF', 'HKD', 'NZD', 'SGD', 'NGN', 'KES', 'UGX', 'RWF', 'BRL', 'ARS', 'COP', 'CLP', 'PEN', 'MXN', 'VES', 'UYU', 'ZAR', 'GHS', 'TZS', 'XAF', 'XOF', 'EGP', 'MAD', 'RWF', 'ETB', 'ZMW', 'BWP', 'MUR', 'AOA', 'MZN', 'CDF'];
