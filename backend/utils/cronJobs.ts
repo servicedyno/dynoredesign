@@ -81,7 +81,7 @@ export const setupWeeklySummaryCron = () => {
             top_currency?: string;
           }
 
-          const typedStats = stats as WeeklyStats;
+          const typedStats = stats as unknown as WeeklyStats;
 
           // Create notification with summary data
           const notificationData = {
