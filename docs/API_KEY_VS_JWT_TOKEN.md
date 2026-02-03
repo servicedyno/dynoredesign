@@ -150,7 +150,7 @@ Notice the three parts separated by dots (`.`) in JWT tokens!
 
 ## Quick Action Plan
 
-1. **Open Swagger UI**: https://dynopay-wallet.preview.emergentagent.com/api/docs
+1. **Open Swagger UI**: https://cryptocheckout-2.preview.emergentagent.com/api/docs
 
 2. **Find** `POST /api/user/registerUser`
 

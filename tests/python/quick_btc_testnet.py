@@ -51,7 +51,7 @@ print(f"   Type: {'TESTNET' if btc_address.startswith(('tb1', 'm', 'n', '2')) el
 
 # Step 3: Create webhook subscription
 print("\n📋 Step 3: Creating Tatum webhook...")
-webhook_url = "https://dynopay-wallet.preview.emergentagent.com/api/tatum-crypto-webhook"
+webhook_url = "https://cryptocheckout-2.preview.emergentagent.com/api/tatum-crypto-webhook"
 
 webhook_response = requests.post(
     "https://api.tatum.io/v3/subscription",

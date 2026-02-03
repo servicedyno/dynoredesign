@@ -8,7 +8,7 @@ import requests
 import json
 from datetime import datetime
 
-BASE_URL = "https://dynopay-wallet.preview.emergentagent.com"
+BASE_URL = "https://cryptocheckout-2.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials

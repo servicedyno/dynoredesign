@@ -8,7 +8,7 @@ import json
 from urllib.parse import urlparse, parse_qs
 
 def debug_currency_rates():
-    backend_url = "https://dynopay-wallet.preview.emergentagent.com"
+    backend_url = "https://cryptocheckout-2.preview.emergentagent.com"
     
     # First authenticate
     response = requests.post(

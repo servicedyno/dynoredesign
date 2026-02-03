@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://dynopay-wallet.preview.emergentagent.com/api/docs/
+**URL:** https://cryptocheckout-2.preview.emergentagent.com/api/docs/
 
 ---
 

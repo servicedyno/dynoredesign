@@ -6,7 +6,7 @@ Create ETH Mainnet Crypto Payment for $10
 import requests
 import json
 
-BASE_URL = "https://dynopay-wallet.preview.emergentagent.com/api"
+BASE_URL = "https://cryptocheckout-2.preview.emergentagent.com/api"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 
