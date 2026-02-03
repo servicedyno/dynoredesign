@@ -131,7 +131,7 @@ export const calculateTransactionFees = async (
   blockchain: string,
   amount: number
 ) => {
-  const config: any = await getBlockchainConfig(blockchain);
+  const config = await getBlockchainConfig(blockchain);
   if (!config) {
     throw new Error(`Blockchain ${blockchain} configuration not found`);
   }
@@ -139,7 +139,7 @@ export const calculateTransactionFees = async (
   // Find the matching tier based on amount
   const tiers = config.tiers || [];
   const matchingTier = tiers.find(
-    (tier: any) =>
+    (tier: { min: number; max: number | null; fixed: number; buffer: number }) =>
       amount >= tier.min_amount &&
       (tier.max_amount === null || amount <= tier.max_amount)
   );
@@ -176,7 +176,7 @@ export const calculateTransactionFeesWithDiscount = async (
   amount: number,
   userId: number
 ) => {
-  const config: any = await getBlockchainConfig(blockchain);
+  const config = await getBlockchainConfig(blockchain);
   if (!config) {
     throw new Error(`Blockchain ${blockchain} configuration not found`);
   }
@@ -184,7 +184,7 @@ export const calculateTransactionFeesWithDiscount = async (
   // Find the matching tier based on amount
   const tiers = config.tiers || [];
   const matchingTier = tiers.find(
-    (tier: any) =>
+    (tier: { min: number; max: number | null; fixed: number; buffer: number }) =>
       amount >= tier.min_amount &&
       (tier.max_amount === null || amount <= tier.max_amount)
   );

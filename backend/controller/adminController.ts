@@ -312,7 +312,7 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
     }
 
     let fees,
-      sendAmount: any = amount;
+      sendAmount: string | number = amount;
     if (["BTC", "LTC", "DOGE"].indexOf(adminWallet.wallet_type) !== -1) {
       fees = (
         await tatumApi.feeEstimation(
@@ -623,7 +623,7 @@ const getAllTransactions = async (
       { type: QueryTypes.SELECT }
     );
     const customer_data = tempData.map((x) => {
-      const { wallet_id, transaction_id, ...rest }: any = x;
+      const { wallet_id, transaction_id, ...rest }: Record<string, unknown> = x;
       return rest;
     });
 
@@ -749,7 +749,7 @@ const getAdminAnalytics = async (
 
     for (let i = 0; i < totalIncome.length; i++) {
       const feeIndex = totalFee.findIndex(
-        (x: any) => x.wallet_type === totalIncome[i]?.base_currency
+        (x: { wallet_type: string }) => x.wallet_type === totalIncome[i]?.base_currency
       );
       const currencyData = await currencyConvert({
         sourceCurrency: totalIncome[i]?.base_currency,

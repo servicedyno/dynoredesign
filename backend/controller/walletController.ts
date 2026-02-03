@@ -230,7 +230,7 @@ const getWalletTransactions = async (
     );
 
     const customer_data = tempData.map((x) => {
-      const { wallet_id, transaction_id, ...rest }: any = x;
+      const { wallet_id, transaction_id, ...rest }: Record<string, unknown> = x;
       return rest;
     });
 
@@ -2578,7 +2578,7 @@ const getUserAnalytics = async (
 
     for (let i = 0; i < totalIncome.length; i++) {
       const feeIndex = totalFee.findIndex(
-        (x: any) => x.wallet_type === totalIncome[i]?.base_currency
+        (x: { wallet_type: string }) => x.wallet_type === totalIncome[i]?.base_currency
       );
       const currencyData = await currencyConvert({
         sourceCurrency: totalIncome[i]?.base_currency,

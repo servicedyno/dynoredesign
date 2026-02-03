@@ -206,7 +206,7 @@ const updateSubscription = async (req: express.Request, res: express.Response) =
       return errorResponseHelper(res, 404, "Subscription not found");
     }
 
-    const sub: any = subscription[0];
+    const sub = subscription[0] as Record<string, unknown>;
 
     // Update in Flutterwave if needed
     if (sub.flw_subscription_id && status === "cancelled") {
@@ -264,7 +264,7 @@ const cancelSubscription = async (req: express.Request, res: express.Response) =
       return errorResponseHelper(res, 404, "Subscription not found");
     }
 
-    const sub: any = subscription[0];
+    const sub = subscription[0] as Record<string, unknown>;
 
     // Cancel in Flutterwave
     if (sub.flw_subscription_id) {

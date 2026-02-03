@@ -335,7 +335,7 @@ export const createNotification = async (
   type: string,
   title: string,
   message: string,
-  data?: any,
+  data?: Record<string, unknown>,
   companyId?: number
 ) => {
   try {

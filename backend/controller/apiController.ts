@@ -251,8 +251,8 @@ const getApi = async (req: express.Request, res: express.Response) => {
     
     // Group by environment for better organization
     const grouped = {
-      production: formattedData.filter((api: any) => api.environment === 'production' || !api.environment),
-      development: formattedData.filter((api: any) => api.environment === 'development'),
+      production: formattedData.filter((api: { environment?: string }) => api.environment === 'production' || !api.environment),
+      development: formattedData.filter((api: { environment?: string }) => api.environment === 'development'),
     };
     
     successResponseHelper(res, 200, "API keys retrieved successfully", {
@@ -542,7 +542,7 @@ const getApiById = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 404, "API key not found");
     }
 
-    const api: any = resData[0];
+    const api = resData[0] as Record<string, unknown>;
     const formattedData = {
       ...api,
       permissions: api.permissions ? JSON.parse(api.permissions) : ["payments", "transactions", "webhooks", "wallets"],

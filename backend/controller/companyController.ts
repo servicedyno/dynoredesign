@@ -96,7 +96,7 @@ const validateTaxIdInternal = async (vat_number: string, country_code: string) =
       format_valid: response.data.format_valid || false,
       query_status: "completed",
     };
-  } catch (apiError: any) {
+  } catch (apiError: unknown) {
     // Handle rate limiting
     if (apiError.response?.data?.message?.includes("exceeded")) {
       return {
@@ -650,7 +650,7 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
     );
 
     const finalRes = resData.map((x) => {
-      const { wallet_id, ...rest }: any = x;
+      const { wallet_id, ...rest }: Record<string, unknown> = x;
       return rest;
     });
 
@@ -965,7 +965,7 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
         signature_included: !!result.webhook_secret,
       });
 
-    } catch (webhookError: any) {
+    } catch (webhookError: unknown) {
       const responseTime = Date.now() - startTime;
       const errorDetails = {
         status: 'failed',

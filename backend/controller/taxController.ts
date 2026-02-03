@@ -110,7 +110,7 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
           apiData = response.data;
           apiSuccess = true;
         }
-      } catch (apiError: any) {
+      } catch (apiError: unknown) {
         // Log API error but continue with fallback
         console.log(`Tax API error for ${upperCountryCode}:`, apiError.response?.data?.message || apiError.message);
       }
@@ -201,7 +201,7 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
         format_valid: validationResult.format_valid || false,
         query_status: validationResult.query || "completed",
       });
-    } catch (apiError: any) {
+    } catch (apiError: unknown) {
       // Handle rate limiting gracefully
       if (apiError.response?.data?.message?.includes("exceeded")) {
         return successResponseHelper(res, 200, "Tax ID validation - API rate limit exceeded, please try again later", {
