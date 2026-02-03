@@ -116,21 +116,6 @@ const PAYMENT_TIMING = {
 };
 
 // ============================================
-// CENTRALIZED FEE CONFIGURATION
-// ============================================
-// Fee structure: Transaction Fee (2%) + Fixed Fee (tier-based) + Buffer (tier-based)
-// See .env for tier configuration (FEE_TIER_1_*, FEE_TIER_2_*, etc.)
-const FEE_CONFIG = {
-  // Transaction fee percentage (2% of transaction amount)
-  TRANSACTION_FEE_PERCENT: parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0'),
-  
-  // Gas price bounds for EVM chains (in Gwei) - for blockchain transactions only
-  MIN_GAS_PRICE: 3,
-  MAX_GAS_PRICE: 30,
-  GAS_BUFFER: 2, // Buffer added to gas price for transaction reliability
-};
-
-// ============================================
 // CENTRALIZED ADMIN CONFIGURATION
 // ============================================
 const ADMIN_CONFIG = {
