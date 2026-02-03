@@ -874,8 +874,9 @@ const addPayment = async (req: express.Request, res: express.Response) => {
         if (value.paymentType === paymentTypes.USSD) {
           const { paymentRes, uniqueRef } = await USSD(value, userData);
           console.log("paymentRes=============>", paymentRes, uniqueRef);
-          const { note } = paymentRes.meta.authorization;
-          const { payment_code } = paymentRes.data;
+          const ussdResponse = paymentRes as { meta?: { authorization?: { note?: string } }; data?: { payment_code?: string } };
+          const { note } = ussdResponse.meta?.authorization || {};
+          const { payment_code } = ussdResponse.data || {};
           finalRes = { hash: uniqueRef, note, payment_code };
           await setRedisItem(uniqueRef, {
             ...items,
@@ -886,10 +887,11 @@ const addPayment = async (req: express.Request, res: express.Response) => {
         if (value.paymentType === paymentTypes.MOBILE_MONEY) {
           const { paymentRes, uniqueRef } = await MobileMoney(value, userData);
           console.log("paymentRes=============>", paymentRes, uniqueRef);
+          const mobileResponse = paymentRes as { meta?: { authorization?: Record<string, unknown> } };
           if (value.currency === "KES") {
             finalRes = { hash: uniqueRef };
           } else {
-            finalRes = { hash: uniqueRef, ...paymentRes?.meta?.authorization };
+            finalRes = { hash: uniqueRef, ...mobileResponse?.meta?.authorization };
           }
           await setRedisItem(uniqueRef, {
             ...items,
