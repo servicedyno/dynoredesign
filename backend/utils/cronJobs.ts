@@ -215,7 +215,7 @@ export const triggerWeeklySummary = async (userId?: number) => {
         failed_count: string | number;
       }
 
-      const typedStats = stats as SummaryStats;
+      const typedStats = stats as unknown as SummaryStats;
       const totalVolume = parseFloat(String(typedStats.total_volume || 0));
 
       const notificationData = {
