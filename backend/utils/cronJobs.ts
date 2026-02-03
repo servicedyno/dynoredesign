@@ -70,27 +70,41 @@ export const setupWeeklySummaryCron = () => {
             failed_count: 0,
           };
 
+          // Define interface for stats
+          interface WeeklyStats {
+            transaction_count: string | number;
+            total_volume: string | number;
+            completed_count: string | number;
+            pending_count: string | number;
+            failed_count: string | number;
+            total_count?: string | number;
+            top_currency?: string;
+          }
+
+          const typedStats = stats as WeeklyStats;
+
           // Create notification with summary data
           const notificationData = {
             period_start: startDate.toISOString().split('T')[0],
             period_end: endDate.toISOString().split('T')[0],
-            transaction_count: parseInt(stats.transaction_count),
-            total_volume: parseFloat(stats.total_volume),
-            completed_count: parseInt(stats.completed_count),
-            pending_count: parseInt(stats.pending_count),
-            failed_count: parseInt(stats.failed_count),
+            transaction_count: parseInt(String(typedStats.transaction_count)),
+            total_volume: parseFloat(String(typedStats.total_volume)),
+            completed_count: parseInt(String(typedStats.completed_count)),
+            pending_count: parseInt(String(typedStats.pending_count)),
+            failed_count: parseInt(String(typedStats.failed_count)),
           };
 
           const title = "Your Weekly Summary";
-          const message = `This week you had ${stats.transaction_count} transactions with a total volume of $${parseFloat(stats.total_volume).toFixed(2)}. ${stats.completed_count} completed, ${stats.pending_count} pending.`;
+          const totalVolume = parseFloat(String(typedStats.total_volume));
+          const message = `This week you had ${typedStats.transaction_count} transactions with a total volume of $${totalVolume.toFixed(2)}. ${typedStats.completed_count} completed, ${typedStats.pending_count} pending.`;
 
           await createNotification(
-            user.user_id,
+            Number(user.user_id),
             NOTIFICATION_TYPES.WEEKLY_SUMMARY,
             title,
             message,
             notificationData,
-            user.company_id
+            Number(user.company_id)
           );
 
           log(`Weekly summary created for user ${user.user_id}`, "info");
@@ -101,15 +115,15 @@ export const setupWeeklySummaryCron = () => {
             const periodStart = startDate.toISOString().split('T')[0];
             const periodEnd = endDate.toISOString().split('T')[0];
             await sendWeeklySummaryEmail(
-              user.email,
-              user.name,
+              String(user.email),
+              String(user.name || ''),
               periodStart,
               periodEnd,
-              stats.total_count,
-              stats.total_volume?.toFixed(2) || "0.00",
-              stats.completed_count,
-              stats.pending_count,
-              stats.top_currency || "N/A"
+              String(typedStats.total_count || typedStats.transaction_count),
+              totalVolume.toFixed(2),
+              String(typedStats.completed_count),
+              String(typedStats.pending_count),
+              String(typedStats.top_currency || "N/A")
             );
             log(`Weekly summary email sent to ${user.email}`, "info");
           } catch (emailError) {
