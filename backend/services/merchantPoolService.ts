@@ -889,7 +889,7 @@ export const releaseAddress = async (
  * @param recipientAddress - Optional: The recipient address (for better estimation)
  */
 export const fundGasIfNeeded = async (
-  poolAddress: string,
+  poolAddress: { dataValues: { wallet_address: string }; update: (data: Record<string, unknown>) => Promise<void> },
   walletType: string,
   transferAmount?: number,
   recipientAddress?: string
