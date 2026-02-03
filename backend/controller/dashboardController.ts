@@ -354,7 +354,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
  */
 const fillMissingDates = (data: Array<Record<string, unknown>>, startDate: Date, endDate: Date, groupBy: string) => {
   const filledData: Array<Record<string, unknown>> = [];
-  const dataMap = new Map(data.map(d => [new Date(d.date).toISOString().split('T')[0], d]));
+  const dataMap = new Map(data.map(d => [new Date(String(d.date)).toISOString().split('T')[0], d]));
   
   const current = new Date(startDate);
   
