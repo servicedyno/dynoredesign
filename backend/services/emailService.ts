@@ -2,12 +2,12 @@ import mailTransporter from "../utils/mailTransporter";
 import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService";
 
 /**
- * DynoPay Email Service - Phase 9
+ * Dynopay Email Service - Phase 9
  * Comprehensive email notification system with 17 templates
  * Provider: Brevo
  */
 
-// DynoPay Logo URL (from official checkout repo)
+// Dynopay Logo URL (from official checkout repo)
 const DYNOPAY_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynocheckoutDarkMode/main/public/Logo.png";
 
 // Base email template wrapper with proper logo
