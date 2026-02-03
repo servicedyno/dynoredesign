@@ -5356,8 +5356,8 @@ const checkFeeBalance = async () => {
         }
       }
       if (flag) {
-        // Try to get admin email from database or environment variable
-        let adminEmail = process.env.ADMIN_EMAIL || "moxxcompany@gmail.com"; // Default fallback
+        // Try to get admin email from database or centralized config
+        let adminEmail = ADMIN_CONFIG.EMAIL;
         
         try {
           const adminData: any[] = await sequelize.query(
@@ -5370,7 +5370,12 @@ const checkFeeBalance = async () => {
             adminEmail = adminData[0].email;
           }
         } catch (dbError) {
-          console.log("Could not fetch admin from database, using fallback email:", adminEmail);
+          console.log("[Cron] Could not fetch admin from database, using config email");
+        }
+        
+        if (!adminEmail) {
+          console.error("[Cron] No admin email configured - skipping notification");
+          return;
         }
         
         textData += `\n\n Please recharge as soon as possible.`;
