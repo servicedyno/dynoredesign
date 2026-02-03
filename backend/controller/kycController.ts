@@ -524,13 +524,15 @@ const resubmitKYC = async (req: express.Request, res: express.Response) => {
         replacements: { userId },
         type: QueryTypes.SELECT,
       }
-    ) as Array<Record<string, unknown>>;
+    ) as Array<{ name: string; email: string }>;
 
     if (!userResult || userResult.length === 0) {
       return errorResponseHelper(res, 404, "User not found");
     }
 
     const user = userResult[0];
+    const userName = user?.name || '';
+    const userEmail = user?.email || '';
 
     // Initialize Veriff service and create new session
     const veriffService = getVeriffService();
@@ -539,8 +541,8 @@ const resubmitKYC = async (req: express.Request, res: express.Response) => {
     const session = await veriffService.createSession({
       userId,
       companyId: company_id || null,
-      firstName: first_name || user.name.split(" ")[0],
-      lastName: last_name || user.name.split(" ").slice(1).join(" "),
+      firstName: first_name || userName.split(" ")[0],
+      lastName: last_name || userName.split(" ").slice(1).join(" "),
       callbackUrl,
     });
 
