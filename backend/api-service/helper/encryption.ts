@@ -2,9 +2,9 @@ import CryptoJS from "crypto-js";
 import dotenv from "dotenv";
 dotenv.config();
 
-const localSecretKey = process.env.CYPHER_KEY;
+const localSecretKey = process.env.CYPHER_KEY || '';
 
-const encrypt = (content: unknown, secretKey?: string) => {
+const encrypt = (content: string, secretKey?: string): string => {
   const cipherText = CryptoJS.AES.encrypt(
     content,
     secretKey ?? localSecretKey
@@ -13,7 +13,7 @@ const encrypt = (content: unknown, secretKey?: string) => {
   return cipherText;
 };
 
-const decrypt = (ciphertext, secretKey?: string) => {
+const decrypt = (ciphertext: string, secretKey?: string): string => {
   const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey ?? localSecretKey);
   const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
   return decryptedText;
