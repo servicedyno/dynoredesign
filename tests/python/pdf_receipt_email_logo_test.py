@@ -23,7 +23,7 @@ import base64
 import re
 
 # Configuration
-BACKEND_URL = "https://dyno-crypto-pay.preview.emergentagent.com"
+BACKEND_URL = "https://dynopay-wallet.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Test credentials

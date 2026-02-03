@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://dyno-crypto-pay.preview.emergentagent.com/api"
+BASE_URL = "https://dynopay-wallet.preview.emergentagent.com/api"
 
 print("=" * 80)
 print("VERIFYING FIXES")

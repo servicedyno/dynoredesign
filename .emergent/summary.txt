@@ -1,84 +1,115 @@
 <analysis>**original_problem_statement:**
-The initial user request was to set up the project and install all dependencies. Following the setup, the user made a series of requests to enhance and harden the application:
-1.  Update the test credential email from  to  in all documentation.
-2.  Implement a validation rule ensuring a company's country matches its VAT ID country.
-3.  Analyze the codebase for other areas needing similar validation and fix all identified issues. This included enhancing error messages, adding auto-suggestions, and creating data quality scripts.
-4.  Analyze and test the admin fee table implementation to ensure fees are calculated and applied correctly.
-5.  Apply rate limiting to sensitive routes like login and password reset to prevent abuse.
-6.  A major code quality initiative to find and fix all usages of the  type in the TypeScript backend codebase to achieve 100% type safety.
-7.  Draft a comprehensive message for the UI/UX team detailing all newly implemented backend settings that require corresponding frontend designs. This included company webhooks, payment thresholds, currency selection, tax settings, and payment link editing.
+The user's initial goal was to harden and enhance a full-stack crypto payment platform. In this session, the user's requests were:
+1.  Create a comprehensive, non-technical message for the UI/UX team detailing all backend features that require a frontend design, with clear examples.
+2.  Email the created design document to .
+3.  Upon realizing a feature mentioned in the design doc was missing, the user requested the full implementation of a feature allowing merchants to select which specific cryptocurrencies to accept for each payment link.
+4.  Fix all remaining TypeScript errors across the entire backend codebase to achieve 100% type safety.
+5.  Ensure the API documentation (Swagger) is updated to reflect all recent changes.
+6.  Confirm that if a merchant does not select specific cryptos for a payment link, it defaults to accepting all of their configured wallets.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is a full-stack cryptocurrency payment platform (DynoPay) with a React frontend and a TypeScript/Express backend using a PostgreSQL database. All dependencies are installed, and the services are running.
+The project is a full-stack cryptocurrency payment platform (DynoPay) with a React frontend and a TypeScript/Express backend using a PostgreSQL database.
 
-Key features and recent work include:
--   **Dependency Setup:** All backend (pip, yarn) and frontend (yarn) dependencies are installed and services are operational.
--   **VAT Validation:** A validation rule is now enforced in the backend () to ensure that a company's country matches the country code derived from its VAT number during company creation and updates. Error messages have been made more descriptive.
--   **Rate Limiting:** Sensitive routes (login, password reset, etc.) are now protected with rate limiting to prevent brute-force attacks.
--   **TypeScript Type Safety:** The backend codebase has undergone an extensive refactoring, eliminating nearly all  types and replacing them with specific interfaces and types. This has made the code significantly more robust and maintainable. The backend compiles and runs successfully.
--   **Admin Fee Logic:** The admin fee calculation logic has been thoroughly analyzed and verified with comprehensive tests.
--   **UI/UX Requirements Document:** A detailed message has been prepared for the UI/UX team, outlining all the backend functionalities that now require frontend designs. This document is located at .
+The following has been accomplished in this session:
+1.  **UI/UX Design Document**: A detailed design request document () was created, refined based on deep backend analysis, and emailed to the design team.
+2.  **Selectable Currencies per Payment Link**: A major feature was implemented allowing merchants to specify an  array when creating/updating a payment link. This includes:
+    *   Database schema update to  to add the  column.
+    *   Backend logic in  to handle creation, update, validation, and retrieval.
+    *   A new API endpoint  for the frontend to fetch a company's available wallets.
+    *   Swagger API documentation has been updated for all new and modified endpoints.
+3.  **TypeScript Refactoring**: A large-scale effort to eliminate TypeScript errors is underway. The total number of errors has been significantly reduced from over 780 to approximately 488. The backend compiles and runs, but the task to reach zero compile errors is ongoing.
 
 **Last working item**:
--   Last item agent was working: The agent was tasked with combining all backend features requiring frontend work into a single message for the UI/UX team. This involved verifying that all features were correctly implemented in the backend, that API documentation (Swagger) was up-to-date, and then drafting the final message.
--   Status: NONE
--   Agent Testing Done: Y
--   Which testing method agent to use? NA
+-   Last item agent was working: The agent was systematically fixing all remaining TypeScript errors across the backend codebase, as requested by the user. The goal is to achieve 100% type safety. The process involved analyzing error types and fixing them file-by-file, starting with the most impacted ones.
+-   Status: IN PROGRESS
+-   Agent Testing Done: N
+-   Which testing method agent to use? backend testing agent
 -   User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   There are no pending or in-progress issues. All user requests from this session have been completed.
+-   **Issue 1 (P0):** Fix all remaining TypeScript errors in the backend.
+
+**Issues Detail:**
+-   **Issue 1: Fix all remaining TypeScript errors in the backend**
+    -   **Attempted fixes:** The agent has made significant progress, reducing the error count from over 780 to ~488. This was done by:
+        *   Creating and updating type interfaces in  and .
+        *   Adding type guards for SDK responses (e.g., Tatum ).
+        *   Fixing property access on  types by casting or adding proper types.
+        *   Correcting function argument types and return types.
+        *   Systematically editing files like , , , , and others.
+    -   **Next debug checklist:**
+        1.  Run       3 
+      2 [41m                                                                               [0m
+      1 To get access to the TypeScript compiler, [34mtsc[0m, from the command line either:
+      1 - Use [1myarn[0m to avoid accidentally running code from un-installed packages
+      1 - Use [1mnpm install typescript[0m to first add TypeScript to your project [1mbefore[0m using npx
+      1 [41m[37m                This is not the tsc command you are looking for                [0m to get an updated list of files with the most errors.
+        2.  Continue focusing on the file with the most errors, likely .
+        3.  Address common error patterns (TS2339, TS2345, TS2322) by creating shared types or fixing logic.
+        4.  After each major file fix, restart the backend (backend: stopped
+backend: started) and run a quick API test to ensure no regressions were introduced.
+    -   **Why fix this issue and what will be achieved with the fix?** To achieve 100% backend type safety, which eliminates a class of runtime bugs, improves code maintainability, and fulfills a direct user request.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   There are no tasks currently in progress.
+-   **Task 1 (P0):** Achieve 100% TypeScript type safety by fixing all compile errors.
+    -   **Where to resume:** Continue the process outlined in the Next debug checklist for the pending issue above.
+    -   **What will be achieved with this?** A fully type-safe, more robust, and easier-to-maintain backend codebase.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P0: Frontend Implementation for New Settings:** The immediate next step is for the frontend team to implement the UI/UX for the backend features documented in . The backend for these is complete. Key areas include:
-    -   Company Profile Settings (Webhooks, Tax, Payment Thresholds).
-    -   Payment Link Creation/Editing (Currency Selection, Tax Toggles).
+-   **P0: Frontend Implementation for New Settings:** The immediate next step is for the frontend team to implement the UI/UX for the backend features documented in . This includes the newly added accepted currencies selector for payment links.
 
 **Future Tasks:**
--   **P2: Run Data Quality Audit:** The data quality audit script (
+-   **P2: Run Data Quality Audit:** The script 
 ================================================================================
   VAT/COUNTRY DATA QUALITY AUDIT
-  2026-02-03 16:29:11
+  2026-02-03 18:13:41
 ================================================================================
 
 
 ❌ Error during audit: connection to server at "localhost" (127.0.0.1), port 57376 failed: Connection refused
 	Is the server running on that host and accepting TCP/IP connections?
 connection to server at "localhost" (::1), port 57376 failed: Cannot assign requested address
-	Is the server running on that host and accepting TCP/IP connections?) was created but failed to run due to a database connection issue. This script should be fixed and run to check for existing data inconsistencies.
--   **P2: Enhance Security Monitoring:** Implement monitoring dashboards and alerts for security events, particularly for the newly added rate limiters.
+	Is the server running on that host and accepting TCP/IP connections? is still broken due to a database connection issue. It needs to be fixed and run to audit existing data.
+-   **P2: Enhance Security Monitoring:** Implement monitoring dashboards and alerts for security events, particularly for the rate limiters.
 
 **Completed work in this session**
--   **Setup & Installation:** Successfully installed all backend and frontend dependencies.
--   **Documentation Update:** Updated test credential email from  to  across all relevant documents (, files in ).
--   **VAT Validation Rule:** Implemented logic in  to ensure a company's country matches its VAT ID country for both  and  functions.
--   **Admin Fee Verification:** Analyzed, tested, and documented the admin fee calculation logic, confirming its correctness.
--   **Rate Limiting:** Applied rate limiters to sensitive authentication routes (, , etc.) in .
--   **TypeScript Refactoring (any removal):** Performed a massive refactoring of the entire backend codebase to remove ~99% of  types, achieving near-perfect type safety. The backend compiles and runs without errors.
--   **UI/UX Handoff Document:** Created a final, verified message for the UI/UX team detailing all new backend features that require frontend design work, located at .
+-   **UI/UX Design Document Creation:** Created and refined  with detailed, non-technical requirements for the design team.
+-   **Email to Design Team:** Successfully sent the content of the design document to  using the application's email infrastructure.
+-   **Feature Implementation: Selectable Currencies per Payment Link:**
+    *   Added  field to  in the PostgreSQL database.
+    *   Updated  and  in  to handle and validate the new field.
+    *   Created a new endpoint  in  and .
+    *   Verified the feature defaults to all company wallets if  is not provided.
+    -   Thoroughly tested the new feature with  and the .
+-   **API Documentation:** Updated Swagger documentation in  for all new and modified endpoints.
+-   **TypeScript Error Reduction:** Reduced the number of backend TypeScript errors from ~788 to ~488 as part of an ongoing refactoring effort.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1:** The Python script for auditing data quality (
 ================================================================================
   VAT/COUNTRY DATA QUALITY AUDIT
-  2026-02-03 16:29:11
+  2026-02-03 18:13:41
 ================================================================================
 
 
 ❌ Error during audit: connection to server at "localhost" (127.0.0.1), port 57376 failed: Connection refused
 	Is the server running on that host and accepting TCP/IP connections?
 connection to server at "localhost" (::1), port 57376 failed: Cannot assign requested address
-	Is the server running on that host and accepting TCP/IP connections?) is not functional.
-    -   **Debug checklist:** The script fails because it cannot connect to the PostgreSQL database. The connection logic needs to be fixed to use the correct credentials/method, possibly by reusing the Sequelize configuration from the main application or ensuring environment variables are loaded correctly.
-    -   **Why to solve this issue and what will be achieved with this?** Fixing this will allow for an audit of the existing database to find and report any companies with mismatched VAT and country data, ensuring data integrity.
+	Is the server running on that host and accepting TCP/IP connections?) is non-functional.
+    -   **Debug checklist:** The script fails to connect to the PostgreSQL database. The connection logic needs to be fixed to correctly use the environment variables from  (note:  is a legacy name for the PostgreSQL connection string).
+    -   **Why to solve this issue and what will be achieved with this?** This will allow an audit of the database to find companies with mismatched VAT and country data, improving data integrity.
     -   **Should Test frontend/backend/both after fix:** backend
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
 -   None.
@@ -89,103 +120,107 @@ connection to server at "localhost" (::1), port 57376 failed: Cannot assign requ
 **Key Technical Concepts**
 -   **Backend:** Express.js, TypeScript, PostgreSQL, Sequelize (ORM)
 -   **Frontend:** React
--   **Authentication:** JWT
--   **Security:** Rate limiting for brute-force protection.
+-   **Security:** Rate limiting, JWT authentication.
 -   **API Documentation:** Swagger/OpenAPI
 
 **key DB schema**
+-   **tbl_payment_links:** { , , , , , , ** (TEXT)** }
 -   **tbl_company:** { , , , , , , , ,  }
--   **tbl_payment_links:** { , , , , ,  }
 
 **changes in tech stack**
 -   None.
 
 **All files of reference**
--   : The final deliverable of the last task, detailing requirements for the UI/UX team. This is the most important document for the next phase of work.
--   : Was modified to add VAT country validation and improved error handling.
--   : Was modified to apply rate limiting middleware.
--   : Contains the implementation for different rate-limiting strategies.
--   : A new file created to hold shared TypeScript interfaces during the  removal refactor.
+-   : The final, comprehensive design request document created in this session.
+-   : Heavily modified to add the  feature and for ongoing TypeScript error fixing.
+-   : Modified to add the  column.
+-   : Modified to add the new  route.
+-   : Updated to document the new feature and endpoint.
+-   Multiple files under  were modified as part of the TypeScript error-fixing effort (e.g., , , ).
 
 **Areas that need refactoring**:
--   The script 
+-   **Backend Type Safety:** The primary area needing work is the remainder of the TypeScript errors across the backend codebase.
+-   **Data Audit Script:** 
 ================================================================================
   VAT/COUNTRY DATA QUALITY AUDIT
-  2026-02-03 16:29:12
+  2026-02-03 18:13:42
 ================================================================================
 
 
 ❌ Error during audit: connection to server at "localhost" (127.0.0.1), port 57376 failed: Connection refused
 	Is the server running on that host and accepting TCP/IP connections?
 connection to server at "localhost" (::1), port 57376 failed: Cannot assign requested address
-	Is the server running on that host and accepting TCP/IP connections? needs its database connection logic fixed. It currently fails to connect and should be updated to use the correct credentials and library for the PostgreSQL database.
+	Is the server running on that host and accepting TCP/IP connections? needs its database connection logic fixed to become functional.
 
 **key api endpoints**
--   : Create a new company (with VAT validation).
--   : Update an existing company (with VAT validation).
--   : Update webhook settings for a company.
--   : Update an existing payment link.
--   : User login (Rate-limited).
--   : Request password reset (Rate-limited).
+-   : Create a new payment link (now accepts optional  array).
+-   : Update a payment link (now accepts optional  array).
+-   : Get payment link details (now returns  array).
+-   ** (New):** Get all configured wallet currencies for a specific company.
 
 **Critical Info for New Agent**
--   The backend has undergone a major TypeScript refactoring to remove  types. The code is now much more type-safe and robust. Do not re-introduce .
--   The next logical step is frontend development. All backend features requiring UI have been implemented and are documented in . Use this document as the source of truth for the new UI work.
--   The application uses PostgreSQL with Sequelize, not MongoDB. Any database-related work should use this stack.
+-   **Main Priority:** The user's last instruction was to fix all remaining TypeScript errors. This is the highest priority task. The backend is functional, but the goal is a clean 
+[41m                                                                               [0m
+[41m[37m                This is not the tsc command you are looking for                [0m
+[41m                                                                               [0m
+
+To get access to the TypeScript compiler, [34mtsc[0m, from the command line either:
+
+- Use [1mnpm install typescript[0m to first add TypeScript to your project [1mbefore[0m using npx
+- Use [1myarn[0m to avoid accidentally running code from un-installed packages compile.
+-   ** is Done:** The feature to select cryptos per payment link is fully implemented, tested, and documented.
+-   **Database Env Var:** The user noted that the env var for the database is . This is a legacy naming convention. The application correctly uses PostgreSQL, not MongoDB. Do not be confused by the variable name.
+-   **Optional Crypto Selection:** The  feature works as requested: if the field is omitted during link creation, the payment link will accept payments from *all* of the company's configured wallets.
 
 **documents and test reports created in this job**
--   /app/FINAL_MESSAGE_TO_UIUX.md
--   /app/docs/VAT_VALIDATION_ALL_FIXES_COMPLETE.md
--   /app/docs/ADMIN_FEE_TABLE_ANALYSIS.md
--   /app/docs/RATE_LIMITING_IMPLEMENTATION.md
--   /app/docs/TYPESCRIPT_ANY_100_PERCENT_COMPLETE.md
--   /app/test_reports/iteration_1.json (Implicitly, through testing)
+-   /app/UI_UX_DESIGN_REQUEST.md
+-   /app/test_reports/iteration_1.json
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.   - **Completed**.
-2.   - **Completed**.
-3.   - **Completed**.
-4.   (referring to  types) - **Completed**.
-5.   (referring to  types) - **Completed**.
-6.   (referring to  types) - **Completed**.
-7.   (confirming to proceed with  type analysis and fixing) - **Completed**.
-8.   - **Completed**.
-9.   - **Completed**.
-10.  - **Completed**.
+1.   - **In Progress**. The agent is currently working on this.
+2.   - **In Progress**. User confirmation to continue the TS error fixing task.
+3.   - **In Progress**. User's initial request to start fixing all TS errors after the progress update.
+4.   - **In Progress**. The multi-part request that initiated the large-scale TS error fixing task, API doc updates, and verification of the optional crypto selection.
+5.   - **Completed**. User's confirmation to build the accepted currencies per payment link feature.
+6.   - **Completed**. The agent analyzed the backend, found the feature was missing, and reported back.
+7.   - **Completed**.
+8.   - **Completed**. User request that led to a deeper backend analysis and correction of the UI/UX document.
+9.   - **Completed**. Initial request of this session.
+10.  - **Completed**. User's prompt to continue after the agent added the new route.
 
 **Project Health Check:**
--   **Broken:** 
+-   **Broken:**
+    -   
 ================================================================================
   VAT/COUNTRY DATA QUALITY AUDIT
-  2026-02-03 16:29:12
+  2026-02-03 18:13:46
 ================================================================================
 
 
 ❌ Error during audit: connection to server at "localhost" (127.0.0.1), port 57376 failed: Connection refused
 	Is the server running on that host and accepting TCP/IP connections?
 connection to server at "localhost" (::1), port 57376 failed: Cannot assign requested address
-	Is the server running on that host and accepting TCP/IP connections? has a database connection error and cannot be executed.
+	Is the server running on that host and accepting TCP/IP connections?: Script has a database connection error.
+-   **Partially Unhealthy:**
+    -   Backend codebase (): Compiles and runs, but has ~488 TypeScript errors that need to be fixed to achieve full type safety.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Tatum:** Used for blockchain interactions (e.g., getting transaction data). Requires an API key, likely configured in the  file.
--   **Nodemailer:** Used for sending emails. Requires SMTP server credentials, likely in the  file.
--   **Axios:** Used for making HTTP requests to external services (e.g., VAT validation APIs).
+-   **Tatum:** Used for blockchain interactions. Requires an API key from .
+-   **Nodemailer:** Used for sending emails. Requires SMTP server credentials from .
+-   **Axios:** Used for making HTTP requests to external services.
+-   **Flutterwave:** Used for card and other payment methods.
 
 **Testing status**
--   Testing agent used after significant changes: NO
+-   Testing agent used after significant changes: YES (Used after implementing the  feature).
 -   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created:
-    -   
-    -   
-    -   
-    -   
+-   Test files created: None in this session.
 -   Known regressions: None.
 
 **Credentials to test flow:**
--   **Email:** richard@dyno.pt
--   **Password:** Katiekendra123@
--   **Company ID:** 38
+-   **Email:** 
+-   **Password:** 
+-   **Company ID:** 
 
 **What agent forgot to execute**
--   The agent did not fix the database connection issue in the  script. After the script failed, the agent pivoted to creating a documentation summary instead of debugging and fixing the script, leaving the data audit task incomplete.</analysis>
+-   The agent has been following user requests closely. The primary uncompleted task is the large, ongoing effort to fix all TypeScript errors, which was the last active item. The previously unfixed  script remains pending as the user has not prioritized it.</analysis>

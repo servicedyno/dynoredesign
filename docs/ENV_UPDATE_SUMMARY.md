@@ -6,7 +6,7 @@
 
 #### 1. **SERVER_URL** ✅
 - **Status**: Maintained current development URL
-- **Value**: `https://dyno-crypto-pay.preview.emergentagent.com`
+- **Value**: `https://dynopay-wallet.preview.emergentagent.com`
 - **Reason**: Kept existing development environment URL as instructed
 
 #### 2. **PROFILE_ID** ✅

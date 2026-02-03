@@ -250,7 +250,7 @@ const getCurrencyRate = async (selectedCurrency: string) => {
 Ensure the checkout app has the correct environment variable:
 
 ```bash
-NEXT_PUBLIC_BASE_URL=https://dyno-crypto-pay.preview.emergentagent.com
+NEXT_PUBLIC_BASE_URL=https://dynopay-wallet.preview.emergentagent.com
 ```
 
 Without this, the axios base URL defaults to `/api/` which may cause routing issues.

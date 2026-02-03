@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://dyno-crypto-pay.preview.emergentagent.com"
+BACKEND_URL = "https://dynopay-wallet.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "john@dyno.pt",
     "password": "Katiekendra123@"
