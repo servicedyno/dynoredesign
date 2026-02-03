@@ -58,7 +58,7 @@ export const sendPendingPaymentNotification = async (
   txId: string,
   amount: number,
   currency: string,
-  customerData: { name?: string; email?: string; phone?: string; metadata?: Record<string, unknown> }
+  customerData: { name?: string; email?: string; phone?: string; metadata?: Record<string, unknown>; adm_id?: number; company_id?: number; amount?: number }
 ): Promise<boolean> => {
   try {
     // Check if we already sent a pending notification for this transaction
