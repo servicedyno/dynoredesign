@@ -4756,6 +4756,11 @@ const getPaymentLinkById = async (req: express.Request, res: express.Response) =
       redirect_url: linkData.redirect_url,
       webhook_url: linkData.webhook_url,
       company_id: linkData.company_id,  // Phase 10 Fix: Include company_id in response
+      fee_payer: linkData.fee_payer || 'company',
+      apply_tax: linkData.apply_tax || false,
+      accepted_currencies: linkData.accepted_currencies 
+        ? linkData.accepted_currencies.split(',').map((c: string) => c.trim())
+        : null,  // null means all configured currencies are accepted
     };
 
     successResponseHelper(res, 200, "Payment link retrieved successfully", response);
