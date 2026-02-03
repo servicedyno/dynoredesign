@@ -326,7 +326,7 @@ Check your email for a 6-digit OTP code and call \`/api/wallet/verifyOtp\` with 
                 },
                 currency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH', 'BSC'],
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'],
                   description: '✅ REQUIRED: Cryptocurrency type',
                   example: 'BTC'
                 },
@@ -404,7 +404,7 @@ Wallet address is saved and ready to receive payments!`,
                 },
                 currency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH', 'BSC'],
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'],
                   description: '✅ REQUIRED: Same currency from Step 1',
                   example: 'BTC'
                 },
