@@ -3576,10 +3576,6 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
     const { wallet_address, wallet_name, otp } = req.body;
     const user_id = userData.user_id;
 
-    if (!otp) {
-      return errorResponseHelper(res, 400, "OTP is required");
-    }
-
     if (!wallet_address && !wallet_name) {
       return errorResponseHelper(res, 400, "wallet_address or wallet_name is required");
     }
@@ -3596,30 +3592,38 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
       return errorResponseHelper(res, 404, "Wallet address not found");
     }
 
-    // Verify OTP from Redis
-    const storedOTPData = await getRedisItem(`wallet_edit_otp_${id}`);
+    // Check if wallet_address is being changed (requires OTP)
+    const isAddressChange = wallet_address && wallet_address !== existingAddress.dataValues.wallet_address;
     
-    if (!storedOTPData || Object.keys(storedOTPData).length === 0) {
-      return errorResponseHelper(res, 400, "OTP expired or not found. Please request a new one.");
-    }
+    // OTP is only required when changing wallet_address, not for wallet_name updates
+    if (isAddressChange) {
+      if (!otp) {
+        return errorResponseHelper(res, 400, "OTP is required to update wallet address. Request OTP first.");
+      }
 
-    const otpData = storedOTPData as { otp: string; user_id: string; expiry: string };
-    
-    if (otpData.otp !== otp) {
-      return errorResponseHelper(res, 400, "Invalid OTP");
-    }
+      // Verify OTP from Redis
+      const storedOTPData = await getRedisItem(`wallet_edit_otp_${id}`);
+      
+      if (!storedOTPData || Object.keys(storedOTPData).length === 0) {
+        return errorResponseHelper(res, 400, "OTP expired or not found. Please request a new one.");
+      }
 
-    if (otpData.user_id !== user_id.toString()) {
-      return errorResponseHelper(res, 403, "Unauthorized");
-    }
+      const otpData = storedOTPData as { otp: string; user_id: string; expiry: string };
+      
+      if (otpData.otp !== otp) {
+        return errorResponseHelper(res, 400, "Invalid OTP");
+      }
 
-    if (new Date(otpData.expiry) < new Date()) {
-      await deleteRedisItem(`wallet_edit_otp_${id}`);
-      return errorResponseHelper(res, 400, "OTP expired. Please request a new one.");
-    }
+      if (otpData.user_id !== user_id.toString()) {
+        return errorResponseHelper(res, 403, "Unauthorized");
+      }
 
-    // If changing wallet address, validate the new address
-    if (wallet_address && wallet_address !== existingAddress.dataValues.wallet_address) {
+      if (new Date(otpData.expiry) < new Date()) {
+        await deleteRedisItem(`wallet_edit_otp_${id}`);
+        return errorResponseHelper(res, 400, "OTP expired. Please request a new one.");
+      }
+
+      // Validate the new address
       const currency = existingAddress.dataValues.currency;
       try {
         if (currency === "TRX" || currency === "USDT-TRC20") {
@@ -3630,12 +3634,15 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
       } catch (e) {
         return errorResponseHelper(res, 400, `Invalid ${currency} address`);
       }
+
+      // Delete OTP from Redis after successful validation
+      await deleteRedisItem(`wallet_edit_otp_${id}`);
     }
 
     // Build update data
     const updateData: any = {};
     if (wallet_address) updateData.wallet_address = wallet_address;
-    if (wallet_name) updateData.wallet_name = wallet_name;
+    if (wallet_name !== undefined) updateData.wallet_name = wallet_name;
 
     // Update the wallet address
     await userWalletAddressModel.update(updateData, {
@@ -3645,17 +3652,15 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
       },
     });
 
-    // Delete OTP from Redis
-    await deleteRedisItem(`wallet_edit_otp_${id}`);
-
     // Fetch updated record
     const updatedAddress = await userWalletAddressModel.findOne({
       where: { user_address_id: id },
     });
 
-    walletLogger.info(`Wallet address ${id} edited by user ${user_id}`);
+    const updateType = isAddressChange ? "address and name" : "name";
+    walletLogger.info(`Wallet ${updateType} for ID ${id} edited by user ${user_id}`);
 
-    return successResponseHelper(res, 200, "Wallet address updated successfully", updatedAddress);
+    return successResponseHelper(res, 200, "Wallet updated successfully", updatedAddress);
 
   } catch (e) {
     const message = getErrorMessage(e);
