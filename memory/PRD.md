@@ -53,6 +53,33 @@ A full-stack crypto payment gateway called "Dynopay" with:
 
 ### Session: February 2026
 
+#### TypeScript Fixes in API Services - COMPLETED ✅
+**Date:** February 2026
+
+**Fixed Files:**
+- `/app/backend/api-service/controller/index.ts` - Added proper type annotations
+- `/app/backend/api-service/helper/getErrorMessage.ts` - Fixed error type handling
+- `/app/backend/api-service/helper/currencyConvert.ts` - Fixed variable types
+- `/app/backend/api-service/helper/encryption.ts` - Fixed parameter types
+- `/app/backend/api-service/middleware/authMiddleware.ts` - Added JWT payload interface
+- `/app/backend/api-service/utils/types.ts` - Added CustomerJwtPayload and CompanyData interfaces
+- `/app/backend/apis/htxApi.ts` - Fixed signature function parameter types
+- `/app/backend/apis/tatumApi.ts` - Added type guard for TransactionHash, fixed error handling
+
+**Note:** ~760 TypeScript errors remain (mostly in tatumApi.ts and api-service controller) - these are non-blocking as the code runs correctly.
+
+---
+
+#### Swagger API Documentation Updated - COMPLETED ✅
+**Date:** February 2026
+
+**Updates:**
+- Added `accepted_currencies` field documentation to Create Payment Link endpoint
+- Added example for "Specific Currencies" use case
+- Added new endpoint documentation: `GET /api/pay/company-currencies/{company_id}`
+
+---
+
 #### Accepted Currencies Feature - COMPLETED ✅
 **Date:** February 2026
 
