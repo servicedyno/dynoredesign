@@ -7,10 +7,15 @@ interface FlutterwaveCharge {
   bank_transfer: (params: Record<string, unknown>) => Promise<unknown>;
   ng: (params: Record<string, unknown>) => Promise<unknown>;
   ach_payment: (params: Record<string, unknown>) => Promise<unknown>;
+  ussd: (params: Record<string, unknown>) => Promise<unknown>;
 }
 
 interface FlutterwaveTransaction {
-  verify: (params: { id: number | string }) => Promise<{ data: { id: number; flw_ref: string; status: string } }>;
+  verify: (params: { id: number | string }) => Promise<{ 
+    status?: string;
+    message?: string;
+    data: { id: number; flw_ref: string; status: string } 
+  }>;
 }
 
 interface FlutterwavePaymentPlan {
@@ -33,12 +38,21 @@ interface FlutterwaveVirtualCard {
   get: (params: Record<string, unknown>) => Promise<unknown>;
 }
 
+interface FlutterwaveMobileMoney {
+  ghana: (params: Record<string, unknown>) => Promise<unknown>;
+  uganda: (params: Record<string, unknown>) => Promise<unknown>;
+  rwanda: (params: Record<string, unknown>) => Promise<unknown>;
+  zambia: (params: Record<string, unknown>) => Promise<unknown>;
+  francophone: (params: Record<string, unknown>) => Promise<unknown>;
+}
+
 export interface FlutterwaveInstance {
   Charge: FlutterwaveCharge;
   Transaction: FlutterwaveTransaction;
   PaymentPlan: FlutterwavePaymentPlan;
   Subaccount: FlutterwaveSubaccount;
   VirtualCard: FlutterwaveVirtualCard;
+  MobileMoney: FlutterwaveMobileMoney;
 }
 
 let flw: FlutterwaveInstance | null = null;
