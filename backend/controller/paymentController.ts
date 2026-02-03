@@ -5047,7 +5047,15 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
       }
     }
 
-    successResponseHelper(res, 200, "Payment link updated successfully", updatedLink);
+    // Format response to be consistent - accepted_currencies as array
+    const responseData = {
+      ...updatedLink.dataValues,
+      accepted_currencies: updatedLink.dataValues.accepted_currencies 
+        ? updatedLink.dataValues.accepted_currencies.split(',').map((c: string) => c.trim())
+        : null,
+    };
+
+    successResponseHelper(res, 200, "Payment link updated successfully", responseData);
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
