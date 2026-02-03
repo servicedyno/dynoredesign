@@ -268,6 +268,7 @@ class TestPaymentLinkAPIs:
         """Test getting fee preview"""
         response = requests.get(
             f"{BASE_URL}/api/pay/fee-preview",
+            params={"amount": 100},  # Amount is required
             headers={
                 "Authorization": f"Bearer {auth_token}",
                 "Content-Type": "application/json"
