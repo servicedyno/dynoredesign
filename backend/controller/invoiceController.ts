@@ -230,7 +230,7 @@ export const autoGenerateInvoice = async (
     apiLogger.error(
       `Failed to generate invoice for transaction ${transactionId}`,
       { transactionId, companyId },
-      new Error(error)
+      error instanceof Error ? error : new Error(String(error))
     );
     return null;
   }
