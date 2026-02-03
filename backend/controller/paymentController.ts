@@ -4345,9 +4345,45 @@ const createPaymentLink = async (
       );
     }
     
-    // Get unique list of available currencies
-    const availableCurrencies = [...new Set(configuredWallets.map((w: { wallet_type: string }) => w.wallet_type))];
-    console.log(`[Phase 11] Available currencies for company_id ${company_id}:`, availableCurrencies);
+    // Get unique list of ALL configured currencies for this company
+    const allConfiguredCurrencies = [...new Set(configuredWallets.map((w: { wallet_type: string }) => w.wallet_type))];
+    console.log(`[Phase 11] All configured currencies for company_id ${company_id}:`, allConfiguredCurrencies);
+    
+    // Validate and process accepted_currencies if provided
+    let finalAcceptedCurrencies: string[] = allConfiguredCurrencies; // Default: all configured
+    let acceptedCurrenciesString: string | null = null;
+    
+    if (accepted_currencies && Array.isArray(accepted_currencies) && accepted_currencies.length > 0) {
+      // Normalize to uppercase
+      const requestedCurrencies = accepted_currencies.map((c: string) => c.toUpperCase().trim());
+      
+      // Validate all requested currencies are valid crypto types
+      const invalidCryptos = requestedCurrencies.filter((c: string) => !cryptoTypes.includes(c));
+      if (invalidCryptos.length > 0) {
+        return errorResponseHelper(
+          res,
+          400,
+          `Invalid cryptocurrency types: ${invalidCryptos.join(', ')}. Valid options: ${cryptoTypes.join(', ')}`
+        );
+      }
+      
+      // Validate all requested currencies have configured wallets
+      const unconfiguredCurrencies = requestedCurrencies.filter((c: string) => !allConfiguredCurrencies.includes(c));
+      if (unconfiguredCurrencies.length > 0) {
+        return errorResponseHelper(
+          res,
+          400,
+          `No wallet configured for: ${unconfiguredCurrencies.join(', ')}. Please configure wallets first or select from available currencies: ${allConfiguredCurrencies.join(', ')}`
+        );
+      }
+      
+      // Use the merchant's selected currencies
+      finalAcceptedCurrencies = requestedCurrencies;
+      acceptedCurrenciesString = requestedCurrencies.join(',');
+      console.log(`[createPaymentLink] Merchant selected currencies: ${acceptedCurrenciesString}`);
+    } else {
+      console.log(`[createPaymentLink] No currencies specified, using all configured: ${allConfiguredCurrencies.join(',')}`);
+    }
     
     const uniqueRef = crypto.randomBytes(24).toString("hex");
     console.log("userData============>", userData);
@@ -4416,6 +4452,7 @@ const createPaymentLink = async (
       webhook_url: webhook_url || null,
       fee_payer: fee_payer || 'company',  // Default: company pays fees (existing behavior)
       apply_tax: apply_tax || false,  // Tax toggle: OFF by default, merchant must enable
+      accepted_currencies: acceptedCurrenciesString,  // Store merchant's selected currencies (null = all)
     };
 
     const links = await paymentLinkModel.create(payload);
@@ -4423,7 +4460,8 @@ const createPaymentLink = async (
       ...payload,
       pathType: "createLink",
       link_id: links.dataValues.link_id,
-      available_currencies: availableCurrencies,  // Phase 11: Store available currencies
+      available_currencies: finalAcceptedCurrencies,  // Use merchant's selection or all configured
+      all_configured_currencies: allConfiguredCurrencies,  // Store all for reference
       createdAt: new Date().toISOString(),  // Include creation timestamp for checkout
     };
 
