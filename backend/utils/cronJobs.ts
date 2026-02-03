@@ -510,15 +510,17 @@ export const setupRefereeCodeReminderCron = () => {
             log(`Sent ${reminderType} reminder to ${codeData.customer_email} (code: ${codeData.code})`, "info");
           }
         } catch (codeError: unknown) {
-          log(`Error processing referee code ${code.dataValues.code}: ${codeError.message}`, "error");
+          const err = codeError as { message?: string };
+          log(`Error processing referee code ${code.dataValues.code}: ${err.message}`, "error");
         }
       }
       
       log(`Referee Code Reminder Cron completed: ${remindersSent} reminders sent, ${skippedAlreadySignedUp} skipped (already signed up)`, "info");
       
     } catch (e: unknown) {
-      log(`Referee Code Reminder Cron Job Error: ${e.message}`, "error");
-      cronLogger?.error?.("Referee Code Reminder Cron Error", {}, new Error(e));
+      const err = e as { message?: string };
+      log(`Referee Code Reminder Cron Job Error: ${err.message}`, "error");
+      cronLogger?.error?.("Referee Code Reminder Cron Error", {}, new Error(err.message));
     }
   });
   
