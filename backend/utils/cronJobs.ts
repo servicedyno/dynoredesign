@@ -802,15 +802,17 @@ export const setupPaymentLinkReminderCron = () => {
             log(`Sent ${reminderType} to ${linkData.email} for payment link ${linkData.link_id} (${expiryType} expiry)`, "info");
           }
         } catch (linkError: unknown) {
-          log(`Error processing payment link ${link.dataValues.link_id}: ${linkError.message}`, "error");
+          const err = linkError as { message?: string };
+          log(`Error processing payment link ${link.dataValues.link_id}: ${err.message}`, "error");
         }
       }
       
       log(`Payment Link Reminder Cron completed: ${remindersSent} reminders sent`, "info");
       
     } catch (e: unknown) {
-      log(`Payment Link Reminder Cron Job Error: ${e.message}`, "error");
-      cronLogger?.error?.("Payment Link Reminder Cron Error", {}, new Error(e));
+      const err = e as { message?: string };
+      log(`Payment Link Reminder Cron Job Error: ${err.message}`, "error");
+      cronLogger?.error?.("Payment Link Reminder Cron Error", {}, new Error(err.message));
     }
   });
   
