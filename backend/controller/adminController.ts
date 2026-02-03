@@ -622,8 +622,8 @@ const getAllTransactions = async (
       `,
       { type: QueryTypes.SELECT }
     );
-    const customer_data = tempData.map((x) => {
-      const { wallet_id, transaction_id, ...rest }: Record<string, unknown> = x;
+    const customer_data = tempData.map((x: Record<string, unknown>) => {
+      const { wallet_id, transaction_id, ...rest } = x;
       return rest;
     });
 
