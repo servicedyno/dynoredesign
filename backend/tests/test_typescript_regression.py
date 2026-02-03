@@ -16,10 +16,8 @@ import os
 import json
 import time
 
-# Get backend URL from environment
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
-if not BASE_URL:
-    BASE_URL = "https://cryptocheckout-2.preview.emergentagent.com"
+# Use localhost for internal testing (backend runs on port 8001)
+BASE_URL = "http://localhost:8001"
 
 # Test credentials
 TEST_EMAIL = "richard@dyno.pt"
