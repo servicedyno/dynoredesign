@@ -4734,6 +4734,10 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
       email?: string;
       allowedModes?: string;
       company_id?: number;
+      callback_url?: string;
+      redirect_url?: string;
+      webhook_url?: string;
+      fee_payer?: string;
     }
 
     // Format for UI with computed status
