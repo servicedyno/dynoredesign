@@ -650,8 +650,8 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
       { type: QueryTypes.SELECT }
     );
 
-    const finalRes = resData.map((x) => {
-      const { wallet_id, ...rest }: Record<string, unknown> = x;
+    const finalRes = resData.map((x: Record<string, unknown>) => {
+      const { wallet_id, ...rest } = x;
       return rest;
     });
 
