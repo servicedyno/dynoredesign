@@ -331,7 +331,7 @@ const getAllInvoices = async (
       attributes: ["company_id"],
     });
 
-    const companyIds = companies.map((c: any) => c.dataValues.company_id);
+    const companyIds = companies.map((c: Record<string, unknown>) => c.dataValues.company_id);
 
     // If user has no companies, return empty result
     if (companyIds.length === 0) {
@@ -364,7 +364,7 @@ const getAllInvoices = async (
       order: [["invoice_date", "DESC"]],
     });
 
-    const invoices = rows.map((invoice: any) => invoice.dataValues);
+    const invoices = rows.map((invoice: Record<string, unknown>) => invoice.dataValues);
 
     successResponseHelper(res, 200, "Invoices retrieved successfully", {
       invoices,

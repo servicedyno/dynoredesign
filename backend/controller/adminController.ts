@@ -116,7 +116,7 @@ const getWallets = async (req: express.Request, res: express.Response) => {
     });
     const currencyList = [];
 
-    const allUserWalletData: any[] = await sequelize.query(
+    const allUserWalletData: unknown[] = await sequelize.query(
       "select sum(amount) as total_balance,wallet_type from tbl_user_wallet group by wallet_type",
       { type: QueryTypes.SELECT }
     );
@@ -429,7 +429,7 @@ const getFeeWalletBalance = async (
 const changePassword = async (req: express.Request, res: express.Response) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    const adminData: any = jwt.decode(res.locals.token);
+    const adminData: Record<string, unknown> = jwt.decode(res.locals.token);
     const hashedOldPassword = oldPassword ? sha256(oldPassword).toString() : null;
 
     // Use parameterized query to prevent SQL injection
@@ -465,7 +465,7 @@ const changePassword = async (req: express.Request, res: express.Response) => {
 const updateEmail = async (req: express.Request, res: express.Response) => {
   try {
     const { email, otp } = req.body;
-    const adminData: any = jwt.decode(res.locals.token);
+    const adminData: Record<string, unknown> = jwt.decode(res.locals.token);
     if (!otp) {
       const data = await sequelize.query(
         `select * from tbl_admin where email='${adminData?.email}'`,
@@ -734,11 +734,11 @@ const getAdminAnalytics = async (
     );
 
     const revenue_performance = [];
-    const totalIncome: any[] = await sequelize.query(
+    const totalIncome: unknown[] = await sequelize.query(
       `select base_currency,sum(base_amount) as amount from tbl_user_transaction ut ${where} group by base_currency`,
       { type: QueryTypes.SELECT }
     );
-    const totalFee: any[] = await sequelize.query(
+    const totalFee: unknown[] = await sequelize.query(
       `
       select wallet_type,sum(blockchain_fee) as fee_amount from tbl_user_temp_address ut ${where} group by wallet_type
       `,

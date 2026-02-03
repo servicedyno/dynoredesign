@@ -457,7 +457,7 @@ const getAllTransactions = async (
       { type: QueryTypes.SELECT }
     );
 
-    const customer_data = tempData.map((x: any) => {
+    const customer_data = tempData.map((x: Record<string, unknown>) => {
       const { wallet_id, ...rest } = x;
       return {
         ...rest,
@@ -2533,7 +2533,7 @@ const getUserAnalytics = async (
 
     const historicalTrends = {};
 
-    const tempTrends: any[] = await sequelize.query(
+    const tempTrends: unknown[] = await sequelize.query(
       `select 
         to_char("createdAt", 'Month') as month_name,
 		extract(month from "createdAt") as month,
@@ -2563,11 +2563,11 @@ const getUserAnalytics = async (
     }
 
     const revenue_performance = [];
-    const totalIncome: any[] = await sequelize.query(
+    const totalIncome: unknown[] = await sequelize.query(
       `select base_currency,sum(base_amount) as amount from tbl_user_transaction ut ${where} group by base_currency`,
       { type: QueryTypes.SELECT }
     );
-    const totalFee: any[] = await sequelize.query(
+    const totalFee: unknown[] = await sequelize.query(
       `
       select wallet_type,sum(blockchain_fee) as fee_amount from tbl_user_temp_address ut ${where} group by wallet_type
       `,
@@ -3907,7 +3907,7 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
       return errorResponseHelper(res, 404, "Transaction not found");
     }
 
-    const txData: any = transaction[0];
+    const txData: Record<string, unknown> = transaction[0];
 
     // Calculate total fees
     const totalFees = (txData.transaction_fee || 0) + (txData.fixed_fee || 0) + (txData.blockchain_buffer_fee || 0);
@@ -4053,7 +4053,7 @@ const exportTransactions = async (req: express.Request, res: express.Response) =
 
     // Convert to CSV format
     const csvHeaders = 'Transaction ID,Date & Time,Crypto,Amount,Currency,USD Value,Status,Customer,Company,Payment Mode,Type,Reference\n';
-    const csvRows = transactions.map((tx: any) => {
+    const csvRows = transactions.map((tx: Record<string, unknown>) => {
       return [
         tx.transaction_id || '',
         tx.date_time || '',
@@ -4113,12 +4113,12 @@ const getConfiguredCurrencies = async (
     });
 
     // Extract unique currencies
-    const currencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
+    const currencies = [...new Set(configuredWallets.map((w: Record<string, unknown>) => w.wallet_type))];
     
     const response = {
       configured_currencies: currencies,
       wallet_count: configuredWallets.length,
-      wallets: configuredWallets.map((w: any) => ({
+      wallets: configuredWallets.map((w: Record<string, unknown>) => ({
         currency: w.wallet_type,
         label: w.wallet_name,
         address_masked: w.wallet_address ? 

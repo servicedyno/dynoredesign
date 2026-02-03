@@ -241,7 +241,7 @@ const getApi = async (req: express.Request, res: express.Response) => {
     );
     
     // Parse permissions and test_mode_restrictions JSON for each API
-    const formattedData = resData.map((api: any) => ({
+    const formattedData = resData.map((api: Record<string, unknown>) => ({
       ...api,
       permissions: api.permissions ? JSON.parse(api.permissions) : ["payments", "transactions", "webhooks", "wallets"],
       test_mode_restrictions: api.test_mode_restrictions ? JSON.parse(api.test_mode_restrictions) : null,

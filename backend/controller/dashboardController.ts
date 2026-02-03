@@ -150,7 +150,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       },
       active_wallets: {
         count: activeWallets.length,
-        wallets: activeWallets.map((w: any) => w.wallet_type),
+        wallets: activeWallets.map((w: Record<string, unknown>) => w.wallet_type),
         details: activeWallets,
       },
       fee_tier: feeTier,
@@ -310,7 +310,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     ) as any[];
 
     // Format chart data
-    const formattedChartData = chartData.map((item: any) => ({
+    const formattedChartData = chartData.map((item: Record<string, unknown>) => ({
       date: item.date,
       volume: Math.round(parseFloat(item.volume) * 100) / 100,
       transaction_count: parseInt(item.transaction_count),
@@ -325,12 +325,12 @@ const getChartData = async (req: express.Request, res: express.Response) => {
       start_date: startDate.toISOString().split('T')[0],
       end_date: new Date().toISOString().split('T')[0],
       chart_data: filledChartData,
-      currency_breakdown: currencyBreakdown.map((c: any) => ({
+      currency_breakdown: currencyBreakdown.map((c: Record<string, unknown>) => ({
         currency: c.base_currency,
         count: parseInt(c.count),
         volume: Math.round(parseFloat(c.volume) * 100) / 100,
       })),
-      status_breakdown: statusBreakdown.map((s: any) => ({
+      status_breakdown: statusBreakdown.map((s: Record<string, unknown>) => ({
         status: s.status,
         count: parseInt(s.count),
       })),

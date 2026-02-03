@@ -4570,7 +4570,7 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
     });
 
     // Format for UI with computed status
-    const formattedLinks = links.map((link: any) => {
+    const formattedLinks = links.map((link: Record<string, unknown>) => {
       const linkData = link.dataValues;
       const now = new Date();
       
@@ -5419,7 +5419,7 @@ const checkFeeBalance = async () => {
         let adminEmail = ADMIN_CONFIG.EMAIL;
         
         try {
-          const adminData: any[] = await sequelize.query(
+          const adminData: unknown[] = await sequelize.query(
             "select email from tbl_admin limit 1",
             {
               type: QueryTypes.SELECT,
@@ -5471,7 +5471,7 @@ const checkOnBlockchair = async () => {
   try {
     // Check for pending payments older than crypto invoice window
     // Using SQL_INTERVALS constant for safety
-    const tempData: any[] = await sequelize.query(
+    const tempData: unknown[] = await sequelize.query(
       `select * from tbl_user_temp_address 
       where "createdAt"::date = CURRENT_DATE - INTERVAL '1 day' 
       and "createdAt" <= NOW() - INTERVAL '${PAYMENT_TIMING.SQL_INTERVALS.CRYPTO_INVOICE}' 
@@ -5512,7 +5512,7 @@ const checkOnBlockchair = async () => {
 
 const removeUnwantedSubscriptions = async () => {
   try {
-    const tempData: any[] = await sequelize.query(
+    const tempData: unknown[] = await sequelize.query(
       `select subscription_id,temp_id from tbl_user_temp_address where "txId" is null 
     and "updatedAt" < NOW() - INTERVAL '1 day' and subscription_id is not null`,
       { type: QueryTypes.SELECT }
@@ -5545,7 +5545,7 @@ const removeUnwantedSubscriptions = async () => {
 const processIncompletePayments = async () => {
   try {
     // Use centralized SQL interval for grace period
-    const pendingTransactions: any[] = await sequelize.query(
+    const pendingTransactions: unknown[] = await sequelize.query(
       `SELECT * FROM tbl_user_temp_address 
        WHERE status = 'partial' 
        AND "txId" IS NOT NULL
@@ -6075,7 +6075,7 @@ const getConfiguredCurrenciesForCheckout = async (
     });
     
     // Extract unique currencies (only those with actual addresses)
-    const currencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
+    const currencies = [...new Set(configuredWallets.map((w: Record<string, unknown>) => w.wallet_type))];
     
     console.log(`[getConfiguredCurrenciesForCheckout] Found ${currencies.length} currencies: ${currencies.join(', ')}`);
     
@@ -6152,7 +6152,7 @@ const getConfiguredCurrenciesForCheckout = async (
     const response: Record<string, unknown> = {
       configured_currencies: currencies,
       wallet_count: configuredWallets.length,
-      wallets: configuredWallets.map((w: any) => ({
+      wallets: configuredWallets.map((w: Record<string, unknown>) => ({
         currency: w.wallet_type,
         label: w.wallet_name,
         address_masked: w.wallet_address ? 
