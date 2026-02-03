@@ -437,15 +437,17 @@ export const checkVolumeAndTriggerKYC = async (
       // If no KYC record or status is pending, send notification
       if (!kycRecord || kycRecord.get("status") === "pending") {
         // Get user details
-        const userResult = await sequelize.query(
+        const userResult = await sequelize.query<{ name: string; email: string }>(
           `SELECT name, email FROM tbl_user WHERE user_id = :userId`,
           {
             replacements: { userId },
             type: QueryTypes.SELECT,
           }
-        ) as Array<Record<string, unknown>>;
+        );
 
         const user = userResult[0];
+        const userEmail = user?.email || '';
+        const userName = user?.name || '';
 
         // Create KYC required notification (only if not already notified)
         const existingNotification = await sequelize.query(
@@ -473,7 +475,7 @@ export const checkVolumeAndTriggerKYC = async (
           );
 
           // Send KYC required email
-          await sendKYCRequiredEmail(user.email, user.name, totalVolume.toFixed(2));
+          await sendKYCRequiredEmail(userEmail, userName, totalVolume.toFixed(2));
         }
       }
     }
