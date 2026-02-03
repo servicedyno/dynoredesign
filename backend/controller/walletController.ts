@@ -2570,12 +2570,12 @@ const getUserAnalytics = async (
       }
     }
 
-    const revenue_performance: unknown[] = [];
-    const totalIncome: unknown[] = await sequelize.query(
+    const revenue_performance: Array<Record<string, unknown>> = [];
+    const totalIncome = await sequelize.query<{ base_currency: string; amount: number }>(
       `select base_currency,sum(base_amount) as amount from tbl_user_transaction ut ${where} group by base_currency`,
       { type: QueryTypes.SELECT }
     );
-    const totalFee: unknown[] = await sequelize.query(
+    const totalFee = await sequelize.query<{ wallet_type: string; fee_amount: number }>(
       `
       select wallet_type,sum(blockchain_fee) as fee_amount from tbl_user_temp_address ut ${where} group by wallet_type
       `,
@@ -2586,7 +2586,7 @@ const getUserAnalytics = async (
 
     for (let i = 0; i < totalIncome.length; i++) {
       const feeIndex = totalFee.findIndex(
-        (x: { wallet_type: string }) => x.wallet_type === totalIncome[i]?.base_currency
+        (x) => x.wallet_type === totalIncome[i]?.base_currency
       );
       const currencyData = await currencyConvert({
         sourceCurrency: totalIncome[i]?.base_currency,
@@ -2594,12 +2594,12 @@ const getUserAnalytics = async (
         amount: totalIncome[i].amount,
         fixedDecimal: true,
       });
-      const { fee_amount } = totalFee[feeIndex];
+      const feeAmount = totalFee[feeIndex]?.fee_amount || 0;
       revenue_performance.push({
         ...totalIncome[i],
         amount_in_usd: currencyData[0].amount,
-        fee_amount: Number(fee_amount).toFixed(8),
-        fee_in_usd: Number(fee_amount * currencyData[0].transferRate).toFixed(
+        fee_amount: Number(feeAmount).toFixed(8),
+        fee_in_usd: Number(feeAmount * currencyData[0].transferRate).toFixed(
           2
         ),
       });
