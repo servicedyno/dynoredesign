@@ -5875,10 +5875,15 @@ const processIncompletePayments = async () => {
             }
 
             const result = await settleCryptoTransaction({
-              tempAddressData: tempTx,
+              tempAddressData: {
+                address: tempTx.wallet_address,
+                wallet_address: tempTx.wallet_address,
+                privateKey: tempTx.privateKey,
+                wallet_type: tempTx.wallet_type,
+              },
               receivedAmount: Number(adminAmountToSend),
               currency: tempTx.wallet_type,
-              transactionId: tempTx.txId,
+              transactionId: tempTx.txId || '',
               ...(userAmountToSend > 0 && {
                 userAmount: Number(userAmountToSend),
                 userAddress: merchantWallet.dataValues.wallet_address,
@@ -6025,10 +6030,15 @@ const processIncompletePayments = async () => {
             }
 
             const result = await settleCryptoTransaction({
-              tempAddressData: tempTx,
+              tempAddressData: {
+                address: tempTx.wallet_address,
+                wallet_address: tempTx.wallet_address,
+                privateKey: tempTx.privateKey,
+                wallet_type: tempTx.wallet_type,
+              },
               receivedAmount: Number(adminAmountToSend),
               currency: tempTx.wallet_type,
-              transactionId: tempTx.txId,
+              transactionId: tempTx.txId || '',
               ...(userAmountToSend > 0 && {
                 userAmount: Number(userAmountToSend),
                 userAddress: merchantWallet.dataValues.wallet_address,
