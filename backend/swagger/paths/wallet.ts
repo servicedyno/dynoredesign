@@ -2,7 +2,7 @@ export const walletPaths = {
   // ============================================
   // WALLET ADDRESS MANAGEMENT
   // For merchant payment forwarding wallets
-  // Table: tbl_user_wallet (Main payment system)
+  // Table: tbl_user_wallet
   // ============================================
 
   // READ - Get wallet addresses (No OTP required) - PRIMARY ENDPOINT
@@ -45,7 +45,7 @@ Wallets are grouped by company for easy organization:
 - Omit company_id → Returns all companies' wallets (grouped)
 - Provide company_id → Returns only that company's wallets
 
-**Table:** tbl_user_wallet (Main payment system)`,
+**Table:** tbl_user_wallet`,
       security: [{ BearerAuth: [] }],
       parameters: [{
         in: 'query',
@@ -541,7 +541,7 @@ Wallet address is saved and ready to receive payments!`,
 - ✅ Currency matching check
 - ✅ Multi-tenant security
 
-**Table:** tbl_user_wallet (Main payment system)`,
+**Table:** tbl_user_wallet`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -638,7 +638,7 @@ Wallet address is saved and ready to receive payments!`,
 
 **⚠️ Warning:** This action is permanent and cannot be undone!
 
-**Table:** tbl_user_wallet (Main payment system)`,
+**Table:** tbl_user_wallet`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -714,7 +714,7 @@ Wallet address is saved and ready to receive payments!`,
 
 **⚠️ Warning:** This action is permanent and cannot be undone!
 
-**Table:** tbl_user_wallet (Main payment system)`,
+**Table:** tbl_user_wallet`,
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
