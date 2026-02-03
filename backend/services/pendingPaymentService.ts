@@ -301,7 +301,7 @@ export const sendPartialPaymentNotification = async (
   receivedAmount: number,
   expectedAmount: number,
   currency: string,
-  customerData: { name?: string; email?: string; phone?: string; metadata?: Record<string, unknown> },
+  customerData: { name?: string; email?: string; phone?: string; metadata?: Record<string, unknown>; adm_id?: number; company_id?: number; amount?: number },
   gracePeriodMinutes: number = 30
 ): Promise<boolean> => {
   try {
