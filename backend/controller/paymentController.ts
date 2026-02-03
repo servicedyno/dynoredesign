@@ -47,6 +47,9 @@ import {
   ITemporaryAddress,
   IUserType,
   IVerifyResponse,
+  IAdminData,
+  PaymentLinkData,
+  PaymentUserJwtPayload,
 } from "../utils/types";
 import { paymentTypes } from "../utils/enums";
 import flw from "../apis/flutterwaveApi";
