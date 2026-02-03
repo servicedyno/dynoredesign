@@ -104,22 +104,23 @@ const getWallet = async (req: express.Request, res: express.Response) => {
       amount: 1,
     });
 
-    const returnData = [];
+    // Create a map of currency to transfer rate for lookup
+    const rateMap = new Map<string, number>();
+    for (const cd of currencyData) {
+      rateMap.set(cd.currency, cd.transferRate);
+    }
 
-    for (let i = 0; i < currencyData.length; i++) {
-      const currentIndex = walletData.findIndex(
-        (x) => x.dataValues.wallet_type === currencyData[i].currency
-      );
-      console.log(currentIndex);
-      const currentWallet = walletData[currentIndex].dataValues;
-      const finalAmount = Number(
-        currentWallet.amount / currencyData[i].transferRate
-      );
+    // Build return data - iterate through walletData directly to preserve all wallets
+    const returnData = [];
+    for (const wallet of walletData) {
+      const currentWallet = wallet.dataValues;
+      const transferRate = rateMap.get(currentWallet.wallet_type) || 1;
+      const finalAmount = Number(currentWallet.amount / transferRate);
       const amount_in_usd = Number(finalAmount).toFixed(2);
       returnData.push({
         ...currentWallet,
         amount_in_usd,
-        transfer_rate: currencyData[i].transferRate,
+        transfer_rate: transferRate,
       });
     }
 
