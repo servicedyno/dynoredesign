@@ -769,6 +769,7 @@ const tatumCryptoWebHook = async (
         console.log("[tatumCryptoWebHook] Payment confirmed - webhook handled by cryptoVerification");
 
       } catch (verifyError: unknown) {
+        const err = verifyError as { message?: string };
         console.error("[tatumCryptoWebHook] Error in cryptoVerification after retries:", verifyError);
         
         // PERSISTENCE: Store failed state for manual recovery or cron retry
@@ -778,7 +779,7 @@ const tatumCryptoWebHook = async (
           receivedAmount: incomingAmount,
           txId: payload.txId,
           failedAt: new Date().toISOString(),
-          lastError: verifyError.message,
+          lastError: err.message,
         });
         
         // Store in failed payments list for monitoring/retry
@@ -787,7 +788,7 @@ const tatumCryptoWebHook = async (
           payment_id: items.payment_id || items.ref,
           amount: incomingAmount,
           txId: payload.txId,
-          error: verifyError.message,
+          error: err.message,
           failed_at: new Date().toISOString(),
         });
         
