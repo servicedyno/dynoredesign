@@ -8,7 +8,7 @@ import { Op } from 'sequelize';
 import { IUserType } from '../utils/types';
 
 // Set up associations (only if not already set)
-if (!(Referral as any).associations?.referrer) {
+if (!(Referral as unknown as { associations?: Record<string, unknown> }).associations?.referrer) {
   Referral.belongsTo(User, { foreignKey: 'referrer_user_id', as: 'referrer' });
   Referral.belongsTo(User, { foreignKey: 'referred_user_id', as: 'referred_user' });
   User.hasMany(Referral, { foreignKey: 'referrer_user_id', as: 'referrals_made' });
@@ -56,9 +56,9 @@ export const getMyReferralCode = async (req: Request, res: Response) => {
     }
 
     // If user doesn't have a referral code, generate one
-    let referralCode = (user as any).referral_code;
+    let referralCode = (user as { referral_code?: string }).referral_code;
     if (!referralCode) {
-      referralCode = generateReferralCode(userId, (user as any).name || 'USER');
+      referralCode = generateReferralCode(userId, (user as Record<string, unknown>).name || 'USER');
       await User.update(
         { referral_code: referralCode },
         { where: { user_id: userId } }
@@ -83,7 +83,7 @@ export const getMyReferralCode = async (req: Request, res: Response) => {
       pending_referrals: referrals.filter(r => r.status === 'pending').length,
       active_referrals: referrals.filter(r => r.status === 'active').length,
       rewarded_referrals: referrals.filter(r => r.status === 'rewarded').length,
-      total_earnings: (user as any).referral_bonus_earned || 0,
+      total_earnings: (user as Record<string, unknown>).referral_bonus_earned || 0,
     };
 
     return res.status(200).json({
@@ -93,8 +93,8 @@ export const getMyReferralCode = async (req: Request, res: Response) => {
         referral_link: `${process.env.SERVER_URL}/signup?ref=${referralCode}`,
         stats,
         user: {
-          name: (user as any).name,
-          email: (user as any).email,
+          name: (user as Record<string, unknown>).name,
+          email: (user as Record<string, unknown>).email,
         },
       },
     });
@@ -191,7 +191,7 @@ export const applyReferralCode = async (req: Request, res: Response) => {
     }
 
     // Check if user is trying to refer themselves
-    if ((referrer as any).user_id === user_id) {
+    if ((referrer as Record<string, unknown>).user_id === user_id) {
       return res.status(400).json({
         message: "You cannot refer yourself",
       });
@@ -200,7 +200,7 @@ export const applyReferralCode = async (req: Request, res: Response) => {
     // Check if referral already exists
     const existingReferral = await Referral.findOne({
       where: {
-        referrer_user_id: (referrer as any).user_id,
+        referrer_user_id: (referrer as Record<string, unknown>).user_id,
         referred_user_id: user_id,
       },
     });
@@ -213,7 +213,7 @@ export const applyReferralCode = async (req: Request, res: Response) => {
 
     // Create referral record
     const referral = await Referral.create({
-      referrer_user_id: (referrer as any).user_id,
+      referrer_user_id: (referrer as Record<string, unknown>).user_id,
       referred_user_id: user_id,
       referral_code,
       status: 'pending',
@@ -224,7 +224,7 @@ export const applyReferralCode = async (req: Request, res: Response) => {
       referee_discount_duration_days: 30,
       referred_at: new Date(),
       expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
-    } as any);
+    } as Record<string, unknown>);
 
     // Update referred_by_code in user table
     await User.update(
@@ -282,7 +282,7 @@ export const validateReferralCode = async (req: Request, res: Response) => {
       message: "Referral code is valid",
       valid: true,
       data: {
-        referrer_name: (referrer as any).name,
+        referrer_name: (referrer as Record<string, unknown>).name,
         bonus_info: {
           referrer_bonus: "$10 USD",
           referee_discount: "50% off fees for 30 days",
@@ -368,7 +368,7 @@ export const processReferralReward = async (userId: number, transactionAmount: n
   try {
     // Find if user was referred
     const user = await User.findByPk(userId);
-    if (!user || !(user as any).referred_by_code) {
+    if (!user || !(user as Record<string, unknown>).referred_by_code) {
       return null; // User wasn't referred
     }
 
@@ -403,7 +403,7 @@ export const processReferralReward = async (userId: number, transactionAmount: n
       amount: referral.bonus_amount,
       currency: referral.bonus_currency,
       status: 'pending',
-    } as any);
+    } as Record<string, unknown>);
 
     // Update referrer's total earnings
     await User.increment(
@@ -464,10 +464,10 @@ export const getReferralLeaderboard = async (req: Request, res: Response) => {
       data: {
         leaderboard: leaderboard.map((user, index) => ({
           rank: index + 1,
-          user_id: (user as any).user_id,
-          name: (user as any).name,
-          referral_count: (user as any).referral_count,
-          total_earnings: (user as any).referral_bonus_earned,
+          user_id: (user as Record<string, unknown>).user_id,
+          name: (user as Record<string, unknown>).name,
+          referral_count: (user as Record<string, unknown>).referral_count,
+          total_earnings: (user as Record<string, unknown>).referral_bonus_earned,
         })),
       },
     });
@@ -605,7 +605,7 @@ const getDiscountStatus = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authorization required" });
     }
 
-    const decoded = jwt.decode(token) as any;
+    const decoded = jwt.decode(token) as { user_id?: number; email?: string; [key: string]: unknown };
     if (!decoded || !decoded.user_id) {
       return res.status(401).json({ message: "Invalid token" });
     }
@@ -626,9 +626,9 @@ const getDiscountStatus = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const discountPercent = (user as any).fee_discount_percent || 0;
-    const expiresAt = (user as any).fee_discount_expires_at;
-    const reason = (user as any).fee_discount_reason;
+    const discountPercent = (user as Record<string, unknown>).fee_discount_percent || 0;
+    const expiresAt = (user as Record<string, unknown>).fee_discount_expires_at;
+    const reason = (user as Record<string, unknown>).fee_discount_reason;
 
     // Check if discount is still active
     const isActive = expiresAt && new Date() < expiresAt && discountPercent > 0;

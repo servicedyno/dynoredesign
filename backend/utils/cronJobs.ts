@@ -34,7 +34,7 @@ export const setupWeeklySummaryCron = () => {
          JOIN tbl_user u ON u.user_id = np.user_id
          WHERE np.weekly_summary = true`,
         { type: QueryTypes.SELECT }
-      ) as any[];
+      ) as Array<Record<string, unknown>>;
 
       log(`Found ${usersWithWeeklySummary.length} users with weekly summary enabled`, "info");
 
@@ -60,7 +60,7 @@ export const setupWeeklySummaryCron = () => {
               },
               type: QueryTypes.SELECT,
             }
-          ) as any[];
+          ) as Array<Record<string, unknown>>;
 
           const stats = summary[0] || {
             transaction_count: 0,
@@ -125,7 +125,7 @@ export const setupWeeklySummaryCron = () => {
       
     } catch (e) {
       log(`Weekly Summary Cron Job Error: ${e}`, "error");
-      cronLogger?.error?.("Weekly Summary Cron Error", {}, new Error(e as any));
+      cronLogger?.error?.("Weekly Summary Cron Error", {}, new Error(String(e)));
     }
   });
 
@@ -154,7 +154,7 @@ export const triggerWeeklySummary = async (userId?: number) => {
           replacements: { userId },
           type: QueryTypes.SELECT 
         }
-      ) as any[];
+      ) as Array<Record<string, unknown>>;
     } else {
       // Get all users with weekly summary enabled
       users = await sequelize.query(
@@ -163,7 +163,7 @@ export const triggerWeeklySummary = async (userId?: number) => {
          JOIN tbl_user u ON u.user_id = np.user_id
          WHERE np.weekly_summary = true`,
         { type: QueryTypes.SELECT }
-      ) as any[];
+      ) as Array<Record<string, unknown>>;
     }
 
     const results = [];
@@ -188,7 +188,7 @@ export const triggerWeeklySummary = async (userId?: number) => {
           },
           type: QueryTypes.SELECT,
         }
-      ) as any[];
+      ) as Array<Record<string, unknown>>;
 
       const stats = summary[0];
 
@@ -274,7 +274,7 @@ export const setupWalletReminderCron = () => {
           },
           type: QueryTypes.SELECT
         }
-      ) as any[];
+      ) as Array<Record<string, unknown>>;
 
       log(`Found ${usersWithoutWallets.length} users without wallets to remind`, "info");
 
@@ -304,7 +304,7 @@ export const setupWalletReminderCron = () => {
       
     } catch (e) {
       log(`Wallet Reminder Cron Job Error: ${e}`, "error");
-      cronLogger?.error?.("Wallet Reminder Cron Error", {}, new Error(e as any));
+      cronLogger?.error?.("Wallet Reminder Cron Error", {}, new Error(String(e)));
     }
   });
 
@@ -332,7 +332,7 @@ export const triggerWalletReminder = async (userId?: number) => {
           replacements: { userId },
           type: QueryTypes.SELECT 
         }
-      ) as any[];
+      ) as Array<Record<string, unknown>>;
     } else {
       // Get all users without wallets (for testing)
       users = await sequelize.query(
@@ -344,7 +344,7 @@ export const triggerWalletReminder = async (userId?: number) => {
          AND wa.user_address_id IS NULL
          LIMIT 10`,
         { type: QueryTypes.SELECT }
-      ) as any[];
+      ) as Array<Record<string, unknown>>;
     }
 
     const results = [];
@@ -524,7 +524,7 @@ export const triggerRefereeCodeReminders = async () => {
     reminders_sent: 0,
     skipped_already_signed_up: 0,
     skipped_no_reminder_due: 0,
-    details: [] as any[],
+    details: [] as Array<Record<string, unknown>>,
   };
   
   for (const code of activeCodes) {
@@ -736,7 +736,7 @@ export const setupPaymentLinkReminderCron = () => {
             if (linkData.company_id) {
               const company = await companyModel.findByPk(linkData.company_id);
               if (company) {
-                companyName = (company as any).company_name || companyName;
+                companyName = (company as { company_name?: string }).company_name || companyName;
               }
             }
             
@@ -817,7 +817,7 @@ export const triggerPaymentLinkReminders = async () => {
     total: pendingLinks.length,
     reminders_sent: 0,
     skipped_no_reminder_due: 0,
-    details: [] as any[],
+    details: [] as Array<Record<string, unknown>>,
   };
   
   for (const link of pendingLinks) {

@@ -1795,7 +1795,7 @@ const unsubscribeFromReminders = async (req: express.Request, res: express.Respo
     
   } catch (e) {
     const errorMessage = getErrorMessage(e);
-    userLogger.error(`Unsubscribe error: ${errorMessage}`, new Error(e as any));
+    userLogger.error(`Unsubscribe error: ${errorMessage}`, new Error(String(e)));
     errorResponseHelper(res, 500, errorMessage);
   }
 };
@@ -1849,7 +1849,7 @@ const unsubscribeFromPaymentReminders = async (req: express.Request, res: expres
     
   } catch (e) {
     const errorMessage = getErrorMessage(e);
-    userLogger.error(`Unsubscribe payment reminders error: ${errorMessage}`, new Error(e as any));
+    userLogger.error(`Unsubscribe payment reminders error: ${errorMessage}`, new Error(String(e)));
     errorResponseHelper(res, 500, errorMessage);
   }
 };

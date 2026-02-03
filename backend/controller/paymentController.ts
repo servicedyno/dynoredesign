@@ -5298,7 +5298,7 @@ const sweepNativeAdminFees = async () => {
             // Update temp address status
             await userTempAddressModel.update(
               {
-                adminTxId: (currentAddress as any).adminTxId 
+                adminTxId: (currentAddress as { adminTxId?: string }).adminTxId 
                   ? (currentAddress as any).adminTxId + "," + transactionDetails?.txId 
                   : transactionDetails?.txId,
                 admin_status: "successful",
@@ -6034,9 +6034,9 @@ const getConfiguredCurrenciesForCheckout = async (
       });
       
       if (paymentLink) {
-        companyId = (paymentLink as any).company_id;
-        userId = (paymentLink as any).user_id;
-        feePayerFromLink = (paymentLink as any).fee_payer || 'company';
+        companyId = (paymentLink as Record<string, unknown>).company_id;
+        userId = (paymentLink as Record<string, unknown>).user_id;
+        feePayerFromLink = (paymentLink as Record<string, unknown>).fee_payer || 'company';
       }
     }
     
@@ -6118,15 +6118,15 @@ const getConfiguredCurrenciesForCheckout = async (
         attributes: ['link_id', 'base_amount', 'base_currency', 'fee_payer'],
       });
       if (paymentLink) {
-        linkId = (paymentLink as any).link_id;
-        if (!transactionAmount && (paymentLink as any).base_amount) {
-          transactionAmount = parseFloat((paymentLink as any).base_amount);
+        linkId = (paymentLink as Record<string, unknown>).link_id;
+        if (!transactionAmount && (paymentLink as Record<string, unknown>).base_amount) {
+          transactionAmount = parseFloat((paymentLink as Record<string, unknown>).base_amount);
         }
-        if ((paymentLink as any).base_currency) {
-          transactionCurrency = (paymentLink as any).base_currency;
+        if ((paymentLink as Record<string, unknown>).base_currency) {
+          transactionCurrency = (paymentLink as Record<string, unknown>).base_currency;
         }
-        if ((paymentLink as any).fee_payer) {
-          feeInfo.fee_payer = (paymentLink as any).fee_payer;
+        if ((paymentLink as Record<string, unknown>).fee_payer) {
+          feeInfo.fee_payer = (paymentLink as Record<string, unknown>).fee_payer;
         }
       }
     }

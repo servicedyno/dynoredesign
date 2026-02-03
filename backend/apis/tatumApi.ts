@@ -58,7 +58,7 @@ const encryptSymmetric = async (dataToEncrypt, keyId) => {
       private_key_id: process.env.PRIVATE_KEY_ID,
       private_key: privateKey,
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    } as any,
+    } as Record<string, unknown>,
   });
 
   const keyName = client.cryptoKeyPath(projectId, locationId, keyRingId, keyId);
@@ -102,7 +102,7 @@ async function decryptSymmetric(ciphertext, keyId) {
       private_key_id: process.env.PRIVATE_KEY_ID,
       private_key: privateKey,
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    } as any,
+    } as Record<string, unknown>,
   });
 
   const buffer = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0));
@@ -151,7 +151,7 @@ const getTatumSDK = async () => {
           private_key_id: process.env.PRIVATE_KEY_ID,
           private_key: privateKey,
           client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        } as any,
+        } as Record<string, unknown>,
       });
       const gcpProjectId = process.env.GCP_PROJECT_ID || process.env.PROJECT_ID || '163670787265';
       const [version] = await client.accessSecretVersion({
@@ -191,7 +191,7 @@ const getTatumKey = async () => {
           private_key_id: process.env.PRIVATE_KEY_ID,
           private_key: privateKey,
           client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        } as any,
+        } as Record<string, unknown>,
       });
       const gcpProjectId = process.env.GCP_PROJECT_ID || process.env.PROJECT_ID || '1098360994708';
       const [version] = await client.accessSecretVersion({
@@ -814,7 +814,7 @@ const deleteSubscription = async (id) => {
  * List all active subscriptions from Tatum
  * Cost: ~2 credits per call
  */
-const listAllSubscriptions = async (): Promise<any[]> => {
+const listAllSubscriptions = async (): Promise<Array<Record<string, unknown>>> => {
   try {
     const headers = await getTatumHeaders();
     const allSubscriptions: Array<Record<string, unknown>> = [];
@@ -1779,7 +1779,7 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.blockchain.bitcoin.btcGetTxByAddress(
         address, limit, 0
       );
-      for (const tx of (txData as any[]) || []) {
+      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
         // Find the output for our address
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
@@ -1797,10 +1797,10 @@ const getIncomingTransactions = async (
       }
     } else if (currency === "ETH") {
       // Note: ethGetAccountTransactions may not exist in newer SDK - use alternative
-      const txData = await (tatumSdk.blockchain.eth as any).ethGetAccountTransactions?.(
+      const txData = await (tatumSdk.blockchain.eth as unknown as { ethGetAccountTransactions?: (address: string) => Promise<unknown>; ethGetBlockNumber?: () => Promise<number> }).ethGetAccountTransactions?.(
         address, 0, limit
       ) || await tatumSdk.blockchain.eth.ethGetTransaction(address).catch(() => []);
-      for (const tx of (txData as any[]) || []) {
+      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
         // Only incoming transactions (where we are the recipient)
         if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
           transactions.push({
@@ -1814,7 +1814,7 @@ const getIncomingTransactions = async (
       const result = await tatumSdk.blockchain.tron.tronAccountTx(
         address, undefined, undefined, true
       );
-      for (const tx of (result as any)?.transactions || []) {
+      for (const tx of (result as { transactions?: Array<Record<string, unknown>> })?.transactions || []) {
         // Check if this is a TRX transfer to our address
         const contract = tx.rawData?.contract?.[0];
         if (contract?.type === 'TransferContract') {
@@ -1835,7 +1835,7 @@ const getIncomingTransactions = async (
       const result = await tatumSdk.blockchain.tron.tronAccountTx20(
         address, undefined, undefined, true
       );
-      for (const tx of (result as any)?.transactions || []) {
+      for (const tx of (result as { transactions?: Array<Record<string, unknown>> })?.transactions || []) {
         // TRC20 transfers
         if (tx.to === address && parseFloat(tx.value || '0') > 0) {
           transactions.push({
@@ -1850,7 +1850,7 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.fungibleToken.erc20GetTransactionByAddress(
         "ETH", address, contractAddress, limit
       );
-      for (const tx of (txData as any[]) || []) {
+      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
         if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
           transactions.push({
             txId: tx.transactionHash || tx.txId || tx.hash,
@@ -1863,7 +1863,7 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.blockchain.ltc.ltcGetTxByAddress(
         address, limit, 0
       );
-      for (const tx of (txData as any[]) || []) {
+      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
@@ -1882,7 +1882,7 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.blockchain.doge.dogeGetTxByAddress(
         address, limit, 0
       );
-      for (const tx of (txData as any[]) || []) {
+      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
@@ -1901,7 +1901,7 @@ const getIncomingTransactions = async (
       const txData = await tatumSdk.blockchain.bcash.bchGetTxByAddress(
         address, limit
       );
-      for (const tx of (txData as any[]) || []) {
+      for (const tx of (txData as Array<Record<string, unknown>>) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
@@ -2030,7 +2030,7 @@ const getTransactionConfirmations = async (
     } else if (currency === 'ETH' || currency === 'USDT-ERC20' || currency === 'USDC-ERC20') {
       const txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);
       if (txData && txData.blockNumber) {
-        const currentBlock: unknown = await (tatumSdk.blockchain.eth as any).ethGetBlockNumber?.() || 0;
+        const currentBlock: unknown = await (tatumSdk.blockchain.eth as unknown as { ethGetAccountTransactions?: (address: string) => Promise<unknown>; ethGetBlockNumber?: () => Promise<number> }).ethGetBlockNumber?.() || 0;
         if (currentBlock) {
           confirmations = currentBlock - txData.blockNumber + 1;
         }

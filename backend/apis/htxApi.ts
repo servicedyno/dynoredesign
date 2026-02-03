@@ -5,7 +5,7 @@ import CryptoJS from "crypto-js";
  * HTX API signature generation
  * Used for authenticated requests to HTX (formerly Huobi) exchange
  */
-const sign_sha = (method: string, baseurl: string, path: string, data: Record<string, any>): string => {
+const sign_sha = (method: string, baseurl: string, path: string, data: Record<string, unknown>): string => {
   const pars: string[] = [];
   for (const item in data) {
     pars.push(item + "=" + encodeURIComponent(data[item]));

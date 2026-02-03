@@ -26,7 +26,7 @@ const customerAuthMiddleware = async (
     
     try {
       // Verify token synchronously
-      const decoded = jwt.verify(token, tokenSecret) as any;
+      const decoded = jwt.verify(token, tokenSecret) as { user_id?: number; customer_id?: string; email?: string; [key: string]: unknown };
       
       console.log("userData=========>", decoded);
       
