@@ -1069,7 +1069,7 @@ const cardPayment = async (
           }),
       },
     }),
-    redirect_url: "http://localhost:3000/payment/verify",
+    redirect_url: `${process.env.FRONTEND_URL || process.env.REACT_APP_FRONTEND_URL || ''}/payment/verify`,
   };
 
   console.log("payload==========>", payload);
