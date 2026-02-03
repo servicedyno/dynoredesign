@@ -4,7 +4,7 @@ dotenv.config();
 
 const localSecretKey = process.env.CYPHER_KEY;
 
-const encrypt = (content: any, secretKey?: string) => {
+const encrypt = (content: unknown, secretKey?: string) => {
   const cipherText = CryptoJS.AES.encrypt(
     content,
     secretKey ?? localSecretKey

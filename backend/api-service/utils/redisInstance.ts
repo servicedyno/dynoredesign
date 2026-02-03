@@ -22,7 +22,7 @@ export const connectRedis = async () => {
   }
 };
 
-const setRedisItem = async (key: string, value: any) => {
+const setRedisItem = async (key: string, value: unknown) => {
   for (const [field, val] of Object.entries(value)) {
     if (val !== undefined && val !== null) {
       await redisClient.hSet(key, field, val.toString());

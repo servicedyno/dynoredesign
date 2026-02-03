@@ -53,7 +53,7 @@ const apiMiddleware = async (
     }
   } catch (e) {
     const errorMessage = getErrorMessage(e);
-    customerLogger.error(errorMessage, new Error(e as any));
+    customerLogger.error(errorMessage, new Error(String(e)));
     errorResponseHelper(res, 500, "API key validation error: " + errorMessage);
   }
 };

@@ -249,7 +249,7 @@ export const redeemUserReferralCode = async (params: {
     return { success: false, message: 'Invalid referral code' };
   }
 
-  const referrerId = (referrer as any).user_id;
+  const referrerId = (referrer as { user_id: number }).user_id;
 
   // Check if user is trying to refer themselves
   if (referrerId === newUserId) {
@@ -398,9 +398,9 @@ export const getUserFeeDiscount = async (userId: number): Promise<{
     return { discountPercent: 0, reason: null, expiresAt: null };
   }
 
-  const discountPercent = (user as any).fee_discount_percent || 0;
-  const expiresAt = (user as any).fee_discount_expires_at;
-  const reason = (user as any).fee_discount_reason;
+  const discountPercent = (user as { fee_discount_percent?: number }).fee_discount_percent || 0;
+  const expiresAt = (user as { fee_discount_expires_at?: Date }).fee_discount_expires_at;
+  const reason = (user as { fee_discount_reason?: string }).fee_discount_reason;
 
   // Check if discount has expired
   if (!expiresAt || new Date() > expiresAt) {

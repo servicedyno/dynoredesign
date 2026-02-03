@@ -64,7 +64,7 @@ export interface Data {
   narration: string;
   status: string;
   payment_type: string;
-  plan: any;
+  plan: Record<string, unknown> | null;
   fraud_status: string;
   charge_type: string;
   created_at: string;
@@ -76,7 +76,7 @@ export interface Data {
 
 export interface Customer {
   id: number;
-  phone_number: any;
+  phone_number: string | null;
   name: string;
   email: string;
   created_at: string;
@@ -112,8 +112,8 @@ export interface IWebHook {
   txRef: string;
   flwRef: string;
   orderRef: string;
-  paymentPlan: any;
-  paymentPage: any;
+  paymentPlan: Record<string, unknown> | null;
+  paymentPage: Record<string, unknown> | null;
   createdAt: string;
   amount: number;
   charged_amount: number;
@@ -132,11 +132,11 @@ export interface IWebHookCustomer {
   id: number;
   phone: string;
   fullName: string;
-  customertoken: any;
+  customertoken: string | null;
   email: string;
   createdAt: string;
   updatedAt: string;
-  deletedAt: any;
+  deletedAt: Date | null;
   AccountId: number;
 }
 
@@ -168,7 +168,7 @@ export interface IVerifyResponse {
     payment_type: string;
     created_at: string;
     account_id: number;
-    meta: any;
+    meta: Record<string, unknown> | null;
     amount_settled: number;
     customer: Customer;
   };

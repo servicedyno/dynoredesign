@@ -43,7 +43,7 @@ async function syncDatabase() {
       ORDER BY table_name;
     `);
     
-    tables.forEach((table: any, index: number) => {
+    tables.forEach((table: Record<string, unknown>, index: number) => {
       console.log(`   ${index + 1}. ${table.table_name}`);
     });
     

@@ -26,7 +26,7 @@ const authMiddleware = async (
     
     try {
       // Verify token synchronously
-      const decoded = jwt.verify(token, tokenSecret) as any;
+      const decoded = jwt.verify(token, tokenSecret) as { user_id?: number; customer_id?: string; email?: string };
       
       // Check if decoded token is valid and has required id
       if (!decoded || !decoded.id) {

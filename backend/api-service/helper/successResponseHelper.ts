@@ -3,7 +3,7 @@ const successResponseHelper = (
   res: express.Response,
   statusCode: number,
   message: string,
-  data?: any,
+  data?: unknown,
   totalCount?: number
 ) => {
   if (!data) {
