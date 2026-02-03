@@ -1722,7 +1722,7 @@ export const getPoolStatus = async (userId?: number): Promise<unknown> => {
 /**
  * Find pool address by wallet address
  */
-export const findByWalletAddress = async (walletAddress: string): Promise<Record<string, unknown> | null> => {
+export const findByWalletAddress = async (walletAddress: string): Promise<unknown> => {
   return await merchantTempAddressModel.findOne({
     where: { wallet_address: walletAddress },
   });
