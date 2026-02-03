@@ -128,6 +128,19 @@ const addCompany = async (req: express.Request, res: express.Response) => {
     }
     let taxValidation = null;
     if (data.vat_number && data.vat_number.trim() !== "" && data.country && data.country.trim() !== "") {
+      // Extract VAT country code from VAT number (first 2 characters for most formats)
+      const vatCountryCode = data.vat_number.trim().substring(0, 2).toUpperCase();
+      const companyCountryCode = data.country.trim().toUpperCase();
+      
+      // Validate that company country matches VAT country
+      if (vatCountryCode !== companyCountryCode) {
+        return errorResponseHelper(
+          res,
+          400,
+          `Company country (${companyCountryCode}) must match VAT country (${vatCountryCode}). Please ensure the company is registered in ${vatCountryCode} or remove the VAT number.`
+        );
+      }
+      
       companyLogger.info(
         `Validating TAX ID: ${data.vat_number} for country: ${data.country}`,
         { user_id: userData.user_id, email: userData.email }
