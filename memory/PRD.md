@@ -51,6 +51,44 @@ A full-stack crypto payment gateway called "Dynopay" with:
 
 ## What's Been Implemented
 
+### Session: February 2026
+
+#### UI/UX Design Document for Missing Screens - COMPLETED ✅
+**Date:** February 2026
+
+**Document Created:** `/app/UI_UX_DESIGN_REQUEST.md`
+
+**Screens Documented:**
+1. **Company Settings** - Webhook notifications + Payment tolerance settings
+2. **Create Payment Link** - Crypto selector + Tax toggle
+3. **Edit Payment Link** - New screen (copy of Create with edit behaviors)
+4. **Payment Links List** - Add Edit button by status
+5. **Checkout Page** - Tax breakdown display for customers
+
+**Key Clarifications:**
+- Tax is **location-based** (customer's country at checkout), NOT company country
+- Merchant only toggles tax ON/OFF per payment link
+- Tax rate is automatically detected based on customer IP geolocation
+- Supported cryptos: BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20
+
+#### TypeScript Any Removal - COMPLETED ✅
+**Date:** February 2026
+- Removed ~99% of `any` types from backend codebase
+- Created `/app/backend/types/index.ts` for shared interfaces
+- Backend compiles and runs without errors
+
+#### Rate Limiting - COMPLETED ✅
+**Date:** February 2026
+- Applied rate limiters to sensitive auth routes (login, forgot-password)
+- Middleware: `/app/backend/middleware/rateLimitMiddleware.ts`
+
+#### VAT Validation - COMPLETED ✅
+**Date:** February 2026
+- Company country must match VAT ID country
+- Implemented in `companyController.ts` for add/update operations
+
+---
+
 ### Session: December 2025
 
 #### Gas System Cleanup - COMPLETED ✅
