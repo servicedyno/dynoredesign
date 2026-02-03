@@ -967,12 +967,13 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
       });
 
     } catch (webhookError: unknown) {
+      const err = webhookError as { message?: string; response?: { status?: number } };
       const responseTime = Date.now() - startTime;
       const errorDetails = {
         status: 'failed',
-        webhook_url: result.webhook_url,
-        error: webhookError.message,
-        response_status: webhookError.response?.status || null,
+        webhook_url: result.dataValues.webhook_url,
+        error: err.message,
+        response_status: err.response?.status || null,
         response_time_ms: responseTime,
         payload_attempted: testPayload,
       };
@@ -985,20 +986,20 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
         {
           replacements: {
             company_id,
-            webhook_url: result.webhook_url,
+            webhook_url: result.dataValues.webhook_url,
             event_type: 'webhook.test',
             webhook_id: testPayload.webhook_id,
             payload: JSON.stringify(testPayload),
-            response_status: webhookError.response?.status || null,
+            response_status: err.response?.status || null,
             response_time_ms: responseTime,
-            error_message: webhookError.message,
+            error_message: err.message,
           },
           type: QueryTypes.INSERT,
         }
       );
 
       companyLogger.error(
-        `Test webhook failed: ${webhookError.message}`,
+        `Test webhook failed: ${err.message}`,
         { user_id: userData.user_id, company_id, ...errorDetails }
       );
 
