@@ -244,8 +244,8 @@ const calculateEvmFee = async (
     };
   }
 
-  const feeData = await fetchTatumFee(chain);
-  const gasPriceWei = feeData[speed] || feeData.fast;
+  const feeData = await fetchTatumFee(chain) as { fast?: number; medium?: number; slow?: number };
+  const gasPriceWei = feeData[speed] || feeData.fast || 0;
   const gasPriceGwei = gasPriceWei / 1e9;
   
   // Determine gas limit based on transaction type
