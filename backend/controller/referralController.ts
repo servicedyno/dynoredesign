@@ -368,7 +368,7 @@ export const processReferralReward = async (userId: number, transactionAmount: n
   try {
     // Find if user was referred
     const user = await User.findByPk(userId);
-    if (!user || !(user as Record<string, unknown>).referred_by_code) {
+    if (!user || !(user as unknown as Record<string, unknown>).referred_by_code) {
       return null; // User wasn't referred
     }
 
