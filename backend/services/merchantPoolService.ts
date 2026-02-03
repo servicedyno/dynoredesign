@@ -2253,7 +2253,7 @@ export const checkMissedPayments = async (): Promise<{
         console.log(`[MerchantPool] 🚀 Processing missed payment via cryptoVerification...`);
         
         try {
-          const verificationResult = await paymentController.cryptoVerification(walletAddress, true);
+          const verificationResult = await paymentController.cryptoVerification(walletAddress, true) as { duplicate?: boolean; status?: number; paymentStatus?: string };
           
           if (verificationResult?.duplicate) {
             console.log(`[MerchantPool] ⏭️ Payment was already processed (duplicate detected)`);
@@ -2282,19 +2282,21 @@ export const checkMissedPayments = async (): Promise<{
             result.errors.push(`Verification returned unexpected result for ${walletAddress}`);
           }
         } catch (verifyError: unknown) {
+          const err = verifyError as { paymentStatus?: string; amount?: number; message?: string };
           // Check if it's an expected "throw" for incomplete payments
-          if (verifyError?.paymentStatus === 'incomplete') {
-            console.log(`[MerchantPool] 📋 Partial payment detected - ${verifyError.amount} ${walletType} remaining`);
+          if (err?.paymentStatus === 'incomplete') {
+            console.log(`[MerchantPool] 📋 Partial payment detected - ${err.amount} ${walletType} remaining`);
             result.processed++;
           } else {
-            console.error(`[MerchantPool] ❌ cryptoVerification failed:`, verifyError.message || verifyError);
-            result.errors.push(`Verification failed for ${walletAddress}: ${verifyError.message || 'Unknown error'}`);
+            console.error(`[MerchantPool] ❌ cryptoVerification failed:`, err.message || verifyError);
+            result.errors.push(`Verification failed for ${walletAddress}: ${err.message || 'Unknown error'}`);
           }
         }
         
       } catch (error: unknown) {
-        console.error(`[MerchantPool] ❌ Error processing ${walletAddress}:`, error.message);
-        result.errors.push(`Processing failed for ${walletAddress}: ${error.message}`);
+        const err = error as { message?: string };
+        console.error(`[MerchantPool] ❌ Error processing ${walletAddress}:`, err.message);
+        result.errors.push(`Processing failed for ${walletAddress}: ${err.message}`);
       }
     }
 
@@ -2309,8 +2311,9 @@ export const checkMissedPayments = async (): Promise<{
     }
     
   } catch (error: unknown) {
-    console.error("[MerchantPool] ❌ Missed payment check failed:", error.message);
-    result.errors.push(`Global error: ${error.message}`);
+    const err = error as { message?: string };
+    console.error("[MerchantPool] ❌ Missed payment check failed:", err.message);
+    result.errors.push(`Global error: ${err.message}`);
   }
 
   return result;
