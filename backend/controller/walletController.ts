@@ -3915,10 +3915,10 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
       return errorResponseHelper(res, 404, "Transaction not found");
     }
 
-    const txData: Record<string, unknown> = transaction[0];
+    const txData = transaction[0] as Record<string, unknown>;
 
     // Calculate total fees
-    const totalFees = (txData.transaction_fee || 0) + (txData.fixed_fee || 0) + (txData.blockchain_buffer_fee || 0);
+    const totalFees = Number(txData.transaction_fee || 0) + Number(txData.fixed_fee || 0) + Number(txData.blockchain_buffer_fee || 0);
 
     // Format response according to Figma UI requirements
     const response = {
@@ -3956,7 +3956,7 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
       // Callback Information
       callback_url: txData.callback_url || null,
       webhook_url: txData.webhook_url || null,
-      webhook_response: txData.webhook_response ? JSON.parse(txData.webhook_response) : null,
+      webhook_response: txData.webhook_response ? JSON.parse(String(txData.webhook_response)) : null,
       
       // Company & Customer Details - both formats
       company: {
