@@ -2693,7 +2693,7 @@ const settleCryptoTransaction = async ({
 
       fees = await tatumApi.feeEstimation(
         currency,
-        tempAddressData.wallet_address,
+        fromAddress,
         userAddress,
         Number(userAmount),
         contractAddress
@@ -2705,7 +2705,7 @@ const settleCryptoTransaction = async ({
       merchantTransactionDetails = await withRetry(
         () => tatumApi.assetToOtherAddress({
           currency,
-          fromAddress: tempAddressData.wallet_address,
+          fromAddress: fromAddress,
           toAddress: userAddress,
           privateKey: privateKey,
           amount: merchantSendAmount,
@@ -2725,7 +2725,7 @@ const settleCryptoTransaction = async ({
         // UTXO chains: Create single transaction with two outputs (merchant + admin)
         fees = await tatumApi.feeEstimation(
           currency,
-          tempAddressData.wallet_address,
+          fromAddress,
           userAddress,
           Number(receivedAmount) + Number(userAmount)
         );
@@ -2738,7 +2738,7 @@ const settleCryptoTransaction = async ({
         merchantTransactionDetails = await withRetry(
           () => tatumApi.assetToOtherAddress({
             currency,
-            fromAddress: tempAddressData.wallet_address,
+            fromAddress: fromAddress,
             toAddress: userAddress,  // Primary recipient is merchant
             privateKey: privateKey,
             amount: merchantSendAmount,
