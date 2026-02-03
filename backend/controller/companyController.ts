@@ -97,8 +97,9 @@ const validateTaxIdInternal = async (vat_number: string, country_code: string) =
       query_status: "completed",
     };
   } catch (apiError: unknown) {
+    const err = apiError as { response?: { data?: { message?: string }; status?: number }; message?: string };
     // Handle rate limiting
-    if (apiError.response?.data?.message?.includes("exceeded")) {
+    if (err.response?.data?.message?.includes("exceeded")) {
       return {
         valid: null,
         format_valid: null,
@@ -108,7 +109,7 @@ const validateTaxIdInternal = async (vat_number: string, country_code: string) =
     }
 
     // Invalid format
-    if (apiError.response?.status === 400) {
+    if (err.response?.status === 400) {
       return {
         valid: false,
         format_valid: false,
