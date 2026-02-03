@@ -126,7 +126,8 @@ const getCoinGeckoRate = async (crypto: string, fiat: string): Promise<number | 
       return rate;
     }
   } catch (error: unknown) {
-    console.warn(`[currencyConvert] CoinGecko API failed for ${crypto}→${fiat}: ${error.message}`);
+    const err = error as { message?: string };
+    console.warn(`[currencyConvert] CoinGecko API failed for ${crypto}→${fiat}: ${err.message}`);
   }
   return null;
 };
