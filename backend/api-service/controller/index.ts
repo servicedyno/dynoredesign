@@ -210,7 +210,7 @@ const getSupportedCurrency = async (
       { type: QueryTypes.SELECT }
     );
 
-    const currencyList = tempData.map((x: unknown) => x.wallet_type);
+    const currencyList = tempData.map((x: WalletTypeResult) => x.wallet_type);
 
     successResponseHelper(res, 200, "", [...currencyList]);
   } catch (e) {
