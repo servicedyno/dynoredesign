@@ -385,25 +385,34 @@ const getData = async (req: express.Request, res: express.Response) => {
       underpayment_threshold_usd: 1,   // Default: $1 maximum underpayment to accept as full payment
     };
     
+    // Define company data interface
+    interface CompanyDataValues {
+      company_name?: string;
+      photo?: string;
+      grace_period_minutes?: number | string;
+      overpayment_threshold_usd?: number | string;
+      underpayment_threshold_usd?: number | string;
+    }
+    
     if (item.company_id) {
       try {
         const company = await companyModel.findByPk(item.company_id);
         if (company) {
-          const companyData = (company as { dataValues: Record<string, unknown> }).dataValues;
+          const companyData = (company as { dataValues: CompanyDataValues }).dataValues;
           companyInfo = {
-            company_name: companyData.company_name || null,
-            company_logo: companyData.photo || null,  // Only include if available
+            company_name: String(companyData.company_name || '') || null,
+            company_logo: String(companyData.photo || '') || null,  // Only include if available
           };
           
           // Override defaults with company-specific settings if configured
           if (companyData.grace_period_minutes !== undefined && companyData.grace_period_minutes !== null) {
-            paymentSettings.grace_period_minutes = parseInt(companyData.grace_period_minutes);
+            paymentSettings.grace_period_minutes = parseInt(String(companyData.grace_period_minutes));
           }
           if (companyData.overpayment_threshold_usd !== undefined && companyData.overpayment_threshold_usd !== null) {
-            paymentSettings.overpayment_threshold_usd = parseFloat(companyData.overpayment_threshold_usd);
+            paymentSettings.overpayment_threshold_usd = parseFloat(String(companyData.overpayment_threshold_usd));
           }
           if (companyData.underpayment_threshold_usd !== undefined && companyData.underpayment_threshold_usd !== null) {
-            paymentSettings.underpayment_threshold_usd = parseFloat(companyData.underpayment_threshold_usd);
+            paymentSettings.underpayment_threshold_usd = parseFloat(String(companyData.underpayment_threshold_usd));
           }
         }
       } catch (companyError) {
