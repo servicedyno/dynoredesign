@@ -1231,9 +1231,10 @@ const assetBatchAddressesToOtherAddress = async ({
       }
     );
     console.log("###result", result);
+    const txId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
     fromAddress.forEach((fromAdd) => {
       transactions.push({
-        txId: result?.txId,
+        txId: txId,
         status: "success",
         reason: null,
         fromAddress: fromAdd,
@@ -1241,7 +1242,7 @@ const assetBatchAddressesToOtherAddress = async ({
     });
     console.log("###transactions", transactions);
   } else if (currency === "ETH" || currency === "USDT-ERC20") {
-    let transactionResponse = [];
+    let transactionResponse: Array<{ txId: string; status: string; reason: string | null; fromAddress: unknown }> = [];
     // Send assets from all addresses to one address
     await Promise.allSettled(
       fromAddress.map(async (fromAddr) => {
@@ -1266,8 +1267,9 @@ const assetBatchAddressesToOtherAddress = async ({
               },
               currency: currency === "ETH" ? "ETH" : "USDT",
             });
+          const ethTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
           transactionResponse.push({
-            txId: result?.txId,
+            txId: ethTxId,
             status: "success",
             reason: null,
             fromAddress: fromAddr,
