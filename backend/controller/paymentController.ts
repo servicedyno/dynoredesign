@@ -283,15 +283,24 @@ const calculateTaxForCheckout = async (
     let taxAcronym = TAX_ACRONYMS[upperCountryCode] || 'Tax';
     let countryName = COUNTRY_NAMES[upperCountryCode] || countryCode;
     
+    // Define type for cached rate
+    interface CachedTaxRate {
+      dataValues: {
+        standard_rate?: string | number;
+        tax_acronym?: string;
+        country_name?: string;
+      };
+    }
+    
     // Check database cache first
     const cachedRate = await taxRateModel.findOne({
       where: { country_code: upperCountryCode }
-    });
+    }) as CachedTaxRate | null;
 
     if (cachedRate) {
-      taxRate = parseFloat((cachedRate as { dataValues: Record<string, unknown> }).dataValues.standard_rate) || 0;
-      taxAcronym = (cachedRate as { dataValues: Record<string, unknown> }).dataValues.tax_acronym || taxAcronym;
-      countryName = (cachedRate as { dataValues: Record<string, unknown> }).dataValues.country_name || countryName;
+      taxRate = parseFloat(String(cachedRate.dataValues.standard_rate)) || 0;
+      taxAcronym = String(cachedRate.dataValues.tax_acronym || taxAcronym);
+      countryName = String(cachedRate.dataValues.country_name || countryName);
       console.log(`[Tax] Using cached rate for ${upperCountryCode}: ${taxRate}%`);
     } else if (TAX_DATA_API_KEY) {
       // Try to fetch from API
@@ -340,7 +349,8 @@ const calculateTaxForCheckout = async (
       currency
     };
   } catch (error: unknown) {
-    console.error(`[Tax] Error calculating tax:`, error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`[Tax] Error calculating tax:`, errorMessage);
     return null;
   }
 };
