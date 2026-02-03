@@ -279,7 +279,7 @@ const getTransactionInvoice = async (
             res,
             200,
             "Invoice generated successfully",
-            generatedInvoice.dataValues
+            (generatedInvoice as unknown as { dataValues: Record<string, unknown> }).dataValues
           );
         }
       }

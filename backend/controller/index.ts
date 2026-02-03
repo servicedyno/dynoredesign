@@ -137,9 +137,16 @@ export const calculateTransactionFees = async (
   }
 
   // Find the matching tier based on amount
-  const tiers = config.tiers || [];
+  interface FeeTier {
+    min_amount: number;
+    max_amount: number | null;
+    fixed_fee: number;
+    blockchain_buffer_percent: number;
+    id?: number;
+  }
+  const tiers = (config.tiers || []) as FeeTier[];
   const matchingTier = tiers.find(
-    (tier: { min_amount: number; max_amount: number | null; fixed_fee: number; blockchain_buffer_percent: number; id?: number }) =>
+    (tier: FeeTier) =>
       amount >= tier.min_amount &&
       (tier.max_amount === null || amount <= tier.max_amount)
   );
@@ -163,7 +170,7 @@ export const calculateTransactionFees = async (
     blockchainBuffer,
     totalDeduction,
     userReceives,
-    tierId: matchingTier.id || 0,
+    tierId: matchingTier.id ?? 0,
     minForwarding: config.min_forwarding_amount,
   };
 };
@@ -182,9 +189,16 @@ export const calculateTransactionFeesWithDiscount = async (
   }
 
   // Find the matching tier based on amount
-  const tiers = config.tiers || [];
+  interface FeeTierDiscount {
+    min_amount: number;
+    max_amount: number | null;
+    fixed_fee: number;
+    blockchain_buffer_percent: number;
+    id?: number;
+  }
+  const tiers = (config.tiers || []) as FeeTierDiscount[];
   const matchingTier = tiers.find(
-    (tier: { min_amount: number; max_amount: number | null; fixed_fee: number; blockchain_buffer_percent: number; id?: number }) =>
+    (tier: FeeTierDiscount) =>
       amount >= tier.min_amount &&
       (tier.max_amount === null || amount <= tier.max_amount)
   );
@@ -220,7 +234,7 @@ export const calculateTransactionFeesWithDiscount = async (
     blockchainBuffer,
     totalDeduction,
     userReceives,
-    tierId: matchingTier.id || 0,
+    tierId: matchingTier.id ?? 0,
     minForwarding: config.min_forwarding_amount,
     // Discount info
     discountApplied: discountPercent > 0,

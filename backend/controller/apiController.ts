@@ -476,7 +476,7 @@ const createPlan = async (req: express.Request, res: express.Response) => {
       plan_name,
       amount,
       interval,
-      currency: data.currency,
+      currency: (req.body as Record<string, unknown>).currency,
     };
 
     const planData = await planModel.create({ ...payload });

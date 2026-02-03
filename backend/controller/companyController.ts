@@ -973,9 +973,10 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
     } catch (webhookError: unknown) {
       const err = webhookError as { message?: string; response?: { status?: number } };
       const responseTime = Date.now() - startTime;
+      const resultData = result as unknown as { dataValues: { webhook_url?: string; webhook_secret?: string; company_name?: string } };
       const errorDetails = {
         status: 'failed',
-        webhook_url: result.dataValues.webhook_url,
+        webhook_url: resultData.dataValues.webhook_url,
         error: err.message,
         response_status: err.response?.status || null,
         response_time_ms: responseTime,
@@ -990,7 +991,7 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
         {
           replacements: {
             company_id,
-            webhook_url: result.dataValues.webhook_url,
+            webhook_url: resultData.dataValues.webhook_url,
             event_type: 'webhook.test',
             webhook_id: testPayload.webhook_id,
             payload: JSON.stringify(testPayload),

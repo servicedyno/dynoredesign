@@ -2059,7 +2059,7 @@ const waitForTransactionConfirmation = async (
       
       if (txData && txData.blockNumber) {
         console.log(`[waitForTransactionConfirmation] TX ${txHash} confirmed in block ${txData.blockNumber}`);
-        return { confirmed: true, blockNumber: txData.blockNumber };
+        return { confirmed: true, blockNumber: txData.blockNumber as number };
       }
       
       console.log(`[waitForTransactionConfirmation] TX ${txHash} still pending, waiting...`);
