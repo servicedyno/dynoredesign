@@ -40,11 +40,17 @@ const POOL_CONFIG = {
   PROCESSING_TIMEOUT_MINUTES: 60,
   STALE_LOCK_TIMEOUT_MINUTES: 120,
   
-  // Gas funding amounts
-  TRX_GAS_AMOUNT: 60,
-  TRX_GAS_MIN_DEFICIT: 10,
-  ETH_GAS_AMOUNT: 0.004,
-  ETH_GAS_MIN_DEFICIT: 0.001,
+  // Smart Gas Funding Settings
+  // Instead of fixed amounts, we now estimate gas + add safety buffer
+  GAS_SAFETY_BUFFER: 1.3,  // 30% extra to ensure transaction success
+  
+  // Minimum gas to maintain (fallback if estimation fails)
+  TRX_GAS_FALLBACK: 15,    // Reduced from 60 - only used if estimation fails
+  ETH_GAS_FALLBACK: 0.001, // Reduced from 0.004 - only used if estimation fails
+  
+  // Minimum deficit to trigger funding (avoid micro-transactions)
+  TRX_MIN_DEFICIT: 2,      // Only fund if need > 2 TRX
+  ETH_MIN_DEFICIT: 0.0002, // Only fund if need > 0.0002 ETH
   
   // Retry settings
   MAX_RETRIES: 3,
