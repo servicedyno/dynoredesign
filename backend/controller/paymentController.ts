@@ -5411,10 +5411,11 @@ const checkFeeBalance = async () => {
 const checkOnBlockchair = async () => {
   try {
     // Check for pending payments older than crypto invoice window
+    // Using SQL_INTERVALS constant for safety
     const tempData: any[] = await sequelize.query(
       `select * from tbl_user_temp_address 
       where "createdAt"::date = CURRENT_DATE - INTERVAL '1 day' 
-      and "createdAt" <= NOW() - INTERVAL '${PAYMENT_TIMING.CRYPTO_INVOICE_MINUTES} minutes' 
+      and "createdAt" <= NOW() - INTERVAL '${PAYMENT_TIMING.SQL_INTERVALS.CRYPTO_INVOICE}' 
       and status='pending' and check_count=0`,
       { type: QueryTypes.SELECT }
     );
