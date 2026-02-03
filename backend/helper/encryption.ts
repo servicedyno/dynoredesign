@@ -6,7 +6,7 @@ const localSecretKey = process.env.CYPHER_KEY;
 
 const encrypt = (content: unknown, secretKey?: string) => {
   const cipherText = CryptoJS.AES.encrypt(
-    content,
+    String(content),
     secretKey ?? localSecretKey
   ).toString();
 

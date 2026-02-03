@@ -975,7 +975,7 @@ const verifyCryptoPayment = async (
           ) as { slow?: string | number };
 
           sendAmount = Number(
-            Number(receivedAmount) - Number(fees?.slow || 0)
+            Number(receivedAmount) - Number((fees as { slow?: string | number })?.slow || 0)
           ).toFixed(8);
         }
 
@@ -988,7 +988,7 @@ const verifyCryptoPayment = async (
           ) as { slow?: string | number };
           sendAmount = (
             Number(receivedAmount) -
-            Number(fees?.slow || 0) -
+            Number((fees as { slow?: string | number })?.slow || 0) -
             0.00005
           ).toFixed(8);
         }

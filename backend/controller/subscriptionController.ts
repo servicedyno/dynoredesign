@@ -211,7 +211,7 @@ const updateSubscription = async (req: express.Request, res: express.Response) =
     // Update in Flutterwave if needed
     if (sub.flw_subscription_id && status === "cancelled") {
       try {
-        await flw.Subscription.cancel({ id: sub.flw_subscription_id });
+        await (flw as unknown as { Subscription: { cancel: (params: { id: unknown }) => Promise<void> } }).Subscription.cancel({ id: sub.flw_subscription_id });
       } catch (flwError) {
         apiLogger.warn(`Failed to cancel subscription in Flutterwave: ${getErrorMessage(flwError)}`);
       }
@@ -269,7 +269,7 @@ const cancelSubscription = async (req: express.Request, res: express.Response) =
     // Cancel in Flutterwave
     if (sub.flw_subscription_id) {
       try {
-        await flw.Subscription.cancel({ id: sub.flw_subscription_id });
+        await (flw as unknown as { Subscription: { cancel: (params: { id: unknown }) => Promise<void> } }).Subscription.cancel({ id: sub.flw_subscription_id });
       } catch (flwError) {
         apiLogger.warn(`Failed to cancel subscription in Flutterwave: ${getErrorMessage(flwError)}`);
       }
