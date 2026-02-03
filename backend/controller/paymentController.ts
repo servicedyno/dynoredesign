@@ -105,6 +105,47 @@ const PAYMENT_TIMING = {
   
   // Webhook/confirmation timeouts
   TRANSACTION_CONFIRMATION_TIMEOUT_MS: 90000, // 90 seconds
+  
+  // SQL interval constants (for parameterized queries)
+  SQL_INTERVALS: {
+    GRACE_PERIOD: '30 minutes',
+    CRYPTO_INVOICE: '15 minutes', 
+    RECENT_TRANSACTIONS: '2 days',
+    MONTHLY_TRANSACTIONS: '30 days',
+  },
+};
+
+// ============================================
+// CENTRALIZED FEE CONFIGURATION
+// ============================================
+// All fee-related constants in one place
+const FEE_CONFIG = {
+  // Admin fee percentage (0.33 = 33%)
+  ADMIN_FEE_PERCENT: parseFloat(process.env.ADMIN_FEE_PERCENT || '0.33'),
+  
+  // Transaction fee percentage (0.02 = 2%)
+  TRANSACTION_FEE_PERCENT: parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0'),
+  
+  // Gas price bounds for EVM chains (in Gwei)
+  MIN_GAS_PRICE: 3,
+  MAX_GAS_PRICE: 30,
+  GAS_BUFFER: 2, // Admin's portion added to gas price
+};
+
+// ============================================
+// CENTRALIZED ADMIN CONFIGURATION
+// ============================================
+const ADMIN_CONFIG = {
+  // Admin email for notifications (from env, no hardcoded fallback exposed)
+  EMAIL: process.env.ADMIN_EMAIL || process.env.SMTP_USER || '',
+  
+  // JWT expiry times
+  JWT_EXPIRY: {
+    ADMIN: '30d',
+    USER: '7d',
+    API_KEY: '365d',
+    CHECKOUT: '1h',
+  },
 };
 
 // Retry configuration
@@ -112,6 +153,7 @@ const RETRY_CONFIG = {
   MAX_RETRIES: 3,
   INITIAL_DELAY_MS: 2000,
 };
+
 
 /**
  * Retry helper with exponential backoff for blockchain operations
