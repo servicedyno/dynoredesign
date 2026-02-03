@@ -6341,7 +6341,7 @@ const getConfiguredCurrenciesForCheckout = async (
     });
     
     // Extract unique currencies (only those with actual addresses)
-    const currencies = [...new Set(configuredWallets.map((w: Record<string, unknown>) => w.wallet_type))];
+    const currencies = [...new Set(configuredWallets.map((w) => w.dataValues.wallet_type as string))];
     
     console.log(`[getConfiguredCurrenciesForCheckout] Found ${currencies.length} currencies: ${currencies.join(', ')}`);
     
