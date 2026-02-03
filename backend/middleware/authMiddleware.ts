@@ -61,11 +61,12 @@ const authMiddleware = async (
       next();
     } catch (err: unknown) {
       // Handle JWT-specific errors
-      if (err.name === 'TokenExpiredError') {
+      const error = err as { name?: string };
+      if (error.name === 'TokenExpiredError') {
         return errorResponseHelper(res, 401, "Token has expired. Please login again.");
-      } else if (err.name === 'JsonWebTokenError') {
+      } else if (error.name === 'JsonWebTokenError') {
         return errorResponseHelper(res, 401, "Invalid token. Please login again.");
-      } else if (err.name === 'NotBeforeError') {
+      } else if (error.name === 'NotBeforeError') {
         return errorResponseHelper(res, 401, "Token not active yet. Please try again later.");
       } else {
         throw err; // Re-throw to be caught by outer catch
