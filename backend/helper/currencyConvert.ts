@@ -85,11 +85,12 @@ const getFastForexRate = async (from: string, to: string, amount: number): Promi
       };
     }
   } catch (error: unknown) {
-    const errorMsg = error.response?.data?.error || error.message;
+    const err = error as { response?: { data?: { error?: string }; status?: number }; message?: string };
+    const errorMsg = err.response?.data?.error || err.message;
     console.warn(`[currencyConvert] FastForex API failed for ${from}→${to}: ${errorMsg}`);
     
     // Check if it's a plan restriction error
-    if (errorMsg?.includes('No access') || errorMsg?.includes('plan') || error.response?.status === 403) {
+    if (errorMsg?.includes('No access') || errorMsg?.includes('plan') || err.response?.status === 403) {
       console.warn(`[currencyConvert] FastForex plan restriction detected, will try CoinGecko fallback`);
     }
   }
