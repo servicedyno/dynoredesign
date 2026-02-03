@@ -618,7 +618,7 @@ const useWallet = async (req: express.Request, res: express.Response) => {
 
       const customer_id = customerData.dataValues.customer_id;
 
-      const companyData: Array<unknown> = await sequelize.query(
+      const companyData = await sequelize.query<CompanyData>(
         "select * from tbl_company where company_id=" + tempData.company_id,
         { type: QueryTypes.SELECT }
       );
