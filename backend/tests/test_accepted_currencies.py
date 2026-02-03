@@ -38,6 +38,14 @@ AUTH_TOKEN = None
 CREATED_LINK_IDS = []
 
 
+@pytest.fixture(autouse=True, scope="session")
+def reset_auth():
+    """Reset auth token at start of session"""
+    global AUTH_TOKEN
+    AUTH_TOKEN = None
+    yield
+
+
 def get_auth_token():
     """Get authentication token"""
     global AUTH_TOKEN
