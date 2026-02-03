@@ -1280,9 +1280,20 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
     
     // Build update object with only provided fields
     const updateData: any = {};
-    if (name !== undefined) updateData.name = name;
-    if (mobile !== undefined) updateData.mobile = mobile;
-    if (username !== undefined) updateData.username = username;
+    const updatedFields: string[] = [];
+    
+    if (name !== undefined && name !== userData.name) {
+      updateData.name = name;
+      updatedFields.push(`Name: ${userData.name} → ${name}`);
+    }
+    if (mobile !== undefined && mobile !== userData.mobile) {
+      updateData.mobile = mobile;
+      updatedFields.push(`Mobile: ${userData.mobile || 'Not set'} → ${mobile}`);
+    }
+    if (username !== undefined && username !== userData.username) {
+      updateData.username = username;
+      updatedFields.push(`Username: ${userData.username} → ${username}`);
+    }
     
     // Check if there's anything to update
     if (Object.keys(updateData).length === 0) {
@@ -1298,6 +1309,18 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
       where: { user_id: userData.user_id },
       attributes: { exclude: ['password', 'reset_token', 'reset_token_expiry'] }
     });
+    
+    // Send profile update notification email
+    if (updatedFields.length > 0) {
+      const { sendUserProfileUpdatedEmail } = await import("../services/emailService");
+      sendUserProfileUpdatedEmail(
+        userData.email,
+        updatedUser?.dataValues.name || userData.name,
+        updatedFields
+      ).catch(err => {
+        console.error("[UpdateProfile] Failed to send notification email:", err);
+      });
+    }
     
     successResponseHelper(res, 200, "Profile updated successfully!", updatedUser);
   } catch (e) {
