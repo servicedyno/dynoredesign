@@ -59,7 +59,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     const { company_id } = req.query;
     
     // Check cache first (30 second TTL)
-    const cacheKey = `wallet:${userData.user_id}:${company_id || 'all'}`;
+    const cacheKey = `wallet:${userData.user_id}:${company_id || 'all'}:v2`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
       console.log(`[Wallet] Cache hit for user ${userData.user_id}`);
@@ -91,6 +91,21 @@ const getWallet = async (req: express.Request, res: express.Response) => {
       where: whereClause,
     });
 
+    // Get all unique company IDs from wallets
+    const companyIds = [...new Set(walletData.map(w => w.dataValues.company_id))];
+    
+    // Fetch company names
+    const companies = await companyModel.findAll({
+      where: { company_id: companyIds },
+      attributes: ['company_id', 'company_name'],
+    });
+    
+    // Create company lookup map
+    const companyMap = new Map<number, string>();
+    for (const company of companies) {
+      companyMap.set(company.dataValues.company_id, company.dataValues.company_name);
+    }
+
     const currencyList = [];
 
     for (let i = 0; i < walletData.length; i++) {
@@ -111,22 +126,45 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     }
 
     // Build return data - iterate through walletData directly to preserve all wallets
-    const returnData = [];
+    // Add company_name to each wallet
+    const walletsWithCompanyName = [];
     for (const wallet of walletData) {
       const currentWallet = wallet.dataValues;
       const transferRate = rateMap.get(currentWallet.wallet_type) || 1;
       const finalAmount = Number(currentWallet.amount / transferRate);
       const amount_in_usd = Number(finalAmount).toFixed(2);
-      returnData.push({
+      walletsWithCompanyName.push({
         ...currentWallet,
+        company_name: companyMap.get(currentWallet.company_id) || 'Unknown',
         amount_in_usd,
         transfer_rate: transferRate,
       });
     }
 
-    const message = returnData.length === 0 
+    // Group wallets by company
+    const groupedByCompany: { [key: string]: { company_id: number; company_name: string; wallets: any[] } } = {};
+    
+    for (const wallet of walletsWithCompanyName) {
+      const companyKey = `company_${wallet.company_id}`;
+      if (!groupedByCompany[companyKey]) {
+        groupedByCompany[companyKey] = {
+          company_id: wallet.company_id,
+          company_name: wallet.company_name,
+          wallets: [],
+        };
+      }
+      // Remove company_name from individual wallet since it's at group level
+      const { company_name, ...walletWithoutCompanyName } = wallet;
+      groupedByCompany[companyKey].wallets.push(walletWithoutCompanyName);
+    }
+
+    // Convert to array format
+    const returnData = Object.values(groupedByCompany);
+
+    const totalWallets = walletsWithCompanyName.length;
+    const message = totalWallets === 0 
       ? "No wallets found. Add your first wallet address to start receiving payments."
-      : `Successfully retrieved ${returnData.length} wallet${returnData.length === 1 ? '' : 's'}`;
+      : `Successfully retrieved ${totalWallets} wallet${totalWallets === 1 ? '' : 's'} from ${returnData.length} company${returnData.length === 1 ? '' : 'ies'}`;
     
     // Cache the result
     await setRedisItem(cacheKey, returnData);
