@@ -571,8 +571,9 @@ const addFunds = async (req: express.Request, res: express.Response) => {
         if (value.paymentType === paymentTypes.USSD) {
           const { paymentRes, uniqueRef } = await USSD(value, userData);
           console.log("paymentRes=============>", paymentRes, uniqueRef);
-          const { note } = paymentRes.meta.authorization;
-          const { payment_code } = paymentRes.data;
+          const ussdRes = paymentRes as { meta?: { authorization?: { note?: string } }; data?: { payment_code?: string } };
+          const { note } = ussdRes.meta?.authorization || {};
+          const { payment_code } = ussdRes.data || {};
           finalRes = { hash: uniqueRef, note, payment_code };
           await setRedisItem("flw-txt-" + uniqueRef, {
             mode: paymentTypes.USSD,
@@ -582,10 +583,11 @@ const addFunds = async (req: express.Request, res: express.Response) => {
         if (value.paymentType === paymentTypes.MOBILE_MONEY) {
           const { paymentRes, uniqueRef } = await MobileMoney(value, userData);
           console.log("paymentRes=============>", paymentRes, uniqueRef);
+          const mobileRes = paymentRes as { meta?: { authorization?: Record<string, unknown> } };
           if (value.currency === "KES") {
             finalRes = { hash: uniqueRef };
           } else {
-            finalRes = { hash: uniqueRef, ...paymentRes?.meta?.authorization };
+            finalRes = { hash: uniqueRef, ...mobileRes?.meta?.authorization };
           }
           await setRedisItem("flw-txt-" + uniqueRef, {
             mode: paymentTypes.MOBILE_MONEY,
@@ -597,7 +599,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
             "paymentRes=============>",
             paymentRes,
             uniqueRef,
-            paymentRes.data?.meta
+            (paymentRes as { data?: { meta?: unknown } }).data?.meta
           );
           finalRes = {
             hash: uniqueRef,
