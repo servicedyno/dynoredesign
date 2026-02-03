@@ -2773,7 +2773,7 @@ const settleCryptoTransaction = async ({
         // Admin fee stays in temp address for batch sweep later
         fees = await tatumApi.feeEstimation(
           currency,
-          tempAddressData.wallet_address,
+          fromAddress,
           userAddress,
           Number(userAmount)
         );
@@ -2795,7 +2795,7 @@ const settleCryptoTransaction = async ({
         merchantTransactionDetails = await withRetry(
           () => tatumApi.assetToOtherAddress({
             currency,
-            fromAddress: tempAddressData.wallet_address,
+            fromAddress: fromAddress,
             toAddress: userAddress,
             privateKey: privateKey,
             amount: merchantSendAmount,
@@ -2839,7 +2839,7 @@ const settleCryptoTransaction = async ({
       "Failed to transfer funds",
       {
         currency,
-        tempAddress: tempAddressData.wallet_address,
+        tempAddress: fromAddress,
         receivedAmount,
         userAmount,
         error: message,
