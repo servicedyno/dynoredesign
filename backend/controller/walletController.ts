@@ -67,8 +67,10 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     }
     
     // Build where clause with optional company_id filter
+    // Only return CRYPTO wallets (this is a crypto-focused project)
     const whereClause: any = {
       user_id: userData.user_id,
+      currency_type: 'CRYPTO',
     };
     
     if (company_id) {
