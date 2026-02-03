@@ -191,7 +191,7 @@ export const applyReferralCode = async (req: Request, res: Response) => {
     }
 
     // Check if user is trying to refer themselves
-    if ((referrer as Record<string, unknown>).user_id === user_id) {
+    if ((referrer as unknown as Record<string, unknown>).user_id === user_id) {
       return res.status(400).json({
         message: "You cannot refer yourself",
       });
@@ -200,7 +200,7 @@ export const applyReferralCode = async (req: Request, res: Response) => {
     // Check if referral already exists
     const existingReferral = await Referral.findOne({
       where: {
-        referrer_user_id: (referrer as Record<string, unknown>).user_id,
+        referrer_user_id: (referrer as unknown as Record<string, unknown>).user_id,
         referred_user_id: user_id,
       },
     });
@@ -213,7 +213,7 @@ export const applyReferralCode = async (req: Request, res: Response) => {
 
     // Create referral record
     const referral = await Referral.create({
-      referrer_user_id: (referrer as Record<string, unknown>).user_id,
+      referrer_user_id: (referrer as unknown as Record<string, unknown>).user_id,
       referred_user_id: user_id,
       referral_code,
       status: 'pending',
