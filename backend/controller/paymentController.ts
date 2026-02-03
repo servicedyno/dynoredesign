@@ -4239,7 +4239,7 @@ const getCurrencyRates = async (
             return {
               ...rate,
               fee_payer: 'customer',
-              base_amount: parseFloat(rate.amount),
+              base_amount: Number(rate.amount),
               base_amount_usd: parseFloat(amount.toFixed(2)),
               // Include tax in breakdown
               tax_amount: parseFloat(taxAmountNum.toFixed(2)),
