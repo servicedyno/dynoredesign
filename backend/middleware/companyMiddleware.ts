@@ -11,6 +11,25 @@ const companyMiddleware = (
   if (method === "GET" || method === "DELETE") {
     return next();
   }
+  
+  const pathname = req.path;
+  const isUpdate = pathname.includes("updateCompany");
+  
+  // For updates, allow any valid field - don't require company_name and email
+  if (isUpdate) {
+    // Check if there's any data to update
+    const hasData = req.body.data || req.body.company_name || req.body.email || 
+                    req.body.mobile || req.body.website || req.body.address_line1 ||
+                    req.body.city || req.body.state || req.body.country || 
+                    req.body.zip_code || req.body.vat_number;
+    
+    if (!hasData) {
+      return res.status(400).json({ message: "No data provided for update." });
+    }
+    return next();
+  }
+  
+  // For addCompany, require company_name and email
   if (!req.body.data && !req.body.company_name && !req.body.email) {
     return res.status(400).json({ message: "Request body 'data' field or individual company fields (company_name, email) are required." });
   } else {
