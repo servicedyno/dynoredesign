@@ -56,27 +56,29 @@ A full-stack crypto payment gateway called "Dynopay" with:
 #### TypeScript Fixes - IN PROGRESS 🔄
 **Date:** February 2026
 
-**Progress:** Reduced from ~788 errors to ~573 errors (27% reduction)
+**Progress:** Reduced from ~788 errors to ~524 errors (33% reduction)
 
 **Fixed Files:**
 - `/app/backend/api-service/controller/index.ts` - Added WalletTypeResult interface
-- `/app/backend/api-service/helper/getErrorMessage.ts` - Fixed error type handling
+- `/app/backend/api-service/helper/getErrorMessage.ts` - Fixed error type handling  
 - `/app/backend/api-service/helper/currencyConvert.ts` - Fixed variable types
 - `/app/backend/api-service/helper/encryption.ts` - Fixed parameter types
 - `/app/backend/api-service/middleware/authMiddleware.ts` - Added JWT payload interface
 - `/app/backend/api-service/utils/types.ts` - Added CustomerJwtPayload and CompanyData interfaces
 - `/app/backend/apis/htxApi.ts` - Fixed signature function parameter types
-- `/app/backend/apis/tatumApi.ts` - Added isTransactionHash type guard
-- `/app/backend/apis/flutterwaveApi.ts` - Added FlutterwaveInstance interface with all methods
+- `/app/backend/apis/tatumApi.ts` - Added isTransactionHash type guard, fixed multiple txId usages
+- `/app/backend/apis/flutterwaveApi.ts` - Added FlutterwaveInstance interface with all methods (MobileMoney, etc.)
 - `/app/backend/utils/geolocation.ts` - Fixed IncomingHttpHeaders compatibility
 - `/app/backend/utils/types.ts` - Fixed IVerifyResponse and FW_API_Response interfaces
-- `/app/backend/controller/paymentController.ts` - Added RedisPaymentItem, TaxInfo interfaces
+- `/app/backend/controller/paymentController.ts` - Added RedisPaymentItem, TaxInfo, settleCryptoTransaction interfaces
+- `/app/backend/controller/walletController.ts` - Fixed tempData mapping, selfWhereClause, and trend types
+- `/app/backend/services/merchantPoolService.ts` - Fixed poolAddress type assertion and error handling
+- `/app/backend/helper/currencyConvert.ts` - Fixed getCachedRate, getFastForexRate, getCoinGeckoRate error types
 
 **Remaining Errors by File:**
-- paymentController.ts: 173 errors
-- tatumApi.ts: 52 errors
-- merchantPoolService.ts: 34 errors
-- walletController.ts: 26 errors
+- paymentController.ts: 166 errors
+- merchantPoolService.ts: 32 errors  
+- tatumApi.ts: 31 errors
 - cronJobs.ts: 24 errors
 - webhooks/index.ts: 21 errors
 
