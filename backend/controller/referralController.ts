@@ -418,8 +418,30 @@ export const processReferralReward = async (userId: number, transactionAmount: n
       rewarded_at: new Date(),
     });
 
-    // Credit the reward to referrer's wallet (implement wallet credit logic here)
-    // TODO: Integrate with wallet system
+    // Credit the reward to referrer's wallet
+    // Find or create wallet for the referrer in the bonus currency
+    try {
+      const [wallet, created] = await userWalletModel.findOrCreate({
+        where: {
+          user_id: referral.referrer_user_id,
+          wallet_type: referral.bonus_currency,
+        },
+        defaults: {
+          user_id: referral.referrer_user_id,
+          wallet_type: referral.bonus_currency,
+          amount: 0,
+          wallet_address: null,
+          company_id: null,
+        }
+      });
+      
+      // Increment wallet balance with referral bonus
+      await wallet.increment('amount', { by: Number(referral.bonus_amount) });
+      console.log(`[Referral] Credited ${referral.bonus_amount} ${referral.bonus_currency} to user ${referral.referrer_user_id}'s wallet`);
+    } catch (walletError) {
+      console.error("[Referral] Failed to credit wallet:", walletError);
+      // Don't throw - reward record is created, wallet credit is best-effort
+    }
 
     return {
       referral_id: referral.referral_id,
