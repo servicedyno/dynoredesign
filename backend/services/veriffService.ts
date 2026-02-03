@@ -141,7 +141,7 @@ class VeriffService {
       console.log("Veriff session created:", response.data.verification.id);
       return response.data;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Veriff create session error:", error.response?.data || error.message);
       throw new Error(
         `Failed to create Veriff session: ${error.response?.data?.message || error.message}`
@@ -169,7 +169,7 @@ class VeriffService {
       console.log("Veriff decision retrieved:", verificationId);
       return response.data;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Veriff get decision error:", error.response?.data || error.message);
       throw new Error(
         `Failed to get Veriff decision: ${error.response?.data?.message || error.message}`

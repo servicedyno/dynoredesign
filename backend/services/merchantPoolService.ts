@@ -1061,7 +1061,7 @@ export const cleanupStaleAddresses = async (
   const sweepingTimeout = new Date();
   sweepingTimeout.setMinutes(sweepingTimeout.getMinutes() - 10);
 
-  const whereClause: any = {
+  const whereClause: Record<string, unknown> = {
     [Op.or]: [
       // Stuck RESERVED or PROCESSING
       {
@@ -1668,7 +1668,7 @@ export const recordPoolTransaction = async (data: {
  * Get pool status for dashboard
  */
 export const getPoolStatus = async (userId?: number): Promise<any> => {
-  const whereClause: any = {};
+  const whereClause: Record<string, unknown> = {};
   if (userId) whereClause.owner_user_id = userId;
 
   const addresses = await merchantTempAddressModel.findAll({
@@ -1860,7 +1860,7 @@ export const ensurePoolSubscriptions = async (): Promise<{
       cronLogger?.warn?.("Subscription health check had failures", { errors: result.errors });
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[MerchantPool] ❌ Subscription health check failed:", error.message);
     cronLogger?.error?.("Subscription health check failed", {}, error);
     result.errors.push(`Global error: ${error.message}`);
@@ -2288,7 +2288,7 @@ export const checkMissedPayments = async (): Promise<{
           }
         }
         
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`[MerchantPool] ❌ Error processing ${walletAddress}:`, error.message);
         result.errors.push(`Processing failed for ${walletAddress}: ${error.message}`);
       }
@@ -2304,7 +2304,7 @@ export const checkMissedPayments = async (): Promise<{
       console.log(`[MerchantPool]   - Errors: ${result.errors.length}`);
     }
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[MerchantPool] ❌ Missed payment check failed:", error.message);
     result.errors.push(`Global error: ${error.message}`);
   }

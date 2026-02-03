@@ -26,7 +26,7 @@ const MONITORED_SERVICES = [
         // Check if database connection is working (core API dependency)
         await sequelize.query("SELECT 1", { type: QueryTypes.SELECT });
         return { healthy: true, latency: Date.now() - start };
-      } catch (error: any) {
+      } catch (error: unknown) {
         return { healthy: false, latency: Date.now() - start, error: error.message };
       }
     }
@@ -41,7 +41,7 @@ const MONITORED_SERVICES = [
         await sequelize.query("SELECT COUNT(*) FROM tbl_payment_link LIMIT 1", { type: QueryTypes.SELECT });
         await sequelize.query("SELECT COUNT(*) FROM tbl_customer_transaction LIMIT 1", { type: QueryTypes.SELECT });
         return { healthy: true, latency: Date.now() - start };
-      } catch (error: any) {
+      } catch (error: unknown) {
         return { healthy: false, latency: Date.now() - start, error: error.message };
       }
     }
@@ -57,7 +57,7 @@ const MONITORED_SERVICES = [
         await sequelize.query("SELECT COUNT(*) FROM tbl_user_addresses LIMIT 1", { type: QueryTypes.SELECT });
         await sequelize.query("SELECT COUNT(*) FROM tbl_admin_wallet LIMIT 1", { type: QueryTypes.SELECT });
         return { healthy: true, latency: Date.now() - start };
-      } catch (error: any) {
+      } catch (error: unknown) {
         return { healthy: false, latency: Date.now() - start, error: error.message };
       }
     }
@@ -72,7 +72,7 @@ const MONITORED_SERVICES = [
         const testKey = await getRedisItem("health_check_test");
         // Redis is connected if no error thrown
         return { healthy: true, latency: Date.now() - start };
-      } catch (error: any) {
+      } catch (error: unknown) {
         return { healthy: false, latency: Date.now() - start, error: error.message };
       }
     }
@@ -87,7 +87,7 @@ const MONITORED_SERVICES = [
         await sequelize.query("SELECT COUNT(*) FROM tbl_user LIMIT 1", { type: QueryTypes.SELECT });
         await sequelize.query("SELECT COUNT(*) FROM tbl_company LIMIT 1", { type: QueryTypes.SELECT });
         return { healthy: true, latency: Date.now() - start };
-      } catch (error: any) {
+      } catch (error: unknown) {
         return { healthy: false, latency: Date.now() - start, error: error.message };
       }
     }
@@ -124,7 +124,7 @@ export const runHealthChecks = async (): Promise<void> => {
       });
       
       log(`[Monitor] ${service.name}: ${status} (${result.latency}ms)`, "info");
-    } catch (error: any) {
+    } catch (error: unknown) {
       log(`[Monitor] Error checking ${service.name}: ${error.message}`, "error");
       
       // Store the failure

@@ -74,7 +74,7 @@ const logWebhookDelivery = async (
         type: QueryTypes.INSERT,
       }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(`[logWebhookDelivery] Failed to log webhook: ${err.message}`);
   }
 };
@@ -150,7 +150,7 @@ const callMerchantWebhook = async (customerData: any, eventData: any): Promise<v
       await callUrlWithPayload(webhookUrl, eventData, webhookSecret, companyId, 'webhook');
     }
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Log but don't throw - webhook failure shouldn't block payment processing
     console.error(`[callMerchantWebhook] Failed to send webhook: ${error.message}`);
   }
@@ -233,7 +233,7 @@ const callUrlWithPayload = async (
         
         return; // Success, exit
         
-      } catch (err: any) {
+      } catch (err: unknown) {
         lastError = err;
         totalRetries = attempt;
         finalResponseStatus = err.response?.status || null;
@@ -271,7 +271,7 @@ const callUrlWithPayload = async (
       );
     }
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`[callMerchantWebhook] Error in callUrlWithPayload: ${error.message}`);
   }
 };

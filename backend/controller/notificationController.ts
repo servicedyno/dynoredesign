@@ -168,7 +168,7 @@ const getNotifications = async (req: express.Request, res: express.Response) => 
     const offset = (Number(page) - 1) * Number(limit);
 
     // Build where clause
-    const where: any = { user_id: userId };
+    const where: Record<string, unknown> = { user_id: userId };
     if (company_id) where.company_id = company_id;
     if (type) where.type = type;
     if (is_read !== undefined) where.is_read = is_read === 'true';
@@ -209,7 +209,7 @@ const getUnreadCount = async (req: express.Request, res: express.Response) => {
     const { company_id } = req.query;
     const userId = userData.user_id;
 
-    const where: any = { user_id: userId, is_read: false };
+    const where: Record<string, unknown> = { user_id: userId, is_read: false };
     if (company_id) where.company_id = company_id;
 
     const count = await notificationModel.count({ where });
@@ -273,7 +273,7 @@ const markAllAsRead = async (req: express.Request, res: express.Response) => {
     const { company_id } = req.body;
     const userId = userData.user_id;
 
-    const where: any = { user_id: userId, is_read: false };
+    const where: Record<string, unknown> = { user_id: userId, is_read: false };
     if (company_id) where.company_id = company_id;
 
     const [updatedCount] = await notificationModel.update(

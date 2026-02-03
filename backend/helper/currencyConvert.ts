@@ -84,7 +84,7 @@ const getFastForexRate = async (from: string, to: string, amount: number): Promi
         converted: data.result[to],
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     const errorMsg = error.response?.data?.error || error.message;
     console.warn(`[currencyConvert] FastForex API failed for ${from}→${to}: ${errorMsg}`);
     
@@ -124,7 +124,7 @@ const getCoinGeckoRate = async (crypto: string, fiat: string): Promise<number | 
       console.log(`[currencyConvert] CoinGecko rate for ${crypto}→${fiat}: ${rate}`);
       return rate;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.warn(`[currencyConvert] CoinGecko API failed for ${crypto}→${fiat}: ${error.message}`);
   }
   return null;

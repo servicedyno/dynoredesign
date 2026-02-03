@@ -494,7 +494,7 @@ export const releaseExpiredReservations = async (
   try {
     const now = new Date();
 
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       status: "RESERVED",  // Only release RESERVED, not PROCESSING
       reserved_until: {
         [Op.lt]: now,
@@ -1015,7 +1015,7 @@ export const cleanupStaleAddresses = async (
     const safetyTimeoutDate = new Date();
     safetyTimeoutDate.setMinutes(safetyTimeoutDate.getMinutes() - POOL_CONFIG.STALE_LOCK_TIMEOUT_MINUTES);
 
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       status: {
         [Op.in]: ["RESERVED", "PROCESSING"],  // Not SWEEPING - that's handled separately
       },

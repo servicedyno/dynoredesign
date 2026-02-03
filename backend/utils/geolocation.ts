@@ -95,7 +95,7 @@ export const getCountryFromIP = async (ip: string, headers?: any): Promise<GeoLo
     console.log(`[Geolocation] ip-api.com failed: ${response.data.message}`);
     return null;
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Geolocation] Failed to detect country:', error.message);
     return null;
   }

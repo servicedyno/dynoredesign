@@ -704,7 +704,7 @@ const createSubscriptionWithUrl = async (address: string, currency: string, cust
     }
     
     return resData;
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.log("[createSubscriptionWithUrl] Error:", JSON.stringify(e.response?.data || e.message, null, 2));
     throw e;
   }
@@ -786,7 +786,7 @@ const createSubscriptionBlockBeeStyle = async (
     }
     
     return resData;
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[createSubscriptionBlockBeeStyle] Error:", e.response?.data || e.message);
     throw e;
   }
@@ -837,7 +837,7 @@ const listAllSubscriptions = async (): Promise<any[]> => {
     }
     
     return allSubscriptions;
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Failed to list subscriptions:", e.response?.data || e.message);
     throw e;
   }
@@ -1942,7 +1942,7 @@ const waitForTransactionConfirmation = async (
   
   while (Date.now() - startTime < maxWaitMs) {
     try {
-      let txData: any = null;
+      let txData: Record<string, unknown> | null = null;
       
       if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
         txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);

@@ -455,7 +455,7 @@ const checkEmail = async (req: express.Request, res: express.Response) => {
       },
     });
 
-    let resData: any = { validEmail: false };
+    let resData: Record<string, unknown> = { validEmail: false };
     if (userData) {
       resData = {
         validEmail: true,
@@ -1309,7 +1309,7 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
     const { name, mobile, username } = req.body;
     
     // Build update object with only provided fields
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     const updatedFields: string[] = [];
     
     if (name !== undefined && name !== userData.name) {

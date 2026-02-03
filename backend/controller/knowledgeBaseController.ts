@@ -56,7 +56,7 @@ export const getArticles = async (req: Request, res: Response) => {
     const { category_id, page = 1, limit = 10, published_only = 'true' } = req.query;
 
     const offset = (Number(page) - 1) * Number(limit);
-    const whereClause: any = {};
+    const whereClause: Record<string, unknown> = {};
 
     if (category_id) {
       whereClause.category_id = Number(category_id);

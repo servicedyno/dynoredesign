@@ -59,7 +59,7 @@ const authMiddleware = async (
       res.locals.user = decoded;
       
       next();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Handle JWT-specific errors
       if (err.name === 'TokenExpiredError') {
         return errorResponseHelper(res, 401, "Token has expired. Please login again.");
@@ -71,7 +71,7 @@ const authMiddleware = async (
         throw err; // Re-throw to be caught by outer catch
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.log("Auth Middleware Error:", e);
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);
@@ -124,7 +124,7 @@ const companyOwnershipMiddleware = async (
     res.locals.validatedCompany = company.dataValues;
     
     next();
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.log("Company Ownership Middleware Error:", e);
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);

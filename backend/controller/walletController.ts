@@ -68,7 +68,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     
     // Build where clause with optional company_id filter
     // Only return CRYPTO wallets (this is a crypto-focused project)
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_id: userData.user_id,
       currency_type: 'CRYPTO',
     };
@@ -472,7 +472,7 @@ const getAllTransactions = async (
     });
 
     // Get self transactions with same filters
-    let selfWhereClause: any = {
+    let selfWhereClause: Record<string, unknown> = {
       user_id: userData.user_id,
     };
     
@@ -1426,7 +1426,7 @@ const getTempAddressBatches = async (
   let tempAddressBalances = [];
 
   if (addressBalance?.balance && Number(addressBalance?.balance) > 0) {
-    const tempData: any = {
+    const tempData: Record<string, unknown> = {
       dataValues: {
         ...userWallet.dataValues,
         amount: Number(addressBalance?.balance),
@@ -1438,7 +1438,7 @@ const getTempAddressBatches = async (
       Number(addressBalance?.incoming) - Number(addressBalance?.outgoing);
     console.log("amount============>", amount);
     if (amount > 0) {
-      const tempData: any = {
+      const tempData: Record<string, unknown> = {
         dataValues: {
           ...userWallet.dataValues,
           amount,
@@ -1462,7 +1462,7 @@ const getTempAddressBatches = async (
       }
 
       if (addressBalance?.balance && Number(addressBalance?.balance) > 0) {
-        const tempData: any = {
+        const tempData: Record<string, unknown> = {
           dataValues: {
             ...address.dataValues,
             amount: Number(addressBalance?.balance),
@@ -1474,7 +1474,7 @@ const getTempAddressBatches = async (
           Number(addressBalance?.incoming) - Number(addressBalance?.outgoing);
         console.log("amount============>", amount);
         if (amount > 0) {
-          const tempData: any = {
+          const tempData: Record<string, unknown> = {
             dataValues: {
               ...address.dataValues,
               amount,
@@ -1833,7 +1833,7 @@ const getWalletAddresses = async (
     const { company_id } = req.query;
     
     // Build where clause with optional company_id filter
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_id,
     };
     
@@ -1901,7 +1901,7 @@ const addWalletAddress = async (
       }
       
       // Check if address already exists for this user and company
-      const whereClause: any = {
+      const whereClause: Record<string, unknown> = {
         wallet_address,
         currency,
         user_id,
@@ -2921,7 +2921,7 @@ const deleteWalletAddress = async (
     const user_id = userData.user_id;
 
     // Build where clause for deletion
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_id,
     };
 
@@ -3031,7 +3031,7 @@ const sendUpdateWalletOTP = async (
     const user_id = userData.user_id;
 
     // Build where clause with multi-tenant security
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_id,
       wallet_id: parseInt(wallet_id),
     };
@@ -3136,7 +3136,7 @@ const updateWalletWithOTP = async (
     }
 
     // Build where clause
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_id,
       wallet_id: parseInt(wallet_id),
     };
@@ -3185,7 +3185,7 @@ const updateWalletWithOTP = async (
     }
 
     // Build update object
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (wallet_address) updateData.wallet_address = wallet_address;
     if (wallet_name) updateData.wallet_name = wallet_name;
     if (currency) updateData.wallet_type = currency;
@@ -3280,7 +3280,7 @@ const sendDeletePaymentWalletOTP = async (
     const user_id = userData.user_id;
 
     // Build where clause with multi-tenant security
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_id,
       wallet_id: parseInt(wallet_id),
     };
@@ -3382,7 +3382,7 @@ const deletePaymentWalletWithOTP = async (
     }
 
     // Build where clause
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_id,
       wallet_id: parseInt(wallet_id),
     };
@@ -3640,7 +3640,7 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
     }
 
     // Build update data
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (wallet_address) updateData.wallet_address = wallet_address;
     if (wallet_name !== undefined) updateData.wallet_name = wallet_name;
 
@@ -3688,7 +3688,7 @@ const sendDeleteWalletOTP = async (req: express.Request, res: express.Response) 
     }
 
     // Build where clause for multi-tenancy
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_address_id: address_id,
       user_id,
     };
@@ -3786,7 +3786,7 @@ const deleteWalletAddressWithOTP = async (
     }
 
     // Build where clause for multi-tenancy
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_address_id: address_id,
       user_id,
     };

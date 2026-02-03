@@ -77,7 +77,7 @@ const getKYCStatus = async (req: express.Request, res: express.Response) => {
       status: kycRecord ? kycRecord.get("status") : "not_started",
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get KYC status error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
@@ -128,7 +128,7 @@ const getKYCRequirements = async (req: express.Request, res: express.Response) =
       requirements,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get KYC requirements error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
@@ -265,7 +265,7 @@ const startKYCVerification = async (req: express.Request, res: express.Response)
       kyc_id: kycRecord.get("kyc_id"),
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Start KYC verification error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
@@ -387,7 +387,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
 
     return successResponseHelper(res, 200, "Webhook processed successfully", {});
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Veriff webhook error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
@@ -575,7 +575,7 @@ const resubmitKYC = async (req: express.Request, res: express.Response) => {
       message: "Please complete the verification process using the new session URL",
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Resubmit KYC error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
@@ -607,7 +607,7 @@ const getKYCHistory = async (req: express.Request, res: express.Response) => {
       total: kycHistory.length,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get KYC history error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);

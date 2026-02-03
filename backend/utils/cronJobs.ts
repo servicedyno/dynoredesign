@@ -490,7 +490,7 @@ export const setupRefereeCodeReminderCron = () => {
       
       log(`Referee Code Reminder Cron completed: ${remindersSent} reminders sent, ${skippedAlreadySignedUp} skipped (already signed up)`, "info");
       
-    } catch (e: any) {
+    } catch (e: unknown) {
       log(`Referee Code Reminder Cron Job Error: ${e.message}`, "error");
       cronLogger?.error?.("Referee Code Reminder Cron Error", {}, new Error(e));
     }
@@ -780,7 +780,7 @@ export const setupPaymentLinkReminderCron = () => {
       
       log(`Payment Link Reminder Cron completed: ${remindersSent} reminders sent`, "info");
       
-    } catch (e: any) {
+    } catch (e: unknown) {
       log(`Payment Link Reminder Cron Job Error: ${e.message}`, "error");
       cronLogger?.error?.("Payment Link Reminder Cron Error", {}, new Error(e));
     }

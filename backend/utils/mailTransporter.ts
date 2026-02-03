@@ -30,7 +30,7 @@ const stripHtml = (html: string): string => {
  * Send email using Brevo (formerly Sendinblue) API
  */
 const mailTransporter = async ({ to, subject, body, name, attachments }: mailOptions) => {
-  const payload: any = {
+  const payload: Record<string, unknown> = {
     sender: {
       name: "Dynopay",
       email: "notify@dynocash.com",

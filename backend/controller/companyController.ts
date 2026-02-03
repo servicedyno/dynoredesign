@@ -1040,7 +1040,7 @@ const getWebhookHistory = async (req: express.Request, res: express.Response) =>
 
     // Build WHERE clause
     let whereClause = 'WHERE company_id = :company_id';
-    const replacements: any = { company_id, limit, offset };
+    const replacements: Record<string, unknown> = { company_id, limit, offset };
     
     if (status && ['success', 'failed'].includes(status)) {
       whereClause += ' AND status = :status';

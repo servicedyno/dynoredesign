@@ -198,7 +198,7 @@ const withRetry = async <T>(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       const message = getErrorMessage(error);
       
@@ -289,9 +289,9 @@ const calculateTaxForCheckout = async (
     });
 
     if (cachedRate) {
-      taxRate = parseFloat((cachedRate as any).dataValues.standard_rate) || 0;
-      taxAcronym = (cachedRate as any).dataValues.tax_acronym || taxAcronym;
-      countryName = (cachedRate as any).dataValues.country_name || countryName;
+      taxRate = parseFloat((cachedRate as { dataValues: Record<string, unknown> }).dataValues.standard_rate) || 0;
+      taxAcronym = (cachedRate as { dataValues: Record<string, unknown> }).dataValues.tax_acronym || taxAcronym;
+      countryName = (cachedRate as { dataValues: Record<string, unknown> }).dataValues.country_name || countryName;
       console.log(`[Tax] Using cached rate for ${upperCountryCode}: ${taxRate}%`);
     } else if (TAX_DATA_API_KEY) {
       // Try to fetch from API
@@ -339,7 +339,7 @@ const calculateTaxForCheckout = async (
       total: parseFloat(total.toFixed(2)),
       currency
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`[Tax] Error calculating tax:`, error.message);
     return null;
   }
@@ -367,8 +367,8 @@ const getData = async (req: express.Request, res: express.Response) => {
     }
     
     // Get company info if company_id exists
-    let companyInfo: any = null;
-    let paymentSettings: any = {
+    let companyInfo: Record<string, unknown> | null = null;
+    let paymentSettings: Record<string, unknown> = {
       initial_window_minutes: PAYMENT_TIMING.CRYPTO_INVOICE_MINUTES,      // Default: 15 minutes to pay after selecting crypto
       grace_period_minutes: PAYMENT_TIMING.GRACE_PERIOD_MINUTES,        // Default: 30 minutes to complete partial payment
       overpayment_threshold_usd: 5,    // Default: $5 minimum overpayment to handle
@@ -379,7 +379,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       try {
         const company = await companyModel.findByPk(item.company_id);
         if (company) {
-          const companyData = (company as any).dataValues;
+          const companyData = (company as { dataValues: Record<string, unknown> }).dataValues;
           companyInfo = {
             company_name: companyData.company_name || null,
             company_logo: companyData.photo || null,  // Only include if available
@@ -435,7 +435,7 @@ const getData = async (req: express.Request, res: express.Response) => {
     const totalWithFees = amount + totalProcessingFee;
     
     // Calculate expiry countdown
-    let expiryInfo: any = null;
+    let expiryInfo: Record<string, unknown> | null = null;
     if (item.expires_at) {
       const expiresAt = new Date(item.expires_at);
       const now = new Date();
@@ -475,7 +475,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       : null;
     
     // Tax calculation - only if merchant enabled apply_tax
-    let taxInfo: any = null;
+    let taxInfo: Record<string, unknown> | null = null;
     if (item.apply_tax) {
       console.log(`[getData] Tax enabled for this payment link, detecting customer location...`);
       
@@ -1199,7 +1199,7 @@ const createCryptoPayment = async (
         return errorResponseHelper(res, 400, "Invalid user ID");
       }
       
-      const whereClause: any = {
+      const whereClause: Record<string, unknown> = {
         user_id: userId,
         wallet_type: requestedCurrency,
         wallet_address: { [Op.not]: null },
@@ -1265,7 +1265,7 @@ const createCryptoPayment = async (
         );
       }
 
-      const tokenData: any = {
+      const tokenData: Record<string, unknown> = {
         ref: data.uniqueRef,
         adm_id: items.adm_id,
         customer_id: items.customer_id,
@@ -1279,7 +1279,7 @@ const createCryptoPayment = async (
       // Calculate crypto amount using FastForex
       let baseAmountUSD = Number(items.base_amount || items.amount || 0);
       let taxAmount = 0;
-      let taxInfo: any = null;
+      let taxInfo: Record<string, unknown> | null = null;
       
       // TAX HANDLING: If apply_tax is enabled, calculate tax based on customer location
       if (items.apply_tax) {
@@ -1672,7 +1672,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
         ).dataValues;
 
         // Multi-tenant fix: Include company_id in wallet lookup
-        const walletWhereClause: any = {
+        const walletWhereClause: Record<string, unknown> = {
           user_id: Number(linkData.user_id),
           wallet_type: data.currency,
         };
@@ -1847,7 +1847,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           };
 
           // Multi-tenant fix: Include company_id in wallet lookup
-          const createPaymentWalletWhere: any = {
+          const createPaymentWalletWhere: Record<string, unknown> = {
             user_id: Number(tempData.adm_id),
             wallet_type: data.currency,
           };
@@ -2838,7 +2838,7 @@ const verifyCryptoPayment = async (
       if (linkId || paymentId) {
         try {
           // Build where clause only with valid values
-          const whereConditions: any[] = [];
+          const whereConditions: Array<Record<string, unknown>> = [];
           if (linkId && linkId !== undefined && linkId !== null) {
             whereConditions.push({ link_id: linkId });
           }
@@ -2912,7 +2912,7 @@ const verifyCryptoPayment = async (
       
       // Build response matching checkout page expected format
       // Checkout expects: status, redirect (for redirect URL), paidAmount, expectedAmount, excessAmount
-      const responseData: any = {
+      const responseData: Record<string, unknown> = {
         status: isOverpayment ? "overpaid" : "confirmed",
         message: isOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
         redirect: redirectUrl,
@@ -3141,7 +3141,7 @@ const cryptoVerification = async (address, webhook = true) => {
       }
 
       // Multi-tenant fix: Include company_id in wallet lookup to ensure funds go to correct company
-      const whereClause: any = {
+      const whereClause: Record<string, unknown> = {
         user_id: customerData.adm_id,
         wallet_type: tempCurrency,
         wallet_address: { [Op.not]: null },
@@ -3264,7 +3264,7 @@ const cryptoVerification = async (address, webhook = true) => {
           console.log(`[cryptoVerification] Found MERCHANT POOL address by wallet: ${address}`);
         } else {
           // Fallback to legacy userTempAddressModel
-          const tempAddressWhereClause: any = {
+          const tempAddressWhereClause: Record<string, unknown> = {
             wallet_address: address,
             wallet_type: tempCurrency,
           };
@@ -4313,7 +4313,7 @@ const createPaymentLink = async (
     // Phase 11: Validate at least one crypto wallet is configured for this company
     const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
     
-    const walletWhereClause: any = {
+    const walletWhereClause: Record<string, unknown> = {
       user_id: userData.user_id,
       wallet_type: { [Op.in]: cryptoTypes },
       wallet_address: { [Op.not]: null },
@@ -4537,7 +4537,7 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
     console.log("userData============>", userData);
     
     // Build where clause with optional company_id filter
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       user_id: userData.user_id,
     };
     
@@ -4764,7 +4764,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
     }
 
     // Prepare update object
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     
     if (description !== undefined) {
       updateData.description = description;
@@ -5001,7 +5001,7 @@ const checkingUSDT = async () => {
       );
       
       // Multi-tenant fix: Include company_id in wallet lookup
-      const forwardingWalletWhere: any = {
+      const forwardingWalletWhere: Record<string, unknown> = {
         wallet_type: currentAddress.wallet_type,
         user_id: currentAddress.user_id,
       };
@@ -6051,7 +6051,7 @@ const getConfiguredCurrenciesForCheckout = async (
     
     // Get configured wallets for this merchant
     // IMPORTANT: Only return wallets that have a wallet_address configured
-    const walletWhereClause: any = {
+    const walletWhereClause: Record<string, unknown> = {
       user_id: userId,
       wallet_address: { [Op.not]: null },
       wallet_type: { [Op.in]: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'] },
@@ -6142,7 +6142,7 @@ const getConfiguredCurrenciesForCheckout = async (
       totalProcessingFee = percentageFee + fixedFee + bufferFee;
     }
     
-    const response: any = {
+    const response: Record<string, unknown> = {
       configured_currencies: currencies,
       wallet_count: configuredWallets.length,
       wallets: configuredWallets.map((w: any) => ({

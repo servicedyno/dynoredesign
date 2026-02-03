@@ -91,7 +91,7 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
     }
 
     // Step 2: Try to fetch from APILayer
-    let apiData: any = null;
+    let apiData: Record<string, unknown> | null = null;
     let apiSuccess = false;
 
     if (TAX_DATA_API_KEY) {
@@ -152,7 +152,7 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
       source,
     });
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     const message = getErrorMessage(e);
     taxLogger?.error?.(message, {}, new Error(e)) || console.error("Tax rate error:", message);
     return errorResponseHelper(res, 500, message);
@@ -232,7 +232,7 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
       throw apiError;
     }
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     const message = getErrorMessage(e);
     taxLogger?.error?.(message, {}, new Error(e)) || console.error("Tax validation error:", message);
     return errorResponseHelper(res, 500, message);

@@ -211,7 +211,7 @@ const getApi = async (req: express.Request, res: express.Response) => {
     
     // Build query with optional filters
     let whereClause = `WHERE a.user_id = :user_id`;
-    const replacements: any = { user_id: userData.user_id };
+    const replacements: Record<string, unknown> = { user_id: userData.user_id };
     
     if (environment && ['production', 'development'].includes(environment as string)) {
       whereClause += ` AND a.environment = :environment`;
@@ -592,7 +592,7 @@ const updateApi = async (req: express.Request, res: express.Response) => {
     }
 
     // Build update data
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     
     if (api_name !== undefined) {
       updateData.api_name = api_name;
@@ -771,7 +771,7 @@ const updatePlan = async (req: express.Request, res: express.Response) => {
     }
 
     // Build update data
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (plan_name !== undefined) updateData.plan_name = plan_name;
     if (amount !== undefined) updateData.amount = amount;
     if (interval !== undefined) updateData.interval = interval;
@@ -888,7 +888,7 @@ const updateCustomer = async (req: express.Request, res: express.Response) => {
     }
 
     // Build update data
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (customer_name !== undefined) updateData.customer_name = customer_name;
     if (email !== undefined) updateData.email = email;
     if (mobile !== undefined) updateData.mobile = mobile;
@@ -1072,7 +1072,7 @@ const getApiLogs = async (req: express.Request, res: express.Response) => {
     }
 
     let whereClause = `WHERE api_id = :api_id`;
-    const replacements: any = { api_id, limit: Number(limit), offset: Number(offset) };
+    const replacements: Record<string, unknown> = { api_id, limit: Number(limit), offset: Number(offset) };
 
     if (status_code) {
       whereClause += ` AND status_code = :status_code`;
@@ -1148,7 +1148,7 @@ const updateRateLimit = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 404, "API key not found");
     }
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (rate_limit_per_minute) updateData.rate_limit_per_minute = rate_limit_per_minute;
     if (rate_limit_per_hour) updateData.rate_limit_per_hour = rate_limit_per_hour;
     if (rate_limit_per_day) updateData.rate_limit_per_day = rate_limit_per_day;

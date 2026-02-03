@@ -35,7 +35,7 @@ const getSubscriptions = async (req: express.Request, res: express.Response) => 
     }
 
     // Build query conditions
-    const whereConditions: any = {
+    const whereConditions: Record<string, unknown> = {
       plan_id: { [Op.in]: planIds },
     };
 

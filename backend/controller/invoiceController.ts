@@ -323,7 +323,7 @@ const getAllInvoices = async (
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     // Build where clause
-    const whereClause: any = {};
+    const whereClause: Record<string, unknown> = {};
 
     // Get user's companies to filter invoices
     const companies = await companyModel.findAll({

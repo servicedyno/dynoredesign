@@ -124,7 +124,7 @@ export const listMyReferrals = async (req: Request, res: Response) => {
     }
 
     const offset = (Number(page) - 1) * Number(limit);
-    const whereClause: any = { referrer_user_id: userId };
+    const whereClause: Record<string, unknown> = { referrer_user_id: userId };
 
     if (status) {
       whereClause.status = status;

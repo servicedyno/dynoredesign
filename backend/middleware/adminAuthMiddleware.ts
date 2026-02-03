@@ -43,7 +43,7 @@ const adminAuthMiddleware = async (
       res.locals.user = decoded;
       
       next();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Handle JWT-specific errors
       if (err.name === 'TokenExpiredError') {
         return errorResponseHelper(res, 403, "Your Login has Expired");
@@ -55,7 +55,7 @@ const adminAuthMiddleware = async (
         throw err; // Re-throw to be caught by outer catch
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.log("Admin Auth Middleware Error:", e);
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);
