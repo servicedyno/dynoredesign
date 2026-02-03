@@ -1292,7 +1292,7 @@ const assetBatchAddressesToOtherAddress = async ({
     );
     transactions = transactionResponse;
   } else if (currency === "TRX") {
-    let transactionResponse = [];
+    let transactionResponse: Array<{ txId: string; status: string; reason: string | null; fromAddress: unknown; toAddress?: string; errorMessage?: string; error?: string; cause?: string }> = [];
     // Send assets from all addresses to one address
     await Promise.allSettled(
       fromAddress.map(async (fromAddr) => {
