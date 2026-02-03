@@ -249,7 +249,7 @@ export const sendUserProfileUpdatedEmail = async (
       await mailTransporter({
         to: oldEmail,
         name,
-        subject: "Your DynoPay Email Address Has Been Changed",
+        subject: "Your Dynopay Email Address Has Been Changed",
         body: oldEmailHtml,
       });
       
@@ -535,7 +535,7 @@ export const sendLoginOTPEmail = async (
   try {
     const subject = "Your login code";
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Here's your one-time login code for DynoPay:</p>
+    <p class="message">Here's your one-time login code for Dynopay:</p>
     <div class="otp-code">${otpCode}</div>
     <p class="message">This code expires in 10 minutes. If you didn't request this code, please secure your account immediately.</p>`;
 
