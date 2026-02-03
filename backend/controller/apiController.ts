@@ -460,17 +460,17 @@ const createPlan = async (req: express.Request, res: express.Response) => {
 
     const apiData = await apiModel.findOne({ where: { company_id } });
 
-    const { data } = await flw.PaymentPlan.create({
+    const flwResponse = await flw.PaymentPlan.create({
       name: plan_name,
       amount,
       interval,
-      currency: apiData.dataValues?.base_currency ?? "USD",
-    });
+      currency: apiData?.dataValues?.base_currency ?? "USD",
+    }) as { data?: { id?: string } };
 
     const payload = {
       id: crypto.randomUUID(),
       user_id: userData.user_id,
-      flw_plan_id: data.id,
+      flw_plan_id: flwResponse.data?.id,
       company_id,
       plan_name,
       amount,
