@@ -493,8 +493,23 @@ const getData = async (req: express.Request, res: express.Response) => {
       ? `INV-${new Date().getFullYear()}-${item.link_id || item.transaction_id.substring(0, 8).toUpperCase()}`
       : null;
     
+    // Define tax info type
+    interface TaxInfo {
+      tax_enabled: boolean;
+      tax_rate: number;
+      tax_acronym?: string;
+      tax_amount: number;
+      country_code?: string;
+      country_name?: string;
+      country_detected?: boolean;
+      subtotal: number;
+      total: number;
+      currency?: string;
+      message?: string;
+    }
+    
     // Tax calculation - only if merchant enabled apply_tax
-    let taxInfo: Record<string, unknown> | null = null;
+    let taxInfo: TaxInfo | null = null;
     if (item.apply_tax) {
       console.log(`[getData] Tax enabled for this payment link, detecting customer location...`);
       
