@@ -13,7 +13,7 @@ import customerTransactionModel from "../models/customerTransactionModel";
 import sequelize from "../utils/dbInstance";
 import { QueryTypes, Op } from "sequelize";
 import axios from "axios";
-import { Authorization } from "../utils/types";
+import { Authorization, CustomerJwtPayload, CompanyData } from "../utils/types";
 
 // Supported crypto types (updated to include USDC-ERC20)
 const CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
