@@ -5762,7 +5762,7 @@ const checkOnBlockchair = async () => {
 
 const removeUnwantedSubscriptions = async () => {
   try {
-    const tempData: unknown[] = await sequelize.query(
+    const tempData = await sequelize.query<ITemporaryAddress>(
       `select subscription_id,temp_id from tbl_user_temp_address where "txId" is null 
     and "updatedAt" < NOW() - INTERVAL '1 day' and subscription_id is not null`,
       { type: QueryTypes.SELECT }
@@ -5770,7 +5770,9 @@ const removeUnwantedSubscriptions = async () => {
 
     for (let i = 0; i < tempData.length; i++) {
       try {
-        await tatumApi.deleteSubscription(tempData[i]?.subscription_id);
+        if (tempData[i]?.subscription_id) {
+          await tatumApi.deleteSubscription(tempData[i].subscription_id);
+        }
       } catch (e) {
         console.log(e);
       }
