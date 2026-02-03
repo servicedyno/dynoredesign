@@ -259,7 +259,7 @@ export const submitArticleFeedback = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { is_helpful, feedback_text } = req.body;
-    const userId = (req as any).user?.user_id;
+    const userId = (req as { user?: { user_id: number } }).user?.user_id;
     const userIp = req.ip || req.socket.remoteAddress;
 
     if (typeof is_helpful !== 'boolean') {
@@ -282,7 +282,7 @@ export const submitArticleFeedback = async (req: Request, res: Response) => {
       is_helpful,
       feedback_text,
       user_ip: userIp,
-    } as any);
+    } as unknown);
 
     // Update article counts
     if (is_helpful) {
@@ -327,7 +327,7 @@ export const createArticle = async (req: Request, res: Response) => {
       is_published,
     } = req.body;
 
-    const authorId = (req as any).user?.user_id;
+    const authorId = (req as { user?: { user_id: number } }).user?.user_id;
 
     if (!title || !slug || !content) {
       return res.status(400).json({
@@ -354,7 +354,7 @@ export const createArticle = async (req: Request, res: Response) => {
       is_published: is_published || false,
       published_at: is_published ? new Date() : null,
       reading_time_minutes,
-    } as any);
+    } as unknown);
 
     return res.status(201).json({
       message: "Article created successfully",

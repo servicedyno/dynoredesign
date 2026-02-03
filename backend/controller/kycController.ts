@@ -57,7 +57,7 @@ const getKYCStatus = async (req: express.Request, res: express.Response) => {
     const volumeResult = await sequelize.query(volumeQuery, {
       replacements: { userId, companyId },
       type: QueryTypes.SELECT,
-    }) as any[];
+    }) as Array<Record<string, unknown>>;
 
     const totalVolume = parseFloat(volumeResult[0]?.total_volume || "0");
     const volumeThreshold = 5000;
@@ -181,7 +181,7 @@ const startKYCVerification = async (req: express.Request, res: express.Response)
         replacements: { userId },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     const user = userResult[0];
     if (!user) {
@@ -200,7 +200,7 @@ const startKYCVerification = async (req: express.Request, res: express.Response)
     const volumeResult = await sequelize.query(volumeQuery, {
       replacements: { userId, companyId: company_id },
       type: QueryTypes.SELECT,
-    }) as any[];
+    }) as Array<Record<string, unknown>>;
 
     const totalVolume = parseFloat(volumeResult[0]?.total_volume || "0");
 
@@ -331,7 +331,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
         replacements: { userId },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     const user = userResult[0];
 
@@ -415,7 +415,7 @@ export const checkVolumeAndTriggerKYC = async (
     const volumeResult = await sequelize.query(volumeQuery, {
       replacements: { userId, companyId },
       type: QueryTypes.SELECT,
-    }) as any[];
+    }) as Array<Record<string, unknown>>;
 
     const totalVolume = parseFloat(volumeResult[0]?.total_volume || "0");
     const volumeThreshold = 5000;
@@ -439,7 +439,7 @@ export const checkVolumeAndTriggerKYC = async (
             replacements: { userId },
             type: QueryTypes.SELECT,
           }
-        ) as any[];
+        ) as Array<Record<string, unknown>>;
 
         const user = userResult[0];
 
@@ -518,7 +518,7 @@ const resubmitKYC = async (req: express.Request, res: express.Response) => {
         replacements: { userId },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     if (!userResult || userResult.length === 0) {
       return errorResponseHelper(res, 404, "User not found");

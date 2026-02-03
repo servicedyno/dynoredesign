@@ -1713,7 +1713,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
               "DynoPay Admin",
               totalFee.toFixed(2),
               data.currency,
-              (data as any).transaction_id || String(data.id),
+              (data as { transaction_id?: string }).transaction_id || String(data.id),
               linkData?.company_name || "Unknown Company",
               merchantAmount.toFixed(2),
               data.amount_settled.toFixed(2)
@@ -1892,7 +1892,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
                 "DynoPay Admin",
                 totalFee.toFixed(2),
                 data.currency,
-                (data as any).transaction_id || String(data.id),
+                (data as { transaction_id?: string }).transaction_id || String(data.id),
                 companyData?.dataValues?.company_name || "Unknown Company",
                 merchantAmount.toFixed(2),
                 data.amount_settled.toFixed(2)
@@ -1973,7 +1973,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           // Auto-generate invoice for completed transaction
           if (tempData.company_id && userPayload.id) {
             autoGenerateInvoice(
-              userPayload.id as any,
+              userPayload.id as unknown,
               Number(tempData.company_id)
             ).catch(err => {
               console.error("Failed to generate invoice:", err);
@@ -3073,7 +3073,7 @@ const verifyCryptoPayment = async (
     } else {
       const returnData =
         typeof result === "object" && result !== null && "resData" in result
-          ? (result as any).resData
+          ? (result as { resData: unknown }).resData
           : result;
       successResponseHelper(res, status, "Success", returnData);
     }
@@ -4177,7 +4177,7 @@ const getCurrencyRates = async (
 };
 
 const getBalance = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as any;
+  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
   try {
     const customer = await customerModel.findOne({
       where: {
@@ -4212,7 +4212,7 @@ const createPaymentLink = async (
   req: express.Request,
   res: express.Response
 ) => {
-  const userData = jwt.decode(res.locals.token) as any;
+  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
   
   // Extract both old and new field names for backward compatibility
   // IMPORTANT: Client should send EITHER new format OR legacy format, not both
@@ -4468,7 +4468,7 @@ const createPaymentLink = async (
         if (company_id) {
           const company = await companyModel.findByPk(company_id);
           if (company) {
-            companyName = (company as any).company_name || companyName;
+            companyName = (company as { company_name?: string }).company_name || companyName;
           }
         }
 
@@ -4537,7 +4537,7 @@ ${refereeCodeSection}
 };
 
 const getPaymentLinks = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as any;
+  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
   try {
     const { company_id, page, limit, paginated } = req.query;  // Added pagination params
     
@@ -4652,7 +4652,7 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
  * GET /api/pay/links/:id
  */
 const getPaymentLinkById = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as any;
+  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
   const link_id = req.params.id;
   
   try {
@@ -4736,7 +4736,7 @@ const getPaymentLinkById = async (req: express.Request, res: express.Response) =
  * PUT /api/pay/links/:id
  */
 const updatePaymentLink = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as any;
+  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
   const link_id = req.params.id;
   const { 
     description, 
@@ -4941,7 +4941,7 @@ const deletePaymentLink = async (
   req: express.Request,
   res: express.Response
 ) => {
-  const userData = jwt.decode(res.locals.token) as any;
+  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
   const link_id = req.params.id;
   try {
     // First get the payment link to extract uniqueRef for Redis deletion
@@ -6189,7 +6189,7 @@ const getConfiguredCurrenciesForCheckout = async (
  */
 const getFeePreview = async (req: express.Request, res: express.Response) => {
   try {
-    const userData = jwt.decode(res.locals.token) as any;
+    const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
     const { amount, currency } = req.query;
 
     if (!amount) {

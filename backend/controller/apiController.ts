@@ -1108,7 +1108,7 @@ const getApiLogs = async (req: express.Request, res: express.Response) => {
       }
     );
 
-    const total = (countResult as any).total;
+    const total = (countResult as unknown as { total: number }).total;
 
     successResponseHelper(res, 200, "API logs retrieved", {
       logs,

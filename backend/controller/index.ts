@@ -59,9 +59,9 @@ export const getDiscountedTransactionFee = async (userId: number) => {
     };
   }
 
-  const discountPercent = Number((user as any).fee_discount_percent) || 0;
-  const expiresAt = (user as any).fee_discount_expires_at;
-  const reason = (user as any).fee_discount_reason;
+  const discountPercent = Number((user as { fee_discount_percent?: number }).fee_discount_percent) || 0;
+  const expiresAt = (user as { fee_discount_expires_at?: Date }).fee_discount_expires_at;
+  const reason = (user as { fee_discount_reason?: string }).fee_discount_reason;
 
   // Check if discount is still active
   const isActive = expiresAt && new Date() < expiresAt && discountPercent > 0;

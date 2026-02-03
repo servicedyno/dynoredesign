@@ -115,7 +115,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
           type: QueryTypes.SELECT,
         }
       )
-    ]) as [any[], any[]];
+    ]) as [Array<Record<string, unknown>>, Array<Record<string, unknown>>];
 
     // Parse results from combined query
     const stats = transactionStats[0] || {};
@@ -270,7 +270,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     const chartData = await sequelize.query(chartQuery, {
       replacements: { userId, startDate, companyId: company_id },
       type: QueryTypes.SELECT,
-    }) as any[];
+    }) as Array<Record<string, unknown>>;
 
     // Get transaction breakdown by currency
     const currencyBreakdown = await sequelize.query(
@@ -290,7 +290,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
         replacements: { userId, startDate, companyId: company_id },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     // Get transaction breakdown by status
     const statusBreakdown = await sequelize.query(
@@ -307,7 +307,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
         replacements: { userId, startDate, companyId: company_id },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     // Format chart data
     const formattedChartData = chartData.map((item: Record<string, unknown>) => ({
@@ -416,7 +416,7 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
         replacements: { userId, startOfMonth, companyId: company_id },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     const monthlyVolume = parseFloat(monthlyVolumeResult[0]?.volume || 0);
     const userTierInfo = getFeeTier(monthlyVolume);

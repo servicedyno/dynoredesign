@@ -839,7 +839,7 @@ const getWebhookSettings = async (req: express.Request, res: express.Response) =
         replacements: { company_id, user_id: userData.user_id },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     if (!result) {
       return errorResponseHelper(res, 404, "Company not found or unauthorized");
@@ -881,7 +881,7 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
         replacements: { company_id, user_id: userData.user_id },
         type: QueryTypes.SELECT,
       }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     if (!result) {
       return errorResponseHelper(res, 404, "Company not found or unauthorized");
@@ -1056,7 +1056,7 @@ const getWebhookHistory = async (req: express.Request, res: express.Response) =>
     const [countResult] = await sequelize.query(
       `SELECT COUNT(*) as total FROM tbl_webhook_delivery_log ${whereClause}`,
       { replacements, type: QueryTypes.SELECT }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     // Get paginated results
     const logs = await sequelize.query(
@@ -1128,7 +1128,7 @@ const getWebhookDetail = async (req: express.Request, res: express.Response) => 
       `SELECT * FROM tbl_webhook_delivery_log 
        WHERE log_id = :log_id AND company_id = :company_id`,
       { replacements: { log_id, company_id }, type: QueryTypes.SELECT }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     if (!log) {
       return errorResponseHelper(res, 404, "Webhook log not found");
@@ -1178,7 +1178,7 @@ const getWebhookStats = async (req: express.Request, res: express.Response) => {
        WHERE company_id = :company_id 
          AND created_at >= NOW() - INTERVAL '${days} days'`,
       { replacements: { company_id }, type: QueryTypes.SELECT }
-    ) as any[];
+    ) as Array<Record<string, unknown>>;
 
     // Get stats by event type
     const eventStats = await sequelize.query(
