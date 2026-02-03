@@ -8,6 +8,7 @@ import linkMiddleware from "./linkMiddleware";
 import adminAuthMiddleware from "./adminAuthMiddleware";
 import walletMiddleware from "./walletMiddleware";
 import apiUsageLogger from "./apiUsageLogger";
+import { apiKeyRateLimiter, ipRateLimiter, strictRateLimiter, createRateLimiter } from "./rateLimitMiddleware";
 
 export {
   adminAuthMiddleware,
@@ -20,4 +21,8 @@ export {
   linkMiddleware,
   walletMiddleware,
   apiUsageLogger,
+  apiKeyRateLimiter,
+  ipRateLimiter,
+  strictRateLimiter,
+  createRateLimiter,
 };
