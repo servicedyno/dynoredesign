@@ -1335,6 +1335,10 @@ const createCryptoPayment = async (
       // This is important when an address is reused for a new payment
       await deleteRedisItem("crypto-" + paymentRes.address);
       
+      // FIX: Store crypto invoice expiry timestamp (15 minutes from now)
+      // This is separate from payment link expiry - crypto invoice has shorter window
+      const cryptoInvoiceExpiresAt = new Date(Date.now() + CRYPTO_INVOICE_MINUTES * 60 * 1000).toISOString();
+      
       await setRedisItem("crypto-" + paymentRes.address, {
         mode: paymentTypes.CRYPTO,
         amount: crypto_amount,                  // Crypto amount customer should pay (includes tax)
@@ -1351,6 +1355,8 @@ const createCryptoPayment = async (
         walletType: "customer",
         temp_id: paymentRes.temp_id,
         is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",  // CRITICAL: Include merchant pool flag
+        // FIX: Store crypto invoice expiry for polling countdown
+        crypto_invoice_expires_at: cryptoInvoiceExpiresAt,
         // Tax tracking
         ...(taxInfo && {
           tax_enabled: "true",
