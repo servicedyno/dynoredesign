@@ -1274,15 +1274,18 @@ const assetBatchAddressesToOtherAddress = async ({
             reason: null,
             fromAddress: fromAddr,
           });
-        } catch (error) {
+        } catch (error: unknown) {
+          const err = error as { body?: { message?: string; cause?: string }; message?: string };
           console.log("###error: ", error);
           transactionResponse.push({
+            txId: '',
             fromAddress: fromAddr.address,
             toAddress: destinationAddress,
             status: "failed",
-            errorMessage: error.body.message,
-            error: error.message,
-            cause: error.body.cause,
+            errorMessage: err.body?.message || '',
+            error: err.message || '',
+            cause: err.body?.cause || '',
+            reason: err.message || null,
           });
         }
       })
