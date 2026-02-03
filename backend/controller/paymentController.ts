@@ -1034,7 +1034,7 @@ const createCryptoPayment = async (
       if (items.incomplete_payment) {
         const incompletePayment = items.incomplete_payment;
         const incompleteTimestamp = new Date(incompletePayment.timestamp);
-        const gracePeriodMs = 30 * 60 * 1000; // 30 minutes
+        const gracePeriodMs = PAYMENT_TIMING.GRACE_PERIOD_MINUTES * 60 * 1000; // From centralized config
         const now = new Date();
         const graceExpiry = new Date(incompleteTimestamp.getTime() + gracePeriodMs);
         
