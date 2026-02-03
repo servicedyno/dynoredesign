@@ -13,6 +13,11 @@ import tronweb from "tronweb";
 import { Crc32c } from "@aws-crypto/crc32c";
 import { buildUrl } from "../helper";
 
+// Type guard for TransactionHash (has txId)
+const isTransactionHash = (result: TransactionHash | SignatureId): result is TransactionHash => {
+  return 'txId' in result;
+};
+
 // Testnet configuration helper
 const isTestnet = () => process.env.TATUM_TESTNET === 'true';
 const getTestnetType = () => process.env.TATUM_TESTNET_TYPE || 'ethereum-sepolia';
