@@ -29,15 +29,24 @@ TEST_COMPANY_ID = 38
 @pytest.fixture(scope="module")
 def auth_token():
     """Get authentication token for all tests"""
-    response = requests.post(
-        f"{BASE_URL}/api/user/login",
-        json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
-        headers={"Content-Type": "application/json"},
-        timeout=15
-    )
-    if response.status_code == 200:
-        return response.json()["data"]["accessToken"]
-    pytest.skip("Authentication failed - cannot run authenticated tests")
+    # Try multiple times with delay to handle rate limiting
+    for attempt in range(3):
+        response = requests.post(
+            f"{BASE_URL}/api/user/login",
+            json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
+            headers={"Content-Type": "application/json"},
+            timeout=15
+        )
+        if response.status_code == 200:
+            return response.json()["data"]["accessToken"]
+        elif response.status_code == 429:
+            # Rate limited - wait and retry
+            retry_after = response.json().get("retryAfter", 60)
+            print(f"Rate limited, waiting {min(retry_after, 30)} seconds...")
+            time.sleep(min(retry_after, 30))
+        else:
+            break
+    pytest.skip(f"Authentication failed - status {response.status_code}: {response.text}")
 
 
 class TestHealthCheck:
