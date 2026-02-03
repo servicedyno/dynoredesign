@@ -54,12 +54,12 @@ const getKYCStatus = async (req: express.Request, res: express.Response) => {
          FROM tbl_user_transaction 
          WHERE user_id = :userId AND status = 'done'`;
 
-    const volumeResult = await sequelize.query(volumeQuery, {
+    const volumeResult = await sequelize.query<{ total_volume: string }>(volumeQuery, {
       replacements: { userId, companyId },
       type: QueryTypes.SELECT,
-    }) as Array<Record<string, unknown>>;
+    });
 
-    const totalVolume = parseFloat(volumeResult[0]?.total_volume || "0");
+    const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
     const volumeThreshold = 5000;
     const requiresKYC = totalVolume >= volumeThreshold;
 
