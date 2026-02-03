@@ -19,6 +19,48 @@ import crypto from "crypto";
 const TAX_DATA_API_URL = process.env.TAX_DATA_API_URL || "https://api.apilayer.com/tax_data";
 const TAX_DATA_API_KEY = process.env.TAX_DATA_API_KEY;
 
+// Country names mapping for better error messages
+const COUNTRY_NAMES: Record<string, string> = {
+  AT: "Austria", BE: "Belgium", BG: "Bulgaria", CY: "Cyprus", CZ: "Czech Republic",
+  DE: "Germany", DK: "Denmark", EE: "Estonia", ES: "Spain", FI: "Finland",
+  FR: "France", GR: "Greece", HR: "Croatia", HU: "Hungary", IE: "Ireland",
+  IT: "Italy", LT: "Lithuania", LU: "Luxembourg", LV: "Latvia", MT: "Malta",
+  NL: "Netherlands", PL: "Poland", PT: "Portugal", RO: "Romania", SE: "Sweden",
+  SI: "Slovenia", SK: "Slovakia", GB: "United Kingdom", US: "United States",
+  CA: "Canada", AU: "Australia", NZ: "New Zealand", IN: "India", JP: "Japan",
+  CN: "China", BR: "Brazil", MX: "Mexico", AR: "Argentina", CH: "Switzerland",
+  NO: "Norway", IS: "Iceland", LI: "Liechtenstein", TR: "Turkey", RU: "Russia",
+  UA: "Ukraine", SA: "Saudi Arabia", AE: "United Arab Emirates", IL: "Israel",
+};
+
+/**
+ * Get country name from country code
+ * @param countryCode - 2-letter ISO country code
+ * @returns Country name or country code if not found
+ */
+const getCountryName = (countryCode: string): string => {
+  const upperCode = countryCode.toUpperCase();
+  return COUNTRY_NAMES[upperCode] || upperCode;
+};
+
+/**
+ * Suggest country based on VAT number prefix
+ * @param vatNumber - VAT number
+ * @returns Suggested country code or null
+ */
+const suggestCountryFromVAT = (vatNumber: string): string | null => {
+  if (!vatNumber || vatNumber.length < 2) return null;
+  
+  const vatCountry = vatNumber.substring(0, 2).toUpperCase();
+  
+  // Validate it's a real country code
+  if (COUNTRY_NAMES[vatCountry]) {
+    return vatCountry;
+  }
+  
+  return null;
+};
+
 /**
  * Validate TAX ID/VAT Number using APILayer
  * @param vat_number - Tax ID to validate
