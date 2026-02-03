@@ -1279,7 +1279,7 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
       parameters: [{
         in: 'query',
         name: 'currency',
-        schema: { type: 'string', enum: ['BTC', 'ETH', 'TRX', 'LTC'] },
+        schema: { type: 'string', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH'] },
         required: true,
         example: 'BTC'
       }],
