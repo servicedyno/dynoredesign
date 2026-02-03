@@ -213,6 +213,27 @@ async function migrateUser() {
     for (const company of sourceCompanies.rows) {
       const oldCompanyId = company.company_id;
       
+      // VAT Country Validation - Check for mismatches and warn
+      if (company.vat_number && company.country) {
+        const vatCountry = company.vat_number.substring(0, 2).toUpperCase();
+        const companyCountry = company.country.toUpperCase();
+        
+        if (vatCountry !== companyCountry) {
+          console.warn(`⚠️  VAT country mismatch for company ${company.company_name}:`);
+          console.warn(`   VAT: ${company.vat_number} (Country: ${vatCountry})`);
+          console.warn(`   Company Country: ${companyCountry}`);
+          console.warn(`   Auto-correcting country to match VAT...`);
+          company.country = vatCountry; // Auto-fix to match VAT
+        }
+      }
+      
+      // Auto-suggest country from VAT if country is missing
+      if (company.vat_number && !company.country) {
+        const suggestedCountry = company.vat_number.substring(0, 2).toUpperCase();
+        console.log(`ℹ️  Auto-suggesting country ${suggestedCountry} for company ${company.company_name} based on VAT ${company.vat_number}`);
+        company.country = suggestedCountry;
+      }
+      
       // Update user_id to new one
       company.user_id = newUserId;
       
