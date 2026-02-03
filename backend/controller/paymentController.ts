@@ -853,8 +853,8 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           }, true);  // Use crypto-specific webhook for proper verification
           console.log("paymentRes=============>", paymentRes, uniqueRef);
           
-          // Calculate remaining minutes for crypto invoice (default 15 minutes from now)
-          const CRYPTO_INVOICE_MINUTES = 15;
+          // Calculate remaining minutes for crypto invoice (uses centralized config)
+          const CRYPTO_INVOICE_MINUTES = PAYMENT_TIMING.CRYPTO_INVOICE_MINUTES;
           finalRes = { 
             hash: uniqueRef, 
             ...paymentRes,
