@@ -119,10 +119,10 @@ export const setupWeeklySummaryCron = () => {
               String(user.name || ''),
               periodStart,
               periodEnd,
-              String(typedStats.total_count || typedStats.transaction_count),
+              String(typedStats.total_count || typedStats.transaction_count || 0),
               totalVolume.toFixed(2),
-              String(typedStats.completed_count),
-              String(typedStats.pending_count),
+              String(typedStats.completed_count || 0),
+              String(typedStats.pending_count || 0),
               String(typedStats.top_currency || "N/A")
             );
             log(`Weekly summary email sent to ${user.email}`, "info");
@@ -308,7 +308,7 @@ export const setupWalletReminderCron = () => {
         try {
           // Send wallet reminder email
           const { sendAddWalletReminderEmail } = await import("../services/emailService");
-          await sendAddWalletReminderEmail(user.email, user.name, user.company_name);
+          await sendAddWalletReminderEmail(String(user.email), String(user.name), String(user.company_name));
 
           // Mark user as reminded
           await sequelize.query(

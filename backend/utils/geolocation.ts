@@ -113,7 +113,8 @@ export const getCountryFromIP = async (ip: string, headers?: HeadersType): Promi
     return null;
     
   } catch (error: unknown) {
-    console.error('[Geolocation] Failed to detect country:', error.message);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('[Geolocation] Failed to detect country:', errMsg);
     return null;
   }
 };

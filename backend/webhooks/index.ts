@@ -237,7 +237,7 @@ const callUrlWithPayload = async (
         
       } catch (err: unknown) {
         const error = err as { response?: { status?: number }; message?: string };
-        lastError = error;
+        lastError = error as Error;
         totalRetries = attempt;
         finalResponseStatus = error.response?.status || null;
         
