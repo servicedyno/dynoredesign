@@ -156,7 +156,7 @@ export const sendConfirmationProgressNotification = async (
   txId: string,
   currentConfirmations: number,
   currency: string,
-  customerData: { name?: string; email?: string; phone?: string; metadata?: Record<string, unknown> }
+  customerData: { name?: string; email?: string; phone?: string; metadata?: Record<string, unknown>; adm_id?: number; company_id?: number; amount?: number }
 ): Promise<boolean> => {
   try {
     const requiredConfirmations = CONFIRMATION_REQUIREMENTS[currency] || 1;
