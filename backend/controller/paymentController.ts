@@ -4154,8 +4154,8 @@ const getCurrencyRates = async (
               total_amount_source: roundedTotalAmountUSD, // Total in source currency (USD) for display
               amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto, // Override amount with total
             };
-          } catch (feeError: any) {
-            console.error(`[getCurrencyRates] Fee calc error for ${rate.currency}:`, feeError.message);
+          } catch (feeError: unknown) {
+            console.error(`[getCurrencyRates] Fee calc error for ${rate.currency}:`, getErrorMessage(feeError));
             return {
               ...rate,
               fee_payer: 'customer',
