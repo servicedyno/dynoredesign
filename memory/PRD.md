@@ -124,15 +124,24 @@ A full-stack crypto payment gateway called "Dynopay" with:
 
 ## Prioritized Backlog
 
+### P0 - Critical (Frontend Implementation Needed)
+1. **Company Settings UI:** Implement Webhook & Tolerance settings sections (backend ready)
+2. **Create Payment Link UI:** Add crypto selector + tax toggle (backend ready)
+3. **Edit Payment Link UI:** New screen to edit existing links (backend ready)
+4. **Payment Links List UI:** Add Edit button with status-based visibility
+
 ### P1 - High Priority
 1. **Import Wallets UI:** Build frontend feature for merchants to import wallets from another company (backend logic exists)
+2. **Checkout Tax Display:** Show tax breakdown on checkout page when enabled
 
 ### P2 - Medium Priority
 1. **Cache Consolidation:** Refactor dual caching (Redis + in-memory) to single Redis-based cache for predictability
 2. **URL Shortener:** Consider dedicated URL shortener service for payment links
+3. **Data Quality Audit:** Fix `/app/audit_vat_data_quality.py` database connection and run audit
 
 ### P3 - Low Priority
 1. Additional code cleanup (linting, unused imports, etc.)
+2. Security monitoring dashboards for rate limiters
 
 ---
 
