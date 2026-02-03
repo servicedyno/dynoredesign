@@ -4,7 +4,11 @@ import { errorResponseHelper, getErrorMessage } from "../helper";
 import { customerModel } from "../models";
 
 import { Op } from "sequelize";
-import { IUserType } from "../utils/types";
+import { IUserType, CustomerJwtPayload } from "../utils/types";
+
+interface JwtError extends Error {
+  name: 'TokenExpiredError' | 'JsonWebTokenError' | 'NotBeforeError' | string;
+}
 
 const authMiddleware = async (
   req: express.Request,
@@ -26,17 +30,18 @@ const authMiddleware = async (
     
     try {
       // Verify token synchronously
-      const decoded = jwt.verify(token, tokenSecret) as { user_id?: number; customer_id?: string; email?: string };
+      const decoded = jwt.verify(token, tokenSecret) as CustomerJwtPayload;
       
       // Check if decoded token is valid and has required id
-      if (!decoded || !decoded.id) {
+      const customerId = decoded.id || decoded.user_id;
+      if (!decoded || !customerId) {
         return errorResponseHelper(res, 403, "Invalid token format - missing customer ID");
       }
       
       // Check if customer exists in database
       const customerExists = await customerModel.findOne({
         where: {
-          id: decoded.id,
+          id: customerId,
         },
       });
 
@@ -51,11 +56,12 @@ const authMiddleware = async (
       next();
     } catch (err: unknown) {
       // Handle JWT-specific errors
-      if (err.name === 'TokenExpiredError') {
+      const jwtError = err as JwtError;
+      if (jwtError.name === 'TokenExpiredError') {
         return errorResponseHelper(res, 403, "Authentication Expired! Please login again.");
-      } else if (err.name === 'JsonWebTokenError') {
+      } else if (jwtError.name === 'JsonWebTokenError') {
         return errorResponseHelper(res, 403, "Invalid token. Please login again.");
-      } else if (err.name === 'NotBeforeError') {
+      } else if (jwtError.name === 'NotBeforeError') {
         return errorResponseHelper(res, 403, "Token not active yet. Please try again later.");
       } else {
         throw err; // Re-throw to be caught by outer catch
