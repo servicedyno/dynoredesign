@@ -448,7 +448,7 @@ const login = async (req: express.Request, res: express.Response) => {
 
 const checkEmail = async (req: express.Request, res: express.Response) => {
   try {
-    const { email }: any = req.query;
+    const { email } = req.query as { email?: string };
     const userData = await userModel.findOne({
       where: {
         email: email.toLowerCase(),
@@ -596,7 +596,7 @@ const confirmOTP = async (req: express.Request, res: express.Response) => {
       } else {
         // Get OTP from Redis instead of localStorage
         const otpKey = `otp:${email}`;
-        const item: any = await getRedisItem(otpKey);
+        const item = await getRedisItem(otpKey);
         
         if (!item || !item.otp) {
           errorResponseHelper(res, 400, "OTP expired or not found!");
@@ -863,7 +863,7 @@ const facebookSignIn = async (req: express.Request, res: express.Response) => {
     }
 
     // Verify token and get user info from Facebook
-    let facebookUserInfo: any;
+    let facebookUserInfo: Record<string, unknown>;
     try {
       const response = await axios.get(
         `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`
@@ -1131,7 +1131,7 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 400, "Google ID token or access token is required");
     }
 
-    let googleUserInfo: any;
+    let googleUserInfo: Record<string, unknown>;
 
     if (idToken) {
       // Verify ID token with Google

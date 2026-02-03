@@ -142,7 +142,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     }
 
     // Group wallets by company
-    const groupedByCompany: { [key: string]: { company_id: number; company_name: string; wallets: any[] } } = {};
+    const groupedByCompany: { [key: string]: { company_id: number; company_name: string; wallets: Array<Record<string, unknown>> } } = {};
     
     for (const wallet of walletsWithCompanyName) {
       const companyKey = `company_${wallet.company_id}`;
@@ -946,7 +946,7 @@ const verifyCryptoPayment = async (
       console.log(adminWallet[0], userSettledAmount);
 
       let fees,
-        sendAmount: any = Number(receivedAmount);
+        sendAmount: number = Number(receivedAmount);
       let transactionDetails;
       if (["USDT-TRC20", "USDT-ERC20"].indexOf(tempData.currency) === -1) {
         if (["BTC", "LTC", "DOGE"].indexOf(tempData.currency) !== -1) {
