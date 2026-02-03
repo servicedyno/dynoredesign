@@ -145,6 +145,7 @@ export const ipRateLimiter = createRateLimiter(
 
 /**
  * Strict rate limiter for sensitive endpoints (login, password reset, etc.)
+ * 5 attempts per 15 minutes
  */
 export const strictRateLimiter = createRateLimiter(
   (req) => {
@@ -157,6 +158,61 @@ export const strictRateLimiter = createRateLimiter(
   async () => ({
     windowMs: 15 * 60 * 1000,  // 15 minutes
     maxRequests: 5,             // 5 attempts per 15 minutes
+  })
+);
+
+/**
+ * Login-specific rate limiter that tracks by both IP and email
+ * This prevents brute force attacks on specific accounts
+ */
+export const loginRateLimiter = createRateLimiter(
+  (req) => {
+    const ip = req.ip || 
+               req.headers['x-forwarded-for'] as string || 
+               req.socket.remoteAddress || 
+               'unknown';
+    const email = req.body?.email || req.body?.data?.email || 'no-email';
+    return `login:${ip}:${email}`;
+  },
+  async () => ({
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    maxRequests: 5,             // 5 login attempts per email per IP per 15 minutes
+  })
+);
+
+/**
+ * Moderate rate limiter for registration and social auth
+ * 10 attempts per 15 minutes
+ */
+export const moderateRateLimiter = createRateLimiter(
+  (req) => {
+    const ip = req.ip || 
+               req.headers['x-forwarded-for'] as string || 
+               req.socket.remoteAddress || 
+               'unknown';
+    return `moderate:${ip}`;
+  },
+  async () => ({
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    maxRequests: 10,            // 10 attempts per 15 minutes
+  })
+);
+
+/**
+ * OTP rate limiter - tracks by phone/email to prevent OTP spam
+ */
+export const otpRateLimiter = createRateLimiter(
+  (req) => {
+    const ip = req.ip || 
+               req.headers['x-forwarded-for'] as string || 
+               req.socket.remoteAddress || 
+               'unknown';
+    const contact = req.body?.email || req.body?.phone || req.body?.data?.email || req.body?.data?.phone || 'no-contact';
+    return `otp:${ip}:${contact}`;
+  },
+  async () => ({
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    maxRequests: 3,             // 3 OTP requests per contact per 15 minutes
   })
 );
 
