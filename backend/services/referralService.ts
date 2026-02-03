@@ -250,7 +250,7 @@ export const redeemUserReferralCode = async (params: {
     return { success: false, message: 'Invalid referral code' };
   }
 
-  const referrerId = (referrer as { user_id: number }).user_id;
+  const referrerId = (referrer as unknown as { user_id: number }).user_id;
 
   // Check if user is trying to refer themselves
   if (referrerId === newUserId) {
