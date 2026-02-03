@@ -4786,6 +4786,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
     allowedModes,
     fee_payer,
     apply_tax,
+    accepted_currencies,  // Array of crypto types to accept
     callback_url, 
     redirect_url, 
     webhook_url 
@@ -4811,6 +4812,10 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
 
     // Prepare update object
     const updateData: Record<string, unknown> = {};
+    
+    // For accepted_currencies validation, we need to fetch configured wallets
+    const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
+    let allConfiguredCurrencies: string[] = [];
     
     if (description !== undefined) {
       updateData.description = description;
