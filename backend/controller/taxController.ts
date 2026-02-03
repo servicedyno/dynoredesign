@@ -112,7 +112,8 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
         }
       } catch (apiError: unknown) {
         // Log API error but continue with fallback
-        console.log(`Tax API error for ${upperCountryCode}:`, apiError.response?.data?.message || apiError.message);
+        const err = apiError as { response?: { data?: { message?: string } }; message?: string };
+        console.log(`Tax API error for ${upperCountryCode}:`, err.response?.data?.message || err.message);
       }
     }
 
@@ -120,12 +121,12 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
     const taxAcronym = TAX_ACRONYMS[upperCountryCode] || "TAX";
     const countryName = COUNTRY_NAMES[upperCountryCode] || upperCountryCode;
     
-    let standardRate = 0;
-    let reducedRates = null;
+    let standardRate: number = 0;
+    let reducedRates: unknown = null;
     let source = "fallback";
 
     if (apiSuccess && apiData) {
-      standardRate = apiData.standard_rate || apiData.rate || 0;
+      standardRate = Number(apiData.standard_rate || apiData.rate || 0);
       reducedRates = apiData.reduced_rates || null;
       source = "api";
     } else if (FALLBACK_VAT_RATES[upperCountryCode] !== undefined) {
