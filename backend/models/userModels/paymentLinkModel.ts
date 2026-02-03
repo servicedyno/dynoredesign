@@ -115,6 +115,15 @@ const paymentLinkModel = sequelize.define(
       defaultValue: false,
       allowNull: false,
     },
+    // Accepted cryptocurrencies for this payment link
+    // If null/empty, all configured wallets are available
+    // Format: comma-separated string e.g., "BTC,ETH,USDT-TRC20"
+    accepted_currencies: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: null,
+      comment: "Comma-separated list of accepted cryptocurrencies. If null, all configured wallets are accepted.",
+    },
     // Payment link reminder tracking
     reminder_1_sent_at: {
       type: DataTypes.DATE,
