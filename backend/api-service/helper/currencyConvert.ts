@@ -29,13 +29,13 @@ const currencyConvert = async ({ from, to, amount }: { from: string; to: string;
     );
     
     const $ = load(response.data);
-    let rates: unknown = $(".iBp4i").text().split(" ")[0];
+    let ratesText: string = $(".iBp4i").text().split(" ")[0];
     
-    if (rates.includes(",")) {
-      rates = replaceAll(rates, ",", "");
+    if (ratesText.includes(",")) {
+      ratesText = replaceAll(ratesText, ",", "");
     }
     
-    rates = parseFloat(rates) / amount;
+    const rates = parseFloat(ratesText) / amount;
     return rates;
   } catch (error) {
     console.error('[currencyConvert] Error fetching rate:', error);
