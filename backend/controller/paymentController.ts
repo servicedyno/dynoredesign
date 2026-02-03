@@ -5029,7 +5029,7 @@ const sendingLeftover = async () => {
     `select ut.* from tbl_user_temp_address ut join tbl_admin_fee_transaction at
     on ut.wallet_address=at.wallet_address
     where ut.wallet_type in ('USDT-ERC20','USDT-TRC20') and ut.status='successful'
-    and ut.admin_status='successful' and ut."createdAt" >= NOW() - INTERVAL '2 days' 
+    and ut.admin_status='successful' and ut."createdAt" >= NOW() - INTERVAL '${PAYMENT_TIMING.SQL_INTERVALS.RECENT_TRANSACTIONS}' 
     `,
     {
       type: QueryTypes.SELECT,
