@@ -730,7 +730,7 @@ const getData = async (req: express.Request, res: express.Response) => {
               currency: item.incomplete_payment.currency,
               address: item.incomplete_payment.address,
               pending_amount: item.incomplete_payment.pending_amount,
-              pending_usd: item.incomplete_payment.pending_amount,
+              pending_usd: incompletePaymentUSD, // Properly converted to USD
               timestamp: item.incomplete_payment.timestamp,
               remaining_minutes: Math.max(0, Math.ceil((new Date(item.incomplete_payment.timestamp).getTime() + paymentSettings.grace_period_minutes * 60 * 1000 - Date.now()) / 60000)),
               qr_code: item.incomplete_payment.qr_code,
