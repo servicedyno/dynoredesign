@@ -873,35 +873,48 @@ export const releaseAddress = async (
 };
 
 /**
- * Fund gas if needed for account-based chains
+ * Smart Gas Funding for account-based chains (ETH, TRX)
+ * 
+ * Instead of sending a fixed amount (wasteful), this function:
+ * 1. Checks existing gas balance in temp address
+ * 2. Estimates gas needed for the upcoming USDT/token transfer
+ * 3. Adds a 30% safety buffer to ensure transaction success
+ * 4. Only sends the deficit (or nothing if balance is sufficient)
+ * 
+ * @param poolAddress - The merchant pool address to fund
+ * @param walletType - The token type (USDT-TRC20, USDT-ERC20, etc.)
+ * @param transferAmount - Optional: The amount to be transferred (for better estimation)
+ * @param recipientAddress - Optional: The recipient address (for better estimation)
  */
 export const fundGasIfNeeded = async (
   poolAddress: any,
-  walletType: string
-): Promise<{ funded: boolean; amount: number; txId?: string }> => {
+  walletType: string,
+  transferAmount?: number,
+  recipientAddress?: string
+): Promise<{ funded: boolean; amount: number; txId?: string; reason?: string }> => {
   // UTXO chains don't need separate gas funding
   if (UTXO_CHAINS.includes(walletType)) {
-    return { funded: false, amount: 0 };
+    return { funded: false, amount: 0, reason: 'UTXO chain - no gas needed' };
   }
 
   const gasToken = GAS_TOKEN_MAPPING[walletType];
   if (!gasToken) {
-    return { funded: false, amount: 0 };
+    return { funded: false, amount: 0, reason: 'No gas token mapping' };
   }
 
   const feeWalletAddress = FEE_WALLETS[gasToken];
   if (!feeWalletAddress) {
-    console.warn(`[MerchantPool] No fee wallet configured for ${gasToken}`);
-    return { funded: false, amount: 0 };
+    console.warn(`[SmartGas] No fee wallet configured for ${gasToken}`);
+    return { funded: false, amount: 0, reason: 'No fee wallet configured' };
   }
 
   try {
-    // Get current gas balance on-chain
-    const balanceResult = await tatumApi.getAddressBalance(
-      poolAddress.dataValues.wallet_address,
-      gasToken
-    );
+    const tempAddress = poolAddress.dataValues.wallet_address;
     
+    // ═══════════════════════════════════════════════════════════════════
+    // STEP 1: Check existing gas balance
+    // ═══════════════════════════════════════════════════════════════════
+    const balanceResult = await tatumApi.getAddressBalance(tempAddress, gasToken);
     let currentBalance = Number(balanceResult?.balance ?? 0);
     
     // Convert from SUN to TRX for TRON
@@ -909,22 +922,79 @@ export const fundGasIfNeeded = async (
       currentBalance = currentBalance / 1000000;
     }
 
-    console.log(`[MerchantPool] Current gas balance: ${currentBalance} ${gasToken}`);
+    console.log(`[SmartGas] Current balance: ${currentBalance} ${gasToken} in ${tempAddress}`);
 
-    // Determine gas requirements
-    const gasAmount = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_AMOUNT : POOL_CONFIG.ETH_GAS_AMOUNT;
-    const minDeficit = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_MIN_DEFICIT : POOL_CONFIG.ETH_GAS_MIN_DEFICIT;
-
-    const deficit = gasAmount - currentBalance;
-
-    // Only fund if deficit exceeds minimum
-    if (deficit <= minDeficit) {
-      console.log(`[MerchantPool] Gas sufficient (have: ${currentBalance}, need: ${gasAmount})`);
-      await poolAddress.update({ gas_balance: currentBalance });
-      return { funded: false, amount: 0 };
+    // ═══════════════════════════════════════════════════════════════════
+    // STEP 2: Estimate gas needed for token transfer
+    // ═══════════════════════════════════════════════════════════════════
+    let estimatedGas = 0;
+    
+    try {
+      // Get contract address for token transfers
+      let contractAddress: string | undefined;
+      if (walletType === 'USDT-ERC20') {
+        contractAddress = process.env.ETH_CONTRACT;
+      } else if (walletType === 'USDC-ERC20') {
+        contractAddress = process.env.USDC_CONTRACT;
+      } else if (walletType === 'USDT-TRC20') {
+        contractAddress = process.env.TRX_CONTRACT;
+      }
+      
+      // Estimate gas for the token transfer
+      // Use a dummy recipient if not provided (for estimation purposes)
+      const estimationRecipient = recipientAddress || feeWalletAddress;
+      const estimationAmount = transferAmount || 100; // Default 100 tokens for estimation
+      
+      const feeEstimate = await tatumApi.feeEstimation(
+        walletType,
+        tempAddress,
+        estimationRecipient,
+        estimationAmount,
+        contractAddress
+      );
+      
+      // Extract gas fee from estimation
+      if (gasToken === "ETH") {
+        // ETH fees are in ETH
+        estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? feeEstimate?.slow ?? 0);
+      } else if (gasToken === "TRX") {
+        // TRX fees - feeEstimation returns TRX amount
+        estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 5);
+      }
+      
+      console.log(`[SmartGas] Estimated gas for ${walletType} transfer: ${estimatedGas} ${gasToken}`);
+      
+    } catch (estimationError) {
+      // Fallback to conservative estimate if estimation fails
+      console.warn(`[SmartGas] Gas estimation failed, using fallback:`, getErrorMessage(estimationError));
+      estimatedGas = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_FALLBACK : POOL_CONFIG.ETH_GAS_FALLBACK;
     }
 
-    // Get fee wallet private key from adminFeeModel
+    // ═══════════════════════════════════════════════════════════════════
+    // STEP 3: Apply safety buffer (30% extra)
+    // ═══════════════════════════════════════════════════════════════════
+    const requiredGas = estimatedGas * POOL_CONFIG.GAS_SAFETY_BUFFER;
+    
+    console.log(`[SmartGas] Required gas with ${((POOL_CONFIG.GAS_SAFETY_BUFFER - 1) * 100).toFixed(0)}% buffer: ${requiredGas.toFixed(6)} ${gasToken}`);
+
+    // ═══════════════════════════════════════════════════════════════════
+    // STEP 4: Calculate deficit and decide if funding needed
+    // ═══════════════════════════════════════════════════════════════════
+    const deficit = requiredGas - currentBalance;
+    const minDeficit = gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT : POOL_CONFIG.ETH_MIN_DEFICIT;
+
+    // If we have enough gas, no need to fund
+    if (deficit <= minDeficit) {
+      console.log(`[SmartGas] ✅ Sufficient gas (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)}) - No funding needed`);
+      await poolAddress.update({ gas_balance: currentBalance });
+      return { funded: false, amount: 0, reason: 'Sufficient balance' };
+    }
+
+    console.log(`[SmartGas] 📊 Gas deficit: ${deficit.toFixed(6)} ${gasToken} (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)})`);
+
+    // ═══════════════════════════════════════════════════════════════════
+    // STEP 5: Fund only the deficit amount
+    // ═══════════════════════════════════════════════════════════════════
     const { adminFeeModel } = await import("../models");
     const feeWallet = await adminFeeModel.findOne({
       where: { wallet_type: gasToken },
@@ -939,39 +1009,42 @@ export const fundGasIfNeeded = async (
       process.env.TEMP_KEY_ID
     );
 
-    // Estimate fees for gas transfer (only for ETH)
+    // Estimate fees for the gas transfer itself (only for ETH)
     let transferFees = null;
     if (gasToken === "ETH") {
       transferFees = await tatumApi.feeEstimation(
         gasToken,
         feeWalletAddress,
-        poolAddress.dataValues.wallet_address,
+        tempAddress,
         deficit
       );
     }
 
-    console.log(`[MerchantPool] 🔥 Funding ${deficit} ${gasToken} to ${poolAddress.dataValues.wallet_address}`);
+    console.log(`[SmartGas] 🔥 Funding ${deficit.toFixed(6)} ${gasToken} to ${tempAddress}`);
 
-    // Transfer gas from fee wallet to pool address
+    // Transfer only the deficit amount from fee wallet to pool address
     const txResult = await tatumApi.assetToOtherAddress({
       currency: gasToken,
       fromAddress: feeWalletAddress,
-      toAddress: poolAddress.dataValues.wallet_address,
+      toAddress: tempAddress,
       privateKey: feeWalletPrivateKey,
       amount: deficit,
       fee: transferFees,
     });
 
     // Update gas balance tracker
-    await poolAddress.update({ gas_balance: currentBalance + deficit });
+    const newBalance = currentBalance + deficit;
+    await poolAddress.update({ gas_balance: newBalance });
 
-    console.log(`[MerchantPool] ✅ Gas funded: ${deficit} ${gasToken} (TX: ${txResult?.txId})`);
+    console.log(`[SmartGas] ✅ Gas funded: ${deficit.toFixed(6)} ${gasToken} (TX: ${txResult?.txId})`);
+    console.log(`[SmartGas]    Old balance: ${currentBalance.toFixed(6)} → New balance: ${newBalance.toFixed(6)} ${gasToken}`);
 
-    return { funded: true, amount: deficit, txId: txResult?.txId };
+    return { funded: true, amount: deficit, txId: txResult?.txId, reason: 'Deficit funded' };
+    
   } catch (error) {
     const message = getErrorMessage(error);
-    console.error(`[MerchantPool] ❌ Gas funding failed:`, message);
-    return { funded: false, amount: 0 };
+    console.error(`[SmartGas] ❌ Gas funding failed:`, message);
+    return { funded: false, amount: 0, reason: `Error: ${message}` };
   }
 };
 
