@@ -8,7 +8,7 @@ import json
 from urllib.parse import urlparse, parse_qs
 
 def manual_test():
-    backend_url = "https://setup-wizard-84.preview.emergentagent.com"
+    backend_url = "https://wallet-manager-33.preview.emergentagent.com"
     
     # First authenticate
     response = requests.post(

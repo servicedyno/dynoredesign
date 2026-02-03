@@ -8,7 +8,7 @@ import json
 import os
 
 # Get backend URL
-BACKEND_URL = "https://setup-wizard-84.preview.emergentagent.com"
+BACKEND_URL = "https://wallet-manager-33.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 def authenticate():

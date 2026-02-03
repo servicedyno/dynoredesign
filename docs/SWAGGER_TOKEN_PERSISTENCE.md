@@ -15,7 +15,7 @@ Added `persistAuthorization: true` to Swagger UI configuration.
 ## How It Works Now
 
 ### 1. Authorize Once
-1. Open Swagger UI: https://setup-wizard-84.preview.emergentagent.com/api/docs
+1. Open Swagger UI: https://wallet-manager-33.preview.emergentagent.com/api/docs
 2. Click "Authorize" (🔓)
 3. Paste your JWT token
 4. Click "Authorize" → "Close"
