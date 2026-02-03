@@ -4273,28 +4273,36 @@ const getBalance = async (req: express.Request, res: express.Response) => {
   try {
     const customer = await customerModel.findOne({
       where: {
-        id: userData.id,
+        id: userData.user_id,
       },
     });
+
+    if (!customer) {
+      return errorResponseHelper(res, 404, "Customer not found");
+    }
 
     const customerData = await customerWalletModel.findOne({
       where: {
-        customer_id: customer.dataValues.customer_id,
+        customer_id: (customer as { dataValues: { customer_id: string } }).dataValues.customer_id,
       },
     });
 
-    const { amount, wallet_type, ...rest } = customerData.dataValues;
+    if (!customerData) {
+      return errorResponseHelper(res, 404, "Customer wallet not found");
+    }
+
+    const walletData = (customerData as { dataValues: { amount: number; wallet_type: string } }).dataValues;
 
     successResponseHelper(res, 200, "Balance retrieved successfully", {
-      amount: amount.toFixed(2),
-      currency: wallet_type,
+      amount: walletData.amount.toFixed(2),
+      currency: walletData.wallet_type,
     });
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
       errorMessage,
-      { id: userData.id, email: userData.email },
-      new Error(e)
+      { id: userData.user_id, email: userData.email },
+      new Error(e instanceof Error ? e.message : String(e))
     );
     errorResponseHelper(res, 500, errorMessage);
   }
