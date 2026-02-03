@@ -1,5 +1,5 @@
 import express from "express";
-import { getRedisItem, setRedisItem } from "../redis";
+import { getRedisItem, setRedisItem } from "../utils/redisInstance";
 
 /**
  * Rate limiting middleware that enforces API rate limits stored in the database
