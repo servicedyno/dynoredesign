@@ -221,4 +221,7 @@ export default {
   apiKeyRateLimiter,
   ipRateLimiter,
   strictRateLimiter,
+  loginRateLimiter,
+  moderateRateLimiter,
+  otpRateLimiter,
 };
