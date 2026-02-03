@@ -1405,7 +1405,7 @@ const createCryptoPayment = async (
         console.error('[createCryptoPayment] Crypto/fee calculation error:', calcError);
         // Fallback to simple 2% if calculation fails
         crypto_amount = data.amount || 0;
-        const fallbackFeePercent = FEE_CONFIG.TRANSACTION_FEE_PERCENT / 100;
+        const fallbackFeePercent = parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0') / 100;
         total_fees_crypto = crypto_amount * fallbackFeePercent;
         merchant_amount_crypto = crypto_amount - total_fees_crypto;
       }
