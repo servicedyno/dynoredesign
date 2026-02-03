@@ -168,7 +168,7 @@ const withRetry = async <T>(
   operationName: string,
   maxRetries: number = RETRY_CONFIG.MAX_RETRIES
 ): Promise<T> => {
-  let lastError: Error | null = null;
+  let lastError: Error = new Error('Operation failed');
   
   // Hard failures that should NOT be retried (invalid data, auth issues, permanent errors)
   const NON_RETRYABLE_ERRORS = [
@@ -199,7 +199,7 @@ const withRetry = async <T>(
     try {
       return await operation();
     } catch (error: unknown) {
-      lastError = error;
+      lastError = error instanceof Error ? error : new Error(String(error));
       const message = getErrorMessage(error);
       
       // Check if error is retryable (soft failure like network timeout, rate limit)
