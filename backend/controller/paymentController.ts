@@ -4563,7 +4563,15 @@ ${refereeCodeSection}
       // Don't fail the request if email fails
     }
 
-    successResponseHelper(res, 200, "Payment link created successfully", links);
+    // Format response to be consistent with getPaymentLinkById
+    const responseData = {
+      ...links.dataValues,
+      accepted_currencies: links.dataValues.accepted_currencies 
+        ? links.dataValues.accepted_currencies.split(',').map((c: string) => c.trim())
+        : null,  // null means all configured currencies are accepted
+    };
+
+    successResponseHelper(res, 200, "Payment link created successfully", responseData);
   } catch (e) {
     const errorMessage = getErrorMessage(e);
     apiLogger.error(
