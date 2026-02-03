@@ -1706,7 +1706,9 @@ export const sendSubscriptionPaymentFailedEmail = async (
 
 export default {
   sendWelcomeEmail,
+  sendUserProfileUpdatedEmail,
   sendCompanyProfileCreatedEmail,
+  sendCompanyProfileUpdatedEmail,
   sendCompanyContactWelcomeEmail,
   sendWalletOTPEmail,
   sendWalletVerifiedEmail,
