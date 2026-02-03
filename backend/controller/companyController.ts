@@ -364,10 +364,13 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
         
         // Validate that company country matches VAT country
         if (vatCountryCode !== companyCountryCode) {
+          const vatCountryName = getCountryName(vatCountryCode);
+          const companyCountryName = getCountryName(companyCountryCode);
+          
           return errorResponseHelper(
             res,
             400,
-            `Company country (${companyCountryCode}) must match VAT country (${vatCountryCode}). Please ensure the company is registered in ${vatCountryCode} or update the country accordingly.`
+            `Company country must match VAT country. Your VAT number is for ${vatCountryName} (${vatCountryCode}), but company country is ${companyCountryName} (${companyCountryCode}). Please update to ensure consistency.`
           );
         }
         
