@@ -570,6 +570,15 @@ const getData = async (req: express.Request, res: express.Response) => {
     const subtotalWithTax = amount + taxAmount;
     const grandTotal = amount + totalProcessingFee + taxAmount; // Keep for reference
     
+    // Convert incomplete payment amount to USD if exists
+    let incompletePaymentUSD = 0;
+    if (item.incomplete_payment?.pending_amount && item.incomplete_payment?.currency) {
+      incompletePaymentUSD = await convertToUSD(
+        Number(item.incomplete_payment.pending_amount),
+        item.incomplete_payment.currency
+      );
+    }
+    
     let payload;
     if (item.pathType === "createLink") {
       payload = {
