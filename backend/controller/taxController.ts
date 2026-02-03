@@ -155,7 +155,7 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
 
   } catch (e: unknown) {
     const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(e)) || console.error("Tax rate error:", message);
+    taxLogger?.error?.(message, {}, new Error(message)) || console.error("Tax rate error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
