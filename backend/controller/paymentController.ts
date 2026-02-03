@@ -905,8 +905,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           const fee_payer = items.fee_payer || 'company';
           const baseAmountUSD = Number(items.base_amount || items.amount || 0);
           
-          // Calculate merchant_amount and fees based on fee_payer mode (using centralized config)
-          const ADMIN_FEE_PERCENT = FEE_CONFIG.ADMIN_FEE_PERCENT;
+          // Calculate fees using tier-based structure (2% + fixed + buffer)
           let merchant_amount_crypto = 0;
           let total_fees_crypto = 0;
           const crypto_amount = Number(value.amount);
@@ -934,17 +933,41 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             }
           }
           
-          if (fee_payer === 'customer') {
-            // Customer pays fees - merchant gets base + tax
-            const baseCrypto = taxAmount > 0 
-              ? crypto_amount * (baseAmountUSD / (baseAmountUSD + taxAmount + (crypto_amount - crypto_amount * baseAmountUSD / (baseAmountUSD + taxAmount))))
-              : crypto_amount / (1 + ADMIN_FEE_PERCENT / (1 - ADMIN_FEE_PERCENT));
-            total_fees_crypto = crypto_amount - baseCrypto - taxAmountCrypto;
-            merchant_amount_crypto = baseCrypto + taxAmountCrypto;
-          } else {
-            // Company pays fees - standard deduction
-            merchant_amount_crypto = crypto_amount * (1 - ADMIN_FEE_PERCENT);
-            total_fees_crypto = crypto_amount * ADMIN_FEE_PERCENT;
+          // Calculate fees using tier-based structure
+          // Fee = 2% transaction fee + fixed fee (tier-based) + buffer (tier-based)
+          try {
+            const { totalDeduction, fixedFee, transactionFee, blockchainBuffer } = await calculateTransactionFees(
+              value.currency,
+              baseAmountUSD  // Fee calculation based on USD amount
+            );
+            
+            // Convert fee percentage to crypto
+            const feePercentage = totalDeduction / baseAmountUSD;
+            
+            if (fee_payer === 'customer') {
+              // Customer pays fees - fees are added on top, merchant gets full base + tax
+              // crypto_amount already includes fees (customer paid more)
+              const baseWithTax = baseAmountUSD + taxAmount;
+              const baseCryptoRatio = baseWithTax / (baseWithTax + totalDeduction);
+              merchant_amount_crypto = crypto_amount * baseCryptoRatio;
+              total_fees_crypto = crypto_amount - merchant_amount_crypto;
+            } else {
+              // Company pays fees - fees deducted from received amount
+              total_fees_crypto = crypto_amount * feePercentage;
+              merchant_amount_crypto = crypto_amount - total_fees_crypto;
+            }
+            
+            console.log(`[addPayment] Fee calculation:
+              - Base USD: $${baseAmountUSD}
+              - Fee breakdown: 2%=$${transactionFee.toFixed(2)} + Fixed=$${fixedFee.toFixed(2)} + Buffer=$${blockchainBuffer.toFixed(2)}
+              - Total fee: $${totalDeduction.toFixed(2)} (${(feePercentage * 100).toFixed(2)}%)
+              - Fee payer: ${fee_payer}`);
+          } catch (feeError) {
+            console.error('[addPayment] Fee calculation error, using fallback:', feeError);
+            // Fallback to simple 2% if tier calculation fails
+            const fallbackFeePercent = FEE_CONFIG.TRANSACTION_FEE_PERCENT / 100;
+            total_fees_crypto = crypto_amount * fallbackFeePercent;
+            merchant_amount_crypto = crypto_amount - total_fees_crypto;
           }
           
           // Clear any existing data for this address before setting new payment data
