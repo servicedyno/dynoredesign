@@ -175,4 +175,96 @@ const softDeleteRedisItem = async (key: string, ttlSeconds: number = 1800) => {
   console.log(`[Redis] Soft delete: ${key} will expire in ${ttlSeconds}s`);
 };
 
-export { setRedisItem, setRedisItemWithTTL, setRedisTTL, getRedisItem, deleteRedisItem, softDeleteRedisItem, setMemoryCache, getMemoryCache, invalidateCache };
+// ============================================
+// DISTRIBUTED LOCKING (for concurrency control)
+// ============================================
+
+/**
+ * Acquire a distributed lock
+ * @param lockKey - Unique key for the lock
+ * @param ttlSeconds - Lock expiry time (prevents deadlock)
+ * @param maxRetries - Number of retry attempts
+ * @param retryDelayMs - Delay between retries
+ * @returns true if lock acquired, false otherwise
+ */
+const acquireLock = async (
+  lockKey: string,
+  ttlSeconds: number = 30,
+  maxRetries: number = 3,
+  retryDelayMs: number = 100
+): Promise<boolean> => {
+  const fullKey = `lock:${lockKey}`;
+  const lockValue = `${process.pid}:${Date.now()}`;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    // SET NX (only if not exists) with EX (expiry)
+    const result = await redisClient.set(fullKey, lockValue, {
+      NX: true,
+      EX: ttlSeconds
+    });
+    
+    if (result === 'OK') {
+      console.log(`[Lock] Acquired: ${lockKey}`);
+      return true;
+    }
+    
+    // Wait before retry
+    if (attempt < maxRetries - 1) {
+      await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+    }
+  }
+  
+  console.log(`[Lock] Failed to acquire after ${maxRetries} attempts: ${lockKey}`);
+  return false;
+};
+
+/**
+ * Release a distributed lock
+ * @param lockKey - Unique key for the lock
+ */
+const releaseLock = async (lockKey: string): Promise<void> => {
+  const fullKey = `lock:${lockKey}`;
+  await redisClient.del(fullKey);
+  console.log(`[Lock] Released: ${lockKey}`);
+};
+
+/**
+ * Execute a function with a distributed lock
+ * @param lockKey - Unique key for the lock
+ * @param fn - Function to execute while holding the lock
+ * @param ttlSeconds - Lock expiry time
+ * @returns Result of the function or null if lock could not be acquired
+ */
+const withLock = async <T>(
+  lockKey: string,
+  fn: () => Promise<T>,
+  ttlSeconds: number = 30
+): Promise<{ success: boolean; result?: T; error?: string }> => {
+  const acquired = await acquireLock(lockKey, ttlSeconds);
+  
+  if (!acquired) {
+    return { success: false, error: 'Could not acquire lock' };
+  }
+  
+  try {
+    const result = await fn();
+    return { success: true, result };
+  } finally {
+    await releaseLock(lockKey);
+  }
+};
+
+export { 
+  setRedisItem, 
+  setRedisItemWithTTL, 
+  setRedisTTL, 
+  getRedisItem, 
+  deleteRedisItem, 
+  softDeleteRedisItem, 
+  setMemoryCache, 
+  getMemoryCache, 
+  invalidateCache,
+  acquireLock,
+  releaseLock,
+  withLock
+};
