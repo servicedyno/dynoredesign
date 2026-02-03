@@ -51,7 +51,7 @@ const dynoPayEmailTemplate = (
       <div class="container">
         <div class="header">
           <a href="https://dynopay.com" class="logo">
-            <img src="${DYNOPAY_LOGO_URL}" alt="DynoPay" class="logo-img" style="height: 40px;" />
+            <img src="${DYNOPAY_LOGO_URL}" alt="Dynopay" class="logo-img" style="height: 40px;" />
           </a>
         </div>
         <div class="content">
@@ -59,15 +59,15 @@ const dynoPayEmailTemplate = (
           ${content}
           ${showButton ? `<div style="text-align: center; margin: 24px 0;"><a href="${buttonLink}" class="button">${buttonText}</a></div>` : ''}
           <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
-            <p>Best regards,<br /><strong>The DynoPay Team</strong></p>
+            <p>Best regards,<br /><strong>The Dynopay Team</strong></p>
           </div>
         </div>
         <div class="footer">
           <div class="footer-logo">
-            <img src="${DYNOPAY_LOGO_URL}" alt="DynoPay" style="height: 30px; opacity: 0.9;" />
+            <img src="${DYNOPAY_LOGO_URL}" alt="Dynopay" style="height: 30px; opacity: 0.9;" />
           </div>
           <p>Secure Crypto Payment Gateway</p>
-          <p>© ${new Date().getFullYear()} DynoPay. All rights reserved.</p>
+          <p>© ${new Date().getFullYear()} Dynopay. All rights reserved.</p>
           <div style="margin-top: 16px;">
             <a href="https://dynopay.com/privacy" style="color: #9ca3af; text-decoration: none; margin: 0 12px;">Privacy</a>
             <a href="https://dynopay.com/terms" style="color: #9ca3af; text-decoration: none; margin: 0 12px;">Terms</a>
@@ -90,8 +90,8 @@ export const sendWelcomeEmail = async (
   try {
     const subject = "Welcome to Dynopay — Let's get you paid";
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Welcome to DynoPay! We're excited to have you on board. 🎉</p>
-    <p class="message">DynoPay makes accepting crypto payments simple, secure, and fast. Whether you're a freelancer, business owner, or developer, we've got you covered.</p>
+    <p class="message">Welcome to Dynopay! We're excited to have you on board. 🎉</p>
+    <p class="message">Dynopay makes accepting crypto payments simple, secure, and fast. Whether you're a freelancer, business owner, or developer, we've got you covered.</p>
     <div class="highlight-box">
       <p><strong>Here's what you can do next:</strong></p>
       <p>✓ Complete your company profile<br />
@@ -100,7 +100,7 @@ export const sendWelcomeEmail = async (
     </div>
     <p class="message">If you have any questions, our support team is here to help!</p>`;
 
-    const html = dynoPayEmailTemplate("Welcome to DynoPay", content, true, "Get Started", "https://dynopay.com/dashboard");
+    const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Get Started", "https://dynopay.com/dashboard");
     
     await mailTransporter({
       to: email,
@@ -161,10 +161,10 @@ export const sendCompanyContactWelcomeEmail = async (
   accountHolderName: string
 ) => {
   try {
-    const subject = `Welcome to DynoPay — ${companyName} is now registered`;
+    const subject = `Welcome to Dynopay — ${companyName} is now registered`;
     const content = `<p class="message">Hello,</p>
-    <p class="message">Great news! <strong>${companyName}</strong> has been registered on DynoPay by ${accountHolderName}. 🎉</p>
-    <p class="message">DynoPay is a secure crypto payment gateway that enables businesses to accept cryptocurrency payments easily and safely.</p>
+    <p class="message">Great news! <strong>${companyName}</strong> has been registered on Dynopay by ${accountHolderName}. 🎉</p>
+    <p class="message">Dynopay is a secure crypto payment gateway that enables businesses to accept cryptocurrency payments easily and safely.</p>
     <div class="highlight-box">
       <p><strong>What this means for you:</strong></p>
       <p>✓ Your company can now accept crypto payments<br />
@@ -173,7 +173,7 @@ export const sendCompanyContactWelcomeEmail = async (
     </div>
     <p class="message">If you have any questions about this registration or need assistance, please contact our support team or reach out to ${accountHolderName}.</p>`;
 
-    const html = dynoPayEmailTemplate("Welcome to DynoPay", content, true, "Learn More", "https://dynopay.com");
+    const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Learn More", "https://dynopay.com");
     
     await mailTransporter({
       to: companyContactEmail,
@@ -317,7 +317,7 @@ export const sendWalletOTPEmail = async (
   try {
     const subject = "Confirm your payout wallet";
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">You're adding a new payout wallet to your DynoPay account. Please verify this action with the OTP code below:</p>
+    <p class="message">You're adding a new payout wallet to your Dynopay account. Please verify this action with the OTP code below:</p>
     <div class="otp-code">${otpCode}</div>
     <div class="highlight-box">
       <p><strong>Wallet Details:</strong></p>
@@ -504,9 +504,9 @@ export const sendEmailVerificationOTPEmail = async (
   try {
     const subject = "Verify your email";
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Please verify your email address to complete your DynoPay registration. Enter this code in the verification page:</p>
+    <p class="message">Please verify your email address to complete your Dynopay registration. Enter this code in the verification page:</p>
     <div class="otp-code">${otpCode}</div>
-    <p class="message">This code expires in 10 minutes. If you didn't create a DynoPay account, please ignore this email.</p>`;
+    <p class="message">This code expires in 10 minutes. If you didn't create a Dynopay account, please ignore this email.</p>`;
 
     const html = dynoPayEmailTemplate("Verify Your Email", content);
     
@@ -566,7 +566,7 @@ export const sendForgotPasswordOTPEmail = async (
   try {
     const subject = "Password reset code";
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">You requested to reset your DynoPay password. Use this code to continue:</p>
+    <p class="message">You requested to reset your Dynopay password. Use this code to continue:</p>
     <div class="otp-code">${otpCode}</div>
     <p class="message">This code expires in 10 minutes. If you didn't request a password reset, please ignore this email and your password will remain unchanged.</p>`;
 
@@ -598,7 +598,7 @@ export const sendPasswordChangedEmail = async (
   try {
     const subject = "Password updated successfully";
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Your DynoPay password has been successfully updated. ✅</p>
+    <p class="message">Your Dynopay password has been successfully updated. ✅</p>
     <div class="highlight-box">
       <p><strong>Change Details:</strong></p>
       <p>Date: ${date} at ${time}</p>
@@ -674,7 +674,7 @@ export const sendKYCRequiredEmail = async (
     const subject = "Verification required — $5,000 volume reached";
     const content = `<p class="message">Hey ${name},</p>
     <p class="message">Congratulations on reaching <strong>$${totalVolume}</strong> in transaction volume! 🎉</p>
-    <p class="message">To continue accepting payments above $5,000, we need to verify your identity. This is a regulatory requirement and helps us keep DynoPay secure.</p>
+    <p class="message">To continue accepting payments above $5,000, we need to verify your identity. This is a regulatory requirement and helps us keep Dynopay secure.</p>
     <div class="highlight-box">
       <p><strong>What you need:</strong></p>
       <p>✓ Government-issued ID<br />
@@ -710,10 +710,10 @@ export const sendKYCApprovedEmail = async (
     const subject = "Verification approved — You're all set";
     const content = `<p class="message">Hey ${name},</p>
     <p class="message">Great news! Your identity verification has been approved. ✅</p>
-    <p class="message">You can now accept payments without limits and access all DynoPay features.</p>
+    <p class="message">You can now accept payments without limits and access all Dynopay features.</p>
     <div class="highlight-box">
       <p><strong>What's next?</strong></p>
-      <p>Your account is fully verified. Keep growing your business with DynoPay!</p>
+      <p>Your account is fully verified. Keep growing your business with Dynopay!</p>
     </div>
     <p class="message">Thank you for completing the verification process.</p>`;
 
@@ -752,7 +752,7 @@ export const sendKYCRejectedEmail = async (
     <p class="message">Don't worry! You can resubmit your verification documents. Make sure to:</p>
     <p class="message">✓ Use clear, high-quality images<br />
     ✓ Ensure all information is visible<br />
-    ✓ Match the name on your DynoPay account</p>
+    ✓ Match the name on your Dynopay account</p>
     <p class="message">If you need help, our support team is here for you.</p>`;
 
     const html = dynoPayEmailTemplate("Verification Unsuccessful", content, true, "Resubmit Documents", "https://dynopay.com/dashboard/kyc");
@@ -829,7 +829,7 @@ export const sendSecurityAlertEmail = async (
   try {
     const subject = "🔒 Security alert on your account";
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">We detected unusual activity on your DynoPay account.</p>
+    <p class="message">We detected unusual activity on your Dynopay account.</p>
     <div class="highlight-box" style="border-left-color: #f47323;">
       <p><strong>⚠️ Alert Details:</strong></p>
       <p>Type: ${alertType}<br />
@@ -876,7 +876,7 @@ export const sendInvoiceGeneratedEmail = async (
   }
 ) => {
   try {
-    const subject = `Invoice ${invoiceData.invoice_number} - DynoPay`;
+    const subject = `Invoice ${invoiceData.invoice_number} - Dynopay`;
     const content = `<p class="message">Hello ${name},</p>
     <p class="message">Your invoice has been successfully generated for transaction #${invoiceData.transaction_id}.</p>
     <div class="highlight-box">
@@ -988,7 +988,7 @@ export const sendCustomerPaymentConfirmationEmail = async (
     ${pdfAttachment ? `<p class="message"><strong>📎 PDF Receipt Attached</strong><br />A detailed receipt is attached to this email for your records.</p>` : ''}
     <p class="message">If you have any questions about this payment, please contact <strong>${companyName}</strong> directly.</p>
     <p class="message" style="font-size: 13px; color: #6b7280; margin-top: 24px;">
-      This payment was processed securely through DynoPay, a trusted crypto payment gateway.
+      This payment was processed securely through Dynopay, a trusted crypto payment gateway.
     </p>`;
 
     const html = dynoPayEmailTemplate("Payment Successful", content);
@@ -1020,7 +1020,7 @@ export const sendKYCStartedEmail = async (
   try {
     const subject = "Complete your identity verification";
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Your identity verification session has been created. Please complete the verification to continue using DynoPay without restrictions. 📋</p>
+    <p class="message">Your identity verification session has been created. Please complete the verification to continue using Dynopay without restrictions. 📋</p>
     <div class="highlight-box">
       <p><strong>What you'll need:</strong></p>
       <p>✓ Government-issued ID (passport, driver's license, or national ID)<br />
@@ -1065,7 +1065,7 @@ export const sendKYCResubmissionRequiredEmail = async (
     </div>
     <p class="message">Don't worry, this is a common request. To continue, please:</p>
     <p class="message">1. Ensure your documents are clear and all text is readable<br />
-    2. Make sure the name matches your DynoPay account<br />
+    2. Make sure the name matches your Dynopay account<br />
     3. Use documents that are not expired</p>
     <p class="message">Click below to resubmit your verification documents:</p>`;
 
@@ -1143,7 +1143,7 @@ export const sendNewDeviceLoginEmail = async (
   time: string
 ) => {
   try {
-    const subject = "🔔 New login to your DynoPay account";
+    const subject = "🔔 New login to your Dynopay account";
     
     // Parse user agent for readable device info
     let deviceInfo = 'Unknown Device';
@@ -1179,7 +1179,7 @@ export const sendNewDeviceLoginEmail = async (
     const locationDisplay = location || 'Unknown location';
     
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">We noticed a new login to your DynoPay account from a different location.</p>
+    <p class="message">We noticed a new login to your Dynopay account from a different location.</p>
     <div class="highlight-box">
       <p><strong>📍 Login Details:</strong></p>
       <p>
@@ -1229,7 +1229,7 @@ export const sendFailedLoginAttemptsEmail = async (
     const subject = "🚨 Multiple failed login attempts on your account";
     
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">We detected <strong>${attemptCount} failed login attempts</strong> on your DynoPay account.</p>
+    <p class="message">We detected <strong>${attemptCount} failed login attempts</strong> on your Dynopay account.</p>
     <div class="highlight-box" style="border-left-color: #ef4444;">
       <p><strong>⚠️ Alert Details:</strong></p>
       <p>Failed Attempts: ${attemptCount}<br />
@@ -1420,7 +1420,7 @@ export const sendWalletDeletedEmail = async (
     const subject = "Wallet removed from your account";
     
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">A wallet has been removed from your DynoPay account.</p>
+    <p class="message">A wallet has been removed from your Dynopay account.</p>
     <div class="highlight-box">
       <p><strong>Removed Wallet:</strong></p>
       <p>Address: ${walletAddressMasked}<br />
