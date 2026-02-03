@@ -1699,7 +1699,7 @@ export const getPoolStatus = async (userId?: number): Promise<unknown> => {
 
   const result: Record<string, unknown> = {};
   for (const [type, addrs] of Object.entries(byType)) {
-    const totalFees = addrs.reduce((sum, a) => sum + parseFloat(a.admin_fee_balance || 0), 0);
+    const totalFees = addrs.reduce((sum, a) => sum + parseFloat(String(a.admin_fee_balance || 0)), 0);
     result[type] = {
       addresses: addrs,
       totalAddresses: addrs.length,
