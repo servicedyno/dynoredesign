@@ -3703,8 +3703,8 @@ const cryptoVerification = async (address, webhook = true) => {
           status: "successful",
           completedAt: new Date().toISOString(),
         });
-        await softDeleteRedisItem(tempData.ref, 1800); // 30 minutes TTL
-        await softDeleteRedisItem("crypto-" + address, 1800); // 30 minutes TTL
+        await softDeleteRedisItem(tempData.ref, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
+        await softDeleteRedisItem("crypto-" + address, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
 
         if (webhook) {
           // FIXED: Use callMerchantWebhook instead of legacy callWebHook
