@@ -2625,7 +2625,7 @@ const settleCryptoTransaction = async ({
       const txHash = merchantTransactionDetails?.txId;
       if (txHash) {
         console.log(`[settleCryptoTransaction] Waiting for TX confirmation: ${txHash}`);
-        const { confirmed, blockNumber } = await tatumApi.waitForTransactionConfirmation(txHash, currency, 90000); // 90 sec timeout
+        const { confirmed, blockNumber } = await tatumApi.waitForTransactionConfirmation(txHash, currency, PAYMENT_TIMING.TRANSACTION_CONFIRMATION_TIMEOUT_MS);
         
         if (!confirmed) {
           console.error(`[settleCryptoTransaction] WARNING: TX ${txHash} not confirmed within timeout!`);
