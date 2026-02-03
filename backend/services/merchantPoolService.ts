@@ -557,7 +557,7 @@ export const reserveAddress = async (
 export const getAvailableAddress = async (
   userId: number,
   walletType: string
-): Promise<Record<string, unknown> | null> => {
+): Promise<unknown> => {
   return await merchantTempAddressModel.findOne({
     where: {
       owner_user_id: userId,
