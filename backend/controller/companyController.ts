@@ -878,13 +878,15 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
     const axios = require('axios');
 
     // Get company webhook settings
-    const [result] = await sequelize.query(
+    const queryResult = await sequelize.query<{ webhook_url?: string; webhook_secret?: string; company_name?: string }>(
       `SELECT webhook_url, webhook_secret, company_name FROM tbl_company WHERE company_id = :company_id AND user_id = :user_id`,
       {
         replacements: { company_id, user_id: userData.user_id },
         type: QueryTypes.SELECT,
       }
-    ) as Array<Record<string, unknown>>;
+    );
+    
+    const result = queryResult[0];
 
     if (!result) {
       return errorResponseHelper(res, 404, "Company not found or unauthorized");
