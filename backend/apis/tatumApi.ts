@@ -1858,43 +1858,56 @@ const getIncomingTransactions = async (
         // Only incoming transactions (where we are the recipient)
         if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(String(tx.value || '0')) > 0) {
           transactions.push({
-            txId: tx.hash,
-            amount: parseFloat(tx.value) / 1e18, // Convert wei to ETH
+            txId: tx.hash || '',
+            amount: parseFloat(String(tx.value || '0')) / 1e18, // Convert wei to ETH
             timestamp: tx.timestamp || Date.now()
           });
         }
       }
     } else if (currency === "TRX") {
+      interface TronTxResult {
+        transactions?: TRXTransaction[];
+      }
       const result = await tatumSdk.blockchain.tron.tronAccountTx(
         address, undefined, undefined, true
-      );
-      for (const tx of (result as { transactions?: Array<Record<string, unknown>> })?.transactions || []) {
+      ) as TronTxResult;
+      for (const tx of result?.transactions || []) {
         // Check if this is a TRX transfer to our address
-        const contract = tx.rawData?.contract?.[0];
-        if (contract?.type === 'TransferContract') {
+        const contract = tx.raw_data?.contract?.[0];
+        if (contract) {
           const params = contract.parameter?.value;
-          if (params?.to_address === address || params?.toAddress === address) {
+          if (params?.to_address === address) {
             const amount = (params.amount || 0) / 1e6; // Convert sun to TRX
             if (amount > 0) {
               transactions.push({
-                txId: tx.txID,
+                txId: tx.txID || '',
                 amount,
-                timestamp: tx.rawData?.timestamp || Date.now()
+                timestamp: tx.block_timestamp || Date.now()
               });
             }
           }
         }
       }
     } else if (currency === "USDT-TRC20") {
+      interface TRC20Transaction {
+        to?: string;
+        value?: string | number;
+        txID?: string;
+        transaction_id?: string;
+        block_timestamp?: number;
+      }
+      interface TRC20TxResult {
+        transactions?: TRC20Transaction[];
+      }
       const result = await tatumSdk.blockchain.tron.tronAccountTx20(
         address, undefined, undefined, true
-      );
-      for (const tx of (result as { transactions?: Array<Record<string, unknown>> })?.transactions || []) {
+      ) as TRC20TxResult;
+      for (const tx of result?.transactions || []) {
         // TRC20 transfers
-        if (tx.to === address && parseFloat(tx.value || '0') > 0) {
+        if (tx.to === address && parseFloat(String(tx.value || '0')) > 0) {
           transactions.push({
-            txId: tx.txID || tx.transaction_id,
-            amount: parseFloat(tx.value) / 1e6, // USDT has 6 decimals
+            txId: tx.txID || tx.transaction_id || '',
+            amount: parseFloat(String(tx.value || '0')) / 1e6, // USDT has 6 decimals
             timestamp: tx.block_timestamp || Date.now()
           });
         }
