@@ -356,9 +356,9 @@ testRouter.post("/diagnose-temp-address", authMiddleware, async (req, res) => {
     const { temp_id } = req.body;
     
     // Get temp address from database
-    const [result]: Array<Record<string, unknown>> = await sequelize.query(
+    const result = await sequelize.query<{ temp_id: number; wallet_address: string; privateKey: string; wallet_type: string }>(
       'SELECT temp_id, wallet_address, "privateKey", wallet_type FROM tbl_user_temp_address WHERE temp_id = :temp_id',
-      { replacements: { temp_id } }
+      { replacements: { temp_id }, type: QueryTypes.SELECT }
     );
     
     if (!result || result.length === 0) {
@@ -381,7 +381,8 @@ testRouter.post("/diagnose-temp-address", authMiddleware, async (req, res) => {
       derivedAddress = wallet.address;
       addressMatch = expectedAddress.toLowerCase() === derivedAddress.toLowerCase();
     } catch (decryptErr: unknown) {
-      return errorResponseHelper(res, 500, `Decryption error: ${decryptErr.message}`);
+      const err = decryptErr as { message?: string };
+      return errorResponseHelper(res, 500, `Decryption error: ${err.message}`);
     }
     
     successResponseHelper(res, 200, "Temp address diagnosis", {
