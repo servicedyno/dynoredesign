@@ -222,15 +222,59 @@ export interface ITemporaryAddress {
   wallet_type: string;
   wallet_address: string;
   wallet_account_id: string;
-  subscription_id: string;
+  subscription_id: string | null;
   index: number;
   privateKey: string;
-  txId: string;
+  txId: string | null;
   admin_txId: string;
   status: string;
   admin_status: string;
   blockchain_fee: string;
   amount_to_be_paid: number;
+  amount?: number;
+  expected_amount?: number;
+  company_id?: number;
+  fee_payer?: string;
+  merchant_amount?: number;
+  partial_payment_timestamp?: Date;
+  check_count?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Admin data interface for query results
+export interface IAdminData {
+  email?: string;
+}
+
+// Payment link data interface
+export interface PaymentLinkData {
+  link_id?: number;
+  company_id?: number;
+  user_id?: number;
+  amount?: number;
+  currency?: string;
+  description?: string;
+  status?: string;
+  callback_url?: string;
+  redirect_url?: string;
+  webhook_url?: string;
+  fee_payer?: string;
+  accepted_currencies?: string | string[];
+  allow_currency_select?: boolean;
+  tax_rate?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// User JWT payload with id for payment controller
+export interface PaymentUserJwtPayload {
+  id?: number | string;
+  user_id: number;
+  email: string;
+  company_id?: number;
+  name?: string;
+  role?: string;
 }
 
 export interface IGenerateUserAddressParams {
