@@ -882,6 +882,11 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           
           // Clear any existing data for this address before setting new payment data
           await deleteRedisItem("crypto-" + paymentRes.address);
+          
+          // FIX: Store crypto invoice expiry timestamp (15 minutes from now)
+          // This is separate from payment link expiry - crypto invoice has shorter window
+          const cryptoInvoiceExpiresAt = new Date(Date.now() + CRYPTO_INVOICE_MINUTES * 60 * 1000).toISOString();
+          
           await setRedisItem("crypto-" + paymentRes.address, {
             mode: paymentTypes.CRYPTO,
             amount: crypto_amount,                    // Crypto amount customer should pay
@@ -900,6 +905,8 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             walletType: "customer",
             temp_id: paymentRes.temp_id,
             is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",
+            // FIX: Store crypto invoice expiry for polling countdown
+            crypto_invoice_expires_at: cryptoInvoiceExpiresAt,
             // Tax tracking
             ...(taxInfo && {
               tax_enabled: "true",
