@@ -89,7 +89,7 @@ export const createRateLimiter = (
       requests.push(now);
 
       // Store updated rate limit data with TTL
-      await setRedisItem(key, { requests }, Math.ceil(config.windowMs / 1000) + 60);
+      await setRedisItem(key, { requests });
 
       // Set rate limit headers
       res.set({
