@@ -18,7 +18,7 @@ A full-stack crypto payment gateway called "Dynopay" with:
 │   ├── middleware/   # Express.js middleware for validation/auth
 │   ├── models/       # Sequelize DB models
 │   ├── routes/       # API route definitions
-│   ├── services/     # Business logic (emailing, gas recovery)
+│   ├── services/     # Business logic (emailing, gas funding)
 │   ├── swagger/      # API documentation files
 │   └── server.py     # Python wrapper for the Node.js app
 ├── frontend/
@@ -53,23 +53,26 @@ A full-stack crypto payment gateway called "Dynopay" with:
 
 ### Session: December 2025
 
-#### Gas System Fix (P0) - COMPLETED ✅
+#### Gas System Cleanup - COMPLETED ✅
 **Date:** December 2025
 
-**Problem:** The `GAS_TOKEN_MAPPING` incorrectly included native currencies (ETH, TRX), causing:
-- Unnecessary gas funding attempts for native currencies
-- Error logs from failed operations
-- Wasted blockchain queries
+**Changes Made:**
 
-**Fix Applied:**
-- Removed `'ETH': 'ETH'` and `'TRX': 'TRX'` from `GAS_TOKEN_MAPPING`
-- Added documentation explaining why only tokens need gas funding
-- File modified: `/app/backend/models/merchantPoolModels/index.ts`
+1. **Fixed `GAS_TOKEN_MAPPING`** (`/app/backend/models/merchantPoolModels/index.ts`)
+   - Removed incorrect entries `'ETH': 'ETH'` and `'TRX': 'TRX'`
+   - Native currencies don't need external gas funding - they pay from their own balance
+   - Only tokens (USDT-TRC20, USDT-ERC20, USDC-ERC20) now in mapping
 
-**Technical Explanation:**
-- Native currencies (ETH, TRX) pay transaction fees from their own balance
-- Only tokens (USDT-TRC20, USDT-ERC20, USDC-ERC20) need external gas funding
-- The `fundGasIfNeeded` function now correctly skips native currencies with "No gas token mapping" reason
+2. **Removed `recoverStrandedGas` function** (`/app/backend/services/merchantPoolService.ts`)
+   - Deleted ~180 lines of unnecessary recovery code
+   - This function was incorrectly attempting to recover gas from addresses
+
+3. **Removed gas recovery cron job** (`/app/backend/server.ts`)
+   - Removed hourly cron that called `recoverStrandedGas`
+   - Eliminates unnecessary blockchain queries and error logs
+
+4. **Cleaned up `dist/` folder**
+   - Removed stale compiled JavaScript files
 
 **Previous Session Completions:**
 - Initial setup and dependency installation
@@ -91,7 +94,7 @@ A full-stack crypto payment gateway called "Dynopay" with:
 2. **URL Shortener:** Consider dedicated URL shortener service for payment links
 
 ### P3 - Low Priority
-1. General code cleanup and documentation updates
+1. Additional code cleanup (linting, unused imports, etc.)
 
 ---
 
@@ -104,4 +107,5 @@ A full-stack crypto payment gateway called "Dynopay" with:
 ## Critical Notes for Future Development
 1. **Dual Cache:** Backend MUST be restarted (`sudo supervisorctl restart backend`) to clear in-memory cache
 2. **Gas System:** Only tokens need gas funding - native currencies handle their own fees
-3. **Subscriptions:** Tatum webhooks are updated on address reservation with company info
+3. **No Gas Recovery:** The system does not have gas recovery logic - gas is only funded when needed for token transfers
+4. **Subscriptions:** Tatum webhooks are updated on address reservation with company info
