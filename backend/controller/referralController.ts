@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import Referral from '../models/referralModels/referralModel';
 import ReferralReward from '../models/referralModels/referralRewardModel';
 import User from '../models/userModels/userModel';
+import { userWalletModel } from '../models';
 import { Op } from 'sequelize';
 import { IUserType } from '../utils/types';
 
