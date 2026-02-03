@@ -840,12 +840,13 @@ const listAllSubscriptions = async (): Promise<Array<Record<string, unknown>>> =
     
     return allSubscriptions;
   } catch (e: unknown) {
-    console.error("Failed to list subscriptions:", e.response?.data || e.message);
+    const error = e as { response?: { data?: unknown }; message?: string };
+    console.error("Failed to list subscriptions:", error.response?.data || error.message);
     throw e;
   }
 };
 
-const sendFeeToAdmin = async (userId, adminID, amount) => {
+const sendFeeToAdmin = async (userId: string, adminID: string, amount: number | string): Promise<string | undefined> => {
   try {
     const tatumSdk = await getTatumSDK();
     const resData = await tatumSdk.ledger.transaction.sendTransaction({
@@ -855,7 +856,7 @@ const sendFeeToAdmin = async (userId, adminID, amount) => {
     });
     console.log(resData.reference);
     return resData.reference;
-  } catch (e) {
+  } catch (e: unknown) {
     console.log(e);
   }
 };
