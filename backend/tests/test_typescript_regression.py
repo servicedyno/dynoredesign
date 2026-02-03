@@ -25,6 +25,21 @@ TEST_PASSWORD = "Katiekendra123@"
 TEST_COMPANY_ID = 38
 
 
+# Module-level fixture for authentication
+@pytest.fixture(scope="module")
+def auth_token():
+    """Get authentication token for all tests"""
+    response = requests.post(
+        f"{BASE_URL}/api/user/login",
+        json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
+        headers={"Content-Type": "application/json"},
+        timeout=15
+    )
+    if response.status_code == 200:
+        return response.json()["data"]["accessToken"]
+    pytest.skip("Authentication failed - cannot run authenticated tests")
+
+
 class TestHealthCheck:
     """Health check endpoint tests - verify backend is running"""
     
@@ -92,7 +107,6 @@ class TestUserAuthentication:
         assert "userData" in data["data"]
         assert data["data"]["userData"]["email"] == TEST_EMAIL
         print(f"✅ Login successful for user: {TEST_EMAIL}")
-        return data["data"]["accessToken"]
     
     def test_login_invalid_credentials(self):
         """Test login with invalid credentials returns error"""
@@ -132,19 +146,6 @@ class TestUserAuthentication:
 class TestUserProfile:
     """User profile endpoint tests (requires authentication)"""
     
-    @pytest.fixture
-    def auth_token(self):
-        """Get authentication token"""
-        response = requests.post(
-            f"{BASE_URL}/api/user/login",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
-            headers={"Content-Type": "application/json"},
-            timeout=15
-        )
-        if response.status_code == 200:
-            return response.json()["data"]["accessToken"]
-        pytest.skip("Authentication failed")
-    
     def test_get_profile(self, auth_token):
         """Test getting user profile"""
         response = requests.get(
@@ -164,19 +165,6 @@ class TestUserProfile:
 
 class TestCompanyAPIs:
     """Company management API tests"""
-    
-    @pytest.fixture
-    def auth_token(self):
-        """Get authentication token"""
-        response = requests.post(
-            f"{BASE_URL}/api/user/login",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
-            headers={"Content-Type": "application/json"},
-            timeout=15
-        )
-        if response.status_code == 200:
-            return response.json()["data"]["accessToken"]
-        pytest.skip("Authentication failed")
     
     def test_get_companies(self, auth_token):
         """Test getting user's companies"""
@@ -229,19 +217,6 @@ class TestCompanyAPIs:
 
 class TestPaymentLinkAPIs:
     """Payment link API tests"""
-    
-    @pytest.fixture
-    def auth_token(self):
-        """Get authentication token"""
-        response = requests.post(
-            f"{BASE_URL}/api/user/login",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
-            headers={"Content-Type": "application/json"},
-            timeout=15
-        )
-        if response.status_code == 200:
-            return response.json()["data"]["accessToken"]
-        pytest.skip("Authentication failed")
     
     def test_get_payment_links(self, auth_token):
         """Test getting payment links"""
@@ -303,8 +278,8 @@ class TestPaymentLinkAPIs:
         assert "data" in data
         print(f"✅ Get network fees successful")
     
-    def test_create_payment_link(self, auth_token):
-        """Test creating a payment link"""
+    def test_create_and_delete_payment_link(self, auth_token):
+        """Test creating and deleting a payment link"""
         test_link_data = {
             "company_id": TEST_COMPANY_ID,
             "link_name": f"TEST_TypeScript_Regression_{int(time.time())}",
@@ -313,6 +288,7 @@ class TestPaymentLinkAPIs:
             "description": "Test payment link for TypeScript regression testing"
         }
         
+        # Create payment link
         response = requests.post(
             f"{BASE_URL}/api/pay/createPaymentLink",
             json=test_link_data,
@@ -327,37 +303,24 @@ class TestPaymentLinkAPIs:
         data = response.json()
         assert "data" in data
         link_id = data["data"].get("link_id")
+        assert link_id is not None, "No link_id returned"
         print(f"✅ Create payment link successful, ID: {link_id}")
         
-        # Cleanup - delete the test link
-        if link_id:
-            cleanup_response = requests.delete(
-                f"{BASE_URL}/api/pay/deletePaymentLink/{link_id}",
-                headers={
-                    "Authorization": f"Bearer {auth_token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=10
-            )
-            if cleanup_response.status_code == 200:
-                print(f"✅ Test payment link cleaned up")
+        # Delete the test link
+        cleanup_response = requests.delete(
+            f"{BASE_URL}/api/pay/deletePaymentLink/{link_id}",
+            headers={
+                "Authorization": f"Bearer {auth_token}",
+                "Content-Type": "application/json"
+            },
+            timeout=10
+        )
+        assert cleanup_response.status_code == 200, f"Delete payment link failed: {cleanup_response.text}"
+        print(f"✅ Delete payment link successful")
 
 
 class TestWalletAPIs:
     """Wallet management API tests"""
-    
-    @pytest.fixture
-    def auth_token(self):
-        """Get authentication token"""
-        response = requests.post(
-            f"{BASE_URL}/api/user/login",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
-            headers={"Content-Type": "application/json"},
-            timeout=15
-        )
-        if response.status_code == 200:
-            return response.json()["data"]["accessToken"]
-        pytest.skip("Authentication failed")
     
     def test_get_wallet(self, auth_token):
         """Test getting user wallet"""
@@ -427,19 +390,6 @@ class TestWalletAPIs:
 class TestDashboardAPIs:
     """Dashboard API tests"""
     
-    @pytest.fixture
-    def auth_token(self):
-        """Get authentication token"""
-        response = requests.post(
-            f"{BASE_URL}/api/user/login",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
-            headers={"Content-Type": "application/json"},
-            timeout=15
-        )
-        if response.status_code == 200:
-            return response.json()["data"]["accessToken"]
-        pytest.skip("Authentication failed")
-    
     def test_get_dashboard_data(self, auth_token):
         """Test getting dashboard data"""
         response = requests.get(
@@ -471,19 +421,6 @@ class TestStatusAPIs:
 class TestReferralAPIs:
     """Referral system API tests"""
     
-    @pytest.fixture
-    def auth_token(self):
-        """Get authentication token"""
-        response = requests.post(
-            f"{BASE_URL}/api/user/login",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
-            headers={"Content-Type": "application/json"},
-            timeout=15
-        )
-        if response.status_code == 200:
-            return response.json()["data"]["accessToken"]
-        pytest.skip("Authentication failed")
-    
     def test_get_referral_stats(self, auth_token):
         """Test getting referral stats"""
         response = requests.get(
@@ -510,6 +447,26 @@ class TestKnowledgeBaseAPIs:
         )
         assert response.status_code == 200, f"Get KB categories failed: {response.text}"
         print(f"✅ Knowledge base categories endpoint works")
+
+
+class TestInvoiceAPIs:
+    """Invoice API tests"""
+    
+    def test_get_invoices(self, auth_token):
+        """Test getting invoices"""
+        response = requests.get(
+            f"{BASE_URL}/api/invoices",
+            headers={
+                "Authorization": f"Bearer {auth_token}",
+                "Content-Type": "application/json"
+            },
+            timeout=10
+        )
+        assert response.status_code == 200, f"Get invoices failed: {response.text}"
+        
+        data = response.json()
+        assert "data" in data
+        print(f"✅ Get invoices successful")
 
 
 # Run tests if executed directly
