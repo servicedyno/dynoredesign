@@ -664,10 +664,23 @@ const updateUser = async (req: express.Request, res: express.Response) => {
     }
     
     const userData = jwt.decode(res.locals.token) as IUserType;
+    const oldEmail = userData.email;
+    const oldName = userData.name;
+    
+    // Track what fields are being updated
+    const updatedFields: string[] = [];
+    if (data.name && data.name !== oldName) {
+      updatedFields.push(`Name: ${oldName} → ${data.name}`);
+    }
+    if (data.email && data.email !== oldEmail) {
+      updatedFields.push(`Email: ${oldEmail} → ${data.email}`);
+    }
+    
     let photo;
     if (file) {
       const serverUrl = process.env.SERVER_URL?.endsWith('/') ? process.env.SERVER_URL : process.env.SERVER_URL + '/';
       photo = serverUrl + "images/" + file.filename;
+      updatedFields.push('Profile Photo: Updated');
     }
     await userModel.update(
       {
@@ -676,6 +689,23 @@ const updateUser = async (req: express.Request, res: express.Response) => {
       },
       { where: { user_id: userData.user_id } }
     );
+    
+    // Send profile update notification email
+    if (updatedFields.length > 0) {
+      const { sendUserProfileUpdatedEmail } = await import("../services/emailService");
+      const newEmail = data.email || oldEmail;
+      const newName = data.name || oldName;
+      
+      sendUserProfileUpdatedEmail(
+        newEmail,
+        newName,
+        updatedFields,
+        data.email && data.email !== oldEmail ? oldEmail : undefined
+      ).catch(err => {
+        console.error("[UpdateUser] Failed to send notification email:", err);
+      });
+    }
+    
     const token = await getAccessToken(userData.user_id);
     successResponseHelper(res, 200, "User updated successfully!", token);
   } catch (e) {
