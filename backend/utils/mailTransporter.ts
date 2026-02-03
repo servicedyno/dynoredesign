@@ -32,7 +32,7 @@ const stripHtml = (html: string): string => {
 const mailTransporter = async ({ to, subject, body, name, attachments }: mailOptions) => {
   const payload: any = {
     sender: {
-      name: "DynoPay",
+      name: "Dynopay",
       email: "notify@dynocash.com",
     },
     subject,
