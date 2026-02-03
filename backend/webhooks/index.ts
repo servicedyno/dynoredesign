@@ -236,19 +236,20 @@ const callUrlWithPayload = async (
         return; // Success, exit
         
       } catch (err: unknown) {
-        lastError = err;
+        const error = err as { response?: { status?: number }; message?: string };
+        lastError = error;
         totalRetries = attempt;
-        finalResponseStatus = err.response?.status || null;
+        finalResponseStatus = error.response?.status || null;
         
         // Don't retry on client errors (4xx) except 429 (rate limit)
         if (finalResponseStatus && finalResponseStatus >= 400 && finalResponseStatus < 500 && finalResponseStatus !== 429) {
-          console.error(`[callMerchantWebhook] ❌ Client error ${finalResponseStatus}, not retrying: ${err.message}`);
+          console.error(`[callMerchantWebhook] ❌ Client error ${finalResponseStatus}, not retrying: ${error.message}`);
           break;
         }
         
         if (attempt < maxRetries) {
           const delay = 1000 * Math.pow(2, attempt - 1); // Exponential backoff: 1s, 2s, 4s
-          console.warn(`[callMerchantWebhook] ⚠️ Attempt ${attempt} failed, retrying in ${delay}ms: ${err.message}`);
+          console.warn(`[callMerchantWebhook] ⚠️ Attempt ${attempt} failed, retrying in ${delay}ms: ${error.message}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -262,7 +263,7 @@ const callUrlWithPayload = async (
       await logWebhookDelivery(
         companyId,
         url,
-        eventData.event,
+        eventData.event as string,
         webhookPayload.webhook_id,
         webhookPayload,
         'failed',
@@ -274,7 +275,8 @@ const callUrlWithPayload = async (
     }
     
   } catch (error: unknown) {
-    console.error(`[callMerchantWebhook] Error in callUrlWithPayload: ${error.message}`);
+    const err = error as { message?: string };
+    console.error(`[callMerchantWebhook] Error in callUrlWithPayload: ${err.message}`);
   }
 };
 
