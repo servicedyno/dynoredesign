@@ -4272,7 +4272,7 @@ const getCurrencyRates = async (
 };
 
 const getBalance = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
+  const userData = jwt.decode(res.locals.token) as PaymentUserJwtPayload;
   try {
     const customer = await customerModel.findOne({
       where: {
@@ -4315,7 +4315,7 @@ const createPaymentLink = async (
   req: express.Request,
   res: express.Response
 ) => {
-  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
+  const userData = jwt.decode(res.locals.token) as PaymentUserJwtPayload;
   
   // Extract both old and new field names for backward compatibility
   // IMPORTANT: Client should send EITHER new format OR legacy format, not both
@@ -4687,7 +4687,7 @@ ${refereeCodeSection}
 };
 
 const getPaymentLinks = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
+  const userData = jwt.decode(res.locals.token) as PaymentUserJwtPayload;
   try {
     const { company_id, page, limit, paginated } = req.query;  // Added pagination params
     
@@ -4823,7 +4823,7 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
  * GET /api/pay/links/:id
  */
 const getPaymentLinkById = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
+  const userData = jwt.decode(res.locals.token) as PaymentUserJwtPayload;
   const link_id = req.params.id;
   
   try {
@@ -4912,7 +4912,7 @@ const getPaymentLinkById = async (req: express.Request, res: express.Response) =
  * PUT /api/pay/links/:id
  */
 const updatePaymentLink = async (req: express.Request, res: express.Response) => {
-  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
+  const userData = jwt.decode(res.locals.token) as PaymentUserJwtPayload;
   const link_id = req.params.id;
   const { 
     description, 
@@ -5195,7 +5195,7 @@ const deletePaymentLink = async (
   req: express.Request,
   res: express.Response
 ) => {
-  const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
+  const userData = jwt.decode(res.locals.token) as PaymentUserJwtPayload;
   const link_id = req.params.id;
   try {
     // First get the payment link to extract uniqueRef for Redis deletion
@@ -6445,7 +6445,7 @@ const getConfiguredCurrenciesForCheckout = async (
  */
 const getFeePreview = async (req: express.Request, res: express.Response) => {
   try {
-    const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
+    const userData = jwt.decode(res.locals.token) as PaymentUserJwtPayload;
     const { amount, currency } = req.query;
 
     if (!amount) {
@@ -6508,7 +6508,7 @@ const getCompanyConfiguredCurrencies = async (
   res: express.Response
 ) => {
   try {
-    const userData = jwt.decode(res.locals.token) as { user_id: number; email: string; company_id?: number };
+    const userData = jwt.decode(res.locals.token) as PaymentUserJwtPayload;
     const { company_id } = req.params;
 
     if (!company_id) {
