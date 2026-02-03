@@ -469,7 +469,8 @@ export const reserveAddress = async (
       // If no address available, create new one
       if (!poolAddress) {
         console.log(`[MerchantPool] No available ${walletType} address for merchant ${userId}, creating new...`);
-        poolAddress = await addAddressToMerchantPool(userId, walletType, transaction);
+        const newAddress = await addAddressToMerchantPool(userId, walletType, transaction);
+        poolAddress = newAddress as typeof poolAddress;
       }
 
       // BLOCKBEE STYLE: Always update subscription URL with current company info
@@ -499,7 +500,8 @@ export const reserveAddress = async (
           console.log(`[MerchantPool]    URL: ${subResult.url}`);
         }
       } catch (subError: unknown) {
-        console.error(`[MerchantPool] ⚠️ Subscription update failed:`, subError.message);
+        const errorMsg = subError instanceof Error ? subError.message : String(subError);
+        console.error(`[MerchantPool] ⚠️ Subscription update failed:`, errorMsg);
         // Continue with existing subscription if update fails
       }
 
