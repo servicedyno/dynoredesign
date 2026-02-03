@@ -2629,6 +2629,9 @@ const settleCryptoTransaction = async ({
   userAddress?: string;    // Merchant wallet address
   isMerchantPool?: boolean; // Whether this is a merchant pool address
 }) => {
+  // Get the address - use wallet_address if available, otherwise use address
+  const fromAddress = tempAddressData.wallet_address || tempAddressData.address;
+  
   try {
     const adminWalletAddress = getAdminWalletAddress(currency);
 
@@ -2637,9 +2640,6 @@ const settleCryptoTransaction = async ({
         `Admin wallet address not configured for ${currency} in environment variables.`
       );
     }
-
-    // Get the address - use wallet_address if available, otherwise use address
-    const fromAddress = tempAddressData.wallet_address || tempAddressData.address;
 
     // Get private key - merchant pool addresses use different field names
     const privateKeyField = isMerchantPool ? tempAddressData.private_key : tempAddressData.privateKey;
