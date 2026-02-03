@@ -182,12 +182,23 @@ export interface virtualAccount {
 
 // JWT Token payload type for customer API service
 export interface CustomerJwtPayload {
-  id?: number;
+  id?: number | string;
   user_id?: number;
   customer_id?: string;
   email?: string;
   name?: string;
   company_id?: number;
+}
+
+// Extended JWT payload for payment controller with full user data
+export interface PaymentJwtPayload {
+  id?: number | string;
+  user_id?: number;
+  customer_id?: string;
+  email?: string;
+  name?: string;
+  company_id?: number;
+  adm_id?: number;
 }
 
 // Company data type from API key
