@@ -1134,7 +1134,7 @@ interface ProfitabilityResult {
 const checkSweepProfitability = async (
   walletType: string,
   balance: number,
-  feeData: { fixedFee: number; transactionFee: number; blockchainBuffer: number; totalDeduction: number }
+  feeData: { fixedFee: number; transactionFee: number; blockchainBuffer: number; totalDeduction: number; gasPrice?: string; gasLimit?: string; fee?: string; slow?: string } | number
 ): Promise<ProfitabilityResult> => {
   try {
     // Get fee amount from feeData
