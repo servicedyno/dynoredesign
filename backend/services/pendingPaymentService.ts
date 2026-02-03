@@ -420,7 +420,7 @@ export const sendPartialPaymentExpiredNotification = async (
       return false;
     }
 
-    const user = userResult[0];
+    const user = userResult[0] as { user_id: number; name: string; email: string; company_name: string; company_id: number };
     const isCompleted = status === "completed_partial";
 
     // Create in-app notification
