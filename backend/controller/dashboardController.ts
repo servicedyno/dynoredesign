@@ -118,14 +118,14 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     ]) as [Array<Record<string, unknown>>, Array<Record<string, unknown>>];
 
     // Parse results from combined query
-    const stats = transactionStats[0] || {};
-    const currentCount = parseInt(stats.current_month_count || '0');
-    const currentVolume = parseFloat(stats.current_month_volume || '0');
-    const lastCount = parseInt(stats.last_month_count || '0');
-    const lastVolume = parseFloat(stats.last_month_volume || '0');
-    const totalCount = parseInt(stats.total_count || '0');
-    const totalVolume = parseFloat(stats.total_volume || '0');
-    const pendingCount = parseInt(stats.pending_count || '0');
+    const stats = transactionStats[0] || {} as Record<string, string>;
+    const currentCount = parseInt(String(stats.current_month_count || '0'));
+    const currentVolume = parseFloat(String(stats.current_month_volume || '0'));
+    const lastCount = parseInt(String(stats.last_month_count || '0'));
+    const lastVolume = parseFloat(String(stats.last_month_volume || '0'));
+    const totalCount = parseInt(String(stats.total_count || '0'));
+    const totalVolume = parseFloat(String(stats.total_volume || '0'));
+    const pendingCount = parseInt(String(stats.pending_count || '0'));
 
     // Calculate fee tier
     const feeTier = getFeeTier(currentVolume);
