@@ -341,11 +341,27 @@ const login = async (req: express.Request, res: express.Response) => {
       const cacheKey = `failed_logins:${email.toLowerCase()}`;
       
       try {
-        let failedAttempts = await getRedisItem(cacheKey);
-        // Handle Redis returning object or string
-        const attemptStr = typeof failedAttempts === 'string' ? failedAttempts : String(failedAttempts || '0');
-        const attemptCount = attemptStr && !isNaN(parseInt(attemptStr)) ? parseInt(attemptStr) + 1 : 1;
-        await setRedisItem(cacheKey, attemptCount.toString());
+        const failedAttempts = await getRedisItem(cacheKey);
+        // Handle Redis returning object, string, number, or null
+        let attemptCount = 1;
+        if (failedAttempts !== null && failedAttempts !== undefined) {
+          if (typeof failedAttempts === 'number') {
+            attemptCount = failedAttempts + 1;
+          } else if (typeof failedAttempts === 'string') {
+            const parsed = parseInt(failedAttempts, 10);
+            attemptCount = isNaN(parsed) ? 1 : parsed + 1;
+          } else if (typeof failedAttempts === 'object') {
+            // Handle object case - might be {value: number} or similar
+            const val = (failedAttempts as Record<string, unknown>).value || (failedAttempts as Record<string, unknown>).count;
+            if (typeof val === 'number') {
+              attemptCount = val + 1;
+            } else if (typeof val === 'string') {
+              const parsed = parseInt(val, 10);
+              attemptCount = isNaN(parsed) ? 1 : parsed + 1;
+            }
+          }
+        }
+        await setRedisItem(cacheKey, attemptCount);
         await setRedisTTL(cacheKey, 3600); // 1 hour expiry
         
         // Send alert after 3 failed attempts
