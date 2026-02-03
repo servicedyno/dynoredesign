@@ -626,12 +626,13 @@ const getDiscountStatus = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const discountPercent = (user as Record<string, unknown>).fee_discount_percent || 0;
-    const expiresAt = (user as Record<string, unknown>).fee_discount_expires_at;
-    const reason = (user as Record<string, unknown>).fee_discount_reason;
+    const userData = user as unknown as Record<string, unknown>;
+    const discountPercent = Number(userData.fee_discount_percent) || 0;
+    const expiresAt = userData.fee_discount_expires_at as Date | null;
+    const reason = userData.fee_discount_reason as string | null;
 
     // Check if discount is still active
-    const isActive = expiresAt && new Date() < expiresAt && discountPercent > 0;
+    const isActive = expiresAt && new Date() < new Date(expiresAt) && discountPercent > 0;
 
     return res.status(200).json({
       message: "Discount status retrieved successfully",
@@ -641,7 +642,7 @@ const getDiscountStatus = async (req: Request, res: Response) => {
         expires_at: isActive ? expiresAt : null,
         reason: isActive ? reason : null,
         days_remaining: isActive
-          ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          ? Math.ceil((new Date(expiresAt as Date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
           : 0,
       },
     });
