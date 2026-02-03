@@ -8,18 +8,29 @@ import psycopg2
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 
 # Load environment variables
 load_dotenv('/app/backend/.env')
 
 def get_db_connection():
-    """Create database connection"""
+    """Create database connection from MONGO_URL (which is actually PostgreSQL)"""
+    # Parse the connection string from MONGO_URL
+    mongo_url = os.getenv('MONGO_URL')
+    
+    if not mongo_url:
+        raise ValueError("MONGO_URL environment variable not set")
+    
+    # Parse the PostgreSQL connection URL
+    # Format: postgresql://user:password@host:port/database
+    parsed = urlparse(mongo_url)
+    
     return psycopg2.connect(
-        host=os.getenv('DB_HOST', 'localhost'),
-        database=os.getenv('DB_NAME'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        port=os.getenv('DB_PORT', 5432)
+        host=parsed.hostname,
+        database=parsed.path[1:] if parsed.path else os.getenv('DB_NAME'),  # Remove leading /
+        user=parsed.username,
+        password=parsed.password,
+        port=parsed.port or os.getenv('DB_PORT', 5432)
     )
 
 def audit_vat_country_consistency():
