@@ -52,10 +52,10 @@ export interface IFundData {
 }
 
 export interface FW_API_Response {
-  status: string;
-  message: string;
-  data: Data;
-  meta: Meta;
+  status?: string;
+  message?: string;
+  data?: Data;
+  meta?: Meta;
 }
 
 export interface Data {
