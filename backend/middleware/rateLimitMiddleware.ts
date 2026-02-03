@@ -145,7 +145,7 @@ export const ipRateLimiter = createRateLimiter(
 
 /**
  * Strict rate limiter for sensitive endpoints (login, password reset, etc.)
- * 5 attempts per 15 minutes
+ * 20 attempts per 15 minutes
  */
 export const strictRateLimiter = createRateLimiter(
   (req) => {
@@ -157,7 +157,7 @@ export const strictRateLimiter = createRateLimiter(
   },
   async () => ({
     windowMs: 15 * 60 * 1000,  // 15 minutes
-    maxRequests: 5,             // 5 attempts per 15 minutes
+    maxRequests: 20,            // 20 attempts per 15 minutes
   })
 );
 
@@ -176,13 +176,13 @@ export const loginRateLimiter = createRateLimiter(
   },
   async () => ({
     windowMs: 15 * 60 * 1000,  // 15 minutes
-    maxRequests: 5,             // 5 login attempts per email per IP per 15 minutes
+    maxRequests: 20,            // 20 login attempts per email per IP per 15 minutes
   })
 );
 
 /**
  * Moderate rate limiter for registration and social auth
- * 10 attempts per 15 minutes
+ * 30 attempts per 15 minutes
  */
 export const moderateRateLimiter = createRateLimiter(
   (req) => {
@@ -194,7 +194,7 @@ export const moderateRateLimiter = createRateLimiter(
   },
   async () => ({
     windowMs: 15 * 60 * 1000,  // 15 minutes
-    maxRequests: 10,            // 10 attempts per 15 minutes
+    maxRequests: 30,            // 30 attempts per 15 minutes
   })
 );
 
@@ -212,7 +212,7 @@ export const otpRateLimiter = createRateLimiter(
   },
   async () => ({
     windowMs: 15 * 60 * 1000,  // 15 minutes
-    maxRequests: 3,             // 3 OTP requests per contact per 15 minutes
+    maxRequests: 10,            // 10 OTP requests per contact per 15 minutes
   })
 );
 
