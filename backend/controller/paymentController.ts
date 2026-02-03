@@ -80,6 +80,33 @@ import {
 import * as merchantPoolService from "../services/merchantPoolService";
 import { callMerchantWebhook } from "../webhooks";
 
+// ============================================
+// CENTRALIZED TIMING CONFIGURATION
+// ============================================
+// All payment timing constants in one place for consistency
+// These can be overridden by merchant settings in tbl_company
+const PAYMENT_TIMING = {
+  // Crypto invoice window - time to complete payment after selecting currency
+  CRYPTO_INVOICE_MINUTES: 15,
+  
+  // Grace period for partial/underpayment completion
+  GRACE_PERIOD_MINUTES: 30,
+  
+  // Redis TTL for soft-deleted payment data (matches grace period)
+  REDIS_SOFT_DELETE_TTL_SECONDS: 30 * 60, // 1800 seconds
+  
+  // Default payment link expiry options
+  LINK_EXPIRY: {
+    '24h': 24 * 60,        // 24 hours in minutes
+    '7d': 7 * 24 * 60,     // 7 days in minutes (default)
+    '30d': 30 * 24 * 60,   // 30 days in minutes
+    'never': null,
+  },
+  
+  // Webhook/confirmation timeouts
+  TRANSACTION_CONFIRMATION_TIMEOUT_MS: 90000, // 90 seconds
+};
+
 // Retry configuration
 const RETRY_CONFIG = {
   MAX_RETRIES: 3,
