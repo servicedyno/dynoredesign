@@ -1316,7 +1316,7 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
               required: ['amount_usd', 'chain'],
               properties: {
                 amount_usd: { type: 'number', description: 'Amount in USD' },
-                chain: { type: 'string', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT_TRC20', 'USDT_ERC20'] },
+                chain: { type: 'string', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'] },
                 fee_payer: { type: 'string', enum: ['customer', 'company'], default: 'customer' }
               }
             },
