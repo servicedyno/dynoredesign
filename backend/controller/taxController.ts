@@ -203,8 +203,9 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
         query_status: validationResult.query || "completed",
       });
     } catch (apiError: unknown) {
+      const err = apiError as { response?: { data?: { message?: string }; status?: number }; message?: string };
       // Handle rate limiting gracefully
-      if (apiError.response?.data?.message?.includes("exceeded")) {
+      if (err.response?.data?.message?.includes("exceeded")) {
         return successResponseHelper(res, 200, "Tax ID validation - API rate limit exceeded, please try again later", {
           tax_id,
           country_code: upperCountryCode,
@@ -216,7 +217,7 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
       }
 
       // Handle specific API errors
-      if (apiError.response?.status === 400) {
+      if (err.response?.status === 400) {
         return successResponseHelper(res, 200, "Tax ID validation completed", {
           tax_id,
           country_code: upperCountryCode,
@@ -226,7 +227,7 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
         });
       }
 
-      if (apiError.response?.status === 401) {
+      if (err.response?.status === 401) {
         return errorResponseHelper(res, 500, "Tax Data API authentication failed");
       }
 
@@ -235,7 +236,7 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
 
   } catch (e: unknown) {
     const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(e)) || console.error("Tax validation error:", message);
+    taxLogger?.error?.(message, {}, new Error(message)) || console.error("Tax validation error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
