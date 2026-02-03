@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://dependency-setup-8.preview.emergentagent.com/api"
+BASE_URL = "https://setup-wizard-84.preview.emergentagent.com/api"
 
 # Login
 print("1. Logging in as john@dyno.pt...")

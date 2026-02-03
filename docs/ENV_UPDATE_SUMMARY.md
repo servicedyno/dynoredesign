@@ -6,7 +6,7 @@
 
 #### 1. **SERVER_URL** ✅
 - **Status**: Maintained current development URL
-- **Value**: `https://dependency-setup-8.preview.emergentagent.com`
+- **Value**: `https://setup-wizard-84.preview.emergentagent.com`
 - **Reason**: Kept existing development environment URL as instructed
 
 #### 2. **PROFILE_ID** ✅

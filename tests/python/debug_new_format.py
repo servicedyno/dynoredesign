@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://dependency-setup-8.preview.emergentagent.com"
+backend_url = "https://setup-wizard-84.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(
