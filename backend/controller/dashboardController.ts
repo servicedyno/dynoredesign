@@ -418,7 +418,7 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
       }
     ) as Array<Record<string, unknown>>;
 
-    const monthlyVolume = parseFloat(monthlyVolumeResult[0]?.volume || 0);
+    const monthlyVolume = parseFloat(String(monthlyVolumeResult[0]?.volume || 0));
     const userTierInfo = getFeeTier(monthlyVolume);
 
     // Build tiers with indicator for current tier
