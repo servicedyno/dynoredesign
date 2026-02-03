@@ -404,10 +404,13 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
         const companyCountryCode = data.country.trim().toUpperCase();
         
         if (vatCountryCode !== companyCountryCode) {
+          const vatCountryName = getCountryName(vatCountryCode);
+          const companyCountryName = getCountryName(companyCountryCode);
+          
           return errorResponseHelper(
             res,
             400,
-            `Company country (${companyCountryCode}) must match VAT country (${vatCountryCode}). Please ensure consistency between country and VAT number.`
+            `Company country must match VAT country. Existing VAT number is for ${vatCountryName} (${vatCountryCode}), but you're trying to change country to ${companyCountryName} (${companyCountryCode}). Please update VAT number first or choose ${vatCountryName}.`
           );
         }
       }
