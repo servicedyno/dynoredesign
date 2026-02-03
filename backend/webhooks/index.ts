@@ -182,9 +182,9 @@ const callUrlWithPayload = async (
     // Build headers - signature is optional
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'X-DynoPay-Event': eventData.event,
+      'X-DynoPay-Event': String(eventData.event || ''),
       'X-DynoPay-Timestamp': timestamp.toString(),
-      'X-DynoPay-Webhook-Id': webhookPayload.webhook_id,
+      'X-DynoPay-Webhook-Id': String(webhookPayload.webhook_id),
       'X-DynoPay-Type': urlType, // 'webhook' or 'callback'
       'User-Agent': 'DynoPay-Webhook/1.0',
     };
