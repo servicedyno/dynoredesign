@@ -1080,7 +1080,7 @@ const getWebhookHistory = async (req: express.Request, res: express.Response) =>
       { replacements, type: QueryTypes.SELECT }
     );
 
-    const total = parseInt(countResult.total);
+    const total = parseInt(String(countResult.total || '0'));
     const totalPages = Math.ceil(total / limit);
 
     successResponseHelper(res, 200, "Webhook history retrieved", {
