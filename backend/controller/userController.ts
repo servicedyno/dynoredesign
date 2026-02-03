@@ -1131,7 +1131,7 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 400, "Google ID token or access token is required");
     }
 
-    let googleUserInfo: Record<string, unknown>;
+    let googleUserInfo: { email?: string; name?: string; picture?: string; sub?: string };
 
     if (idToken) {
       // Verify ID token with Google
