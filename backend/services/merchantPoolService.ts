@@ -1270,7 +1270,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     const isToken = TOKEN_CHAINS.includes(walletType);
     
     if (isToken) {
-      const fundResult = await fundGasIfNeeded(poolAddress, walletType);
+      const fundResult = await fundGasIfNeeded(poolAddress as unknown as { dataValues: { wallet_address: string }; update: (data: Record<string, unknown>) => Promise<void> }, walletType);
       gasFunding = { ...fundResult, txId: fundResult.txId || null };
     } else {
       console.log(`[MerchantPool] Native ${walletType} - gas comes from remaining balance, no external funding needed`);

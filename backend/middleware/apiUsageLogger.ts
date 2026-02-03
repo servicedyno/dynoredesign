@@ -75,10 +75,11 @@ export const apiUsageLogger = async (
           }
 
           // Truncate large responses
-          if (data && data.length > 5000) {
-            responseBody = data.substring(0, 5000) + '... (truncated)';
+          const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
+          if (dataStr && dataStr.length > 5000) {
+            responseBody = dataStr.substring(0, 5000) + '... (truncated)';
           } else {
-            responseBody = data;
+            responseBody = dataStr;
           }
 
           await sequelize.query(

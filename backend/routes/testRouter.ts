@@ -4,6 +4,7 @@
  */
 
 import express from "express";
+import { QueryTypes } from "sequelize";
 import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../helper";
 import { setRedisItem, getRedisItem, deleteRedisItem } from "../utils/redisInstance";
 import { calculateTransactionFees, getBlockchainConfig } from "../controller/index";

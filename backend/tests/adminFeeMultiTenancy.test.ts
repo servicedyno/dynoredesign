@@ -129,7 +129,8 @@ const runTests = async () => {
     
     console.log('  Admin wallets found:', adminWallets.length);
     adminWallets.forEach((w: unknown) => {
-      console.log(`    - ${w.wallet_type}: fee balance = ${w.fee}`);
+      const wallet = w as { wallet_type?: string; fee?: number };
+      console.log(`    - ${wallet.wallet_type}: fee balance = ${wallet.fee}`);
     });
     
     if (adminWallets.length > 0) {
