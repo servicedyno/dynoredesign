@@ -197,12 +197,12 @@ const startKYCVerification = async (req: express.Request, res: express.Response)
          FROM tbl_user_transaction 
          WHERE user_id = :userId AND status = 'done'`;
 
-    const volumeResult = await sequelize.query(volumeQuery, {
+    const volumeResult = await sequelize.query<{ total_volume: string }>(volumeQuery, {
       replacements: { userId, companyId: company_id },
       type: QueryTypes.SELECT,
-    }) as Array<Record<string, unknown>>;
+    });
 
-    const totalVolume = parseFloat(volumeResult[0]?.total_volume || "0");
+    const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
 
     // Initialize Veriff service and create session
     const veriffService = getVeriffService();
