@@ -75,7 +75,8 @@ const logWebhookDelivery = async (
       }
     );
   } catch (err: unknown) {
-    console.error(`[logWebhookDelivery] Failed to log webhook: ${err.message}`);
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[logWebhookDelivery] Failed to log webhook: ${errorMsg}`);
   }
 };
 
