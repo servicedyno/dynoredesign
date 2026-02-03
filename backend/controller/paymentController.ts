@@ -1260,9 +1260,6 @@ const createCryptoPayment = async (
       // Determine fee_payer mode
       const fee_payer = items.fee_payer || 'company';
       
-      // Fee percentage from centralized config
-      const ADMIN_FEE_PERCENT = FEE_CONFIG.ADMIN_FEE_PERCENT;
-      
       // Calculate crypto amount using FastForex
       let baseAmountUSD = Number(items.base_amount || items.amount || 0);
       let taxAmount = 0;
@@ -1335,6 +1332,20 @@ const createCryptoPayment = async (
           - Tax crypto: ${tax_amount_crypto} ${requestedCurrency}
           - Exchange rate: 1 ${items.base_currency || 'USD'} = ${exchange_rate} ${requestedCurrency}`);
         
+        // Calculate fees using tier-based structure: 2% + fixed + buffer
+        const { totalDeduction, fixedFee, transactionFee, blockchainBuffer } = await calculateTransactionFees(
+          requestedCurrency,
+          baseAmountUSD  // Fee calculation based on USD amount (base only, not tax)
+        );
+        
+        // Fee percentage for crypto conversion
+        const feePercentage = totalDeduction / baseAmountUSD;
+        
+        console.log(`[createCryptoPayment] Fee calculation:
+          - Base USD: $${baseAmountUSD}
+          - Fee breakdown: 2%=$${transactionFee.toFixed(2)} + Fixed=$${fixedFee.toFixed(2)} + Buffer=$${blockchainBuffer.toFixed(2)}
+          - Total fee: $${totalDeduction.toFixed(2)} (${(feePercentage * 100).toFixed(2)}% of base)`);
+        
         // TAX HANDLING IN FEE CALCULATION:
         // - Admin fees are calculated on BASE amount only (not on tax)
         // - Tax goes entirely to merchant (they must remit to tax authority)
@@ -1347,39 +1358,40 @@ const createCryptoPayment = async (
           // - Admin receives: fees only (swept from temp wallet)
           
           const merchant_base_crypto = base_crypto_amount;  // Merchant gets full base
-          total_fees_crypto = base_crypto_amount * ADMIN_FEE_PERCENT / (1 - ADMIN_FEE_PERCENT);  // Calculate fees on base only
+          total_fees_crypto = base_crypto_amount * feePercentage;  // Calculate fees using tier-based percentage
           merchant_amount_crypto = merchant_base_crypto + tax_amount_crypto;  // Merchant gets base + tax
           crypto_amount = merchant_base_crypto + total_fees_crypto + tax_amount_crypto;  // Customer pays base + fees + tax
           
           console.log(`[createCryptoPayment] CUSTOMER PAYS FEES mode (with tax):
             - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base + fees + tax)
             - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (base + tax)
-            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (swept later)
+            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (${(feePercentage * 100).toFixed(2)}% of base)
             - Tax collected: ${tax_amount_crypto.toFixed(8)} ${requestedCurrency} (included in merchant amount)`);
             
         } else {
           // COMPANY (MERCHANT) PAYS FEES:
           // - Customer pays: base_amount + tax
-          // - Merchant receives: base_amount * (1 - fee_percent) + tax = 67% of base + full tax
-          // - Admin receives: base_amount * fee_percent = 33% of base (swept from temp wallet)
+          // - Merchant receives: base_amount * (1 - fee_percent) + tax
+          // - Admin receives: base_amount * fee_percent (swept from temp wallet)
           
           crypto_amount = total_crypto_amount;  // Customer pays base + tax
-          const merchant_base_after_fees = base_crypto_amount * (1 - ADMIN_FEE_PERCENT);  // 67% of base
-          merchant_amount_crypto = merchant_base_after_fees + tax_amount_crypto;  // 67% of base + tax
-          total_fees_crypto = base_crypto_amount * ADMIN_FEE_PERCENT;  // 33% of base
+          const merchant_base_after_fees = base_crypto_amount * (1 - feePercentage);
+          merchant_amount_crypto = merchant_base_after_fees + tax_amount_crypto;
+          total_fees_crypto = base_crypto_amount * feePercentage;
           
           console.log(`[createCryptoPayment] COMPANY PAYS FEES mode (with tax):
             - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base + tax)
-            - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (67% base + tax)
-            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (33% of base, swept later)
+            - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (${((1 - feePercentage) * 100).toFixed(2)}% base + tax)
+            - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (${(feePercentage * 100).toFixed(2)}% of base)
             - Tax collected: ${tax_amount_crypto.toFixed(8)} ${requestedCurrency} (included in merchant amount)`);
         }
       } catch (calcError) {
-        console.error('[createCryptoPayment] Crypto amount calculation error:', calcError);
-        // Fallback to data.amount if conversion fails
+        console.error('[createCryptoPayment] Crypto/fee calculation error:', calcError);
+        // Fallback to simple 2% if calculation fails
         crypto_amount = data.amount || 0;
-        merchant_amount_crypto = crypto_amount * (1 - ADMIN_FEE_PERCENT);
-        total_fees_crypto = crypto_amount * ADMIN_FEE_PERCENT;
+        const fallbackFeePercent = FEE_CONFIG.TRANSACTION_FEE_PERCENT / 100;
+        total_fees_crypto = crypto_amount * fallbackFeePercent;
+        merchant_amount_crypto = crypto_amount - total_fees_crypto;
       }
       
       // Add crypto amount and rate to response
