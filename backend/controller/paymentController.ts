@@ -1313,7 +1313,21 @@ const createCryptoPayment = async (
       // Calculate crypto amount using FastForex
       let baseAmountUSD = Number(items.base_amount || items.amount || 0);
       let taxAmount = 0;
-      let taxInfo: Record<string, unknown> | null = null;
+      
+      // Define tax info type
+      interface CryptoPaymentTaxInfo {
+        tax_enabled: boolean;
+        tax_rate: number;
+        tax_acronym?: string;
+        tax_amount: number;
+        country_code?: string;
+        country_name?: string;
+        subtotal: number;
+        total: number;
+        currency?: string;
+      }
+      
+      let taxInfo: CryptoPaymentTaxInfo | null = null;
       
       // TAX HANDLING: If apply_tax is enabled, calculate tax based on customer location
       if (items.apply_tax) {
@@ -1327,11 +1341,15 @@ const createCryptoPayment = async (
           console.log(`[createCryptoPayment] Detected country: ${geoLocation.country_name} (${geoLocation.country_code})`);
           
           // Calculate tax using the same function as getData
-          taxInfo = await calculateTaxForCheckout(
+          const calculatedTax = await calculateTaxForCheckout(
             geoLocation.country_code,
             baseAmountUSD,
             items.base_currency || 'USD'
           );
+          
+          if (calculatedTax) {
+            taxInfo = calculatedTax as CryptoPaymentTaxInfo;
+          }
           
           if (taxInfo && taxInfo.tax_amount > 0) {
             taxAmount = taxInfo.tax_amount;
