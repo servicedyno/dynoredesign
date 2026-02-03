@@ -907,8 +907,8 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           const fee_payer = items.fee_payer || 'company';
           const baseAmountUSD = Number(items.base_amount || items.amount || 0);
           
-          // Calculate merchant_amount and fees based on fee_payer mode
-          const ADMIN_FEE_PERCENT = Number(process.env.ADMIN_FEE_PERCENT) || 0.33;
+          // Calculate merchant_amount and fees based on fee_payer mode (using centralized config)
+          const ADMIN_FEE_PERCENT = FEE_CONFIG.ADMIN_FEE_PERCENT;
           let merchant_amount_crypto = 0;
           let total_fees_crypto = 0;
           const crypto_amount = Number(value.amount);
