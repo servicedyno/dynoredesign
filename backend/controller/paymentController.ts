@@ -5035,7 +5035,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
           attributes: ['wallet_type'],
         });
         
-        allConfiguredCurrencies = [...new Set(configuredWallets.map((w: { wallet_type: string }) => w.wallet_type))];
+        allConfiguredCurrencies = [...new Set(configuredWallets.map((w) => (w.dataValues as { wallet_type: string }).wallet_type))];
         
         // Normalize to uppercase
         const requestedCurrencies = accepted_currencies.map((c: string) => c.toUpperCase().trim());
