@@ -197,13 +197,6 @@ cron.schedule("*/15 * * * *", function () {
   merchantPoolService.cleanupStaleAddresses();
 });
 
-// Merchant Pool: Recover stranded gas every hour
-// Handles gas that was funded but token transfer failed
-cron.schedule("0 * * * *", function () {
-  log("Cron: recoverStrandedGas running", "info");
-  merchantPoolService.recoverStrandedGas();
-});
-
 // Merchant Pool: Subscription health monitor every 30 minutes
 // Ensures all pool addresses have valid Tatum webhook subscriptions
 // Cost: ~2 credits per check (minimal)
