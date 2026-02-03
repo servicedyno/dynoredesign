@@ -5436,16 +5436,17 @@ const removeUnwantedSubscriptions = async () => {
 
 const processIncompletePayments = async () => {
   try {
+    // Use centralized grace period config for SQL query
     const pendingTransactions: any[] = await sequelize.query(
       `SELECT * FROM tbl_user_temp_address 
        WHERE status = 'partial' 
        AND "txId" IS NOT NULL
-       AND COALESCE(partial_payment_timestamp, "updatedAt") < NOW() - INTERVAL '30 minutes'`,
+       AND COALESCE(partial_payment_timestamp, "updatedAt") < NOW() - INTERVAL '${PAYMENT_TIMING.GRACE_PERIOD_MINUTES} minutes'`,
       { type: QueryTypes.SELECT }
     );
 
     if (pendingTransactions.length > 0) {
-      console.log(`Found ${pendingTransactions.length} incomplete payments to process after 30-minutes grace period.`);
+      console.log(`Found ${pendingTransactions.length} incomplete payments to process after ${PAYMENT_TIMING.GRACE_PERIOD_MINUTES}-minutes grace period.`);
 
       for (const tempTx of pendingTransactions) {
         try {
