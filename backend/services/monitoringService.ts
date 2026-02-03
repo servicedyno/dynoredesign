@@ -27,7 +27,7 @@ const MONITORED_SERVICES = [
         await sequelize.query("SELECT 1", { type: QueryTypes.SELECT });
         return { healthy: true, latency: Date.now() - start };
       } catch (error: unknown) {
-        return { healthy: false, latency: Date.now() - start, error: error.message };
+        return { healthy: false, latency: Date.now() - start, error: (error as { message?: string }).message };
       }
     }
   },
@@ -42,7 +42,7 @@ const MONITORED_SERVICES = [
         await sequelize.query("SELECT COUNT(*) FROM tbl_customer_transaction LIMIT 1", { type: QueryTypes.SELECT });
         return { healthy: true, latency: Date.now() - start };
       } catch (error: unknown) {
-        return { healthy: false, latency: Date.now() - start, error: error.message };
+        return { healthy: false, latency: Date.now() - start, error: (error as { message?: string }).message };
       }
     }
   },
@@ -58,7 +58,7 @@ const MONITORED_SERVICES = [
         await sequelize.query("SELECT COUNT(*) FROM tbl_admin_wallet LIMIT 1", { type: QueryTypes.SELECT });
         return { healthy: true, latency: Date.now() - start };
       } catch (error: unknown) {
-        return { healthy: false, latency: Date.now() - start, error: error.message };
+        return { healthy: false, latency: Date.now() - start, error: (error as { message?: string }).message };
       }
     }
   },
@@ -73,7 +73,7 @@ const MONITORED_SERVICES = [
         // Redis is connected if no error thrown
         return { healthy: true, latency: Date.now() - start };
       } catch (error: unknown) {
-        return { healthy: false, latency: Date.now() - start, error: error.message };
+        return { healthy: false, latency: Date.now() - start, error: (error as { message?: string }).message };
       }
     }
   },
@@ -88,7 +88,7 @@ const MONITORED_SERVICES = [
         await sequelize.query("SELECT COUNT(*) FROM tbl_company LIMIT 1", { type: QueryTypes.SELECT });
         return { healthy: true, latency: Date.now() - start };
       } catch (error: unknown) {
-        return { healthy: false, latency: Date.now() - start, error: error.message };
+        return { healthy: false, latency: Date.now() - start, error: (error as { message?: string }).message };
       }
     }
   }
