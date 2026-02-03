@@ -4232,6 +4232,7 @@ const createPaymentLink = async (
     fee_payer,        // Who pays blockchain fees: 'customer' or 'company'
     company_id,       // Phase 10 Fix: Accept company_id for multi-tenant isolation
     apply_tax,        // Tax toggle: calculate tax based on customer location (default: false)
+    accepted_currencies, // Array of crypto types to accept (e.g., ['BTC', 'ETH', 'USDT-TRC20'])
     // Fixed tax parameters (alternative to apply_tax location-based)
     tax_percentage,   // Fixed tax rate (e.g., 10 for 10%)
     tax_name,         // Tax label (e.g., "VAT", "GST", "Sales Tax")
