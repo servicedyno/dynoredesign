@@ -1,34 +1,39 @@
 import express, { RequestHandler } from "express";
 import { userController } from "../controller";
 import { authMiddleware, uploadImage, userMiddleware } from "../middleware";
-import { strictRateLimiter, ipRateLimiter } from "../middleware/rateLimitMiddleware";
+import { 
+  strictRateLimiter, 
+  moderateRateLimiter, 
+  loginRateLimiter,
+  otpRateLimiter 
+} from "../middleware/rateLimitMiddleware";
 const userRouter = express.Router();
 
-// Registration endpoints - moderate rate limiting (10 per 15 min)
-userRouter.post("/registerUser", ipRateLimiter, userMiddleware, userController.registerUser);
-userRouter.post("/registerPhone", ipRateLimiter, userController.registerPhoneStep1);
-userRouter.post("/registerPhone/verify", ipRateLimiter, userController.registerPhoneStep2);
+// Registration endpoints - moderate rate limiting (10 per 15 min per IP)
+userRouter.post("/registerUser", moderateRateLimiter, userMiddleware, userController.registerUser);
+userRouter.post("/registerPhone", moderateRateLimiter, userController.registerPhoneStep1);
+userRouter.post("/registerPhone/verify", moderateRateLimiter, userController.registerPhoneStep2);
 
-// Login endpoint - strict rate limiting (5 per 15 min) to prevent brute force
-userRouter.post("/login", strictRateLimiter, userMiddleware, userController.login);
+// Login endpoint - strict rate limiting (5 per 15 min per IP+email combo) to prevent brute force
+userRouter.post("/login", loginRateLimiter, userMiddleware, userController.login);
 
 // Email check - moderate rate limiting
-userRouter.get("/checkEmail", ipRateLimiter, userController.checkEmail);
+userRouter.get("/checkEmail", moderateRateLimiter, userController.checkEmail);
 
-// OTP endpoints - strict rate limiting (5 per 15 min) to prevent OTP spam
-userRouter.post("/generateOTP", strictRateLimiter, userController.generateOTP);
-userRouter.post("/confirmOTP", strictRateLimiter, userController.confirmOTP);
+// OTP endpoints - strict rate limiting (3 per 15 min per contact) to prevent OTP spam
+userRouter.post("/generateOTP", otpRateLimiter, userController.generateOTP);
+userRouter.post("/confirmOTP", otpRateLimiter, userController.confirmOTP);
 
 // Social connect - moderate rate limiting
-userRouter.post("/connectSocial", ipRateLimiter, userController.connectSocial);
+userRouter.post("/connectSocial", moderateRateLimiter, userController.connectSocial);
 
-// Password reset endpoints - strict rate limiting (5 per 15 min) to prevent abuse
+// Password reset endpoints - strict rate limiting (5 per 15 min per IP) to prevent abuse
 userRouter.post("/forgot-password", strictRateLimiter, userController.forgotPassword);
 userRouter.post("/reset-password", strictRateLimiter, userController.resetPassword);
 
-// Social Sign-In endpoints - moderate rate limiting (10 per 15 min)
-userRouter.post("/google-signin", ipRateLimiter, userController.googleSignIn);
-userRouter.post("/facebook-signin", ipRateLimiter, userController.facebookSignIn);
+// Social Sign-In endpoints - moderate rate limiting (10 per 15 min per IP)
+userRouter.post("/google-signin", moderateRateLimiter, userController.googleSignIn);
+userRouter.post("/facebook-signin", moderateRateLimiter, userController.facebookSignIn);
 
 // Profile endpoints (requires auth)
 userRouter.get("/profile", authMiddleware, userController.getProfile);
