@@ -292,6 +292,79 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
     }
     
     const company_id = req.params.id;
+    
+    // Validate VAT country matches company country if both are provided
+    if (data.vat_number && data.vat_number.trim() !== "") {
+      // Get current company data to check existing country if not provided in update
+      let countryToValidate = data.country;
+      
+      if (!countryToValidate || countryToValidate.trim() === "") {
+        // Fetch existing company country if not provided in update
+        const existingCompany = await companyModel.findOne({
+          where: {
+            user_id: userData.user_id,
+            company_id,
+          },
+        });
+        
+        if (existingCompany) {
+          countryToValidate = existingCompany.dataValues.country;
+        }
+      }
+      
+      if (countryToValidate && countryToValidate.trim() !== "") {
+        // Extract VAT country code from VAT number (first 2 characters)
+        const vatCountryCode = data.vat_number.trim().substring(0, 2).toUpperCase();
+        const companyCountryCode = countryToValidate.trim().toUpperCase();
+        
+        // Validate that company country matches VAT country
+        if (vatCountryCode !== companyCountryCode) {
+          return errorResponseHelper(
+            res,
+            400,
+            `Company country (${companyCountryCode}) must match VAT country (${vatCountryCode}). Please ensure the company is registered in ${vatCountryCode} or update the country accordingly.`
+          );
+        }
+        
+        companyLogger.info(
+          `VAT country validation passed for update: ${vatCountryCode} matches ${companyCountryCode}`,
+          { user_id: userData.user_id, company_id }
+        );
+      }
+    }
+    
+    // Also validate if both country and vat_number exist (from different sources)
+    if (data.country && data.country.trim() !== "") {
+      // Fetch existing VAT number if not provided in update
+      let vatNumberToValidate = data.vat_number;
+      
+      if (!vatNumberToValidate || vatNumberToValidate.trim() === "") {
+        const existingCompany = await companyModel.findOne({
+          where: {
+            user_id: userData.user_id,
+            company_id,
+          },
+        });
+        
+        if (existingCompany && existingCompany.dataValues.vat_number) {
+          vatNumberToValidate = existingCompany.dataValues.vat_number;
+        }
+      }
+      
+      if (vatNumberToValidate && vatNumberToValidate.trim() !== "") {
+        const vatCountryCode = vatNumberToValidate.trim().substring(0, 2).toUpperCase();
+        const companyCountryCode = data.country.trim().toUpperCase();
+        
+        if (vatCountryCode !== companyCountryCode) {
+          return errorResponseHelper(
+            res,
+            400,
+            `Company country (${companyCountryCode}) must match VAT country (${vatCountryCode}). Please ensure consistency between country and VAT number.`
+          );
+        }
+      }
+    }
+    
     let photo;
     if (file) {
       const serverUrl = process.env.SERVER_URL?.endsWith('/') ? process.env.SERVER_URL : process.env.SERVER_URL + '/';
