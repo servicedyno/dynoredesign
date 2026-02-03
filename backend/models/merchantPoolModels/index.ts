@@ -33,11 +33,16 @@ export const ACCOUNT_CHAINS = ['ETH', 'TRX'];
 export const TOKEN_CHAINS = ['USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
 
 /**
- * Gas token mapping for account-based and token chains
+ * Gas token mapping for TOKEN chains only
+ * 
+ * IMPORTANT: This mapping should ONLY include tokens that require external gas funding.
+ * Native currencies (ETH, TRX) do NOT need external gas - they pay fees from their own balance.
+ * 
+ * - USDT-TRC20: Needs TRX for gas (token transfer on TRON)
+ * - USDT-ERC20: Needs ETH for gas (token transfer on Ethereum)
+ * - USDC-ERC20: Needs ETH for gas (token transfer on Ethereum)
  */
 export const GAS_TOKEN_MAPPING: Record<string, string> = {
-  'ETH': 'ETH',
-  'TRX': 'TRX',
   'USDT-TRC20': 'TRX',
   'USDT-ERC20': 'ETH',
   'USDC-ERC20': 'ETH',
