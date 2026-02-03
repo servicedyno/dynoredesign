@@ -317,6 +317,17 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   expire: '30d',
                   webhook_url: 'https://myapp.com/webhooks/payment'
                 }
+              },
+              'Specific Currencies': {
+                summary: '🪙 SELECTIVE: Only accept BTC, ETH, USDT',
+                value: {
+                  amount: 100.00,
+                  company_id: 38,
+                  currency: 'USD',
+                  email: 'customer@example.com',
+                  description: 'Payment with limited crypto options',
+                  accepted_currencies: ['BTC', 'ETH', 'USDT-TRC20']
+                }
               }
             }
           }
