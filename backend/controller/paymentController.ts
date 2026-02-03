@@ -2615,6 +2615,7 @@ const settleCryptoTransaction = async ({
 }: {
   tempAddressData: {
     address: string;
+    wallet_address?: string;  // Alternative name for address
     private_key?: string;
     privateKey?: string;
     wallet_type?: string;
@@ -2636,6 +2637,9 @@ const settleCryptoTransaction = async ({
         `Admin wallet address not configured for ${currency} in environment variables.`
       );
     }
+
+    // Get the address - use wallet_address if available, otherwise use address
+    const fromAddress = tempAddressData.wallet_address || tempAddressData.address;
 
     // Get private key - merchant pool addresses use different field names
     const privateKeyField = isMerchantPool ? tempAddressData.private_key : tempAddressData.privateKey;
