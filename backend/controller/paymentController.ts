@@ -6566,7 +6566,7 @@ const getCompanyConfiguredCurrencies = async (
     });
 
     // Create a set of configured wallet types
-    const configuredTypes = new Set(configuredWallets.map((w: { wallet_type: string }) => w.wallet_type));
+    const configuredTypes = new Set(configuredWallets.map((w) => (w.dataValues as { wallet_type: string }).wallet_type));
 
     // Build response with all crypto types and their configuration status
     const currencies = allCryptoTypes.map(crypto => ({
@@ -6575,7 +6575,7 @@ const getCompanyConfiguredCurrencies = async (
       symbol: crypto.symbol,
       configured: configuredTypes.has(crypto.type),
       wallet_address: configuredTypes.has(crypto.type) 
-        ? configuredWallets.find((w: { wallet_type: string }) => w.wallet_type === crypto.type)?.wallet_address 
+        ? (configuredWallets.find((w) => (w.dataValues as { wallet_type: string }).wallet_type === crypto.type)?.dataValues as { wallet_address?: string })?.wallet_address 
         : null,
     }));
 
