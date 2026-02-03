@@ -837,6 +837,10 @@ Wallet address is saved and ready to receive payments!`,
       summary: '➕ Add Secondary Wallet Address',
       description: `Add a new secondary wallet address directly (no OTP required).
 
+## Optional Fields:
+- **wallet_name** - Custom name for the wallet (defaults to currency code if not provided)
+- **label** - Alternative to wallet_name (legacy support)
+
 **Table:** tbl_user_wallet_addresses`,
       security: [{ BearerAuth: [] }],
       requestBody: {
@@ -845,20 +849,84 @@ Wallet address is saved and ready to receive payments!`,
           'application/json': {
             schema: {
               type: 'object',
-              required: ['address', 'currency', 'company_id'],
+              required: ['wallet_address', 'currency', 'company_id'],
               properties: {
-                address: { type: 'string', example: '0x9a7221b5e32d5f99e8da95585835442e29afb38f' },
-                currency: { type: 'string', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'] },
-                company_id: { type: 'integer', example: 38 },
-                label: { type: 'string', example: 'My ETH Address' }
+                wallet_address: { 
+                  type: 'string', 
+                  description: '✅ REQUIRED: Cryptocurrency wallet address',
+                  example: '0x9a7221b5e32d5f99e8da95585835442e29afb38f' 
+                },
+                currency: { 
+                  type: 'string', 
+                  description: '✅ REQUIRED: Cryptocurrency type',
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'BCH'],
+                  example: 'ETH'
+                },
+                company_id: { 
+                  type: 'integer', 
+                  description: '✅ REQUIRED: Company ID',
+                  example: 38 
+                },
+                wallet_name: { 
+                  type: 'string', 
+                  description: '(Optional) Custom wallet name. Defaults to currency code.',
+                  example: 'My Primary ETH Wallet' 
+                },
+                label: { 
+                  type: 'string', 
+                  description: '(Optional) Legacy field - use wallet_name instead',
+                  example: 'My ETH Address' 
+                }
+              }
+            },
+            examples: {
+              'with_name': {
+                summary: 'With custom wallet name',
+                value: {
+                  "wallet_address": "0x9a7221b5e32d5f99e8da95585835442e29afb38f",
+                  "currency": "ETH",
+                  "company_id": 38,
+                  "wallet_name": "My Primary ETH Wallet"
+                }
+              },
+              'without_name': {
+                summary: 'Without name (uses currency as default)',
+                value: {
+                  "wallet_address": "1JH5TnZzjYTf1yYwBDLjWoHgkAcCHc1Do7",
+                  "currency": "BTC",
+                  "company_id": 38
+                }
               }
             }
           }
         }
       },
       responses: {
-        200: { description: 'Address added successfully' },
-        400: { description: 'Invalid address or duplicate' },
+        200: { 
+          description: 'Address added successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Address added successfully!' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      user_address_id: { type: 'integer', example: 123 },
+                      wallet_address: { type: 'string', example: '0x9a7221b5e32d5f99e8da95585835442e29afb38f' },
+                      currency: { type: 'string', example: 'ETH' },
+                      wallet_name: { type: 'string', example: 'My Primary ETH Wallet' },
+                      company_id: { type: 'integer', example: 38 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: { description: 'Invalid address format or duplicate address for this company' },
         401: { description: 'Unauthorized' }
       }
     }
