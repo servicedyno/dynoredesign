@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://setup-dependencies-3.preview.emergentagent.com/api/docs
+Go to: https://dyno-crypto-pay.preview.emergentagent.com/api/docs
 
 ---
 

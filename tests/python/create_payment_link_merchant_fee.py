@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://setup-dependencies-3.preview.emergentagent.com/api"
+BASE_URL = "https://dyno-crypto-pay.preview.emergentagent.com/api"
 
 # Login
 print("1. Logging in as john@dyno.pt...")

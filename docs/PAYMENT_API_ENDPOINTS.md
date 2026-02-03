@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://setup-dependencies-3.preview.emergentagent.com/api
+Development: https://dyno-crypto-pay.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 
