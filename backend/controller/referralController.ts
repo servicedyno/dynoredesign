@@ -282,7 +282,7 @@ export const validateReferralCode = async (req: Request, res: Response) => {
       message: "Referral code is valid",
       valid: true,
       data: {
-        referrer_name: (referrer as Record<string, unknown>).name,
+        referrer_name: (referrer as unknown as Record<string, unknown>).name,
         bonus_info: {
           referrer_bonus: "$10 USD",
           referee_discount: "50% off fees for 30 days",
