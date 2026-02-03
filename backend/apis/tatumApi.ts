@@ -1376,7 +1376,7 @@ const assetBatchAddressesToOtherAddress = async ({
     );
     transactions = transactionResponse;
   } else if (currency === "BSC") {
-    let transactionResponse = [];
+    let transactionResponse: Array<{ txId: string; status: string; reason: string | null; fromAddress: unknown }> = [];
     // Send assets from all addresses to one address
     await Promise.allSettled(
       fromAddress.map(async (fromAddr) => {
@@ -1403,21 +1403,25 @@ const assetBatchAddressesToOtherAddress = async ({
             });
 
           console.log("###result", result);
+          const bscTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
           transactionResponse.push({
-            txId: result?.txId,
+            txId: bscTxId,
             status: "success",
             reason: null,
             fromAddress: fromAddr,
           });
-        } catch (error) {
+        } catch (error: unknown) {
+          const err = error as { body?: { message?: string; cause?: string }; message?: string };
           console.log("###error: ", error);
           transactionResponse.push({
+            txId: '',
             fromAddress: fromAddr.address,
             toAddress: destinationAddress,
             status: "failed",
-            errorMessage: error.body.message,
-            error: error.message,
-            cause: error.body.cause,
+            errorMessage: err.body?.message || '',
+            error: err.message || '',
+            cause: err.body?.cause || '',
+            reason: err.message || null,
           });
         }
       })
