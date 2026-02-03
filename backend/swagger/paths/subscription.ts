@@ -133,7 +133,7 @@ export const subscriptionPaths = {
                   amount: 29.99,
                   currency: 'USD',
                   interval: 'monthly',
-                  company_id: 1,
+                  company_id: 38,
                   description: 'Premium Plan - Monthly'
                 }
               },
@@ -145,7 +145,7 @@ export const subscriptionPaths = {
                   amount: 299.00,
                   currency: 'USD',
                   interval: 'yearly',
-                  company_id: 1,
+                  company_id: 38,
                   description: 'Premium Plan - Annual (Save 17%)',
                   metadata: { plan_tier: 'premium', discount: '17%' }
                 }

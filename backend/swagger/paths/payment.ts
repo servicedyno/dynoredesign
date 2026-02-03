@@ -206,14 +206,14 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 summary: '⚡ MINIMAL: Required fields only (amount + company_id)',
                 value: {
                   amount: 10.00,
-                  company_id: 1
+                  company_id: 38
                 }
               },
               'With Customer Email': {
                 summary: '📧 SIMPLE: Amount + company + customer email',
                 value: {
                   amount: 50.00,
-                  company_id: 1,
+                  company_id: 38,
                   email: 'customer@example.com'
                 }
               },
@@ -221,7 +221,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 summary: '💡 STANDARD: Common use case with description',
                 value: {
                   amount: 100.00,
-                  company_id: 1,
+                  company_id: 38,
                   currency: 'USD',
                   email: 'customer@example.com',
                   description: 'Order #12345'
@@ -231,7 +231,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 summary: '🧾 TAX: Auto-calculate tax based on customer location',
                 value: {
                   amount: 100.00,
-                  company_id: 1,
+                  company_id: 38,
                   currency: 'EUR',
                   email: 'customer@example.com',
                   description: 'Digital Product - Pro Plan',
@@ -242,7 +242,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 summary: '💰 FEES: Customer pays processing fees',
                 value: {
                   amount: 50.00,
-                  company_id: 1,
+                  company_id: 38,
                   email: 'customer@example.com',
                   fee_payer: 'customer',
                   description: 'Service Fee - Customer Absorbs Fees'
@@ -252,7 +252,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 summary: '⏰ EXPIRY: Link expires in 24 hours',
                 value: {
                   amount: 199.99,
-                  company_id: 1,
+                  company_id: 38,
                   email: 'customer@example.com',
                   description: 'Limited Time Offer',
                   expire: '24h'
@@ -263,7 +263,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 value: {
                   amount: 199.99,
                   currency: 'USD',
-                  company_id: 1,
+                  company_id: 38,
                   email: 'customer@example.com',
                   modes: ['CRYPTO'],
                   description: 'Premium Subscription - Annual',
@@ -279,7 +279,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                 summary: '₿ CRYPTO: Bitcoin payment with webhook',
                 value: {
                   amount: 0.001,
-                  company_id: 1,
+                  company_id: 38,
                   currency: 'BTC',
                   email: 'crypto@example.com',
                   description: 'BTC Payment - Invoice #001',
