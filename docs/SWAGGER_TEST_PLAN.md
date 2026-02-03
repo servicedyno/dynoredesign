@@ -1,7 +1,7 @@
 # 🧪 DynoPay API Comprehensive Testing Plan
 
 **Test User**: Johnny LTD (user_id: 28)  
-**Email**: john@dyno.pt  
+**Email**: richard@dyno.pt  
 **Last Updated**: 2026-01-26
 
 ---

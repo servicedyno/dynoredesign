@@ -25,7 +25,7 @@ PROFILE_ID=cryptoprocessor
 
 **User Account:**
 ```
-Email: john@dyno.pt
+Email: richard@dyno.pt
 Password: Katiekendra123@
 User ID: 28
 Name: Johnny LTD
@@ -43,7 +43,7 @@ Name: Johnny LTD
     "userData": {
       "user_id": 28,
       "name": "Johnny LTD",
-      "email": "john@dyno.pt",
+      "email": "richard@dyno.pt",
       "username": "johnny_test",
       "mobile": "351912345678",
       "status": "active"
@@ -84,7 +84,7 @@ Updated files:
 ### User Authentication
 ```
 ✅ Login Endpoint: POST /api/user/login
-✅ Test User: john@dyno.pt
+✅ Test User: richard@dyno.pt
 ✅ Password: Katiekendra123@
 ✅ JWT Token: Generated successfully
 ```
@@ -118,7 +118,7 @@ Now ready to test with production credentials:
 # 1. Login as test user
 curl -X POST http://localhost:8001/api/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"john@dyno.pt","password":"Katiekendra123@"}'
+  -d '{"email":"richard@dyno.pt","password":"Katiekendra123@"}'
 
 # 2. Check KYC status
 curl -X GET http://localhost:8001/api/kyc/status \

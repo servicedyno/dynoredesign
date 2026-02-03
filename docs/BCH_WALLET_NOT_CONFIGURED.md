@@ -2,7 +2,7 @@
 
 ## Issue Confirmed
 
-You are **100% correct!** The BCH merchant wallet has NOT been configured for company 38 (user 28 - john@dyno.pt).
+You are **100% correct!** The BCH merchant wallet has NOT been configured for company 38 (user 28 - richard@dyno.pt).
 
 ---
 
@@ -10,7 +10,7 @@ You are **100% correct!** The BCH merchant wallet has NOT been configured for co
 
 ### ❌ Merchant Wallet Table (tbl_merchant_wallet)
 ```
-User 28 (john@dyno.pt): 0 wallets configured
+User 28 (richard@dyno.pt): 0 wallets configured
 BCH wallet: NOT FOUND
 ```
 

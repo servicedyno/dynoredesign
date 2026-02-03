@@ -22,7 +22,7 @@ WHERE user_id = 28
 ```
 
 ## User Action Required
-1. Check email john@dyno.pt for OTP code
+1. Check email richard@dyno.pt for OTP code
 2. In frontend, verify OTP
 3. **CRITICAL:** Make sure frontend sends `currency: "ETH"` in verifyOtp request
 4. This will properly save address to ETH wallet

@@ -145,7 +145,7 @@ TRX=TTXk9SbNj8tnRABdGDM3PZvT5bHqTNtANB        (for USDT-TRC20 transfers)
 
 ### User Account
 ```
-Email: john@dyno.pt
+Email: richard@dyno.pt
 Password: Katiekendra123@
 ```
 
@@ -270,7 +270,7 @@ tail -f /var/log/supervisor/frontend.out.log
 ### Current Session (January 27, 2026)
 - ✅ Updated Veriff KYC credentials (real API keys)
 - ✅ Updated Telnyx SMS verification credentials  
-- ✅ Fixed test user credentials (john@dyno.pt password reset)
+- ✅ Fixed test user credentials (richard@dyno.pt password reset)
 - ✅ Verified login working successfully
 - ⏳ Ready for KYC and SMS testing with production credentials
 

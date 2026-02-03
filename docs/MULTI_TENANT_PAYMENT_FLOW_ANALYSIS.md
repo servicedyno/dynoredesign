@@ -227,12 +227,12 @@ const company_data = (
 ## Testing Multi-Tenant Payment Flow
 
 ### Test Scenario 1: Single Company User
-**User**: john@dyno.pt (user_id: 28)  
+**User**: richard@dyno.pt (user_id: 28)  
 **Company**: 38  
 **Expected**: Funds go to Company 38's wallet ✅
 
 ### Test Scenario 2: Multi-Company User (Critical Test)
-**User**: john@dyno.pt (user_id: 28)  
+**User**: richard@dyno.pt (user_id: 28)  
 **Companies**:
 - Company 38: ETH Wallet 0xAAA...
 - Company 42: ETH Wallet 0xBBB...

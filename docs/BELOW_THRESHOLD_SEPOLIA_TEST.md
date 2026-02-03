@@ -28,7 +28,7 @@ Test crypto payment processing for amounts that result in admin fees **below $5 
 | **Amount** | $10 USD |
 | **Currency** | BTC |
 | **Payment Link** | [Checkout URL](https://dynocheckoutfix-production.up.railway.app//pay?d=a3b3c6744b4aeda3e6a9d64dcef81bae3924f0cd504514de) |
-| **User** | john@dyno.pt (ID: 28) |
+| **User** | richard@dyno.pt (ID: 28) |
 
 ---
 
@@ -60,7 +60,7 @@ Expected sweep action: NONE (held for batch processing)
 ┌──────────────────────────────────────────────────────────┐
 │ PHASE 1: Payment Link Creation ✅ COMPLETED             │
 ├──────────────────────────────────────────────────────────┤
-│ 1. Login as john@dyno.pt                                │
+│ 1. Login as richard@dyno.pt                                │
 │ 2. Create payment link: $10 BTC                         │
 │ 3. Link ID: 148                                         │
 │ 4. Transaction ID: da84d8c3-31ef-48f7-acb9-104a2c1daba2 │
@@ -178,7 +178,7 @@ WHERE user_id = 28 AND wallet_type = 'BTC';
 
 ### Completed Steps ✅
 
-- ✅ User authentication (john@dyno.pt)
+- ✅ User authentication (richard@dyno.pt)
 - ✅ Payment link creation ($10 BTC)
 - ✅ Link ID generated: 148
 - ✅ Transaction ID generated: da84d8c3-31ef-48f7-acb9-104a2c1daba2

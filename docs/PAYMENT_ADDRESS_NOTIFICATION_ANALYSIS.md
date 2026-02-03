@@ -3,7 +3,7 @@
 **Payment Link ID**: 129  
 **Amount**: $10 USD  
 **Company**: 38 (Johnny LTD)  
-**User**: 28 (john@dyno.pt)  
+**User**: 28 (richard@dyno.pt)  
 **Currency**: ETH
 
 ---
@@ -131,7 +131,7 @@ Step 5: Fund Distribution
 
 **When**: As soon as transaction is broadcast to blockchain (0 confirmations)
 
-**To**: Merchant (john@dyno.pt)
+**To**: Merchant (richard@dyno.pt)
 
 **Triggered By**: 
 - `tatumCryptoWebHook()` webhook handler
@@ -179,7 +179,7 @@ if (isFirstTransaction) {
 
 **When**: After payment is confirmed and funds are distributed
 
-**To**: Merchant (john@dyno.pt)
+**To**: Merchant (richard@dyno.pt)
 
 **Triggered By**:
 - `cryptoVerification()` function
@@ -204,7 +204,7 @@ Thank you for using DynoPay for your crypto payments!
 **Code Location**: `/app/backend/controller/paymentController.ts` (Lines 2039-2046)
 ```typescript
 await sendPaymentReceivedEmail(
-  userData?.email,           // john@dyno.pt
+  userData?.email,           // richard@dyno.pt
   userData?.name,           // Johnny LTD
   companyName,              // Johnny LTD
   userAmountToSend,         // 6.70
@@ -368,7 +368,7 @@ Time: T+0 seconds
 Time: T+5 seconds (Transaction Broadcast)
 ┌────────────────────────────────────────────────┐
 │ ✅ Email 1: Payment Pending                   │
-│    To: john@dyno.pt                           │
+│    To: richard@dyno.pt                           │
 │    Subject: ⏳ Payment Pending Confirmation   │
 │    Amount: 0.003 ETH (~$10)                   │
 └────────────────────────────────────────────────┘
@@ -388,7 +388,7 @@ Time: T+1-5 minutes (12 Confirmations for ETH)
 Time: T+5 minutes (After Distribution)
 ┌────────────────────────────────────────────────┐
 │ ✅ Email 2: Payment Received                  │
-│    To: john@dyno.pt                           │
+│    To: richard@dyno.pt                           │
 │    Subject: Payment Received - DynoPay        │
 │    Amount: 6.70 ETH (merchant portion)        │
 └────────────────────────────────────────────────┘

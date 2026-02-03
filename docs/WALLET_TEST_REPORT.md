@@ -63,7 +63,7 @@
 ## 💰 Phase 3: Wallet Management - Detailed Testing
 
 ### **Test Environment:**
-- **User**: Johnny LTD (user_id: 28, email: john@dyno.pt)
+- **User**: Johnny LTD (user_id: 28, email: richard@dyno.pt)
 - **Company**: Johnnys LDA (company_id: 38)
 - **Password**: Katiekendra123@
 

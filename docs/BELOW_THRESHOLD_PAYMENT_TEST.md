@@ -22,7 +22,7 @@ Verify how DynoPay handles admin fees when crypto payments are **below the $5 US
 
 ### ✅ Authentication & Configuration
 ```
-✅ Test User: john@dyno.pt - Login successful
+✅ Test User: richard@dyno.pt - Login successful
 ✅ ETH_THRESHOLD: $5 USD (configured in .env)
 ✅ Admin Wallet: 0x9a7221b5e32d5f99e8da95585835442e29afb38f
 ✅ Testnet Mode: TATUM_TESTNET=true (Sepolia)

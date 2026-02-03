@@ -190,7 +190,7 @@ await userWalletModel.update(
 ## 🎯 Final System State
 
 ### **User: Johnny LTD** (ID: 28)
-- Email: john@dyno.pt
+- Email: richard@dyno.pt
 - Username: johnny_test
 - Phone: 351912345678
 - Companies: 2

@@ -1,6 +1,6 @@
 # Payment Link Testing - Company 38
 **Test Date**: 2026-01-26  
-**User**: john@dyno.pt (user_id: 28, Johnny LTD)  
+**User**: richard@dyno.pt (user_id: 28, Johnny LTD)  
 **Company ID**: 38  
 **Backend URL**: https://setup-dependencies-3.preview.emergentagent.com  
 **Checkout URL**: https://dynocheckoutfix-production.up.railway.app/

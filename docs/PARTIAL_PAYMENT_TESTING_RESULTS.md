@@ -21,7 +21,7 @@ Verify partial payment threshold logic works correctly:
 
 | Test Category | Status | Details |
 |--------------|--------|---------|
-| Authentication | ✅ PASS | john@dyno.pt working |
+| Authentication | ✅ PASS | richard@dyno.pt working |
 | Configuration | ✅ PASS | ETH_THRESHOLD=$5, testnet enabled |
 | Code Analysis | ✅ PASS | processIncompletePayments found |
 | Threshold Logic | ✅ PASS | Above/Below/At scenarios correct |

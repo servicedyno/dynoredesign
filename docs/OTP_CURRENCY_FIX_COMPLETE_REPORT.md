@@ -11,7 +11,7 @@
 ## 🔴 The Problem
 
 ### What Happened
-User john@dyno.pt (user_id: 28) selected **ETH** wallet but the system saved the address to **BTC** wallet, resulting in:
+User richard@dyno.pt (user_id: 28) selected **ETH** wallet but the system saved the address to **BTC** wallet, resulting in:
 - BTC wallet containing an Ethereum address (0x9a7221...)
 - Data integrity corruption
 - Potential payment routing failures
@@ -134,7 +134,7 @@ All companies follow the "one wallet per blockchain type" rule.
 
 ## 🛠️ User Data Fix
 
-### User 28 (john@dyno.pt) Data Correction
+### User 28 (richard@dyno.pt) Data Correction
 
 **Before Fix:**
 ```
