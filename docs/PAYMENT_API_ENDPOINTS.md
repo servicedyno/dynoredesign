@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://wallet-manager-33.preview.emergentagent.com/api
+Development: https://setup-dependencies-3.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://wallet-manager-33.preview.emergentagent.com/api"
+BASE_URL = "https://setup-dependencies-3.preview.emergentagent.com/api"
 
 # Login credentials
 email = "john@dyno.pt"

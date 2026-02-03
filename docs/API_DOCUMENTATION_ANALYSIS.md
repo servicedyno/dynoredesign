@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://wallet-manager-33.preview.emergentagent.com/api/docs/
+**URL:** https://setup-dependencies-3.preview.emergentagent.com/api/docs/
 
 ---
 

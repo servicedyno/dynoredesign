@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://wallet-manager-33.preview.emergentagent.com
+SERVER_URL=https://setup-dependencies-3.preview.emergentagent.com
 ```
 
 **Impact:**
