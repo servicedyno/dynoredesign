@@ -198,6 +198,37 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 - Merchant receives: base + tax = €123.00 (67% of base + full tax if company pays fees)`,
                   example: false,
                   default: false
+                },
+                accepted_currencies: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                  },
+                  description: `🪙 OPTIONAL: Specific cryptocurrencies to accept for this payment link.
+
+**When NOT provided (null):**
+- All cryptocurrencies with configured wallets are accepted
+- Customer can choose from any configured wallet
+
+**When provided:**
+- Only the specified currencies are available at checkout
+- Each currency must have a configured wallet (validation will fail otherwise)
+
+**Supported Currencies:**
+- \`BTC\` - Bitcoin
+- \`ETH\` - Ethereum
+- \`LTC\` - Litecoin
+- \`DOGE\` - Dogecoin
+- \`TRX\` - Tron
+- \`BCH\` - Bitcoin Cash
+- \`USDT-TRC20\` - Tether on Tron network
+- \`USDT-ERC20\` - Tether on Ethereum network
+- \`USDC-ERC20\` - USD Coin on Ethereum network
+
+**Use Case:** Limit payment options when you only want to receive specific cryptocurrencies.`,
+                  example: ['BTC', 'ETH', 'USDT-TRC20'],
+                  nullable: true
                 }
               }
             },
