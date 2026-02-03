@@ -175,8 +175,9 @@ export const redeemRefereeCode = async (params: {
 
   // Check if referrer already has a better discount
   const referrer = await User.findByPk(refereeCode.referrer_user_id);
-  const currentDiscount = (referrer as Record<string, unknown> | null)?.fee_discount_percent || 0;
-  const currentExpiry = (referrer as Record<string, unknown> | null)?.fee_discount_expires_at;
+  const referrerData = referrer as unknown as Record<string, unknown> | null;
+  const currentDiscount = Number(referrerData?.fee_discount_percent || 0);
+  const currentExpiry = referrerData?.fee_discount_expires_at as Date | null;
 
   // Stack discounts or extend - use the better deal
   if (!currentExpiry || new Date() > currentExpiry || currentDiscount < 10) {
