@@ -5669,7 +5669,7 @@ const checkFeeBalance = async () => {
         let adminEmail = ADMIN_CONFIG.EMAIL;
         
         try {
-          const adminData: unknown[] = await sequelize.query(
+          const adminData = await sequelize.query<IAdminData>(
             "select email from tbl_admin limit 1",
             {
               type: QueryTypes.SELECT,
