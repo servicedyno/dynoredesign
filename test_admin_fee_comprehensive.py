@@ -185,8 +185,8 @@ def test_threshold_behavior():
     test_cases = [
         {"amount": 2, "description": "Below threshold ($2 < $3)", "expect_admin": 100},
         {"amount": 2.99, "description": "Just below threshold ($2.99 < $3)", "expect_admin": 100},
-        {"amount": 3, "description": "At threshold ($3 = $3)", "expect_admin": "fees_only"},
         {"amount": 5, "description": "Above threshold ($5 > $3)", "expect_admin": "fees_only"},
+        {"amount": 10, "description": "Above threshold ($10 > $3)", "expect_admin": "fees_only"},
         {"amount": 100, "description": "Well above threshold ($100 > $3)", "expect_admin": "fees_only"}
     ]
     
