@@ -4314,10 +4314,11 @@ const createPaymentLink = async (
     
     // company_id is REQUIRED - validate it exists
     if (!company_id) {
-      return res.status(400).json({
-        message: "company_id is required. Please specify which company this payment link belongs to.",
-        error: "COMPANY_ID_REQUIRED"
-      });
+      return errorResponseHelper(
+        res,
+        400,
+        "company_id is required. Please specify which company this payment link belongs to."
+      );
     }
     
     // Verify the company belongs to this user
@@ -4329,10 +4330,11 @@ const createPaymentLink = async (
     });
     
     if (!userCompany) {
-      return res.status(400).json({
-        message: "Invalid company_id. The specified company does not exist or does not belong to you.",
-        error: "INVALID_COMPANY_ID"
-      });
+      return errorResponseHelper(
+        res,
+        400,
+        "Invalid company_id. The specified company does not exist or does not belong to you."
+      );
     }
     
     console.log(`[createPaymentLink] Using company_id: ${company_id} for user: ${userData.user_id}`);
