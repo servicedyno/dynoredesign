@@ -6300,9 +6300,9 @@ const getConfiguredCurrenciesForCheckout = async (
       });
       
       if (paymentLink) {
-        companyId = (paymentLink as Record<string, unknown>).company_id;
-        userId = (paymentLink as Record<string, unknown>).user_id;
-        feePayerFromLink = (paymentLink as Record<string, unknown>).fee_payer || 'company';
+        companyId = paymentLink.dataValues.company_id as number;
+        userId = paymentLink.dataValues.user_id as number;
+        feePayerFromLink = (paymentLink.dataValues.fee_payer as string) || 'company';
       }
     }
     
