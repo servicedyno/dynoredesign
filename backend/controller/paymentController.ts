@@ -2703,46 +2703,50 @@ const verifyCryptoPayment = async (
       grace_period_minutes: gracePeriodMinutes,
     };
     
-    // Try to get payment link expiry - FIX: Only query with valid IDs to avoid "undefined" error
-    const linkId = customerData?.payment_link_id;
-    const paymentId = tempData?.payment_id;
-    
-    if (linkId || paymentId) {
-      try {
-        // Build where clause only with valid values
-        const whereConditions: any[] = [];
-        if (linkId && linkId !== undefined && linkId !== null) {
-          whereConditions.push({ link_id: linkId });
-        }
-        if (paymentId && paymentId !== undefined && paymentId !== null) {
-          whereConditions.push({ transaction_id: paymentId });
-        }
-        
-        if (whereConditions.length > 0) {
-          const paymentLink = await paymentLinkModel.findOne({
-            where: {
-              [Op.or]: whereConditions
-            }
-          });
+    // FIX: Use crypto_invoice_expires_at from Redis for accurate countdown
+    // This is the 15-minute window from when crypto payment was initiated
+    // NOT the payment link expiry (which could be 7 days)
+    if (tempData?.crypto_invoice_expires_at) {
+      const cryptoExpiresAt = new Date(tempData.crypto_invoice_expires_at);
+      const now = new Date();
+      remainingSeconds = Math.max(0, Math.floor((cryptoExpiresAt.getTime() - now.getTime()) / 1000));
+      console.log(`[verifyCryptoPayment] Using crypto invoice expiry: ${tempData.crypto_invoice_expires_at}, remaining: ${remainingSeconds}s`);
+    } else {
+      // Fallback: Try to get payment link expiry (legacy behavior)
+      const linkId = customerData?.payment_link_id;
+      const paymentId = tempData?.payment_id;
+      
+      if (linkId || paymentId) {
+        try {
+          // Build where clause only with valid values
+          const whereConditions: any[] = [];
+          if (linkId && linkId !== undefined && linkId !== null) {
+            whereConditions.push({ link_id: linkId });
+          }
+          if (paymentId && paymentId !== undefined && paymentId !== null) {
+            whereConditions.push({ transaction_id: paymentId });
+          }
           
-          if (paymentLink) {
-            const linkData = paymentLink.dataValues;
-            if (linkData.expires_at) {
-              const expiresAt = new Date(linkData.expires_at);
-              const now = new Date();
-              remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
-            } else {
-              // No explicit expiry - use created_at + default expiry (15 min for initial, 30 min for grace)
+          if (whereConditions.length > 0) {
+            const paymentLink = await paymentLinkModel.findOne({
+              where: {
+                [Op.or]: whereConditions
+              }
+            });
+            
+            if (paymentLink) {
+              const linkData = paymentLink.dataValues;
+              // FIX: For crypto invoice, use 15 minutes from creation, NOT payment link expiry
               const createdAt = new Date(linkData.createdAt);
-              const defaultExpiryMinutes = String(tempData?.incomplete) === "true" ? gracePeriodMinutes : 15;
-              const expiresAt = new Date(createdAt.getTime() + defaultExpiryMinutes * 60 * 1000);
+              const cryptoWindowMinutes = String(tempData?.incomplete) === "true" ? gracePeriodMinutes : 15;
+              const expiresAt = new Date(createdAt.getTime() + cryptoWindowMinutes * 60 * 1000);
               const now = new Date();
               remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
             }
           }
+        } catch (e) {
+          console.log("[verifyCryptoPayment] Could not fetch payment link expiry:", e);
         }
-      } catch (e) {
-        console.log("[verifyCryptoPayment] Could not fetch payment link expiry:", e);
       }
     }
     
