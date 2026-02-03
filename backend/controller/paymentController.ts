@@ -3244,7 +3244,7 @@ const cryptoVerification = async (address, webhook = true) => {
           expectedAmount,
           tempCurrency,
           customerData,
-          30 // 30 minutes grace period
+          PAYMENT_TIMING.GRACE_PERIOD_MINUTES
         );
 
         const { txId, ...rest } = tempData;
