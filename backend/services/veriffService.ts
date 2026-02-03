@@ -142,9 +142,10 @@ class VeriffService {
       return response.data;
 
     } catch (error: unknown) {
-      console.error("Veriff create session error:", error.response?.data || error.message);
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      console.error("Veriff create session error:", err.response?.data || err.message);
       throw new Error(
-        `Failed to create Veriff session: ${error.response?.data?.message || error.message}`
+        `Failed to create Veriff session: ${err.response?.data?.message || err.message}`
       );
     }
   }
@@ -170,9 +171,10 @@ class VeriffService {
       return response.data;
 
     } catch (error: unknown) {
-      console.error("Veriff get decision error:", error.response?.data || error.message);
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      console.error("Veriff get decision error:", err.response?.data || err.message);
       throw new Error(
-        `Failed to get Veriff decision: ${error.response?.data?.message || error.message}`
+        `Failed to get Veriff decision: ${err.response?.data?.message || err.message}`
       );
     }
   }
