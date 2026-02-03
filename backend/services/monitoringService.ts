@@ -153,7 +153,7 @@ export const getDailyServiceStatus = async (
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   
-  const results = await sequelize.query(
+  const results = await sequelize.query<{ date: string; status: string; checks: number; avg_latency: number }>(
     `SELECT 
       check_date as date,
       CASE 
@@ -172,7 +172,7 @@ export const getDailyServiceStatus = async (
       replacements: { serviceId, startDate: startDate.toISOString().split('T')[0] },
       type: QueryTypes.SELECT
     }
-  ) as Array<Record<string, unknown>>;
+  );
   
   return results;
 };
