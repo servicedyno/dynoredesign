@@ -53,14 +53,15 @@ class TestAcceptedCurrencies:
         """Authenticate and get token"""
         print(f"\n[Auth] Authenticating with {TEST_EMAIL}...")
         response = requests.post(
-            f"{BASE_URL}/api/auth/login",
+            f"{BASE_URL}/api/user/login",
             json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
         )
         print(f"[Auth] Response status: {response.status_code}")
         
         if response.status_code == 200:
             data = response.json()
-            TestAcceptedCurrencies.auth_token = data.get('data', {}).get('token') or data.get('token')
+            # Token is in data.accessToken
+            TestAcceptedCurrencies.auth_token = data.get('data', {}).get('accessToken') or data.get('accessToken')
             print(f"[Auth] Token obtained: {TestAcceptedCurrencies.auth_token[:20]}..." if TestAcceptedCurrencies.auth_token else "[Auth] No token in response")
         else:
             print(f"[Auth] Failed: {response.text}")
