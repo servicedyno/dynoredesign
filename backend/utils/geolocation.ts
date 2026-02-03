@@ -1,4 +1,6 @@
 import axios from 'axios';
+import express from 'express';
+import { IncomingHttpHeaders } from 'http';
 
 interface GeoLocationResult {
   country_code: string;
@@ -8,6 +10,9 @@ interface GeoLocationResult {
   ip: string;
   source: 'ip-api' | 'cloudflare' | 'fallback';
 }
+
+// Type alias for headers that works with both Record<string, string> and IncomingHttpHeaders
+type HeadersType = Record<string, string | string[] | undefined> | IncomingHttpHeaders;
 
 // Country names mapping for fallback
 const COUNTRY_NAMES: Record<string, string> = {
@@ -27,23 +32,35 @@ const COUNTRY_NAMES: Record<string, string> = {
   CO: "Colombia", PE: "Peru", VE: "Venezuela", EC: "Ecuador",
 };
 
+// Helper to safely get string value from headers
+const getHeaderValue = (headers: HeadersType | undefined, key: string): string | undefined => {
+  if (!headers) return undefined;
+  const value = headers[key];
+  if (Array.isArray(value)) return value[0];
+  return value as string | undefined;
+};
+
 /**
  * Extract client IP from request
  * Handles proxies, load balancers, Cloudflare, etc.
  */
 export const getClientIP = (req: express.Request): string => {
   // Priority order for IP detection
+  const cfIp = getHeaderValue(req.headers, 'cf-connecting-ip');
+  const realIp = getHeaderValue(req.headers, 'x-real-ip');
+  const forwardedFor = getHeaderValue(req.headers, 'x-forwarded-for');
+  
   const ip = 
-    req.headers?.['cf-connecting-ip'] ||           // Cloudflare
-    req.headers?.['x-real-ip'] ||                  // Nginx proxy
-    req.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||  // Standard proxy
+    cfIp ||                                        // Cloudflare
+    realIp ||                                      // Nginx proxy
+    forwardedFor?.split(',')[0]?.trim() ||         // Standard proxy
     req.connection?.remoteAddress ||
     req.socket?.remoteAddress ||
     req.ip ||
     '127.0.0.1';
   
   // Remove IPv6 prefix if present
-  return ip.replace('::ffff:', '');
+  return String(ip).replace('::ffff:', '');
 };
 
 /**
@@ -51,10 +68,10 @@ export const getClientIP = (req: express.Request): string => {
  * Uses free ip-api.com service (no API key required, 45 req/min limit)
  * Falls back to Cloudflare headers if available
  */
-export const getCountryFromIP = async (ip: string, headers?: Record<string, string>): Promise<GeoLocationResult | null> => {
+export const getCountryFromIP = async (ip: string, headers?: HeadersType): Promise<GeoLocationResult | null> => {
   try {
     // First, try Cloudflare header (most reliable if using CF)
-    const cfCountry = headers?.['cf-ipcountry'];
+    const cfCountry = getHeaderValue(headers, 'cf-ipcountry');
     if (cfCountry && cfCountry !== 'XX' && cfCountry !== 'T1') {
       console.log(`[Geolocation] Country from Cloudflare header: ${cfCountry}`);
       return {
