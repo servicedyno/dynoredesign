@@ -1,0 +1,94 @@
+{
+  "summary": "Backend API regression testing completed after TypeScript error fixes. All 26 tests passed successfully. Backend is fully functional with all endpoints working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_typescript_regression.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "TypeScript compilation errors have been successfully fixed (34 errors reduced to 0)",
+    "All backend API endpoints are responding correctly",
+    "Rate limiting is working as expected (may need to clear Redis rate limit keys during testing)",
+    "Backend startup takes ~60 seconds due to database table syncing - this is expected behavior"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_typescript_regression.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A - backend only testing"
+  },
+  "test_credentials": {
+    "email": "richard@dyno.pt",
+    "password": "Katiekendra123@",
+    "company_id": 38
+  },
+  "seed_data_creation": "Test payment link created and deleted during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All backend APIs tested and working. Rate limiting is active - may need to clear Redis keys (ratelimit:*) before running tests. Backend takes ~60 seconds to fully start after restart.",
+  "tests_executed": {
+    "TestHealthCheck::test_health_endpoint": "PASSED - Health check returns healthy status with database connected",
+    "TestHealthCheck::test_root_endpoint": "PASSED - Root endpoint returns API info",
+    "TestHealthCheck::test_api_base_endpoint": "PASSED - API base returns operational status",
+    "TestSwaggerDocs::test_swagger_docs_loads": "PASSED - Swagger UI loads at /api/docs",
+    "TestUserAuthentication::test_login_success": "PASSED - Login with valid credentials works",
+    "TestUserAuthentication::test_login_invalid_credentials": "PASSED - Invalid credentials rejected",
+    "TestUserAuthentication::test_login_missing_fields": "PASSED - Missing fields rejected",
+    "TestUserAuthentication::test_check_email_endpoint": "PASSED - Email check endpoint works",
+    "TestUserProfile::test_get_profile": "PASSED - User profile retrieval works",
+    "TestCompanyAPIs::test_get_companies": "PASSED - Get companies list works",
+    "TestCompanyAPIs::test_get_company_by_id": "PASSED - Get company by ID works",
+    "TestCompanyAPIs::test_get_company_transactions": "PASSED - Get company transactions works",
+    "TestPaymentLinkAPIs::test_get_payment_links": "PASSED - Get payment links works",
+    "TestPaymentLinkAPIs::test_get_company_currencies": "PASSED - Get company currencies works",
+    "TestPaymentLinkAPIs::test_get_fee_preview": "PASSED - Get fee preview works",
+    "TestPaymentLinkAPIs::test_get_network_fees": "PASSED - Get network fees works",
+    "TestPaymentLinkAPIs::test_create_and_delete_payment_link": "PASSED - Create and delete payment link works",
+    "TestWalletAPIs::test_get_wallet": "PASSED - Get wallet works",
+    "TestWalletAPIs::test_get_wallet_addresses": "PASSED - Get wallet addresses works",
+    "TestWalletAPIs::test_get_configured_currencies": "PASSED - Get configured currencies works",
+    "TestWalletAPIs::test_wallet_network_fees": "PASSED - Get wallet network fees works",
+    "TestDashboardAPIs::test_get_dashboard_data": "PASSED - Dashboard endpoint works",
+    "TestStatusAPIs::test_get_status": "PASSED - Status endpoint works",
+    "TestReferralAPIs::test_get_referral_stats": "PASSED - Referral stats endpoint works",
+    "TestKnowledgeBaseAPIs::test_get_kb_categories": "PASSED - Knowledge base categories works",
+    "TestInvoiceAPIs::test_get_invoices": "PASSED - Get invoices works"
+  },
+  "endpoints_tested": [
+    "GET /health",
+    "GET /",
+    "GET /api",
+    "GET /api/docs/",
+    "POST /api/user/login",
+    "GET /api/user/checkEmail",
+    "GET /api/user/profile",
+    "GET /api/company/getCompany",
+    "GET /api/company/getCompany/:id",
+    "GET /api/company/getTransactions/:id",
+    "GET /api/pay/getPaymentLinks",
+    "GET /api/pay/company-currencies/:id",
+    "GET /api/pay/fee-preview",
+    "GET /api/pay/network-fees",
+    "POST /api/pay/createPaymentLink",
+    "DELETE /api/pay/deletePaymentLink/:id",
+    "GET /api/wallet/getWallet",
+    "GET /api/wallet/getWalletAddresses",
+    "GET /api/wallet/configured-currencies",
+    "GET /api/wallet/network-fees",
+    "GET /api/dashboard",
+    "GET /api/status",
+    "GET /api/referral/stats",
+    "GET /api/kb/categories",
+    "GET /api/invoices"
+  ]
+}
