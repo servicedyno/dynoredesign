@@ -378,7 +378,7 @@ const tatumCryptoWebHook = async (
     console.log("[tatumCryptoWebHook] Received webhook:", {
       address: payload.address,
       amount: payload.amount,
-      currency: (payload as Record<string, unknown>).currency || payload.asset,
+      currency: (payload as unknown as Record<string, unknown>).currency || payload.asset,
       txId: payload.txId,
       // BlockBee style params from URL
       queryCompanyId,
