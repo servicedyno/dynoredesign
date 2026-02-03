@@ -2694,7 +2694,7 @@ const verifyCryptoPayment = async (
     const customerData = await getRedisItem(tempData?.ref);
     
     // Calculate remaining seconds from payment link expiry or partial payment timestamp
-    let remainingSeconds = 15 * 60; // Default 15 minutes
+    let remainingSeconds = PAYMENT_TIMING.CRYPTO_INVOICE_MINUTES * 60; // Default from centralized config
     let gracePeriodMinutes = 30; // Default grace period for underpayment completion
     
     // Default merchant settings
