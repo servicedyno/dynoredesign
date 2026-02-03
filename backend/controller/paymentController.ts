@@ -4876,6 +4876,58 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
       updateData.apply_tax = Boolean(apply_tax);
     }
     
+    // Handle accepted_currencies update
+    if (accepted_currencies !== undefined) {
+      if (accepted_currencies === null || (Array.isArray(accepted_currencies) && accepted_currencies.length === 0)) {
+        // Clear selection - use all configured wallets
+        updateData.accepted_currencies = null;
+      } else if (Array.isArray(accepted_currencies)) {
+        // Fetch configured wallets to validate
+        const company_id = existingLink.dataValues.company_id;
+        const walletWhereClause: Record<string, unknown> = {
+          user_id: userData.user_id,
+          wallet_type: { [Op.in]: cryptoTypes },
+          wallet_address: { [Op.not]: null },
+        };
+        if (company_id) {
+          walletWhereClause.company_id = company_id;
+        }
+        
+        const configuredWallets = await userWalletModel.findAll({
+          where: walletWhereClause,
+          attributes: ['wallet_type'],
+        });
+        
+        allConfiguredCurrencies = [...new Set(configuredWallets.map((w: { wallet_type: string }) => w.wallet_type))];
+        
+        // Normalize to uppercase
+        const requestedCurrencies = accepted_currencies.map((c: string) => c.toUpperCase().trim());
+        
+        // Validate all requested currencies are valid crypto types
+        const invalidCryptos = requestedCurrencies.filter((c: string) => !cryptoTypes.includes(c));
+        if (invalidCryptos.length > 0) {
+          return errorResponseHelper(
+            res,
+            400,
+            `Invalid cryptocurrency types: ${invalidCryptos.join(', ')}. Valid options: ${cryptoTypes.join(', ')}`
+          );
+        }
+        
+        // Validate all requested currencies have configured wallets
+        const unconfiguredCurrencies = requestedCurrencies.filter((c: string) => !allConfiguredCurrencies.includes(c));
+        if (unconfiguredCurrencies.length > 0) {
+          return errorResponseHelper(
+            res,
+            400,
+            `No wallet configured for: ${unconfiguredCurrencies.join(', ')}. Please configure wallets first or select from available: ${allConfiguredCurrencies.join(', ')}`
+          );
+        }
+        
+        updateData.accepted_currencies = requestedCurrencies.join(',');
+        console.log(`[updatePaymentLink] Updated accepted currencies: ${updateData.accepted_currencies}`);
+      }
+    }
+    
     if (expire !== undefined) {
       // Calculate new expires_at
       if (expire === "No" || expire === null || expire === "") {
