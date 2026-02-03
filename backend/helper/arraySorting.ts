@@ -1,5 +1,5 @@
-const arraySorting = (tempData: any[], keyName: string, asc = true) => {
-  tempData.sort((a: any, b: any) => {
+const arraySorting = (tempData: Array<Record<string, unknown>>, keyName: string, asc = true) => {
+  tempData.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
     if (a[keyName] < b[keyName]) {
       return asc ? -1 : 1;
     }

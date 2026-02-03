@@ -141,7 +141,7 @@ export const triggerWeeklySummary = async (userId?: number) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 7);
 
-    let users: any[];
+    let users: Array<Record<string, unknown>>;
 
     if (userId) {
       // Get specific user
@@ -316,7 +316,7 @@ export const setupWalletReminderCron = () => {
  */
 export const triggerWalletReminder = async (userId?: number) => {
   try {
-    let users: any[];
+    let users: Array<Record<string, unknown>>;
 
     if (userId) {
       // Get specific user
@@ -483,7 +483,7 @@ export const setupRefereeCodeReminderCron = () => {
             remindersSent++;
             log(`Sent ${reminderType} reminder to ${codeData.customer_email} (code: ${codeData.code})`, "info");
           }
-        } catch (codeError: any) {
+        } catch (codeError: unknown) {
           log(`Error processing referee code ${code.dataValues.code}: ${codeError.message}`, "error");
         }
       }
@@ -773,7 +773,7 @@ export const setupPaymentLinkReminderCron = () => {
             remindersSent++;
             log(`Sent ${reminderType} to ${linkData.email} for payment link ${linkData.link_id} (${expiryType} expiry)`, "info");
           }
-        } catch (linkError: any) {
+        } catch (linkError: unknown) {
           log(`Error processing payment link ${link.dataValues.link_id}: ${linkError.message}`, "error");
         }
       }

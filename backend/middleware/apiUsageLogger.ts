@@ -51,7 +51,7 @@ export const apiUsageLogger = async (
   }
 
   // Override res.send to capture response
-  res.send = function (data: any) {
+  res.send = function (data: unknown) {
     res.send = originalSend; // Restore original send
 
     const responseTime = Date.now() - startTime;

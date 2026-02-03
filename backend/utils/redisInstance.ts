@@ -28,7 +28,7 @@ export const connectRedis = async () => {
 // IN-MEMORY CACHE LAYER (for hot data - <1ms)
 // ============================================
 interface CacheEntry {
-  value: any;
+  value: unknown;
   expires: number;
 }
 
@@ -36,7 +36,7 @@ const memoryCache = new Map<string, CacheEntry>();
 // Note: MemoryCache initialization log moved to connectRedis() to ensure proper load order
 
 // Set item in memory cache with TTL
-const setMemoryCache = (key: string, value: any, ttlSeconds: number) => {
+const setMemoryCache = (key: string, value: unknown, ttlSeconds: number) => {
   memoryCache.set(key, {
     value,
     expires: Date.now() + (ttlSeconds * 1000)
@@ -45,7 +45,7 @@ const setMemoryCache = (key: string, value: any, ttlSeconds: number) => {
 };
 
 // Get item from memory cache
-const getMemoryCache = (key: string): any | null => {
+const getMemoryCache = (key: string): unknown | null => {
   const entry = memoryCache.get(key);
   if (!entry) {
     // Only log cache misses in development or for non-customer keys to reduce noise
@@ -79,7 +79,7 @@ setInterval(() => {
 // REDIS OPERATIONS (for distributed caching)
 // ============================================
 
-const setRedisItem = async (key: string, value: any) => {
+const setRedisItem = async (key: string, value: unknown) => {
   // Use shorter TTL for crypto payment keys (5 seconds) to ensure fresh status reads
   const cacheTTL = key.startsWith('crypto-') ? 5 : 30;
   
@@ -101,7 +101,7 @@ const setRedisItem = async (key: string, value: any) => {
 };
 
 // Set Redis item with TTL (time-to-live in seconds)
-const setRedisItemWithTTL = async (key: string, value: any, ttlSeconds: number) => {
+const setRedisItemWithTTL = async (key: string, value: unknown, ttlSeconds: number) => {
   // Also store in memory cache
   setMemoryCache(key, value, ttlSeconds);
   

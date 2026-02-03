@@ -7,7 +7,7 @@
 
 // Placeholder export to prevent import errors
 const localStorage = {
-  push: async (key: string, data: any) => {
+  push: async (key: string, data: unknown) => {
     console.warn('[DEPRECATED] localStorage.push called - use Redis instead');
     throw new Error('localStorage is deprecated. Use Redis for OTP storage.');
   },

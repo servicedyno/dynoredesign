@@ -35,7 +35,7 @@ const COINGECKO_IDS: Record<string, string> = {
 const getCachedRate = async (from: string, to: string): Promise<number | null> => {
   try {
     const cacheKey = `rate_cache:${from}:${to}`;
-    const cached: any = await getRedisItem(cacheKey);
+    const cached: unknown = await getRedisItem(cacheKey);
     if (cached && cached.rate && cached.timestamp) {
       const age = (Date.now() - Number(cached.timestamp)) / 1000;
       if (age < RATE_CACHE_TTL) {

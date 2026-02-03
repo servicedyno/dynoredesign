@@ -31,7 +31,7 @@ const COUNTRY_NAMES: Record<string, string> = {
  * Extract client IP from request
  * Handles proxies, load balancers, Cloudflare, etc.
  */
-export const getClientIP = (req: any): string => {
+export const getClientIP = (req: express.Request): string => {
   // Priority order for IP detection
   const ip = 
     req.headers?.['cf-connecting-ip'] ||           // Cloudflare
@@ -51,7 +51,7 @@ export const getClientIP = (req: any): string => {
  * Uses free ip-api.com service (no API key required, 45 req/min limit)
  * Falls back to Cloudflare headers if available
  */
-export const getCountryFromIP = async (ip: string, headers?: any): Promise<GeoLocationResult | null> => {
+export const getCountryFromIP = async (ip: string, headers?: Record<string, string>): Promise<GeoLocationResult | null> => {
   try {
     // First, try Cloudflare header (most reliable if using CF)
     const cfCountry = headers?.['cf-ipcountry'];
@@ -161,7 +161,7 @@ export const getCountryFromTimezone = (timezone: string): GeoLocationResult | nu
 /**
  * Get country from request (combines IP extraction and geolocation)
  */
-export const getCountryFromRequest = async (req: any): Promise<GeoLocationResult | null> => {
+export const getCountryFromRequest = async (req: express.Request): Promise<GeoLocationResult | null> => {
   const ip = getClientIP(req);
   return getCountryFromIP(ip, req.headers);
 };
