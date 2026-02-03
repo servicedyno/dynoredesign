@@ -981,7 +981,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           } catch (feeError) {
             console.error('[addPayment] Fee calculation error, using fallback:', feeError);
             // Fallback to simple 2% if tier calculation fails
-            const fallbackFeePercent = FEE_CONFIG.TRANSACTION_FEE_PERCENT / 100;
+            const fallbackFeePercent = parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0') / 100;
             total_fees_crypto = crypto_amount * fallbackFeePercent;
             merchant_amount_crypto = crypto_amount - total_fees_crypto;
           }
