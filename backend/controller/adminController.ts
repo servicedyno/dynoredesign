@@ -429,7 +429,7 @@ const getFeeWalletBalance = async (
 const changePassword = async (req: express.Request, res: express.Response) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    const adminData: Record<string, unknown> = jwt.decode(res.locals.token);
+    const adminData = jwt.decode(res.locals.token) as { email?: string } | null;
     const hashedOldPassword = oldPassword ? sha256(oldPassword).toString() : null;
 
     // Use parameterized query to prevent SQL injection
