@@ -247,6 +247,7 @@ const getApi = async (req: express.Request, res: express.Response) => {
       test_mode_restrictions: api.test_mode_restrictions ? JSON.parse(String(api.test_mode_restrictions)) : null,
       // Mask sensitive parts of the API key for display
       apiKey_masked: api.apiKey ? maskApiKey(String(api.apiKey), String(api.environment || '')) : null,
+      environment: api.environment,
     }));
     
     // Group by environment for better organization
