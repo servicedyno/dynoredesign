@@ -170,29 +170,29 @@ export interface IWebHookEntity {
 }
 
 export interface IVerifyResponse {
-  status: string;
-  messge: string;
+  status?: string;
+  message?: string;  // Fixed typo from 'messge'
   data: {
     id: number;
-    tx_ref: string;
+    tx_ref?: string;
     flw_ref: string;
-    device_fingerprint: string;
-    amount: number;
-    currency: string;
-    charged_amount: number;
-    app_fee: number;
-    merchant_fee: number;
-    processor_response: string;
-    auth_model: string;
-    ip: string;
-    narration: string;
+    device_fingerprint?: string;
+    amount?: number;
+    currency?: string;
+    charged_amount?: number;
+    app_fee?: number;
+    merchant_fee?: number;
+    processor_response?: string;
+    auth_model?: string;
+    ip?: string;
+    narration?: string;
     status: string;
-    payment_type: string;
-    created_at: string;
-    account_id: number;
-    meta: Record<string, unknown> | null;
-    amount_settled: number;
-    customer: Customer;
+    payment_type?: string;
+    created_at?: string;
+    account_id?: number;
+    meta?: Record<string, unknown> | null;
+    amount_settled?: number;
+    customer?: Customer;
   };
 }
 
