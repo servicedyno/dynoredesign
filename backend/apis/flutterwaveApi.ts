@@ -1,13 +1,54 @@
 import Flutterwave from "flutterwave-node-v3";
 
-let flw: Record<string, unknown> | null = null;
+// Define Flutterwave interface based on usage
+interface FlutterwaveCharge {
+  validate: (params: { otp: string; flw_ref: string }) => Promise<{ data: { id: number } }>;
+  card: (params: Record<string, unknown>) => Promise<unknown>;
+  bank_transfer: (params: Record<string, unknown>) => Promise<unknown>;
+  ng: (params: Record<string, unknown>) => Promise<unknown>;
+  ach_payment: (params: Record<string, unknown>) => Promise<unknown>;
+}
+
+interface FlutterwaveTransaction {
+  verify: (params: { id: number | string }) => Promise<{ data: { id: number; flw_ref: string; status: string } }>;
+}
+
+interface FlutterwavePaymentPlan {
+  create: (params: Record<string, unknown>) => Promise<unknown>;
+  get: (params: { id: string }) => Promise<unknown>;
+  getAll: () => Promise<unknown>;
+  update: (params: Record<string, unknown>) => Promise<unknown>;
+  cancel: (params: { id: string }) => Promise<unknown>;
+}
+
+interface FlutterwaveSubaccount {
+  create: (params: Record<string, unknown>) => Promise<unknown>;
+  fetch: (params: { id: string }) => Promise<unknown>;
+  fetchAll: () => Promise<unknown>;
+  delete: (params: { id: string }) => Promise<unknown>;
+}
+
+interface FlutterwaveVirtualCard {
+  create: (params: Record<string, unknown>) => Promise<unknown>;
+  get: (params: Record<string, unknown>) => Promise<unknown>;
+}
+
+export interface FlutterwaveInstance {
+  Charge: FlutterwaveCharge;
+  Transaction: FlutterwaveTransaction;
+  PaymentPlan: FlutterwavePaymentPlan;
+  Subaccount: FlutterwaveSubaccount;
+  VirtualCard: FlutterwaveVirtualCard;
+}
+
+let flw: FlutterwaveInstance | null = null;
 
 // Only initialize if credentials are provided
 if (process.env.FLW_PUBLIC_KEY && process.env.FLW_SECRET_KEY) {
   flw = new Flutterwave(
     process.env.FLW_PUBLIC_KEY,
     process.env.FLW_SECRET_KEY
-  );
+  ) as FlutterwaveInstance;
 }
 
 export default flw;
