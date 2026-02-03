@@ -208,11 +208,12 @@ const startKYCVerification = async (req: express.Request, res: express.Response)
     const veriffService = getVeriffService();
     const callbackUrl = `${process.env.SERVER_URL}/api/kyc/webhook`;
 
+    const userName = String((user as unknown as Record<string, unknown>).name || '');
     const session = await veriffService.createSession({
       userId,
       companyId: company_id || null,
-      firstName: first_name || user.name.split(" ")[0],
-      lastName: last_name || user.name.split(" ").slice(1).join(" "),
+      firstName: first_name || userName.split(" ")[0],
+      lastName: last_name || userName.split(" ").slice(1).join(" "),
       callbackUrl,
     });
 
