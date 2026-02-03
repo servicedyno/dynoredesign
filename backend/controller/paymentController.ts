@@ -4345,7 +4345,7 @@ const createPaymentLink = async (
     }
     
     // Get unique list of available currencies
-    const availableCurrencies = [...new Set(configuredWallets.map((w: any) => w.wallet_type))];
+    const availableCurrencies = [...new Set(configuredWallets.map((w: { wallet_type: string }) => w.wallet_type))];
     console.log(`[Phase 11] Available currencies for company_id ${company_id}:`, availableCurrencies);
     
     const uniqueRef = crypto.randomBytes(24).toString("hex");
