@@ -464,10 +464,10 @@ export const getReferralLeaderboard = async (req: Request, res: Response) => {
       data: {
         leaderboard: leaderboard.map((user, index) => ({
           rank: index + 1,
-          user_id: (user as Record<string, unknown>).user_id,
-          name: (user as Record<string, unknown>).name,
-          referral_count: (user as Record<string, unknown>).referral_count,
-          total_earnings: (user as Record<string, unknown>).referral_bonus_earned,
+          user_id: (user as unknown as Record<string, unknown>).user_id,
+          name: (user as unknown as Record<string, unknown>).name,
+          referral_count: (user as unknown as Record<string, unknown>).referral_count,
+          total_earnings: (user as unknown as Record<string, unknown>).referral_bonus_earned,
         })),
       },
     });
