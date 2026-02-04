@@ -1,6 +1,6 @@
 import express from "express";
 import Joi from "joi";
-import { ICompany, IUserType } from "../utils/types";
+import { ICompany } from "../utils/types";
 
 const companyMiddleware = (
   req: express.Request,
