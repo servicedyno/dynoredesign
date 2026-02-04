@@ -1,0 +1,78 @@
+{
+  "summary": "Currency selection fixes testing completed successfully. All 22 tests passed. The three fixes implemented are working correctly: 1) getConfiguredCurrenciesForCheckout filters by accepted_currencies, 2) getData returns available_currencies, 3) Currency validation at payment time rejects disallowed currencies.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_currency_selection_fixes.py",
+    "/app/backend/tests/test_accepted_currencies.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Currency selection fixes are properly implemented and working",
+    "getData correctly returns available_currencies for restricted payment links",
+    "configured-currencies endpoint correctly filters to only accepted_currencies",
+    "Payment validation correctly rejects currencies not in accepted_currencies list",
+    "Unrestricted links (no accepted_currencies) correctly return all configured wallets"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_currency_selection_fixes.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A - backend only testing"
+  },
+  "test_credentials": {
+    "email": "richard@dyno.pt",
+    "password": "Katiekendra123@",
+    "company_id": 38
+  },
+  "seed_data_creation": "Test payment links created during testing were cleaned up automatically",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Currency selection fixes verified working. Key endpoints tested: POST /api/pay/createPaymentLink (with/without accepted_currencies), POST /api/pay/getData (returns available_currencies), GET /api/pay/configured-currencies (filters by accepted_currencies), POST /api/pay/createCryptoPayment (validates currency against accepted_currencies). Company 38 has configured: BTC, ETH, LTC, DOGE, TRX, USDT-TRC20, USDT-ERC20.",
+  "tests_executed": {
+    "TestCreatePaymentLinkWithCurrencies::test_create_link_with_btc_eth_restriction": "PASSED - Creates link with BTC,ETH restriction, returns accepted_currencies array",
+    "TestCreatePaymentLinkWithCurrencies::test_create_link_without_accepted_currencies": "PASSED - Creates link with null accepted_currencies (all configured)",
+    "TestGetDataAvailableCurrencies::test_getData_returns_available_currencies_for_restricted_link": "PASSED - getData returns available_currencies=[BTC,ETH] for restricted link",
+    "TestGetDataAvailableCurrencies::test_getData_returns_all_currencies_for_unrestricted_link": "PASSED - getData returns all 7 configured currencies for unrestricted link",
+    "TestConfiguredCurrenciesFiltering::test_configured_currencies_with_restricted_link": "PASSED - configured-currencies returns only BTC,ETH for restricted link",
+    "TestConfiguredCurrenciesFiltering::test_configured_currencies_with_unrestricted_link": "PASSED - configured-currencies returns all 7 configured currencies for unrestricted link",
+    "TestCurrencyValidationAtPayment::test_payment_with_allowed_currency": "PASSED - Payment with BTC (allowed) succeeds",
+    "TestCurrencyValidationAtPayment::test_payment_with_disallowed_currency_rejected": "PASSED - Payment with LTC (not allowed) returns 400 with correct error message",
+    "TestExistingPaymentLink::test_existing_link_getData": "PASSED - Existing test link getData works",
+    "test_zz_cleanup": "PASSED - Cleanup completed",
+    "test_get_company_currencies_success": "PASSED - Returns all 9 crypto types with configuration status",
+    "test_get_company_currencies_invalid_company": "PASSED - Returns 404 for non-existent company",
+    "test_create_payment_link_with_accepted_currencies": "PASSED - Creates link with specific currencies",
+    "test_create_payment_link_without_accepted_currencies": "PASSED - Creates link with null (all configured)",
+    "test_create_payment_link_invalid_crypto_type": "PASSED - Returns 400 for invalid crypto",
+    "test_create_payment_link_unconfigured_wallet": "PASSED - Returns 400 for unconfigured BCH",
+    "test_get_payment_link_returns_accepted_currencies": "PASSED - Returns accepted_currencies as array",
+    "test_update_payment_link_accepted_currencies": "PASSED - Updates currencies successfully",
+    "test_update_payment_link_clear_accepted_currencies": "PASSED - Clears to null (all configured)",
+    "test_update_payment_link_invalid_crypto": "PASSED - Returns 400 for invalid crypto",
+    "test_update_payment_link_unconfigured_wallet": "PASSED - Returns 400 for unconfigured BCH"
+  },
+  "endpoints_tested": [
+    "POST /api/pay/createPaymentLink - with accepted_currencies parameter",
+    "POST /api/pay/getData - returns available_currencies in response",
+    "GET /api/pay/configured-currencies - filters by accepted_currencies",
+    "POST /api/pay/createCryptoPayment - validates currency against accepted_currencies",
+    "GET /api/pay/company-currencies/:id - returns all currencies with configuration status",
+    "GET /api/pay/links/:id - returns accepted_currencies as array",
+    "PUT /api/pay/links/:id - updates accepted_currencies"
+  ],
+  "verified_fixes": {
+    "fix_1_getConfiguredCurrenciesForCheckout": "VERIFIED - Reads accepted_currencies from payment link and filters results correctly",
+    "fix_2_getData_available_currencies": "VERIFIED - Returns available_currencies in response for both restricted and unrestricted links",
+    "fix_3_currency_validation": "VERIFIED - Rejects currencies not in accepted_currencies list with proper error message"
+  }
+}
