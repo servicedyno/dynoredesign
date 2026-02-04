@@ -2193,20 +2193,26 @@ BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20`,
                 message: 'Fee calculation successful',
                 data: {
                   payment_amount: 100,
-                  currency: 'USD',
+                  currency: 'AUD',
                   cryptocurrency: 'ETH',
                   fee_breakdown: {
-                    platform_fee: 0.40,
+                    platform_fee: 0.57,
                     platform_fee_percent: 0.4,
-                    blockchain_fee: 2.00,
-                    total_fees: 2.40
+                    blockchain_fee: 2.86,
+                    total_fees: 3.43
                   },
-                  net_to_merchant: 97.60,
+                  net_to_merchant: 96.57,
+                  usd_equivalents: {
+                    payment_amount_usd: 70.03,
+                    total_fees_usd: 2.40,
+                    net_to_merchant_usd: 67.63,
+                    exchange_rate: 0.7003
+                  },
                   details: {
                     promotional_discount_percent: 60,
-                    actual_total_fees: 6.00,
-                    displayed_total_fees: 2.40,
-                    savings_displayed: 3.60
+                    actual_total_fees: 8.58,
+                    displayed_total_fees: 3.43,
+                    savings_displayed: 5.15
                   }
                 }
               }
@@ -2223,6 +2229,9 @@ BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20`,
                 },
                 'Invalid Crypto': {
                   value: { success: false, message: 'Invalid cryptocurrency. Valid options: BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20', statusCode: 400 }
+                },
+                'Invalid Currency': {
+                  value: { success: false, message: 'Invalid currency. Common options: USD, EUR, GBP, AUD, CAD, etc.', statusCode: 400 }
                 }
               }
             }
