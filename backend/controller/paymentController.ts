@@ -6748,5 +6748,6 @@ export default {
   getConfiguredCurrenciesForCheckout,
   getFeePreview,
   getCompanyConfiguredCurrencies,
+  calculateCheckoutFees,
 };
 
