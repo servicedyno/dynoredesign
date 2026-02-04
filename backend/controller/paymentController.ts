@@ -4634,6 +4634,17 @@ const createPaymentLink = async (
     const kycThreshold = 10000; // $10,000 USD threshold
     const kycGracePeriodDays = 90; // 90-day grace period after threshold reached
     
+    // Store KYC warning for in-app display
+    let kycWarning: {
+      type: string;
+      message: string;
+      days_remaining: number;
+      threshold_date: string;
+      grace_period_end: string;
+      kyc_status: string;
+      action_url: string;
+    } | null = null;
+    
     if (totalVolume >= kycThreshold) {
       // KYC is required - check if it's approved
       const kycRecord = await kycModel.findOne({
@@ -4682,11 +4693,24 @@ const createPaymentLink = async (
           const daysRemaining = Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           
           if (now < gracePeriodEnd) {
-            // Still within grace period - allow but warn
+            // Still within grace period - allow but set warning for in-app display
             console.log(`[KYC GRACE PERIOD] User ${userData.user_id} within grace period. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Days remaining: ${daysRemaining}`);
             
-            // Trigger KYC notification if not already sent recently (handled by checkVolumeAndTriggerKYC)
-            // Continue processing - don't block yet
+            // Set in-app warning
+            const urgencyType = daysRemaining <= 14 ? "critical" : daysRemaining <= 30 ? "warning" : "info";
+            kycWarning = {
+              type: urgencyType,
+              message: daysRemaining <= 14 
+                ? `URGENT: Only ${daysRemaining} days left to complete KYC verification! Your account will be restricted after ${gracePeriodEnd.toLocaleDateString()}.`
+                : daysRemaining <= 30
+                ? `Warning: ${daysRemaining} days remaining to complete KYC verification before your account is restricted.`
+                : `KYC verification required within ${daysRemaining} days. Your transaction volume ($${totalVolume.toLocaleString()}) has exceeded the $${kycThreshold.toLocaleString()} threshold.`,
+              days_remaining: daysRemaining,
+              threshold_date: thresholdDate.toISOString(),
+              grace_period_end: gracePeriodEnd.toISOString(),
+              kyc_status: kycStatus,
+              action_url: "/settings/kyc",
+            };
           } else {
             // Grace period expired - block
             console.log(`[KYC BLOCK] User ${userData.user_id} grace period expired. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Grace period ended: ${gracePeriodEnd.toISOString()}`);
