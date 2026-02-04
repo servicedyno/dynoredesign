@@ -6607,27 +6607,47 @@ const getConfiguredCurrenciesForCheckout = async (
     let transactionId = userData.transaction_id;
     let feePayerFromLink = 'company';
     
-    // First try to get company_id from payment link using transaction_id
+    // Track accepted_currencies restriction from payment link
+    let acceptedCurrenciesFilter: string[] | null = null;
+    
+    // First try to get company_id and accepted_currencies from payment link using transaction_id
     if (userData.pathType === 'createLink' && userData.transaction_id) {
       const paymentLink = await paymentLinkModel.findOne({
         where: { transaction_id: userData.transaction_id },
-        attributes: ['company_id', 'user_id', 'fee_payer', 'base_amount', 'base_currency', 'link_id'],
+        attributes: ['company_id', 'user_id', 'fee_payer', 'base_amount', 'base_currency', 'link_id', 'accepted_currencies'],
       });
       
       if (paymentLink) {
         companyId = paymentLink.dataValues.company_id as number;
         userId = paymentLink.dataValues.user_id as number;
         feePayerFromLink = (paymentLink.dataValues.fee_payer as string) || 'company';
+        
+        // Parse accepted_currencies if set by merchant
+        const acceptedCurrenciesStr = paymentLink.dataValues.accepted_currencies as string | null;
+        if (acceptedCurrenciesStr) {
+          acceptedCurrenciesFilter = acceptedCurrenciesStr.split(',').map((c: string) => c.trim().toUpperCase());
+          console.log(`[getConfiguredCurrenciesForCheckout] Payment link has accepted_currencies restriction: ${acceptedCurrenciesFilter.join(', ')}`);
+        }
       }
     }
     
-    // Fallback: try to get from Redis data
+    // Fallback: try to get from Redis data (includes available_currencies)
     if (!userId && paymentRef) {
       const redisData = await getRedisItem(`customer-${paymentRef}`);
       if (redisData) {
         companyId = redisData.company_id ? parseInt(redisData.company_id) : null;
         userId = redisData.adm_id ? parseInt(redisData.adm_id) : (redisData.user_id ? parseInt(redisData.user_id) : null);
         feePayerFromLink = redisData.fee_payer || 'company';
+        
+        // Get available_currencies from Redis (set during payment link creation)
+        if (redisData.available_currencies) {
+          if (Array.isArray(redisData.available_currencies)) {
+            acceptedCurrenciesFilter = redisData.available_currencies;
+          } else if (typeof redisData.available_currencies === 'string') {
+            acceptedCurrenciesFilter = redisData.available_currencies.split(',').map((c: string) => c.trim().toUpperCase());
+          }
+          console.log(`[getConfiguredCurrenciesForCheckout] Redis has available_currencies: ${acceptedCurrenciesFilter?.join(', ')}`);
+        }
       }
     }
     
@@ -6650,13 +6670,24 @@ const getConfiguredCurrenciesForCheckout = async (
       walletWhereClause.company_id = companyId;
     }
     
+    // If merchant specified accepted_currencies, filter wallet types
+    if (acceptedCurrenciesFilter && acceptedCurrenciesFilter.length > 0) {
+      walletWhereClause.wallet_type = { [Op.in]: acceptedCurrenciesFilter };
+      console.log(`[getConfiguredCurrenciesForCheckout] Filtering wallets to accepted currencies: ${acceptedCurrenciesFilter.join(', ')}`);
+    }
+    
     const configuredWallets = await userWalletModel.findAll({
       where: walletWhereClause,
       attributes: ['wallet_type', 'wallet_address', 'wallet_name'],
     });
     
-    // Extract unique currencies (only those with actual addresses)
-    const currencies = [...new Set(configuredWallets.map((w) => w.dataValues.wallet_type as string))];
+    // Extract unique currencies (only those with actual addresses AND in accepted list)
+    let currencies = [...new Set(configuredWallets.map((w) => w.dataValues.wallet_type as string))];
+    
+    // Double-check filter (in case of edge cases)
+    if (acceptedCurrenciesFilter && acceptedCurrenciesFilter.length > 0) {
+      currencies = currencies.filter(c => acceptedCurrenciesFilter!.includes(c));
+    }
     
     console.log(`[getConfiguredCurrenciesForCheckout] Found ${currencies.length} currencies: ${currencies.join(', ')}`);
     
