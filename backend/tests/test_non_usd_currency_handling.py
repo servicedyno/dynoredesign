@@ -49,8 +49,9 @@ class TestNonUSDCurrencyHandling:
             )
             if response.status_code == 200:
                 data = response.json()
-                TestNonUSDCurrencyHandling.auth_token = data.get('data', {}).get('token')
-                print(f"✓ Authenticated successfully")
+                # Token is in data.accessToken
+                TestNonUSDCurrencyHandling.auth_token = data.get('data', {}).get('accessToken')
+                print(f"✓ Authenticated successfully, token: {TestNonUSDCurrencyHandling.auth_token[:50]}...")
             else:
                 pytest.skip(f"Authentication failed: {response.status_code}")
         yield
