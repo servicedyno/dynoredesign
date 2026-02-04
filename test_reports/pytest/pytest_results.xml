@@ -1,1 +1,81 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="22" time="39.047" timestamp="2026-02-04T16:49:02.489004+00:00" hostname="agent-env-dffb809b-3cc7-4334-85ac-1e217c082fa2"><testcase classname="backend.tests.test_currency_selection_fixes.TestCreatePaymentLinkWithCurrencies" name="test_create_link_with_btc_eth_restriction" time="2.553" /><testcase classname="backend.tests.test_currency_selection_fixes.TestCreatePaymentLinkWithCurrencies" name="test_create_link_without_accepted_currencies" time="1.172" /><testcase classname="backend.tests.test_currency_selection_fixes.TestGetDataAvailableCurrencies" name="test_getData_returns_available_currencies_for_restricted_link" time="1.416" /><testcase classname="backend.tests.test_currency_selection_fixes.TestGetDataAvailableCurrencies" name="test_getData_returns_all_currencies_for_unrestricted_link" time="1.301" /><testcase classname="backend.tests.test_currency_selection_fixes.TestConfiguredCurrenciesFiltering" name="test_configured_currencies_with_restricted_link" time="1.650" /><testcase classname="backend.tests.test_currency_selection_fixes.TestConfiguredCurrenciesFiltering" name="test_configured_currencies_with_unrestricted_link" time="1.627" /><testcase classname="backend.tests.test_currency_selection_fixes.TestCurrencyValidationAtPayment" name="test_payment_with_allowed_currency" time="3.957" /><testcase classname="backend.tests.test_currency_selection_fixes.TestCurrencyValidationAtPayment" name="test_payment_with_disallowed_currency_rejected" time="1.519" /><testcase classname="backend.tests.test_currency_selection_fixes.TestExistingPaymentLink" name="test_existing_link_getData" time="0.234" /><testcase classname="backend.tests.test_currency_selection_fixes" name="test_zz_cleanup" time="4.483" /><testcase classname="backend.tests.test_accepted_currencies" name="test_get_company_currencies_success" time="2.442" /><testcase classname="backend.tests.test_accepted_currencies" name="test_get_company_currencies_invalid_company" time="0.235" /><testcase classname="backend.tests.test_accepted_currencies" name="test_create_payment_link_with_accepted_currencies" time="1.198" /><testcase classname="backend.tests.test_accepted_currencies" name="test_create_payment_link_without_accepted_currencies" time="1.208" /><testcase classname="backend.tests.test_accepted_currencies" name="test_create_payment_link_invalid_crypto_type" time="0.465" /><testcase classname="backend.tests.test_accepted_currencies" name="test_create_payment_link_unconfigured_wallet" time="0.455" /><testcase classname="backend.tests.test_accepted_currencies" name="test_get_payment_link_returns_accepted_currencies" time="1.467" /><testcase classname="backend.tests.test_accepted_currencies" name="test_update_payment_link_accepted_currencies" time="2.227" /><testcase classname="backend.tests.test_accepted_currencies" name="test_update_payment_link_clear_accepted_currencies" time="2.179" /><testcase classname="backend.tests.test_accepted_currencies" name="test_update_payment_link_invalid_crypto" time="1.635" /><testcase classname="backend.tests.test_accepted_currencies" name="test_update_payment_link_unconfigured_wallet" time="1.579" /><testcase classname="backend.tests.test_accepted_currencies" name="test_zz_cleanup" time="3.956" /></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="11" time="0.487" timestamp="2026-02-04T17:17:39.374975+00:00" hostname="agent-env-dffb809b-3cc7-4334-85ac-1e217c082fa2"><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_01_get_currency_rates_aud_source" time="0.072"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:83: in test_01_get_currency_rates_aud_source
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_02_compare_aud_vs_usd_same_amount" time="0.020"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:133: in test_02_compare_aud_vs_usd_same_amount
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_03_verify_fee_tier_selection_aud" time="0.029"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:188: in test_03_verify_fee_tier_selection_aud
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_04_get_currency_rates_eur_source" time="0.015"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:246: in test_04_get_currency_rates_eur_source
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_05_get_currency_rates_gbp_source" time="0.018"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:284: in test_05_get_currency_rates_gbp_source
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_06_verify_fee_tier_boundaries" time="0.013"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:332: in test_06_verify_fee_tier_boundaries
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_07_create_payment_link_with_aud" time="0.034"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:378: in test_07_create_payment_link_with_aud
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_08_create_payment_link_with_eur" time="0.017"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:416: in test_08_create_payment_link_with_eur
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_09_company_pays_fees_mode" time="0.016"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:448: in test_09_company_pays_fees_mode
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_10_multiple_currency_conversions" time="0.017"><failure message="Exception: Authentication failed: 520 - {&quot;error&quot;: &quot;Backend starting, please retry&quot;}">backend/tests/test_non_usd_currency_handling.py:494: in test_10_multiple_currency_conversions
+    headers=get_headers(),
+            ^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:60: in get_headers
+    "Authorization": f"Bearer {get_auth_token()}"
+                               ^^^^^^^^^^^^^^^^
+backend/tests/test_non_usd_currency_handling.py:52: in get_auth_token
+    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+E   Exception: Authentication failed: 520 - {"error": "Backend starting, please retry"}</failure></testcase><testcase classname="backend.tests.test_non_usd_currency_handling.TestNonUSDCurrencyHandling" name="test_99_cleanup" time="0.000" /></testsuite></testsuites>
