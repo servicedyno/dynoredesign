@@ -38,17 +38,7 @@ export const ESTIMATED_CONFIRMATION_TIMES: Record<string, string> = {
   "USDT-ERC20": "1-5 minutes",
 };
 
-interface PendingPaymentData {
-  address: string;
-  txId: string;
-  amount: number;
-  currency: string;
-  customerRef: string;
-  userId: number;
-  companyId: number;
-  notificationSent?: boolean;
-  confirmations?: number;
-}
+// PendingPaymentData interface removed - not used
 
 /**
  * Send pending payment notification when transaction is first detected

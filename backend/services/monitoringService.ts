@@ -69,7 +69,7 @@ const MONITORED_SERVICES = [
       const start = Date.now();
       try {
         // Check Redis connectivity (used for webhook queuing)
-        const testKey = await getRedisItem("health_check_test");
+        await getRedisItem("health_check_test");
         // Redis is connected if no error thrown
         return { healthy: true, latency: Date.now() - start };
       } catch (error: unknown) {

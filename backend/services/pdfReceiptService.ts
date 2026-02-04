@@ -5,11 +5,10 @@
 
 import PDFDocument from "pdfkit";
 import path from "path";
-import fs from "fs";
+// fs import removed - not used
 
 // Logo configuration - using local asset
-const LOGO_PATH = path.join(__dirname, "../assets/dynopay-logo.png");
-const LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynocheckoutDarkMode/main/public/Logo.png";
+// LOGO_PATH and LOGO_URL removed - not used
 
 // Brand colors
 const BRAND_COLORS = {
