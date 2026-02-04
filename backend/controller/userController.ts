@@ -404,9 +404,11 @@ const login = async (req: express.Request, res: express.Response) => {
       // Send new device alert if IP changed (and not first login)
       // Use Redis to prevent duplicate alerts within 5 minutes
       const alertCacheKey = `new_device_alert:${userData.dataValues.user_id}:${ipAddress}`;
-      const alertAlreadySent = await getRedisItem(alertCacheKey);
+      const alertCacheValue = await getRedisItem(alertCacheKey);
+      // Check if alert was already sent - getRedisItem returns {} for cache miss
+      const alertAlreadySent = alertCacheValue && Object.keys(alertCacheValue).length > 0;
       
-      console.log(`[Login] Alert check - lastLoginIp: ${!!lastLoginIp}, ipChanged: ${lastLoginIp !== ipAddress}, alertAlreadySent: ${!!alertAlreadySent}`);
+      console.log(`[Login] Alert check - lastLoginIp: ${!!lastLoginIp}, ipChanged: ${lastLoginIp !== ipAddress}, alertAlreadySent: ${alertAlreadySent}`);
       
       if (lastLoginIp && lastLoginIp !== ipAddress && !alertAlreadySent) {
         try {
