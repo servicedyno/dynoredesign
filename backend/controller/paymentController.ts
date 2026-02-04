@@ -1569,18 +1569,20 @@ const createCryptoPayment = async (
       
       try {
         // Get the crypto amount for the TOTAL value (base + tax) using FastForex
+        // Convert from ORIGINAL currency (e.g., AUD) to crypto
         const cryptoRates = await currencyConvert({
-          sourceCurrency: items.base_currency || 'USD',
+          sourceCurrency: baseCurrency,
           currency: [requestedCurrency],
-          amount: totalAmountWithTax,  // Use total with tax
+          amount: totalAmountWithTax,  // Use total with tax in original currency
           fixedDecimal: false,
         });
         const total_crypto_amount = parseFloat(cryptoRates[0]?.amount?.toString() || '0');
         exchange_rate = parseFloat(cryptoRates[0]?.transferRate?.toString() || '0');
         
         // Calculate base crypto amount (without tax) for merchant amount calculation
+        // Use ratio from original currency amounts
         const base_crypto_amount = taxAmount > 0 
-          ? total_crypto_amount * (baseAmountUSD / totalAmountWithTax)
+          ? total_crypto_amount * (baseAmountOriginal / totalAmountWithTax)
           : total_crypto_amount;
         
         // Calculate tax amount in crypto
@@ -1589,25 +1591,27 @@ const createCryptoPayment = async (
           : 0;
         
         console.log(`[createCryptoPayment] Crypto amount calculated:
-          - Base amount: ${baseAmountUSD} ${items.base_currency || 'USD'}
-          - Tax amount: ${taxAmount} ${items.base_currency || 'USD'}
-          - Total with tax: ${totalAmountWithTax} ${items.base_currency || 'USD'}
+          - Base amount: ${baseAmountOriginal} ${baseCurrency} (${baseAmountUSD.toFixed(2)} USD)
+          - Tax amount: ${taxAmount} ${baseCurrency}
+          - Total with tax: ${totalAmountWithTax} ${baseCurrency}
           - Total crypto: ${total_crypto_amount} ${requestedCurrency}
           - Base crypto: ${base_crypto_amount} ${requestedCurrency}
           - Tax crypto: ${tax_amount_crypto} ${requestedCurrency}
-          - Exchange rate: 1 ${items.base_currency || 'USD'} = ${exchange_rate} ${requestedCurrency}`);
+          - Exchange rate: 1 ${baseCurrency} = ${exchange_rate} ${requestedCurrency}`);
         
         // Calculate fees using tier-based structure: 2% + fixed + buffer
+        // IMPORTANT: Use USD amount for fee tier selection (tiers are defined in USD)
         const { totalDeduction, fixedFee, transactionFee, blockchainBuffer } = await calculateTransactionFees(
           requestedCurrency,
-          baseAmountUSD  // Fee calculation based on USD amount (base only, not tax)
+          baseAmountUSD  // Fee calculation based on USD amount (ensures correct tier)
         );
         
-        // Fee percentage for crypto conversion
+        // Fee percentage for crypto conversion (based on USD fee / USD amount)
         const feePercentage = totalDeduction / baseAmountUSD;
         
-        console.log(`[createCryptoPayment] Fee calculation:
-          - Base USD: $${baseAmountUSD}
+        console.log(`[createCryptoPayment] Fee calculation (USD-based for tier accuracy):
+          - Base original: ${baseAmountOriginal} ${baseCurrency}
+          - Base USD: $${baseAmountUSD.toFixed(2)}
           - Fee breakdown: 2%=$${transactionFee.toFixed(2)} + Fixed=$${fixedFee.toFixed(2)} + Buffer=$${blockchainBuffer.toFixed(2)}
           - Total fee: $${totalDeduction.toFixed(2)} (${(feePercentage * 100).toFixed(2)}% of base)`);
         
