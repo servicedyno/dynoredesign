@@ -4,23 +4,20 @@
 # Last Updated: 2026-02-04
 #===================================================
 
-user_problem_statement: "Add two new features: (1) Optional customer name field for payment links - passed to checkout page, (2) Fee calculator endpoint that shows platform fee (1%), blockchain fee (remainder), total fees, and net to merchant - consistent with existing fee logic"
+user_problem_statement: "Comprehensive testing of recent implementations: Enhanced webhooks, KYC enforcement with $10K threshold and 90-day grace period, in-app KYC warnings with Veriff integration, onboarding status endpoint"
 
 current_test_task:
-  - task: "Onboarding Status Endpoint for Merchant Frontend"
+  - task: "Comprehensive Testing of Recent Implementations"
     implemented: true
-    working: true
-    file: "/app/backend/controller/userController.ts, /app/backend/routes/userRouter.ts"
+    working: "NA"
+    file: "/app/backend/controller/paymentController.ts, /app/backend/controller/userController.ts, /app/backend/controller/kycController.ts, /app/backend/webhooks/index.ts"
     stuck_count: 0
-    priority: "high"
-    needs_retesting: false
+    priority: "critical"
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implemented GET /api/user/onboarding-status endpoint that returns wallet_setup, kyc_status, api_key_status, company_setup, onboarding_complete flag, and next_steps array"
-      - working: true
-        agent: "main"
-        comment: "✅ VERIFIED WORKING: Tested with richard@dyno.pt - returns complete onboarding status including wallet_count=22, address_count=2, kyc_status=submitted, has_production_key=true, company_count=4, onboarding_complete=true"
+        comment: "Testing: (1) Enhanced webhook payloads with payment_type field, (2) KYC enforcement at $10K threshold with 90-day grace period, (3) In-app KYC warnings with Veriff session URLs, (4) Onboarding status endpoint with grace period info, (5) API documentation updates"
 
 previous_test_tasks:
   - task: "Enhanced Webhook Payloads for Developers"
