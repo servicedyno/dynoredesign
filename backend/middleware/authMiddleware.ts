@@ -3,8 +3,7 @@ import jwt from "jsonwebtoken";
 import { errorResponseHelper, getErrorMessage } from "../helper";
 import { userModel } from "../models";
 
-import { Op } from "sequelize";
-import { IUserType } from "../utils/types";
+// Op and IUserType imports removed - not used
 
 const authMiddleware = async (
   req: express.Request,

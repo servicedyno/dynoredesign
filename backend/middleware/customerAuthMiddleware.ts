@@ -1,10 +1,9 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import { errorResponseHelper, getErrorMessage } from "../helper";
-import { customerModel, paymentLinkModel, userModel } from "../models";
+import { customerModel, paymentLinkModel } from "../models";
 
-import { Op } from "sequelize";
-import { IUserType } from "../utils/types";
+// Op and IUserType imports removed - not used
 
 const customerAuthMiddleware = async (
   req: express.Request,

@@ -1,10 +1,9 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import { errorResponseHelper, getErrorMessage } from "../helper";
-import { userModel } from "../models";
+// userModel import removed - not used
 
-import { Op } from "sequelize";
-import { IUserType } from "../utils/types";
+// Op and IUserType imports removed - not used
 
 const adminAuthMiddleware = async (
   req: express.Request,
