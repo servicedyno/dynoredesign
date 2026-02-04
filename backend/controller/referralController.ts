@@ -302,7 +302,7 @@ export const validateReferralCode = async (req: Request, res: Response) => {
  * Get referral earnings and rewards
  * GET /api/referral/earnings
  */
-export const getReferralEarnings = async (req: Request, res: Response) => {
+export const getReferralEarnings = async (_req: Request, res: Response) => {
   try {
     const userData = jwt.decode(res.locals.token) as IUserType;
     const userId = userData?.user_id;

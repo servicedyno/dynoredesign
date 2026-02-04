@@ -447,7 +447,7 @@ const getIncident = async (req: express.Request, res: express.Response) => {
  * GET /api/status/health
  * Simple health check endpoint for monitoring
  */
-const healthCheck = async (req: express.Request, res: express.Response) => {
+const healthCheck = async (_req: express.Request, res: express.Response) => {
   try {
     await sequelize.query("SELECT 1", { type: QueryTypes.SELECT });
     
