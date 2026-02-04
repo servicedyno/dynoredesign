@@ -399,6 +399,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       incomplete_payment?: IncompletePaymentData;
       available_currencies?: string[];
       accepted_currencies?: string;
+      customer_name?: string;  // Optional customer name
     }
 
     const item = await getRedisItem("customer-" + data) as RedisPaymentItem | null;
