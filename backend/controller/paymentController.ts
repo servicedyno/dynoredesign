@@ -6884,11 +6884,13 @@ const getConfiguredCurrenciesForCheckout = async (
  * Calculate fees for checkout page - Public endpoint (no auth required)
  * POST /api/pay/calculateFees
  * 
- * Used by checkout page to show fee breakdown when customer selects cryptocurrency:
- * - Platform fee: 1% of amount
+ * Used by merchants and checkout page to show fee breakdown:
+ * - Platform fee: 1% of amount (displayed with 60% promotional discount)
  * - Blockchain fee: Remaining fees (total - platform fee) 
- * - Total fees: Consistent with actual fee calculation
- * - Net to merchant: Amount - Total fees
+ * - Total fees: With 60% promotional discount applied
+ * - Net to merchant: Amount - Total fees (displayed fees)
+ * 
+ * Supports any fiat currency - automatically converts to USD for fee tier calculation
  * 
  * Note: Displays 1% as "platform fee" and remainder as "blockchain fee"
  * but total fees are always consistent with actual fee tier logic
@@ -6898,7 +6900,7 @@ const calculateCheckoutFees = async (
   res: express.Response
 ) => {
   try {
-    const { amount, cryptocurrency } = req.body;
+    const { amount, cryptocurrency, currency = 'USD' } = req.body;
 
     // Validate required fields
     if (!amount || amount <= 0) {
@@ -6911,6 +6913,7 @@ const calculateCheckoutFees = async (
 
     const paymentAmount = parseFloat(amount);
     const crypto = cryptocurrency.toUpperCase();
+    const fiatCurrency = currency.toUpperCase();
 
     // Validate cryptocurrency
     const validCryptos = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
@@ -6918,12 +6921,37 @@ const calculateCheckoutFees = async (
       return errorResponseHelper(res, 400, `Invalid cryptocurrency. Valid options: ${validCryptos.join(', ')}`);
     }
 
-    // Calculate actual fees using existing fee logic
+    // Validate fiat currency (common fiat currencies supported)
+    const validFiatCurrencies = ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'NZD', 'SGD', 'HKD', 'NGN', 'KES', 'ZAR', 'BRL', 'MXN', 'INR', 'AED', 'SAR', 'PHP', 'THB', 'IDR', 'MYR', 'VND', 'KRW', 'TWD', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'TRY', 'ILS', 'CLP', 'COP', 'PEN', 'ARS'];
+    if (!validFiatCurrencies.includes(fiatCurrency)) {
+      return errorResponseHelper(res, 400, `Invalid currency. Common options: USD, EUR, GBP, AUD, CAD, etc.`);
+    }
+
+    // Convert amount to USD for fee calculation if not already USD
+    let amountUSD = paymentAmount;
+    let exchangeRate = 1;
+    
+    if (fiatCurrency !== 'USD') {
+      try {
+        const usdConversion = await currencyConvert({
+          sourceCurrency: fiatCurrency,
+          currency: ['USD'],
+          amount: paymentAmount,
+          fixedDecimal: true,
+        });
+        amountUSD = Number(usdConversion[0]?.amount || paymentAmount);
+        exchangeRate = amountUSD / paymentAmount;
+        console.log(`[calculateCheckoutFees] Converted ${paymentAmount} ${fiatCurrency} → ${amountUSD.toFixed(2)} USD`);
+      } catch (conversionError) {
+        console.warn(`[calculateCheckoutFees] USD conversion failed, using original amount:`, conversionError);
+      }
+    }
+
+    // Calculate actual fees using existing fee logic (based on USD amount)
     const { totalDeduction } = await calculateTransactionFees(
       crypto,
-      paymentAmount
+      amountUSD
     );
-    // fixedFee, transactionFee, blockchainBuffer not used individually
 
     // Get blockchain network fee for display
     let networkFeeUSD = 0;
@@ -6934,34 +6962,53 @@ const calculateCheckoutFees = async (
       console.log(`[calculateCheckoutFees] Could not fetch network fee for ${crypto}, using 0`);
     }
 
-    // Total actual fees (from our fee tier system)
-    const totalActualFees = totalDeduction + networkFeeUSD;
+    // Total actual fees in USD (from our fee tier system)
+    const totalActualFeesUSD = totalDeduction + networkFeeUSD;
 
     // PROMOTIONAL DISPLAY: Show fees 60% cheaper to encourage customers
     // Actual fees are used internally, but display shows reduced amount
     const promotionalDiscount = 0.60; // 60% reduction
     const displayMultiplier = 1 - promotionalDiscount; // Show only 40% of fees
 
-    // Display breakdown with 60% reduction:
+    // Display breakdown with 60% reduction (in USD first):
     // Platform fee = 1% of amount (fixed display, also reduced)
     // Blockchain fee = Remaining displayed fees
     const platformFeePercent = 1;
-    const actualPlatformFee = paymentAmount * platformFeePercent / 100;
-    const platformFee = parseFloat((actualPlatformFee * displayMultiplier).toFixed(2));
+    const actualPlatformFeeUSD = amountUSD * platformFeePercent / 100;
+    const platformFeeUSD = parseFloat((actualPlatformFeeUSD * displayMultiplier).toFixed(2));
     
-    // Total displayed fees (60% cheaper than actual)
-    const totalFees = parseFloat((totalActualFees * displayMultiplier).toFixed(2));
+    // Total displayed fees in USD (60% cheaper than actual)
+    const totalFeesUSD = parseFloat((totalActualFeesUSD * displayMultiplier).toFixed(2));
     
-    // Blockchain fee is the remainder of displayed total fees
-    const blockchainFee = parseFloat(Math.max(0, totalFees - platformFee).toFixed(2));
+    // Blockchain fee is the remainder of displayed total fees (in USD)
+    const blockchainFeeUSD = parseFloat(Math.max(0, totalFeesUSD - platformFeeUSD).toFixed(2));
     
-    // Net amount to merchant (based on displayed fees - appears higher)
-    const netToMerchant = parseFloat((paymentAmount - totalFees).toFixed(2));
+    // Net amount to merchant in USD (based on displayed fees - appears higher)
+    const netToMerchantUSD = parseFloat((amountUSD - totalFeesUSD).toFixed(2));
+
+    // Convert fees back to original currency if not USD
+    let platformFee = platformFeeUSD;
+    let blockchainFee = blockchainFeeUSD;
+    let totalFees = totalFeesUSD;
+    let netToMerchant = netToMerchantUSD;
+    let totalActualFees = totalActualFeesUSD;
+    let savingsDisplayed = parseFloat((totalActualFeesUSD - totalFeesUSD).toFixed(2));
+
+    if (fiatCurrency !== 'USD' && exchangeRate > 0) {
+      // Convert all fee amounts back to original currency
+      const reverseRate = 1 / exchangeRate;
+      platformFee = parseFloat((platformFeeUSD * reverseRate).toFixed(2));
+      blockchainFee = parseFloat((blockchainFeeUSD * reverseRate).toFixed(2));
+      totalFees = parseFloat((totalFeesUSD * reverseRate).toFixed(2));
+      netToMerchant = parseFloat((netToMerchantUSD * reverseRate).toFixed(2));
+      totalActualFees = parseFloat((totalActualFeesUSD * reverseRate).toFixed(2));
+      savingsDisplayed = parseFloat((totalActualFees - totalFees).toFixed(2));
+    }
 
     // Build response
     const response = {
       payment_amount: paymentAmount,
-      currency: "USD",
+      currency: fiatCurrency,
       cryptocurrency: crypto,
       fee_breakdown: {
         platform_fee: platformFee,
@@ -6970,16 +7017,23 @@ const calculateCheckoutFees = async (
         total_fees: totalFees,
       },
       net_to_merchant: netToMerchant,
+      // USD equivalents for reference (always included)
+      usd_equivalents: {
+        payment_amount_usd: parseFloat(amountUSD.toFixed(2)),
+        total_fees_usd: totalFeesUSD,
+        net_to_merchant_usd: netToMerchantUSD,
+        exchange_rate: fiatCurrency !== 'USD' ? parseFloat(exchangeRate.toFixed(6)) : 1,
+      },
       // Additional details (shows promotional vs actual for reference)
       details: {
         promotional_discount_percent: promotionalDiscount * 100,
-        actual_total_fees: parseFloat(totalActualFees.toFixed(2)),
+        actual_total_fees: totalActualFees,
         displayed_total_fees: totalFees,
-        savings_displayed: parseFloat((totalActualFees - totalFees).toFixed(2)),
+        savings_displayed: savingsDisplayed,
       }
     };
 
-    console.log(`[calculateCheckoutFees] ${paymentAmount} USD in ${crypto}: Actual=$${totalActualFees.toFixed(2)}, Displayed=$${totalFees} (60% off), Net=$${netToMerchant}`);
+    console.log(`[calculateCheckoutFees] ${paymentAmount} ${fiatCurrency} ($${amountUSD.toFixed(2)} USD) in ${crypto}: Actual=${fiatCurrency !== 'USD' ? totalActualFees + ' ' + fiatCurrency : ''} $${totalActualFeesUSD.toFixed(2)} USD, Displayed=$${totalFeesUSD} USD (60% off), Net=$${netToMerchantUSD} USD`);
 
     return successResponseHelper(res, 200, "Fee calculation successful", response);
   } catch (e) {
