@@ -1944,7 +1944,78 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     
     const hasCompany = companies.length > 0;
     
-    // 5. Determine next steps
+    // 5. Calculate KYC grace period if applicable
+    let kycWarning: {
+      type: string;
+      message: string;
+      days_remaining: number;
+      threshold_date: string | null;
+      grace_period_end: string | null;
+      action_url: string;
+    } | null = null;
+    
+    if (requiresKyc && !kycApproved) {
+      // Calculate grace period
+      try {
+        const thresholdQuery = `
+          SELECT MIN("createdAt") as threshold_date
+          FROM (
+            SELECT "createdAt", 
+                   SUM(CAST(base_amount AS DECIMAL)) OVER (ORDER BY "createdAt") as running_total
+            FROM tbl_customer_transaction 
+            WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId) 
+            AND status = 'successful'
+          ) sub
+          WHERE running_total >= :threshold
+        `;
+        
+        const thresholdResult = await sequelize.query<{ threshold_date: string }>(
+          thresholdQuery,
+          {
+            replacements: { userId, threshold: kycThreshold },
+            type: QueryTypes.SELECT,
+          }
+        );
+        
+        const thresholdDate = thresholdResult[0]?.threshold_date ? new Date(thresholdResult[0].threshold_date) : null;
+        
+        if (thresholdDate) {
+          const gracePeriodEnd = new Date(thresholdDate);
+          gracePeriodEnd.setDate(gracePeriodEnd.getDate() + kycGracePeriodDays);
+          const now = new Date();
+          const daysRemaining = Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysRemaining > 0) {
+            const urgencyType = daysRemaining <= 14 ? "critical" : daysRemaining <= 30 ? "warning" : "info";
+            kycWarning = {
+              type: urgencyType,
+              message: daysRemaining <= 14 
+                ? `URGENT: Only ${daysRemaining} days left to complete KYC verification! Your account will be restricted after ${gracePeriodEnd.toLocaleDateString()}.`
+                : daysRemaining <= 30
+                ? `Warning: ${daysRemaining} days remaining to complete KYC verification before your account is restricted.`
+                : `KYC verification required within ${daysRemaining} days. Complete verification to continue processing payments.`,
+              days_remaining: daysRemaining,
+              threshold_date: thresholdDate.toISOString(),
+              grace_period_end: gracePeriodEnd.toISOString(),
+              action_url: "/settings/kyc",
+            };
+          } else {
+            kycWarning = {
+              type: "critical",
+              message: "Your KYC grace period has expired. Complete verification immediately to resume payment processing.",
+              days_remaining: 0,
+              threshold_date: thresholdDate.toISOString(),
+              grace_period_end: gracePeriodEnd.toISOString(),
+              action_url: "/settings/kyc",
+            };
+          }
+        }
+      } catch (e) {
+        console.warn("[Onboarding] Could not calculate KYC grace period:", e);
+      }
+    }
+    
+    // 6. Determine next steps
     const nextSteps: string[] = [];
     
     if (!hasCompany) {
@@ -1956,14 +2027,17 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     }
     
     if (requiresKyc && !kycApproved) {
-      nextSteps.push("Complete KYC verification to continue processing payments");
+      const kycMessage = kycWarning?.days_remaining !== undefined && kycWarning.days_remaining <= 30
+        ? `URGENT: Complete KYC verification (${kycWarning.days_remaining} days remaining)`
+        : "Complete KYC verification to continue processing payments";
+      nextSteps.push(kycMessage);
     }
     
     if (!hasProductionKey && hasCompany) {
       nextSteps.push("Create a production API key for live payments");
     }
     
-    // 6. Determine if onboarding is complete
+    // 7. Determine if onboarding is complete
     const onboardingComplete = hasCompany && hasWalletAddress && (!requiresKyc || kycApproved);
     
     // Build response
@@ -1981,7 +2055,10 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
         is_approved: kycApproved,
         total_volume: totalVolume,
         threshold: kycThreshold,
+        grace_period_days: kycGracePeriodDays,
         required_action: requiresKyc && !kycApproved ? "Complete KYC verification" : null,
+        // Include warning for in-app banner display
+        warning: kycWarning,
       },
       api_key_status: {
         has_production_key: hasProductionKey,
