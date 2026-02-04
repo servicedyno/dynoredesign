@@ -609,57 +609,49 @@ Response contains \`accessToken\` - use this in the \`Authorization: Bearer <tok
     },
     paths: allPaths,
     tags: [
-      { name: "Authentication", description: "User authentication endpoints" },
-      { name: "User Management", description: "User profile and account management" },
-      { name: "Email Unsubscribe", description: "Email unsubscribe endpoints (no auth required)" },
-      { name: "Admin", description: "Platform administration endpoints" },
-      { name: "Company", description: "Company profile management" },
-      { name: "Wallet Address Management", description: "CRUD operations for merchant wallet addresses. Create, Update, and Delete require OTP verification." },
-      { name: "API Keys", description: "API key management, usage statistics, and rate limits" },
-      { 
-        name: "Direct API - Merchant Integration", 
-        description: `Programmatic API for server-to-server integration. Use these endpoints to create customers, generate payment addresses, and receive webhook notifications.
+      // === AUTHENTICATION & USER ===
+      { name: "Authentication", description: "User login, registration, and password management" },
+      { name: "User Management", description: "User profile, settings, and account management" },
+      
+      // === MERCHANT SETUP ===
+      { name: "Company", description: "Company profile and business configuration" },
+      { name: "Wallet Address Management", description: "Crypto wallet configuration (requires OTP for changes)" },
+      { name: "API Keys", description: "API key management for server-to-server integration" },
+      { name: "KYC Verification", description: "Identity verification with Veriff" },
+      
+      // === PAYMENTS ===
+      { name: "Payments", description: "Payment link creation, management, and configuration" },
+      { name: "Payment Processing", description: "Checkout flow: getData, currency selection, crypto payment" },
+      { name: "Direct API - Merchant Integration", description: `Server-to-server API for programmatic payments.
 
-**Authentication:**
-- \`x-api-key\` header: Your merchant API key (from /api/userApi/addApi)
-- \`Authorization\` header: Bearer token for customer (from /api/user/createUser)
+**Flow:** Create API Key → Create Customer → Generate Payment → Receive Webhook
 
-**Typical Flow:**
-1. Create API key via dashboard or /api/userApi/addApi
-2. Create customer: POST /api/user/createUser (with x-api-key)
-3. Generate payment: POST /api/user/cryptoPayment (with x-api-key + customer token)
-4. Receive webhook when payment completes
+**Authentication:** x-api-key header + customer Bearer token` },
+      
+      // === TRANSACTIONS & REPORTS ===
+      { name: "Transactions", description: "Transaction history and export" },
+      { name: "Dashboard", description: "Analytics and statistics" },
+      { name: "Subscriptions", description: "Recurring payment management" },
+      
+      // === INTEGRATIONS ===
+      { name: "Webhooks", description: `Webhook configuration and delivery.
 
-**URL Configuration (Priority Order):**
-1. Per-payment URLs (callback_url, webhook_url in payment request)
-2. API key's configured webhook_url
-3. Company's default webhook settings` 
-      },
-      { name: "Dashboard", description: "Dashboard statistics and charts" },
-      { name: "Tax", description: "Tax rates and validation" },
-      { name: "Notifications", description: "Notification management" },
-      { name: "Payments", description: "Payment links and processing" },
-      { name: "Payment Processing", description: "Payment flow and verification" },
-      { name: "Transactions", description: "Transaction management and export" },
-      { name: "Invoices", description: "Invoice generation and PDF download" },
-      { name: "Subscriptions", description: "Recurring payment subscriptions" },
-      { name: "KYC Verification", description: "Know Your Customer identity verification with Veriff" },
-      { name: "Status", description: "System status and infrastructure monitoring" },
-      { name: "Referral - User Code", description: "User referral codes for organic growth (DYNO format)" },
-      { name: "Referral - Referee Code", description: "Referee codes from payment link emails (REF format)" },
-      { name: "Referral - Fee Discount", description: "Fee discount status from referral program" },
-      { name: "Knowledge Base", description: "Help articles, categories, and search" },
-      { 
-        name: "Webhooks", 
-        description: `Webhook integration for payment notifications.
-
-**Merchant Webhooks**: Configure your webhook_url when creating payment links to receive payment status updates.
-
-**Multi-Tenant Routing**: DynoPay uses a multi-tenant architecture where tenant info (company_id, user_id, address_id) is encoded in webhook URLs. This enables:
-- Multi-tenant payment routing without per-company backends
-- Synchronous URL updates when addresses are reserved
-- Automatic tenant identification from URL query parameters` 
-      },
+**Events:** payment.confirmed, payment.pending, payment.underpaid, payment.overpaid` },
+      { name: "Tax", description: "Tax rates and country-based calculations" },
+      { name: "Notifications", description: "In-app and email notification management" },
+      
+      // === PLATFORM ===
+      { name: "Status", description: "System health and infrastructure monitoring" },
+      { name: "Knowledge Base", description: "Help articles and documentation" },
+      { name: "Admin", description: "Platform administration (super-admin only)" },
+      
+      // === REFERRALS ===
+      { name: "Referral - User Code", description: "User referral codes (DYNO format)" },
+      { name: "Referral - Referee Code", description: "Payment link referee codes (REF format)" },
+      { name: "Referral - Fee Discount", description: "Fee discount from referral program" },
+      
+      // === MISC ===
+      { name: "Email Unsubscribe", description: "Email unsubscribe (no auth)" },
     ],
   },
   apis: ["./swagger/paths/*.ts", "./routes/*.ts"],
