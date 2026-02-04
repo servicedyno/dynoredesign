@@ -6,7 +6,7 @@ import {
 } from "../helper";
 import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
-import { companyModel, planModel } from "../models";
+import { planModel } from "../models";
 import subscriptionModel from "../models/apiModels/subscriptionModel";
 import { apiLogger } from "../utils/loggers";
 import crypto from "crypto";

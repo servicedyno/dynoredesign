@@ -3,7 +3,7 @@ import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../
 import sequelize from "../utils/dbInstance";
 import { QueryTypes } from "sequelize";
 import monitoringService from "../services/monitoringService";
-import serviceHealthModel from "../models/serviceHealthModel";
+// serviceHealthModel import removed - not used
 import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 
 // Cache TTL for status data (60 seconds - health checks run in background)

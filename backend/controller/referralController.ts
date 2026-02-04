@@ -22,7 +22,7 @@ if (!(Referral as unknown as { associations?: Record<string, unknown> }).associa
 /**
  * Generate unique referral code for user
  */
-export const generateReferralCode = (userId: number, userName: string): string => {
+export const generateReferralCode = (_userId: number, userName: string): string => {
   const prefix = "DYNO";
   const year = new Date().getFullYear();
   const userPart = userName.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
@@ -34,7 +34,7 @@ export const generateReferralCode = (userId: number, userName: string): string =
  * Get user's referral code and statistics
  * GET /api/referral/my-code
  */
-export const getMyReferralCode = async (req: Request, res: Response) => {
+export const getMyReferralCode = async (_req: Request, res: Response) => {
   try {
     const userData = jwt.decode(res.locals.token) as IUserType;
     const userId = userData?.user_id;
