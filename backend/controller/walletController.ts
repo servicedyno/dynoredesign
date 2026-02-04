@@ -311,7 +311,7 @@ const estimateFees = async (req: express.Request, res: express.Response) => {
       fromAddresses: fromAddress,
       toAddresses: toAddress,
       amount: totalSendAmount,
-      contractAddress,
+      _contractAddress: contractAddress,
       totalAddress: fromAddress.length,
       bchInputs: inputCount,
     });
