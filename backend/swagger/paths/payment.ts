@@ -1736,7 +1736,7 @@ The 📡 Webhooks section contains the latest webhook documentation.`,
   
   '/api/crypto-webhook': {
     post: {
-      tags: ['Webhooks'],
+      tags: ['🔧 Internal'],
       summary: 'Blockchain webhook (Internal)',
       description: `**Internal endpoint** - receives blockchain transaction notifications.
 
