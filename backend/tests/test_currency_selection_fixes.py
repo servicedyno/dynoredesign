@@ -497,7 +497,7 @@ class TestConfiguredCurrenciesFiltering:
         # Data assertions
         data = config_response.json()
         result = data['data']
-        currencies = result.get('currencies', [])
+        currencies = result.get('configured_currencies', [])
         
         print(f"[Test] Configured currencies returned: {currencies}")
         
