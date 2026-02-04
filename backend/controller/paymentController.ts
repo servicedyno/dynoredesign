@@ -4004,7 +4004,7 @@ const cryptoVerification = async (address, webhook = true) => {
         if (webhook) {
           // FIXED: Use callMerchantWebhook instead of legacy callWebHook
           // callMerchantWebhook properly looks up webhook_url from payment_link or company
-          const { company_id, customer_id, ...transferDetails } = customerPayload;
+          const { company_id, customer_id } = customerPayload;
           
           // ENHANCED WEBHOOK: Calculate fee in USD for merchant transparency
           let totalFeeUsd = 0;
@@ -4262,7 +4262,7 @@ const cryptoVerification = async (address, webhook = true) => {
   }
 };
 
-const timer = (ms) => new Promise((res) => setTimeout(res, ms));
+// timer function removed - not used
 
 const userWallet = async (data: IFundData, tokenData: IUserType) => {
   const id = tokenData.id;
