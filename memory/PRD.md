@@ -23,97 +23,80 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 
 ### Session: February 4, 2026 (Latest)
 
-#### API Documentation Improvements
-- ✅ Consolidated tags from 25+ down to 24 logical groups
-- ✅ Better organization: Authentication → Merchant Setup → Payments → Transactions → Integrations → Platform
-- ✅ Added `available_currencies` documentation to `getData` response
-- ✅ Updated `configured-currencies` endpoint to explain `accepted_currencies` filtering
-- ✅ Added examples showing currency restrictions in action
+#### Non-USD Currency Fix (Critical)
+- ✅ **Fee Tier Calculation**: Fixed to use USD equivalent for all currencies
+  - $100 AUD → $70 USD (Tier 1, not incorrectly Tier 2)
+  - $100 EUR → $118 USD (Tier 2)
+  - $100 GBP → $137 USD (Tier 2)
+- ✅ **createCryptoPayment**: Converts `base_amount` to USD before fee calculation
+- ✅ **getCurrencyRates**: Converts source amount to USD for fee tier selection
+- ✅ **Redis Storage**: Now stores both `base_amount_original` and `base_amount_usd`
+- ✅ **All 11 tests passing** (100% success rate)
 
-#### Checkout Repo Analysis (CheckoutDyno)
-- ✅ **Consistent**: `getData` response structure matches checkout expectations
-- ✅ **Consistent**: `configured-currencies` endpoint provides filtered currencies
-- ✅ **Consistent**: Fee handling (`fee_payer`, `feeInfo`) matches
-- ✅ **Consistent**: Tax handling (`taxInfo`) matches
-- ✅ **Consistent**: Payment timing settings match
-- ✅ **No fixes required**: Checkout repo is compatible with backend
+#### API Documentation Improvements
+- ✅ Consolidated tags from 25+ to 24 logical groups
+- ✅ Added `available_currencies` documentation
+- ✅ Updated `configured-currencies` endpoint documentation
 
 #### Currency Selection Architecture Fix
-- ✅ `getConfiguredCurrenciesForCheckout` now respects `accepted_currencies`
-- ✅ `getData` endpoint returns `available_currencies` in response
+- ✅ `getConfiguredCurrenciesForCheckout` respects `accepted_currencies`
+- ✅ `getData` returns `available_currencies` in response
 - ✅ Direct API endpoints support `accepted_currencies` parameter
-- ✅ 22/22 currency tests passing (100% success rate)
 
-#### Code Cleaning
-- ✅ Fixed all TypeScript compilation errors
-- ✅ All files pass `yarn tsc --noEmit` with 0 errors
+#### Checkout Repo Compatibility (Verified)
+- ✅ All API endpoints compatible with CheckoutDyno
+- ✅ No changes required in checkout repo
 
 ### Previous Sessions
 - ✅ Webhook Enhancements with detailed payloads
-- ✅ Onboarding Status Endpoint (`GET /api/user/onboarding-status`)
+- ✅ Onboarding Status Endpoint
 - ✅ KYC Enforcement Logic ($10K threshold, 90-day grace period)
-- ✅ In-App KYC Warnings with Veriff session URLs
+- ✅ Code Cleaning (0 TypeScript errors)
 
-## Currency Selection Flow
+## Payment Flow for Non-USD Currencies
 
-| Step | Endpoint | Behavior |
-|------|----------|----------|
-| 1. Create Link | `POST /api/pay/createPaymentLink` | Stores `accepted_currencies` in DB + Redis |
-| 2. Load Checkout | `POST /api/pay/getData` | Returns `available_currencies` if restrictions set |
-| 3. Get Currencies | `GET /api/pay/configured-currencies` | Returns ONLY currencies from `accepted_currencies` |
-| 4. Make Payment | `POST /api/pay/createCryptoPayment` | Validates currency is in allowed list |
+### Example: $100 AUD Payment Link
 
-## API Documentation Tags (Reorganized)
+```
+1. CREATE LINK: base_amount=100, base_currency=AUD
+   └─ Store in DB: 100 AUD
 
-### Authentication & User
-- Authentication
-- User Management
+2. CHECKOUT (getCurrencyRates):
+   └─ Convert: 100 AUD → ~$70 USD
+   └─ Fee Tier: Tier 1 ($5-$100 USD) ✓
+   └─ Calculate: 2% + $5 fixed + buffer
+   └─ Return: processing_fee=$5.14, total_usd=$75.11
 
-### Merchant Setup
-- Company
-- Wallet Address Management
-- API Keys
-- KYC Verification
+3. CREATE PAYMENT (createCryptoPayment):
+   └─ Convert to crypto: 100 AUD → 0.032 ETH
+   └─ Store in Redis: {
+        base_amount_original: 100,
+        base_currency: "AUD",
+        base_amount_usd: 70,
+        merchant_amount: 0.030 ETH
+      }
 
-### Payments
-- Payments (link creation/management)
-- Payment Processing (checkout flow)
-- Direct API - Merchant Integration
+4. SETTLEMENT (on payment confirmation):
+   └─ Read merchant_amount from Redis
+   └─ Transfer to merchant: 0.030 ETH
+   └─ Admin fee stays for sweep: 0.002 ETH
+```
 
-### Transactions & Reports
-- Transactions
-- Dashboard
-- Subscriptions
+## Fee Tier Structure (USD)
 
-### Integrations
-- Webhooks
-- Tax
-- Notifications
-
-### Platform
-- Status
-- Knowledge Base
-- Admin
-
-## Checkout Repo Compatibility
-
-**Repo:** https://github.com/Moxxcompany/CheckoutDyno/
-
-**API Calls Used:**
-1. `POST /api/pay/getData` ✅
-2. `POST /api/pay/getCurrencyRates` ✅
-3. `GET /api/pay/configured-currencies` ✅
-4. `POST /api/pay/addPayment` ✅
-5. `POST /api/pay/verifyCryptoPayment` ✅
-
-**Status:** All endpoints compatible, no changes required in checkout repo.
+| Tier | Amount Range | Fixed Fee | Transaction Fee | Buffer |
+|------|-------------|-----------|-----------------|--------|
+| 1    | $5 - $100   | $5.00     | 2%             | Varies |
+| 2    | $101 - $500 | $7.50     | 2%             | Varies |
+| 3    | $501 - $1000| $10.00    | 2%             | Varies |
+| 4    | $1001+      | $15.00    | 2%             | Varies |
 
 ## Prioritized Backlog
 
 ### P0 (Critical)
-- [x] ~~Currency selection fix~~ ✅ COMPLETE
+- [x] ~~Non-USD currency fee calculation fix~~ ✅ COMPLETE
+- [x] ~~Currency selection architecture fix~~ ✅ COMPLETE
 - [x] ~~API documentation update~~ ✅ COMPLETE
-- [x] ~~Checkout compatibility check~~ ✅ VERIFIED
 
 ### P1 (High)
 - [ ] Frontend implementation for accepted_currencies selector
@@ -125,11 +108,10 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 - [ ] Security monitoring dashboards
 
 ## Key API Endpoints
-- `POST /api/pay/createPaymentLink` - Create payment link with currency restrictions
-- `POST /api/pay/getData` - Get payment data including `available_currencies`
-- `GET /api/pay/configured-currencies` - Get filtered currencies for checkout
-- `GET /api/user/onboarding-status` - Merchant onboarding status
-- `GET /api/docs` - Swagger API documentation
+- `POST /api/pay/createPaymentLink` - Create payment link (any currency)
+- `POST /api/pay/getCurrencyRates` - Get rates with USD conversion for fees
+- `POST /api/pay/getData` - Get payment data with `available_currencies`
+- `GET /api/pay/configured-currencies` - Get filtered currencies
 
 ## Test Credentials
 - Email: richard@dyno.pt
@@ -137,4 +119,10 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 - Company ID: 38
 
 ## Test Reports
-- Latest: `/app/test_reports/iteration_3.json` (22 tests, 100% pass rate)
+- Latest: `/app/test_reports/iteration_4.json` (11 tests, 100% pass rate)
+- Currency conversion verified for AUD, EUR, GBP, CAD
+
+## Key Files Modified (Non-USD Fix)
+- `controller/paymentController.ts`:
+  - `createCryptoPayment` (lines 1480-1700): Added USD conversion
+  - `getCurrencyRates` (lines 4358-4550): Added USD conversion for fees
