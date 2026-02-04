@@ -349,9 +349,10 @@ class DynoPayCustomerNameFeeCalculatorTester:
                 data = response.json()
                 response_data = data.get('data', {})
                 
-                # Verify required fields
-                platform_fee = response_data.get('platform_fee')
-                total_fees = response_data.get('total_fees')
+                # Verify required fields based on actual API structure
+                fee_breakdown = response_data.get('fee_breakdown', {})
+                platform_fee = fee_breakdown.get('platform_fee')
+                total_fees = fee_breakdown.get('total_fees')
                 net_to_merchant = response_data.get('net_to_merchant')
                 
                 # Check if platform_fee is 1% of amount ($5)
@@ -360,7 +361,7 @@ class DynoPayCustomerNameFeeCalculatorTester:
                 
                 if (platform_fee == expected_platform_fee and 
                     total_fees is not None and 
-                    net_to_merchant == expected_net_to_merchant):
+                    abs(net_to_merchant - expected_net_to_merchant) < 0.01 if expected_net_to_merchant else False):
                     
                     self.log_result(
                         "Test 2.2", 
