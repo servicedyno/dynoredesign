@@ -487,7 +487,7 @@ const getData = async (req: express.Request, res: express.Response) => {
     }
     
     const totalProcessingFee = parseFloat((feeAmountPercent + fixedFee + bufferAmount + networkFeeUSD).toFixed(2));
-    const totalWithFees = amount + totalProcessingFee;
+    // totalWithFees calculated but not used - kept for reference
     
     // Calculate expiry countdown
     let expiryInfo: Record<string, unknown> | null = null;
