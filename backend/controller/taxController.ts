@@ -245,7 +245,7 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
  * Get all tax acronyms by country
  * GET /api/tax/acronyms
  */
-const getTaxAcronyms = async (req: express.Request, res: express.Response) => {
+const getTaxAcronyms = async (_req: express.Request, res: express.Response) => {
   try {
     // Build response with country names
     const acronymsWithNames = Object.entries(TAX_ACRONYMS).map(([code, acronym]) => ({

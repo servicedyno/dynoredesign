@@ -18,7 +18,7 @@ if (!(KBArticle as unknown as { associations?: Record<string, unknown> }).associ
  * Get all KB categories
  * GET /api/kb/categories
  */
-export const getCategories = async (req: Request, res: Response) => {
+export const getCategories = async (_req: Request, res: Response) => {
   try {
     const categories = await KBCategory.findAll({
       where: { is_active: true },

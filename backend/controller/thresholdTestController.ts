@@ -3,9 +3,8 @@
  * Tests that payments below blockchain threshold are sent entirely to admin wallet
  */
 
-import { getRedisItem, setRedisItem, deleteRedisItem } from '../utils/redisInstance';
-import sequelize from '../utils/dbInstance';
-import { QueryTypes } from 'sequelize';
+import { setRedisItem, deleteRedisItem } from '../utils/redisInstance';
+// sequelize and QueryTypes imports removed - not used
 import { calculateTransactionFees } from './index';
 import { getBlockchainThreshold } from '../utils/feeConfigUtils';
 
