@@ -310,7 +310,7 @@ class TestGetDataAvailableCurrencies:
         
         # Extract payment reference
         payment_link = create_data.get('payment_link', '')
-        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_url else create_data.get('transaction_id', '')
+        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_link else create_data.get('transaction_id', '')
         
         print(f"[Test] Created unrestricted link {link_id}, payment_ref: {payment_ref}")
         
@@ -376,7 +376,7 @@ class TestConfiguredCurrenciesFiltering:
         
         # Extract payment reference
         payment_link = create_data.get('payment_link', '')
-        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_url else create_data.get('transaction_id', '')
+        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_link else create_data.get('transaction_id', '')
         
         print(f"[Test] Created restricted link {link_id}, payment_ref: {payment_ref}")
         
@@ -460,7 +460,7 @@ class TestConfiguredCurrenciesFiltering:
         
         # Extract payment reference
         payment_link = create_data.get('payment_link', '')
-        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_url else create_data.get('transaction_id', '')
+        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_link else create_data.get('transaction_id', '')
         
         print(f"[Test] Created unrestricted link {link_id}, payment_ref: {payment_ref}")
         
@@ -542,7 +542,7 @@ class TestCurrencyValidationAtPayment:
         
         # Extract payment reference
         payment_link = create_data.get('payment_link', '')
-        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_url else create_data.get('transaction_id', '')
+        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_link else create_data.get('transaction_id', '')
         
         print(f"[Test] Created restricted link {link_id}, payment_ref: {payment_ref}")
         
@@ -644,7 +644,7 @@ class TestCurrencyValidationAtPayment:
         
         # Extract payment reference
         payment_link = create_data.get('payment_link', '')
-        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_url else create_data.get('transaction_id', '')
+        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_link else create_data.get('transaction_id', '')
         
         print(f"[Test] Created restricted link {link_id}, payment_ref: {payment_ref}")
         
