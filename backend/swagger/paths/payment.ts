@@ -1517,47 +1517,45 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
 
   // ==================== WEBHOOKS ====================
   
-  // MERCHANT WEBHOOK DOCUMENTATION
-  // This describes what YOUR server receives when payment events occur
-  '/webhooks/merchant-endpoint': {
+  // MERCHANT WEBHOOK DOCUMENTATION - DEPRECATED
+  // See 📡 Webhooks section for updated documentation
+  '/webhooks/merchant-endpoint-legacy': {
     post: {
-      tags: ['Webhooks'],
-      summary: '📘 Merchant Webhook Payloads (Documentation)',
-      description: `**This is documentation only - not an actual DynoPay endpoint.**
+      tags: ['🗄️ Webhook Logs'],
+      summary: '⚠️ DEPRECATED - See 📡 Webhooks section',
+      description: `**⚠️ DEPRECATED DOCUMENTATION**
 
-When you create a payment link with a \`webhook_url\`, DynoPay will POST to YOUR server when payment events occur.
+This documentation is outdated. Please refer to the **📡 Webhooks** section for:
+- Current webhook payload structures
+- All enhanced fields (merchant_amount, total_fee, customer_name, etc.)
+- Payment Link vs Direct API webhook differences
+- Integration guides and code examples
 
-### Webhook Setup
-1. Create a payment link with \`webhook_url: "https://yourserver.com/webhooks/dynopay"\`
-2. DynoPay sends POST requests to your URL when payment status changes
-3. Your server should respond with HTTP 200 to acknowledge receipt
-
-### Security
-- Verify the \`signature\` header using your API secret
-- Signature: HMAC-SHA256 of request body with your secret key
-- Always validate \`transaction_id\` matches your records
-
-### Retry Policy
-- DynoPay retries failed webhooks 3 times with exponential backoff
-- Intervals: 1 min, 5 min, 30 min
-- After 3 failures, webhook is marked as failed (check dashboard)`,
+The 📡 Webhooks section contains the latest webhook documentation.`,
       requestBody: {
-        description: 'Example webhook payloads sent to YOUR webhook_url',
+        description: 'See 📡 Webhooks section for current payload structures',
         content: {
           'application/json': {
             examples: {
-              'payment.confirmed': {
-                summary: '✅ Payment Confirmed (Crypto)',
-                description: 'Sent when crypto payment is fully confirmed on blockchain',
+              'deprecated': {
+                summary: '⚠️ See 📡 Webhooks section',
                 value: {
-                  event: 'payment.confirmed',
-                  timestamp: '2024-01-15T10:45:00Z',
-                  data: {
-                    transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-                    link_id: 'link_xyz789',
-                    status: 'completed',
-                    amount: 199.99,
-                    currency: 'USD',
+                  message: "This documentation is deprecated. Please refer to the 📡 Webhooks section for current webhook payload structures."
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'See 📡 Webhooks section for current documentation'
+        }
+      }
+    }
+  },
+  
+  '/api/crypto-webhook': {
                     crypto_amount: 0.00456789,
                     crypto_currency: 'BTC',
                     tx_hash: '7a91f8b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
