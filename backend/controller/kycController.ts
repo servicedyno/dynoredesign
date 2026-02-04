@@ -60,11 +60,22 @@ const getKYCStatus = async (req: express.Request, res: express.Response) => {
     });
 
     const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
-    const volumeThreshold = 5000;
+    const volumeThreshold = 10000; // $10,000 USD threshold
+    const gracePeriodDays = 90;
     const requiresKYC = totalVolume >= volumeThreshold;
 
+    // Calculate grace period info
+    let gracePeriodInfo = null;
+    if (requiresKYC && kycRecord?.get("status") !== "approved") {
+      // This is simplified - actual grace period calculation happens in payment endpoints
+      gracePeriodInfo = {
+        grace_period_days: gracePeriodDays,
+        message: `You have ${gracePeriodDays} days from when you first exceeded the threshold to complete KYC verification.`
+      };
+    }
+
     // Get KYC requirements status
-    const needsSubmission = requiresKYC && (!kycRecord || kycRecord.get("status") === "pending");
+    const needsSubmission = requiresKYC && (!kycRecord || kycRecord.get("status") === "pending" || kycRecord.get("status") === "not_started");
     const canProcess = !requiresKYC || (kycRecord && kycRecord.get("status") === "approved");
 
     return successResponseHelper(res, 200, "KYC status retrieved successfully", {
@@ -75,6 +86,7 @@ const getKYCStatus = async (req: express.Request, res: express.Response) => {
       needs_submission: needsSubmission,
       can_process_payments: canProcess,
       status: kycRecord ? kycRecord.get("status") : "not_started",
+      grace_period: gracePeriodInfo,
     });
 
   } catch (error: unknown) {
@@ -91,8 +103,9 @@ const getKYCStatus = async (req: express.Request, res: express.Response) => {
 const getKYCRequirements = async (req: express.Request, res: express.Response) => {
   try {
     const requirements = {
-      volume_threshold: 5000,
-      threshold_description: "KYC verification is required when your transaction volume reaches $5,000",
+      volume_threshold: 10000,
+      grace_period_days: 90,
+      threshold_description: "KYC verification is required when your transaction volume reaches $10,000. You have 90 days from reaching the threshold to complete verification.",
       required_documents: [
         {
           type: "government_id",
