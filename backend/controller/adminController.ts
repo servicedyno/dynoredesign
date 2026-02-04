@@ -350,15 +350,6 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
       fee: fees,
     });
 
-    // if (transactionDetails) {
-    //   await adminWalletModel.decrement("fee", {
-    //     by: amount,
-    //     where: {
-    //       wallet_id: adminWallet.wallet_id,
-    //     },
-    //   });
-    // }
-
     successResponseHelper(res, 200, "Amount withdrawed!", transactionDetails);
   } catch (e) {
     const message = getErrorMessage(e);
