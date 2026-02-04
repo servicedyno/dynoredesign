@@ -329,5 +329,5 @@ The system demonstrates:
 
 **Report Generated:** January 25, 2026  
 **Test Credentials:** nomadly@moxx.co  
-**Backend URL:** https://cryptocheckout-2.preview.emergentagent.com  
+**Backend URL:** https://anomaly-finder-10.preview.emergentagent.com  
 **Tester:** Main Development Agent

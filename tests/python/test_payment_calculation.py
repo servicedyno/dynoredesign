@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://cryptocheckout-2.preview.emergentagent.com/api"
+BASE_URL = "https://anomaly-finder-10.preview.emergentagent.com/api"
 
 # First get payment data
 print("1. Getting payment data...")

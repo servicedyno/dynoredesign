@@ -8,7 +8,7 @@ import json
 from urllib.parse import urlparse, parse_qs
 
 def manual_test():
-    backend_url = "https://cryptocheckout-2.preview.emergentagent.com"
+    backend_url = "https://anomaly-finder-10.preview.emergentagent.com"
     
     # First authenticate
     response = requests.post(

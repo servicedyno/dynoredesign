@@ -23,7 +23,7 @@ import base64
 import re
 
 # Configuration
-BACKEND_URL = "https://cryptocheckout-2.preview.emergentagent.com"
+BACKEND_URL = "https://anomaly-finder-10.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Test credentials

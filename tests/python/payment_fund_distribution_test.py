@@ -14,7 +14,7 @@ Test Credentials:
 - Email: john@dyno.pt
 - Password: Katiekendra123@
 - Company ID: 38
-- Backend URL: https://cryptocheckout-2.preview.emergentagent.com
+- Backend URL: https://anomaly-finder-10.preview.emergentagent.com
 """
 
 import requests
@@ -25,7 +25,7 @@ from typing import Dict, Any, Optional
 
 class DynoPayTester:
     def __init__(self):
-        self.base_url = "https://cryptocheckout-2.preview.emergentagent.com"
+        self.base_url = "https://anomaly-finder-10.preview.emergentagent.com"
         self.session = requests.Session()
         self.session.headers.update({
             'Content-Type': 'application/json',
