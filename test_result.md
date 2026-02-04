@@ -13,7 +13,7 @@ current_test_task:
     file: "/app/backend/controller/paymentController.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -2114,7 +2114,7 @@ ports:
     file: "/app/backend/services/merchantPoolService.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -2126,7 +2126,7 @@ ports:
     file: "/app/backend/controller/paymentController.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
