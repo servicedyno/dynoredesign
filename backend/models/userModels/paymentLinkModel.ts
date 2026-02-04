@@ -147,6 +147,12 @@ const paymentLinkModel = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    // Customer name - optional field to identify who the payment is for
+    customer_name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: "Name of the customer this payment link is created for",
+    },
   },
   {
     tableName: "tbl_payment_link",
