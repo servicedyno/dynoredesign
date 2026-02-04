@@ -920,7 +920,7 @@ const feeEstimation = async (
   fromAddress,
   toAddress,
   amount,
-  contractAddress = "",
+  _contractAddress = "",
   bchInputs = 1
 ) => {
   let fees;
@@ -1016,7 +1016,7 @@ const batchFeeEstimation = async ({
   fromAddresses,
   toAddresses,
   amount,
-  contractAddress = "",
+  _contractAddress = "",
   bchInputs = 1,
   totalAddress,
 }) => {
