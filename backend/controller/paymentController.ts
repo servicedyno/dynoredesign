@@ -4497,6 +4497,68 @@ const createPaymentLink = async (
       }
     }
     
+    // ========================================
+    // KYC ENFORCEMENT: Block payment creation if KYC required but not approved
+    // ========================================
+    const kycWhereClause: Record<string, unknown> = {
+      user_id: userData.user_id,
+    };
+    if (company_id) {
+      kycWhereClause.company_id = company_id;
+    }
+    
+    // Calculate total transaction volume
+    const volumeQuery = company_id
+      ? `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
+         FROM tbl_customer_transaction 
+         WHERE company_id = :companyId AND status = 'successful'`
+      : `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
+         FROM tbl_customer_transaction 
+         WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId) AND status = 'successful'`;
+    
+    const volumeResult = await sequelize.query<{ total_volume: string }>(
+      volumeQuery,
+      {
+        replacements: { userId: userData.user_id, companyId: company_id },
+        type: QueryTypes.SELECT,
+      }
+    );
+    
+    const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
+    const kycThreshold = 5000; // $5,000 USD threshold
+    
+    if (totalVolume >= kycThreshold) {
+      // KYC is required - check if it's approved
+      const kycRecord = await kycModel.findOne({
+        where: kycWhereClause,
+        order: [["created_at", "DESC"]],
+      });
+      
+      const kycStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
+      
+      if (kycStatus !== "approved") {
+        console.log(`[KYC BLOCK] User ${userData.user_id} blocked from creating payment link. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}`);
+        
+        return errorResponseHelper(
+          res,
+          403,
+          `KYC verification required. Your transaction volume ($${totalVolume.toFixed(2)}) has exceeded the $${kycThreshold} threshold. Please complete KYC verification to continue creating payment links. Current KYC status: ${kycStatus}`,
+          {
+            error_code: "KYC_REQUIRED",
+            total_volume: totalVolume,
+            threshold: kycThreshold,
+            kyc_status: kycStatus,
+            action_required: "Complete KYC verification at /api/kyc/submit",
+          }
+        );
+      }
+      
+      console.log(`[KYC OK] User ${userData.user_id} KYC approved. Volume: $${totalVolume.toFixed(2)}`);
+    }
+    // ========================================
+    // END KYC ENFORCEMENT
+    // ========================================
+    
     // Phase 11: Validate at least one crypto wallet is configured for this company
     const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
     
