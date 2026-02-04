@@ -4332,6 +4332,7 @@ const getCurrencyRates = async (
               
               const fixedFee = Number(feeResult.fixedFee) || 0;
               const transactionFee = Number(feeResult.transactionFee) || 0;
+              const blockchainBuffer = Number(feeResult.blockchainBuffer) || 0;
               const networkFeeUSD = Number(networkFee.feeInUSD) || 0;
               
               const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
