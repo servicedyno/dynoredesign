@@ -236,9 +236,9 @@ class TestGetDataAvailableCurrencies:
         link_id = create_data['link_id']
         CREATED_LINK_IDS.append(link_id)
         
-        # Extract payment reference from payment_url
-        payment_url = create_data.get('payment_url', '')
-        payment_ref = payment_url.split('d=')[-1] if 'd=' in payment_url else create_data.get('transaction_id', '')
+        # Extract payment reference from payment_link
+        payment_link = create_data.get('payment_link', '')
+        payment_ref = payment_link.split('d=')[-1] if 'd=' in payment_link else create_data.get('transaction_id', '')
         
         print(f"[Test] Created link {link_id}, payment_ref: {payment_ref}")
         
