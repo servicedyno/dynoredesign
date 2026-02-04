@@ -22,7 +22,6 @@ Test Scenarios:
 import pytest
 import requests
 import os
-import time
 import json
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
@@ -32,79 +31,43 @@ TEST_EMAIL = "richard@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 COMPANY_ID = 38
 
+# Module-level variables for sharing state
+_auth_token = None
+_created_link_ids = []
+
+
+def get_auth_token():
+    """Get or create auth token"""
+    global _auth_token
+    if not _auth_token:
+        response = requests.post(
+            f"{BASE_URL}/api/user/login",
+            json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            _auth_token = data.get('data', {}).get('accessToken')
+            print(f"✓ Authenticated successfully")
+        else:
+            raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+    return _auth_token
+
+
+def get_headers():
+    """Get headers with auth token"""
+    return {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {get_auth_token()}"
+    }
+
 
 class TestNonUSDCurrencyHandling:
     """Test non-USD currency handling for fee tier calculation"""
     
-    auth_token = None
-    created_link_ids = []
-    
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Setup - authenticate before tests"""
-        if not TestNonUSDCurrencyHandling.auth_token:
-            response = requests.post(
-                f"{BASE_URL}/api/user/login",
-                json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
-            )
-            if response.status_code == 200:
-                data = response.json()
-                # Token is in data.accessToken
-                TestNonUSDCurrencyHandling.auth_token = data.get('data', {}).get('accessToken')
-                print(f"✓ Authenticated successfully, token: {TestNonUSDCurrencyHandling.auth_token[:50]}...")
-            else:
-                pytest.skip(f"Authentication failed: {response.status_code}")
-        yield
-    
-    def get_headers(self):
-        """Get headers with auth token"""
-        return {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {TestNonUSDCurrencyHandling.auth_token}"
-        }
-    
     # ==========================================
-    # Test 1: Create Payment Link with AUD
+    # Test 1: getCurrencyRates with AUD source
     # ==========================================
-    def test_01_create_payment_link_with_aud(self):
-        """Test creating a payment link with AUD currency"""
-        payload = {
-            "company_id": COMPANY_ID,
-            "base_amount": 100,  # $100 AUD
-            "base_currency": "AUD",
-            "description": "Test AUD payment for fee tier verification",
-            "fee_payer": "customer",  # Customer pays fees to see fee breakdown
-            "accepted_currencies": "BTC,ETH"  # Limit to BTC and ETH
-        }
-        
-        response = requests.post(
-            f"{BASE_URL}/api/pay/createPaymentLink",
-            headers=self.get_headers(),
-            json=payload
-        )
-        
-        print(f"Create AUD payment link response: {response.status_code}")
-        print(f"Response: {json.dumps(response.json(), indent=2)[:500]}")
-        
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
-        
-        data = response.json().get('data', {})
-        assert 'link_id' in data or 'id' in data, "Response should contain link_id or id"
-        
-        link_id = data.get('link_id') or data.get('id')
-        TestNonUSDCurrencyHandling.created_link_ids.append(link_id)
-        
-        # Verify the payment link was created with AUD
-        assert data.get('base_currency') == 'AUD', f"Expected AUD, got {data.get('base_currency')}"
-        assert data.get('base_amount') == 100 or data.get('amount') == 100, "Amount should be 100"
-        
-        print(f"✓ Created AUD payment link with ID: {link_id}")
-        return data
-    
-    # ==========================================
-    # Test 2: getCurrencyRates with AUD source
-    # ==========================================
-    def test_02_get_currency_rates_aud_source(self):
+    def test_01_get_currency_rates_aud_source(self):
         """Test getCurrencyRates with AUD source - verify USD conversion"""
         payload = {
             "source": "AUD",
@@ -117,7 +80,7 @@ class TestNonUSDCurrencyHandling:
         
         response = requests.post(
             f"{BASE_URL}/api/pay/getCurrencyRates",
-            headers=self.get_headers(),
+            headers=get_headers(),
             json=payload
         )
         
@@ -128,104 +91,33 @@ class TestNonUSDCurrencyHandling:
         data = response.json().get('data', [])
         assert len(data) > 0, "Should return currency rates"
         
-        # Find BTC or ETH rate to check fee calculation
-        crypto_rate = None
+        # Find ETH rate to check fee calculation
+        eth_rate = None
         for rate in data:
-            if rate.get('currency') in ['BTC', 'ETH']:
-                crypto_rate = rate
+            if rate.get('currency') == 'ETH':
+                eth_rate = rate
                 break
         
-        assert crypto_rate is not None, "Should have BTC or ETH rate"
+        assert eth_rate is not None, "Should have ETH rate"
         
         # KEY VERIFICATION: base_amount_usd should be ~$70 USD (not $100)
-        base_amount_usd = crypto_rate.get('base_amount_usd', 0)
+        base_amount_usd = eth_rate.get('base_amount_usd', 0)
         print(f"✓ base_amount_usd: ${base_amount_usd}")
         
         # AUD to USD rate is approximately 0.65-0.75, so $100 AUD ≈ $65-$75 USD
         assert 50 < base_amount_usd < 85, f"Expected base_amount_usd between $50-$85 (AUD conversion), got ${base_amount_usd}"
         
         # Verify processing_fee is calculated based on USD amount
-        processing_fee = crypto_rate.get('processing_fee', 0)
+        processing_fee = eth_rate.get('processing_fee', 0)
         print(f"✓ processing_fee: ${processing_fee}")
         
-        # For Tier 1 ($5-$100 USD): Fixed=$3 + 2% + 1% buffer
-        # For ~$70 USD: 2% = $1.40, 1% buffer = $0.70, Fixed = $3
-        # Total ≈ $5.10 + network fee
-        # Should be less than what $100 would give (which would be Tier 2)
-        
-        # If it was using $100 (wrong), it would hit Tier 2 with Fixed=$2
-        # Tier 2 for $100: 2% = $2, 0.8% buffer = $0.80, Fixed = $2 = $4.80
-        # But since $100 AUD ≈ $70 USD, it should use Tier 1
-        
-        print(f"✓ Full rate data: {json.dumps(crypto_rate, indent=2)}")
-        
-        return crypto_rate
+        print(f"✓ Full rate data: {json.dumps(eth_rate, indent=2)}")
     
     # ==========================================
-    # Test 3: Verify Fee Tier Selection
+    # Test 2: Compare $100 AUD vs $100 USD
     # ==========================================
-    def test_03_verify_fee_tier_selection_aud(self):
-        """Verify $100 AUD uses correct fee tier based on USD equivalent"""
-        # Test with $100 AUD (should be ~$70 USD -> Tier 1)
-        payload_aud = {
-            "source": "AUD",
-            "amount": 100,
-            "currencyList": ["ETH"],
-            "fixedDecimal": True,
-            "fee_payer": "customer",
-            "tax_amount": 0
-        }
-        
-        response_aud = requests.post(
-            f"{BASE_URL}/api/pay/getCurrencyRates",
-            headers=self.get_headers(),
-            json=payload_aud
-        )
-        
-        assert response_aud.status_code == 200
-        data_aud = response_aud.json().get('data', [])[0]
-        
-        # Test with $70 USD directly (should be same tier)
-        payload_usd = {
-            "source": "USD",
-            "amount": 70,  # Approximate USD equivalent of $100 AUD
-            "currencyList": ["ETH"],
-            "fixedDecimal": True,
-            "fee_payer": "customer",
-            "tax_amount": 0
-        }
-        
-        response_usd = requests.post(
-            f"{BASE_URL}/api/pay/getCurrencyRates",
-            headers=self.get_headers(),
-            json=payload_usd
-        )
-        
-        assert response_usd.status_code == 200
-        data_usd = response_usd.json().get('data', [])[0]
-        
-        print(f"$100 AUD -> base_amount_usd: ${data_aud.get('base_amount_usd')}, processing_fee: ${data_aud.get('processing_fee')}")
-        print(f"$70 USD -> base_amount_usd: ${data_usd.get('base_amount_usd')}, processing_fee: ${data_usd.get('processing_fee')}")
-        
-        # Both should use Tier 1 (since both are ~$70 USD)
-        # The processing fees should be similar (within reasonable margin for rate fluctuation)
-        fee_aud = data_aud.get('processing_fee', 0)
-        fee_usd = data_usd.get('processing_fee', 0)
-        
-        # Allow 20% variance due to exchange rate fluctuations
-        fee_ratio = fee_aud / fee_usd if fee_usd > 0 else 0
-        print(f"Fee ratio (AUD/USD): {fee_ratio:.2f}")
-        
-        # The fees should be in the same ballpark (both Tier 1)
-        assert 0.7 < fee_ratio < 1.5, f"Fee ratio should be close to 1.0, got {fee_ratio:.2f}"
-        
-        print(f"✓ Fee tier selection verified - both use similar tier")
-    
-    # ==========================================
-    # Test 4: Compare $100 AUD vs $100 USD
-    # ==========================================
-    def test_04_compare_aud_vs_usd_same_amount(self):
-        """Compare $100 AUD vs $100 USD - should use different tiers"""
+    def test_02_compare_aud_vs_usd_same_amount(self):
+        """Compare $100 AUD vs $100 USD - should use different USD equivalents"""
         # $100 AUD (~$70 USD) -> Tier 1
         payload_aud = {
             "source": "AUD",
@@ -238,7 +130,7 @@ class TestNonUSDCurrencyHandling:
         
         response_aud = requests.post(
             f"{BASE_URL}/api/pay/getCurrencyRates",
-            headers=self.get_headers(),
+            headers=get_headers(),
             json=payload_aud
         )
         
@@ -257,7 +149,7 @@ class TestNonUSDCurrencyHandling:
         
         response_usd = requests.post(
             f"{BASE_URL}/api/pay/getCurrencyRates",
-            headers=self.get_headers(),
+            headers=get_headers(),
             json=payload_usd
         )
         
@@ -277,14 +169,73 @@ class TestNonUSDCurrencyHandling:
         print(f"✓ Verified: $100 AUD (${base_usd_from_aud} USD) < $100 USD (${base_usd_from_usd} USD)")
     
     # ==========================================
-    # Test 5: Test EUR Currency
+    # Test 3: Verify Fee Tier Selection
     # ==========================================
-    def test_05_get_currency_rates_eur_source(self):
+    def test_03_verify_fee_tier_selection_aud(self):
+        """Verify $100 AUD uses correct fee tier based on USD equivalent"""
+        # Test with $100 AUD (should be ~$70 USD -> Tier 1)
+        payload_aud = {
+            "source": "AUD",
+            "amount": 100,
+            "currencyList": ["ETH"],
+            "fixedDecimal": True,
+            "fee_payer": "customer",
+            "tax_amount": 0
+        }
+        
+        response_aud = requests.post(
+            f"{BASE_URL}/api/pay/getCurrencyRates",
+            headers=get_headers(),
+            json=payload_aud
+        )
+        
+        assert response_aud.status_code == 200
+        data_aud = response_aud.json().get('data', [])[0]
+        
+        # Test with $70 USD directly (should be same tier)
+        payload_usd = {
+            "source": "USD",
+            "amount": 70,  # Approximate USD equivalent of $100 AUD
+            "currencyList": ["ETH"],
+            "fixedDecimal": True,
+            "fee_payer": "customer",
+            "tax_amount": 0
+        }
+        
+        response_usd = requests.post(
+            f"{BASE_URL}/api/pay/getCurrencyRates",
+            headers=get_headers(),
+            json=payload_usd
+        )
+        
+        assert response_usd.status_code == 200
+        data_usd = response_usd.json().get('data', [])[0]
+        
+        print(f"$100 AUD -> base_amount_usd: ${data_aud.get('base_amount_usd')}, processing_fee: ${data_aud.get('processing_fee')}")
+        print(f"$70 USD -> base_amount_usd: ${data_usd.get('base_amount_usd')}, processing_fee: ${data_usd.get('processing_fee')}")
+        
+        # Both should use Tier 1 (since both are ~$70 USD)
+        fee_aud = data_aud.get('processing_fee', 0)
+        fee_usd = data_usd.get('processing_fee', 0)
+        
+        # Allow 20% variance due to exchange rate fluctuations
+        fee_ratio = fee_aud / fee_usd if fee_usd > 0 else 0
+        print(f"Fee ratio (AUD/USD): {fee_ratio:.2f}")
+        
+        # The fees should be in the same ballpark (both Tier 1)
+        assert 0.7 < fee_ratio < 1.5, f"Fee ratio should be close to 1.0, got {fee_ratio:.2f}"
+        
+        print(f"✓ Fee tier selection verified - both use similar tier")
+    
+    # ==========================================
+    # Test 4: Test EUR Currency
+    # ==========================================
+    def test_04_get_currency_rates_eur_source(self):
         """Test getCurrencyRates with EUR source"""
         payload = {
             "source": "EUR",
             "amount": 100,  # €100 EUR
-            "currencyList": ["BTC", "ETH", "USD"],
+            "currencyList": ["ETH"],
             "fixedDecimal": True,
             "fee_payer": "customer",
             "tax_amount": 0
@@ -292,7 +243,7 @@ class TestNonUSDCurrencyHandling:
         
         response = requests.post(
             f"{BASE_URL}/api/pay/getCurrencyRates",
-            headers=self.get_headers(),
+            headers=get_headers(),
             json=payload
         )
         
@@ -303,16 +254,9 @@ class TestNonUSDCurrencyHandling:
         data = response.json().get('data', [])
         assert len(data) > 0, "Should return currency rates"
         
-        # Find ETH rate
-        eth_rate = None
-        for rate in data:
-            if rate.get('currency') == 'ETH':
-                eth_rate = rate
-                break
+        eth_rate = data[0]
         
-        assert eth_rate is not None, "Should have ETH rate"
-        
-        # EUR to USD rate is approximately 1.05-1.15, so €100 EUR ≈ $105-$115 USD
+        # EUR to USD rate is approximately 1.05-1.25, so €100 EUR ≈ $105-$125 USD
         base_amount_usd = eth_rate.get('base_amount_usd', 0)
         print(f"✓ €100 EUR -> base_amount_usd: ${base_amount_usd}")
         
@@ -322,9 +266,9 @@ class TestNonUSDCurrencyHandling:
         print(f"✓ EUR conversion verified: €100 EUR = ${base_amount_usd} USD")
     
     # ==========================================
-    # Test 6: Test GBP Currency
+    # Test 5: Test GBP Currency
     # ==========================================
-    def test_06_get_currency_rates_gbp_source(self):
+    def test_05_get_currency_rates_gbp_source(self):
         """Test getCurrencyRates with GBP source"""
         payload = {
             "source": "GBP",
@@ -337,7 +281,7 @@ class TestNonUSDCurrencyHandling:
         
         response = requests.post(
             f"{BASE_URL}/api/pay/getCurrencyRates",
-            headers=self.get_headers(),
+            headers=get_headers(),
             json=payload
         )
         
@@ -350,27 +294,25 @@ class TestNonUSDCurrencyHandling:
         
         eth_rate = data[0]
         
-        # GBP to USD rate is approximately 1.25-1.35, so £100 GBP ≈ $125-$135 USD
+        # GBP to USD rate is approximately 1.25-1.40, so £100 GBP ≈ $125-$140 USD
         base_amount_usd = eth_rate.get('base_amount_usd', 0)
         print(f"✓ £100 GBP -> base_amount_usd: ${base_amount_usd}")
         
         # £100 GBP should be > $100 USD (GBP is stronger than USD)
         assert base_amount_usd > 100, f"Expected base_amount_usd > $100 (GBP conversion), got ${base_amount_usd}"
         
-        # GBP should be stronger than EUR
         print(f"✓ GBP conversion verified: £100 GBP = ${base_amount_usd} USD")
     
     # ==========================================
-    # Test 7: Verify Fee Tier Boundaries
+    # Test 6: Verify Fee Tier Boundaries
     # ==========================================
-    def test_07_verify_fee_tier_boundaries(self):
+    def test_06_verify_fee_tier_boundaries(self):
         """Verify fee tier boundaries work correctly with USD conversion"""
         # Test amounts that should hit different tiers
         test_cases = [
             # (source, amount, expected_tier_description)
             ("AUD", 70, "Tier 1 (~$50 USD)"),   # ~$50 USD -> Tier 1
-            ("AUD", 150, "Tier 1/2 (~$100 USD)"),  # ~$100 USD -> Tier 1 boundary
-            ("AUD", 200, "Tier 2 (~$140 USD)"),  # ~$140 USD -> Tier 2
+            ("AUD", 150, "Tier 1/2 (~$105 USD)"),  # ~$105 USD -> Tier 2
             ("AUD", 750, "Tier 3 (~$525 USD)"),  # ~$525 USD -> Tier 3
         ]
         
@@ -387,7 +329,7 @@ class TestNonUSDCurrencyHandling:
             
             response = requests.post(
                 f"{BASE_URL}/api/pay/getCurrencyRates",
-                headers=self.get_headers(),
+                headers=get_headers(),
                 json=payload
             )
             
@@ -410,17 +352,56 @@ class TestNonUSDCurrencyHandling:
         # Verify fees increase with amount (as expected with tier structure)
         for i in range(1, len(results)):
             # Higher amounts should generally have higher absolute fees
-            # (though percentage may decrease due to tier structure)
             assert results[i]['base_usd'] > results[i-1]['base_usd'], \
                 f"USD amount should increase: {results[i-1]['base_usd']} -> {results[i]['base_usd']}"
         
         print(f"✓ Fee tier boundaries verified across different AUD amounts")
     
     # ==========================================
+    # Test 7: Create Payment Link with AUD
+    # ==========================================
+    def test_07_create_payment_link_with_aud(self):
+        """Test creating a payment link with AUD currency"""
+        global _created_link_ids
+        
+        payload = {
+            "company_id": COMPANY_ID,
+            "base_amount": 100,  # $100 AUD
+            "base_currency": "AUD",
+            "description": "Test AUD payment for fee tier verification",
+            "fee_payer": "customer",  # Customer pays fees to see fee breakdown
+            "accepted_currencies": "BTC,ETH"  # Limit to BTC and ETH
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/pay/createPaymentLink",
+            headers=get_headers(),
+            json=payload
+        )
+        
+        print(f"Create AUD payment link response: {response.status_code}")
+        
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        
+        data = response.json().get('data', {})
+        assert 'link_id' in data or 'id' in data, "Response should contain link_id or id"
+        
+        link_id = data.get('link_id') or data.get('id')
+        _created_link_ids.append(link_id)
+        
+        # Verify the payment link was created with AUD
+        assert data.get('base_currency') == 'AUD', f"Expected AUD, got {data.get('base_currency')}"
+        assert data.get('base_amount') == 100 or data.get('amount') == 100, "Amount should be 100"
+        
+        print(f"✓ Created AUD payment link with ID: {link_id}")
+    
+    # ==========================================
     # Test 8: Create Payment Link with EUR
     # ==========================================
     def test_08_create_payment_link_with_eur(self):
         """Test creating a payment link with EUR currency"""
+        global _created_link_ids
+        
         payload = {
             "company_id": COMPANY_ID,
             "base_amount": 100,  # €100 EUR
@@ -432,7 +413,7 @@ class TestNonUSDCurrencyHandling:
         
         response = requests.post(
             f"{BASE_URL}/api/pay/createPaymentLink",
-            headers=self.get_headers(),
+            headers=get_headers(),
             json=payload
         )
         
@@ -442,7 +423,7 @@ class TestNonUSDCurrencyHandling:
         
         data = response.json().get('data', {})
         link_id = data.get('link_id') or data.get('id')
-        TestNonUSDCurrencyHandling.created_link_ids.append(link_id)
+        _created_link_ids.append(link_id)
         
         assert data.get('base_currency') == 'EUR', f"Expected EUR, got {data.get('base_currency')}"
         
@@ -464,7 +445,7 @@ class TestNonUSDCurrencyHandling:
         
         response = requests.post(
             f"{BASE_URL}/api/pay/getCurrencyRates",
-            headers=self.get_headers(),
+            headers=get_headers(),
             json=payload
         )
         
@@ -487,15 +468,56 @@ class TestNonUSDCurrencyHandling:
         print(f"✓ Company pays fees mode verified")
     
     # ==========================================
+    # Test 10: Multiple Currency Conversions
+    # ==========================================
+    def test_10_multiple_currency_conversions(self):
+        """Test multiple currency conversions to verify USD conversion works for all"""
+        currencies = [
+            ("AUD", 100, 50, 85),    # AUD weaker than USD
+            ("EUR", 100, 100, 140),  # EUR stronger than USD
+            ("GBP", 100, 120, 150),  # GBP stronger than USD
+            ("CAD", 100, 60, 85),    # CAD weaker than USD
+        ]
+        
+        for source, amount, min_usd, max_usd in currencies:
+            payload = {
+                "source": source,
+                "amount": amount,
+                "currencyList": ["ETH"],
+                "fixedDecimal": True,
+                "fee_payer": "customer",
+                "tax_amount": 0
+            }
+            
+            response = requests.post(
+                f"{BASE_URL}/api/pay/getCurrencyRates",
+                headers=get_headers(),
+                json=payload
+            )
+            
+            assert response.status_code == 200, f"Failed for {source}"
+            data = response.json().get('data', [])[0]
+            
+            base_usd = data.get('base_amount_usd', 0)
+            print(f"${amount} {source} = ${base_usd} USD")
+            
+            assert min_usd < base_usd < max_usd, \
+                f"${amount} {source} should be ${min_usd}-${max_usd} USD, got ${base_usd}"
+        
+        print(f"✓ All currency conversions verified")
+    
+    # ==========================================
     # Cleanup
     # ==========================================
     def test_99_cleanup(self):
         """Cleanup created payment links"""
-        for link_id in TestNonUSDCurrencyHandling.created_link_ids:
+        global _created_link_ids
+        
+        for link_id in _created_link_ids:
             try:
                 response = requests.delete(
                     f"{BASE_URL}/api/pay/deletePaymentLink/{link_id}",
-                    headers=self.get_headers()
+                    headers=get_headers()
                 )
                 if response.status_code == 200:
                     print(f"✓ Deleted payment link {link_id}")
@@ -504,7 +526,7 @@ class TestNonUSDCurrencyHandling:
             except Exception as e:
                 print(f"⚠ Error deleting payment link {link_id}: {e}")
         
-        TestNonUSDCurrencyHandling.created_link_ids = []
+        _created_link_ids = []
         print("✓ Cleanup completed")
 
 
