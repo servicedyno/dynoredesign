@@ -705,11 +705,6 @@ const regenerateApiKey = async (req: express.Request, res: express.Response) => 
       { where: { api_id, user_id: userData.user_id } }
     );
 
-    // Fetch updated record
-    const updatedApi = await apiModel.findOne({
-      where: { api_id },
-    });
-
     // Send API key regenerated notification email
     try {
       const { sendApiKeyCreatedEmail } = await import("../services/emailService");
