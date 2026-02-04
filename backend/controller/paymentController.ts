@@ -4364,6 +4364,23 @@ const getCurrencyRates = async (
 
     console.log(`[getCurrencyRates] Request params: amount=${amount}, source=${source}, fee_payer=${fee_payer}, tax_amount=${tax_amount}`);
 
+    // Convert source amount to USD if needed (for fee tier calculation)
+    let amountUSD = amount;
+    if (source && source !== 'USD') {
+      try {
+        const usdConversion = await currencyConvert({
+          sourceCurrency: source,
+          currency: ['USD'],
+          amount: amount,
+          fixedDecimal: true,
+        });
+        amountUSD = Number(usdConversion[0]?.amount || amount);
+        console.log(`[getCurrencyRates] Converted ${amount} ${source} → ${amountUSD.toFixed(2)} USD for fee calculation`);
+      } catch (conversionError) {
+        console.warn(`[getCurrencyRates] USD conversion failed, using original amount:`, conversionError);
+      }
+    }
+
     const currencyRateList = await currencyConvert({
       sourceCurrency: source,
       currency: currencyList,
@@ -4392,7 +4409,8 @@ const getCurrencyRates = async (
               
               // Use pre-fetched fees instead of individual API call
               const networkFee = allBlockchainFees[chain] || await getBlockchainNetworkFee(chain);
-              const feeResult = await calculateTransactionFees(chain, amount);
+              // Use USD amount for fee tier calculation
+              const feeResult = await calculateTransactionFees(chain, amountUSD);
               
               const fixedFee = Number(feeResult.fixedFee) || 0;
               const transactionFee = Number(feeResult.transactionFee) || 0;
@@ -4401,11 +4419,10 @@ const getCurrencyRates = async (
               
               const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
               const taxAmountNum = Number(tax_amount) || 0;
-              // totalAmountUSD calculated but not used - kept for reference
               
               // Round all amounts to 2 decimal places for consistency
               const roundedTotalFeesUSD = parseFloat(totalFeesUSD.toFixed(2));
-              const roundedTotalAmountUSD = parseFloat((amount + roundedTotalFeesUSD + taxAmountNum).toFixed(2));
+              const roundedTotalAmountUSD = parseFloat((amountUSD + roundedTotalFeesUSD + taxAmountNum).toFixed(2));
               
               // Get the exchange rate and convert fees/tax to target currency
               const exchangeRate = Number(rate.transferRate) || 1;
@@ -4414,13 +4431,13 @@ const getCurrencyRates = async (
               const convertedTaxAmount = parseFloat((taxAmountNum * exchangeRate).toFixed(2));
               const convertedTotalAmount = parseFloat((roundedTotalAmountUSD * exchangeRate).toFixed(2));
               
-              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=$${amount} USD = ${convertedBaseAmount} ${rate.currency}, tax=$${taxAmountNum.toFixed(2)} USD = ${convertedTaxAmount} ${rate.currency}, fees=$${roundedTotalFeesUSD.toFixed(2)} USD = ${convertedTotalFees} ${rate.currency}, total=$${roundedTotalAmountUSD.toFixed(2)} USD = ${convertedTotalAmount} ${rate.currency}`);
+              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=${amount} ${source} ($${amountUSD.toFixed(2)} USD) = ${convertedBaseAmount} ${rate.currency}, tax=$${taxAmountNum.toFixed(2)} USD = ${convertedTaxAmount} ${rate.currency}, fees=$${roundedTotalFeesUSD.toFixed(2)} USD = ${convertedTotalFees} ${rate.currency}, total=$${roundedTotalAmountUSD.toFixed(2)} USD = ${convertedTotalAmount} ${rate.currency}`);
               
               return {
                 ...rate,
                 fee_payer: 'customer',
-                base_amount: parseFloat(amount.toFixed(2)),
-                base_amount_usd: parseFloat(amount.toFixed(2)),
+                base_amount: parseFloat(amount.toFixed(2)),       // Original amount in source currency
+                base_amount_usd: parseFloat(amountUSD.toFixed(2)), // Converted to USD
                 // Include tax in breakdown (converted to target currency)
                 tax_amount: convertedTaxAmount,
                 tax_amount_usd: parseFloat(taxAmountNum.toFixed(2)),
@@ -4447,13 +4464,14 @@ const getCurrencyRates = async (
             
             console.log(`[getCurrencyRates] Processing ${rate.currency} -> chain: ${chain}`);
             
-            const cryptoPrice = Number(rate.amount) > 0 ? amount / Number(rate.amount) : 0;
+            const cryptoPrice = Number(rate.amount) > 0 ? amountUSD / Number(rate.amount) : 0;
             
             // Use pre-fetched network fee if available, fallback to individual fetch
             const networkFee = allBlockchainFees[chain] || await getBlockchainNetworkFee(chain);
+            // Use USD amount for fee tier calculation
             const feeResult = await calculateTransactionFees(
               chain,
-              amount
+              amountUSD
             );
             
             // Ensure all fee values are valid numbers (protection against NaN/undefined)
@@ -4466,17 +4484,17 @@ const getCurrencyRates = async (
             const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
             const roundedTotalFeesUSD = parseFloat(totalFeesUSD.toFixed(2));
             const taxAmountNum = Number(tax_amount) || 0;
-            const totalAmountUSD = amount + roundedTotalFeesUSD + taxAmountNum;
+            const totalAmountUSD = amountUSD + roundedTotalFeesUSD + taxAmountNum;
             const roundedTotalAmountUSD = parseFloat(totalAmountUSD.toFixed(2));
             const totalAmountCrypto = cryptoPrice > 0 ? roundedTotalAmountUSD / cryptoPrice : 0;
             
-            console.log(`[getCurrencyRates] ${rate.currency}: base=$${amount}, tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)}`);
+            console.log(`[getCurrencyRates] ${rate.currency}: base=${amount} ${source} ($${amountUSD.toFixed(2)} USD), tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)}`);
             
             return {
               ...rate,
               fee_payer: 'customer',
               base_amount: Number(rate.amount),
-              base_amount_usd: parseFloat(amount.toFixed(2)),
+              base_amount_usd: parseFloat(amountUSD.toFixed(2)),
               // Include tax in breakdown
               tax_amount: parseFloat(taxAmountNum.toFixed(2)),
               // Simplified - only show total processing fee, no breakdown
