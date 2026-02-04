@@ -4603,14 +4603,7 @@ const createPaymentLink = async (
         return errorResponseHelper(
           res,
           403,
-          `KYC verification required. Your transaction volume ($${totalVolume.toFixed(2)}) has exceeded the $${kycThreshold} threshold. Please complete KYC verification to continue creating payment links. Current KYC status: ${kycStatus}`,
-          {
-            error_code: "KYC_REQUIRED",
-            total_volume: totalVolume,
-            threshold: kycThreshold,
-            kyc_status: kycStatus,
-            action_required: "Complete KYC verification at /api/kyc/submit",
-          }
+          `KYC verification required. Your transaction volume ($${totalVolume.toFixed(2)}) has exceeded the $${kycThreshold} threshold. Please complete KYC verification to continue creating payment links. Current KYC status: ${kycStatus}. [KYC_REQUIRED]`
         );
       }
       
