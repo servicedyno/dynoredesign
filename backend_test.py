@@ -247,7 +247,7 @@ class DynoPay7IssuesFixTester:
                         "no_decoder_errors": not has_decoder_error
                     }
                 )
-            elif response.status_code == 400 and ('already exists' in response_text or 'duplicate' in response_text):
+            elif response.status_code == 520 and ('already exists' in response_text or 'duplicate' in response_text):
                 self.log_result(
                     "Issue #3 - KMS/Wallet Address", 
                     True, 
