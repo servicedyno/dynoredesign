@@ -627,6 +627,7 @@ const tatumCryptoWebHook = async (
         await setRedisTTL("crypto-" + address, 1800);
         
         // Send underpayment webhook to merchant
+        // ENHANCED: Include customer details and payment context
         if (customerData && customerData.company_id) {
           await callMerchantWebhook(customerData, {
             event: 'payment.underpaid',
@@ -638,10 +639,19 @@ const tatumCryptoWebHook = async (
             currency: items?.currency || payload.asset,
             payment_id: items?.payment_id || items?.unique_tx_id,
             status: 'underpaid',
+            // ENHANCED: Add base amount context
+            base_amount: customerData?.base_amount || items?.base_amount_usd || null,
+            base_currency: customerData?.base_currency || 'USD',
+            // ENHANCED: Customer & payment link details
+            customer_name: customerData?.customer_name || null,
+            customer_email: customerData?.email || null,
+            description: customerData?.description || null,
+            link_id: customerData?.link_id || null,
+            fee_payer: customerData?.fee_payer || items?.fee_payer || 'company',
             grace_period_minutes: 30,
             timestamp: new Date().toISOString(),
           });
-          console.log("[tatumCryptoWebHook] Underpayment webhook sent to merchant");
+          console.log("[tatumCryptoWebHook] Enhanced underpayment webhook sent to merchant");
         }
         
         console.log("[tatumCryptoWebHook] Underpayment recorded, waiting for remaining payment");
