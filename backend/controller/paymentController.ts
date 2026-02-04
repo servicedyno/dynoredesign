@@ -1479,9 +1479,31 @@ const createCryptoPayment = async (
       // Determine fee_payer mode
       const fee_payer = items.fee_payer || 'company';
       
-      // Calculate crypto amount using FastForex
-      let baseAmountUSD = Number(items.base_amount || items.amount || 0);
+      // Get base amount in original currency (could be USD, AUD, EUR, etc.)
+      const baseAmountOriginal = Number(items.base_amount || items.amount || 0);
+      const baseCurrency = items.base_currency || 'USD';
+      
+      // Convert base amount to USD for fee tier calculation
+      // Fee tiers are defined in USD, so we need accurate USD amount
+      let baseAmountUSD = baseAmountOriginal;
+      if (baseCurrency !== 'USD') {
+        try {
+          const usdConversion = await currencyConvert({
+            sourceCurrency: baseCurrency,
+            currency: ['USD'],
+            amount: baseAmountOriginal,
+            fixedDecimal: true,
+          });
+          baseAmountUSD = Number(usdConversion[0]?.amount || baseAmountOriginal);
+          console.log(`[createCryptoPayment] Converted ${baseAmountOriginal} ${baseCurrency} → ${baseAmountUSD} USD for fee calculation`);
+        } catch (conversionError) {
+          console.warn(`[createCryptoPayment] USD conversion failed, using original amount:`, conversionError);
+          // Fallback to original amount if conversion fails
+        }
+      }
+      
       let taxAmount = 0;
+      let taxAmountUSD = 0;  // Tax in USD for fee calculation
       
       // Define tax info type
       interface CryptoPaymentTaxInfo {
@@ -1509,11 +1531,11 @@ const createCryptoPayment = async (
         if (geoLocation && geoLocation.country_code) {
           console.log(`[createCryptoPayment] Detected country: ${geoLocation.country_name} (${geoLocation.country_code})`);
           
-          // Calculate tax using the same function as getData
+          // Calculate tax using the same function as getData (in original currency)
           const calculatedTax = await calculateTaxForCheckout(
             geoLocation.country_code,
-            baseAmountUSD,
-            items.base_currency || 'USD'
+            baseAmountOriginal,
+            baseCurrency
           );
           
           if (calculatedTax) {
@@ -1521,17 +1543,23 @@ const createCryptoPayment = async (
           }
           
           if (taxInfo && taxInfo.tax_amount > 0) {
-            taxAmount = taxInfo.tax_amount;
-            console.log(`[createCryptoPayment] Tax calculated: ${taxInfo.tax_rate}% ${taxInfo.tax_acronym} = ${taxAmount} ${items.base_currency || 'USD'}`);
-            console.log(`[createCryptoPayment] Total with tax: ${taxInfo.total} ${items.base_currency || 'USD'}`);
+            taxAmount = taxInfo.tax_amount;  // Tax in original currency
+            // Convert tax to USD for fee calculation if needed
+            if (baseCurrency !== 'USD') {
+              taxAmountUSD = taxAmount * (baseAmountUSD / baseAmountOriginal);
+            } else {
+              taxAmountUSD = taxAmount;
+            }
+            console.log(`[createCryptoPayment] Tax calculated: ${taxInfo.tax_rate}% ${taxInfo.tax_acronym} = ${taxAmount} ${baseCurrency} (${taxAmountUSD.toFixed(2)} USD)`);
+            console.log(`[createCryptoPayment] Total with tax: ${taxInfo.total} ${baseCurrency}`);
           }
         } else {
           console.log(`[createCryptoPayment] Could not detect customer country, no tax applied`);
         }
       }
       
-      // Total amount customer should pay (base + tax if applicable)
-      const totalAmountWithTax = baseAmountUSD + taxAmount;
+      // Total amount customer should pay in original currency (base + tax if applicable)
+      const totalAmountWithTax = baseAmountOriginal + taxAmount;
       
       let crypto_amount = 0;           // What customer should pay (includes tax)
       let merchant_amount_crypto = 0;  // What merchant receives (base amount only, no tax)
