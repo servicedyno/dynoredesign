@@ -4,7 +4,6 @@ import KBArticle from '../models/knowledgeBaseModels/kbArticleModel';
 import KBArticleFeedback from '../models/knowledgeBaseModels/kbArticleFeedbackModel';
 import User from '../models/userModels/userModel';
 import { Op } from 'sequelize';
-import sequelize from '../utils/dbInstance';
 
 // Set up associations if not already done
 if (!(KBArticle as unknown as { associations?: Record<string, unknown> }).associations?.category) {
