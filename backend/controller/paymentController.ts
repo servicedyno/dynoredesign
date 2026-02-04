@@ -4644,8 +4644,6 @@ const createPaymentLink = async (
       has_active_session: boolean;
     } | null = null;
     
-    const frontendUrl = process.env.FRONTEND_URL || 'https://dynopay.io';
-    
     if (totalVolume >= kycThreshold) {
       // KYC is required - check if it's approved
       const kycRecord = await kycModel.findOne({
