@@ -1821,7 +1821,6 @@ const verifyPayment = async (req: express.Request, res: express.Response) => {
     console.log(tempData, uniqueRef);
     const transactionId = tempData?.id;
     if (transactionId) {
-      //   await deleteRedisItem(uniqueRef);
       const { data }: IVerifyResponse = await flw.Transaction.verify({
         id: transactionId,
       });
