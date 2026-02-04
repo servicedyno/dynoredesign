@@ -1,7 +1,6 @@
 import sequelize from "../utils/dbInstance";
 import * as models from "../models";
-import fs from "fs";
-import path from "path";
+// fs and path imports removed - not used
 
 const migrate = async () => {
     try {

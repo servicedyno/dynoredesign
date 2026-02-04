@@ -62,7 +62,6 @@ export const apiUsageLogger = async (
       setImmediate(async () => {
         try {
           let errorMessage = null;
-          let responseBody = null;
 
           // Parse response if it's an error
           if (statusCode >= 400) {
