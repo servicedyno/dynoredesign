@@ -359,7 +359,7 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
 };
 
 const getFeeWalletBalance = async (
-  req: express.Request,
+  _req: express.Request,
   res: express.Response
 ) => {
   try {
@@ -567,7 +567,7 @@ const updateTransferFees = async (
   }
 };
 
-const getTransferFees = async (req: express.Request, res: express.Response) => {
+const getTransferFees = async (_req: express.Request, res: express.Response) => {
   try {
     const resData = await adminTransferFeeModel.findAll();
     successResponseHelper(res, 200, "", resData);
@@ -777,7 +777,7 @@ const getAdminAnalytics = async (
   }
 };
 
-const getAllUsers = async (req: express.Request, res: express.Response) => {
+const getAllUsers = async (_req: express.Request, res: express.Response) => {
   try {
     const userData = await userModel.findAll({
       attributes: { exclude: ["password"] },
