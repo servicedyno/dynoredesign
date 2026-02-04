@@ -655,7 +655,14 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 - Tax calculation (if merchant enabled \`apply_tax\`)
 - Link expiry with countdown
 - Redirect URL for post-payment
-- **Payment timing settings** (new!)
+- **Available currencies** (new!) - filtered list based on merchant's \`accepted_currencies\` selection
+- **Payment timing settings**
+
+**Available Currencies:**
+The response includes \`available_currencies\` array when the merchant specified currency restrictions:
+- If merchant set \`accepted_currencies: ["BTC", "ETH"]\` when creating the payment link, only those will be returned
+- If no restriction was set, this field will be absent (call \`/configured-currencies\` endpoint instead)
+- Frontend should use this to filter the cryptocurrency selector
 
 **Payment Timing Settings:**
 The response includes \`payment_settings\` object with:
