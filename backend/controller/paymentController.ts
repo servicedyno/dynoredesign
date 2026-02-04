@@ -6588,7 +6588,7 @@ const getCryptoPriceForPayment = async (symbol: string): Promise<number> => {
  * GET /api/pay/configured-currencies
  */
 const getConfiguredCurrenciesForCheckout = async (
-  req: express.Request,
+  _req: express.Request,
   res: express.Response
 ) => {
   try {
@@ -6805,10 +6805,11 @@ const calculateCheckoutFees = async (
     }
 
     // Calculate actual fees using existing fee logic
-    const { totalDeduction, fixedFee, transactionFee, blockchainBuffer } = await calculateTransactionFees(
+    const { totalDeduction } = await calculateTransactionFees(
       crypto,
       paymentAmount
     );
+    // fixedFee, transactionFee, blockchainBuffer not used individually
 
     // Get blockchain network fee for display
     let networkFeeUSD = 0;
