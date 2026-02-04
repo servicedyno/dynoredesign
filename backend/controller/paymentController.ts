@@ -1936,10 +1936,6 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             transaction,
           }
         );
-        // await adminWalletModel.increment("amount", {
-        //   by: data.amount_settled - platformCharge,
-        //   where: { wallet_type: data.currency },
-        // });
 
         await paymentLinkModel.update(
           {
