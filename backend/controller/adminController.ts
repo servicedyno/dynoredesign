@@ -33,7 +33,7 @@ import {
 } from "../models/userModels";
 
 const getTransactionFee = async (
-  req: express.Request,
+  _req: express.Request,
   res: express.Response
 ) => {
   try {
@@ -106,7 +106,7 @@ const newTransactionFee = async (
   }
 };
 
-const getWallets = async (req: express.Request, res: express.Response) => {
+const getWallets = async (_req: express.Request, res: express.Response) => {
   try {
     const walletData = await adminWalletModel.findAll({
       attributes: {
@@ -177,7 +177,7 @@ const getWallets = async (req: express.Request, res: express.Response) => {
   }
 };
 
-const createWallets = async (req: express.Request, res: express.Response) => {
+const createWallets = async (_req: express.Request, res: express.Response) => {
   const transaction = await sequelize.transaction();
   try {
     const count = (await adminWalletModel.findAndCountAll()).count;
