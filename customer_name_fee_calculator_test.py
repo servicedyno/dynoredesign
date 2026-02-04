@@ -405,10 +405,11 @@ class DynoPayCustomerNameFeeCalculatorTester:
                 data = response.json()
                 response_data = data.get('data', {})
                 
-                # Verify calculations are consistent
-                platform_fee = response_data.get('platform_fee')
-                blockchain_fee = response_data.get('blockchain_fee')
-                total_fees = response_data.get('total_fees')
+                # Verify calculations are consistent based on actual API structure
+                fee_breakdown = response_data.get('fee_breakdown', {})
+                platform_fee = fee_breakdown.get('platform_fee')
+                blockchain_fee = fee_breakdown.get('blockchain_fee')
+                total_fees = fee_breakdown.get('total_fees')
                 net_to_merchant = response_data.get('net_to_merchant')
                 
                 # Check if platform_fee is 1% of amount ($2)
