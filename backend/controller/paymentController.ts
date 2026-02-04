@@ -4712,7 +4712,8 @@ const createPaymentLink = async (
               threshold_date: thresholdDate.toISOString(),
               grace_period_end: gracePeriodEnd.toISOString(),
               kyc_status: kycStatus,
-              action_url: "/settings/kyc",
+              verification_url: `${frontendUrl}/settings/kyc`,
+              api_endpoint: "/api/kyc/submit",
             };
           } else {
             // Grace period expired - block
