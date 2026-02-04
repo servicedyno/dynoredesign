@@ -373,7 +373,10 @@ class DynoPay7IssuesFixTester:
             response = requests.post(
                 f"{self.backend_url}/api/pay/getCurrencyRates",
                 json=currency_rates_data,
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {self.jwt_token}",
+                    "Content-Type": "application/json"
+                },
                 timeout=15
             )
             
