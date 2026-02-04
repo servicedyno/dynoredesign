@@ -4642,8 +4642,9 @@ const createPaymentLink = async (
       threshold_date: string;
       grace_period_end: string;
       kyc_status: string;
-      verification_url: string;
+      verification_url: string | null;
       api_endpoint: string;
+      has_active_session: boolean;
     } | null = null;
     
     const frontendUrl = process.env.FRONTEND_URL || 'https://dynopay.io';
@@ -4656,6 +4657,10 @@ const createPaymentLink = async (
       });
       
       const kycStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
+      
+      // Get existing Veriff session URL if available
+      const veriffSessionUrl = kycRecord ? kycRecord.get("veriff_session_url") as string | null : null;
+      const hasActiveSession = veriffSessionUrl && ["submitted", "pending"].includes(kycStatus);
       
       if (kycStatus !== "approved") {
         // Check if we're still within the 90-day grace period
