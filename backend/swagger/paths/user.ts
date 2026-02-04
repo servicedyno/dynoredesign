@@ -1042,5 +1042,216 @@ This endpoint is typically accessed by clicking the unsubscribe link in payment 
         404: { description: 'Invalid unsubscribe token' }
       }
     }
+  },
+
+  '/api/user/onboarding-status': {
+    get: {
+      tags: ['User Management'],
+      summary: 'Get onboarding status',
+      description: `Get comprehensive onboarding/setup status for the authenticated user.
+
+**Use this endpoint to determine:**
+- Whether the user has completed wallet setup
+- KYC verification status and requirements
+- API key configuration status
+- Company setup status
+- What actions the user needs to take next
+
+**Perfect for frontend apps to:**
+- Show/hide setup wizards
+- Display progress indicators
+- Show relevant CTAs (e.g., "Add Wallet", "Complete KYC")
+- Gate features based on setup completion`,
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'Onboarding status retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Onboarding status retrieved successfully' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      wallet_setup: {
+                        type: 'object',
+                        description: 'Wallet configuration status',
+                        properties: {
+                          has_wallet: { type: 'boolean', description: 'Whether user has any wallets', example: true },
+                          has_wallet_address: { type: 'boolean', description: 'Whether user has wallet addresses configured', example: false },
+                          wallet_count: { type: 'integer', description: 'Number of wallets', example: 2 },
+                          address_count: { type: 'integer', description: 'Number of wallet addresses', example: 0 },
+                          required_action: { type: 'string', nullable: true, description: 'Action needed if setup incomplete', example: 'Add at least one wallet address to receive payments' }
+                        }
+                      },
+                      kyc_status: {
+                        type: 'object',
+                        description: 'KYC verification status',
+                        properties: {
+                          status: { type: 'string', enum: ['not_started', 'pending', 'approved', 'rejected'], example: 'not_started' },
+                          requires_kyc: { type: 'boolean', description: 'Whether KYC is required based on volume', example: false },
+                          is_approved: { type: 'boolean', description: 'Whether KYC is approved', example: false },
+                          total_volume: { type: 'number', description: 'Total transaction volume in USD', example: 1500.00 },
+                          threshold: { type: 'number', description: 'Volume threshold that triggers KYC requirement', example: 5000 },
+                          required_action: { type: 'string', nullable: true, description: 'Action needed if KYC required', example: null }
+                        }
+                      },
+                      api_key_status: {
+                        type: 'object',
+                        description: 'API key configuration status',
+                        properties: {
+                          has_production_key: { type: 'boolean', description: 'Whether user has active production API key', example: false },
+                          has_development_key: { type: 'boolean', description: 'Whether user has active development API key', example: true },
+                          total_keys: { type: 'integer', description: 'Total number of API keys', example: 1 },
+                          required_action: { type: 'string', nullable: true, description: 'Action needed', example: 'Create a production API key for live payments' }
+                        }
+                      },
+                      company_setup: {
+                        type: 'object',
+                        description: 'Company/business setup status',
+                        properties: {
+                          has_company: { type: 'boolean', description: 'Whether user has created a company', example: true },
+                          company_count: { type: 'integer', description: 'Number of companies', example: 1 },
+                          required_action: { type: 'string', nullable: true, description: 'Action needed if no company', example: null }
+                        }
+                      },
+                      onboarding_complete: { 
+                        type: 'boolean', 
+                        description: 'Whether all essential setup is complete (company + wallet + KYC if required)',
+                        example: false 
+                      },
+                      next_steps: {
+                        type: 'array',
+                        description: 'List of actions user should take to complete setup',
+                        items: { type: 'string' },
+                        example: ['Add a wallet address to receive crypto payments', 'Create a production API key for live payments']
+                      }
+                    }
+                  }
+                }
+              },
+              examples: {
+                'New User': {
+                  summary: 'New user - needs setup',
+                  value: {
+                    message: 'Onboarding status retrieved successfully',
+                    data: {
+                      wallet_setup: {
+                        has_wallet: false,
+                        has_wallet_address: false,
+                        wallet_count: 0,
+                        address_count: 0,
+                        required_action: 'Add at least one wallet address to receive payments'
+                      },
+                      kyc_status: {
+                        status: 'not_started',
+                        requires_kyc: false,
+                        is_approved: false,
+                        total_volume: 0,
+                        threshold: 5000,
+                        required_action: null
+                      },
+                      api_key_status: {
+                        has_production_key: false,
+                        has_development_key: false,
+                        total_keys: 0,
+                        required_action: 'Create a production API key for live payments'
+                      },
+                      company_setup: {
+                        has_company: false,
+                        company_count: 0,
+                        required_action: 'Create a company to start accepting payments'
+                      },
+                      onboarding_complete: false,
+                      next_steps: [
+                        'Create a company to start accepting payments',
+                        'Add a wallet address to receive crypto payments',
+                        'Create a production API key for live payments'
+                      ]
+                    }
+                  }
+                },
+                'Ready for Payments': {
+                  summary: 'Fully setup user',
+                  value: {
+                    message: 'Onboarding status retrieved successfully',
+                    data: {
+                      wallet_setup: {
+                        has_wallet: true,
+                        has_wallet_address: true,
+                        wallet_count: 3,
+                        address_count: 5,
+                        required_action: null
+                      },
+                      kyc_status: {
+                        status: 'approved',
+                        requires_kyc: true,
+                        is_approved: true,
+                        total_volume: 7500.00,
+                        threshold: 5000,
+                        required_action: null
+                      },
+                      api_key_status: {
+                        has_production_key: true,
+                        has_development_key: true,
+                        total_keys: 2,
+                        required_action: null
+                      },
+                      company_setup: {
+                        has_company: true,
+                        company_count: 1,
+                        required_action: null
+                      },
+                      onboarding_complete: true,
+                      next_steps: []
+                    }
+                  }
+                },
+                'KYC Required': {
+                  summary: 'User needs KYC verification',
+                  value: {
+                    message: 'Onboarding status retrieved successfully',
+                    data: {
+                      wallet_setup: {
+                        has_wallet: true,
+                        has_wallet_address: true,
+                        wallet_count: 2,
+                        address_count: 3,
+                        required_action: null
+                      },
+                      kyc_status: {
+                        status: 'pending',
+                        requires_kyc: true,
+                        is_approved: false,
+                        total_volume: 5500.00,
+                        threshold: 5000,
+                        required_action: 'Complete KYC verification'
+                      },
+                      api_key_status: {
+                        has_production_key: true,
+                        has_development_key: true,
+                        total_keys: 2,
+                        required_action: null
+                      },
+                      company_setup: {
+                        has_company: true,
+                        company_count: 1,
+                        required_action: null
+                      },
+                      onboarding_complete: false,
+                      next_steps: ['Complete KYC verification to continue processing payments']
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Authentication required' },
+        500: { description: 'Server error' }
+      }
+    }
   }
 };
