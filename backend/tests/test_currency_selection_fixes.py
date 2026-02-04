@@ -419,7 +419,7 @@ class TestConfiguredCurrenciesFiltering:
         assert 'data' in data, "Response should have 'data' field"
         
         result = data['data']
-        currencies = result.get('currencies', [])
+        currencies = result.get('configured_currencies', [])
         
         print(f"[Test] Configured currencies returned: {currencies}")
         
