@@ -1,10 +1,11 @@
 import mailTransporter from "../utils/mailTransporter";
 
+// emailTemplate function is defined but not currently used - kept for future use
 const emailTemplate = (
-  name: string,
+  _name: string,
   message: string,
   heading: string,
-  showImage: boolean
+  _showImage: boolean
 ) => {
   const html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
   <html
@@ -307,10 +308,10 @@ const emailTemplate = (
 
 const sendEmail = async (
   recipientEmail: string,
-  name: string,
+  _name: string,
   subject: string,
   message: string,
-  showImage = true
+  _showImage = true
 ) => {
   try {
     // const getHtml = emailTemplate(name, message, subject, showImage);
