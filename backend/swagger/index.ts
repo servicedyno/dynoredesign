@@ -18,6 +18,7 @@ import { companyPaths } from "./paths/company";
 import { taxPaths } from "./paths/tax";
 import { kycPaths } from "./paths/kyc";
 import { directApiPaths } from "./paths/directApi";
+import { webhookPaths } from "./paths/webhooks";
 
 // Merge all paths
 const allPaths = {
@@ -35,6 +36,7 @@ const allPaths = {
   ...taxPaths,
   ...kycPaths,
   ...directApiPaths,
+  ...webhookPaths,
 };
 
 const options: swaggerJsdoc.Options = {
