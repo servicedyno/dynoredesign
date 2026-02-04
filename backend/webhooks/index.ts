@@ -512,8 +512,12 @@ const tatumCryptoWebHook = async (
           
           // Call merchant webhook if configured (for pending state)
           // ENHANCED: Include customer details and payment context
+          const linkIdPending = customerData?.link_id || null;
+          const paymentTypePending = linkIdPending ? 'payment_link' : 'direct_api';
+          
           await callMerchantWebhook(customerData, {
             event: 'payment.pending',
+            payment_type: paymentTypePending,
             address: address,
             txId: payload.txId,
             amount: incomingAmount,
@@ -527,7 +531,7 @@ const tatumCryptoWebHook = async (
             customer_name: customerData?.customer_name || null,
             customer_email: customerData?.email || null,
             description: customerData?.description || null,
-            link_id: customerData?.link_id || null,
+            link_id: linkIdPending,
             fee_payer: customerData?.fee_payer || items?.fee_payer || 'company',
             timestamp: new Date().toISOString(),
           });
