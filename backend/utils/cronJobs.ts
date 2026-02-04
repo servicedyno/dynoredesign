@@ -4,6 +4,7 @@ import sequelize from "./dbInstance";
 import { createNotification, NOTIFICATION_TYPES } from "../controller";
 import { notificationPreferencesModel, userTransactionModel } from "../models";
 import { cronLogger, log } from "./loggers";
+// Unused imports removed from top level - dynamically imported where needed
 
 /**
  * Weekly Summary Cron Job
@@ -825,8 +826,8 @@ export const setupPaymentLinkReminderCron = () => {
 export const triggerPaymentLinkReminders = async () => {
   log("Manually triggering Payment Link Reminders...", "info");
   
-  const { sendPaymentLinkReminderEmail } = await import("../helper");
-  const { paymentLinkModel, companyModel } = await import("../models");
+  await import("../helper");
+  const { paymentLinkModel } = await import("../models");
   const { Op } = await import("sequelize");
   
   const now = new Date();
