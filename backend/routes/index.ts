@@ -15,8 +15,8 @@ import knowledgeBaseRouter from "./knowledgeBaseRouter";
 
 import {
   authMiddleware,
+  walletMiddleware,
 } from "../middleware";
-// walletMiddleware import removed - not used
 // ITatumWebHook, IWebHook imports removed - not used
 import apiRouter from "./apiRouter";
 import paymentRouter from "./paymentRouter";

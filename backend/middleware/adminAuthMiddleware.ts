@@ -1,9 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import { errorResponseHelper, getErrorMessage } from "../helper";
-// userModel import removed - not used
-
-// Op and IUserType imports removed - not used
+import { IUserType } from "../utils/types";
 
 const adminAuthMiddleware = async (
   req: express.Request,
