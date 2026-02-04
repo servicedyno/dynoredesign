@@ -262,7 +262,7 @@ testRouter.post("/threshold-test", authMiddleware, async (req, res) => {
  */
 testRouter.post("/full-payment-flow", authMiddleware, async (req, res) => {
   try {
-    const { amount, currency, company_id, simulate_below_threshold = false } = req.body;
+    const { currency, company_id, simulate_below_threshold = false } = req.body;
     
     const threshold = getBlockchainThreshold(currency);
     const testAmount = simulate_below_threshold ? Math.max(1, threshold - 2) : threshold + 10;
@@ -556,7 +556,7 @@ ${refereeCodeSection}
  * Manually trigger the referee code reminder job
  * Protected: Requires authentication
  */
-testRouter.post("/trigger-referee-reminders", authMiddleware, async (req, res) => {
+testRouter.post("/trigger-referee-reminders", authMiddleware, async (_req, res) => {
   try {
     const { triggerRefereeCodeReminders } = await import("../utils/cronJobs");
     const results = await triggerRefereeCodeReminders();
@@ -618,7 +618,7 @@ testRouter.post("/send-referee-reminder", async (req, res) => {
  * Manually trigger the payment link reminder job
  * Protected: Requires authentication
  */
-testRouter.post("/trigger-payment-link-reminders", authMiddleware, async (req, res) => {
+testRouter.post("/trigger-payment-link-reminders", authMiddleware, async (_req, res) => {
   try {
     const { triggerPaymentLinkReminders } = await import("../utils/cronJobs");
     const results = await triggerPaymentLinkReminders();
