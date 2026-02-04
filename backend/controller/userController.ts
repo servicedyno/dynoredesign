@@ -521,7 +521,7 @@ const generateOTP = async (req: express.Request, res: express.Response) => {
         .then((token) => token !== null)
         .then((isExists) => isExists);
       if (isExists) {
-        const resData = await axios.post(
+        await axios.post(
           "https://api.telnyx.com/v2/verifications/sms",
           {
             phone_number: "+" + mobile,
@@ -836,7 +836,7 @@ const connectSocial = async (req: express.Request, res: express.Response) => {
       });
 
       if (provider === "telegram") {
-        const data = await axios.post(
+        await axios.post(
           `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
           {
             chat_id: id,
