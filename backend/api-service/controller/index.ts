@@ -474,7 +474,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
   }
 };
 
-const getTransactions = async (req: express.Request, res: express.Response) => {
+const getTransactions = async (_req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const customer = await customerModel.findOne({
@@ -519,7 +519,7 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
   }
 };
 
-const getBalance = async (req: express.Request, res: express.Response) => {
+const getBalance = async (_req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
     const customer = await customerModel.findOne({
@@ -534,7 +534,7 @@ const getBalance = async (req: express.Request, res: express.Response) => {
       },
     });
 
-    const { amount, wallet_type, ...rest } = customerData.dataValues;
+    const { amount, wallet_type } = customerData.dataValues;
 
     successResponseHelper(res, 200, "Balance Fetched Successfully!", {
       amount: amount.toFixed(2),
