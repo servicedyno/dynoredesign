@@ -1717,8 +1717,12 @@ const createCryptoPayment = async (
         merchant_amount: merchant_amount_crypto, // Amount merchant should receive (includes tax)
         total_fees: total_fees_crypto,          // Total fees (admin's portion - from base only)
         fee_payer: fee_payer,                   // Who pays fees
-        base_amount_usd: baseAmountUSD,         // Original USD amount (without tax)
-        total_amount_usd: totalAmountWithTax,   // Total USD amount (with tax if applicable)
+        // Store both original and USD amounts for accurate fee calculations
+        base_amount_original: baseAmountOriginal,  // Original amount in merchant's currency
+        base_currency: baseCurrency,              // Merchant's currency (e.g., AUD)
+        base_amount_usd: baseAmountUSD,           // Converted USD amount (for fee tier)
+        total_amount_original: totalAmountWithTax, // Total in original currency (with tax)
+        total_amount_usd: baseAmountUSD + (taxAmountUSD || 0),  // Total USD amount (with tax if applicable)
         status: "pending",
         ref: uniqueRef,
         currency: data.currency,
@@ -1732,7 +1736,8 @@ const createCryptoPayment = async (
         // Tax tracking
         ...(taxInfo && {
           tax_enabled: "true",
-          tax_amount_usd: taxAmount,
+          tax_amount_original: taxAmount,       // Tax in original currency
+          tax_amount_usd: taxAmountUSD,         // Tax in USD
           tax_amount_crypto: tax_amount_crypto,
           tax_rate: taxInfo.tax_rate,
           tax_country_code: taxInfo.country_code,
