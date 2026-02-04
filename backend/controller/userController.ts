@@ -2008,8 +2008,10 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
               days_remaining: daysRemaining,
               threshold_date: thresholdDate.toISOString(),
               grace_period_end: gracePeriodEnd.toISOString(),
-              verification_url: `${frontendUrl}/settings/kyc`,
+              // If merchant has an active Veriff session, use that URL; otherwise provide API endpoint
+              verification_url: hasActiveSession ? veriffSessionUrl : null,
               api_endpoint: "/api/kyc/submit",
+              has_active_session: !!hasActiveSession,
             };
           } else {
             kycWarning = {
@@ -2018,8 +2020,9 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
               days_remaining: 0,
               threshold_date: thresholdDate.toISOString(),
               grace_period_end: gracePeriodEnd.toISOString(),
-              verification_url: `${frontendUrl}/settings/kyc`,
+              verification_url: hasActiveSession ? veriffSessionUrl : null,
               api_endpoint: "/api/kyc/submit",
+              has_active_session: !!hasActiveSession,
             };
           }
         }
