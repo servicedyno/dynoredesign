@@ -9,9 +9,37 @@ DynoPay sends webhook notifications to your configured URL when payment events o
 
 ---
 
+## 🎯 Payment Types That Trigger Webhooks
+
+Webhooks are sent for **ALL crypto payment types**:
+
+| Payment Type | API Endpoint | Webhook Triggered |
+|-------------|--------------|-------------------|
+| **Payment Links** | \`POST /api/pay/createPaymentLink\` | ✅ Yes |
+| **Direct API Payments** | \`POST /api/user/cryptoPayment\` | ✅ Yes |
+
+### Field Availability by Payment Type
+
+| Field | Payment Link | Direct API | Notes |
+|-------|:------------:|:----------:|-------|
+| \`payment_id\` | ✅ | ✅ | Always present |
+| \`amount\` / \`currency\` | ✅ | ✅ | Crypto amount received |
+| \`base_amount\` / \`base_currency\` | ✅ | ✅ | Original fiat amount |
+| \`merchant_amount\` | ✅ | ✅ | Net amount after fees |
+| \`total_fee\` / \`total_fee_usd\` | ✅ | ✅ | Fees charged |
+| \`fee_payer\` | ✅ | ✅ | "customer" or "company" |
+| \`link_id\` | ✅ | ❌ | Only for Payment Links |
+| \`description\` | ✅ | ✅ | If provided during creation |
+| \`customer_name\` | ✅ | ✅ | If provided during creation |
+| \`customer_email\` | ✅ | ✅ | Required for Payment Links |
+| \`tax_info\` | ✅ | ✅ | If tax enabled |
+| \`meta_data\` | ✅ | ✅ | Custom data you passed |
+
+---
+
 ## 📌 How to Configure Webhooks
 
-### Option 1: Per-Payment Link
+### For Payment Links
 Set \`webhook_url\` when creating a payment link:
 \`\`\`json
 POST /api/pay/createPaymentLink
@@ -19,12 +47,30 @@ POST /api/pay/createPaymentLink
   "amount": 100,
   "currency": "USD",
   "modes": ["CRYPTO"],
-  "webhook_url": "https://yourapp.com/webhooks/dynopay"
+  "email": "customer@example.com",
+  "customer_name": "John Doe",
+  "description": "Order #12345",
+  "webhook_url": "https://yourapp.com/webhooks/dynopay",
+  "meta_data": { "order_id": "12345" }
 }
 \`\`\`
 
-### Option 2: Company Default
-Set default webhook URL for all payments:
+### For Direct API Payments
+Set \`webhook_url\` when creating a crypto payment:
+\`\`\`json
+POST /api/user/cryptoPayment
+{
+  "amount": 100,
+  "currency": "ETH",
+  "customer_name": "John Doe",
+  "description": "API Payment",
+  "webhook_url": "https://yourapp.com/webhooks/dynopay",
+  "meta_data": { "invoice_id": "INV-001" }
+}
+\`\`\`
+
+### Company Default (Fallback)
+Set default webhook URL for all payments without explicit webhook_url:
 \`\`\`json
 PUT /api/company/webhook-settings/{company_id}
 {
@@ -32,6 +78,8 @@ PUT /api/company/webhook-settings/{company_id}
   "webhook_secret": "generate"
 }
 \`\`\`
+
+**Priority Order:** Payment-specific \`webhook_url\` → Company default \`webhook_url\`
 
 ---
 
@@ -45,6 +93,7 @@ All webhooks include these headers for verification:
 | \`X-DynoPay-Signature\` | HMAC-SHA256 signature (if webhook_secret configured) |
 | \`X-DynoPay-Timestamp\` | Unix timestamp of the request |
 | \`X-DynoPay-Webhook-Id\` | Unique delivery ID for idempotency |
+| \`X-DynoPay-Type\` | \`"payment_link"\` or \`"direct_api"\` |
 
 ### Verifying Signatures
 \`\`\`javascript
@@ -66,19 +115,21 @@ function verifyWebhook(payload, signature, secret) {
 
 ## 📨 Webhook Events
 
-DynoPay sends these webhook events:
+DynoPay sends these webhook events for **both Payment Links and Direct API Payments**:
 
-| Event | Description |
-|-------|-------------|
-| \`payment.pending\` | Payment detected on blockchain, awaiting confirmations |
-| \`payment.confirmed\` | Payment fully confirmed and processed |
-| \`payment.underpaid\` | Partial payment received, awaiting remainder |
+| Event | Description | Triggered For |
+|-------|-------------|---------------|
+| \`payment.pending\` | Payment detected on blockchain, awaiting confirmations | Payment Links ✅, Direct API ✅ |
+| \`payment.confirmed\` | Payment fully confirmed and processed | Payment Links ✅, Direct API ✅ |
+| \`payment.underpaid\` | Partial payment received, awaiting remainder | Payment Links ✅, Direct API ✅ |
 
 ---
 
 ## 📦 Webhook Payloads
 
-See the response examples below for detailed payload structures.`,
+See the response examples below for detailed payload structures.
+
+**Note:** Examples show Payment Link webhooks. Direct API webhooks have the same structure but \`link_id\` will be \`null\`.`,
       responses: {
         200: {
           description: 'Webhook payload examples',
