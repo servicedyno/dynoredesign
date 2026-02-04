@@ -366,6 +366,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                       amount: { type: 'number' },
                       currency: { type: 'string' },
                       status: { type: 'string' },
+                      customer_name: { type: 'string', nullable: true, description: 'Customer name if provided' },
                       created_at: { type: 'string', format: 'date-time' },
                       expires_at: { type: 'string', format: 'date-time' }
                     }
@@ -379,6 +380,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   payment_url: 'https://checkout.dynopay.com/pay/a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                   amount: 199.99,
                   currency: 'USD',
+                  customer_name: 'John Smith',
                   status: 'active',
                   created_at: '2024-01-15T10:30:00Z',
                   expires_at: null
