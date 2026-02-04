@@ -3908,20 +3908,74 @@ const cryptoVerification = async (address, webhook = true) => {
           // FIXED: Use callMerchantWebhook instead of legacy callWebHook
           // callMerchantWebhook properly looks up webhook_url from payment_link or company
           const { company_id, customer_id, ...transferDetails } = customerPayload;
+          
+          // ENHANCED WEBHOOK: Calculate fee in USD for merchant transparency
+          let totalFeeUsd = 0;
           try {
-            await callMerchantWebhook(customerData, {
-              event: "payment.confirmed",
-              payment_id: customerPayload.id,
-              transaction_reference: transactionId,
-              status: customerPayload.status,
-              amount: userAmountToSend,
-              currency: tempCurrency,
-              base_amount: customerData?.base_amount,
-              base_currency: customerData?.base_currency,
-              meta_data: customerData?.meta_data ? JSON.parse(customerData.meta_data) : null,
-              completed_at: new Date().toISOString(),
+            const feeInUsd = await currencyConvert({
+              sourceCurrency: tempCurrency,
+              currency: [customerData?.base_currency || "USD"],
+              amount: adminAmountToSend,
+              fixedDecimal: false,
             });
-            console.log("[cryptoVerification] Merchant webhook sent successfully");
+            totalFeeUsd = Number(feeInUsd[0]?.amount || 0);
+          } catch (feeConvertError) {
+            console.warn("[cryptoVerification] Fee USD conversion failed:", feeConvertError.message);
+          }
+          
+          // Build enhanced webhook payload with all relevant fields for developers
+          const enhancedWebhookPayload: Record<string, unknown> = {
+            // Core payment info
+            event: "payment.confirmed",
+            payment_id: customerPayload.id,
+            transaction_reference: transactionId,
+            status: customerPayload.status,
+            
+            // Amount received (crypto)
+            amount: userAmountToSend,
+            currency: tempCurrency,
+            
+            // Original payment request (fiat)
+            base_amount: customerData?.base_amount,
+            base_currency: customerData?.base_currency,
+            
+            // ENHANCED: Merchant receives (net after fees)
+            merchant_amount: userAmountToSend,
+            
+            // ENHANCED: Fee information
+            total_fee: adminAmountToSend,
+            total_fee_usd: Number(totalFeeUsd.toFixed(2)),
+            fee_payer: tempData?.fee_payer || customerData?.fee_payer || 'company',
+            
+            // ENHANCED: Customer & payment link details
+            customer_name: customerData?.customer_name || tempData?.customer_name || null,
+            customer_email: customerData?.email || tempData?.email || null,
+            description: customerData?.description || tempData?.description || null,
+            link_id: customerData?.link_id || tempData?.link_id || null,
+            
+            // ENHANCED: Tax information (if applicable)
+            tax_info: (tempData?.tax_enabled === "true" || tempData?.tax_enabled === true) ? {
+              tax_amount_usd: Number(tempData?.tax_amount_usd || 0),
+              tax_amount_crypto: Number(tempData?.tax_amount_crypto || 0),
+              tax_rate: Number(tempData?.tax_rate || 0),
+              tax_country_code: tempData?.tax_country_code || null,
+            } : null,
+            
+            // ENHANCED: Overpayment detection (if applicable)
+            overpayment: tempAmount > 0 ? {
+              amount_crypto: tempAmount,
+              amount_usd: Number(newAmount[0]?.amount || 0),
+            } : null,
+            
+            // Metadata & timestamp
+            meta_data: customerData?.meta_data ? JSON.parse(customerData.meta_data) : null,
+            completed_at: new Date().toISOString(),
+          };
+          
+          try {
+            await callMerchantWebhook(customerData, enhancedWebhookPayload);
+            console.log("[cryptoVerification] Enhanced merchant webhook sent successfully");
+            console.log(`[cryptoVerification] Webhook payload: merchant_amount=${userAmountToSend}, total_fee=${adminAmountToSend}, fee_payer=${enhancedWebhookPayload.fee_payer}`);
           } catch (webhookError) {
             console.error("[cryptoVerification] Merchant webhook failed:", webhookError.message);
             // Don't fail the transaction if webhook fails
