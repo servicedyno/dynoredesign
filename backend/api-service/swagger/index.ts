@@ -162,7 +162,7 @@ export const setupMerchantSwagger = (app: Express) => {
   app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOptions));
 
   // Serve OpenAPI spec as JSON
-  app.get("/docs.json", (req, res) => {
+  app.get("/docs.json", (_req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
   });
