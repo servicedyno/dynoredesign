@@ -136,11 +136,12 @@ See the response examples below for detailed payload structures.
           content: {
             'application/json': {
               examples: {
-                'payment.pending': {
-                  summary: '🟡 payment.pending - Transaction Detected',
-                  description: 'Sent when a crypto transaction is detected on the blockchain but not yet confirmed',
+                'payment_link_pending': {
+                  summary: '🟡 PAYMENT LINK: payment.pending',
+                  description: 'Sent when a crypto transaction is detected for a Payment Link',
                   value: {
                     event: 'payment.pending',
+                    payment_type: 'payment_link',
                     address: '0x1234567890abcdef1234567890abcdef12345678',
                     txId: '0xabc123def456789012345678901234567890abcdef1234567890abcdef123456',
                     amount: 0.042,
@@ -157,11 +158,12 @@ See the response examples below for detailed payload structures.
                     timestamp: '2026-02-04T13:02:27.843Z'
                   }
                 },
-                'payment.confirmed': {
-                  summary: '✅ payment.confirmed - Payment Completed',
-                  description: 'Sent when payment is fully confirmed and processed. This is the most important webhook for fulfilling orders.',
+                'payment_link_confirmed': {
+                  summary: '✅ PAYMENT LINK: payment.confirmed',
+                  description: 'Sent when a Payment Link payment is fully confirmed. Use link_id to match with your order.',
                   value: {
                     event: 'payment.confirmed',
+                    payment_type: 'payment_link',
                     payment_id: 'pay_7668e15b-7f61-4bab-b123-abc123def456',
                     transaction_reference: '0xabc123def456789012345678901234567890abcdef1234567890abcdef123456',
                     status: 'processing',
@@ -186,11 +188,64 @@ See the response examples below for detailed payload structures.
                     completed_at: '2026-02-04T13:02:37.960Z'
                   }
                 },
-                'payment.confirmed_with_tax': {
-                  summary: '✅ payment.confirmed - With Tax Applied',
-                  description: 'Example when tax was applied to the payment (e.g., EU VAT)',
+                'direct_api_pending': {
+                  summary: '🟡 DIRECT API: payment.pending',
+                  description: 'Sent when a crypto transaction is detected for a Direct API Payment (cryptoPayment endpoint)',
+                  value: {
+                    event: 'payment.pending',
+                    payment_type: 'direct_api',
+                    address: '0xabcdef1234567890abcdef1234567890abcdef12',
+                    txId: '0x789xyz123456789012345678901234567890abcdef1234567890abcdef789xyz',
+                    amount: 0.015,
+                    currency: 'BTC',
+                    payment_id: 'pay_direct-api-1234-5678-abcd-ef0123456789',
+                    status: 'pending',
+                    base_amount: 500,
+                    base_currency: 'USD',
+                    customer_name: 'API Customer',
+                    customer_email: 'api-customer@example.com',
+                    description: 'Invoice INV-2024-001',
+                    link_id: null,
+                    fee_payer: 'customer',
+                    timestamp: '2026-02-04T14:30:00.000Z'
+                  }
+                },
+                'direct_api_confirmed': {
+                  summary: '✅ DIRECT API: payment.confirmed',
+                  description: 'Sent when a Direct API Payment is fully confirmed. Note: link_id is null for API payments.',
                   value: {
                     event: 'payment.confirmed',
+                    payment_type: 'direct_api',
+                    payment_id: 'pay_direct-api-1234-5678-abcd-ef0123456789',
+                    transaction_reference: '0x789xyz123456789012345678901234567890abcdef1234567890abcdef789xyz',
+                    status: 'processing',
+                    amount: 0.015,
+                    currency: 'BTC',
+                    base_amount: 500,
+                    base_currency: 'USD',
+                    merchant_amount: 0.01425,
+                    total_fee: 0.00075,
+                    total_fee_usd: 25.00,
+                    fee_payer: 'customer',
+                    customer_name: 'API Customer',
+                    customer_email: 'api-customer@example.com',
+                    description: 'Invoice INV-2024-001',
+                    link_id: null,
+                    tax_info: null,
+                    overpayment: null,
+                    meta_data: {
+                      invoice_id: 'INV-2024-001',
+                      customer_id: 'CUST-789'
+                    },
+                    completed_at: '2026-02-04T14:35:00.000Z'
+                  }
+                },
+                'payment_link_with_tax': {
+                  summary: '✅ PAYMENT LINK: With Tax Applied (EU VAT)',
+                  description: 'Example when tax was applied to a Payment Link payment (e.g., EU VAT)',
+                  value: {
+                    event: 'payment.confirmed',
+                    payment_type: 'payment_link',
                     payment_id: 'pay_8899aabb-ccdd-eeff-0011-223344556677',
                     transaction_reference: '0xdef789...',
                     status: 'processing',
