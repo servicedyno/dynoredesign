@@ -4560,6 +4560,7 @@ const createPaymentLink = async (
     
     // ========================================
     // KYC ENFORCEMENT: Block payment creation if KYC required but not approved
+    // Threshold: $10,000 USD with 90-day grace period
     // ========================================
     const kycWhereClause: Record<string, unknown> = {
       user_id: userData.user_id,
@@ -4586,7 +4587,8 @@ const createPaymentLink = async (
     );
     
     const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
-    const kycThreshold = 5000; // $5,000 USD threshold
+    const kycThreshold = 10000; // $10,000 USD threshold
+    const kycGracePeriodDays = 90; // 90-day grace period after threshold reached
     
     if (totalVolume >= kycThreshold) {
       // KYC is required - check if it's approved
@@ -4598,16 +4600,66 @@ const createPaymentLink = async (
       const kycStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
       
       if (kycStatus !== "approved") {
-        console.log(`[KYC BLOCK] User ${userData.user_id} blocked from creating payment link. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}`);
+        // Check if we're still within the 90-day grace period
+        // Get the date when threshold was first reached (first transaction that pushed over threshold)
+        const thresholdReachedQuery = company_id
+          ? `SELECT MIN("createdAt") as threshold_date
+             FROM (
+               SELECT "createdAt", 
+                      SUM(CAST(base_amount AS DECIMAL)) OVER (ORDER BY "createdAt") as running_total
+               FROM tbl_customer_transaction 
+               WHERE company_id = :companyId AND status = 'successful'
+             ) sub
+             WHERE running_total >= :threshold`
+          : `SELECT MIN("createdAt") as threshold_date
+             FROM (
+               SELECT "createdAt", 
+                      SUM(CAST(base_amount AS DECIMAL)) OVER (ORDER BY "createdAt") as running_total
+               FROM tbl_customer_transaction 
+               WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId) AND status = 'successful'
+             ) sub
+             WHERE running_total >= :threshold`;
         
-        return errorResponseHelper(
-          res,
-          403,
-          `KYC verification required. Your transaction volume ($${totalVolume.toFixed(2)}) has exceeded the $${kycThreshold} threshold. Please complete KYC verification to continue creating payment links. Current KYC status: ${kycStatus}. [KYC_REQUIRED]`
+        const thresholdResult = await sequelize.query<{ threshold_date: string }>(
+          thresholdReachedQuery,
+          {
+            replacements: { userId: userData.user_id, companyId: company_id, threshold: kycThreshold },
+            type: QueryTypes.SELECT,
+          }
         );
+        
+        const thresholdDate = thresholdResult[0]?.threshold_date ? new Date(thresholdResult[0].threshold_date) : null;
+        const now = new Date();
+        
+        if (thresholdDate) {
+          const gracePeriodEnd = new Date(thresholdDate);
+          gracePeriodEnd.setDate(gracePeriodEnd.getDate() + kycGracePeriodDays);
+          
+          const daysRemaining = Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (now < gracePeriodEnd) {
+            // Still within grace period - allow but warn
+            console.log(`[KYC GRACE PERIOD] User ${userData.user_id} within grace period. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Days remaining: ${daysRemaining}`);
+            
+            // Trigger KYC notification if not already sent recently (handled by checkVolumeAndTriggerKYC)
+            // Continue processing - don't block yet
+          } else {
+            // Grace period expired - block
+            console.log(`[KYC BLOCK] User ${userData.user_id} grace period expired. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Grace period ended: ${gracePeriodEnd.toISOString()}`);
+            
+            return errorResponseHelper(
+              res,
+              403,
+              `KYC verification required. Your transaction volume ($${totalVolume.toFixed(2)}) exceeded the $${kycThreshold.toLocaleString()} threshold on ${thresholdDate.toLocaleDateString()}. Your 90-day grace period has expired. Please complete KYC verification to continue creating payment links. Current KYC status: ${kycStatus}. [KYC_REQUIRED]`
+            );
+          }
+        } else {
+          // Couldn't determine threshold date - be lenient, allow but log warning
+          console.warn(`[KYC WARNING] Could not determine threshold date for user ${userData.user_id}. Allowing payment creation.`);
+        }
+      } else {
+        console.log(`[KYC OK] User ${userData.user_id} KYC approved. Volume: $${totalVolume.toFixed(2)}`);
       }
-      
-      console.log(`[KYC OK] User ${userData.user_id} KYC approved. Volume: $${totalVolume.toFixed(2)}`);
     }
     // ========================================
     // END KYC ENFORCEMENT
