@@ -15,10 +15,9 @@ import knowledgeBaseRouter from "./knowledgeBaseRouter";
 
 import {
   authMiddleware,
-  walletMiddleware,
 } from "../middleware";
-import { ITatumWebHook, IWebHook } from "../utils/types";
-import { getRedisItem, setRedisItem } from "../utils/redisInstance";
+// walletMiddleware import removed - not used
+// ITatumWebHook, IWebHook imports removed - not used
 import apiRouter from "./apiRouter";
 import paymentRouter from "./paymentRouter";
 import {
@@ -31,7 +30,7 @@ import adminRouter from "./adminRouter";
 const router = express.Router();
 
 // Base API route - Returns API status and available endpoints
-router.get("/", (req: express.Request, res: express.Response) => {
+router.get("/", (_req: express.Request, res: express.Response) => {
   res.status(200).json({
     status: "operational",
     service: "DynoPay API",
