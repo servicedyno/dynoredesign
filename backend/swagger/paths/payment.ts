@@ -644,6 +644,7 @@ When \`apply_tax: true\` was set during payment link creation:
                       payment_mode: 'createLink',
                       allowedModes: 'CRYPTO',
                       fee_payer: 'company',
+                      customer_name: 'John Smith',
                       transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                       order_reference: 'INV-2026-A1B2C3',
                       description: 'Order #12345 - Premium Subscription',
