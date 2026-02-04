@@ -1145,6 +1145,70 @@ const createCryptoPayment = async (
       
       if (DEBUG) console.log('[DEBUG] Step 4: Redis item retrieved successfully:', { adm_id: items?.adm_id, company_id: items?.company_id });
 
+      // ========================================
+      // KYC ENFORCEMENT: Block payment processing if merchant's KYC required but not approved
+      // ========================================
+      const merchantUserId = items?.adm_id;
+      const merchantCompanyId = items?.company_id;
+      
+      if (merchantUserId) {
+        // Calculate merchant's total transaction volume
+        const merchantVolumeQuery = merchantCompanyId
+          ? `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
+             FROM tbl_customer_transaction 
+             WHERE company_id = :companyId AND status = 'successful'`
+          : `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
+             FROM tbl_customer_transaction 
+             WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId) AND status = 'successful'`;
+        
+        const merchantVolumeResult = await sequelize.query<{ total_volume: string }>(
+          merchantVolumeQuery,
+          {
+            replacements: { userId: merchantUserId, companyId: merchantCompanyId },
+            type: QueryTypes.SELECT,
+          }
+        );
+        
+        const merchantTotalVolume = parseFloat(String(merchantVolumeResult[0]?.total_volume || "0"));
+        const kycThreshold = 5000; // $5,000 USD threshold
+        
+        if (merchantTotalVolume >= kycThreshold) {
+          // Merchant KYC is required - check if it's approved
+          const merchantKycWhereClause: Record<string, unknown> = {
+            user_id: merchantUserId,
+          };
+          if (merchantCompanyId) {
+            merchantKycWhereClause.company_id = merchantCompanyId;
+          }
+          
+          const merchantKycRecord = await kycModel.findOne({
+            where: merchantKycWhereClause,
+            order: [["created_at", "DESC"]],
+          });
+          
+          const merchantKycStatus = merchantKycRecord ? merchantKycRecord.get("status") as string : "not_started";
+          
+          if (merchantKycStatus !== "approved") {
+            console.log(`[KYC BLOCK - Checkout] Merchant ${merchantUserId} blocked. Volume: $${merchantTotalVolume.toFixed(2)}, KYC status: ${merchantKycStatus}`);
+            
+            return errorResponseHelper(
+              res,
+              503,
+              "This payment cannot be processed at this time. The merchant's account requires verification. Please contact the merchant for assistance.",
+              {
+                error_code: "MERCHANT_KYC_REQUIRED",
+                message: "The merchant needs to complete KYC verification to continue accepting payments.",
+              }
+            );
+          }
+          
+          console.log(`[KYC OK - Checkout] Merchant ${merchantUserId} KYC approved. Volume: $${merchantTotalVolume.toFixed(2)}`);
+        }
+      }
+      // ========================================
+      // END KYC ENFORCEMENT
+      // ========================================
+
       // Check if payment link has expired
       if (items.expires_at) {
         const expiresAt = new Date(items.expires_at);
