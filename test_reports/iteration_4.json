@@ -1,0 +1,71 @@
+{
+  "summary": "Non-USD currency handling fix verified successfully. All 11 tests passed. The fix ensures fee tiers are calculated using USD equivalent amounts. Example: $100 AUD correctly converts to ~$70 USD for fee tier selection.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_non_usd_currency_handling.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Non-USD currency handling fix is correctly implemented in both createCryptoPayment and getCurrencyRates",
+    "Fee tiers are now calculated based on USD equivalent amounts, not original currency amounts",
+    "$100 AUD correctly converts to ~$70 USD for fee tier selection (Tier 1)",
+    "$100 EUR correctly converts to ~$118 USD for fee tier selection (Tier 2)",
+    "$100 GBP correctly converts to ~$137 USD for fee tier selection (Tier 2)",
+    "Company pays fees mode works correctly without exposing fee breakdown"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_non_usd_currency_handling.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A - backend only testing"
+  },
+  "test_credentials": {
+    "email": "richard@dyno.pt",
+    "password": "Katiekendra123@",
+    "company_id": 38
+  },
+  "seed_data_creation": "Test payment links created during testing were cleaned up automatically",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Non-USD currency handling fix verified. Key endpoints tested: POST /api/pay/getCurrencyRates (with AUD, EUR, GBP, CAD sources), POST /api/pay/createPaymentLink (with AUD and EUR currencies). The fix converts base_amount to USD before fee tier calculation. Fee tiers are defined in USD: Tier 1 ($5-$100), Tier 2 ($101-$500), Tier 3 ($501-$1000), Tier 4 ($1001+).",
+  "tests_executed": {
+    "test_01_get_currency_rates_aud_source": "PASSED - $100 AUD correctly shows base_amount_usd ~$70",
+    "test_02_compare_aud_vs_usd_same_amount": "PASSED - $100 AUD ($70 USD) < $100 USD verified",
+    "test_03_verify_fee_tier_selection_aud": "PASSED - $100 AUD and $70 USD use same fee tier",
+    "test_04_get_currency_rates_eur_source": "PASSED - €100 EUR correctly shows base_amount_usd ~$118",
+    "test_05_get_currency_rates_gbp_source": "PASSED - £100 GBP correctly shows base_amount_usd ~$137",
+    "test_06_verify_fee_tier_boundaries": "PASSED - Fee tier boundaries work correctly with USD conversion",
+    "test_07_create_payment_link_with_aud": "PASSED - Payment link created with AUD currency",
+    "test_08_create_payment_link_with_eur": "PASSED - Payment link created with EUR currency",
+    "test_09_company_pays_fees_mode": "PASSED - Company pays fees mode works correctly",
+    "test_10_multiple_currency_conversions": "PASSED - AUD, EUR, GBP, CAD all convert correctly",
+    "test_99_cleanup": "PASSED - Test payment links cleaned up"
+  },
+  "endpoints_tested": [
+    "POST /api/pay/getCurrencyRates - with AUD, EUR, GBP, CAD, USD sources",
+    "POST /api/pay/createPaymentLink - with AUD and EUR currencies",
+    "DELETE /api/pay/deletePaymentLink/:id - cleanup"
+  ],
+  "verified_fixes": {
+    "fix_1_createCryptoPayment_usd_conversion": "VERIFIED - Lines 1486-1503 convert base_amount to USD before fee calculation",
+    "fix_2_getCurrencyRates_usd_conversion": "VERIFIED - Lines 4367-4382 convert source amount to USD for fee tier selection",
+    "fix_3_fee_tier_selection": "VERIFIED - Fee tiers correctly selected based on USD equivalent amounts"
+  },
+  "currency_conversion_results": {
+    "$100_AUD": "$70.03 USD (Tier 1)",
+    "$100_EUR": "$118.11 USD (Tier 2)",
+    "$100_GBP": "$136.66 USD (Tier 2)",
+    "$100_CAD": "$73.20 USD (Tier 1)",
+    "$100_USD": "$100.00 USD (Tier 1 boundary)"
+  }
+}
