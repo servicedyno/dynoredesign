@@ -635,6 +635,24 @@ const getData = async (req: express.Request, res: express.Response) => {
     }
     
     let payload;
+    
+    // Parse available_currencies for frontend display
+    let availableCurrenciesList: string[] = [];
+    if (item.available_currencies) {
+      if (Array.isArray(item.available_currencies)) {
+        availableCurrenciesList = item.available_currencies;
+      } else if (typeof item.available_currencies === 'string') {
+        availableCurrenciesList = item.available_currencies.split(',').map((c: string) => c.trim());
+      }
+    }
+    
+    // Also check accepted_currencies from payment link record if available_currencies is empty
+    if (availableCurrenciesList.length === 0 && item.accepted_currencies) {
+      if (typeof item.accepted_currencies === 'string') {
+        availableCurrenciesList = item.accepted_currencies.split(',').map((c: string) => c.trim());
+      }
+    }
+    
     if (item.pathType === "createLink") {
       payload = {
         amount: amount, // Use the converted number instead of item.base_amount
@@ -657,6 +675,9 @@ const getData = async (req: express.Request, res: express.Response) => {
         merchant: companyInfo,
         // Payment timing settings - passed upfront for checkout to display
         payment_settings: paymentSettings,
+        // Available currencies - filtered by merchant's accepted_currencies selection
+        // If empty, frontend should call /configured-currencies endpoint
+        ...(availableCurrenciesList.length > 0 && { available_currencies: availableCurrenciesList }),
         // Simplified fee info - always include subtotal and total with tax
         fee_info: {
           fee_payer: item.fee_payer || 'company',
