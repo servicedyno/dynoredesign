@@ -100,7 +100,7 @@ const getKYCStatus = async (req: express.Request, res: express.Response) => {
  * Get KYC requirements/documents needed
  * GET /api/kyc/requirements
  */
-const getKYCRequirements = async (req: express.Request, res: express.Response) => {
+const getKYCRequirements = async (_req: express.Request, res: express.Response) => {
   try {
     const requirements = {
       volume_threshold: 10000,
@@ -308,7 +308,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
 
     // Parse webhook payload
     const webhookData = veriffService.parseWebhookPayload(payload);
-    const { verificationId, status, decision, decisionCode, reason, vendorData } = webhookData;
+    const { verificationId, status, decision, decisionCode, reason } = webhookData;
 
     console.log("Veriff webhook received:", { verificationId, decision, status });
 
@@ -594,7 +594,7 @@ const resubmitKYC = async (req: express.Request, res: express.Response) => {
 
     const user = userResult[0];
     const userName = user?.name || '';
-    const userEmail = user?.email || '';
+    // userEmail not used in this function
 
     // Initialize Veriff service and create new session
     const veriffService = getVeriffService();
