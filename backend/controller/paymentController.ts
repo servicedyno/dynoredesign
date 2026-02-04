@@ -32,6 +32,7 @@ import {
   userModel,
   userWalletModel,
   taxRateModel,
+  kycModel,
 } from "../models";
 import { createNotification, NOTIFICATION_TYPES } from "./notificationController";
 import {
