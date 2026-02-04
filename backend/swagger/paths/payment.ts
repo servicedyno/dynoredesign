@@ -110,6 +110,11 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   description: '📝 OPTIONAL: Customer email for payment notifications and receipts',
                   example: 'customer@example.com'
                 },
+                name: {
+                  type: 'string',
+                  description: '👤 OPTIONAL: Customer name - identifies who the payment link is for. Displayed on the checkout page.',
+                  example: 'John Smith'
+                },
                 modes: {
                   type: 'array',
                   items: { 
