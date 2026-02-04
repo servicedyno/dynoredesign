@@ -6471,6 +6471,109 @@ const getConfiguredCurrenciesForCheckout = async (
 };
 
 /**
+ * Calculate fees for checkout page - Public endpoint (no auth required)
+ * POST /api/pay/calculateFees
+ * 
+ * Used by checkout page to show fee breakdown when customer selects cryptocurrency:
+ * - Platform fee: 1% of amount
+ * - Blockchain fee: Remaining fees (total - platform fee) 
+ * - Total fees: Consistent with actual fee calculation
+ * - Net to merchant: Amount - Total fees
+ * 
+ * Note: Displays 1% as "platform fee" and remainder as "blockchain fee"
+ * but total fees are always consistent with actual fee tier logic
+ */
+const calculateCheckoutFees = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  try {
+    const { amount, cryptocurrency } = req.body;
+
+    // Validate required fields
+    if (!amount || amount <= 0) {
+      return errorResponseHelper(res, 400, "Valid payment amount is required");
+    }
+
+    if (!cryptocurrency) {
+      return errorResponseHelper(res, 400, "Cryptocurrency selection is required");
+    }
+
+    const paymentAmount = parseFloat(amount);
+    const crypto = cryptocurrency.toUpperCase();
+
+    // Validate cryptocurrency
+    const validCryptos = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
+    if (!validCryptos.includes(crypto)) {
+      return errorResponseHelper(res, 400, `Invalid cryptocurrency. Valid options: ${validCryptos.join(', ')}`);
+    }
+
+    // Calculate actual fees using existing fee logic
+    const { totalDeduction, fixedFee, transactionFee, blockchainBuffer } = await calculateTransactionFees(
+      crypto,
+      paymentAmount
+    );
+
+    // Get blockchain network fee for display
+    let networkFeeUSD = 0;
+    try {
+      const networkFee = await getBlockchainNetworkFee(crypto);
+      networkFeeUSD = Number(networkFee.feeInUSD) || 0;
+    } catch (e) {
+      console.log(`[calculateCheckoutFees] Could not fetch network fee for ${crypto}, using 0`);
+    }
+
+    // Total actual fees (from our fee tier system)
+    const totalActualFees = totalDeduction + networkFeeUSD;
+
+    // Display breakdown:
+    // Platform fee = 1% of amount (fixed display)
+    // Blockchain fee = Total fees - Platform fee (remainder)
+    const platformFeePercent = 1;
+    const platformFee = parseFloat((paymentAmount * platformFeePercent / 100).toFixed(2));
+    
+    // Blockchain fee is the remainder of total fees
+    const blockchainFee = parseFloat(Math.max(0, totalActualFees - platformFee).toFixed(2));
+    
+    // Total fees (consistent with actual calculation)
+    const totalFees = parseFloat(totalActualFees.toFixed(2));
+    
+    // Net amount to merchant
+    const netToMerchant = parseFloat((paymentAmount - totalFees).toFixed(2));
+
+    // Build response
+    const response = {
+      payment_amount: paymentAmount,
+      currency: "USD",
+      cryptocurrency: crypto,
+      fee_breakdown: {
+        platform_fee: platformFee,
+        platform_fee_percent: platformFeePercent,
+        blockchain_fee: blockchainFee,
+        total_fees: totalFees,
+      },
+      net_to_merchant: netToMerchant,
+      // Additional details (optional)
+      details: {
+        fee_tier_applied: true,
+        fixed_fee_component: parseFloat(fixedFee.toFixed(2)),
+        percentage_fee_component: parseFloat(transactionFee.toFixed(2)),
+        buffer_component: parseFloat(blockchainBuffer.toFixed(2)),
+        network_fee_component: parseFloat(networkFeeUSD.toFixed(2)),
+      }
+    };
+
+    console.log(`[calculateCheckoutFees] ${paymentAmount} USD in ${crypto}: Platform=$${platformFee}, Blockchain=$${blockchainFee}, Total=$${totalFees}, Net=$${netToMerchant}`);
+
+    return successResponseHelper(res, 200, "Fee calculation successful", response);
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    console.error(`[calculateCheckoutFees] Error:`, errorMessage);
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
  * Get fee preview with user's referral discount applied
  * GET /api/pay/fee-preview
  */
