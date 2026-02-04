@@ -1,6 +1,7 @@
 import winston from "winston";
 
-const { combine, timestamp, json, prettyPrint, errors, printf, colorize } = winston.format;
+const { combine, timestamp, json, prettyPrint, errors, printf } = winston.format;
+// colorize import removed - not used
 
 // ============================================
 // RAILWAY-COMPATIBLE CONSOLE LOGGER
