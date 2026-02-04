@@ -218,7 +218,7 @@ export const redeemRefereeCode = async (params: {
  * Generate user referral code
  * Format: DYNO2026JOHXXXXXXXX
  */
-export const generateUserReferralCode = (userId: number, userName: string): string => {
+export const generateUserReferralCode = (_userId: number, userName: string): string => {
   const prefix = 'DYNO';
   const year = new Date().getFullYear();
   const userPart = (userName || 'USR').substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
