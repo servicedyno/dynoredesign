@@ -37,19 +37,28 @@ _created_link_ids = []
 
 
 def get_auth_token():
-    """Get or create auth token"""
+    """Get or create auth token with retry logic"""
     global _auth_token
     if not _auth_token:
-        response = requests.post(
-            f"{BASE_URL}/api/user/login",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
-        )
-        if response.status_code == 200:
-            data = response.json()
-            _auth_token = data.get('data', {}).get('accessToken')
-            print(f"✓ Authenticated successfully")
+        max_retries = 5
+        for attempt in range(max_retries):
+            response = requests.post(
+                f"{BASE_URL}/api/user/login",
+                json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
+            )
+            if response.status_code == 200:
+                data = response.json()
+                _auth_token = data.get('data', {}).get('accessToken')
+                print(f"✓ Authenticated successfully")
+                break
+            elif response.status_code == 520 or "Backend starting" in response.text:
+                print(f"Backend starting, waiting... (attempt {attempt + 1}/{max_retries})")
+                import time
+                time.sleep(15)
+            else:
+                raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
         else:
-            raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+            raise Exception(f"Backend did not start after {max_retries} attempts")
     return _auth_token
 
 
