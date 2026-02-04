@@ -3924,9 +3924,14 @@ const cryptoVerification = async (address, webhook = true) => {
           }
           
           // Build enhanced webhook payload with all relevant fields for developers
+          // Determine payment type based on whether link_id exists
+          const linkId = customerData?.link_id || tempData?.link_id || null;
+          const paymentType = linkId ? 'payment_link' : 'direct_api';
+          
           const enhancedWebhookPayload: Record<string, unknown> = {
             // Core payment info
             event: "payment.confirmed",
+            payment_type: paymentType,
             payment_id: customerPayload.id,
             transaction_reference: transactionId,
             status: customerPayload.status,
@@ -3951,7 +3956,7 @@ const cryptoVerification = async (address, webhook = true) => {
             customer_name: customerData?.customer_name || tempData?.customer_name || null,
             customer_email: customerData?.email || tempData?.email || null,
             description: customerData?.description || tempData?.description || null,
-            link_id: customerData?.link_id || tempData?.link_id || null,
+            link_id: linkId,
             
             // ENHANCED: Tax information (if applicable)
             tax_info: (tempData?.tax_enabled === "true" || tempData?.tax_enabled === true) ? {
