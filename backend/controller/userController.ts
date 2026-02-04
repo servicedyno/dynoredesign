@@ -1919,7 +1919,8 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     ) as { total_volume: string }[];
     
     const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
-    const kycThreshold = 5000;
+    const kycThreshold = 10000; // $10,000 USD threshold
+    const kycGracePeriodDays = 90;
     const requiresKyc = totalVolume >= kycThreshold;
     const kycStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
     const kycApproved = kycStatus === "approved";
