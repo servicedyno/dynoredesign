@@ -1872,6 +1872,142 @@ const unsubscribeFromPaymentReminders = async (req: express.Request, res: expres
   }
 };
 
+/**
+ * Get onboarding status for authenticated user
+ * GET /api/user/onboarding-status
+ * 
+ * Returns a comprehensive status of user's setup progress including:
+ * - Wallet setup status
+ * - KYC status
+ * - API key status
+ * - Company setup status
+ * - Next steps for incomplete setup
+ */
+const getOnboardingStatus = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  
+  try {
+    const userId = userData.user_id;
+    
+    // 1. Check wallet setup
+    const wallets = await userWalletModel.findAll({
+      where: { user_id: userId },
+    });
+    
+    const walletAddresses = await userWalletAddressModel.findAll({
+      where: { user_id: userId },
+    });
+    
+    const hasWallet = wallets.length > 0;
+    const hasWalletAddress = walletAddresses.length > 0;
+    
+    // 2. Check KYC status
+    const kycRecord = await kycModel.findOne({
+      where: { user_id: userId },
+    });
+    
+    // Calculate total volume for KYC threshold check
+    const volumeResult = await sequelize.query(
+      `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
+       FROM tbl_customer_transaction 
+       WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId)
+       AND status = 'successful'`,
+      {
+        replacements: { userId },
+        type: QueryTypes.SELECT,
+      }
+    ) as { total_volume: string }[];
+    
+    const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
+    const kycThreshold = 5000;
+    const requiresKyc = totalVolume >= kycThreshold;
+    const kycStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
+    const kycApproved = kycStatus === "approved";
+    
+    // 3. Check API key status
+    const apiKeys = await apiModel.findAll({
+      where: { user_id: userId },
+    });
+    
+    const hasProductionKey = apiKeys.some((key: any) => 
+      key.get("environment") === "production" && key.get("status") === "active"
+    );
+    const hasDevelopmentKey = apiKeys.some((key: any) => 
+      key.get("environment") === "development" && key.get("status") === "active"
+    );
+    
+    // 4. Check company setup
+    const companies = await companyModel.findAll({
+      where: { user_id: userId },
+    });
+    
+    const hasCompany = companies.length > 0;
+    
+    // 5. Determine next steps
+    const nextSteps: string[] = [];
+    
+    if (!hasCompany) {
+      nextSteps.push("Create a company to start accepting payments");
+    }
+    
+    if (!hasWalletAddress) {
+      nextSteps.push("Add a wallet address to receive crypto payments");
+    }
+    
+    if (requiresKyc && !kycApproved) {
+      nextSteps.push("Complete KYC verification to continue processing payments");
+    }
+    
+    if (!hasProductionKey && hasCompany) {
+      nextSteps.push("Create a production API key for live payments");
+    }
+    
+    // 6. Determine if onboarding is complete
+    const onboardingComplete = hasCompany && hasWalletAddress && (!requiresKyc || kycApproved);
+    
+    // Build response
+    const onboardingStatus = {
+      wallet_setup: {
+        has_wallet: hasWallet,
+        has_wallet_address: hasWalletAddress,
+        wallet_count: wallets.length,
+        address_count: walletAddresses.length,
+        required_action: !hasWalletAddress ? "Add at least one wallet address to receive payments" : null,
+      },
+      kyc_status: {
+        status: kycStatus,
+        requires_kyc: requiresKyc,
+        is_approved: kycApproved,
+        total_volume: totalVolume,
+        threshold: kycThreshold,
+        required_action: requiresKyc && !kycApproved ? "Complete KYC verification" : null,
+      },
+      api_key_status: {
+        has_production_key: hasProductionKey,
+        has_development_key: hasDevelopmentKey,
+        total_keys: apiKeys.length,
+        required_action: !hasProductionKey && hasCompany ? "Create a production API key for live payments" : null,
+      },
+      company_setup: {
+        has_company: hasCompany,
+        company_count: companies.length,
+        required_action: !hasCompany ? "Create a company to start accepting payments" : null,
+      },
+      onboarding_complete: onboardingComplete,
+      next_steps: nextSteps,
+    };
+    
+    console.log(`[Onboarding] Status retrieved for user ${userId}: complete=${onboardingComplete}, next_steps=${nextSteps.length}`);
+    
+    return successResponseHelper(res, 200, "Onboarding status retrieved successfully", onboardingStatus);
+    
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    userLogger.error(`Get onboarding status error: ${errorMessage}`, new Error(String(e)));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 export default {
   registerUser,
   registerPhoneStep1,
