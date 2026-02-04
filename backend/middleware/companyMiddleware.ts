@@ -58,7 +58,7 @@ const companyMiddleware = (
       };
     }
     
-    const { company_name, email, mobile }: ICompany = parsedData;
+    const { company_name, email }: ICompany = parsedData;
     let validateFields;
 
     const pathname = req.path;
