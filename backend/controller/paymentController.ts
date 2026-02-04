@@ -650,6 +650,8 @@ const getData = async (req: express.Request, res: express.Response) => {
         payment_mode: item.pathType,
         allowedModes: item.allowedModes,
         fee_payer: item.fee_payer || 'company',
+        // Customer name - displayed on checkout page if provided
+        ...(item.customer_name && { customer_name: item.customer_name }),
         // Enhanced checkout data
         transaction_id: item.transaction_id,
         order_reference: orderReference,
