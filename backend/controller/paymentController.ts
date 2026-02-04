@@ -48,7 +48,6 @@ import {
   IUserType,
   IVerifyResponse,
   IAdminData,
-  PaymentLinkData,
   PaymentUserJwtPayload,
 } from "../utils/types";
 import { paymentTypes } from "../utils/enums";
@@ -62,7 +61,6 @@ import {
   userTempAddressModel,
   userTransactionModel,
   paymentLinkModel,
-  userWalletAddressModel,
   merchantTempAddressModel,
 } from "../models";
 import QR_Code from "qrcode";
