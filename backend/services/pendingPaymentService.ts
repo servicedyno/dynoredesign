@@ -235,7 +235,7 @@ export const sendConfirmationProgressNotification = async (
  * Uses Tatum API to check current confirmations
  */
 export const getTransactionConfirmations = async (
-  txId: string,
+  _txId: string,
   currency: string
 ): Promise<number> => {
   try {

@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import User from '../models/userModels/userModel';
 import RefereeCode from '../models/referralModels/refereeCodeModel';
 import Referral from '../models/referralModels/referralModel';
-import { companyModel } from '../models';
+// companyModel import removed - not used
 
 // ============================================
 // REFEREE CODE SERVICE (Type 2 - Payment Link)
