@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://packages-setup.preview.emergentagent.com/api
+Development: https://payflow-fix-17.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

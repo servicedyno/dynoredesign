@@ -206,7 +206,7 @@ const { id } = await tatumApi.createSubscription(
 
 **Current SERVER_URL:**
 ```env
-SERVER_URL=https://packages-setup.preview.emergentagent.com
+SERVER_URL=https://payflow-fix-17.preview.emergentagent.com
 ```
 
 ---

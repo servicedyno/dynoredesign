@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://packages-setup.preview.emergentagent.com
+SERVER_URL=https://payflow-fix-17.preview.emergentagent.com
 ```
 
 **Impact:**
