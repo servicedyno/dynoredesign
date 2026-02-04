@@ -500,6 +500,18 @@
  *       **Webhook Events:**
  *       - `payment.pending` - Payment detected, awaiting confirmations
  *       - `payment.confirmed` - Payment fully confirmed
+ *       - `payment.underpaid` - Partial payment received, awaiting remainder
+ *       
+ *       **Enhanced Webhook Payload Fields:**
+ *       All webhooks now include these additional fields for better developer experience:
+ *       - `merchant_amount` - Net amount merchant receives (crypto)
+ *       - `total_fee` / `total_fee_usd` - Fees charged
+ *       - `fee_payer` - Who paid fees ('customer' or 'company')
+ *       - `customer_name` / `customer_email` - Customer details
+ *       - `description` - Payment description
+ *       - `link_id` - Payment link ID
+ *       - `tax_info` - Tax details if applicable (object or null)
+ *       - `overpayment` - Overpayment info if applicable (object or null)
  *     security:
  *       - BearerAuth: []
  *     parameters:
