@@ -623,7 +623,7 @@ const getData = async (req: express.Request, res: express.Response) => {
     // For customer pays fees: Don't include processing fee in total_amount yet
     // The exact fee depends on selected crypto and will be calculated by getCurrencyRates
     const subtotalWithTax = amount + taxAmount;
-    const grandTotal = amount + totalProcessingFee + taxAmount; // Keep for reference
+    // grandTotal calculated but not used - kept for reference: amount + totalProcessingFee + taxAmount
     
     // Convert incomplete payment amount to USD if exists
     let incompletePaymentUSD = 0;
