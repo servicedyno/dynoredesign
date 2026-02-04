@@ -4717,8 +4717,10 @@ const createPaymentLink = async (
               threshold_date: thresholdDate.toISOString(),
               grace_period_end: gracePeriodEnd.toISOString(),
               kyc_status: kycStatus,
-              verification_url: `${frontendUrl}/settings/kyc`,
+              // If merchant has an active Veriff session, use that URL; otherwise null
+              verification_url: hasActiveSession ? veriffSessionUrl : null,
               api_endpoint: "/api/kyc/submit",
+              has_active_session: !!hasActiveSession,
             };
           } else {
             // Grace period expired - block
