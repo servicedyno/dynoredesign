@@ -15,12 +15,9 @@ import knowledgeBaseRouter from "./knowledgeBaseRouter";
 
 import {
   authMiddleware,
-  companyMiddleware,
-  userMiddleware,
   walletMiddleware,
 } from "../middleware";
 import { ITatumWebHook, IWebHook } from "../utils/types";
-import { paymentTypes } from "../utils/enums";
 import { getRedisItem, setRedisItem } from "../utils/redisInstance";
 import apiRouter from "./apiRouter";
 import paymentRouter from "./paymentRouter";
