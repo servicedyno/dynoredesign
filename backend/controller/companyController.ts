@@ -508,7 +508,7 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
   }
 };
 
-const getCompany = async (req: express.Request, res: express.Response) => {
+const getCompany = async (_req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
     const resData = await companyModel.findAll({

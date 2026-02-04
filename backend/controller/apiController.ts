@@ -414,7 +414,7 @@ const getApiCustomers = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
     const { rowsPerPage, page } = req.body;
-    let column, sortType, offset, limit;
+    let offset, limit;
 
     if (rowsPerPage && page) {
       offset = (page - 1) * rowsPerPage;
