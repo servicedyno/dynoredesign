@@ -4332,12 +4332,11 @@ const getCurrencyRates = async (
               
               const fixedFee = Number(feeResult.fixedFee) || 0;
               const transactionFee = Number(feeResult.transactionFee) || 0;
-              const blockchainBuffer = Number(feeResult.blockchainBuffer) || 0;
               const networkFeeUSD = Number(networkFee.feeInUSD) || 0;
               
               const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
               const taxAmountNum = Number(tax_amount) || 0;
-              const totalAmountUSD = amount + totalFeesUSD + taxAmountNum;
+              // totalAmountUSD calculated but not used - kept for reference
               
               // Round all amounts to 2 decimal places for consistency
               const roundedTotalFeesUSD = parseFloat(totalFeesUSD.toFixed(2));
@@ -4444,7 +4443,7 @@ const getCurrencyRates = async (
   }
 };
 
-const getBalance = async (req: express.Request, res: express.Response) => {
+const getBalance = async (_req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as PaymentUserJwtPayload;
   try {
     const customer = await customerModel.findOne({
