@@ -4,10 +4,9 @@ import path from "path";
 import cors from "cors";
 import helmet from "helmet";
 import router from "./routes";
-import crypto from "crypto";
-import { decrypt } from "./helper";
+// crypto and decrypt imports removed - not used
+// controller import removed - not used
 import { apiMiddleware } from "./middleware";
-import controller from "./controller";
 import { connectRedis } from "./utils/redisInstance";
 import { setupMerchantSwagger } from "./swagger";
 
@@ -31,7 +30,7 @@ setupMerchantSwagger(app);
 
 app.use("/api", apiMiddleware, router);
 
-app.get("/", async (req: express.Request, res: express.Response) => {
+app.get("/", async (_req: express.Request, res: express.Response) => {
   res.json({ 
     message: "DynoPay Merchant API Service", 
     version: "1.0.0",
