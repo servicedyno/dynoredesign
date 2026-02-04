@@ -12,6 +12,17 @@ This endpoint requires **JWT Token** authentication (not API Key).
 2. Click "Authorize" button and enter your token
 3. Then call this endpoint
 
+**⚠️ KYC VERIFICATION REQUIRED:**
+When your transaction volume exceeds **$5,000 USD**, you must complete KYC verification to continue creating payment links.
+
+| Volume | KYC Required | Can Create Links |
+|--------|--------------|------------------|
+| < $5,000 | ❌ No | ✅ Yes |
+| ≥ $5,000 + KYC Approved | ✅ Yes | ✅ Yes |
+| ≥ $5,000 + KYC Pending/Not Started | ✅ Yes | ❌ **Blocked** (403 Error) |
+
+If blocked, complete KYC at \`POST /api/kyc/submit\` first.
+
 **🎁 REFEREE CODE FEATURE:**
 When you provide a customer email, the system will automatically:
 - Check if the email already has a DynoPay account (skips if yes)
