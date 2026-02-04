@@ -395,7 +395,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       createdAt?: string | Date;
       customer_id?: string;
       incomplete_payment?: IncompletePaymentData;
-      available_currencies?: string[];
+      available_currencies?: string[] | string;  // Can be array or comma-separated string
       accepted_currencies?: string;
       customer_name?: string;  // Optional customer name
     }
