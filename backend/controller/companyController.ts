@@ -14,7 +14,6 @@ import { sendCompanyProfileCreatedEmail, sendCompanyContactWelcomeEmail, sendCom
 import { deleteRedisItem } from "../utils/redisInstance";
 
 import axios from "axios";
-import crypto from "crypto";
 
 const TAX_DATA_API_URL = process.env.TAX_DATA_API_URL || "https://api.apilayer.com/tax_data";
 const TAX_DATA_API_KEY = process.env.TAX_DATA_API_KEY;
