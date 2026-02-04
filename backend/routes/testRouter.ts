@@ -7,9 +7,10 @@ import express from "express";
 import { QueryTypes } from "sequelize";
 import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../helper";
 import { setRedisItem, getRedisItem, deleteRedisItem } from "../utils/redisInstance";
-import { calculateTransactionFees, getBlockchainConfig } from "../controller/index";
+import { calculateTransactionFees } from "../controller/index";
+// getBlockchainConfig import removed - not used
 import { getBlockchainThreshold } from "../utils/feeConfigUtils";
-import { paymentController } from "../controller";
+// paymentController import removed - not used
 import { authMiddleware } from "../middleware";
 import sequelize from "../utils/dbInstance";
 import tatumApi from "../apis/tatumApi";
