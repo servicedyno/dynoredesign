@@ -11,7 +11,8 @@ import Crypto from "crypto";
 import { setRedisItem } from "../utils/redisInstance";
 import customerTransactionModel from "../models/customerTransactionModel";
 import sequelize from "../utils/dbInstance";
-import { QueryTypes, Op } from "sequelize";
+import { QueryTypes } from "sequelize";
+// Op import removed - not used
 import axios from "axios";
 import { CustomerJwtPayload, CompanyData } from "../utils/types";
 
@@ -199,12 +200,11 @@ const createPayment = async (req: express.Request, res: express.Response) => {
 };
 
 const getSupportedCurrency = async (
-  req: express.Request,
+  _req: express.Request,
   res: express.Response
 ) => {
   const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
-    const data = res.locals.apiKeyData;
     const tempData = await sequelize.query(
       "select wallet_type from tbl_admin_wallet where currency_type='CRYPTO'",
       { type: QueryTypes.SELECT }
