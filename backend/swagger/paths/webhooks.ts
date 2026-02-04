@@ -352,23 +352,6 @@ See the response examples below for detailed payload structures.
                     timestamp: '2026-02-04T16:30:00.000Z'
                   }
                 }
-                    amount_received: 0.030,
-                    amount_expected: 0.042,
-                    amount_remaining: 0.012,
-                    currency: 'ETH',
-                    payment_id: 'pay_underpaid-1234-5678-abcd-ef0123456789',
-                    status: 'underpaid',
-                    base_amount: 100,
-                    base_currency: 'USD',
-                    customer_name: 'Jane Smith',
-                    customer_email: 'jane@example.com',
-                    description: 'Monthly Plan',
-                    link_id: 444,
-                    fee_payer: 'company',
-                    grace_period_minutes: 30,
-                    timestamp: '2026-02-04T16:00:00.000Z'
-                  }
-                }
               }
             }
           }
