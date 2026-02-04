@@ -4570,6 +4570,7 @@ const createPaymentLink = async (
       fee_payer: fee_payer || 'company',  // Default: company pays fees (existing behavior)
       apply_tax: apply_tax || false,  // Tax toggle: OFF by default, merchant must enable
       accepted_currencies: acceptedCurrenciesString,  // Store merchant's selected currencies (null = all)
+      customer_name: name || null,  // Optional customer name for payment link
     };
 
     const links = await paymentLinkModel.create(payload);
