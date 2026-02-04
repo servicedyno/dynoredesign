@@ -1673,14 +1673,16 @@ const createCryptoPayment = async (
         merchant_amount: merchant_amount_crypto,
         fees: total_fees_crypto,
         fee_payer: fee_payer,
-        base_amount: baseAmountUSD,
-        base_currency: items.base_currency || 'USD',
+        base_amount: baseAmountOriginal,          // Original amount in merchant's currency
+        base_amount_usd: baseAmountUSD,           // Converted to USD (for reference)
+        base_currency: baseCurrency,
         rate: exchange_rate,
         remaining_minutes: CRYPTO_INVOICE_MINUTES,  // Frontend uses this for invoice countdown timer
         // Tax info (if applicable)
         ...(taxInfo && {
           tax_info: {
-            tax_amount: taxAmount,
+            tax_amount: taxAmount,                // Tax in original currency
+            tax_amount_usd: taxAmountUSD,         // Tax in USD
             tax_amount_crypto: tax_amount_crypto,
             tax_rate: taxInfo.tax_rate,
             tax_acronym: taxInfo.tax_acronym,
