@@ -69,6 +69,15 @@ paymentRouter.post(
   paymentController.calculatePaymentAmount
 );
 
+// Public endpoint for fee calculator - shows fee breakdown for checkout
+// POST /api/pay/calculateFees
+// Body: { amount: number, cryptocurrency: string }
+// Returns: platform_fee, blockchain_fee, total_fees, net_to_merchant
+paymentRouter.post(
+  "/calculateFees",
+  paymentController.calculateCheckoutFees
+);
+
 // Get configured currencies for checkout (customer auth required)
 paymentRouter.get(
   "/configured-currencies",
