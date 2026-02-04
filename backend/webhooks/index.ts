@@ -633,8 +633,12 @@ const tatumCryptoWebHook = async (
         // Send underpayment webhook to merchant
         // ENHANCED: Include customer details and payment context
         if (customerData && customerData.company_id) {
+          const linkIdUnderpaid = customerData?.link_id || null;
+          const paymentTypeUnderpaid = linkIdUnderpaid ? 'payment_link' : 'direct_api';
+          
           await callMerchantWebhook(customerData, {
             event: 'payment.underpaid',
+            payment_type: paymentTypeUnderpaid,
             address: address,
             txId: payload.txId,
             amount_received: totalReceivedAmount,
@@ -650,7 +654,7 @@ const tatumCryptoWebHook = async (
             customer_name: customerData?.customer_name || null,
             customer_email: customerData?.email || null,
             description: customerData?.description || null,
-            link_id: customerData?.link_id || null,
+            link_id: linkIdUnderpaid,
             fee_payer: customerData?.fee_payer || items?.fee_payer || 'company',
             grace_period_minutes: 30,
             timestamp: new Date().toISOString(),
