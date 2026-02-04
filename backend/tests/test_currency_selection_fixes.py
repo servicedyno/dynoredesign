@@ -136,7 +136,7 @@ class TestCreatePaymentLinkWithCurrencies:
         result = data['data']
         assert 'link_id' in result, "Response should have link_id"
         assert 'transaction_id' in result, "Response should have transaction_id"
-        assert 'payment_url' in result, "Response should have payment_url"
+        assert 'payment_link' in result, "Response should have payment_link"
         
         # Track for cleanup
         CREATED_LINK_IDS.append(result['link_id'])
