@@ -139,17 +139,54 @@ export const directApiPaths = {
 **Webhook Events Sent:**
 - \`payment.pending\` - Deposit detected, awaiting confirmations
 - \`payment.confirmed\` - Payment fully confirmed
+- \`payment.underpaid\` - Partial payment received, awaiting remainder
 
-**Webhook Payload:**
+**Webhook Payload (payment.confirmed):**
 \`\`\`json
 {
   "event": "payment.confirmed",
   "payment_id": "pay_xyz789",
-  "amount": 100,
+  "transaction_reference": "0xabc123...",
+  "status": "processing",
+  "amount": 0.042,
   "currency": "ETH",
-  "crypto_amount": "0.042",
-  "tx_hash": "0xabc123...",
-  "status": "confirmed"
+  "base_amount": 100,
+  "base_currency": "USD",
+  "merchant_amount": 0.0399,
+  "total_fee": 0.0021,
+  "total_fee_usd": 5.00,
+  "fee_payer": "company",
+  "customer_name": "John Doe",
+  "customer_email": "john@example.com",
+  "description": "Order #12345",
+  "link_id": 411,
+  "tax_info": null,
+  "overpayment": null,
+  "meta_data": null,
+  "completed_at": "2026-02-04T13:02:37.960Z",
+  "webhook_id": "wh_abc123",
+  "sent_at": "2026-02-04T13:02:37.963Z"
+}
+\`\`\`
+
+**Webhook Payload (payment.pending):**
+\`\`\`json
+{
+  "event": "payment.pending",
+  "address": "0x1234...",
+  "txId": "0xabc123...",
+  "amount": 0.042,
+  "currency": "ETH",
+  "payment_id": "pay_xyz789",
+  "status": "pending",
+  "base_amount": 100,
+  "base_currency": "USD",
+  "customer_name": "John Doe",
+  "customer_email": "john@example.com",
+  "description": "Order #12345",
+  "link_id": 411,
+  "fee_payer": "company",
+  "timestamp": "2026-02-04T13:02:27.843Z"
 }
 \`\`\``,
                   example: 'https://yourapp.com/webhooks/crypto-payment'
