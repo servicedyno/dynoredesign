@@ -2,15 +2,13 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import {
   FW_API_Response,
-  IAdminWallet,
   IFundData,
   IUserType,
   IVerifyResponse,
 } from "../utils/types";
 import sequelize from "../utils/dbInstance";
-import { Op, QueryTypes, where } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import {
-  arraySorting,
   currencyConvert,
   decrypt,
   errorResponseHelper,
@@ -18,7 +16,7 @@ import {
   sendEmail,
   successResponseHelper,
 } from "../helper";
-import crypto, { hash } from "crypto";
+import crypto from "crypto";
 import flw from "../apis/flutterwaveApi";
 import {
   deleteRedisItem,
