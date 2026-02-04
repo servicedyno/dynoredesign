@@ -7,6 +7,19 @@
 user_problem_statement: "Add two new features: (1) Optional customer name field for payment links - passed to checkout page, (2) Fee calculator endpoint that shows platform fee (1%), blockchain fee (remainder), total fees, and net to merchant - consistent with existing fee logic"
 
 current_test_task:
+  - task: "Enhanced Webhook Payloads for Developers"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/controller/paymentController.ts, /app/backend/webhooks/index.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Enhanced all 3 webhook events (payment.pending, payment.confirmed, payment.underpaid) with additional fields: merchant_amount, total_fee, total_fee_usd, fee_payer, customer_name, customer_email, description, link_id, tax_info (if applicable), overpayment (if applicable). This provides developers full transaction visibility for accounting/reconciliation."
+
+previous_test_tasks:
   - task: "Customer Name & Fee Calculator Features"
     implemented: true
     working: true
