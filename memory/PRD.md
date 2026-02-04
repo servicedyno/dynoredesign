@@ -21,12 +21,18 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 ## What's Been Implemented
 
 ### Session: February 4, 2026 (Latest)
+- ✅ **Currency Selection Architecture Fix**: Fixed critical inconsistencies in how `accepted_currencies` is enforced
+  - `getConfiguredCurrenciesForCheckout` now reads `accepted_currencies` from payment link and filters results
+  - `getData` endpoint now returns `available_currencies` in response for frontend to use
+  - Direct API endpoints (`/user/cryptoPayment`, `/user/createPayment`) now support `accepted_currencies` parameter
+  - Payment validation correctly rejects currencies not in the allowed list
+  - All 22 currency tests passing (100% success rate)
+  
 - ✅ **Code Cleaning Completed**: Fixed all TypeScript compilation errors
   - Fixed broken imports (IUserType, walletMiddleware) removed by previous cleanup
   - Fixed property name mismatch (contractAddress → _contractAddress)
   - Fixed undeclared variable (blockchainBuffer) in fee calculation
   - Fixed undefined variable (responseBody) in API usage logger
-  - Fixed template variable reference (_showImage) in sendEmail helper
   - All files now pass `yarn tsc --noEmit` with 0 errors
 
 ### Session: January-February 2026
@@ -43,11 +49,21 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 - ✅ Accepted Currencies per Payment Link feature (backend complete)
 - ✅ Full merchant/company/payment/wallet CRUD operations
 
+## Currency Selection Flow (Fixed)
+
+| Step | Endpoint | Behavior |
+|------|----------|----------|
+| 1. Create Link | `POST /api/pay/createPaymentLink` | Stores `accepted_currencies` in DB and Redis as `available_currencies` |
+| 2. Load Checkout | `POST /api/pay/getData` | Returns `available_currencies` array to frontend |
+| 3. Get Currencies | `GET /api/pay/configured-currencies` | Returns ONLY currencies from `accepted_currencies` (not all wallets) |
+| 4. Make Payment | `POST /api/pay/createCryptoPayment` | Validates currency is in `available_currencies` list |
+
 ## Prioritized Backlog
 
 ### P0 (Critical)
 - [x] ~~Fix all TypeScript errors~~ ✅ COMPLETE
 - [x] ~~Code cleaning (medium effort)~~ ✅ COMPLETE
+- [x] ~~Currency selection architecture fix~~ ✅ COMPLETE
 
 ### P1 (High)
 - [ ] Frontend implementation for accepted_currencies selector
@@ -61,12 +77,13 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 
 ## Key API Endpoints
 - `GET /api/user/onboarding-status` - Consolidated onboarding status with KYC warnings
-- `POST /api/pay/createPaymentLink` - Create payment link with KYC enforcement
-- `POST /api/user/cryptoPayment` - Direct API crypto payment with KYC enforcement
-- `POST /api/kyc/submit` - Initiate KYC verification with Veriff
-- `POST /api/pay/links` - Create payment link
-- `PUT /api/pay/links/:id` - Update payment link
-- `GET /api/pay/links/:id` - Get payment link details
+- `POST /api/pay/createPaymentLink` - Create payment link with currency restrictions
+- `POST /api/pay/getData` - Get payment link data including `available_currencies`
+- `GET /api/pay/configured-currencies` - Get currencies filtered by `accepted_currencies`
+- `POST /api/pay/createCryptoPayment` - Create crypto payment (validates currency)
+- `POST /api/user/cryptoPayment` - Direct API payment with `accepted_currencies` support
+- `GET /api/pay/company-currencies/:id` - Get all currencies with configuration status
+- `PUT /api/pay/links/:id` - Update payment link including `accepted_currencies`
 - `GET /api/docs` - Swagger API documentation
 
 ## Database Schema (Key Tables)
@@ -83,14 +100,10 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 - Admin: admin@dynopay.io / password123
 
 ## Test Reports
-- Latest: Backend operational, all endpoints verified working
+- Latest: `/app/test_reports/iteration_3.json` (22 tests, 100% pass rate)
+- Currency Selection: All flows verified working
 - TypeScript: 0 compilation errors
 
-## Key Files Modified (Code Cleaning)
-- `middleware/adminAuthMiddleware.ts` - Restored IUserType import
-- `middleware/authMiddleware.ts` - Restored IUserType import
-- `middleware/apiUsageLogger.ts` - Fixed responseBody declaration
-- `routes/index.ts` - Restored walletMiddleware import
-- `controller/paymentController.ts` - Fixed _contractAddress and blockchainBuffer
-- `controller/walletController.ts` - Fixed _contractAddress property
-- `api-service/helper/sendEmail.ts` - Fixed _showImage reference
+## Key Files Modified (Currency Fix)
+- `controller/paymentController.ts` - getData returns available_currencies, getConfiguredCurrenciesForCheckout filters by accepted_currencies
+- `api-service/controller/index.ts` - cryptoPayment and createPayment support accepted_currencies parameter
