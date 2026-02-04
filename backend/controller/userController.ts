@@ -2032,4 +2032,5 @@ export default {
   deleteAccount,
   unsubscribeFromReminders,
   unsubscribeFromPaymentReminders,
+  getOnboardingStatus,
 };
