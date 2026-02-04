@@ -23,7 +23,7 @@ const testRouter = express.Router();
  * Fix the customer_id column to allow NULL values
  * Protected: Admin only
  */
-testRouter.post("/fix-customer-id-column", authMiddleware, async (req, res) => {
+testRouter.post("/fix-customer-id-column", authMiddleware, async (_req, res) => {
   try {
     await sequelize.query('ALTER TABLE tbl_customer_transaction ALTER COLUMN customer_id DROP NOT NULL;');
     
@@ -46,7 +46,7 @@ testRouter.post("/fix-customer-id-column", authMiddleware, async (req, res) => {
  * Returns all blockchain thresholds
  * Protected: Requires authentication
  */
-testRouter.get("/thresholds", authMiddleware, async (req, res) => {
+testRouter.get("/thresholds", authMiddleware, async (_req, res) => {
   try {
     const thresholds = {
       BTC: getBlockchainThreshold("BTC"),
