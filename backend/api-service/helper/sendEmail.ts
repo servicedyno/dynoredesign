@@ -150,7 +150,7 @@ const emailTemplate = (
         </div>
         <div class="body">
           ${
-            showImage
+            _showImage
               ? `<div class="img-outer">
               <a target="_blank" href="https://www.expeditesocial.com/">
             <img
