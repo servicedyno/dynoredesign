@@ -157,6 +157,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 **Webhook Events:**
 - \`payment.pending\` - Payment detected on blockchain, awaiting confirmations
 - \`payment.confirmed\` - Payment fully confirmed and processed
+- \`payment.underpaid\` - Partial payment received, awaiting remainder
 
 **Note:** If not set, webhooks will be sent to the company's default webhook URL (configured via /api/company/webhook-settings).
 
@@ -164,7 +165,53 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 - \`X-DynoPay-Event\` - Event type
 - \`X-DynoPay-Signature\` - HMAC signature (if webhook_secret configured)
 - \`X-DynoPay-Timestamp\` - Unix timestamp
-- \`X-DynoPay-Webhook-Id\` - Unique delivery ID`,
+- \`X-DynoPay-Webhook-Id\` - Unique delivery ID
+- \`X-DynoPay-Type\` - 'webhook' or 'callback'
+
+**Enhanced Webhook Payload (payment.confirmed):**
+\`\`\`json
+{
+  "event": "payment.confirmed",
+  "payment_id": "uuid-here",
+  "transaction_reference": "0xabc123...",
+  "status": "processing",
+  "amount": 0.042,
+  "currency": "ETH",
+  "base_amount": 100,
+  "base_currency": "USD",
+  "merchant_amount": 0.0399,
+  "total_fee": 0.0021,
+  "total_fee_usd": 5.00,
+  "fee_payer": "company",
+  "customer_name": "John Doe",
+  "customer_email": "john@example.com",
+  "description": "Order #12345",
+  "link_id": 411,
+  "tax_info": {
+    "tax_amount_usd": 23.00,
+    "tax_amount_crypto": 0.0097,
+    "tax_rate": 23,
+    "tax_country_code": "PT"
+  },
+  "overpayment": null,
+  "meta_data": null,
+  "completed_at": "2026-02-04T13:02:37.960Z"
+}
+\`\`\`
+
+**Enhanced Webhook Fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| \`merchant_amount\` | number | Net amount merchant receives (crypto) |
+| \`total_fee\` | number | Total fees charged (crypto) |
+| \`total_fee_usd\` | number | Total fees in USD |
+| \`fee_payer\` | string | Who paid fees: 'customer' or 'company' |
+| \`customer_name\` | string | Customer name (if provided) |
+| \`customer_email\` | string | Customer email |
+| \`description\` | string | Payment description |
+| \`link_id\` | number | Payment link ID |
+| \`tax_info\` | object/null | Tax details if tax was applied |
+| \`overpayment\` | object/null | Overpayment details if customer overpaid |`,
                   example: 'https://example.com/webhook'
                 },
                 fee_payer: {
