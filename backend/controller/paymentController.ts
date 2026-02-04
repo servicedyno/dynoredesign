@@ -4642,8 +4642,11 @@ const createPaymentLink = async (
       threshold_date: string;
       grace_period_end: string;
       kyc_status: string;
-      action_url: string;
+      verification_url: string;
+      api_endpoint: string;
     } | null = null;
+    
+    const frontendUrl = process.env.FRONTEND_URL || 'https://dynopay.io';
     
     if (totalVolume >= kycThreshold) {
       // KYC is required - check if it's approved
