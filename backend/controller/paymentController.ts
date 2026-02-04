@@ -4985,6 +4985,8 @@ ${refereeCodeSection}
       accepted_currencies: links.dataValues.accepted_currencies 
         ? links.dataValues.accepted_currencies.split(',').map((c: string) => c.trim())
         : null,  // null means all configured currencies are accepted
+      // Include KYC warning if within grace period (for in-app display)
+      ...(kycWarning && { kyc_warning: kycWarning }),
     };
 
     successResponseHelper(res, 200, "Payment link created successfully", responseData);
