@@ -75,6 +75,7 @@ export const apiUsageLogger = async (
 
           // Truncate large responses
           const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
+          let responseBody: string;
           if (dataStr && dataStr.length > 5000) {
             responseBody = dataStr.substring(0, 5000) + '... (truncated)';
           } else {
