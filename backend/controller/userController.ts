@@ -1951,8 +1951,11 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
       days_remaining: number;
       threshold_date: string | null;
       grace_period_end: string | null;
-      action_url: string;
+      verification_url: string;
+      api_endpoint: string;
     } | null = null;
+    
+    const frontendUrl = process.env.FRONTEND_URL || 'https://dynopay.io';
     
     if (requiresKyc && !kycApproved) {
       // Calculate grace period
@@ -1997,7 +2000,8 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
               days_remaining: daysRemaining,
               threshold_date: thresholdDate.toISOString(),
               grace_period_end: gracePeriodEnd.toISOString(),
-              action_url: "/settings/kyc",
+              verification_url: `${frontendUrl}/settings/kyc`,
+              api_endpoint: "/api/kyc/submit",
             };
           } else {
             kycWarning = {
@@ -2006,7 +2010,8 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
               days_remaining: 0,
               threshold_date: thresholdDate.toISOString(),
               grace_period_end: gracePeriodEnd.toISOString(),
-              action_url: "/settings/kyc",
+              verification_url: `${frontendUrl}/settings/kyc`,
+              api_endpoint: "/api/kyc/submit",
             };
           }
         }
