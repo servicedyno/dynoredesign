@@ -1960,6 +1960,8 @@ test_plan:
 
 agent_communication:
     -agent: "testing"
+    -message: "✅ CUSTOMER NAME & FEE CALCULATOR FEATURES TESTING COMPLETED: 100% success rate (9/9 tests passed). Both new features are fully operational and production-ready. ✅ FEATURE 1 - CUSTOMER NAME: All 3 scenarios working perfectly - payment links accept optional customer name, store it correctly, and return it via getData API. ✅ FEATURE 2 - FEE CALCULATOR: All 5 scenarios working perfectly - calculateFees endpoint returns proper 1% platform fee, blockchain fees, total fees, net to merchant, with correct validation for missing/invalid parameters. Mathematical consistency verified across all fee calculations. Both features meet all requirements specified in the review request."
+    -agent: "testing"
     -message: "Device login email fixes testing completed. ✅ EMAIL TEMPLATE: Location prominently displayed as first item. ✅ REDIS CACHE: Cache keys working correctly. ✅ AUTHENTICATION: Login sequence successful. ❌ ALERT TRIGGERING: Device alert messages not appearing in logs despite proper conditions. Previous tests showed this working. May need investigation of current deployment state or recent changes affecting the device alert trigger logic in userController.ts lines 391-427."
   - agent: "main"
     message: "Phase 6 implemented. Changes: getWallet/getWalletAddresses now filter by company_id, addWalletAddress accepts company_id and wallet_name, addApi accepts api_name, new endpoints POST /api/wallet/address/send-otp and PUT /api/wallet/address/:id for edit with OTP, Swagger docs at /api/docs. All endpoints require JWT auth except tax endpoints."
