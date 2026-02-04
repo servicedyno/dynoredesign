@@ -272,11 +272,12 @@ See the response examples below for detailed payload structures.
                     completed_at: '2026-02-04T14:15:00.000Z'
                   }
                 },
-                'payment.confirmed_with_overpayment': {
-                  summary: '✅ payment.confirmed - Customer Overpaid',
-                  description: 'Example when customer sent more crypto than required',
+                'payment_link_overpaid': {
+                  summary: '✅ PAYMENT LINK: Customer Overpaid',
+                  description: 'Example when customer sent more crypto than required for a Payment Link',
                   value: {
                     event: 'payment.confirmed',
+                    payment_type: 'payment_link',
                     payment_id: 'pay_1122aabb-ccdd-eeff-0011-223344556677',
                     transaction_reference: '0xghi012...',
                     status: 'processing',
@@ -301,13 +302,56 @@ See the response examples below for detailed payload structures.
                     completed_at: '2026-02-04T15:30:00.000Z'
                   }
                 },
-                'payment.underpaid': {
-                  summary: '⚠️ payment.underpaid - Partial Payment',
-                  description: 'Sent when customer sends less than the required amount. A 30-minute grace period is given to complete the payment.',
+                'payment_link_underpaid': {
+                  summary: '⚠️ PAYMENT LINK: Partial Payment (Underpaid)',
+                  description: 'Sent when customer sends less than required for a Payment Link. 30-minute grace period to complete.',
                   value: {
                     event: 'payment.underpaid',
+                    payment_type: 'payment_link',
                     address: '0x1234567890abcdef1234567890abcdef12345678',
                     txId: '0xpartial123...',
+                    amount_received: 0.030,
+                    amount_expected: 0.042,
+                    amount_remaining: 0.012,
+                    currency: 'ETH',
+                    payment_id: 'pay_underpaid-1234-5678-abcd-ef0123456789',
+                    status: 'underpaid',
+                    base_amount: 100,
+                    base_currency: 'USD',
+                    customer_name: 'Jane Smith',
+                    customer_email: 'jane@example.com',
+                    description: 'Monthly Plan',
+                    link_id: 444,
+                    fee_payer: 'company',
+                    grace_period_minutes: 30,
+                    timestamp: '2026-02-04T16:00:00.000Z'
+                  }
+                },
+                'direct_api_underpaid': {
+                  summary: '⚠️ DIRECT API: Partial Payment (Underpaid)',
+                  description: 'Sent when customer sends less than required for a Direct API Payment. Note: link_id is null.',
+                  value: {
+                    event: 'payment.underpaid',
+                    payment_type: 'direct_api',
+                    address: '0xabcdef1234567890abcdef1234567890abcdef12',
+                    txId: '0xpartial789...',
+                    amount_received: 0.010,
+                    amount_expected: 0.015,
+                    amount_remaining: 0.005,
+                    currency: 'BTC',
+                    payment_id: 'pay_api-underpaid-5678-abcd-ef0123456789',
+                    status: 'underpaid',
+                    base_amount: 500,
+                    base_currency: 'USD',
+                    customer_name: 'API Customer',
+                    customer_email: 'api@example.com',
+                    description: 'Invoice Payment',
+                    link_id: null,
+                    fee_payer: 'customer',
+                    grace_period_minutes: 30,
+                    timestamp: '2026-02-04T16:30:00.000Z'
+                  }
+                }
                     amount_received: 0.030,
                     amount_expected: 0.042,
                     amount_remaining: 0.012,
