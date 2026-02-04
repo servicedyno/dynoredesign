@@ -6,11 +6,9 @@ import path from "path";
 import router from "./routes";
 import { setupSwagger } from "./swagger";
 
-import {
-  deleteRedisItem,
-  getRedisItem,
-  setRedisItem,
-} from "./utils/redisInstance";
+// Redis imports - only used ones
+import { connectRedis } from "./utils/redisInstance";
+// Unused Redis imports removed: deleteRedisItem, getRedisItem, setRedisItem
 import {
   adminFeeModel,
   adminFeeTransactionModel,
@@ -20,10 +18,10 @@ import {
   feesModel,
   userTempAddressModel,
 } from "./models";
-import { currencyConvert, encrypt, getErrorMessage, sendEmail } from "./helper";
+// Unused imports removed: currencyConvert, encrypt, sendEmail
+import { getErrorMessage } from "./helper";
 import cron from "node-cron";
 import { getTransactionFee, getBlockchainFee, paymentController } from "./controller";
-import { connectRedis } from "./utils/redisInstance";
 import sequelize from "./utils/dbInstance";
 import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron, setupRefereeCodeReminderCron, setupPaymentLinkReminderCron } from "./utils/cronJobs";
 
@@ -97,7 +95,7 @@ setupSwagger(app);
 app.use("/api", router);
 
 // Health check endpoint for Railway
-app.get("/health", async (req: express.Request, res: express.Response) => {
+app.get("/health", async (_req: express.Request, res: express.Response) => {
   try {
     await sequelize.authenticate();
     res.status(200).json({ 
@@ -118,7 +116,7 @@ app.get("/health", async (req: express.Request, res: express.Response) => {
   }
 });
 
-app.get("/", async (req: express.Request, res: express.Response) => {
+app.get("/", async (_req: express.Request, res: express.Response) => {
   const transaction_fee = await getTransactionFee();
   const blockchain_fee = await getBlockchainFee();
 
