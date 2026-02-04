@@ -13,13 +13,14 @@ This endpoint requires **JWT Token** authentication (not API Key).
 3. Then call this endpoint
 
 **⚠️ KYC VERIFICATION REQUIRED:**
-When your transaction volume exceeds **$5,000 USD**, you must complete KYC verification to continue creating payment links.
+When your transaction volume exceeds **$10,000 USD**, you must complete KYC verification within 90 days to continue creating payment links.
 
-| Volume | KYC Required | Can Create Links |
-|--------|--------------|------------------|
-| < $5,000 | ❌ No | ✅ Yes |
-| ≥ $5,000 + KYC Approved | ✅ Yes | ✅ Yes |
-| ≥ $5,000 + KYC Pending/Not Started | ✅ Yes | ❌ **Blocked** (403 Error) |
+| Volume | KYC Status | Can Create Links |
+|--------|------------|------------------|
+| < $10,000 | Not Required | ✅ Yes |
+| ≥ $10,000 + KYC Approved | ✅ Verified | ✅ Yes |
+| ≥ $10,000 + Within 90-day Grace | ⏳ Pending | ✅ Yes (with warning) |
+| ≥ $10,000 + Grace Period Expired | ❌ Not Verified | ❌ **Blocked** (403 Error) |
 
 If blocked, complete KYC at \`POST /api/kyc/submit\` first.
 
