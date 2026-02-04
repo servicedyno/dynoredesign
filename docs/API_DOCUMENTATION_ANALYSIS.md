@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://anomaly-finder-10.preview.emergentagent.com/api/docs/
+**URL:** https://packages-setup.preview.emergentagent.com/api/docs/
 
 ---
 

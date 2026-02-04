@@ -7,7 +7,7 @@ Tests: Enhanced error messages, auto-suggestion, and validation
 import requests
 import json
 
-BASE_URL = "https://anomaly-finder-10.preview.emergentagent.com"
+BASE_URL = "https://packages-setup.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 TEST_EMAIL = "richard@dyno.pt"

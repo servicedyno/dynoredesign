@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://anomaly-finder-10.preview.emergentagent.com
+SERVER_URL=https://packages-setup.preview.emergentagent.com
 ```
 
 **Impact:**

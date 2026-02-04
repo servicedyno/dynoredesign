@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://anomaly-finder-10.preview.emergentagent.com/api/docs
+Go to: https://packages-setup.preview.emergentagent.com/api/docs
 
 ---
 
