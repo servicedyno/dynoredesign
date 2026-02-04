@@ -39,7 +39,7 @@ const INCIDENTS = [
  * Get overall system status with REAL monitoring data
  * OPTIMIZED: Redis caching + background health checks
  */
-const getStatus = async (req: express.Request, res: express.Response) => {
+const getStatus = async (_req: express.Request, res: express.Response) => {
   try {
     // Check Redis cache first
     const cacheKey = 'system:status';
@@ -98,7 +98,7 @@ const getStatus = async (req: express.Request, res: express.Response) => {
  * GET /api/status/services
  * Get detailed status for all services with REAL data
  */
-const getServicesStatus = async (req: express.Request, res: express.Response) => {
+const getServicesStatus = async (_req: express.Request, res: express.Response) => {
   try {
     const currentStatus = await monitoringService.getCurrentServiceStatus();
     const services = monitoringService.getMonitoredServices();
@@ -364,7 +364,7 @@ const getUptimeChart = async (req: express.Request, res: express.Response) => {
  * POST /api/status/check
  * Manually trigger health checks (admin endpoint)
  */
-const triggerHealthCheck = async (req: express.Request, res: express.Response) => {
+const triggerHealthCheck = async (_req: express.Request, res: express.Response) => {
   try {
     await monitoringService.runHealthChecks();
     
