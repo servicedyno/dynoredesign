@@ -1878,14 +1878,21 @@ This endpoint uses multi-tenant routing for payment processing. When a crypto ad
   '/api/pay/configured-currencies': {
     get: {
       tags: ['Payment Processing'],
-      summary: 'Get configured currencies for checkout',
-      description: `Returns the list of cryptocurrencies configured by the merchant for accepting payments.
-      
-**Use Case:** Called by checkout page to show only the payment methods the merchant has set up.
+      summary: 'Get available currencies for checkout',
+      description: `Returns the list of cryptocurrencies available for this specific payment.
+
+**⚠️ Important:** This endpoint respects the merchant's \`accepted_currencies\` restriction:
+- If merchant created payment link with \`accepted_currencies: ["BTC", "ETH"]\`, only those will be returned
+- If no restriction was set, ALL configured wallets are returned
+
+**Priority Order:**
+1. First check \`available_currencies\` in \`getData\` response (most efficient)
+2. If not present, call this endpoint to get filtered currencies
 
 **Response includes:**
-- \`configured_currencies\` - Array of currency codes (e.g., ["BTC", "ETH", "USDT-TRC20"])
-- \`skip_selection\` - If true and only one currency configured, auto-select it
+- \`configured_currencies\` - Array of currency codes (filtered by merchant's \`accepted_currencies\` if set)
+- \`skip_selection\` - If true and only one currency available, auto-select it
+- \`fee_info\` - Fee configuration for the payment
 
 **Note:** Requires customer token from getData response (not merchant JWT token).`,
       parameters: [],
@@ -1895,13 +1902,29 @@ This endpoint uses multi-tenant routing for payment processing. When a crypto ad
           content: {
             'application/json': {
               examples: {
+                'Filtered by accepted_currencies': {
+                  summary: 'Payment link with currency restrictions',
+                  value: {
+                    message: 'Configured currencies retrieved successfully',
+                    data: {
+                      configured_currencies: ['BTC', 'ETH'],
+                      skip_selection: false,
+                      wallet_count: 2,
+                      fee_info: {
+                        fee_payer: 'company',
+                        transaction_fee_percent: 2.0
+                      }
+                    }
+                  }
+                },
                 'Multiple Currencies': {
-                  summary: 'Merchant with multiple crypto options',
+                  summary: 'Merchant with multiple crypto options (no restrictions)',
                   value: {
                     message: 'Configured currencies retrieved successfully',
                     data: {
                       configured_currencies: ['BTC', 'ETH', 'USDT-TRC20', 'USDT-ERC20', 'LTC', 'TRX'],
                       skip_selection: false,
+                      wallet_count: 6,
                       fee_info: {
                         fee_payer: 'company',
                         transaction_fee_percent: 2.0
@@ -1916,6 +1939,7 @@ This endpoint uses multi-tenant routing for payment processing. When a crypto ad
                     data: {
                       configured_currencies: ['USDT-TRC20'],
                       skip_selection: true,
+                      wallet_count: 1,
                       fee_info: {
                         fee_payer: 'company',
                         transaction_fee_percent: 2.0
@@ -1930,6 +1954,7 @@ This endpoint uses multi-tenant routing for payment processing. When a crypto ad
                     data: {
                       configured_currencies: [],
                       skip_selection: false,
+                      wallet_count: 0,
                       fee_info: {
                         fee_payer: 'company',
                         transaction_fee_percent: 2.0
