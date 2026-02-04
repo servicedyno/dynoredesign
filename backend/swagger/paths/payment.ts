@@ -2132,5 +2132,154 @@ Called by merchant dashboard when creating/editing payment links to show which c
         404: { description: 'Company not found or does not belong to user' }
       }
     }
+  },
+
+  // ==================== FEE CALCULATOR ====================
+  '/api/pay/calculateFees': {
+    post: {
+      tags: ['Payments'],
+      summary: 'Calculate fees for checkout (Public)',
+      description: `Calculate and preview the fee breakdown for a payment before checkout.
+
+**🔓 NO AUTHENTICATION REQUIRED**
+This is a public endpoint for checkout pages to show customers the fee breakdown.
+
+**Use Case:**
+When a customer selects a cryptocurrency at checkout, call this endpoint to show:
+- Platform fee (processing fee)
+- Blockchain/network fee
+- Total fees
+- Net amount that will be forwarded to merchant
+
+**Fee Breakdown:**
+- **Platform Fee**: Service fee for payment processing
+- **Blockchain Fee**: Network fees for the selected cryptocurrency
+- **Total Fees**: Sum of platform + blockchain fees
+- **Net to Merchant**: Payment amount minus total fees
+
+**Supported Cryptocurrencies:**
+BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20`,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['amount', 'cryptocurrency'],
+              properties: {
+                amount: {
+                  type: 'number',
+                  description: 'Payment amount in USD',
+                  example: 100.00,
+                  minimum: 0.01
+                },
+                cryptocurrency: {
+                  type: 'string',
+                  enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
+                  description: 'Selected cryptocurrency for payment',
+                  example: 'ETH'
+                }
+              }
+            },
+            examples: {
+              'ETH Payment': {
+                summary: 'Calculate fees for $100 ETH payment',
+                value: {
+                  amount: 100.00,
+                  cryptocurrency: 'ETH'
+                }
+              },
+              'BTC Large Payment': {
+                summary: 'Calculate fees for $500 BTC payment',
+                value: {
+                  amount: 500.00,
+                  cryptocurrency: 'BTC'
+                }
+              },
+              'USDT Stablecoin': {
+                summary: 'Calculate fees for USDT-TRC20 payment',
+                value: {
+                  amount: 250.00,
+                  cryptocurrency: 'USDT-TRC20'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'Fee calculation successful',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      payment_amount: { type: 'number', description: 'Original payment amount' },
+                      currency: { type: 'string', description: 'Base currency (USD)' },
+                      cryptocurrency: { type: 'string', description: 'Selected crypto' },
+                      fee_breakdown: {
+                        type: 'object',
+                        properties: {
+                          platform_fee: { type: 'number', description: 'Platform processing fee' },
+                          platform_fee_percent: { type: 'number', description: 'Platform fee percentage' },
+                          blockchain_fee: { type: 'number', description: 'Blockchain network fee' },
+                          total_fees: { type: 'number', description: 'Total fees (platform + blockchain)' }
+                        }
+                      },
+                      net_to_merchant: { type: 'number', description: 'Amount merchant receives after fees' },
+                      details: {
+                        type: 'object',
+                        description: 'Additional fee breakdown details'
+                      }
+                    }
+                  }
+                }
+              },
+              example: {
+                message: 'Fee calculation successful',
+                data: {
+                  payment_amount: 100,
+                  currency: 'USD',
+                  cryptocurrency: 'ETH',
+                  fee_breakdown: {
+                    platform_fee: 0.40,
+                    platform_fee_percent: 0.4,
+                    blockchain_fee: 2.00,
+                    total_fees: 2.40
+                  },
+                  net_to_merchant: 97.60,
+                  details: {
+                    promotional_discount_percent: 60,
+                    actual_total_fees: 6.00,
+                    displayed_total_fees: 2.40,
+                    savings_displayed: 3.60
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: {
+          description: 'Invalid input',
+          content: {
+            'application/json': {
+              examples: {
+                'Missing Amount': {
+                  value: { success: false, message: 'Valid payment amount is required', statusCode: 400 }
+                },
+                'Invalid Crypto': {
+                  value: { success: false, message: 'Invalid cryptocurrency. Valid options: BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20', statusCode: 400 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 };
