@@ -30,7 +30,6 @@ import {
   selfTransactionModel,
   userModel,
   userTransactionModel,
-  userWalletModel,
 } from "../models/userModels";
 
 const getTransactionFee = async (
