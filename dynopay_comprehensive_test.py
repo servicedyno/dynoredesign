@@ -77,7 +77,16 @@ class DynoPayTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success') and data.get('data', {}).get('token'):
+                # Handle different response structures
+                if data.get('data', {}).get('accessToken'):
+                    self.jwt_token = data['data']['accessToken']
+                    self.user_id = data['data'].get('userData', {}).get('user_id')
+                    self.session.headers.update({
+                        'Authorization': f'Bearer {self.jwt_token}'
+                    })
+                    self.log_test("Authentication", True, f"Authenticated as {self.email} (user_id: {self.user_id})")
+                    return True
+                elif data.get('success') and data.get('data', {}).get('token'):
                     self.jwt_token = data['data']['token']
                     self.user_id = data['data'].get('user_id')
                     self.session.headers.update({
