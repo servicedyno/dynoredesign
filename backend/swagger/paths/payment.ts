@@ -714,6 +714,7 @@ When \`apply_tax: true\` was set during payment link creation:
                       transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                       order_reference: 'INV-2026-A1B2C3',
                       description: 'Order #12345 - Premium Subscription',
+                      available_currencies: ['BTC', 'ETH', 'USDT-TRC20'],
                       merchant: {
                         company_name: 'My Online Store',
                         company_logo: 'https://mystore.com/logo.png'
