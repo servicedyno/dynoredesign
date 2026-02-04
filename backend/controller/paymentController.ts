@@ -4509,8 +4509,7 @@ const createPaymentLink = async (
     apply_tax,        // Tax toggle: calculate tax based on customer location (default: false)
     accepted_currencies, // Array of crypto types to accept (e.g., ['BTC', 'ETH', 'USDT-TRC20'])
     // Fixed tax parameters (alternative to apply_tax location-based)
-    tax_percentage,   // Fixed tax rate (e.g., 10 for 10%)
-    tax_name,         // Tax label (e.g., "VAT", "GST", "Sales Tax")
+    // tax_percentage and tax_name removed - not used in this function
     name              // Customer name
   } = req.body;
   
@@ -6049,12 +6048,12 @@ const checkOnBlockchair = async () => {
     );
     if (tempData.length > 0) {
       for (let i = 0; i < tempData.length; i++) {
-        const addressDetails = await blockchairApi.getAddressStatus(
+        await blockchairApi.getAddressStatus(
           tempData[i].wallet_address,
           tempData[i].wallet_type
         );
 
-        const items = await getRedisItem(
+        await getRedisItem(
           "crypto-" + tempData[i].wallet_address
         );
 
