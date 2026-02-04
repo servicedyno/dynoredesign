@@ -1951,11 +1951,19 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
       days_remaining: number;
       threshold_date: string | null;
       grace_period_end: string | null;
-      verification_url: string;
+      verification_url: string | null;
       api_endpoint: string;
+      has_active_session: boolean;
     } | null = null;
     
     const frontendUrl = process.env.FRONTEND_URL || 'https://dynopay.io';
+    
+    // Get existing Veriff session URL if available
+    const veriffSessionUrl = kycRecord ? kycRecord.get("veriff_session_url") as string | null : null;
+    const kycSubmittedStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
+    
+    // Determine if merchant has an active Veriff session they can continue
+    const hasActiveSession = veriffSessionUrl && ["submitted", "pending"].includes(kycSubmittedStatus);
     
     if (requiresKyc && !kycApproved) {
       // Calculate grace period
