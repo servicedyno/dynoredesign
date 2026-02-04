@@ -6,7 +6,7 @@ let storage;
 try {
   storage = multer.diskStorage({
     destination: (
-      req: Express.Request,
+      _req: Express.Request,
       file: Express.Multer.File,
       callback: (error: Error | null, destination: string) => void
     ) => {
@@ -23,7 +23,7 @@ try {
       }
     },
     filename: (
-      req: Express.Request,
+      _req: Express.Request,
       file: Express.Multer.File,
       callback: (errror: Error | null, destination: string) => void
     ) => {

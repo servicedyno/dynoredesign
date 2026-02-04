@@ -1,6 +1,6 @@
 import express from "express";
 import Joi from "joi";
-import { IUserType } from "../utils/types";
+// IUserType import removed - not used
 
 const walletMiddleware = (
   req: express.Request,
