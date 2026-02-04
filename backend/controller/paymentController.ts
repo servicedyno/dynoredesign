@@ -1195,11 +1195,7 @@ const createCryptoPayment = async (
             return errorResponseHelper(
               res,
               503,
-              "This payment cannot be processed at this time. The merchant's account requires verification. Please contact the merchant for assistance.",
-              {
-                error_code: "MERCHANT_KYC_REQUIRED",
-                message: "The merchant needs to complete KYC verification to continue accepting payments.",
-              }
+              "This payment cannot be processed at this time. The merchant's account requires verification. Please contact the merchant for assistance. [MERCHANT_KYC_REQUIRED]"
             );
           }
           
