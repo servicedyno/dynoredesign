@@ -2057,20 +2057,27 @@ Called by merchant dashboard when creating/editing payment links to show which c
       description: `Calculate and preview the fee breakdown for a payment before checkout.
 
 **🔓 NO AUTHENTICATION REQUIRED**
-This is a public endpoint for checkout pages to show customers the fee breakdown.
+This is a public endpoint for merchants and checkout pages to preview fees.
+
+**Multi-Currency Support:**
+Supports any fiat currency (USD, EUR, GBP, AUD, CAD, etc.). The system automatically converts to USD for fee tier calculation, then converts fees back to your currency.
+
+**60% Promotional Discount:**
+All displayed fees include a 60% promotional discount to encourage adoption.
 
 **Use Case:**
-When a customer selects a cryptocurrency at checkout, call this endpoint to show:
-- Platform fee (processing fee)
-- Blockchain/network fee
-- Total fees
-- Net amount that will be forwarded to merchant
+1. Merchant enters payment amount in their local currency
+2. Selects cryptocurrency they want to receive
+3. API returns fee breakdown and net amount to merchant
 
 **Fee Breakdown:**
-- **Platform Fee**: Service fee for payment processing
+- **Platform Fee**: ~0.4% of amount (1% with 60% discount)
 - **Blockchain Fee**: Network fees for the selected cryptocurrency
-- **Total Fees**: Sum of platform + blockchain fees
+- **Total Fees**: Sum of platform + blockchain fees (with 60% discount)
 - **Net to Merchant**: Payment amount minus total fees
+
+**Supported Fiat Currencies:**
+USD, EUR, GBP, AUD, CAD, CHF, CNY, JPY, NZD, SGD, HKD, NGN, KES, ZAR, BRL, MXN, INR, AED, and many more.
 
 **Supported Cryptocurrencies:**
 BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20`,
@@ -2084,9 +2091,15 @@ BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20`,
               properties: {
                 amount: {
                   type: 'number',
-                  description: 'Payment amount in USD',
+                  description: 'Payment amount in the specified currency',
                   example: 100.00,
                   minimum: 0.01
+                },
+                currency: {
+                  type: 'string',
+                  description: 'Fiat currency code (default: USD)',
+                  example: 'AUD',
+                  default: 'USD'
                 },
                 cryptocurrency: {
                   type: 'string',
@@ -2097,24 +2110,35 @@ BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20`,
               }
             },
             examples: {
-              'ETH Payment': {
-                summary: 'Calculate fees for $100 ETH payment',
+              'USD Payment': {
+                summary: 'Calculate fees for $100 USD ETH payment',
                 value: {
                   amount: 100.00,
+                  currency: 'USD',
                   cryptocurrency: 'ETH'
                 }
               },
-              'BTC Large Payment': {
-                summary: 'Calculate fees for $500 BTC payment',
+              'AUD Payment': {
+                summary: 'Calculate fees for $100 AUD BTC payment',
                 value: {
-                  amount: 500.00,
+                  amount: 100.00,
+                  currency: 'AUD',
                   cryptocurrency: 'BTC'
                 }
               },
-              'USDT Stablecoin': {
-                summary: 'Calculate fees for USDT-TRC20 payment',
+              'EUR Payment': {
+                summary: 'Calculate fees for €500 EUR payment',
+                value: {
+                  amount: 500.00,
+                  currency: 'EUR',
+                  cryptocurrency: 'ETH'
+                }
+              },
+              'GBP Payment': {
+                summary: 'Calculate fees for £250 GBP USDT payment',
                 value: {
                   amount: 250.00,
+                  currency: 'GBP',
                   cryptocurrency: 'USDT-TRC20'
                 }
               }
@@ -2135,18 +2159,28 @@ BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20`,
                     type: 'object',
                     properties: {
                       payment_amount: { type: 'number', description: 'Original payment amount' },
-                      currency: { type: 'string', description: 'Base currency (USD)' },
+                      currency: { type: 'string', description: 'Fiat currency (e.g., USD, AUD, EUR)' },
                       cryptocurrency: { type: 'string', description: 'Selected crypto' },
                       fee_breakdown: {
                         type: 'object',
                         properties: {
-                          platform_fee: { type: 'number', description: 'Platform processing fee' },
-                          platform_fee_percent: { type: 'number', description: 'Platform fee percentage' },
-                          blockchain_fee: { type: 'number', description: 'Blockchain network fee' },
-                          total_fees: { type: 'number', description: 'Total fees (platform + blockchain)' }
+                          platform_fee: { type: 'number', description: 'Platform processing fee (in currency)' },
+                          platform_fee_percent: { type: 'number', description: 'Platform fee percentage (with discount)' },
+                          blockchain_fee: { type: 'number', description: 'Blockchain network fee (in currency)' },
+                          total_fees: { type: 'number', description: 'Total fees (in currency, with 60% discount)' }
                         }
                       },
                       net_to_merchant: { type: 'number', description: 'Amount merchant receives after fees' },
+                      usd_equivalents: {
+                        type: 'object',
+                        description: 'USD equivalent amounts for reference',
+                        properties: {
+                          payment_amount_usd: { type: 'number', description: 'Payment amount in USD' },
+                          total_fees_usd: { type: 'number', description: 'Total fees in USD' },
+                          net_to_merchant_usd: { type: 'number', description: 'Net to merchant in USD' },
+                          exchange_rate: { type: 'number', description: 'Exchange rate (currency to USD)' }
+                        }
+                      },
                       details: {
                         type: 'object',
                         description: 'Additional fee breakdown details'
