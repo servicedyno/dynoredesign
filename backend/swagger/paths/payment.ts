@@ -300,6 +300,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   amount: 199.99,
                   currency: 'USD',
                   company_id: 38,
+                  name: 'John Smith',
                   email: 'customer@example.com',
                   modes: ['CRYPTO'],
                   description: 'Premium Subscription - Annual',
@@ -309,6 +310,16 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   callback_url: 'https://myapp.com/api/payment-callback',
                   redirect_url: 'https://myapp.com/thank-you',
                   webhook_url: 'https://myapp.com/webhooks/payment'
+                }
+              },
+              'With Customer Name': {
+                summary: '👤 NAMED: Payment for specific customer',
+                value: {
+                  amount: 150.00,
+                  company_id: 38,
+                  name: 'Alice Johnson',
+                  email: 'alice@example.com',
+                  description: 'Invoice #INV-2026-001'
                 }
               },
               'Crypto Only Payment': {
