@@ -122,7 +122,7 @@ export const redeemRefereeCode = async (params: {
   referrerUserId?: number;
   message: string;
 }> => {
-  const { code, userEmail, userId } = params;
+  const { code, userId } = params;
 
   // Find the referee code
   const refereeCode = await RefereeCode.findOne({
