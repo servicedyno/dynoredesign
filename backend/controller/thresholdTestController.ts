@@ -6,7 +6,7 @@
 import { getRedisItem, setRedisItem, deleteRedisItem } from '../utils/redisInstance';
 import sequelize from '../utils/dbInstance';
 import { QueryTypes } from 'sequelize';
-import { calculateTransactionFees, getBlockchainConfig } from './index';
+import { calculateTransactionFees } from './index';
 import { getBlockchainThreshold } from '../utils/feeConfigUtils';
 
 // Test configuration
