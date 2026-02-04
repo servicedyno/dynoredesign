@@ -3,8 +3,8 @@ import jwt from "jsonwebtoken";
 import { errorResponseHelper, getErrorMessage } from "../helper";
 import { customerModel } from "../models";
 
-import { Op } from "sequelize";
-import { IUserType, CustomerJwtPayload } from "../utils/types";
+// Op and IUserType imports removed - not used
+import { CustomerJwtPayload } from "../utils/types";
 
 interface JwtError extends Error {
   name: 'TokenExpiredError' | 'JsonWebTokenError' | 'NotBeforeError' | string;

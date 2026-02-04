@@ -1,5 +1,5 @@
 import express from "express";
-import Joi from "joi";
+// Joi import removed - not used
 import { decrypt, errorResponseHelper, getErrorMessage } from "../helper";
 import { customerLogger } from "../utils/loggers";
 import sequelize from "../utils/dbInstance";
