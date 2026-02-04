@@ -4,23 +4,23 @@
 # Last Updated: 2026-02-04
 #===================================================
 
-user_problem_statement: "Fix all 7 identified issues: (1) KYC Database Schema, (2) Tatum API, (3) KMS Auth, (4) Device Login Alerts, (5) Currency Rates Fallback, (6) Seed Data, (7) Base Currency Bug"
+user_problem_statement: "Add two new features: (1) Optional customer name field for payment links - passed to checkout page, (2) Fee calculator endpoint that shows platform fee (1%), blockchain fee (remainder), total fees, and net to merchant - consistent with existing fee logic"
 
 current_test_task:
-  - task: "7 Issues Fix Verification - Post-Fix Testing"
+  - task: "Customer Name & Fee Calculator Features"
     implemented: true
     working: true
-    file: "/app/backend"
+    file: "/app/backend/controller/paymentController.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Testing 7 fixes applied: (1) KYC schema - veriff_session_id column added via migration, (2) Tatum API key updated and verified working, (3) KMS credentials in place, (4) Device login alert fix - empty object check added, (5) Currency rates already has fallback, (6) Seed data - not needed, (7) Base currency bug already fixed"
+        comment: "Implementing: (1) customer_name field in payment link model, createPaymentLink payload, and getData response, (2) calculateCheckoutFees endpoint with 1% platform fee display"
       - working: true
         agent: "main"
-        comment: "✅ ALL 7 FIXES VERIFIED: (1) KYC: GET /api/kyc/history works - returns veriff_session_id correctly, (2) Tatum API: Direct API test shows ETH fee endpoint working with new key, (3) KMS: Wallet address addition works - ETH address added successfully, (4) Device Login: Alert now sends correctly - 'New device alert sent to richard@dyno.pt' logged, (5) Currency Rates: FastForex+CoinGecko fallback already implemented, (6) Seed Data: Not a bug - endpoints work with existing data, (7) Base Currency: Already fixed - uses customerData?.base_currency"
+        comment: "✅ VERIFIED WORKING: (1) Payment link created with customer_name='John Smith', (2) getData returns customer_name in response, (3) calculateFees endpoint returns: platform_fee=1%, blockchain_fee=(total-1%), total_fees, net_to_merchant"
       - working: true
         agent: "testing"
         comment: "✅ COMPREHENSIVE 7 ISSUES FIX VERIFICATION COMPLETED: 100% success rate (8/8 tests passed). ✅ AUTHENTICATION: Successfully authenticated richard@dyno.pt with provided credentials (Katiekendra123@). ✅ ISSUE #1 - KYC SCHEMA FIX: GET /api/kyc/history returns 200 status with veriff_session_id field present in KYC records (1 record found with veriff_session_id: d96c8424-1cee-4082-b03b-4f628f571b57). ✅ ISSUE #2 - TATUM API FIX: GET /api/wallet/getWallet returns 200 status without subscription errors (2 wallets retrieved successfully). ✅ ISSUE #3 - KMS/WALLET ADDRESS FIX: POST /api/wallet/addWalletAddress with BTC address 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2 returns 'already exists' message (acceptable) without KMS/decoder errors. ✅ ISSUE #4 - DEVICE LOGIN ALERT FIX: Login attempts with different X-Forwarded-For IPs (1.2.3.4 and 5.6.7.8) trigger device alert system - backend logs show '[Login] Alert check - lastLoginIp: true, ipChanged: true' and cache operations 'new_device_alert:28:*'. ✅ ISSUE #5 - CURRENCY RATES FALLBACK: POST /api/pay/getCurrencyRates with authentication returns 200 status and rates for all 3 requested currencies (BTC, ETH, EUR) using FastForex/CoinGecko fallback. ✅ ISSUE #6 - PAYMENT LINK CREATION: POST /api/pay/createPaymentLink with company_id=38 returns 200 status and creates payment link successfully with existing seed data. ✅ ISSUE #7 - BASE CURRENCY CHECK: GET /api/userApi/getApi returns API keys with base_currency field present (1 API key checked with base_currency field). CONCLUSION: All 7 critical fixes are verified and working correctly in production environment."
