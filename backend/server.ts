@@ -4,9 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import path from "path";
 import router from "./routes";
-import tatumApi from "./apis/tatumApi";
 import { setupSwagger } from "./swagger";
-import { allowedOrigins } from "./utils/constants";
 
 import {
   deleteRedisItem,
@@ -22,16 +20,11 @@ import {
   feesModel,
   userTempAddressModel,
 } from "./models";
-import jwt from "jsonwebtoken";
 import { currencyConvert, encrypt, getErrorMessage, sendEmail } from "./helper";
-import axios from "axios";
-import { webhookLogs } from "./utils/loggers";
-import blockchairApi from "./apis/blockchairApi";
 import cron from "node-cron";
 import { getTransactionFee, getBlockchainFee, paymentController } from "./controller";
 import { connectRedis } from "./utils/redisInstance";
 import sequelize from "./utils/dbInstance";
-import { QueryTypes } from "sequelize";
 import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron, setupRefereeCodeReminderCron, setupPaymentLinkReminderCron } from "./utils/cronJobs";
 
 // Load environment variables
