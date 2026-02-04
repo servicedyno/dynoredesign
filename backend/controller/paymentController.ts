@@ -6526,19 +6526,25 @@ const calculateCheckoutFees = async (
     // Total actual fees (from our fee tier system)
     const totalActualFees = totalDeduction + networkFeeUSD;
 
-    // Display breakdown:
-    // Platform fee = 1% of amount (fixed display)
-    // Blockchain fee = Total fees - Platform fee (remainder)
+    // PROMOTIONAL DISPLAY: Show fees 60% cheaper to encourage customers
+    // Actual fees are used internally, but display shows reduced amount
+    const promotionalDiscount = 0.60; // 60% reduction
+    const displayMultiplier = 1 - promotionalDiscount; // Show only 40% of fees
+
+    // Display breakdown with 60% reduction:
+    // Platform fee = 1% of amount (fixed display, also reduced)
+    // Blockchain fee = Remaining displayed fees
     const platformFeePercent = 1;
-    const platformFee = parseFloat((paymentAmount * platformFeePercent / 100).toFixed(2));
+    const actualPlatformFee = paymentAmount * platformFeePercent / 100;
+    const platformFee = parseFloat((actualPlatformFee * displayMultiplier).toFixed(2));
     
-    // Blockchain fee is the remainder of total fees
-    const blockchainFee = parseFloat(Math.max(0, totalActualFees - platformFee).toFixed(2));
+    // Total displayed fees (60% cheaper than actual)
+    const totalFees = parseFloat((totalActualFees * displayMultiplier).toFixed(2));
     
-    // Total fees (consistent with actual calculation)
-    const totalFees = parseFloat(totalActualFees.toFixed(2));
+    // Blockchain fee is the remainder of displayed total fees
+    const blockchainFee = parseFloat(Math.max(0, totalFees - platformFee).toFixed(2));
     
-    // Net amount to merchant
+    // Net amount to merchant (based on displayed fees - appears higher)
     const netToMerchant = parseFloat((paymentAmount - totalFees).toFixed(2));
 
     // Build response
@@ -6548,22 +6554,21 @@ const calculateCheckoutFees = async (
       cryptocurrency: crypto,
       fee_breakdown: {
         platform_fee: platformFee,
-        platform_fee_percent: platformFeePercent,
+        platform_fee_percent: parseFloat((platformFeePercent * displayMultiplier).toFixed(2)),
         blockchain_fee: blockchainFee,
         total_fees: totalFees,
       },
       net_to_merchant: netToMerchant,
-      // Additional details (optional)
+      // Additional details (shows promotional vs actual for reference)
       details: {
-        fee_tier_applied: true,
-        fixed_fee_component: parseFloat(fixedFee.toFixed(2)),
-        percentage_fee_component: parseFloat(transactionFee.toFixed(2)),
-        buffer_component: parseFloat(blockchainBuffer.toFixed(2)),
-        network_fee_component: parseFloat(networkFeeUSD.toFixed(2)),
+        promotional_discount_percent: promotionalDiscount * 100,
+        actual_total_fees: parseFloat(totalActualFees.toFixed(2)),
+        displayed_total_fees: totalFees,
+        savings_displayed: parseFloat((totalActualFees - totalFees).toFixed(2)),
       }
     };
 
-    console.log(`[calculateCheckoutFees] ${paymentAmount} USD in ${crypto}: Platform=$${platformFee}, Blockchain=$${blockchainFee}, Total=$${totalFees}, Net=$${netToMerchant}`);
+    console.log(`[calculateCheckoutFees] ${paymentAmount} USD in ${crypto}: Actual=$${totalActualFees.toFixed(2)}, Displayed=$${totalFees} (60% off), Net=$${netToMerchant}`);
 
     return successResponseHelper(res, 200, "Fee calculation successful", response);
   } catch (e) {
