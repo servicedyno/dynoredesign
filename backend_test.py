@@ -112,7 +112,15 @@ class DynoPay7IssuesFixTester:
             
             if response.status_code == 200:
                 data = response.json()
-                kyc_records = data.get('data', [])
+                kyc_data = data.get('data', {})
+                
+                # Handle both array and object response formats
+                if isinstance(kyc_data, dict) and 'records' in kyc_data:
+                    kyc_records = kyc_data['records']
+                elif isinstance(kyc_data, list):
+                    kyc_records = kyc_data
+                else:
+                    kyc_records = []
                 
                 # Check if veriff_session_id field exists in records
                 has_veriff_session_id = False
