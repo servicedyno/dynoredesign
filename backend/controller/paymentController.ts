@@ -739,6 +739,8 @@ const getData = async (req: express.Request, res: express.Response) => {
           merchant: companyInfo,
           // Payment timing settings - passed upfront for checkout to display
           payment_settings: paymentSettings,
+          // Available currencies - filtered by merchant's accepted_currencies selection
+          ...(availableCurrenciesList.length > 0 && { available_currencies: availableCurrenciesList }),
           // Simplified fee info - no internal breakdown exposed
           fee_info: {
             fee_payer: item.fee_payer || 'company',
@@ -784,6 +786,8 @@ const getData = async (req: express.Request, res: express.Response) => {
           merchant: companyInfo,
           // Payment timing settings - passed upfront for checkout to display
           payment_settings: paymentSettings,
+          // Available currencies - filtered by merchant's accepted_currencies selection
+          ...(availableCurrenciesList.length > 0 && { available_currencies: availableCurrenciesList }),
           // Simplified fee info - no internal breakdown exposed
           fee_info: {
             fee_payer: item.fee_payer || 'company',
