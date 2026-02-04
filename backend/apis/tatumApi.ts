@@ -1140,7 +1140,7 @@ const assetToOtherAddress = async ({
   privateKey,
   amount,
   fee,
-  contractAddress = null,
+  _contractAddress = null,
   fromMaster = false,
   fromUTXO = [],
   toUTXO = [],
@@ -1224,7 +1224,7 @@ const assetBatchAddressesToOtherAddress = async ({
   fromAddress,
   toAddress,
   fee,
-  contractAddress = null,
+  _contractAddress = null,
   permanentUserWalletAddress = null,
   fromUTXO = [],
   toUTXO = [],
@@ -1680,7 +1680,6 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
       "incoming"
     );
 
-    let currentTransactionBlock;
     for (let i = 0; i < tempData.length; i++) {
       const currentBlock = tempData[i];
       const blockTime =
