@@ -27,7 +27,8 @@ import {
 import { getRedisItem, setRedisItem, withLock } from "../utils/redisInstance";
 import tatumApi from "../apis/tatumApi";
 import sequelize from "../utils/dbInstance";
-import { cronLogger, log } from "../utils/loggers";
+import { cronLogger } from "../utils/loggers";
+// log import removed - not used
 import { currencyConvert, getErrorMessage } from "../helper";
 import { paymentController } from "../controller";
 
@@ -601,7 +602,7 @@ export const handlePartialPayment = async (
   tempAddressId: number,
   receivedAmount: number,
   expectedAmount: number,
-  incomingTxId: string
+  _incomingTxId: string
 ): Promise<void> => {
   const poolAddress = await merchantTempAddressModel.findByPk(tempAddressId);
   
