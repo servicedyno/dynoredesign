@@ -422,7 +422,8 @@ export const checkVolumeAndTriggerKYC = async (
     });
 
     const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
-    const volumeThreshold = 5000;
+    const volumeThreshold = 10000; // $10,000 USD threshold
+    const gracePeriodDays = 90; // 90-day grace period
 
     // Check if KYC is required
     if (totalVolume >= volumeThreshold) {
@@ -434,8 +435,10 @@ export const checkVolumeAndTriggerKYC = async (
         },
       });
 
-      // If no KYC record or status is pending, send notification
-      if (!kycRecord || kycRecord.get("status") === "pending") {
+      const kycStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
+      
+      // If KYC not approved, send notifications
+      if (kycStatus !== "approved") {
         // Get user details
         const userResult = await sequelize.query<{ name: string; email: string }>(
           `SELECT name, email FROM tbl_user WHERE user_id = :userId`,
@@ -449,12 +452,50 @@ export const checkVolumeAndTriggerKYC = async (
         const userEmail = user?.email || '';
         const userName = user?.name || '';
 
-        // Create KYC required notification (only if not already notified)
+        // Calculate days since threshold was reached for grace period tracking
+        const thresholdReachedQuery = companyId
+          ? `SELECT MIN("createdAt") as threshold_date
+             FROM (
+               SELECT "createdAt", 
+                      SUM(CAST(base_amount AS DECIMAL)) OVER (ORDER BY "createdAt") as running_total
+               FROM tbl_customer_transaction 
+               WHERE company_id = :companyId AND status = 'successful'
+             ) sub
+             WHERE running_total >= :threshold`
+          : `SELECT MIN("createdAt") as threshold_date
+             FROM (
+               SELECT "createdAt", 
+                      SUM(CAST(base_amount AS DECIMAL)) OVER (ORDER BY "createdAt") as running_total
+               FROM tbl_user_transaction 
+               WHERE user_id = :userId AND status = 'done'
+             ) sub
+             WHERE running_total >= :threshold`;
+        
+        let daysRemaining = gracePeriodDays;
+        try {
+          const thresholdResult = await sequelize.query<{ threshold_date: string }>(
+            thresholdReachedQuery,
+            {
+              replacements: { userId, companyId, threshold: volumeThreshold },
+              type: QueryTypes.SELECT,
+            }
+          );
+          
+          const thresholdDate = thresholdResult[0]?.threshold_date ? new Date(thresholdResult[0].threshold_date) : new Date();
+          const gracePeriodEnd = new Date(thresholdDate);
+          gracePeriodEnd.setDate(gracePeriodEnd.getDate() + gracePeriodDays);
+          daysRemaining = Math.max(0, Math.ceil((gracePeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+        } catch (e) {
+          console.warn("[KYC] Could not calculate grace period, using default");
+        }
+
+        // MONTHLY NOTIFICATION: Send reminder every 30 days until KYC is approved
+        // Check for existing notification in the last 30 days (monthly)
         const existingNotification = await sequelize.query(
           `SELECT notification_id FROM tbl_notification 
            WHERE user_id = :userId 
            AND type = :type 
-           AND created_at > NOW() - INTERVAL '7 days'`,
+           AND created_at > NOW() - INTERVAL '30 days'`,
           {
             replacements: { userId, type: NOTIFICATION_TYPES.KYC_REQUIRED },
             type: QueryTypes.SELECT,
@@ -462,20 +503,28 @@ export const checkVolumeAndTriggerKYC = async (
         );
 
         if (existingNotification.length === 0) {
+          const urgencyMessage = daysRemaining <= 30 
+            ? `URGENT: Only ${daysRemaining} days remaining before your account is restricted.`
+            : `You have ${daysRemaining} days to complete KYC verification.`;
+          
           await createNotification(
             userId,
             NOTIFICATION_TYPES.KYC_REQUIRED,
-            "KYC Verification Required",
-            `Your transaction volume has reached $${totalVolume.toFixed(2)}. Please complete KYC verification to continue processing payments.`,
+            "KYC Verification Required - Monthly Reminder",
+            `Your transaction volume ($${totalVolume.toFixed(2)}) has exceeded the $${volumeThreshold.toLocaleString()} threshold. ${urgencyMessage} Please complete KYC verification to continue processing payments.`,
             {
               total_volume: totalVolume,
               threshold: volumeThreshold,
+              days_remaining: daysRemaining,
+              grace_period_days: gracePeriodDays,
             },
             companyId
           );
 
-          // Send KYC required email
+          // Send KYC required email with urgency based on remaining days
           await sendKYCRequiredEmail(userEmail, userName, totalVolume.toFixed(2));
+          
+          console.log(`[KYC NOTIFICATION] Sent monthly reminder to user ${userId}. Volume: $${totalVolume.toFixed(2)}, Days remaining: ${daysRemaining}`);
         }
       }
     }
