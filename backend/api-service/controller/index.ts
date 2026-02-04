@@ -117,14 +117,15 @@ const createPayment = async (req: express.Request, res: express.Response) => {
       fee_payer,
       callback_url,   // Per-payment callback URL (optional, overrides API key setting)
       webhook_url,    // Per-payment webhook URL (optional, overrides API key setting)
+      accepted_currencies,  // Optional: restrict which currencies customer can pay with
     } = req.body;
 
     const data = res.locals.apiKeyData;
 
-    // Phase 11: Check if at least one crypto wallet is configured for this company
-    const availableCurrencies = await getAvailableCurrencies(data.adm_id, data.company_id);
+    // Phase 11: Get all configured currencies for this company
+    const allConfiguredCurrencies = await getAvailableCurrencies(data.adm_id, data.company_id);
     
-    if (availableCurrencies.length === 0) {
+    if (allConfiguredCurrencies.length === 0) {
       return errorResponseHelper(
         res,
         400,
@@ -132,7 +133,28 @@ const createPayment = async (req: express.Request, res: express.Response) => {
       );
     }
     
-    console.log(`[Phase 11] Available currencies for company_id ${data.company_id}:`, availableCurrencies);
+    // Determine effective available currencies based on merchant's accepted_currencies filter
+    let effectiveAvailableCurrencies = allConfiguredCurrencies;
+    
+    if (accepted_currencies && Array.isArray(accepted_currencies) && accepted_currencies.length > 0) {
+      // Normalize to uppercase
+      const requestedCurrencies = accepted_currencies.map((c: string) => c.toUpperCase().trim());
+      
+      // Validate all requested currencies are configured
+      const unconfiguredCurrencies = requestedCurrencies.filter((c: string) => !allConfiguredCurrencies.includes(c));
+      if (unconfiguredCurrencies.length > 0) {
+        return errorResponseHelper(
+          res,
+          400,
+          `No wallet configured for: ${unconfiguredCurrencies.join(', ')}. Available currencies: ${allConfiguredCurrencies.join(', ')}`
+        );
+      }
+      
+      effectiveAvailableCurrencies = requestedCurrencies;
+      console.log(`[createPayment] Merchant restricted to currencies: ${effectiveAvailableCurrencies.join(', ')}`);
+    }
+    
+    console.log(`[Phase 11] Available currencies for company_id ${data.company_id}:`, effectiveAvailableCurrencies);
 
     const customerData = await customerModel.findOne({
       where: {
@@ -160,7 +182,8 @@ const createPayment = async (req: express.Request, res: express.Response) => {
       redirect_uri,
       pathType: "createPayment",
       fee_payer: fee_payer || 'company',  // Who pays fees: 'customer' or 'company'
-      available_currencies: availableCurrencies,  // Phase 11: Store available currencies
+      available_currencies: effectiveAvailableCurrencies,  // Phase 11: Store filtered currencies
+      all_configured_currencies: allConfiguredCurrencies,  // Store all for reference
       // Webhook support - for merchant notifications
       webhook_url: effectiveWebhookUrl,
       webhook_secret: effectiveWebhookSecret,
@@ -185,7 +208,7 @@ const createPayment = async (req: express.Request, res: express.Response) => {
     successResponseHelper(res, 200, "Link Generated!", { 
       redirect_url, 
       fee_payer: redisPayload.fee_payer, 
-      available_currencies: availableCurrencies,
+      available_currencies: effectiveAvailableCurrencies,
       webhook_url: effectiveWebhookUrl ? 'configured' : 'not configured',
     });
   } catch (e) {
