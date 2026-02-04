@@ -7,7 +7,8 @@
  * 3. Transactions are properly attributed to companies
  */
 
-import { calculateTransactionFees, getTransactionFee, getBlockchainFee } from '../controller';
+import { calculateTransactionFees } from '../controller';
+// getTransactionFee and getBlockchainFee imports removed - not used
 import sequelize from '../utils/dbInstance';
 import { QueryTypes } from 'sequelize';
 
