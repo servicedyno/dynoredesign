@@ -369,44 +369,173 @@ export const directApiPaths = {
       },
       responses: {
         200: {
-          description: 'Crypto payment address generated',
+          description: 'Crypto payment address generated successfully',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
+                  success: { type: 'boolean', example: true },
                   message: { type: 'string' },
                   data: {
                     type: 'object',
                     properties: {
-                      payment_id: { type: 'string', description: 'Unique payment identifier' },
-                      address: { type: 'string', description: '📥 Deposit address - customer sends funds here' },
-                      amount: { type: 'number', description: 'Amount in USD' },
-                      crypto_amount: { type: 'string', description: 'Amount in cryptocurrency' },
-                      currency: { type: 'string', description: 'Cryptocurrency symbol' },
-                      expires_at: { type: 'string', format: 'date-time', description: 'Payment expiration time' },
-                      qr_code: { type: 'string', description: 'QR code URL for easy scanning' }
+                      transaction_id: { 
+                        type: 'string', 
+                        description: '🆔 Unique payment transaction ID - use for tracking'
+                      },
+                      qr_code: { 
+                        type: 'string', 
+                        description: '📱 QR code data URL for customer scanning'
+                      },
+                      address: { 
+                        type: 'string', 
+                        description: '📥 Crypto deposit address - customer sends funds here'
+                      },
+                      amount: { 
+                        type: 'number', 
+                        description: '💰 Exact crypto amount customer must send'
+                      },
+                      currency: { 
+                        type: 'string', 
+                        description: '🪙 Cryptocurrency symbol'
+                      },
+                      base_amount: { 
+                        type: 'number', 
+                        description: '💵 Original amount in base currency (USD)'
+                      },
+                      base_currency: { 
+                        type: 'string', 
+                        description: 'Base currency code (e.g., USD)'
+                      },
+                      redirect_uri: { 
+                        type: 'string', 
+                        description: '🔗 Redirect URL after payment (if provided)'
+                      }
                     }
                   }
                 }
               },
-              example: {
-                message: 'Payment address generated',
-                data: {
-                  payment_id: 'pay_xyz789',
-                  address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE4E',
-                  amount: 100,
-                  crypto_amount: '0.042156',
-                  currency: 'ETH',
-                  expires_at: '2025-02-02T03:00:00Z',
-                  qr_code: 'https://api.qrserver.com/v1/create-qr-code/?data=0x742d35...'
+              examples: {
+                'ETH Payment': {
+                  summary: 'Ethereum payment address generated',
+                  value: {
+                    success: true,
+                    message: 'Payment Created!',
+                    data: {
+                      transaction_id: 'a3f2e1d4c5b6a7890fedcba987654321fedcba987654321fedcba9876543210',
+                      qr_code: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
+                      address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE4E',
+                      amount: 0.042156,
+                      currency: 'ETH',
+                      base_amount: 100,
+                      base_currency: 'USD',
+                      redirect_uri: 'https://yourapp.com/order/success'
+                    }
+                  }
+                },
+                'BTC Payment': {
+                  summary: 'Bitcoin payment address generated',
+                  value: {
+                    success: true,
+                    message: 'Payment Created!',
+                    data: {
+                      transaction_id: 'b4e3f2d1c0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3',
+                      qr_code: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
+                      address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+                      amount: 0.00234567,
+                      currency: 'BTC',
+                      base_amount: 100,
+                      base_currency: 'USD',
+                      redirect_uri: null
+                    }
+                  }
                 }
               }
             }
           }
         },
-        401: { description: 'Invalid API key or customer token' },
-        400: { description: 'Invalid request parameters' }
+        400: { 
+          description: 'Bad Request - Invalid parameters or unconfigured wallet',
+          content: {
+            'application/json': {
+              examples: {
+                'Missing Amount': {
+                  summary: 'Amount field missing or invalid',
+                  value: {
+                    success: false,
+                    message: 'Valid payment amount is required'
+                  }
+                },
+                'Missing Currency': {
+                  summary: 'Currency field missing',
+                  value: {
+                    success: false,
+                    message: 'Currency is required',
+                    available_currencies: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                  }
+                },
+                'No Wallet Configured': {
+                  summary: 'No crypto wallets configured',
+                  value: {
+                    success: false,
+                    message: 'No crypto wallet configured. Please add at least one crypto wallet address before creating a payment.'
+                  }
+                },
+                'Currency Not Configured': {
+                  summary: 'Requested currency not available',
+                  value: {
+                    success: false,
+                    message: 'ETH is not available for this payment. Available currencies: BTC, USDT-TRC20',
+                    available_currencies: ['BTC', 'USDT-TRC20']
+                  }
+                },
+                'Unconfigured Accepted Currency': {
+                  summary: 'accepted_currencies contains unconfigured wallet',
+                  value: {
+                    success: false,
+                    message: 'No wallet configured for: SOL, MATIC. Available currencies: BTC, ETH, USDT-TRC20'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: { 
+          description: 'Forbidden - Invalid API key or unauthorized',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                message: 'Invalid API key'
+              }
+            }
+          }
+        },
+        500: { 
+          description: 'Internal Server Error',
+          content: {
+            'application/json': {
+              examples: {
+                'Currency Rate Error': {
+                  summary: 'Failed to fetch cryptocurrency rates',
+                  value: {
+                    success: false,
+                    message: 'Failed to get currency rates'
+                  }
+                },
+                'Payment Creation Error': {
+                  summary: 'Error creating crypto payment',
+                  value: {
+                    success: false,
+                    message: 'Failed to create crypto payment',
+                    error: 'Internal payment processing error'
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
