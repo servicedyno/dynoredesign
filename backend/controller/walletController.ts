@@ -1961,6 +1961,10 @@ const addWalletAddress = async (
           company_id: company_id || null,
           wallet_name: wallet_name || label || currency,
         });
+        
+        // Invalidate wallet cache so getWallet returns fresh data
+        await invalidateWalletCache(userData.user_id);
+        
         successResponseHelper(res, 200, "Address added successfully!", resData);
       }
     } catch (e) {
