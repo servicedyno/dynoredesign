@@ -2038,17 +2038,28 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
         
         // Call webhook if webhook_url is configured
         if (linkData.webhook_url) {
-          try {
-            await axios.post(linkData.webhook_url, returnData, { timeout: 30000 });
-            webhookLogs.log("info", "Payment link webhook sent successfully!", {
+          // Validate webhook URL - localhost URLs won't work from cloud server
+          if (linkData.webhook_url.includes('localhost') || linkData.webhook_url.includes('127.0.0.1')) {
+            webhookLogs.error("Payment link webhook uses localhost URL which is unreachable", { 
               webhook_url: linkData.webhook_url,
-              ...returnData,
+              suggestion: "Use a public URL for webhooks"
             });
-          } catch (webhookError) {
-            webhookLogs.error("Payment link webhook failed", { 
-              webhook_url: linkData.webhook_url,
-              error: webhookError.message 
-            });
+          } else {
+            try {
+              await axios.post(linkData.webhook_url, returnData, { timeout: 30000 });
+              webhookLogs.log("info", "Payment link webhook sent successfully!", {
+                webhook_url: linkData.webhook_url,
+                ...returnData,
+              });
+            } catch (webhookError) {
+              const errorMsg = webhookError.code === 'ECONNREFUSED' 
+                ? `Connection refused - server at ${linkData.webhook_url} is not reachable`
+                : webhookError.message;
+              webhookLogs.error("Payment link webhook failed", { 
+                webhook_url: linkData.webhook_url,
+                error: errorMsg
+              });
+            }
           }
         }
         
