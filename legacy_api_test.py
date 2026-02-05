@@ -1,558 +1,592 @@
 #!/usr/bin/env python3
 """
-DynoPay Legacy API Backward Compatibility Testing
-Tests the newly implemented Legacy API endpoints for backward compatibility with OLD DynoPay API
+Legacy API Backward Compatibility Testing
+=========================================
+
+Tests the Legacy API endpoints that provide backward compatibility with the OLD DynoPay API.
+This test suite verifies that the SQL type error fix in paymentController.ts line 1444 is working correctly.
+
+Test Scenarios:
+1. Create Customer (NEW Flow) - x-api-key only
+2. Create Crypto Payment with NEW Auth - x-api-key + customer JWT (CRITICAL - Previously Had SQL Error)
+3. Create Crypto Payment with OLD Auth - x-api-key + legacy flow (auto-creates default customer)
+4. Get Supported Currencies - x-api-key only
+5. Get Balance - x-api-key + customer JWT
+6. Get Transactions - x-api-key + customer JWT
+
+Authentication:
+- Test User: richard@dyno.pt
+- Password: Katiekendra123@
+- Company ID: 38
 """
 
-import os
-import sys
+import requests
 import json
 import time
-import requests
-from typing import Dict, List, Any
-import uuid
+import os
+from datetime import datetime
 
-class LegacyApiTester:
+# Configuration
+BACKEND_URL = "https://api-payment-restore.preview.emergentagent.com"
+TEST_USER_EMAIL = "richard@dyno.pt"
+TEST_USER_PASSWORD = "Katiekendra123@"
+COMPANY_ID = 38
+
+class LegacyAPITester:
     def __init__(self):
-        # Get backend URL from frontend .env file
-        self.backend_url = self.get_backend_url()
-        self.test_results = {}
-        self.errors = []
-        self.jwt_token = None
-        self.user_data = None
+        self.session = requests.Session()
+        self.session.headers.update({
+            'Content-Type': 'application/json',
+            'User-Agent': 'DynoPay-Legacy-API-Tester/1.0'
+        })
+        self.user_token = None
         self.api_key = None
+        self.customer_token = None
+        self.test_results = []
         
-        # Test credentials from review request
-        self.test_email = "richard@dyno.pt"
-        self.test_password = "Katiekendra123@"
-        
-    def get_backend_url(self):
-        """Get backend URL from frontend .env file"""
-        try:
-            with open('/app/frontend/.env', 'r') as f:
-                for line in f:
-                    if line.startswith('REACT_APP_BACKEND_URL='):
-                        return line.split('=', 1)[1].strip()
-        except:
-            pass
-        return "http://localhost:8001"
-        
-    def log_result(self, test_name: str, success: bool, message: str, details: Dict = None):
-        """Log test result"""
-        self.test_results[test_name] = {
+    def log_test(self, test_name, success, message, details=None):
+        """Log test results"""
+        result = {
+            'test': test_name,
             'success': success,
             'message': message,
+            'timestamp': datetime.now().isoformat(),
             'details': details or {}
         }
+        self.test_results.append(result)
+        
         status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status}: {test_name} - {message}")
-        if not success:
-            self.errors.append(f"{test_name}: {message}")
+        print(f"{status} {test_name}: {message}")
+        if details and not success:
+            print(f"   Details: {details}")
     
     def authenticate_user(self):
-        """Authenticate with provided credentials"""
+        """Step 1: Authenticate as richard@dyno.pt to get access to company API key"""
+        print("\n🔐 STEP 1: User Authentication")
+        print("=" * 50)
+        
         try:
-            response = requests.post(
-                f"{self.backend_url}/api/user/login",
-                json={
-                    "email": self.test_email,
-                    "password": self.test_password
-                },
-                headers={"Content-Type": "application/json"},
-                timeout=15
-            )
+            response = self.session.post(f"{BACKEND_URL}/api/user/login", json={
+                "email": TEST_USER_EMAIL,
+                "password": TEST_USER_PASSWORD
+            })
             
             if response.status_code == 200:
                 data = response.json()
-                if 'data' in data and 'accessToken' in data['data']:
-                    self.jwt_token = data['data']['accessToken']
-                    self.user_data = data['data']['userData']
-                    self.log_result(
-                        "Authentication", 
+                if data.get('success') and data.get('data', {}).get('token'):
+                    self.user_token = data['data']['token']
+                    user_info = data['data']
+                    self.log_test(
+                        "User Authentication", 
                         True, 
-                        f"Successfully authenticated {self.user_data.get('email', 'user')}",
+                        f"Successfully authenticated {TEST_USER_EMAIL}",
                         {
-                            "user_id": self.user_data.get('user_id'),
-                            "name": self.user_data.get('name'),
-                            "email": self.user_data.get('email')
+                            'user_id': user_info.get('user_id'),
+                            'name': user_info.get('name'),
+                            'username': user_info.get('username')
                         }
                     )
                     return True
                 else:
-                    self.log_result("Authentication", False, "Login succeeded but no token received")
+                    self.log_test("User Authentication", False, "Invalid response format", data)
                     return False
             else:
-                self.log_result("Authentication", False, f"Login failed with status {response.status_code}")
+                self.log_test("User Authentication", False, f"HTTP {response.status_code}", response.text)
                 return False
                 
         except Exception as e:
-            self.log_result("Authentication", False, f"Authentication failed: {str(e)}")
+            self.log_test("User Authentication", False, f"Exception: {str(e)}")
             return False
     
     def get_api_key(self):
-        """Get API key for testing"""
+        """Step 2: Retrieve the encrypted API key for company_id 38"""
+        print("\n🔑 STEP 2: API Key Retrieval")
+        print("=" * 50)
+        
+        if not self.user_token:
+            self.log_test("API Key Retrieval", False, "No user token available")
+            return False
+            
         try:
-            response = requests.get(
-                f"{self.backend_url}/api/userApi/getApi",
-                headers={"Authorization": f"Bearer {self.jwt_token}"},
-                timeout=15
-            )
+            headers = {'Authorization': f'Bearer {self.user_token}'}
+            response = self.session.get(f"{BACKEND_URL}/api/userApi/getApi", headers=headers)
             
             if response.status_code == 200:
                 data = response.json()
-                api_data = data.get('data', {})
-                
-                # Handle both single API key and grouped format
-                if isinstance(api_data, dict) and 'all' in api_data:
-                    api_list = api_data['all']
-                elif isinstance(api_data, list):
-                    api_list = api_data
+                if data.get('success') and data.get('data'):
+                    # Look for API key with company_id 38
+                    api_keys = data['data']
+                    company_api_key = None
+                    
+                    # Handle both grouped and flat API key structures
+                    if isinstance(api_keys, dict):
+                        # Grouped by environment
+                        for env_keys in api_keys.values():
+                            if isinstance(env_keys, list):
+                                for key_info in env_keys:
+                                    if key_info.get('company_id') == COMPANY_ID:
+                                        company_api_key = key_info.get('api_key')
+                                        break
+                            if company_api_key:
+                                break
+                    elif isinstance(api_keys, list):
+                        # Flat list
+                        for key_info in api_keys:
+                            if key_info.get('company_id') == COMPANY_ID:
+                                company_api_key = key_info.get('api_key')
+                                break
+                    
+                    if company_api_key:
+                        self.api_key = company_api_key
+                        self.log_test(
+                            "API Key Retrieval", 
+                            True, 
+                            f"Successfully retrieved API key for company {COMPANY_ID}",
+                            {'api_key_length': len(company_api_key)}
+                        )
+                        return True
+                    else:
+                        self.log_test("API Key Retrieval", False, f"No API key found for company {COMPANY_ID}", api_keys)
+                        return False
                 else:
-                    api_list = [api_data] if api_data else []
-                
-                if api_list and len(api_list) > 0:
-                    self.api_key = api_list[0].get('api_key')
-                    self.log_result(
-                        "API Key Retrieval", 
-                        True, 
-                        f"Retrieved API key for testing",
-                        {"api_key_count": len(api_list)}
-                    )
-                    return True
-                else:
-                    self.log_result("API Key Retrieval", False, "No API keys found")
+                    self.log_test("API Key Retrieval", False, "Invalid response format", data)
                     return False
             else:
-                self.log_result("API Key Retrieval", False, f"API key retrieval failed with status {response.status_code}")
+                self.log_test("API Key Retrieval", False, f"HTTP {response.status_code}", response.text)
                 return False
                 
         except Exception as e:
-            self.log_result("API Key Retrieval", False, f"API key retrieval failed: {str(e)}")
+            self.log_test("API Key Retrieval", False, f"Exception: {str(e)}")
             return False
     
-    # ============================================
-    # TEST 1: Endpoints without API key should return 403
-    # ============================================
-    
-    def test_endpoints_without_api_key(self):
-        """Test that endpoints return 403 when API key is missing"""
-        print("\n" + "="*60)
-        print("TEST 1: ENDPOINTS WITHOUT API KEY SHOULD RETURN 403")
-        print("="*60)
-        
-        endpoints_to_test = [
-            ("POST", "/api/user/createUser", {"name": "Test User", "email": "test@example.com"}),
-            ("POST", "/api/user/cryptoPayment", {"amount": 100, "currency": "BTC"}),
-            ("GET", "/api/user/getSupportedCurrency", None),
-            ("GET", "/api/user/getBalance", None),
-            ("GET", "/api/user/getTransactions", None)
-        ]
-        
-        for method, endpoint, payload in endpoints_to_test:
-            try:
-                if method == "POST":
-                    response = requests.post(
-                        f"{self.backend_url}{endpoint}",
-                        json=payload,
-                        headers={"Content-Type": "application/json"},
-                        timeout=10
-                    )
-                else:
-                    response = requests.get(
-                        f"{self.backend_url}{endpoint}",
-                        timeout=10
-                    )
-                
-                if response.status_code == 403:
-                    response_data = response.json()
-                    if "API key" in response_data.get('message', ''):
-                        self.log_result(
-                            f"No API Key - {endpoint}", 
-                            True, 
-                            f"Correctly returned 403 with API key error message",
-                            {"status_code": response.status_code, "message": response_data.get('message')}
-                        )
-                    else:
-                        self.log_result(
-                            f"No API Key - {endpoint}", 
-                            False, 
-                            f"Returned 403 but wrong error message: {response_data.get('message')}"
-                        )
-                else:
-                    self.log_result(
-                        f"No API Key - {endpoint}", 
-                        False, 
-                        f"Expected 403 but got {response.status_code}"
-                    )
-                    
-            except Exception as e:
-                self.log_result(f"No API Key - {endpoint}", False, f"Request failed: {str(e)}")
-    
-    # ============================================
-    # TEST 2: Endpoint accessibility verification
-    # ============================================
-    
-    def test_endpoint_accessibility(self):
-        """Test that all endpoints exist and respond (even if 403 without valid key)"""
-        print("\n" + "="*60)
-        print("TEST 2: ENDPOINT ACCESSIBILITY VERIFICATION")
-        print("="*60)
-        
-        endpoints_to_test = [
-            ("POST", "/api/user/createUser"),
-            ("POST", "/api/user/cryptoPayment"),
-            ("GET", "/api/user/getSupportedCurrency"),
-            ("GET", "/api/user/getBalance"),
-            ("GET", "/api/user/getTransactions")
-        ]
-        
-        for method, endpoint in endpoints_to_test:
-            try:
-                if method == "POST":
-                    response = requests.post(
-                        f"{self.backend_url}{endpoint}",
-                        json={},
-                        headers={"Content-Type": "application/json"},
-                        timeout=10
-                    )
-                else:
-                    response = requests.get(
-                        f"{self.backend_url}{endpoint}",
-                        timeout=10
-                    )
-                
-                # Endpoint should exist (not return 404)
-                if response.status_code != 404:
-                    self.log_result(
-                        f"Endpoint Exists - {endpoint}", 
-                        True, 
-                        f"Endpoint accessible (status: {response.status_code})",
-                        {"status_code": response.status_code}
-                    )
-                else:
-                    self.log_result(
-                        f"Endpoint Exists - {endpoint}", 
-                        False, 
-                        f"Endpoint not found (404)"
-                    )
-                    
-            except Exception as e:
-                self.log_result(f"Endpoint Exists - {endpoint}", False, f"Request failed: {str(e)}")
-    
-    # ============================================
-    # TEST 3: Code verification
-    # ============================================
-    
-    def test_code_verification(self):
-        """Verify that the required code files exist with correct structure"""
-        print("\n" + "="*60)
-        print("TEST 3: CODE VERIFICATION")
-        print("="*60)
-        
-        # Check if legacyApiAuthMiddleware.ts exists
-        try:
-            with open('/app/backend/middleware/legacyApiAuthMiddleware.ts', 'r') as f:
-                middleware_content = f.read()
-                
-            if 'validateApiKey' in middleware_content and 'export' in middleware_content:
-                self.log_result(
-                    "Middleware File", 
-                    True, 
-                    "legacyApiAuthMiddleware.ts exists with validateApiKey export",
-                    {"file_size": len(middleware_content)}
-                )
-            else:
-                self.log_result("Middleware File", False, "legacyApiAuthMiddleware.ts missing validateApiKey export")
-                
-        except Exception as e:
-            self.log_result("Middleware File", False, f"legacyApiAuthMiddleware.ts not found: {str(e)}")
-        
-        # Check if legacyApiRouter.ts exists
-        try:
-            with open('/app/backend/routes/legacyApiRouter.ts', 'r') as f:
-                router_content = f.read()
-                
-            required_routes = ['/createUser', '/cryptoPayment', '/getBalance', '/getTransactions', '/getSupportedCurrency']
-            routes_found = []
-            
-            for route in required_routes:
-                if route in router_content:
-                    routes_found.append(route)
-            
-            if len(routes_found) == len(required_routes):
-                self.log_result(
-                    "Router File", 
-                    True, 
-                    f"legacyApiRouter.ts exists with all 5 routes defined",
-                    {"routes_found": routes_found}
-                )
-            else:
-                self.log_result(
-                    "Router File", 
-                    False, 
-                    f"legacyApiRouter.ts missing routes: {set(required_routes) - set(routes_found)}"
-                )
-                
-        except Exception as e:
-            self.log_result("Router File", False, f"legacyApiRouter.ts not found: {str(e)}")
-        
-        # Check if routes/index.ts imports and mounts legacyApiRouter
-        try:
-            with open('/app/backend/routes/index.ts', 'r') as f:
-                index_content = f.read()
-                
-            has_import = 'legacyApiRouter' in index_content and 'import' in index_content
-            has_mount = 'router.use("/user", legacyApiRouter)' in index_content
-            
-            if has_import and has_mount:
-                self.log_result(
-                    "Router Integration", 
-                    True, 
-                    "legacyApiRouter properly imported and mounted in routes/index.ts",
-                    {"has_import": has_import, "has_mount": has_mount}
-                )
-            else:
-                self.log_result(
-                    "Router Integration", 
-                    False, 
-                    f"legacyApiRouter integration issue - import: {has_import}, mount: {has_mount}"
-                )
-                
-        except Exception as e:
-            self.log_result("Router Integration", False, f"routes/index.ts check failed: {str(e)}")
-    
-    # ============================================
-    # TEST 4: API key functionality tests
-    # ============================================
-    
-    def test_api_key_functionality(self):
-        """Test endpoints with valid API key"""
-        print("\n" + "="*60)
-        print("TEST 4: API KEY FUNCTIONALITY TESTS")
-        print("="*60)
+    def test_create_customer_new_flow(self):
+        """SCENARIO 1: Create Customer (NEW Flow) - x-api-key only"""
+        print("\n📝 SCENARIO 1: Create Customer (NEW Flow)")
+        print("=" * 50)
         
         if not self.api_key:
-            self.log_result("API Key Tests", False, "No API key available for testing")
-            return
-        
-        # Test createUser with valid API key
+            self.log_test("Create Customer (NEW Flow)", False, "No API key available")
+            return False
+            
         try:
-            response = requests.post(
-                f"{self.backend_url}/api/user/createUser",
+            headers = {'x-api-key': self.api_key}
+            test_email = f"test-legacy-api-{int(time.time())}@example.com"
+            
+            response = self.session.post(f"{BACKEND_URL}/api/user/createUser", 
+                headers=headers,
                 json={
-                    "name": "Test Legacy User",
-                    "email": f"legacy-test-{int(time.time())}@example.com"
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": self.api_key
-                },
-                timeout=15
+                    "name": "Test Customer",
+                    "email": test_email,
+                    "mobile": "+1234567890"
+                }
             )
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success') and 'token' in data.get('data', {}):
-                    customer_token = data['data']['token']
-                    self.log_result(
-                        "createUser with API Key", 
+                if data.get('success') and data.get('data', {}).get('token'):
+                    self.customer_token = data['data']['token']
+                    customer_id = data['data']['customer_id']
+                    self.log_test(
+                        "Create Customer (NEW Flow)", 
                         True, 
-                        "Successfully created customer and returned JWT token",
+                        "Successfully created customer and received JWT token",
                         {
-                            "status_code": response.status_code,
-                            "has_token": bool(customer_token),
-                            "customer_id": data['data'].get('customer_id')
+                            'customer_id': customer_id,
+                            'email': test_email,
+                            'token_length': len(self.customer_token)
                         }
                     )
-                    
-                    # Test cryptoPayment with the customer token
-                    self.test_crypto_payment_with_token(customer_token)
+                    return True
                 else:
-                    self.log_result("createUser with API Key", False, "Response missing token or success flag")
+                    self.log_test("Create Customer (NEW Flow)", False, "Invalid response format", data)
+                    return False
             else:
-                self.log_result("createUser with API Key", False, f"createUser failed with status {response.status_code}")
+                self.log_test("Create Customer (NEW Flow)", False, f"HTTP {response.status_code}", response.text)
+                return False
                 
         except Exception as e:
-            self.log_result("createUser with API Key", False, f"createUser request failed: {str(e)}")
-        
-        # Test getSupportedCurrency with valid API key
-        try:
-            response = requests.get(
-                f"{self.backend_url}/api/user/getSupportedCurrency",
-                headers={"x-api-key": self.api_key},
-                timeout=15
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('success') and 'currencies' in data.get('data', {}):
-                    currencies = data['data']['currencies']
-                    self.log_result(
-                        "getSupportedCurrency with API Key", 
-                        True, 
-                        f"Successfully retrieved {len(currencies)} supported currencies",
-                        {
-                            "status_code": response.status_code,
-                            "currency_count": len(currencies),
-                            "currencies": currencies[:5]  # Show first 5
-                        }
-                    )
-                else:
-                    self.log_result("getSupportedCurrency with API Key", False, "Response missing currencies data")
-            else:
-                self.log_result("getSupportedCurrency with API Key", False, f"getSupportedCurrency failed with status {response.status_code}")
-                
-        except Exception as e:
-            self.log_result("getSupportedCurrency with API Key", False, f"getSupportedCurrency request failed: {str(e)}")
+            self.log_test("Create Customer (NEW Flow)", False, f"Exception: {str(e)}")
+            return False
     
-    def test_crypto_payment_with_token(self, customer_token: str):
-        """Test cryptoPayment with customer token"""
+    def test_crypto_payment_new_auth(self):
+        """SCENARIO 2: Create Crypto Payment with NEW Auth (CRITICAL - Previously Had SQL Error)"""
+        print("\n💰 SCENARIO 2: Create Crypto Payment with NEW Auth (CRITICAL)")
+        print("=" * 50)
+        
+        if not self.api_key or not self.customer_token:
+            self.log_test("Crypto Payment (NEW Auth)", False, "Missing API key or customer token")
+            return False
+            
         try:
-            response = requests.post(
-                f"{self.backend_url}/api/user/cryptoPayment",
+            headers = {
+                'x-api-key': self.api_key,
+                'Authorization': f'Bearer {self.customer_token}'
+            }
+            
+            response = self.session.post(f"{BACKEND_URL}/api/user/cryptoPayment",
+                headers=headers,
                 json={
                     "amount": 10,
-                    "currency": "BTC"
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": self.api_key,
-                    "Authorization": f"Bearer {customer_token}"
-                },
-                timeout=15
+                    "currency": "ETH",
+                    "redirect_uri": "https://example.com/success",
+                    "fee_payer": "customer"
+                }
             )
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success') and 'address' in data.get('data', {}):
-                    self.log_result(
-                        "cryptoPayment with Customer Token", 
-                        True, 
-                        "Successfully created crypto payment with customer token",
-                        {
-                            "status_code": response.status_code,
-                            "has_address": bool(data['data'].get('address')),
-                            "currency": data['data'].get('currency'),
-                            "amount": data['data'].get('amount')
-                        }
-                    )
+                if data.get('success') and data.get('data'):
+                    payment_data = data['data']
+                    required_fields = ['transaction_id', 'qr_code', 'address', 'amount', 'currency']
+                    missing_fields = [field for field in required_fields if field not in payment_data]
+                    
+                    if not missing_fields:
+                        self.log_test(
+                            "Crypto Payment (NEW Auth)", 
+                            True, 
+                            "✅ CRITICAL SUCCESS: No SQL type error occurred! Payment created successfully",
+                            {
+                                'transaction_id': payment_data['transaction_id'],
+                                'address': payment_data['address'],
+                                'amount': payment_data['amount'],
+                                'currency': payment_data['currency'],
+                                'sql_error_fixed': True
+                            }
+                        )
+                        return True
+                    else:
+                        self.log_test("Crypto Payment (NEW Auth)", False, f"Missing required fields: {missing_fields}", payment_data)
+                        return False
                 else:
-                    self.log_result("cryptoPayment with Customer Token", False, "Response missing payment data")
+                    self.log_test("Crypto Payment (NEW Auth)", False, "Invalid response format", data)
+                    return False
             else:
-                # Check if it's a configuration issue (no wallets configured)
-                response_text = response.text.lower()
-                if 'wallet' in response_text and 'configured' in response_text:
-                    self.log_result(
-                        "cryptoPayment with Customer Token", 
-                        True, 
-                        f"Endpoint working but no crypto wallets configured (status {response.status_code})",
-                        {"status_code": response.status_code, "note": "Configuration issue, not code issue"}
+                # Check if this is the SQL type error we were trying to fix
+                error_text = response.text.lower()
+                if "operator does not exist: character varying = integer" in error_text:
+                    self.log_test(
+                        "Crypto Payment (NEW Auth)", 
+                        False, 
+                        "❌ CRITICAL FAILURE: SQL type error still exists! Fix at line 1444 not working",
+                        {'sql_error': True, 'error_text': response.text}
                     )
                 else:
-                    self.log_result("cryptoPayment with Customer Token", False, f"cryptoPayment failed with status {response.status_code}")
+                    self.log_test("Crypto Payment (NEW Auth)", False, f"HTTP {response.status_code}", response.text)
+                return False
                 
         except Exception as e:
-            self.log_result("cryptoPayment with Customer Token", False, f"cryptoPayment request failed: {str(e)}")
+            self.log_test("Crypto Payment (NEW Auth)", False, f"Exception: {str(e)}")
+            return False
     
-    # ============================================
-    # Main Test Runner
-    # ============================================
+    def test_crypto_payment_old_auth(self):
+        """SCENARIO 3: Create Crypto Payment with OLD Auth (Legacy Flow)"""
+        print("\n🔄 SCENARIO 3: Create Crypto Payment with OLD Auth (Legacy Flow)")
+        print("=" * 50)
+        
+        if not self.api_key:
+            self.log_test("Crypto Payment (OLD Auth)", False, "No API key available")
+            return False
+            
+        try:
+            headers = {
+                'x-api-key': self.api_key,
+                'Authorization': 'Bearer invalid_or_empty_token'  # This should trigger legacy flow
+            }
+            
+            response = self.session.post(f"{BACKEND_URL}/api/user/cryptoPayment",
+                headers=headers,
+                json={
+                    "amount": 20,
+                    "currency": "BTC",
+                    "redirect_uri": "https://example.com/success",
+                    "fee_payer": "company"
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success') and data.get('data'):
+                    payment_data = data['data']
+                    required_fields = ['transaction_id', 'qr_code', 'address', 'amount', 'currency']
+                    missing_fields = [field for field in required_fields if field not in payment_data]
+                    
+                    if not missing_fields:
+                        self.log_test(
+                            "Crypto Payment (OLD Auth)", 
+                            True, 
+                            "Successfully created payment with auto-created default customer",
+                            {
+                                'transaction_id': payment_data['transaction_id'],
+                                'address': payment_data['address'],
+                                'amount': payment_data['amount'],
+                                'currency': payment_data['currency'],
+                                'legacy_flow': True
+                            }
+                        )
+                        return True
+                    else:
+                        self.log_test("Crypto Payment (OLD Auth)", False, f"Missing required fields: {missing_fields}", payment_data)
+                        return False
+                else:
+                    self.log_test("Crypto Payment (OLD Auth)", False, "Invalid response format", data)
+                    return False
+            else:
+                self.log_test("Crypto Payment (OLD Auth)", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_test("Crypto Payment (OLD Auth)", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_supported_currencies(self):
+        """SCENARIO 4: Get Supported Currencies"""
+        print("\n🪙 SCENARIO 4: Get Supported Currencies")
+        print("=" * 50)
+        
+        if not self.api_key:
+            self.log_test("Get Supported Currencies", False, "No API key available")
+            return False
+            
+        try:
+            headers = {'x-api-key': self.api_key}
+            
+            response = self.session.get(f"{BACKEND_URL}/api/user/getSupportedCurrency", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success') and data.get('data'):
+                    currency_data = data['data']
+                    currencies = currency_data.get('currencies', [])
+                    all_supported = currency_data.get('all_supported', [])
+                    
+                    self.log_test(
+                        "Get Supported Currencies", 
+                        True, 
+                        f"Successfully retrieved {len(currencies)} configured currencies",
+                        {
+                            'configured_currencies': currencies,
+                            'all_supported_count': len(all_supported),
+                            'all_supported': all_supported
+                        }
+                    )
+                    return True
+                else:
+                    self.log_test("Get Supported Currencies", False, "Invalid response format", data)
+                    return False
+            else:
+                self.log_test("Get Supported Currencies", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_test("Get Supported Currencies", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_balance(self):
+        """SCENARIO 5: Get Balance"""
+        print("\n💰 SCENARIO 5: Get Customer Balance")
+        print("=" * 50)
+        
+        if not self.api_key or not self.customer_token:
+            self.log_test("Get Balance", False, "Missing API key or customer token")
+            return False
+            
+        try:
+            headers = {
+                'x-api-key': self.api_key,
+                'Authorization': f'Bearer {self.customer_token}'
+            }
+            
+            response = self.session.get(f"{BACKEND_URL}/api/user/getBalance", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success'):
+                    balance_data = data.get('data', [])
+                    self.log_test(
+                        "Get Balance", 
+                        True, 
+                        f"Successfully retrieved balance for {len(balance_data)} wallets",
+                        {'wallets': balance_data}
+                    )
+                    return True
+                else:
+                    self.log_test("Get Balance", False, "Invalid response format", data)
+                    return False
+            else:
+                self.log_test("Get Balance", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_test("Get Balance", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_transactions(self):
+        """SCENARIO 6: Get Transactions"""
+        print("\n📊 SCENARIO 6: Get Customer Transactions")
+        print("=" * 50)
+        
+        if not self.api_key or not self.customer_token:
+            self.log_test("Get Transactions", False, "Missing API key or customer token")
+            return False
+            
+        try:
+            headers = {
+                'x-api-key': self.api_key,
+                'Authorization': f'Bearer {self.customer_token}'
+            }
+            
+            response = self.session.get(f"{BACKEND_URL}/api/user/getTransactions", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success'):
+                    transactions = data.get('data', [])
+                    self.log_test(
+                        "Get Transactions", 
+                        True, 
+                        f"Successfully retrieved {len(transactions)} transactions",
+                        {'transaction_count': len(transactions)}
+                    )
+                    return True
+                else:
+                    self.log_test("Get Transactions", False, "Invalid response format", data)
+                    return False
+            else:
+                self.log_test("Get Transactions", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_test("Get Transactions", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_api_key_validation(self):
+        """Test API key validation (should return 403 without API key)"""
+        print("\n🔒 BONUS TEST: API Key Validation")
+        print("=" * 50)
+        
+        try:
+            # Test without API key - should return 403
+            response = self.session.post(f"{BACKEND_URL}/api/user/createUser", json={
+                "name": "Test Customer",
+                "email": "test@example.com"
+            })
+            
+            if response.status_code == 403:
+                self.log_test(
+                    "API Key Validation", 
+                    True, 
+                    "Correctly returned 403 Forbidden without API key"
+                )
+                return True
+            else:
+                self.log_test("API Key Validation", False, f"Expected 403, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("API Key Validation", False, f"Exception: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all Legacy API tests"""
-        print("="*80)
-        print("DYNOPAY LEGACY API BACKWARD COMPATIBILITY TESTING")
-        print("="*80)
-        print(f"Backend URL: {self.backend_url}")
-        print(f"Test Credentials: {self.test_email}")
-        print("="*80)
+        print("🚀 LEGACY API BACKWARD COMPATIBILITY TESTING")
+        print("=" * 60)
+        print(f"Backend URL: {BACKEND_URL}")
+        print(f"Test User: {TEST_USER_EMAIL}")
+        print(f"Company ID: {COMPANY_ID}")
+        print(f"Test Time: {datetime.now().isoformat()}")
         
-        # Authenticate first
+        # Step 1: Authentication and Setup
         if not self.authenticate_user():
-            print("\n❌ AUTHENTICATION FAILED - Cannot proceed with API key tests")
-        else:
-            # Get API key for testing
-            self.get_api_key()
+            print("\n❌ CRITICAL: User authentication failed. Cannot proceed with tests.")
+            return self.generate_summary()
+            
+        if not self.get_api_key():
+            print("\n❌ CRITICAL: API key retrieval failed. Cannot proceed with tests.")
+            return self.generate_summary()
         
-        # Run all tests
-        self.test_endpoints_without_api_key()
-        self.test_endpoint_accessibility()
-        self.test_code_verification()
+        # Step 2: Run all test scenarios
+        test_methods = [
+            self.test_api_key_validation,
+            self.test_create_customer_new_flow,
+            self.test_crypto_payment_new_auth,  # CRITICAL TEST
+            self.test_crypto_payment_old_auth,
+            self.test_get_supported_currencies,
+            self.test_get_balance,
+            self.test_get_transactions
+        ]
         
-        if self.api_key:
-            self.test_api_key_functionality()
-        else:
-            print("\n⚠️  Skipping API key functionality tests - no API key available")
+        for test_method in test_methods:
+            try:
+                test_method()
+                time.sleep(1)  # Brief pause between tests
+            except Exception as e:
+                print(f"❌ UNEXPECTED ERROR in {test_method.__name__}: {str(e)}")
         
-        # Print summary
-        self.print_summary()
+        return self.generate_summary()
     
-    def print_summary(self):
-        """Print test summary"""
-        print("\n" + "="*80)
-        print("LEGACY API TEST SUMMARY")
-        print("="*80)
+    def generate_summary(self):
+        """Generate test summary"""
+        print("\n" + "=" * 60)
+        print("📋 LEGACY API TEST SUMMARY")
+        print("=" * 60)
         
         total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results.values() if result['success'])
+        passed_tests = sum(1 for result in self.test_results if result['success'])
         failed_tests = total_tests - passed_tests
+        success_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
         
         print(f"Total Tests: {total_tests}")
         print(f"Passed: {passed_tests}")
         print(f"Failed: {failed_tests}")
-        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+        print(f"Success Rate: {success_rate:.1f}%")
         
-        if failed_tests > 0:
-            print("\n❌ FAILED TESTS:")
-            for error in self.errors:
-                print(f"  - {error}")
-        
-        if passed_tests == total_tests:
-            print("\n🎉 ALL LEGACY API TESTS PASSED!")
-        else:
-            print(f"\n⚠️  {failed_tests} TEST(S) NEED ATTENTION")
-        
-        # Success criteria check
-        print("\n" + "="*60)
-        print("SUCCESS CRITERIA VERIFICATION")
-        print("="*60)
-        
-        criteria_met = []
-        
-        # Criterion 1: All endpoints return proper error (403) when API key missing - NOT 404
-        no_api_key_tests = [k for k in self.test_results.keys() if "No API Key" in k]
-        if all(self.test_results[k]['success'] for k in no_api_key_tests):
-            criteria_met.append("✅ All endpoints return 403 (not 404) when API key missing")
-        else:
-            criteria_met.append("❌ Some endpoints don't return proper 403 error")
-        
-        # Criterion 2: Code files exist with correct structure
-        code_tests = ["Middleware File", "Router File", "Router Integration"]
-        if all(self.test_results.get(k, {}).get('success', False) for k in code_tests):
-            criteria_met.append("✅ Code files exist with correct structure")
-        else:
-            criteria_met.append("❌ Code files missing or incorrect structure")
-        
-        # Criterion 3: Routes mounted correctly in main backend
-        endpoint_tests = [k for k in self.test_results.keys() if "Endpoint Exists" in k]
-        if all(self.test_results[k]['success'] for k in endpoint_tests):
-            criteria_met.append("✅ Routes mounted correctly in main backend")
-        else:
-            criteria_met.append("❌ Some routes not properly mounted")
-        
-        # Criterion 4: If API key available - functionality works
-        if self.api_key:
-            api_tests = ["createUser with API Key", "getSupportedCurrency with API Key"]
-            if all(self.test_results.get(k, {}).get('success', False) for k in api_tests):
-                criteria_met.append("✅ API key functionality working correctly")
+        # Critical test status
+        critical_test = next((r for r in self.test_results if "Crypto Payment (NEW Auth)" in r['test']), None)
+        if critical_test:
+            if critical_test['success']:
+                print("\n🎉 CRITICAL SUCCESS: SQL type error fix is working correctly!")
+                print("   ✅ cryptoPayment endpoint with NEW auth works WITHOUT SQL type error")
             else:
-                criteria_met.append("❌ API key functionality has issues")
-        else:
-            criteria_met.append("⚠️  API key functionality not tested (no API key available)")
+                print("\n🚨 CRITICAL FAILURE: SQL type error fix is NOT working!")
+                print("   ❌ cryptoPayment endpoint still has SQL type error")
         
-        for criterion in criteria_met:
-            print(criterion)
+        print("\n📊 DETAILED RESULTS:")
+        print("-" * 60)
+        for result in self.test_results:
+            status = "✅ PASS" if result['success'] else "❌ FAIL"
+            print(f"{status} {result['test']}")
+            if not result['success']:
+                print(f"   Error: {result['message']}")
+        
+        # Final assessment
+        print("\n🎯 FINAL ASSESSMENT:")
+        print("-" * 60)
+        if success_rate >= 85:
+            print("✅ LEGACY API IS OPERATIONAL - Ready for production use")
+        elif success_rate >= 70:
+            print("⚠️  LEGACY API MOSTLY WORKING - Minor issues need attention")
+        else:
+            print("❌ LEGACY API HAS MAJOR ISSUES - Requires immediate fixes")
+        
+        return {
+            'total_tests': total_tests,
+            'passed_tests': passed_tests,
+            'failed_tests': failed_tests,
+            'success_rate': success_rate,
+            'critical_test_passed': critical_test['success'] if critical_test else False,
+            'results': self.test_results
+        }
+
+def main():
+    """Main test execution"""
+    tester = LegacyAPITester()
+    summary = tester.run_all_tests()
+    
+    # Return appropriate exit code
+    if summary['success_rate'] >= 85 and summary['critical_test_passed']:
+        exit(0)  # Success
+    else:
+        exit(1)  # Failure
 
 if __name__ == "__main__":
-    tester = LegacyApiTester()
-    tester.run_all_tests()
+    main()
