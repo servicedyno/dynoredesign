@@ -168,22 +168,44 @@ export const directApiPaths = {
       summary: 'Create a cryptocurrency payment',
       description: `Generate a crypto payment address for the customer. Returns a deposit address that the customer should send funds to.
 
-**Authentication:** 
-- Header \`x-api-key\`: Your merchant API key
-- Header \`Authorization\`: Bearer token from /api/user/createUser
+**🔐 Authentication (2 Options):**
 
-**Supported Currencies:** BTC, ETH, USDT, USDC, TRX, LTC, XRP, SOL, MATIC, BNB
+**Option 1: NEW Flow (Recommended)**
+- Header \`x-api-key\`: Your encrypted merchant API key  
+- Header \`Authorization\`: \`Bearer {customer_token}\` from \`/api/user/createUser\`
 
-**Webhook Flow:**
+**Option 2: LEGACY Flow (Backward Compatibility)**
+- Header \`x-api-key\`: Your encrypted merchant API key
+- Header \`Authorization\`: Can be empty, invalid, or old wallet_token
+- System automatically creates/finds a default customer for your company
+
+**💰 Supported Cryptocurrencies:**
+- \`BTC\` - Bitcoin
+- \`ETH\` - Ethereum  
+- \`LTC\` - Litecoin
+- \`DOGE\` - Dogecoin
+- \`TRX\` - Tron
+- \`BCH\` - Bitcoin Cash
+- \`USDT-TRC20\` - Tether (Tron Network)
+- \`USDT-ERC20\` - Tether (Ethereum Network)
+- \`USDC-ERC20\` - USD Coin (Ethereum Network)
+
+**⚠️ Important:** You must have wallet addresses configured for the cryptocurrencies you want to accept. Check available currencies via \`GET /api/user/getSupportedCurrency\`.
+
+**📡 Webhook Flow:**
 1. Customer sends crypto to the returned address
-2. DynoPay detects the deposit on blockchain
-3. Webhook sent to your \`webhook_url\` with payment status
+2. DynoPay detects the deposit on blockchain (usually 1-3 confirmations)
+3. Webhook sent to your \`webhook_url\` with payment status updates
 4. Optional: Customer redirected to \`callback_url\` after payment
 
-**URL Priority:**
-1. Per-payment \`webhook_url\` (this request)
-2. API key's configured webhook URL
-3. Company's default webhook URL`,
+**🔗 URL Configuration Priority:**
+1. Per-payment \`webhook_url\` (this request body)
+2. API key's configured webhook URL (from dashboard)
+3. Company's default webhook URL (from company settings)
+
+**💸 Fee Payment Options:**
+- \`company\` (default) - You pay fees, deducted from your portion
+- \`customer\` - Customer pays extra to cover fees`,
       security: [{ ApiKeyAuth: [], BearerAuth: [] }],
       requestBody: {
         required: true,
