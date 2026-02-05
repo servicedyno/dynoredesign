@@ -3030,6 +3030,9 @@ const deleteWalletAddress = async (
       }
     }
 
+    // Invalidate wallet cache so getWallet returns fresh data
+    await invalidateWalletCache(userData.user_id);
+
     return successResponseHelper(res, 200, "Wallet address removed successfully!", {
       removed: true,
       wallet_id: wallet.dataValues.wallet_id,
