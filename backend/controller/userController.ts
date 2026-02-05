@@ -2071,12 +2071,11 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     // Build response
     const onboardingStatus = {
       wallet_setup: {
-        has_wallet: hasWallet,
-        has_wallet_address: hasWalletAddress,
-        wallet_count: wallets.length,
-        // Show total configured addresses (from both tables)
-        address_count: totalConfiguredAddresses,
-        // Also show breakdown for debugging
+        has_wallet: hasCryptoWallet,  // Has at least one CRYPTO wallet type
+        has_wallet_address: hasWalletAddress,  // Has at least one address to receive payments
+        wallet_count: cryptoWallets.length,  // Only CRYPTO wallets (not FIAT)
+        address_count: totalConfiguredAddresses,  // Total configured addresses
+        // Breakdown for clarity
         wallets_with_address: walletsWithAddress.length,
         additional_addresses: additionalAddresses.length,
         required_action: !hasWalletAddress ? "Add at least one wallet address to receive payments" : null,
