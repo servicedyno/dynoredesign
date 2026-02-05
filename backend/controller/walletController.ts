@@ -3253,6 +3253,9 @@ const updateWalletWithOTP = async (
       { user_id, wallet_id, company_id }
     );
 
+    // Invalidate wallet cache so getWallet returns fresh data
+    await invalidateWalletCache(userData.user_id);
+
     // Get updated wallet
     const updatedWallet = await userWalletModel.findOne({
       where: whereClause,
