@@ -313,29 +313,54 @@ export const directApiPaths = {
               }
             },
             examples: {
-              'Simple Payment': {
-                summary: '⚡ Minimal - just amount and currency',
+              'Minimal Payment': {
+                summary: '⚡ Simplest - just amount and currency',
+                description: 'Minimal required fields only',
                 value: {
                   amount: 50,
                   currency: 'ETH'
                 }
               },
-              'With Webhook': {
-                summary: '📡 With webhook notification',
+              'Payment with Webhook': {
+                summary: '📡 With server webhook notification',
+                description: 'Receive payment updates on your server',
                 value: {
                   amount: 100,
                   currency: 'BTC',
-                  webhook_url: 'https://yourapp.com/webhooks/payment'
+                  webhook_url: 'https://yourapp.com/webhooks/payment',
+                  fee_payer: 'company'
                 }
               },
-              'Full Options': {
-                summary: '🚀 All options specified',
+              'Full Payment Options': {
+                summary: '🚀 All available options',
+                description: 'Complete example with all optional fields',
                 value: {
                   amount: 250,
-                  currency: 'USDT',
-                  callback_url: 'https://yourapp.com/order/success',
+                  currency: 'USDT-TRC20',
+                  redirect_uri: 'https://yourapp.com/order/12345/success',
                   webhook_url: 'https://yourapp.com/webhooks/payment',
-                  fee_payer: 'customer'
+                  fee_payer: 'customer',
+                  topUp: false,
+                  accepted_currencies: ['USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
+                  meta_data: {
+                    order_id: 'ORD-12345',
+                    customer_ref: 'CUST-789',
+                    notes: 'Express delivery'
+                  }
+                }
+              },
+              'Limited Currency Options': {
+                summary: '🪙 Restrict payment currencies',
+                description: 'Only allow BTC and ETH for this payment',
+                value: {
+                  amount: 500,
+                  currency: 'BTC',
+                  accepted_currencies: ['BTC', 'ETH'],
+                  webhook_url: 'https://yourapp.com/webhooks/payment',
+                  meta_data: {
+                    order_id: 'ORD-99999',
+                    vip_customer: true
+                  }
                 }
               }
             }
