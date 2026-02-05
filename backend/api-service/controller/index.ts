@@ -495,11 +495,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
     
     console.log(`[Phase 11] Available currencies for addFunds company_id ${data.company_id}:`, availableCurrencies);
 
-    const customerData = await customerModel.findOne({
-      where: {
-        id: userData.id,
-      },
-    });
+    const customerData = await findCustomerByJwtPayload(userData);
 
     const redisPayload = {
       customer_id: customerData.dataValues.customer_id,
