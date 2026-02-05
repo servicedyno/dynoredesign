@@ -71,36 +71,93 @@ export const directApiPaths = {
       },
       responses: {
         200: {
-          description: 'Customer created successfully',
+          description: 'Customer created or retrieved successfully',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
+                  success: { type: 'boolean', example: true },
                   message: { type: 'string' },
                   data: {
                     type: 'object',
                     properties: {
                       token: { 
                         type: 'string', 
-                        description: '🔑 Customer token - use in Authorization header for payments'
+                        description: '🔑 Customer JWT token - use this in Authorization header for /api/user/cryptoPayment'
                       },
-                      customer_id: { type: 'string' }
+                      customer_id: { 
+                        type: 'string', 
+                        description: 'Unique customer UUID'
+                      }
                     }
                   }
                 }
               },
-              example: {
-                message: 'Customer Created!',
-                data: {
-                  token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-                  customer_id: 'cust_abc123'
+              examples: {
+                'New Customer Created': {
+                  summary: 'New customer successfully created',
+                  value: {
+                    success: true,
+                    message: 'Registered Successful!',
+                    data: {
+                      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFiYzEyMyIsImN1c3RvbWVyX2lkIjo0NSwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwiY29tcGFueV9pZCI6MzgsImlhdCI6MTcwOTU3MTIwMH0.xyz',
+                      customer_id: 'abc123-def456-ghi789'
+                    }
+                  }
+                },
+                'Existing Customer Retrieved': {
+                  summary: 'Customer already exists, returned with new token',
+                  value: {
+                    success: true,
+                    message: 'Customer already exists',
+                    data: {
+                      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFiYzEyMyIsImN1c3RvbWVyX2lkIjo0NSwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwiY29tcGFueV9pZCI6MzgsImlhdCI6MTcwOTU3MTIwMH0.xyz',
+                      customer_id: 'abc123-def456-ghi789'
+                    }
+                  }
                 }
               }
             }
           }
         },
-        401: { description: 'Invalid or missing API key' }
+        400: { 
+          description: 'Bad Request - Missing required fields',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                message: 'Name and email are required',
+                errors: [
+                  { key: 'name', error: 'Name is Required' },
+                  { key: 'email', error: 'Email is Required' }
+                ]
+              }
+            }
+          }
+        },
+        403: { 
+          description: 'Forbidden - Invalid or missing API key',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                message: 'API key is required in x-api-key header'
+              }
+            }
+          }
+        },
+        500: {
+          description: 'Internal Server Error',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                message: 'Internal server error'
+              }
+            }
+          }
+        }
       }
     }
   },
