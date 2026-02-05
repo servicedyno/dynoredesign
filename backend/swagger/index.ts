@@ -162,8 +162,8 @@ curl -X POST https://api.dynopay.com/api/user/createUser \\
 
 | Your Use Case | Authentication Method | Endpoints to Use |
 |---------------|----------------------|------------------|
-| 🖥️ **Dashboard User** (creating payments via UI) | JWT Token only | `/api/pay/createPaymentLink` |
-| 🔌 **API Integration** (programmatic payments) | API Key + Customer Token | `/api/user/createUser` → `/api/user/cryptoPayment` |
+| 🖥️ **Dashboard User** (creating payments via UI) | JWT Token only | \`/api/pay/createPaymentLink\` |
+| 🔌 **API Integration** (programmatic payments) | API Key + Customer Token | \`/api/user/createUser\` → \`/api/user/cryptoPayment\` |
 | 🔄 **Both** (dashboard + API) | Both methods for same company | Use appropriate auth for each endpoint |
 
 ### Q: How do I pass API Key for webhook delivery?
