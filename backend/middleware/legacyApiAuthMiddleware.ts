@@ -135,7 +135,7 @@ const findOrCreateDefaultCustomer = async (
     const defaultEmail = `legacy-api-${companyId}-${Date.now()}@dynopay.internal`;
     
     await sequelize.query(
-      `INSERT INTO tbl_customer (id, customer_name, email, company_id, created_at, updated_at)
+      `INSERT INTO tbl_customer (id, customer_name, email, company_id, "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, NOW(), NOW())`,
       {
         bind: [customerId, 'Legacy API Customer', defaultEmail, companyId],
