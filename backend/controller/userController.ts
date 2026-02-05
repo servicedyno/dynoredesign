@@ -2072,7 +2072,11 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
         has_wallet: hasWallet,
         has_wallet_address: hasWalletAddress,
         wallet_count: wallets.length,
-        address_count: walletAddresses.length,
+        // Show total configured addresses (from both tables)
+        address_count: totalConfiguredAddresses,
+        // Also show breakdown for debugging
+        wallets_with_address: walletsWithAddress.length,
+        additional_addresses: additionalAddresses.length,
         required_action: !hasWalletAddress ? "Add at least one wallet address to receive payments" : null,
       },
       kyc_status: {
