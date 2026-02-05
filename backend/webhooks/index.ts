@@ -545,7 +545,7 @@ const tatumCryptoWebHook = async (
           const linkIdPending = customerData?.link_id || null;
           const paymentTypePending = linkIdPending ? 'payment_link' : 'direct_api';
           
-          await callMerchantWebhook(customerData, {
+          const pendingWebhookResult = await callMerchantWebhook(customerData, {
             event: 'payment.pending',
             payment_type: paymentTypePending,
             address: address,
@@ -565,6 +565,9 @@ const tatumCryptoWebHook = async (
             fee_payer: customerData?.fee_payer || items?.fee_payer || 'company',
             timestamp: new Date().toISOString(),
           });
+          if (!pendingWebhookResult.success) {
+            console.error(`[tatumCryptoWebHook] Pending webhook failed: ${pendingWebhookResult.error}`);
+          }
         } catch (notifError) {
           console.error("[tatumCryptoWebHook] Error sending pending notification:", notifError);
         }
