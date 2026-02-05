@@ -1440,8 +1440,13 @@ const createCryptoPayment = async (
         // If not found with null, get the FIRST company for this user and use its wallet
         if (!hasWallet) {
           console.log('[Phase 10 Validation] No null company_id wallet, finding user default company');
+          // Parse adm_id to integer for proper SQL comparison
+          const admIdInt = parseInt(String(items.adm_id), 10);
+          if (isNaN(admIdInt)) {
+            return errorResponseHelper(res, 400, "Invalid admin user ID");
+          }
           const userCompany = await companyModel.findOne({
-            where: { user_id: items.adm_id },
+            where: { user_id: admIdInt },
             order: [['createdAt', 'ASC']]  // Get the first/oldest company
           });
           
