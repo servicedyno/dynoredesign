@@ -217,81 +217,42 @@ export const directApiPaths = {
               properties: {
                 amount: {
                   type: 'number',
-                  description: '✅ REQUIRED: Payment amount in USD',
-                  example: 100
+                  description: '✅ REQUIRED: Payment amount in your base currency (default: USD)',
+                  example: 100,
+                  minimum: 0.01
                 },
                 currency: {
                   type: 'string',
-                  description: '✅ REQUIRED: Cryptocurrency for payment',
-                  enum: ['BTC', 'ETH', 'USDT', 'USDC', 'TRX', 'LTC', 'XRP', 'SOL', 'MATIC', 'BNB'],
+                  description: '✅ REQUIRED: Cryptocurrency the customer will pay with',
+                  enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
                   example: 'ETH'
+                },
+                redirect_uri: {
+                  type: 'string',
+                  format: 'uri',
+                  description: `🔗 OPTIONAL: URL to redirect customer after payment completion. Also known as callback_url.
+                  
+**Use Case:** Redirect customer to your order confirmation page after they complete payment.
+**Note:** Customer sees this URL and can click to return to your site.`,
+                  example: 'https://yourapp.com/order/12345/success'
                 },
                 callback_url: {
                   type: 'string',
                   format: 'uri',
-                  description: `🔗 OPTIONAL: URL to redirect customer after payment completion.
-                  
-**Use Case:** Redirect customer to your order confirmation page after they complete payment.`,
+                  description: '🔗 OPTIONAL: Alternative name for redirect_uri (works identically)',
                   example: 'https://yourapp.com/order/12345/success'
                 },
                 webhook_url: {
                   type: 'string',
                   format: 'uri',
-                  description: `📡 OPTIONAL: URL to receive payment status webhooks (overrides API key config).
+                  description: `📡 OPTIONAL: URL to receive server-to-server payment status webhooks (overrides API key config).
 
 **Webhook Events Sent:**
 - \`payment.pending\` - Deposit detected, awaiting confirmations
-- \`payment.confirmed\` - Payment fully confirmed
-- \`payment.underpaid\` - Partial payment received, awaiting remainder
+- \`payment.confirmed\` - Payment fully confirmed and processed
+- \`payment.underpaid\` - Partial payment received (less than expected amount)
 
-**Webhook Payload (payment.confirmed):**
-\`\`\`json
-{
-  "event": "payment.confirmed",
-  "payment_id": "pay_xyz789",
-  "transaction_reference": "0xabc123...",
-  "status": "processing",
-  "amount": 0.042,
-  "currency": "ETH",
-  "base_amount": 100,
-  "base_currency": "USD",
-  "merchant_amount": 0.0399,
-  "total_fee": 0.0021,
-  "total_fee_usd": 5.00,
-  "fee_payer": "company",
-  "customer_name": "John Doe",
-  "customer_email": "john@example.com",
-  "description": "Order #12345",
-  "link_id": 411,
-  "tax_info": null,
-  "overpayment": null,
-  "meta_data": null,
-  "completed_at": "2026-02-04T13:02:37.960Z",
-  "webhook_id": "wh_abc123",
-  "sent_at": "2026-02-04T13:02:37.963Z"
-}
-\`\`\`
-
-**Webhook Payload (payment.pending):**
-\`\`\`json
-{
-  "event": "payment.pending",
-  "address": "0x1234...",
-  "txId": "0xabc123...",
-  "amount": 0.042,
-  "currency": "ETH",
-  "payment_id": "pay_xyz789",
-  "status": "pending",
-  "base_amount": 100,
-  "base_currency": "USD",
-  "customer_name": "John Doe",
-  "customer_email": "john@example.com",
-  "description": "Order #12345",
-  "link_id": 411,
-  "fee_payer": "company",
-  "timestamp": "2026-02-04T13:02:27.843Z"
-}
-\`\`\``,
+**Security:** Webhooks are sent via POST with JSON payload. Validate webhook authenticity using the payment details.`,
                   example: 'https://yourapp.com/webhooks/crypto-payment'
                 },
                 fee_payer: {
@@ -300,10 +261,54 @@ export const directApiPaths = {
                   description: `💰 OPTIONAL: Who pays the processing fees.
 
 **Options:**
-- \`company\` (default) - Fees deducted from merchant's portion
-- \`customer\` - Customer pays additional amount to cover fees`,
+- \`company\` (default) - Fees deducted from merchant's received amount
+- \`customer\` - Customer pays additional amount to cover all fees
+
+**Example (100 USD payment):**
+- \`company\` mode: Customer sends ~0.042 ETH, you receive ~0.040 ETH (fees deducted)
+- \`customer\` mode: Customer sends ~0.044 ETH, you receive full 0.042 ETH (customer pays extra)`,
                   default: 'company',
                   example: 'company'
+                },
+                topUp: {
+                  type: 'boolean',
+                  description: `📥 OPTIONAL: Payment type flag.
+                  
+- \`false\` (default) - Regular payment for goods/services
+- \`true\` - Customer wallet top-up/deposit`,
+                  default: false,
+                  example: false
+                },
+                accepted_currencies: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                  },
+                  description: `🪙 OPTIONAL: Limit which cryptocurrencies customer can choose.
+                  
+**Use Case:** If you only want to accept BTC and ETH for this payment, pass \`["BTC", "ETH"]\`.
+
+**Default:** All your configured wallet currencies are available.
+
+**Validation:** All currencies in this array must have wallet addresses configured in your account.`,
+                  example: ['BTC', 'ETH', 'USDT-TRC20']
+                },
+                meta_data: {
+                  type: 'object',
+                  description: `🏷️ OPTIONAL: Custom data to attach to this payment (max 2KB).
+                  
+**Use Cases:**
+- Order ID: \`{ "order_id": "ORD-12345" }\`
+- Customer reference: \`{ "customer_ref": "CUST-789", "invoice": "INV-2024-001" }\`
+- Cart details: \`{ "items": ["Product A", "Product B"], "discount_code": "SAVE20" }\`
+
+**Returned In:** Payment webhooks and transaction queries`,
+                  example: {
+                    order_id: 'ORD-12345',
+                    customer_ref: 'CUST-789',
+                    notes: 'Priority shipping'
+                  }
                 }
               }
             },
