@@ -4353,8 +4353,20 @@ const cryptoVerification = async (address, webhook = true) => {
 
 const userWallet = async (data: IFundData, tokenData: IUserType) => {
   const id = tokenData.id;
-  const customer_id = (await customerModel.findOne({ where: { id } }))
-    .dataValues.customer_id;
+  
+  // Handle both UUID id and customer_id cases
+  let customer_id: number;
+  if (tokenData.customer_id) {
+    // If customer_id is available in token, use it directly
+    customer_id = tokenData.customer_id;
+  } else {
+    // Otherwise, look up by id (UUID)
+    const customer = await customerModel.findOne({ where: { id } });
+    if (!customer) {
+      throw { message: "Customer not found" };
+    }
+    customer_id = customer.dataValues.customer_id;
+  }
   const walletData = (
     await customerWalletModel.findOne({
       where: { customer_id },
