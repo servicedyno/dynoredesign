@@ -23,7 +23,7 @@ import { QueryTypes } from "sequelize";
 import sequelize from "../utils/dbInstance";
 import legacyApiAuthMiddleware, { validateApiKey } from "../middleware/legacyApiAuthMiddleware";
 import { decrypt } from "../helper/encryption";
-import { getRedisItem, setRedisItem } from "../helper/redisHelper";
+import { setRedisItem } from "../utils/redisInstance";
 
 const router = express.Router();
 
