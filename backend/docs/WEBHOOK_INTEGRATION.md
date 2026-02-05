@@ -4,6 +4,118 @@
 
 DynoPay sends webhook notifications for payment events to your configured webhook URL. This allows your application to react in real-time to payment status changes.
 
+---
+
+## ⚠️ Important: Webhook URL Requirements
+
+### URLs That Will NOT Work
+
+| URL Type | Example | Why It Fails |
+|----------|---------|--------------|
+| **localhost** | `http://localhost:8000/webhook` | DynoPay servers cannot reach your local machine |
+| **127.0.0.1** | `http://127.0.0.1:3000/webhook` | Same as localhost - unreachable |
+| **Private IPs** | `http://192.168.1.100/webhook` | Private network addresses are not routable |
+| **HTTP in production** | `http://example.com/webhook` | Use HTTPS for security |
+
+### URLs That WILL Work
+
+| URL Type | Example | Notes |
+|----------|---------|-------|
+| **Public HTTPS** | `https://api.yourcompany.com/webhook` | ✅ Recommended for production |
+| **ngrok (testing)** | `https://abc123.ngrok.io/webhook` | ✅ Great for development |
+| **Cloudflare Tunnel** | `https://webhook.yourdomain.com` | ✅ Free alternative to ngrok |
+| **Railway/Render/Vercel** | `https://your-app.railway.app/webhook` | ✅ Deployed backends |
+
+---
+
+## 🛠️ Setting Up Webhooks for Development
+
+### Option 1: ngrok (Recommended)
+
+ngrok creates a secure tunnel from the internet to your local server.
+
+```bash
+# 1. Install ngrok
+npm install -g ngrok
+# or: brew install ngrok
+
+# 2. Start your local server (e.g., on port 8000)
+npm run dev
+
+# 3. Create tunnel to your local server
+ngrok http 8000
+
+# 4. Copy the HTTPS URL (e.g., https://abc123.ngrok.io)
+# 5. Use this URL in DynoPay webhook settings:
+#    https://abc123.ngrok.io/api/v1/wallet/dynopay-webhook
+```
+
+**ngrok Dashboard:** Visit `http://127.0.0.1:4040` to inspect incoming webhooks.
+
+### Option 2: Cloudflare Tunnel (Free)
+
+```bash
+# 1. Install cloudflared
+brew install cloudflare/cloudflare/cloudflared
+
+# 2. Create a quick tunnel
+cloudflared tunnel --url http://localhost:8000
+
+# 3. Use the generated URL in DynoPay
+```
+
+### Option 3: localtunnel
+
+```bash
+# 1. Install
+npm install -g localtunnel
+
+# 2. Create tunnel
+lt --port 8000
+
+# 3. Use the generated URL
+```
+
+---
+
+## 🔍 Troubleshooting Webhook Failures
+
+### Common Error Messages
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Connection refused` | Server not running or wrong port | Verify your server is running and accessible |
+| `Connection timed out` | Server too slow or firewall blocking | Check server response time, firewall rules |
+| `localhost is unreachable` | Using localhost URL | Use ngrok or deploy to public URL |
+| `Certificate error` | Invalid/expired SSL certificate | Fix your SSL certificate |
+| `404 Not Found` | Wrong endpoint path | Verify the webhook path exists |
+| `401/403` | Authentication required | Your endpoint should accept unauthenticated POST requests from DynoPay |
+
+### Debugging Steps
+
+1. **Check Webhook History**
+   ```bash
+   curl -X GET "https://api.dynopay.com/api/company/webhook-history/{company_id}" \
+     -H "Authorization: Bearer YOUR_TOKEN"
+   ```
+
+2. **Send Test Webhook**
+   ```bash
+   curl -X POST "https://api.dynopay.com/api/company/webhook-test/{company_id}" \
+     -H "Authorization: Bearer YOUR_TOKEN"
+   ```
+
+3. **Verify Your Endpoint Manually**
+   ```bash
+   curl -X POST "https://your-webhook-url.com/webhook" \
+     -H "Content-Type: application/json" \
+     -d '{"event": "test", "data": "hello"}'
+   ```
+
+4. **Check Your Server Logs** for incoming requests
+
+---
+
 ## Events
 
 | Event | Description |
