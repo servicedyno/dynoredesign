@@ -216,6 +216,9 @@ const callUrlWithPayload = async (
     
     console.log(`[callMerchantWebhook] Sending ${urlType} ${eventData.event} to ${url}`);
     console.log(`[callMerchantWebhook] Signature included: ${!!webhookSecret}`);
+    // Log payload for debugging (truncate large payloads)
+    const payloadStr = JSON.stringify(webhookPayload);
+    console.log(`[callMerchantWebhook] Payload (${payloadStr.length} bytes): ${payloadStr.substring(0, 500)}${payloadStr.length > 500 ? '...' : ''}`);
     
     // Send webhook with timeout and retry
     const maxRetries = 3;
