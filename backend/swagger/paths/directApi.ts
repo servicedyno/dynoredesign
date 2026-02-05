@@ -635,27 +635,76 @@ export const directApiPaths = {
       security: [{ ApiKeyAuth: [] }],
       responses: {
         200: {
-          description: 'Supported currencies list',
+          description: 'Supported currencies retrieved successfully',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
+                  success: { type: 'boolean', example: true },
                   message: { type: 'string' },
                   data: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        symbol: { type: 'string', example: 'ETH' },
-                        name: { type: 'string', example: 'Ethereum' },
-                        network: { type: 'string', example: 'ethereum' },
-                        min_amount: { type: 'number' },
-                        enabled: { type: 'boolean' }
+                    type: 'object',
+                    properties: {
+                      currencies: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: '✅ Your configured cryptocurrencies (what customers can use for payments)'
+                      },
+                      all_supported: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: '📋 All cryptocurrencies supported by DynoPay platform'
                       }
                     }
                   }
                 }
+              },
+              examples: {
+                'Partial Configuration': {
+                  summary: 'Merchant has some wallets configured',
+                  value: {
+                    success: true,
+                    message: 'Supported currencies retrieved',
+                    data: {
+                      currencies: ['BTC', 'ETH', 'USDT-TRC20'],
+                      all_supported: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                    }
+                  }
+                },
+                'Full Configuration': {
+                  summary: 'Merchant has all wallets configured',
+                  value: {
+                    success: true,
+                    message: 'Supported currencies retrieved',
+                    data: {
+                      currencies: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
+                      all_supported: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'Forbidden - Invalid or missing API key',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                message: 'Invalid API key'
+              }
+            }
+          }
+        },
+        500: {
+          description: 'Internal Server Error',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                message: 'Internal server error'
               }
             }
           }
