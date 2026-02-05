@@ -255,13 +255,19 @@ const callUrlWithPayload = async (
         return { success: true, url }; // Success
         
       } catch (err: unknown) {
-        const error = err as { response?: { status?: number }; message?: string; code?: string };
+        const error = err as { response?: { status?: number; data?: unknown }; message?: string; code?: string };
         lastError = error as Error;
         totalRetries = attempt;
         finalResponseStatus = error.response?.status || null;
         
+        // Capture response body for debugging
+        const responseBody = error.response?.data;
+        const responseBodyStr = responseBody 
+          ? (typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody))
+          : null;
+        
         // Build descriptive error message
-        const errorMessage = error.code === 'ECONNREFUSED' 
+        let errorMessage = error.code === 'ECONNREFUSED' 
           ? `Connection refused - server at ${url} is not reachable`
           : error.code === 'ETIMEDOUT'
           ? `Connection timed out - server at ${url} did not respond`
@@ -270,6 +276,13 @@ const callUrlWithPayload = async (
         // Don't retry on client errors (4xx) except 429 (rate limit)
         if (finalResponseStatus && finalResponseStatus >= 400 && finalResponseStatus < 500 && finalResponseStatus !== 429) {
           console.error(`[callMerchantWebhook] ❌ Client error ${finalResponseStatus}, not retrying: ${errorMessage}`);
+          if (responseBodyStr) {
+            console.error(`[callMerchantWebhook] ❌ Response body: ${responseBodyStr.substring(0, 500)}`);
+          }
+          // Include response body in error message for caller
+          if (responseBodyStr) {
+            errorMessage = `${errorMessage} - Server response: ${responseBodyStr.substring(0, 200)}`;
+          }
           break;
         }
         
