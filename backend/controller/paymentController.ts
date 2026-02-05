@@ -4139,8 +4139,15 @@ const cryptoVerification = async (address, webhook = true) => {
           };
           
           try {
-            await callMerchantWebhook(customerData, enhancedWebhookPayload);
-            console.log("[cryptoVerification] Enhanced merchant webhook sent successfully");
+            const webhookResult = await callMerchantWebhook(customerData, enhancedWebhookPayload);
+            if (webhookResult.success) {
+              console.log("[cryptoVerification] ✅ Merchant webhook sent successfully");
+            } else {
+              console.error(`[cryptoVerification] ❌ Merchant webhook failed: ${webhookResult.error}`);
+              if (webhookResult.url) {
+                console.error(`[cryptoVerification] Failed URL: ${webhookResult.url}`);
+              }
+            }
             console.log(`[cryptoVerification] Webhook payload: merchant_amount=${userAmountToSend}, total_fee=${adminAmountToSend}, fee_payer=${enhancedWebhookPayload.fee_payer}`);
           } catch (webhookError) {
             console.error("[cryptoVerification] Merchant webhook failed:", webhookError.message);
