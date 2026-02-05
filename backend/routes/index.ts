@@ -59,6 +59,9 @@ router.get("/", (_req: express.Request, res: express.Response) => {
 });
 
 router.use("/user", userRouter);
+// Legacy API routes for backward compatibility (OLD user-api.dynopay.com style)
+// These routes support both OLD (x-api-key + wallet_token) and NEW (x-api-key + customer JWT) auth
+router.use("/user", legacyApiRouter);
 router.use("/admin", adminRouter);
 router.use("/company", companyRouter);
 router.use("/userApi", apiRouter);
