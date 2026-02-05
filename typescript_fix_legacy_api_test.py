@@ -103,7 +103,7 @@ class TypeScriptFixLegacyAPITester:
                 
             # Get the first API key
             first_api_key = api_keys[0]
-            self.api_key = first_api_key.get('api_key') or first_api_key.get('encrypted_key')
+            self.api_key = first_api_key.get('apiKey') or first_api_key.get('api_key') or first_api_key.get('encrypted_key')
             
             if not self.api_key:
                 self.log_result("Authentication", False, "API key not found in response")
