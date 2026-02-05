@@ -207,14 +207,14 @@ POST /api/pay/createPaymentLink
 - **Auth:** JWT Token (login to dashboard)
 - **Flow:** Create link → Share URL → Customer pays → Webhook sent
 - **Customer experience:** Redirected to DynoPay hosted payment page
-- **Endpoints:** `/api/pay/createPaymentLink`, `/api/pay/getAllPaymentLinks`
+- **Endpoints:** \`/api/pay/createPaymentLink\`, \`/api/pay/getAllPaymentLinks\`
 
 **⚡ Direct API (Programmatic)**
 - **Best for:** Custom checkout, embedded payments, full control
 - **Auth:** API Key + Customer Token
 - **Flow:** Create customer → Create payment → Get crypto address → Customer pays → Webhook sent
 - **Customer experience:** Stay on your website/app (you build the UI)
-- **Endpoints:** `/api/user/createUser`, `/api/user/cryptoPayment`, `/api/user/getBalance`
+- **Endpoints:** \`/api/user/createUser\`, \`/api/user/cryptoPayment\`, \`/api/user/getBalance\`
 
 ### Q: Can I use both Payment Links and Direct API in the same company?
 **A: Yes!** You can use both methods simultaneously:
