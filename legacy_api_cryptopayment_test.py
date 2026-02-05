@@ -118,12 +118,12 @@ class LegacyAPICryptoPaymentTester:
                 # Get the first active API key
                 for api_key_obj in api_list:
                     if api_key_obj.get('status') == 'active':
-                        self.api_key = api_key_obj.get('api_key')
+                        self.api_key = api_key_obj.get('apiKey')
                         break
                 
                 if not self.api_key and api_list:
                     # If no active key found, use the first one
-                    self.api_key = api_list[0].get('api_key')
+                    self.api_key = api_list[0].get('apiKey')
                 
                 if self.api_key:
                     self.log_result(
