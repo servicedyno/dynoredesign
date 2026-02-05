@@ -61,6 +61,20 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const { company_id } = req.query;
     const userId = userData.user_id;
     
+    // Validate company ownership if company_id is provided
+    if (company_id) {
+      const company = await companyModel.findOne({
+        where: { 
+          company_id: company_id,
+          user_id: userId  // Ensure company belongs to user
+        }
+      });
+      
+      if (!company) {
+        return errorResponseHelper(res, 403, "You don't have access to this company's dashboard");
+      }
+    }
+    
     // Check Redis cache first
     const cacheKey = `dashboard:${userId}:${company_id || 'all'}`;
     const cached = await getRedisItem(cacheKey);
