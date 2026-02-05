@@ -120,27 +120,35 @@ class LegacyAPITester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success') and data.get('data'):
+                if data.get('data'):
                     # Look for API key with company_id 38
-                    api_keys = data['data']
+                    api_keys_data = data['data']
                     company_api_key = None
                     
-                    # Handle both grouped and flat API key structures
-                    if isinstance(api_keys, dict):
-                        # Grouped by environment
-                        for env_keys in api_keys.values():
+                    # Check if there's an 'all' array
+                    if 'all' in api_keys_data and isinstance(api_keys_data['all'], list):
+                        for key_info in api_keys_data['all']:
+                            if key_info.get('company_id') == COMPANY_ID:
+                                company_api_key = key_info.get('apiKey')
+                                break
+                    
+                    # If not found in 'all', check grouped structure
+                    if not company_api_key and 'grouped' in api_keys_data:
+                        grouped = api_keys_data['grouped']
+                        for env_keys in grouped.values():
                             if isinstance(env_keys, list):
                                 for key_info in env_keys:
                                     if key_info.get('company_id') == COMPANY_ID:
-                                        company_api_key = key_info.get('api_key')
+                                        company_api_key = key_info.get('apiKey')
                                         break
                             if company_api_key:
                                 break
-                    elif isinstance(api_keys, list):
-                        # Flat list
-                        for key_info in api_keys:
+                    
+                    # If still not found, try flat list structure
+                    if not company_api_key and isinstance(api_keys_data, list):
+                        for key_info in api_keys_data:
                             if key_info.get('company_id') == COMPANY_ID:
-                                company_api_key = key_info.get('api_key')
+                                company_api_key = key_info.get('apiKey') or key_info.get('api_key')
                                 break
                     
                     if company_api_key:
@@ -153,7 +161,7 @@ class LegacyAPITester:
                         )
                         return True
                     else:
-                        self.log_test("API Key Retrieval", False, f"No API key found for company {COMPANY_ID}", api_keys)
+                        self.log_test("API Key Retrieval", False, f"No API key found for company {COMPANY_ID}", api_keys_data)
                         return False
                 else:
                     self.log_test("API Key Retrieval", False, "Invalid response format", data)
