@@ -54,12 +54,21 @@ const customerAuthMiddleware = async (
         res.locals.token = token;
         res.locals.user = decoded;
         next();
-      } else if (decoded?.customer_id) {
-        // Customer model uses id field
+      } else if (decoded?.customer_id || decoded?.id) {
+        // Customer model uses id field (UUID) or customer_id field (integer)
+        let whereClause;
+        if (decoded.id && typeof decoded.id === 'string') {
+          // Use UUID id field
+          whereClause = { id: decoded.id };
+        } else if (decoded.customer_id) {
+          // Use integer customer_id field
+          whereClause = { customer_id: decoded.customer_id };
+        } else {
+          return errorResponseHelper(res, 403, "Invalid token - missing customer identification");
+        }
+        
         const customerExists = await customerModel.findOne({
-          where: {
-            id: decoded.customer_id,
-          },
+          where: whereClause,
         });
 
         if (!customerExists) {
