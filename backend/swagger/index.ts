@@ -77,17 +77,81 @@ POST /api/user/login
 Response contains \`accessToken\` - use this in the \`Authorization: Bearer <token>\` header.
 
 ### 2. API Key (x-api-key Header)
-**Use for:** Server-to-server integration, programmatic payment creation
+**Use for:** Server-to-server integration, programmatic payment creation, direct crypto payments
 
 | Operation | Auth Required |
 |-----------|---------------|
-| Create Customer | ✅ API Key |
+| Create Customer | ✅ API Key only |
+| Get Supported Currencies | ✅ API Key only |
 | Direct Crypto Payment | ✅ API Key + Customer Token |
+| Get Customer Balance | ✅ API Key + Customer Token |
+| Get Customer Transactions | ✅ API Key + Customer Token |
 
 **How to get API Key:**
-1. Login to dashboard
-2. Go to API Keys section
-3. Create new API key via \`POST /api/userApi/addApi\`
+1. Login to DynoPay dashboard (\`POST /api/user/login\`)
+2. Navigate to API Keys section in dashboard
+3. Create new API key via \`POST /api/userApi/addApi\` OR use dashboard UI
+4. Copy the **encrypted API key** value (starts with long encrypted string)
+5. Store it securely - treat it like a password
+
+**Important Notes:**
+- ⚠️ Use the **encrypted API key** from the response, NOT the raw key ID
+- ✅ The encrypted key is a long string that looks like: \`U2FsdGVkX1+abc123def456...\`
+- 🔒 Never commit API keys to version control
+- 📝 Each API key is tied to a specific company
+
+**Example API Key Request:**
+\`\`\`bash
+curl -X POST https://api.dynopay.com/api/user/createUser \\
+  -H "x-api-key: U2FsdGVkX1+abc123def456ghi789jkl..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com"
+  }'
+\`\`\`
+
+---
+
+## 🔄 Authentication Flows
+
+### Flow 1: NEW API (Recommended)
+**For Direct Crypto Payments with Customer Management**
+
+\`\`\`
+1. Create Customer
+   POST /api/user/createUser
+   Headers: x-api-key: YOUR_ENCRYPTED_API_KEY
+   → Returns: customer_token
+
+2. Create Payment
+   POST /api/user/cryptoPayment  
+   Headers: x-api-key: YOUR_ENCRYPTED_API_KEY
+           Authorization: Bearer CUSTOMER_TOKEN
+   → Returns: crypto_address, qr_code, amount
+
+3. Receive Webhook
+   Your server receives payment.confirmed webhook
+   → Process order fulfillment
+\`\`\`
+
+### Flow 2: LEGACY API (Backward Compatible)
+**For Old Integrations Without Customer Management**
+
+\`\`\`
+1. Create Payment (One Step)
+   POST /api/user/cryptoPayment
+   Headers: x-api-key: YOUR_ENCRYPTED_API_KEY
+           Authorization: Bearer (optional/empty/invalid)
+   → System auto-creates default customer
+   → Returns: crypto_address, qr_code, amount
+
+2. Receive Webhook
+   Your server receives payment.confirmed webhook
+   → Process order fulfillment
+\`\`\`
+
+**Note:** Legacy flow automatically creates/reuses a default customer for your company.
 
 ---
 
