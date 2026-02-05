@@ -223,28 +223,34 @@ class TypeScriptFixLegacyAPITester:
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check for TypeScript type conversion success
-                transaction_id = data.get('transaction_id')
-                address = data.get('address')
-                amount = data.get('amount')
-                currency = data.get('currency')
-                
-                if transaction_id and address:
-                    self.log_result(
-                        "Scenario 2 - Crypto Payment (NEW Auth)", 
-                        True, 
-                        f"Crypto payment created successfully - TypeScript type conversion working",
-                        {
-                            "transaction_id": transaction_id,
-                            "address": address,
-                            "amount": amount,
-                            "currency": currency,
-                            "fee_payer": payment_data["fee_payer"],
-                            "typescript_fix_verified": True
-                        }
-                    )
+                # Check for success and data structure
+                if data.get('success') and 'data' in data:
+                    response_data = data['data']
+                    
+                    # Check for TypeScript type conversion success
+                    transaction_id = response_data.get('transaction_id')
+                    address = response_data.get('address')
+                    amount = response_data.get('amount')
+                    currency = response_data.get('currency')
+                    
+                    if transaction_id and address:
+                        self.log_result(
+                            "Scenario 2 - Crypto Payment (NEW Auth)", 
+                            True, 
+                            f"Crypto payment created successfully - TypeScript type conversion working",
+                            {
+                                "transaction_id": transaction_id,
+                                "address": address,
+                                "amount": amount,
+                                "currency": currency,
+                                "fee_payer": payment_data["fee_payer"],
+                                "typescript_fix_verified": True
+                            }
+                        )
+                    else:
+                        self.log_result("Scenario 2 - Crypto Payment (NEW Auth)", False, "Payment created but missing required fields")
                 else:
-                    self.log_result("Scenario 2 - Crypto Payment (NEW Auth)", False, "Payment created but missing required fields")
+                    self.log_result("Scenario 2 - Crypto Payment (NEW Auth)", False, f"Unexpected response structure: {data}")
             else:
                 self.log_result("Scenario 2 - Crypto Payment (NEW Auth)", False, f"Crypto payment (NEW Auth) failed with status {response.status_code}")
                 
