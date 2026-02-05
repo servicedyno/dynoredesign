@@ -89,7 +89,32 @@ lt --port 8000
 | `localhost is unreachable` | Using localhost URL | Use ngrok or deploy to public URL |
 | `Certificate error` | Invalid/expired SSL certificate | Fix your SSL certificate |
 | `404 Not Found` | Wrong endpoint path | Verify the webhook path exists |
+| `400 Bad Request` | Endpoint rejected the payload | Check if your endpoint requires auth - see below |
 | `401/403` | Authentication required | Your endpoint should accept unauthenticated POST requests from DynoPay |
+
+### ⚠️ Important: Webhook Endpoints Must Be Unauthenticated
+
+Your webhook endpoint **should NOT require API keys or authentication**. DynoPay sends webhooks from our servers, not from the user's browser.
+
+**❌ Wrong approach:**
+```javascript
+app.post('/webhook', requireApiKey, (req, res) => { ... });
+```
+
+**✅ Correct approach:**
+```javascript
+// No authentication middleware - use signature verification instead
+app.post('/dynopay-webhook', (req, res) => {
+  // Verify using X-DynoPay-Signature header if you configured a webhook_secret
+  // Process the webhook
+  res.status(200).send('OK');
+});
+```
+
+**Why?**
+- DynoPay servers don't have your API keys
+- Webhooks are secured via HMAC signature (if you configure a `webhook_secret`)
+- Your API keys are for your clients calling YOUR API, not for DynoPay calling you
 
 ### Debugging Steps
 
