@@ -2927,6 +2927,9 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       false
     );
 
+    // Invalidate wallet cache so getWallet returns fresh data
+    await invalidateWalletCache(user_id);
+
     successResponseHelper(res, 200, "OTP verified successfully!", {
       verified: true,
       wallet_name,
