@@ -330,11 +330,7 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
     
     console.log(`[Phase 11] Currency ${currency} validated. Available currencies:`, effectiveAvailableCurrencies);
 
-    const customerData = await customerModel.findOne({
-      where: {
-        id: userData.id,
-      },
-    });
+    const customerData = await findCustomerByJwtPayload(userData);
 
     const localCurrency = currency.includes("USDT") ? "usdt" : currency;
 
