@@ -168,9 +168,11 @@ export const directApiPaths = {
 
   '/api/user/cryptoPayment': {
     post: {
-      tags: ['Direct API - Merchant Integration'],
-      summary: 'Create a cryptocurrency payment',
+      tags: ['Direct API - Merchant Integration', 'Crypto Payments', 'Bitcoin', 'Ethereum', 'Webhooks'],
+      summary: 'Create a cryptocurrency payment (Direct API)',
       description: `Generate a crypto payment address for the customer. Returns a deposit address that the customer should send funds to.
+
+**🔍 KEYWORDS:** crypto payment, bitcoin payment, ethereum payment, BTC, ETH, USDT, create payment, payment address, QR code, deposit address, webhook, callback, cryptocurrency, blockchain payment
 
 **🔐 Authentication (2 Options):**
 
@@ -209,7 +211,9 @@ export const directApiPaths = {
 
 **💸 Fee Payment Options:**
 - \`company\` (default) - You pay fees, deducted from your portion
-- \`customer\` - Customer pays extra to cover fees`,
+- \`customer\` - Customer pays extra to cover fees
+
+**💡 USE CASE:** Programmatic crypto payments with custom checkout UI, embedded payments, API-first integration`,
       security: [{ ApiKeyAuth: [], BearerAuth: [] }],
       requestBody: {
         required: true,
