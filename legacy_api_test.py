@@ -73,23 +73,30 @@ class LegacyAPITester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success') and data.get('data', {}).get('token'):
+                # Handle both response formats
+                if data.get('data', {}).get('accessToken'):
+                    # New format: data.data.accessToken
+                    self.user_token = data['data']['accessToken']
+                    user_info = data['data']['userData']
+                elif data.get('data', {}).get('token'):
+                    # Old format: data.data.token
                     self.user_token = data['data']['token']
                     user_info = data['data']
-                    self.log_test(
-                        "User Authentication", 
-                        True, 
-                        f"Successfully authenticated {TEST_USER_EMAIL}",
-                        {
-                            'user_id': user_info.get('user_id'),
-                            'name': user_info.get('name'),
-                            'username': user_info.get('username')
-                        }
-                    )
-                    return True
                 else:
                     self.log_test("User Authentication", False, "Invalid response format", data)
                     return False
+                    
+                self.log_test(
+                    "User Authentication", 
+                    True, 
+                    f"Successfully authenticated {TEST_USER_EMAIL}",
+                    {
+                        'user_id': user_info.get('user_id'),
+                        'name': user_info.get('name'),
+                        'username': user_info.get('username')
+                    }
+                )
+                return True
             else:
                 self.log_test("User Authentication", False, f"HTTP {response.status_code}", response.text)
                 return False
