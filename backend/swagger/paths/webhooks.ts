@@ -9,6 +9,57 @@ DynoPay sends webhook notifications to your configured URL when payment events o
 
 ---
 
+## ⚠️ IMPORTANT: Webhook Endpoint Requirements
+
+### Your Endpoint MUST Be Publicly Accessible
+
+| URL Type | Works? | Notes |
+|----------|:------:|-------|
+| \`https://yourapp.com/webhook\` | ✅ | Recommended for production |
+| \`https://abc123.ngrok.io/webhook\` | ✅ | Great for development/testing |
+| \`http://localhost:8000/webhook\` | ❌ | DynoPay servers cannot reach your localhost |
+| \`http://127.0.0.1:3000/webhook\` | ❌ | Same as localhost |
+| \`http://192.168.x.x/webhook\` | ❌ | Private IPs are not routable |
+
+### Your Endpoint MUST NOT Require Authentication
+
+**Common 400 Error:** \`"No API key provided"\` or similar authentication errors.
+
+DynoPay sends webhooks from our servers - we don't have your API keys. Your webhook endpoint must accept unauthenticated POST requests.
+
+❌ **Wrong:**
+\`\`\`javascript
+// This will fail - DynoPay doesn't have your API key
+app.post('/webhook', requireApiKey, handler);
+\`\`\`
+
+✅ **Correct:**
+\`\`\`javascript
+// No auth middleware - verify using signature instead
+app.post('/dynopay-webhook', (req, res) => {
+  // Optional: Verify X-DynoPay-Signature header
+  const signature = req.headers['x-dynopay-signature'];
+  // Process webhook...
+  res.status(200).send('OK');
+});
+\`\`\`
+
+### Your Endpoint MUST Respond Quickly
+
+- Return \`200 OK\` within **10 seconds**
+- Process webhooks asynchronously if needed
+- We retry 3 times with exponential backoff (1s, 2s, 4s)
+
+### Testing During Development
+
+Use [ngrok](https://ngrok.com) to expose your local server:
+\`\`\`bash
+ngrok http 8000
+# Use the https://xxx.ngrok.io URL in DynoPay
+\`\`\`
+
+---
+
 ## 🎯 Payment Types That Trigger Webhooks
 
 Webhooks are sent for **ALL crypto payment types**:
