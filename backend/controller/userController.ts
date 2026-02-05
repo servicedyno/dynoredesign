@@ -1888,16 +1888,28 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     const userId = userData.user_id;
     
     // 1. Check wallet setup
+    // Note: userWalletModel stores wallet_address directly, userWalletAddressModel is for additional addresses
     const wallets = await userWalletModel.findAll({
       where: { user_id: userId },
     });
     
-    const walletAddresses = await userWalletAddressModel.findAll({
+    // Count wallets that have an actual wallet_address configured
+    const walletsWithAddress = wallets.filter((w: any) => {
+      const address = w.get("wallet_address");
+      return address && address.trim() !== '';
+    });
+    
+    // Also check the separate addresses table (userWalletAddressModel)
+    const additionalAddresses = await userWalletAddressModel.findAll({
       where: { user_id: userId },
     });
     
     const hasWallet = wallets.length > 0;
-    const hasWalletAddress = walletAddresses.length > 0;
+    // A merchant has a wallet address if either:
+    // 1. Any wallet in userWalletModel has wallet_address populated, OR
+    // 2. They have entries in userWalletAddressModel
+    const hasWalletAddress = walletsWithAddress.length > 0 || additionalAddresses.length > 0;
+    const totalConfiguredAddresses = walletsWithAddress.length + additionalAddresses.length;
     
     // 2. Check KYC status
     const kycRecord = await kycModel.findOne({
