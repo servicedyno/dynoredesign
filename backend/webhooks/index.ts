@@ -92,7 +92,13 @@ const logWebhookDelivery = async (
  * 
  * Note: webhook_secret is OPTIONAL. If not configured, X-DynoPay-Signature will not be included.
  */
-const callMerchantWebhook = async (customerData: Record<string, unknown>, eventData: Record<string, unknown>): Promise<void> => {
+interface WebhookResult {
+  success: boolean;
+  error?: string;
+  url?: string;
+}
+
+const callMerchantWebhook = async (customerData: Record<string, unknown>, eventData: Record<string, unknown>): Promise<WebhookResult> => {
   try {
     // Get webhook URL, callback URL, and secret from payment link or company settings
     const sequelize = require('../utils/dbInstance').default;
@@ -135,26 +141,39 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
     // If neither webhook_url nor callback_url configured, skip
     if (!webhookUrl && !callbackUrl) {
       console.log("[callMerchantWebhook] No webhook URL or callback URL configured, skipping");
-      return;
+      return { success: true }; // No webhook configured is not an error
     }
+    
+    // Validate webhook URL - localhost URLs won't work from cloud server
+    const urlToCheck = webhookUrl || callbackUrl;
+    if (urlToCheck && (urlToCheck.includes('localhost') || urlToCheck.includes('127.0.0.1'))) {
+      const errorMsg = `Webhook URL "${urlToCheck}" uses localhost which is unreachable from DynoPay servers. Please use a public URL.`;
+      console.error(`[callMerchantWebhook] ❌ ${errorMsg}`);
+      return { success: false, error: errorMsg, url: urlToCheck };
+    }
+    
+    let lastResult: WebhookResult = { success: true };
     
     // Call callback_url first (instant notification, synchronous)
     if (callbackUrl) {
-      await callUrlWithPayload(callbackUrl, eventData, webhookSecret, Number(companyId), 'callback');
+      lastResult = await callUrlWithPayload(callbackUrl, eventData, webhookSecret, Number(companyId), 'callback');
     }
     
     // Then call webhook_url (transaction updates, can be same or different)
     if (webhookUrl && webhookUrl !== callbackUrl) {
-      await callUrlWithPayload(webhookUrl, eventData, webhookSecret, Number(companyId), 'webhook');
+      lastResult = await callUrlWithPayload(webhookUrl, eventData, webhookSecret, Number(companyId), 'webhook');
     } else if (webhookUrl && !callbackUrl) {
       // If only webhook_url is configured (no callback_url)
-      await callUrlWithPayload(webhookUrl, eventData, webhookSecret, Number(companyId), 'webhook');
+      lastResult = await callUrlWithPayload(webhookUrl, eventData, webhookSecret, Number(companyId), 'webhook');
     }
+    
+    return lastResult;
     
   } catch (error: unknown) {
     // Log but don't throw - webhook failure shouldn't block payment processing
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error(`[callMerchantWebhook] Failed to send webhook: ${errorMsg}`);
+    return { success: false, error: errorMsg };
   }
 };
 
