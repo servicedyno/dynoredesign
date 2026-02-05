@@ -3879,6 +3879,9 @@ const deleteWalletAddressWithOTP = async (
     // Delete OTP from Redis
     await deleteRedisItem(`wallet_delete_otp_${address_id}`);
 
+    // Invalidate wallet cache so getWallet returns fresh data
+    await invalidateWalletCache(userData.user_id);
+
     walletLogger.info(`Wallet address ${address_id} deleted by user ${user_id}`);
 
     return successResponseHelper(res, 200, "Wallet address deleted successfully", {
