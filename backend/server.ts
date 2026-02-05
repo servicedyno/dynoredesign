@@ -271,6 +271,9 @@ const startServer = async () => {
     log('User model synced with referral columns.', 'info');
     
     // Validate Merchant Pool Configuration (CRITICAL STARTUP CHECK)
+    // Can be disabled with SKIP_MERCHANT_POOL_VALIDATION=true for testing/development
+    const skipValidation = process.env.SKIP_MERCHANT_POOL_VALIDATION === 'true';
+    
     try {
       log('Validating Merchant Pool configuration...', 'info');
       const validateMerchantPoolConfiguration = (await import("./services/merchantPoolValidator")).default;
@@ -279,8 +282,16 @@ const startServer = async () => {
     } catch (validationError: unknown) {
       log('MERCHANT POOL CONFIGURATION VALIDATION FAILED', 'error');
       const errMsg = validationError instanceof Error ? validationError.message : String(validationError);
-      log(`Server cannot start with invalid configuration: ${errMsg}`, 'error');
-      process.exit(1); // Exit server - don't start with bad config
+      
+      if (skipValidation) {
+        log(`⚠️  WARNING: Validation failed but SKIP_MERCHANT_POOL_VALIDATION=true`, 'warn');
+        log(`⚠️  Configuration error: ${errMsg}`, 'warn');
+        log('⚠️  Server starting anyway - Merchant Pool features may not work correctly', 'warn');
+      } else {
+        log(`Server cannot start with invalid configuration: ${errMsg}`, 'error');
+        log('💡 Tip: Set SKIP_MERCHANT_POOL_VALIDATION=true to bypass this check for testing', 'info');
+        process.exit(1); // Exit server - don't start with bad config
+      }
     }
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
