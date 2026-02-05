@@ -9,7 +9,7 @@ import time
 import json
 from typing import Dict, List
 
-BASE_URL = "https://payment-guard-11.preview.emergentagent.com"
+BASE_URL = "https://install-deps-8.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 def print_header(title):
