@@ -45,6 +45,33 @@ const getAvailableCurrencies = async (userId: number, companyId: number): Promis
   return wallets.map((w) => w.wallet_type);
 };
 
+// Helper function to find customer by JWT payload
+const findCustomerByJwtPayload = async (userData: CustomerJwtPayload) => {
+  // Try to find customer by UUID id first
+  if (userData.id && typeof userData.id === 'string') {
+    const customer = await customerModel.findOne({
+      where: { id: userData.id },
+    });
+    if (customer) return customer;
+  }
+  
+  // If not found or id is integer, try by customer_id
+  if (userData.customer_id) {
+    return await customerModel.findOne({
+      where: { customer_id: userData.customer_id },
+    });
+  }
+  
+  // If id is integer, try using it as customer_id
+  if (userData.id && typeof userData.id === 'number') {
+    return await customerModel.findOne({
+      where: { customer_id: userData.id },
+    });
+  }
+  
+  return null;
+};
+
 const createUser = async (req: express.Request, res: express.Response) => {
   try {
     const { name, email, mobile } = req.body;
