@@ -157,7 +157,7 @@ const findOrCreateDefaultCustomer = async (
       // Create wallet for the customer
       const walletId = crypto.randomUUID();
       await sequelize.query(
-        `INSERT INTO tbl_customer_wallet (id, customer_id, wallet_type, amount, created_at, updated_at)
+        `INSERT INTO tbl_customer_wallet (id, customer_id, wallet_type, amount, "createdAt", "updatedAt")
          VALUES ($1, $2, $3, 0, NOW(), NOW())`,
         {
           bind: [walletId, newCustomer[0].customer_id, baseCurrency],
