@@ -3,8 +3,6 @@ node_modules
 .gitignore
 *.md
 *.log
-.env
-.env.*
 dist
 build
 coverage
