@@ -1888,13 +1888,16 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     const userId = userData.user_id;
     
     // 1. Check wallet setup
-    // Note: userWalletModel stores wallet_address directly, userWalletAddressModel is for additional addresses
-    const wallets = await userWalletModel.findAll({
-      where: { user_id: userId },
+    // Only count CRYPTO wallets - FIAT wallets are auto-created and don't count for onboarding
+    const cryptoWallets = await userWalletModel.findAll({
+      where: { 
+        user_id: userId,
+        currency_type: 'CRYPTO',  // Only count crypto wallets
+      },
     });
     
-    // Count wallets that have an actual wallet_address configured
-    const walletsWithAddress = wallets.filter((w: any) => {
+    // Count crypto wallets that have an actual wallet_address configured
+    const walletsWithAddress = cryptoWallets.filter((w: any) => {
       const address = w.get("wallet_address");
       return address && address.trim() !== '';
     });
@@ -1904,10 +1907,9 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
       where: { user_id: userId },
     });
     
-    const hasWallet = wallets.length > 0;
-    // A merchant has a wallet address if either:
-    // 1. Any wallet in userWalletModel has wallet_address populated, OR
-    // 2. They have entries in userWalletAddressModel
+    // A merchant has crypto wallets if they have CRYPTO type wallets
+    const hasCryptoWallet = cryptoWallets.length > 0;
+    // A merchant can receive payments if they have at least one wallet address configured
     const hasWalletAddress = walletsWithAddress.length > 0 || additionalAddresses.length > 0;
     const totalConfiguredAddresses = walletsWithAddress.length + additionalAddresses.length;
     
