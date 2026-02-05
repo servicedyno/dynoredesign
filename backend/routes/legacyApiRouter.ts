@@ -150,7 +150,7 @@ router.post("/createUser", apiKeyOnlyMiddleware, async (req, res) => {
     const customerId = Crypto.randomUUID();
     
     await sequelize.query(
-      `INSERT INTO tbl_customer (id, customer_name, email, mobile, company_id, created_at, updated_at)
+      `INSERT INTO tbl_customer (id, customer_name, email, mobile, company_id, "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
       {
         bind: [customerId, name, email, mobile || null, data.company_id],
