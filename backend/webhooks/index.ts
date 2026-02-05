@@ -669,7 +669,7 @@ const tatumCryptoWebHook = async (
           const linkIdUnderpaid = customerData?.link_id || null;
           const paymentTypeUnderpaid = linkIdUnderpaid ? 'payment_link' : 'direct_api';
           
-          await callMerchantWebhook(customerData, {
+          const underpaidWebhookResult = await callMerchantWebhook(customerData, {
             event: 'payment.underpaid',
             payment_type: paymentTypeUnderpaid,
             address: address,
@@ -692,7 +692,11 @@ const tatumCryptoWebHook = async (
             grace_period_minutes: 30,
             timestamp: new Date().toISOString(),
           });
-          console.log("[tatumCryptoWebHook] Enhanced underpayment webhook sent to merchant");
+          if (underpaidWebhookResult.success) {
+            console.log("[tatumCryptoWebHook] ✅ Enhanced underpayment webhook sent to merchant");
+          } else {
+            console.error(`[tatumCryptoWebHook] ❌ Underpayment webhook failed: ${underpaidWebhookResult.error}`);
+          }
         }
         
         console.log("[tatumCryptoWebHook] Underpayment recorded, waiting for remaining payment");
