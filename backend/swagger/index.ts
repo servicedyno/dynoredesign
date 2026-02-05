@@ -225,9 +225,9 @@ POST /api/pay/createPaymentLink
 ### Q: How do I test webhooks locally?
 **A: Use a tunnel service** (localhost webhooks won't work from cloud):
 
-1. **ngrok** (recommended): `ngrok http 3000` → Get public URL
-2. **localtunnel**: `lt --port 3000`
-3. **Cloudflare Tunnel**: `cloudflared tunnel`
+1. **ngrok** (recommended): \`ngrok http 3000\` → Get public URL
+2. **localtunnel**: \`lt --port 3000\`
+3. **Cloudflare Tunnel**: \`cloudflared tunnel\`
 
 Then use the public URL as your \`webhook_url\`:
 \`\`\`json
