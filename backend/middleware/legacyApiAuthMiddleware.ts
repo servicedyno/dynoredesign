@@ -117,7 +117,7 @@ const findOrCreateDefaultCustomer = async (
       `SELECT id, customer_id, customer_name, email, company_id 
        FROM tbl_customer 
        WHERE company_id = $1 AND email LIKE 'legacy-api-%'
-       ORDER BY created_at DESC LIMIT 1`,
+       ORDER BY "createdAt" DESC LIMIT 1`,
       {
         bind: [companyId],
         type: QueryTypes.SELECT
