@@ -1079,13 +1079,26 @@ function verifyWebhookSignature(payload, signature, secret) {
 const swaggerSpec = swaggerJsdoc(options);
 
 export const setupSwagger = (app: Express) => {
-  // Serve Swagger UI
+  // Serve Swagger UI with enhanced search
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (app as any).use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    customCss: '.swagger-ui .topbar { display: none }',
+    customCss: `
+      .swagger-ui .topbar { display: none }
+      .swagger-ui .info { max-width: 100%; }
+      .swagger-ui .info .description { line-height: 1.6; }
+      .swagger-ui .info h2 { margin-top: 30px; color: #3b4151; }
+      .swagger-ui .info h3 { margin-top: 20px; color: #555; }
+      .swagger-ui .info code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+    `,
     customSiteTitle: "DynoPay API Documentation",
     swaggerOptions: {
       persistAuthorization: true, // Keep authorization token on page refresh
+      filter: true, // Enable filter/search box
+      displayOperationId: true,
+      defaultModelsExpandDepth: 1,
+      defaultModelExpandDepth: 3,
+      docExpansion: 'list', // Show endpoints collapsed by default
+      tryItOutEnabled: true,
     },
   }));
 
