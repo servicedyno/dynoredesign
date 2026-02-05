@@ -1,9 +1,11 @@
 export const directApiPaths = {
   '/api/user/createUser': {
     post: {
-      tags: ['Direct API - Merchant Integration'],
-      summary: 'Create a customer for payment processing',
+      tags: ['Direct API - Merchant Integration', 'Customer Management', 'Authentication'],
+      summary: 'Create a customer for payment processing (Direct API)',
       description: `Create a customer record to initiate payments. Returns a customer token required for subsequent payment requests.
+
+**🔍 KEYWORDS:** create customer, customer token, customer JWT, register customer, new customer, customer creation, API integration, programmatic payments
 
 **🔐 Authentication:** Requires \`x-api-key\` header with your encrypted API key.
 
@@ -21,7 +23,9 @@ export const directApiPaths = {
 
 **✨ Existing Customer Handling:**
 - If email already exists for your company → Returns existing customer with new token
-- No duplicate customers created`,
+- No duplicate customers created
+
+**💡 USE CASE:** Programmatic payment integration where you control the checkout experience`,
       security: [{ ApiKeyAuth: [] }],
       requestBody: {
         required: true,
