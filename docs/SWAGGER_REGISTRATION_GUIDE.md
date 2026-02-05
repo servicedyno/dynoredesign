@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://payflow-fix-17.preview.emergentagent.com/api/docs
+Go to: https://payment-guard-11.preview.emergentagent.com/api/docs
 
 ---
 

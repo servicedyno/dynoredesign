@@ -3,78 +3,76 @@ The initial request was to set up and install dependencies for the project. Subs
 
 **PRODUCT REQUIREMENTS:**
 1.  Analyze why a specific transaction () showed an amount of .17 instead of the expected 0.
-2.  Enhance webhook responses (, , ) to be more detailed, including fields like merchant amount, fees, customer details, and payment type.
+2.  Enhance webhook responses (, , ) to be more detailed.
 3.  Update the API documentation (Swagger) to reflect the new, detailed webhook payloads in a clear, dedicated section.
 4.  Create a new endpoint () for the merchant frontend to easily determine a user's onboarding status (wallet setup, KYC, API keys).
-5.  Implement a strict KYC enforcement policy:
-    *   Set the transaction volume threshold to **0,000**.
-    *   Once the threshold is reached, give merchants a **90-day grace period** to complete KYC.
-    *   Send monthly email notifications during the grace period.
-    *   Block payment creation ( and ) if KYC is not approved after the grace period expires.
-6.  Display in-app warnings for merchants who are in their KYC grace period, both in the onboarding status endpoint and in the response when creating payment links.
+5.  Implement a strict KYC enforcement policy with a 0,000 threshold and a 90-day grace period, including email notifications and payment blocking.
+6.  Display in-app warnings for merchants in their KYC grace period.
 7.  Ensure the KYC warning's  correctly points to the merchant's unique Veriff verification session URL.
-8.  Perform code cleaning to improve codebase quality by removing unused variables, imports, and commented-out code.
+8.  Perform code cleaning to improve codebase quality.
+9.  Analyze and fix inconsistencies in currency selection for payment links and direct API calls.
+10. Fix critical architectural issues with non-USD currency handling, where fees were being calculated incorrectly.
+11. Update a public fee calculator endpoint to support all fiat currencies and ensure it's documented in Swagger.
+12. Resolve bugs in wallet-related APIs, including a cache invalidation issue, and incorrect counts in the onboarding and dashboard endpoints.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is a fully functional DynoPay payment processing system with a TypeScript/Node.js backend, React frontend, and PostgreSQL database. Dependencies are installed, and all services are running.
+The project is a fully functional DynoPay payment processing system with a TypeScript/Node.js backend, React frontend, and PostgreSQL database. The system now has robust KYC enforcement, enhanced webhooks, a detailed onboarding status endpoint, and comprehensive API documentation.
 
-The agent has successfully implemented several major enhancements:
--   **Webhook Enhancement:** Webhooks now provide comprehensive transaction details, including fees, merchant payouts, customer info, and payment type ( or ).
--   **API Documentation:** The Swagger documentation features a new, clear, and detailed section for webhooks, with payload examples for all event types.
--   **Onboarding Endpoint:** A new endpoint, , provides a consolidated status for merchants, indicating required actions for wallet setup, KYC, and API keys.
--   **KYC Enforcement:** A robust KYC flow is now in place. Payment creation is blocked for merchants who exceed a 0,000 transaction volume and fail to complete verification within a 90-day grace period. The system also sends in-app warnings and email notifications.
--   **Veriff Integration:** The KYC action URL now correctly links to the merchant's active Veriff session, streamlining the verification process.
+Recent fixes have addressed several critical bugs:
+-   **Code Cleaning:** All TypeScript compilation errors have been resolved, and unused variables/imports have been cleaned up.
+-   **Currency Handling:** A major architectural flaw was fixed, ensuring non-USD payments are correctly converted to USD before fee calculations are applied.
+-   **API Documentation:** The Swagger documentation has been reorganized with a cleaner tag structure, and new fields () have been documented.
+-   **Cache Invalidation:** A critical bug was fixed where the wallet cache was not being invalidated after add/update/delete operations, leading to stale data.
+-   **Onboarding & Dashboard Bugs:** Several bugs were fixed in the  and  endpoints, which were showing incorrect wallet counts due to improper filtering (e.g., including FIAT wallets, not checking company ownership).
 
 **Last working item**:
--   **Last item agent was working:** The agent was in the process of applying medium effort code cleaning recommendations. This involved systematically removing unused imports, variables, and commented-out code from all major controllers in the backend to improve code quality and maintainability.
+-   **Last item agent was working:** Investigating why the  API endpoint returns only one wallet for a specific merchant (), even though the merchant claims to have added three wallet addresses. The agent was in the process of debugging this discrepancy.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** NA
+-   **Which testing method agent to use?** backend testing agent
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Complete the Medium Effort Code Cleaning (P0)**
-    -   **Description:** The agent initiated a medium effort code cleaning task as requested but has not completed it. The last check by the TypeScript compiler () reported approximately 33 remaining issues related to unused variables and imports across various controller files.
-    -   **Attempted fixes:** The agent successfully cleaned several major controllers, including , , , and , by removing unused imports and commented code blocks. However, the task was not finished.
+-   **Issue 1:  API returns incomplete wallet list (P0)**
+    -   **Description:** The  endpoint, when called with , returns only one wallet. The user reported that three wallets should be present. The agent's investigation points to a potential architectural issue where wallets are stored in two different database tables.
+    -   **Attempted fixes:** The agent confirmed that the  function in  works correctly for other companies and does not have a  filter that would incorrectly exclude wallets. The agent hypothesized that the two missing wallets might be stored in the separate  table, which is not being queried by the  endpoint.
     -   **Next debug checklist:**
-        1.  Execute yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. in the  directory to get a fresh list of all remaining errors.
-        2.  Methodically edit each file flagged by  to remove the specified unused variables and imports.
-        3.  Run yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. again to confirm that all compilation errors and warnings have been resolved.
-        4.  Restart the backend service using backend: stopped
-backend: started.
-        5.  Initiate the backend testing agent () with the task Run a full regression test to ensure code cleaning did not introduce any bugs to verify that the changes have not broken any existing functionality.
-    -   **Why fix this issue and what will be achieved with the fix?** Completing the cleanup will improve code quality, reduce technical debt, and ensure the codebase is easier to maintain. It fulfills a direct user request.
+        1.  Verify the hypothesis: Check if the missing wallet addresses for the user/company exist in the  table (queried via the  endpoint or by inspecting the database).
+        2.  If confirmed, modify the  function in .
+        3.  The function should query both  (for primary wallets) and  (for additional addresses) associated with the user/company.
+        4.  Consolidate the results from both queries into a single, unified list before sending the response.
+        5.  Test the  endpoint again with  to ensure it now returns all three wallets.
+    -   **Why fix this issue and what will be achieved with the fix?** This will resolve a critical data inconsistency, ensuring that merchants see all of their configured wallet addresses in the application, which is essential for managing their funds.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** backend
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   **Task 1: Code Cleaning**
-    -   **Where to resume:** The agent needs to address the remaining ~33 issues reported by yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. in the  directory.
-    -   **What will be achieved with this?** A cleaner, more maintainable codebase with no compilation warnings, fulfilling the user's request.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** backend
-    -   **Blocked on something:** None
+-   None.
 
 **Upcoming and Future Tasks**
--   No upcoming tasks have been defined by the user. The next action after completing the code cleaning should be to confirm completion with the user and ask for the next development priority.
+-   **Upcoming Tasks:**
+    -   **P1: Implement Visual Currency Selector:** Create a UI component on the frontend to allow merchants to visually select which cryptocurrencies to accept when creating a payment link.
+-   **Future Tasks:**
+    -   **P2: Fee Comparison Tool:** Develop a feature that shows merchants how DynoPay's fees compare to competitors like Stripe or PayPal.
+    -   **P2: High Effort Code Cleaning:** Address deeper refactoring opportunities identified previously, such as standardizing logger usage and refactoring duplicated logic (e.g., OTP generation).
+    -   **P2: Security Monitoring Dashboards:** Build internal dashboards for monitoring security-related events.
 
 **Completed work in this session**
--   **Webhook Enhancements:** Added detailed fields (, , , , etc.) to all payment-related webhooks. (Files: , ).
--   **API Documentation Overhaul:** Created a dedicated and comprehensive Webhooks section in Swagger docs and fixed structural issues. (Files: , , ).
--   **Onboarding Status Endpoint:** Implemented  to give the frontend a single source of truth for merchant onboarding steps. (Files: , ).
--   **KYC Enforcement Logic:** Implemented a policy to block payments for non-compliant merchants based on a 0,000 volume threshold and a 90-day grace period. (Files: , ).
--   **In-App KYC Warnings:** Added dynamic warnings to API responses, including remaining grace period and the correct Veriff session URL. (Files: , ).
--   **Initial Code Cleaning:** Applied minimum effort and started medium effort code cleaning by removing numerous unused imports and commented code blocks.
+-   **Code Cleaning and Bug Fixing:** Fixed ~33 TypeScript compilation errors and logical issues introduced during a previous cleanup attempt. All code now compiles successfully. (Files: , , etc.)
+-   **Currency Selection Architecture Fix:** Corrected major inconsistencies in currency selection. The system now properly filters available currencies based on the  set on a payment link and supports this feature in the Direct API. (Files: , )
+-   **Non-USD Currency Handling Fix:** Resolved a critical bug where transaction fees for non-USD payments were calculated incorrectly. The system now converts all amounts to USD before applying fee tiers. (Files: )
+-   **API Documentation Overhaul:** Restructured and cleaned up the Swagger API documentation by consolidating 25+ tags into logical groups and documenting newly added fields like . (Files: , )
+-   **Public Fee Calculator Enhancement:** Updated the public  endpoint to support multi-currency calculations and added it to the Swagger documentation. (Files: , )
+-   **Wallet Cache Invalidation Fix:** Implemented a robust cache invalidation mechanism for all wallet CRUD operations (add, update, delete) to prevent stale data from being served. (Files: , )
+-   **Onboarding Status Endpoint Fix:** Corrected a bug in  that was showing incorrect wallet and address counts by improperly including FIAT wallets and querying the wrong table. (File: )
+-   **Dashboard Wallet Count Fix:** Fixed a bug in  where  showed 0 for a valid company because of incorrect ownership verification logic. (File: )
 
 **Earlier issues found/mentioned but not fixed**
--   None. All issues raised by the user during this session have been addressed or are currently in progress.
+-   None.
 
 **Known issue recurrence from previous fork**
 -   N/A
@@ -92,54 +90,57 @@ info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this comm
 -   **Process Management:** Supervisor
 
 **key DB schema**
--   : { kyc_id, user_id, company_id, status, veriff_session_url, threshold_reached_at }
--   : { link_id, transaction_id, user_id, base_amount, base_currency }
--   : { log_id, webhook_url, event_type, payload, status }
+-   : { wallet_id, user_id, company_id, wallet_type, currency_type, wallet_address, amount }
+-   : { user_address_id, user_id, company_id, currency, wallet_address }
+-   : { kyc_id, user_id, status, veriff_session_url, threshold_reached_at }
+-   : { link_id, user_id, base_amount, base_currency, accepted_currencies }
 
 **changes in tech stack**
 -   None.
 
 **All files of reference**
--   : Central file for payment creation and confirmation. Modified for KYC enforcement and webhook data enrichment.
--   : Manages KYC status, thresholds, and grace period notifications.
--   : Contains the new  endpoint and logic for in-app warnings.
--   : New file housing the detailed API documentation for all webhook events and payloads.
--   : Modified to register the new  route.
+-   : Contains the logic for all wallet operations, including the  function currently being debugged and the newly added cache invalidation logic.
+-   : Heavily modified to fix currency conversion logic for fees (), respect , and enhance the public fee calculator ().
+-   : Modified to fix bugs in the  endpoint related to incorrect wallet counting.
+-   : Modified to fix a company ownership bug affecting the  count.
+-   : Modified to export the Redis client to enable pattern-based cache invalidation.
+-   : Modified to consolidate and reorganize API documentation tags.
 
 **Areas that need refactoring**:
 -   The High Effort cleaning recommendations identified during the code analysis have not been addressed. These include standardizing logger usage and refactoring duplicated logic (e.g., OTP generation). This could be a future task.
 
 **key api endpoints**
--   : **(New)** Provides a consolidated onboarding status for a merchant, including KYC warnings and action URLs.
--   : Creates a payment link. Now includes KYC enforcement and may return a KYC warning.
--   : Processes direct API crypto payments. Also includes KYC enforcement.
--   : Initiates a new KYC verification session with Veriff and returns a session URL.
--   : Renders the Swagger UI with the updated API documentation.
+-   : **(Under Investigation)** Retrieves wallets for a user/company. Currently returns incomplete data for some users.
+-   : Creates a payment link. Now correctly handles non-USD  and filters accepted payment currencies.
+-   : Calculates crypto exchange rates. Now correctly converts non-USD source amounts to USD before calculating fees.
+-   : **(Enhanced)** Public endpoint to estimate fees. Now supports multiple fiat currencies.
+-   : **(Fixed)** Provides a consolidated onboarding status. Now correctly counts only crypto wallets with addresses.
+-   : **(Fixed)** Retrieves dashboard metrics. Now correctly verifies company ownership when fetching wallet counts.
 
 **Critical Info for New Agent**
--   **Code Cleaning is Incomplete:** Your immediate priority is to finish the code cleaning task. Run yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. in  to see the list of remaining files that need unused variables and imports removed.
--   **KYC Logic is Critical:** The new KYC enforcement blocks payments for non-compliant merchants. Be mindful of this logic ( threshold,  grace period) when working on payment-related features. The  field in  is key to this logic.
--   **Onboarding Endpoint is Source of Truth:** The  endpoint is designed to be the single point of reference for any merchant-facing frontend to display user status and required actions.
--   **Test After Cleaning:** After completing the code cleanup, you must run the backend test suite to ensure no regressions were introduced.
+-   ** is Bugged:** Your immediate priority is to fix the  API. The leading hypothesis is that it only queries the  table and ignores additional addresses stored in . You need to modify the function to query both tables and merge the results.
+-   **Cache Invalidation is Implemented:** A new helper function, , has been added to . It uses a Redis  pattern to clear the cache for a user across all companies. This function is now called in all wallet add/update/delete operations. Be aware of this when modifying wallet logic.
+-   **Non-USD Currency Flow:** Be mindful that all fee calculations are based on USD. Any function dealing with amounts in other fiat currencies must first convert the amount to USD using  before passing it to .
 
 **documents and test reports created in this job**
--    (Updated multiple times for backend testing).
+-    (Continuously updated)
+-    (Currency selection tests)
+-    (Non-USD currency handling tests)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.   - **Status: In Progress**. The agent started this task but did not complete it.
-2.   - **Status: Completed**.
-3.   - **Status: Completed**.
-4.   - **Status: Completed**.
-5.   - **Status: Completed**.
-6.   - **Status: Completed**.
-7.   - **Status: Completed**.
-8.   - **Status: Completed**. All requests in this message were addressed.
-9.   - **Status: Completed**.
-10.  - **Status: Completed**.
+1.  **User:**  API for  only returns 1 wallet, but I added 3. **Status: In Progress**
+2.  **Agent:** Analyzed the  code and confirmed it works for another company. Hypothesized the issue is related to addresses being stored in a separate table.
+3.  **User:**  API for  returns , which is wrong. **Status: Resolved**
+4.  **Agent:** Fixed the dashboard endpoint by adding proper company ownership verification before querying for wallets.
+5.  **User:** Merchant  reports  shows he only added 3 wallets, but the response says  and . **Status: Resolved**
+6.  **Agent:** Fixed the onboarding status endpoint to correctly count only crypto wallets with addresses, excluding auto-created fiat wallets.
+7.  **User:** Cache is not being cleared on wallet deletion. **Status: Resolved**
+8.  **Agent:** Implemented a robust cache invalidation mechanism for all wallet CRUD operations.
+9.  **User:** Asks about a public fee calculator endpoint with a 60% discount and requests multi-currency support and API documentation for it. **Status: Completed**
+10. **User:** Asks how the system handles a 00 AUD payment, questioning currency processing and fund distribution. **Status: Completed** (Led to fixing the non-USD fee calculation bug).
 
 **Project Health Check:**
--   **Broken:** None
+-   **Broken:**  is not returning complete data for all users.
 -   **Mocked:** None
 
 **3rd Party Integrations**
@@ -157,4 +158,4 @@ info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this comm
 -   Login with user  and password  via the API to obtain a JWT for authenticated requests.
 
 **What agent forgot to execute**
--   The agent did not fully complete the medium effort code cleaning task as requested. Approximately 33 unused variable/import issues remain in the backend codebase.</analysis>
+-   Nothing was forgotten. The agent was actively investigating the latest user-reported bug before the session ended.</analysis>

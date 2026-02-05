@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://payflow-fix-17.preview.emergentagent.com/api"
+BASE_URL = "https://payment-guard-11.preview.emergentagent.com/api"
 
 # Login credentials
 email = "john@dyno.pt"

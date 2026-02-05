@@ -8,7 +8,7 @@ import json
 import os
 
 # Get backend URL
-BACKEND_URL = "https://payflow-fix-17.preview.emergentagent.com"
+BACKEND_URL = "https://payment-guard-11.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 def authenticate():

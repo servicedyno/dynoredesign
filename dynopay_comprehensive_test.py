@@ -24,7 +24,7 @@ from typing import Dict, Any, Optional, List
 
 class DynoPayTester:
     def __init__(self):
-        self.base_url = "https://payflow-fix-17.preview.emergentagent.com"
+        self.base_url = "https://payment-guard-11.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.session = requests.Session()
         self.session.headers.update({
