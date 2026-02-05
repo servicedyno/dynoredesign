@@ -613,11 +613,7 @@ const getSingleTransaction = async (
   try {
     const id = req.params?.id;
     if (id) {
-      const customer = await customerModel.findOne({
-        where: {
-          id: userData.id,
-        },
-      });
+      const customer = await findCustomerByJwtPayload(userData);
 
       const customerData = await customerTransactionModel.findOne({
         where: {
