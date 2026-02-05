@@ -660,7 +660,45 @@ DynoPay retries failed webhooks with exponential backoff:
 - Retry 4: 2 hours
 - Retry 5: 24 hours
 
-Always respond with 2xx status to acknowledge receipt.`,
+Always respond with 2xx status to acknowledge receipt.
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Errors & Solutions
+
+| HTTP Status | Error Message | Cause | Solution |
+|:-----------:|--------------|-------|----------|
+| **N/A** | Connection refused | DynoPay can't reach your server | Use a public URL, not localhost |
+| **N/A** | Connection timed out | Server too slow | Respond within 10 seconds |
+| **400** | "No API key provided" | Your endpoint requires auth | Remove auth from webhook endpoint |
+| **400** | "Invalid request body" | Payload parsing issue | Check Content-Type is application/json |
+| **401** | Unauthorized | Your endpoint requires auth | Remove auth from webhook endpoint |
+| **403** | Forbidden | Firewall blocking request | Whitelist DynoPay IPs |
+| **404** | Not Found | Wrong endpoint path | Verify your webhook URL path |
+| **500** | Internal Server Error | Bug in your handler | Check your server logs |
+
+### Quick Checklist
+
+✅ URL is publicly accessible (not localhost)  
+✅ Using HTTPS (not HTTP)  
+✅ Endpoint accepts POST without authentication  
+✅ Endpoint responds with 200 OK  
+✅ Response time < 10 seconds  
+✅ Handling JSON body (not form data)  
+
+### Test Your Endpoint
+
+\`\`\`bash
+# Test from your terminal
+curl -X POST "https://your-webhook-url.com/webhook" \\
+  -H "Content-Type: application/json" \\
+  -H "X-DynoPay-Event: test" \\
+  -d '{"event":"test","payment_id":"test-123"}'
+
+# Should return: 200 OK
+\`\`\``,
       responses: {
         200: {
           description: 'Integration guide',
