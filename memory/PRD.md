@@ -5,7 +5,18 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 
 ## What's Been Implemented
 
-### Session: February 4, 2026 (Latest)
+### Session: February 5, 2026 (Latest)
+
+#### getWallet API Fix (P0 Bug) ✅ COMPLETE
+- **Issue**: `GET /api/wallet/getWallet?company_id=12` was returning only 1 wallet instead of 4
+- **Root Cause**: Stale cache data from before cache invalidation was implemented
+- **Investigation**: Verified 4 wallets exist in `tbl_user_wallet` for company 12 (BTC, LTC, DOGE, ETH)
+- **Fix**: 
+  1. Cleared stale Redis cache for user 16
+  2. Added `invalidateWalletCache()` call to `verifyOtp` function (line 2931)
+- **Result**: API now correctly returns all 4 wallets
+
+### Session: February 4, 2026
 
 #### Wallet Cache Invalidation Fix (Critical Bug)
 - ✅ **Root Cause**: Wallet cache was not being cleared when wallets were added/updated/deleted
@@ -18,6 +29,7 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
   - `updateWalletWithOTP` - Now invalidates cache after OTP-verified update
   - `editWalletAddress` - Now invalidates cache after editing
   - `deletePaymentWalletWithOTP` - Now invalidates cache after deletion
+  - `verifyOtp` - NOW invalidates cache after wallet creation/update (NEW FIX)
 
 #### Fee Calculator Multi-Currency Support
 - ✅ `POST /api/pay/calculateFees` supports 40+ fiat currencies
@@ -39,10 +51,20 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 - `dashboard:{userId}:{companyId}` - Dashboard data cache
 
 **Cache Invalidation Triggers:**
-- Adding wallet address
-- Updating wallet address
-- Deleting wallet address
-- Any OTP-verified wallet modification
+- Adding wallet address (via `addWalletAddress`)
+- Creating/updating wallet via OTP verification (via `verifyOtp`)
+- Updating wallet address (via `updateWalletWithOTP`, `editWalletAddress`)
+- Deleting wallet address (via `deleteWalletAddress`, `deleteWalletAddressWithOTP`, `deletePaymentWalletWithOTP`)
+
+**Cache Invalidation Function Locations:**
+- Line 59: Function definition
+- Line 1970: `addWalletAddress`
+- Line 2931: `verifyOtp` (NEW)
+- Line 3045: `deleteWalletAddress`
+- Line 3264: `updateWalletWithOTP`
+- Line 3497: `deleteWalletAddressWithOTP`
+- Line 3710: `editWalletAddress`
+- Line 3903: `deletePaymentWalletWithOTP`
 
 ## Key API Endpoints
 
@@ -50,12 +72,22 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 |----------|-------|--------------|
 | `GET /api/wallet/getWallet` | 30 sec | On any wallet modification |
 | `GET /api/wallet/getWalletAddresses` | No cache | Real-time |
-| `POST /api/wallet/addWallet` | N/A | Triggers invalidation |
+| `POST /api/wallet/validateWalletAddress` | N/A | Step 1 - Send OTP |
+| `POST /api/wallet/verifyOtp` | N/A | Step 2 - Triggers invalidation |
 | `DELETE /api/wallet/deleteWallet` | N/A | Triggers invalidation |
+
+## Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `tbl_user_wallet` | Primary wallet records (includes FIAT and CRYPTO) |
+| `tbl_user_addresses` | Additional saved addresses for withdrawals |
+| `tbl_company` | Company/merchant information |
 
 ## Prioritized Backlog
 
 ### P0 (Critical)
+- [x] ~~getWallet API returning incomplete data~~ ✅ COMPLETE (Feb 5)
 - [x] ~~Wallet cache invalidation bug~~ ✅ COMPLETE
 - [x] ~~Fee calculator multi-currency~~ ✅ COMPLETE
 - [x] ~~Non-USD currency fix~~ ✅ COMPLETE
@@ -67,8 +99,15 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 ### P2 (Medium)
 - [ ] High effort code cleaning
 - [ ] Security monitoring dashboards
+- [ ] Fee comparison tool
 
 ## Test Credentials
-- Email: richard@dyno.pt
-- Password: Katiekendra123@
-- Company ID: 38
+- Primary Test User:
+  - Email: richard@dyno.pt
+  - Password: Katiekendra123@
+  - Companies: 38, 39, 41, 42
+  
+- User with Company 12:
+  - Email: dharmikgodhani1705@gmail.com
+  - Password: TestPassword123!
+  - Company ID: 12 (4 wallets: BTC, LTC, DOGE, ETH)
