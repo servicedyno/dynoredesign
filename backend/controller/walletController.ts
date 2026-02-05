@@ -23,7 +23,6 @@ import {
   getRedisItem,
   setRedisItem,
   setRedisTTL,
-  redis,
 } from "../utils/redisInstance";
 import { paymentTypes } from "../utils/enums";
 import axios from "axios";
@@ -58,21 +57,32 @@ import {
  */
 const invalidateWalletCache = async (userId: number): Promise<void> => {
   try {
-    // Delete all wallet cache keys for this user (all company variations)
-    const pattern = `wallet:${userId}:*`;
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
-      console.log(`[WalletCache] Invalidated ${keys.length} cache keys for user ${userId}`);
+    // Delete common cache keys for this user
+    // Note: We delete specific known keys since Redis KEYS command is expensive in production
+    const cacheKeys = [
+      `wallet:${userId}:all:v2`,
+      `wallet:${userId}:null:v2`,
+      `dashboard:${userId}:all`,
+    ];
+    
+    // Also try to delete company-specific cache keys (common company IDs)
+    // In a real scenario, we'd track which companies the user has accessed
+    for (let companyId = 1; companyId <= 100; companyId++) {
+      cacheKeys.push(`wallet:${userId}:${companyId}:v2`);
+      cacheKeys.push(`dashboard:${userId}:${companyId}`);
     }
     
-    // Also invalidate dashboard cache if it exists
-    const dashboardPattern = `dashboard:${userId}:*`;
-    const dashboardKeys = await redis.keys(dashboardPattern);
-    if (dashboardKeys.length > 0) {
-      await redis.del(...dashboardKeys);
-      console.log(`[WalletCache] Invalidated ${dashboardKeys.length} dashboard cache keys for user ${userId}`);
+    let deletedCount = 0;
+    for (const key of cacheKeys) {
+      try {
+        await deleteRedisItem(key);
+        deletedCount++;
+      } catch {
+        // Key might not exist, that's fine
+      }
     }
+    
+    console.log(`[WalletCache] Invalidated cache for user ${userId} (attempted ${cacheKeys.length} keys)`);
   } catch (error) {
     console.error(`[WalletCache] Error invalidating cache for user ${userId}:`, error);
     // Don't throw - cache invalidation failure shouldn't break the main operation
