@@ -23,6 +23,7 @@ import {
   getRedisItem,
   setRedisItem,
   setRedisTTL,
+  redis,
 } from "../utils/redisInstance";
 import { paymentTypes } from "../utils/enums";
 import axios from "axios";
@@ -50,6 +51,33 @@ import {
   getAllBlockchainFees, 
   calculateCustomerPaymentAmount 
 } from "../services/blockchainFeeService";
+
+/**
+ * Invalidate all wallet caches for a user
+ * Called after any wallet modification (add, update, delete)
+ */
+const invalidateWalletCache = async (userId: number): Promise<void> => {
+  try {
+    // Delete all wallet cache keys for this user (all company variations)
+    const pattern = `wallet:${userId}:*`;
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+      console.log(`[WalletCache] Invalidated ${keys.length} cache keys for user ${userId}`);
+    }
+    
+    // Also invalidate dashboard cache if it exists
+    const dashboardPattern = `dashboard:${userId}:*`;
+    const dashboardKeys = await redis.keys(dashboardPattern);
+    if (dashboardKeys.length > 0) {
+      await redis.del(...dashboardKeys);
+      console.log(`[WalletCache] Invalidated ${dashboardKeys.length} dashboard cache keys for user ${userId}`);
+    }
+  } catch (error) {
+    console.error(`[WalletCache] Error invalidating cache for user ${userId}:`, error);
+    // Don't throw - cache invalidation failure shouldn't break the main operation
+  }
+};
 
 const getWallet = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
