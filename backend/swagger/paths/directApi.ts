@@ -626,9 +626,11 @@ export const directApiPaths = {
 
   '/api/user/getSupportedCurrency': {
     get: {
-      tags: ['Direct API - Merchant Integration'],
+      tags: ['Direct API - Merchant Integration', 'Currencies', 'Configuration'],
       summary: 'Get supported cryptocurrencies for your account',
       description: `Retrieve list of cryptocurrencies configured for your merchant account. Only returns currencies where you have wallet addresses configured.
+
+**🔍 KEYWORDS:** supported currencies, available cryptocurrencies, configured wallets, currency list, BTC ETH LTC DOGE TRX BCH USDT USDC, check currencies, wallet configuration
 
 **🔐 Authentication:** Requires \`x-api-key\` header with your encrypted API key.
 
@@ -639,7 +641,9 @@ export const directApiPaths = {
 
 **Response includes:**
 - \`currencies\` - Your configured cryptocurrencies (what customers can actually use)
-- \`all_supported\` - All cryptocurrencies DynoPay supports (for reference)`,
+- \`all_supported\` - All cryptocurrencies DynoPay supports (for reference)
+
+**💡 USE CASE:** Check wallet configuration before offering payment options to customers`,
       security: [{ ApiKeyAuth: [] }],
       responses: {
         200: {
