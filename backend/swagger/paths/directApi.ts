@@ -50,11 +50,19 @@ export const directApiPaths = {
               }
             },
             examples: {
-              'Basic Customer': {
-                summary: 'Create a new customer',
+              'Basic Customer (Minimal)': {
+                summary: 'Create customer with email only',
                 value: {
                   name: 'John Doe',
                   email: 'john@example.com'
+                }
+              },
+              'Customer with Mobile': {
+                summary: 'Create customer with phone number',
+                value: {
+                  name: 'Jane Smith',
+                  email: 'jane@example.com',
+                  mobile: '+1234567890'
                 }
               }
             }
