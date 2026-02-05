@@ -3696,6 +3696,9 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
       },
     });
 
+    // Invalidate wallet cache so getWallet returns fresh data
+    await invalidateWalletCache(userData.user_id);
+
     // Fetch updated record
     const updatedAddress = await userWalletAddressModel.findOne({
       where: { user_address_id: id },
