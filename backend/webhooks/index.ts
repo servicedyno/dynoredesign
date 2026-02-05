@@ -186,9 +186,9 @@ const callUrlWithPayload = async (
   webhookSecret: string | null, 
   companyId: number | null,
   urlType: 'webhook' | 'callback'
-): Promise<void> => {
+): Promise<WebhookResult> => {
   try {
-    if (!url) return;
+    if (!url) return { success: true };
     
     // Add metadata to payload
     const timestamp = Math.floor(Date.now() / 1000);
@@ -252,23 +252,30 @@ const callUrlWithPayload = async (
           );
         }
         
-        return; // Success, exit
+        return { success: true, url }; // Success
         
       } catch (err: unknown) {
-        const error = err as { response?: { status?: number }; message?: string };
+        const error = err as { response?: { status?: number }; message?: string; code?: string };
         lastError = error as Error;
         totalRetries = attempt;
         finalResponseStatus = error.response?.status || null;
         
+        // Build descriptive error message
+        const errorMessage = error.code === 'ECONNREFUSED' 
+          ? `Connection refused - server at ${url} is not reachable`
+          : error.code === 'ETIMEDOUT'
+          ? `Connection timed out - server at ${url} did not respond`
+          : error.message || 'Unknown error';
+        
         // Don't retry on client errors (4xx) except 429 (rate limit)
         if (finalResponseStatus && finalResponseStatus >= 400 && finalResponseStatus < 500 && finalResponseStatus !== 429) {
-          console.error(`[callMerchantWebhook] ❌ Client error ${finalResponseStatus}, not retrying: ${error.message}`);
+          console.error(`[callMerchantWebhook] ❌ Client error ${finalResponseStatus}, not retrying: ${errorMessage}`);
           break;
         }
         
         if (attempt < maxRetries) {
           const delay = 1000 * Math.pow(2, attempt - 1); // Exponential backoff: 1s, 2s, 4s
-          console.warn(`[callMerchantWebhook] ⚠️ Attempt ${attempt} failed, retrying in ${delay}ms: ${error.message}`);
+          console.warn(`[callMerchantWebhook] ⚠️ Attempt ${attempt} failed, retrying in ${delay}ms: ${errorMessage}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -276,7 +283,8 @@ const callUrlWithPayload = async (
     
     // All retries failed - log the failure
     const responseTimeMs = Date.now() - startTime;
-    console.error(`[callMerchantWebhook] ❌ ${urlType} failed after ${maxRetries} attempts: ${lastError?.message}`);
+    const finalErrorMessage = lastError?.message || 'Unknown error';
+    console.error(`[callMerchantWebhook] ❌ ${urlType} failed after ${maxRetries} attempts: ${finalErrorMessage}`);
     
     if (companyId) {
       await logWebhookDelivery(
@@ -288,14 +296,17 @@ const callUrlWithPayload = async (
         'failed',
         finalResponseStatus,
         responseTimeMs,
-        lastError?.message || 'Unknown error',
+        finalErrorMessage,
         totalRetries
       );
     }
     
+    return { success: false, error: finalErrorMessage, url };
+    
   } catch (error: unknown) {
     const err = error as { message?: string };
     console.error(`[callMerchantWebhook] Error in callUrlWithPayload: ${err.message}`);
+    return { success: false, error: err.message || 'Unknown error', url };
   }
 };
 
