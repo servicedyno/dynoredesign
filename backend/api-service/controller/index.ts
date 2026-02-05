@@ -660,11 +660,7 @@ const useWallet = async (req: express.Request, res: express.Response) => {
     if (amount) {
       const tempData = res.locals.apiKeyData;
 
-      const customerData = await customerModel.findOne({
-        where: {
-          id: userData.id,
-        },
-      });
+      const customerData = await findCustomerByJwtPayload(userData);
 
       const customer_id = customerData.dataValues.customer_id;
 
