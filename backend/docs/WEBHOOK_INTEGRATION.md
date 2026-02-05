@@ -304,3 +304,106 @@ Webhooks are considered failed if:
 
 Webhooks are NOT retried for:
 - HTTP 4xx responses (except 429 Rate Limit)
+
+---
+
+## ✅ Production Checklist
+
+Before going live, verify:
+
+- [ ] **Webhook URL is publicly accessible** (not localhost/127.0.0.1)
+- [ ] **Using HTTPS** (not HTTP)
+- [ ] **SSL certificate is valid** and not expired
+- [ ] **Endpoint returns 200 OK** quickly (within 10 seconds)
+- [ ] **Endpoint handles POST requests** without authentication
+- [ ] **Signature verification implemented** (if using webhook_secret)
+- [ ] **Idempotency handling** using `webhook_id`
+- [ ] **Test webhook works** via the test endpoint
+- [ ] **Webhook history shows successful deliveries**
+- [ ] **Error handling** for payment processing failures
+
+---
+
+## Example Webhook Endpoint (Node.js/Express)
+
+```javascript
+const express = require('express');
+const crypto = require('crypto');
+const app = express();
+
+// Store processed webhook IDs for idempotency
+const processedWebhooks = new Set();
+
+app.post('/dynopay-webhook', express.json(), async (req, res) => {
+  try {
+    const event = req.body;
+    const webhookId = event.webhook_id;
+    
+    // 1. Idempotency check
+    if (processedWebhooks.has(webhookId)) {
+      console.log(`Webhook ${webhookId} already processed, skipping`);
+      return res.status(200).send('OK');
+    }
+    
+    // 2. Optional: Verify signature (if you configured webhook_secret)
+    const signature = req.headers['x-dynopay-signature'];
+    if (signature && process.env.WEBHOOK_SECRET) {
+      const timestamp = req.headers['x-dynopay-timestamp'];
+      const signaturePayload = { ...event, timestamp: parseInt(timestamp) };
+      const expectedSig = crypto
+        .createHmac('sha256', process.env.WEBHOOK_SECRET)
+        .update(JSON.stringify(signaturePayload))
+        .digest('hex');
+      
+      if (signature !== expectedSig) {
+        console.error('Invalid webhook signature');
+        return res.status(401).send('Invalid signature');
+      }
+    }
+    
+    // 3. Process based on event type
+    switch (event.event) {
+      case 'payment.pending':
+        console.log(`Payment pending: ${event.payment_id}`);
+        // Update order status to "awaiting confirmation"
+        break;
+        
+      case 'payment.confirmed':
+        console.log(`Payment confirmed: ${event.payment_id}`);
+        console.log(`Amount: ${event.merchant_amount} ${event.currency}`);
+        // Fulfill the order, send confirmation email, etc.
+        break;
+        
+      case 'payment.underpaid':
+        console.log(`Underpayment: received ${event.amount_received}, expected ${event.amount_expected}`);
+        // Notify customer about remaining amount
+        break;
+        
+      default:
+        console.log(`Unknown event: ${event.event}`);
+    }
+    
+    // 4. Mark as processed
+    processedWebhooks.add(webhookId);
+    
+    // 5. Respond quickly
+    res.status(200).send('OK');
+    
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    res.status(500).send('Internal error');
+  }
+});
+
+app.listen(8000, () => {
+  console.log('Webhook server running on port 8000');
+});
+```
+
+---
+
+## Need Help?
+
+- **Documentation Issues:** Open a GitHub issue
+- **Integration Support:** Contact support@dynopay.com
+- **API Status:** https://status.dynopay.com
