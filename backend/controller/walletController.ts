@@ -3486,6 +3486,9 @@ const deletePaymentWalletWithOTP = async (
       { user_id, wallet_id, company_id }
     );
 
+    // Invalidate wallet cache so getWallet returns fresh data
+    await invalidateWalletCache(userData.user_id);
+
     // Send confirmation email
     const companyData = await companyModel.findOne({
       where: { company_id }
