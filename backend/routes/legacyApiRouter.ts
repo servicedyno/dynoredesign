@@ -467,7 +467,7 @@ router.get("/getTransactions", legacyApiAuthMiddleware, async (req, res) => {
     const transactions = await sequelize.query<any>(
       `SELECT * FROM tbl_customer_transaction 
        WHERE customer_id = (SELECT customer_id FROM tbl_customer WHERE id = $1)
-       ORDER BY created_at DESC
+       ORDER BY "createdAt" DESC
        LIMIT $2 OFFSET $3`,
       {
         bind: [userData.id, Number(limit), offset],
