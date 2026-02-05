@@ -580,11 +580,7 @@ const getTransactions = async (_req: express.Request, res: express.Response) => 
 const getBalance = async (_req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as CustomerJwtPayload;
   try {
-    const customer = await customerModel.findOne({
-      where: {
-        id: userData.id,
-      },
-    });
+    const customer = await findCustomerByJwtPayload(userData);
 
     const customerData = await customerWalletModel.findOne({
       where: {
