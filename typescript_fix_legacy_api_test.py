@@ -154,24 +154,31 @@ class TypeScriptFixLegacyAPITester:
             
             if response.status_code == 200:
                 data = response.json()
-                customer_token = data.get('token')
-                customer_id = data.get('customer_id')
                 
-                if customer_token and customer_id:
-                    self.log_result(
-                        "Scenario 1 - Create Customer", 
-                        True, 
-                        f"Customer created successfully with token and customer_id",
-                        {
-                            "customer_id": customer_id,
-                            "token_length": len(customer_token) if customer_token else 0,
-                            "customer_name": customer_data["name"],
-                            "customer_email": customer_data["email"]
-                        }
-                    )
-                    return customer_token
+                # Check for success and data structure
+                if data.get('success') and 'data' in data:
+                    response_data = data['data']
+                    customer_token = response_data.get('token')
+                    customer_id = response_data.get('customer_id')
+                    
+                    if customer_token and customer_id:
+                        self.log_result(
+                            "Scenario 1 - Create Customer", 
+                            True, 
+                            f"Customer created successfully with token and customer_id",
+                            {
+                                "customer_id": customer_id,
+                                "token_length": len(customer_token) if customer_token else 0,
+                                "customer_name": customer_data["name"],
+                                "customer_email": customer_data["email"]
+                            }
+                        )
+                        return customer_token
+                    else:
+                        self.log_result("Scenario 1 - Create Customer", False, "Customer created but missing token or customer_id")
+                        return None
                 else:
-                    self.log_result("Scenario 1 - Create Customer", False, "Customer created but missing token or customer_id")
+                    self.log_result("Scenario 1 - Create Customer", False, f"Unexpected response structure: {data}")
                     return None
             else:
                 self.log_result("Scenario 1 - Create Customer", False, f"Customer creation failed with status {response.status_code}")
