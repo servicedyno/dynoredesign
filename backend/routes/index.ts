@@ -12,6 +12,7 @@ import subscriptionRouter from "./subscriptionRouter";
 import testRouter from "./testRouter";
 import referralRouter from "./referralRouter";
 import knowledgeBaseRouter from "./knowledgeBaseRouter";
+import legacyApiRouter from "./legacyApiRouter";
 
 import {
   authMiddleware,
