@@ -155,6 +155,193 @@ curl -X POST https://api.dynopay.com/api/user/createUser \\
 
 ---
 
+## ❓ Common Questions & Flow Comparison
+
+### Q: Do I need both JWT Token and API Key?
+**A: No!** Choose based on your integration type:
+
+| Your Use Case | Authentication Method | Endpoints to Use |
+|---------------|----------------------|------------------|
+| 🖥️ **Dashboard User** (creating payments via UI) | JWT Token only | `/api/pay/createPaymentLink` |
+| 🔌 **API Integration** (programmatic payments) | API Key + Customer Token | `/api/user/createUser` → `/api/user/cryptoPayment` |
+| 🔄 **Both** (dashboard + API) | Both methods for same company | Use appropriate auth for each endpoint |
+
+### Q: How do I pass API Key for webhook delivery?
+**A: You don't!** Webhooks are sent automatically - no authentication needed.
+
+**How Webhooks Work:**
+1. ✅ You configure \`webhook_url\` when creating payment (or in company settings)
+2. ✅ System stores your webhook URL with the payment record
+3. ✅ When payment completes, webhook is automatically sent to your URL
+4. ❌ NO API Key or JWT needed for webhook delivery
+5. ✅ System already knows which merchant from the payment record
+
+### Q: Where do I configure webhook URLs?
+**A: Three configuration options** (priority order):
+
+| Priority | Location | When to Use |
+|----------|----------|-------------|
+| **1st** | Per-payment \`webhook_url\` field | Different webhook per payment/product |
+| **2nd** | API Key settings | Different webhook per API integration |
+| **3rd** | Company default settings | Same webhook for all payments |
+
+**Example:**
+\`\`\`javascript
+// Option 1: Per-payment (highest priority)
+POST /api/pay/createPaymentLink
+{
+  "amount": 100,
+  "webhook_url": "https://myapp.com/webhooks/order-123"  // ← Specific to this payment
+}
+
+// Option 2: Company-wide (fallback)
+// Configure once in dashboard → Settings → Webhooks
+// Used for all payments if per-payment webhook_url not provided
+\`\`\`
+
+### Q: What's the difference between Payment Links and Direct API?
+**A: Two integration methods for different needs:**
+
+**🔗 Payment Links (Hosted Checkout)**
+- **Best for:** Dashboard users, no-code integration, shareable payment pages
+- **Auth:** JWT Token (login to dashboard)
+- **Flow:** Create link → Share URL → Customer pays → Webhook sent
+- **Customer experience:** Redirected to DynoPay hosted payment page
+- **Endpoints:** `/api/pay/createPaymentLink`, `/api/pay/getAllPaymentLinks`
+
+**⚡ Direct API (Programmatic)**
+- **Best for:** Custom checkout, embedded payments, full control
+- **Auth:** API Key + Customer Token
+- **Flow:** Create customer → Create payment → Get crypto address → Customer pays → Webhook sent
+- **Customer experience:** Stay on your website/app (you build the UI)
+- **Endpoints:** `/api/user/createUser`, `/api/user/cryptoPayment`, `/api/user/getBalance`
+
+### Q: Can I use both Payment Links and Direct API in the same company?
+**A: Yes!** You can use both methods simultaneously:
+- Payment Links for manual/dashboard payments
+- Direct API for automated/programmatic payments
+- Both receive webhooks to same or different URLs
+
+### Q: How do I test webhooks locally?
+**A: Use a tunnel service** (localhost webhooks won't work from cloud):
+
+1. **ngrok** (recommended): `ngrok http 3000` → Get public URL
+2. **localtunnel**: `lt --port 3000`
+3. **Cloudflare Tunnel**: `cloudflared tunnel`
+
+Then use the public URL as your \`webhook_url\`:
+\`\`\`json
+{
+  "webhook_url": "https://abc123.ngrok.io/webhooks/payment"
+}
+\`\`\`
+
+**Why localhost doesn't work:**
+- DynoPay servers are in the cloud
+- Cannot reach \`http://localhost\` or \`http://127.0.0.1\` on your machine
+- Need publicly accessible URL for webhook delivery
+
+### Q: What headers are included in webhook requests?
+**A: Standard webhook headers sent to your URL:**
+
+\`\`\`http
+POST /your-webhook-endpoint HTTP/1.1
+Host: yourapp.com
+Content-Type: application/json
+X-DynoPay-Event: payment.confirmed
+X-DynoPay-Signature: abc123... (HMAC-SHA256, if webhook_secret configured)
+X-DynoPay-Timestamp: 1704067200
+X-DynoPay-Webhook-Id: wh_abc123
+
+{
+  "event": "payment.confirmed",
+  "payment_id": "pay_xyz789",
+  "amount": 0.042,
+  "currency": "ETH",
+  ...
+}
+\`\`\`
+
+**Signature Verification (Optional but Recommended):**
+\`\`\`javascript
+const crypto = require('crypto');
+
+function verifyWebhook(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+  
+  return signature === expectedSignature;
+}
+\`\`\`
+
+### Q: What webhook events will I receive?
+**A: Three main webhook events:**
+
+| Event | When Sent | Action Required |
+|-------|-----------|-----------------|
+| \`payment.pending\` | Crypto deposit detected on blockchain | ⏳ Wait for confirmations |
+| \`payment.confirmed\` | Payment fully confirmed (1-3 confirmations) | ✅ Fulfill order / deliver product |
+| \`payment.underpaid\` | Partial payment received (less than expected) | ⚠️ Contact customer or wait for remainder |
+
+**Best Practice:** Only fulfill orders on \`payment.confirmed\` event.
+
+### Q: How do I get my API Key?
+**A: Two methods:**
+
+**Method 1: Via Dashboard (Recommended)**
+1. Login to DynoPay dashboard
+2. Navigate to Settings → API Keys
+3. Click "Create New API Key"
+4. Copy the **encrypted API key** (long string starting with U2FsdGVk...)
+5. Store securely (treat like a password)
+
+**Method 2: Via API**
+\`\`\`bash
+# Step 1: Login to get JWT token
+POST /api/user/login
+{
+  "email": "your@email.com",
+  "password": "yourpassword"
+}
+# Response: { "accessToken": "jwt_token_here" }
+
+# Step 2: Create API key
+POST /api/userApi/addApi
+Authorization: Bearer jwt_token_here
+{
+  "company_id": 38,
+  "name": "Production API Key"
+}
+# Response: { "api_key": "U2FsdGVkX1+abc123..." } ← Use this!
+\`\`\`
+
+⚠️ **Important:** Use the **encrypted string** (not the numeric ID) in \`x-api-key\` header.
+
+### Q: What cryptocurrencies are supported?
+**A: 9 cryptocurrencies across 3 networks:**
+
+| Cryptocurrency | Symbol | Network | Min Amount |
+|----------------|--------|---------|------------|
+| Bitcoin | BTC | Bitcoin | 0.0001 BTC |
+| Ethereum | ETH | Ethereum | 0.001 ETH |
+| Litecoin | LTC | Litecoin | 0.01 LTC |
+| Dogecoin | DOGE | Dogecoin | 10 DOGE |
+| Tron | TRX | Tron | 10 TRX |
+| Bitcoin Cash | BCH | Bitcoin Cash | 0.001 BCH |
+| Tether (Tron) | USDT-TRC20 | Tron | 1 USDT |
+| Tether (Ethereum) | USDT-ERC20 | Ethereum | 1 USDT |
+| USD Coin | USDC-ERC20 | Ethereum | 1 USDC |
+
+**Check your configured wallets:**
+\`\`\`bash
+GET /api/user/getSupportedCurrency
+x-api-key: YOUR_API_KEY
+\`\`\`
+
+---
+
 ## 🚀 Quick Start
 
 **For Dashboard Users (JWT Auth):**
