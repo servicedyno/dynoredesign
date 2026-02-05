@@ -7,7 +7,7 @@ import {
   successResponseHelper,
 } from "../helper";
 import { IUserType } from "../utils/types";
-import { userTransactionModel, userWalletModel } from "../models";
+import { userTransactionModel, userWalletModel, companyModel } from "../models";
 import sequelize from "../utils/dbInstance";
 import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 
