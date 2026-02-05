@@ -4358,7 +4358,7 @@ const userWallet = async (data: IFundData, tokenData: IUserType) => {
   let customer_id: number;
   if (tokenData.customer_id) {
     // If customer_id is available in token, use it directly
-    customer_id = tokenData.customer_id;
+    customer_id = typeof tokenData.customer_id === 'string' ? parseInt(tokenData.customer_id, 10) : tokenData.customer_id;
   } else {
     // Otherwise, look up by id (UUID)
     const customer = await customerModel.findOne({ where: { id } });
