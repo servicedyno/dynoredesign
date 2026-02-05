@@ -7,7 +7,7 @@ import requests
 import json
 
 def debug_api_key_response():
-    backend_url = "https://install-deps-8.preview.emergentagent.com"
+    backend_url = "https://api-payment-restore.preview.emergentagent.com"
     
     # First authenticate
     auth_response = requests.post(

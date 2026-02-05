@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://install-deps-8.preview.emergentagent.com/api/docs/
+**URL:** https://api-payment-restore.preview.emergentagent.com/api/docs/
 
 ---
 

@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://install-deps-8.preview.emergentagent.com
+SERVER_URL=https://api-payment-restore.preview.emergentagent.com
 ```
 
 **Impact:**
