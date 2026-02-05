@@ -266,5 +266,6 @@ export {
   invalidateCache,
   acquireLock,
   releaseLock,
-  withLock
+  withLock,
+  redisClient as redis, // Export redis client for advanced operations like KEYS
 };
