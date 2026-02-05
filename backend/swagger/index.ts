@@ -342,7 +342,175 @@ x-api-key: YOUR_API_KEY
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start Examples
+
+### Example 1: Create Payment Link (JWT Auth)
+**Use Case:** Accept payment via hosted checkout page
+
+\`\`\`bash
+# Step 1: Login to get JWT token
+curl -X POST https://api.dynopay.com/api/user/login \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "email": "merchant@example.com",
+    "password": "yourpassword"
+  }'
+
+# Response: { "accessToken": "eyJhbGc..." }
+
+# Step 2: Create payment link
+curl -X POST https://api.dynopay.com/api/pay/createPaymentLink \\
+  -H "Authorization: Bearer eyJhbGc..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "amount": 100,
+    "company_id": 38,
+    "currency": "USD",
+    "description": "Product Purchase",
+    "webhook_url": "https://yourapp.com/webhooks/payment",
+    "modes": ["CRYPTO"]
+  }'
+
+# Response: { "checkout_url": "https://pay.dynopay.com/abc123" }
+# Share this URL with your customer!
+\`\`\`
+
+### Example 2: Direct Crypto Payment (API Key Auth)
+**Use Case:** Programmatic payment with custom checkout
+
+\`\`\`bash
+# Step 1: Create customer
+curl -X POST https://api.dynopay.com/api/user/createUser \\
+  -H "x-api-key: U2FsdGVkX1+abc123def456..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "John Doe",
+    "email": "customer@example.com"
+  }'
+
+# Response: { "data": { "token": "customer_jwt_token", "customer_id": "uuid" } }
+
+# Step 2: Create crypto payment
+curl -X POST https://api.dynopay.com/api/user/cryptoPayment \\
+  -H "x-api-key: U2FsdGVkX1+abc123def456..." \\
+  -H "Authorization: Bearer customer_jwt_token" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "amount": 100,
+    "currency": "ETH",
+    "webhook_url": "https://yourapp.com/webhooks/payment",
+    "redirect_uri": "https://yourapp.com/order/success"
+  }'
+
+# Response: { 
+#   "address": "0x742d35Cc...", 
+#   "amount": 0.042156,
+#   "qr_code": "data:image/png;base64,..."
+# }
+# Show QR code to customer for payment!
+\`\`\`
+
+### Example 3: Webhook Handler (Your Server)
+**Handle payment notifications:**
+
+\`\`\`javascript
+// Node.js/Express webhook endpoint
+app.post('/webhooks/payment', (req, res) => {
+  const webhook = req.body;
+  
+  // Verify webhook signature (recommended)
+  const signature = req.headers['x-dynopay-signature'];
+  const isValid = verifyWebhookSignature(
+    JSON.stringify(webhook),
+    signature,
+    process.env.WEBHOOK_SECRET
+  );
+  
+  if (!isValid) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  // Handle different events
+  switch (webhook.event) {
+    case 'payment.confirmed':
+      // ✅ Payment successful - fulfill order
+      fulfillOrder(webhook.payment_id, webhook.amount);
+      console.log(\`Payment confirmed: \${webhook.payment_id}\`);
+      break;
+      
+    case 'payment.pending':
+      // ⏳ Payment detected - wait for confirmations
+      console.log(\`Payment pending: \${webhook.payment_id}\`);
+      break;
+      
+    case 'payment.underpaid':
+      // ⚠️ Partial payment - notify customer
+      notifyCustomer(webhook.customer_email, 'Partial payment received');
+      break;
+  }
+  
+  // Always return 200 to acknowledge receipt
+  res.status(200).json({ received: true });
+});
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const crypto = require('crypto');
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  return signature === expectedSignature;
+}
+\`\`\`
+
+---
+
+## 🔍 Searchable Keywords
+
+**Authentication:** JWT Token, Bearer Auth, API Key, x-api-key, Login, Authorization, Customer Token
+
+**Payment Creation:** Payment Link, Create Payment, Crypto Payment, Direct API, Hosted Checkout, Checkout URL
+
+**Cryptocurrencies:** Bitcoin (BTC), Ethereum (ETH), Litecoin (LTC), Dogecoin (DOGE), Tron (TRX), Bitcoin Cash (BCH), Tether (USDT-TRC20, USDT-ERC20), USD Coin (USDC-ERC20)
+
+**Webhooks:** Webhook URL, Payment Notification, Callback URL, Webhook Signature, HMAC, Event Types, payment.confirmed, payment.pending, payment.underpaid
+
+**Customer Management:** Create Customer, Customer Token, Customer Wallet, Balance, Transactions
+
+**Integration Types:** REST API, Server-to-Server, Programmatic Integration, Dashboard Integration, Hosted Integration
+
+**Common Operations:** Get Balance, Get Transactions, Get Supported Currencies, Create User, Verify Payment
+
+**Testing:** ngrok, localhost tunnel, webhook testing, sandbox, test mode
+
+**Errors:** 400 Bad Request, 401 Unauthorized, 403 Forbidden, 500 Internal Server Error, Invalid API Key, Missing Amount
+
+---
+
+## 📚 Additional Resources
+
+**Dashboard:** https://dashboard.dynopay.com  
+**API Base URL:** https://api.dynopay.com  
+**Checkout Base URL:** https://pay.dynopay.com  
+**Support:** support@dynopay.com  
+**Documentation:** This page + inline endpoint descriptions
+
+---
+
+## 🔒 Security Best Practices
+
+1. **Never expose API keys** in client-side code or public repositories
+2. **Use HTTPS** for all API calls (enforced by server)
+3. **Verify webhook signatures** to prevent spoofing attacks
+4. **Store credentials** in environment variables, not hardcoded
+5. **Rotate API keys** periodically (every 90 days recommended)
+6. **Use separate API keys** for development and production
+7. **Implement rate limiting** on your webhook endpoints
+8. **Log all webhook events** for audit trail
+9. **Validate webhook URLs** are publicly accessible (no localhost)
+10. **Keep JWT tokens short-lived** (automatically handled - 7 days)
+
+---
 
 **For Dashboard Users (JWT Auth):**
 1. Login: \`POST /api/user/login\` → Get JWT token
