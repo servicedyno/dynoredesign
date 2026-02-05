@@ -183,11 +183,7 @@ const createPayment = async (req: express.Request, res: express.Response) => {
     
     console.log(`[Phase 11] Available currencies for company_id ${data.company_id}:`, effectiveAvailableCurrencies);
 
-    const customerData = await customerModel.findOne({
-      where: {
-        id: userData.id,
-      },
-    });
+    const customerData = await findCustomerByJwtPayload(userData);
 
     // Determine webhook URL: per-payment > API key config > company default
     const effectiveWebhookUrl = webhook_url || data.webhook_url || null;
