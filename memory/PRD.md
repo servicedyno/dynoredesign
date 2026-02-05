@@ -7,6 +7,22 @@ Build and maintain a full-stack cryptocurrency payment platform allowing merchan
 
 ### Session: February 5, 2026 (Latest)
 
+#### Webhook Improvements ✅ COMPLETE
+- **Issue**: Webhook failures showed empty error messages and misleading "sent successfully" logs
+- **Root Cause**: Merchant used `localhost:8000` URL which is unreachable from cloud servers
+- **Fixes Applied**:
+  1. Added `WebhookResult` return type to track success/failure
+  2. Added localhost/127.0.0.1 URL validation with clear error message
+  3. Improved error messages for ECONNREFUSED, ETIMEDOUT
+  4. Fixed misleading "sent successfully" log - now only shows on actual success
+  5. Updated all webhook callers to handle the result properly
+- **Documentation**: Added comprehensive webhook URL requirements section to `docs/WEBHOOK_INTEGRATION.md`
+- **Files Modified**: `webhooks/index.ts`, `controller/paymentController.ts`, `docs/WEBHOOK_INTEGRATION.md`
+
+#### Database Cleanup ✅ COMPLETE
+- Cleared 28 orphaned wallet records (wallets with addresses but no company assignment)
+- These were legacy records from before multi-tenant company support
+
 #### getWallet API Fix (P0 Bug) ✅ COMPLETE
 - **Issue**: `GET /api/wallet/getWallet?company_id=12` was returning only 1 wallet instead of 4
 - **Root Cause**: Stale cache data from before cache invalidation was implemented
