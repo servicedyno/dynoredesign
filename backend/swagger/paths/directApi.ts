@@ -5,12 +5,23 @@ export const directApiPaths = {
       summary: 'Create a customer for payment processing',
       description: `Create a customer record to initiate payments. Returns a customer token required for subsequent payment requests.
 
-**Authentication:** Requires \`x-api-key\` header with your API key.
+**🔐 Authentication:** Requires \`x-api-key\` header with your encrypted API key.
 
-**Flow:**
-1. Create customer with this endpoint
-2. Use returned \`token\` in Authorization header for payment endpoints
-3. Customer can make multiple payments using same token`,
+**📝 How to Get Your API Key:**
+1. Login to DynoPay dashboard (\`POST /api/user/login\`)
+2. Navigate to API Keys section
+3. Create new API key (\`POST /api/userApi/addApi\`)
+4. Copy the encrypted API key value
+5. Use it in the \`x-api-key\` header
+
+**🔄 Payment Flow:**
+1. Create customer with this endpoint → Get customer \`token\`
+2. Use customer \`token\` in \`Authorization: Bearer {token}\` header for \`/api/user/cryptoPayment\`
+3. Customer can make multiple payments using same token (token doesn't expire)
+
+**✨ Existing Customer Handling:**
+- If email already exists for your company → Returns existing customer with new token
+- No duplicate customers created`,
       security: [{ ApiKeyAuth: [] }],
       requestBody: {
         required: true,
@@ -22,7 +33,7 @@ export const directApiPaths = {
               properties: {
                 name: {
                   type: 'string',
-                  description: '✅ REQUIRED: Customer name',
+                  description: '✅ REQUIRED: Customer full name',
                   example: 'John Doe'
                 },
                 email: {
@@ -30,6 +41,11 @@ export const directApiPaths = {
                   format: 'email',
                   description: '✅ REQUIRED: Customer email address',
                   example: 'customer@example.com'
+                },
+                mobile: {
+                  type: 'string',
+                  description: '📱 OPTIONAL: Customer phone number',
+                  example: '+1234567890'
                 }
               }
             },
