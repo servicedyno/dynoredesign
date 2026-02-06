@@ -18,11 +18,25 @@ interface InvoiceData {
   transaction_fee_percent: number;
   blockchain_buffer_percent: number;
   total_usd: number;
+  total_amount?: number; // Amount in base_currency (if different from USD)
+  base_currency?: string; // Base currency code (e.g., EUR, GBP)
   total_crypto: number;
   crypto_currency: string;
   payment_terms: string;
   transaction_id: number;
 }
+
+/**
+ * Get currency symbol for a given currency code
+ */
+const getCurrencySymbol = (currency: string): string => {
+  const symbols: Record<string, string> = {
+    USD: '$', EUR: '€', GBP: '£', AUD: 'A$', CAD: 'C$', CHF: 'CHF ',
+    CNY: '¥', JPY: '¥', HKD: 'HK$', NZD: 'NZ$', SGD: 'S$',
+    BRL: 'R$', NGN: '₦', ZAR: 'R', KES: 'KSh', MXN: 'MX$'
+  };
+  return symbols[currency?.toUpperCase()] || '';
+};
 
 /**
  * Generate PDF invoice
@@ -31,10 +45,16 @@ interface InvoiceData {
  */
 export const generateInvoicePDF = (invoiceData: InvoiceData): PDFKit.PDFDocument => {
   const doc = new PDFDocument({ size: "A4", margin: 50 });
+  
+  // Determine the display currency
+  const displayCurrency = invoiceData.base_currency || 'USD';
+  const displayAmount = invoiceData.total_amount || invoiceData.total_usd;
+  const currencySymbol = getCurrencySymbol(displayCurrency);
 
   // Helper function to format currency
-  const formatCurrency = (amount: number, currency: string = "USD"): string => {
-    return `${currency} ${amount.toFixed(2)}`;
+  const formatCurrency = (amount: number, currency: string = displayCurrency): string => {
+    const symbol = getCurrencySymbol(currency);
+    return `${symbol}${amount.toFixed(2)} ${currency}`;
   };
 
   // Helper function to format date
