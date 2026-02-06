@@ -26,7 +26,7 @@ If blocked, complete KYC at \`POST /api/kyc/submit\` first.
 
 **🎁 REFEREE CODE FEATURE:**
 When you provide a customer email, the system will automatically:
-- Check if the email already has a DynoPay account (skips if yes)
+- Check if the email already has a Dynopay account (skips if yes)
 - Check if a referee code was already sent to this email (skips if yes)
 - Generate a unique one-time referee code (REF-XXXXXXXX)
 - Include the code in the payment notification email
@@ -174,11 +174,11 @@ Modes must be provided in **UPPERCASE**. Valid modes:
 **Note:** If not set, webhooks will be sent to the company's default webhook URL (configured via /api/company/webhook-settings).
 
 **Headers Included:**
-- \`X-DynoPay-Event\` - Event type
+- \`X-Dynopay-Event\` - Event type
 - \`X-DynoPay-Signature\` - HMAC signature (if webhook_secret configured)
-- \`X-DynoPay-Timestamp\` - Unix timestamp
-- \`X-DynoPay-Webhook-Id\` - Unique delivery ID
-- \`X-DynoPay-Type\` - 'webhook' or 'callback'
+- \`X-Dynopay-Timestamp\` - Unix timestamp
+- \`X-Dynopay-Webhook-Id\` - Unique delivery ID
+- \`X-Dynopay-Type\` - 'webhook' or 'callback'
 
 **Enhanced Webhook Payload (payment.confirmed):**
 \`\`\`json

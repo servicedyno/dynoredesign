@@ -3,7 +3,7 @@ export const apiKeyPaths = {
     post: {
       tags: ['API Keys'],
       summary: 'Create new API key',
-      description: `Create a new API key for programmatic access to DynoPay services.
+      description: `Create a new API key for programmatic access to Dynopay services.
       
 **Features:**
 - Auto-generates secure API key

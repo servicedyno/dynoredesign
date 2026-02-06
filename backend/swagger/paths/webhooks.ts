@@ -5,7 +5,7 @@ export const webhookPaths = {
       summary: 'Webhook Documentation',
       description: `# Webhook Events & Payloads
 
-DynoPay sends webhook notifications to your configured URL when payment events occur.
+Dynopay sends webhook notifications to your configured URL when payment events occur.
 
 ---
 
@@ -17,7 +17,7 @@ DynoPay sends webhook notifications to your configured URL when payment events o
 |----------|:------:|-------|
 | \`https://yourapp.com/webhook\` | ✅ | Recommended for production |
 | \`https://abc123.ngrok.io/webhook\` | ✅ | Great for development/testing |
-| \`http://localhost:8000/webhook\` | ❌ | DynoPay servers cannot reach your localhost |
+| \`http://localhost:8000/webhook\` | ❌ | Dynopay servers cannot reach your localhost |
 | \`http://127.0.0.1:3000/webhook\` | ❌ | Same as localhost |
 | \`http://192.168.x.x/webhook\` | ❌ | Private IPs are not routable |
 
@@ -25,11 +25,11 @@ DynoPay sends webhook notifications to your configured URL when payment events o
 
 **Common 400 Error:** \`"No API key provided"\` or similar authentication errors.
 
-DynoPay sends webhooks from our servers - we don't have your API keys. Your webhook endpoint must accept unauthenticated POST requests.
+Dynopay sends webhooks from our servers - we don't have your API keys. Your webhook endpoint must accept unauthenticated POST requests.
 
 ❌ **Wrong:**
 \`\`\`javascript
-// This will fail - DynoPay doesn't have your API key
+// This will fail - Dynopay doesn't have your API key
 app.post('/webhook', requireApiKey, handler);
 \`\`\`
 
@@ -55,7 +55,7 @@ app.post('/dynopay-webhook', (req, res) => {
 Use [ngrok](https://ngrok.com) to expose your local server:
 \`\`\`bash
 ngrok http 8000
-# Use the https://xxx.ngrok.io URL in DynoPay
+# Use the https://xxx.ngrok.io URL in Dynopay
 \`\`\`
 
 ---
@@ -140,11 +140,11 @@ All webhooks include these headers for verification:
 
 | Header | Description |
 |--------|-------------|
-| \`X-DynoPay-Event\` | Event type (e.g., \`payment.confirmed\`) |
+| \`X-Dynopay-Event\` | Event type (e.g., \`payment.confirmed\`) |
 | \`X-DynoPay-Signature\` | HMAC-SHA256 signature (if webhook_secret configured) |
-| \`X-DynoPay-Timestamp\` | Unix timestamp of the request |
-| \`X-DynoPay-Webhook-Id\` | Unique delivery ID for idempotency |
-| \`X-DynoPay-Type\` | \`"payment_link"\` or \`"direct_api"\` |
+| \`X-Dynopay-Timestamp\` | Unix timestamp of the request |
+| \`X-Dynopay-Webhook-Id\` | Unique delivery ID for idempotency |
+| \`X-Dynopay-Type\` | \`"payment_link"\` or \`"direct_api"\` |
 
 ### Verifying Signatures
 \`\`\`javascript
@@ -166,7 +166,7 @@ function verifyWebhook(payload, signature, secret) {
 
 ## 📨 Webhook Events
 
-DynoPay sends these webhook events for **both Payment Links and Direct API Payments**:
+Dynopay sends these webhook events for **both Payment Links and Direct API Payments**:
 
 | Event | Description | Triggered For |
 |-------|-------------|---------------|
@@ -510,7 +510,7 @@ Custom metadata passed when creating the payment link.
       summary: 'Webhook Integration Guide',
       description: `# Webhook Integration Guide
 
-Step-by-step guide to integrate DynoPay webhooks into your application.
+Step-by-step guide to integrate Dynopay webhooks into your application.
 
 ---
 
@@ -622,7 +622,7 @@ async function handlePaymentConfirmed(payload) {
 ## 4️⃣ Best Practices
 
 ### Idempotency
-Use \`X-DynoPay-Webhook-Id\` to prevent duplicate processing:
+Use \`X-Dynopay-Webhook-Id\` to prevent duplicate processing:
 
 \`\`\`javascript
 const processedWebhooks = new Set();
@@ -653,7 +653,7 @@ app.post('/webhooks/dynopay', (req, res) => {
 \`\`\`
 
 ### Retry Handling
-DynoPay retries failed webhooks with exponential backoff:
+Dynopay retries failed webhooks with exponential backoff:
 - Retry 1: 1 minute
 - Retry 2: 5 minutes  
 - Retry 3: 30 minutes
@@ -670,12 +670,12 @@ Always respond with 2xx status to acknowledge receipt.
 
 | HTTP Status | Error Message | Cause | Solution |
 |:-----------:|--------------|-------|----------|
-| **N/A** | Connection refused | DynoPay can't reach your server | Use a public URL, not localhost |
+| **N/A** | Connection refused | Dynopay can't reach your server | Use a public URL, not localhost |
 | **N/A** | Connection timed out | Server too slow | Respond within 10 seconds |
 | **400** | "No API key provided" | Your endpoint requires auth | Remove auth from webhook endpoint |
 | **400** | "Invalid request body" | Payload parsing issue | Check Content-Type is application/json |
 | **401** | Unauthorized | Your endpoint requires auth | Remove auth from webhook endpoint |
-| **403** | Forbidden | Firewall blocking request | Whitelist DynoPay IPs |
+| **403** | Forbidden | Firewall blocking request | Whitelist Dynopay IPs |
 | **404** | Not Found | Wrong endpoint path | Verify your webhook URL path |
 | **500** | Internal Server Error | Bug in your handler | Check your server logs |
 
@@ -694,7 +694,7 @@ Always respond with 2xx status to acknowledge receipt.
 # Test from your terminal
 curl -X POST "https://your-webhook-url.com/webhook" \\
   -H "Content-Type: application/json" \\
-  -H "X-DynoPay-Event: test" \\
+  -H "X-Dynopay-Event: test" \\
   -d '{"event":"test","payment_id":"test-123"}'
 
 # Should return: 200 OK

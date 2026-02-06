@@ -17,7 +17,7 @@
  *   get:
  *     tags: [Status]
  *     summary: Get overall system status
- *     description: Returns real-time status of all DynoPay services with uptime metrics. Triggers health checks on all services.
+ *     description: Returns real-time status of all Dynopay services with uptime metrics. Triggers health checks on all services.
  *     responses:
  *       200:
  *         description: System status retrieved successfully
@@ -755,7 +755,7 @@
  *               company_name:
  *                 type: string
  *                 description: Company legal name
- *                 example: "DynoPay Tech Ltd"
+ *                 example: "Dynopay Tech Ltd"
  *               email:
  *                 type: string
  *                 format: email

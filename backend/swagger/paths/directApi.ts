@@ -10,7 +10,7 @@ export const directApiPaths = {
 **🔐 Authentication:** Requires \`x-api-key\` header with your encrypted API key.
 
 **📝 How to Get Your API Key:**
-1. Login to DynoPay dashboard (\`POST /api/user/login\`)
+1. Login to Dynopay dashboard (\`POST /api/user/login\`)
 2. Navigate to API Keys section
 3. Create new API key (\`POST /api/userApi/addApi\`)
 4. Copy the encrypted API key value
@@ -200,7 +200,7 @@ export const directApiPaths = {
 
 **📡 Webhook Flow:**
 1. Customer sends crypto to the returned address
-2. DynoPay detects the deposit on blockchain (usually 1-3 confirmations)
+2. Dynopay detects the deposit on blockchain (usually 1-3 confirmations)
 3. Webhook sent to your \`webhook_url\` with payment status updates
 4. Optional: Customer redirected to \`callback_url\` after payment
 
@@ -641,7 +641,7 @@ export const directApiPaths = {
 
 **Response includes:**
 - \`currencies\` - Your configured cryptocurrencies (what customers can actually use)
-- \`all_supported\` - All cryptocurrencies DynoPay supports (for reference)
+- \`all_supported\` - All cryptocurrencies Dynopay supports (for reference)
 
 **💡 USE CASE:** Check wallet configuration before offering payment options to customers`,
       security: [{ ApiKeyAuth: [] }],
@@ -666,7 +666,7 @@ export const directApiPaths = {
                       all_supported: {
                         type: 'array',
                         items: { type: 'string' },
-                        description: '📋 All cryptocurrencies supported by DynoPay platform'
+                        description: '📋 All cryptocurrencies supported by Dynopay platform'
                       }
                     }
                   }
