@@ -158,7 +158,7 @@ const addApi = async (req: express.Request, res: express.Response) => {
       adminToken: token.token, // Customer token (legacy)
       admin_token: adminToken, // New admin token
       withdrawal_whitelist: withdrawal_whitelist,
-      api_name: api_name || `${company_data.dataValues.company_name} ${environment === 'production' ? 'Production' : 'Development'} API`,
+      api_name: api_name || generateApiKeyName(environment),
       permissions: JSON.stringify(apiPermissions),
       environment,
       status: 'active',
