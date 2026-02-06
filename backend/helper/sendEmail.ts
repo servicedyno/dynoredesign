@@ -495,32 +495,38 @@ const sendPaymentPartialEmail = async (
   gracePeriodMinutes: number = 30
 ) => {
   try {
-    const subject = "⚠️ Partial Payment Received - Action Required - DynoPay";
-    const message = `A partial payment has been received for your company ${companyName}.
+    const subject = "Partial Payment Received - Action Required - DynoPay";
+    
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">A partial payment has been received for your company <strong style="color: #1a1a2e;">${companyName}</strong>.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+        <tr><td style="padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Expected Amount</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${expectedAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Received</td><td style="padding: 8px 0; color: #166534; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${receivedAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Remaining</td><td style="padding: 8px 0; color: #dc2626; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${remainingAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${transactionId}</td></tr>
+          </table>
+        </td></tr>
+      </table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626; margin: 0 0 24px 0;">
+        <tr><td style="padding: 16px 20px;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #991b1b; font-family: 'Inter', Arial, sans-serif;">Action Required</p>
+          <p style="margin: 0; font-size: 14px; color: #7f1d1d; line-height: 1.5; font-family: 'Inter', Arial, sans-serif;">You have <strong>${gracePeriodMinutes} minutes</strong> to send the remaining <strong>${remainingAmount} ${currency}</strong> to complete this payment.</p>
+        </td></tr>
+      </table>
+      <p style="font-size: 14px; color: #4a4a4a; line-height: 1.6; margin: 0 0 8px 0; font-family: 'Inter', Arial, sans-serif;"><strong>Send to:</strong></p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 6px; margin: 0 0 24px 0;">
+        <tr><td style="padding: 12px 16px; font-size: 13px; color: #1a1a2e; font-family: 'Inter', Arial, monospace; word-break: break-all;">${walletAddress}</td></tr>
+      </table>
+      <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">If the remaining amount is received within ${gracePeriodMinutes} minutes, the full payment will be processed. If the grace period expires, the partial amount will be processed with adjusted fees.</p>`;
 
-💰 Expected Amount: ${expectedAmount} ${currency}
-✅ Received Amount: ${receivedAmount} ${currency}
-⚠️ Remaining Amount: ${remainingAmount} ${currency}
-
-📝 Transaction ID: ${transactionId}
-📍 Wallet Address: ${walletAddress}
-
-⏰ IMPORTANT: You have ${gracePeriodMinutes} minutes to send the remaining ${remainingAmount} ${currency} to complete this payment.
-
-What happens next?
-• If the remaining amount is received within ${gracePeriodMinutes} minutes, the full payment will be processed and forwarded to your wallet.
-• If the grace period expires, the partial amount received will be processed with adjusted fees.
-
-To complete the payment, send exactly ${remainingAmount} ${currency} to:
-${walletAddress}
-
-You can track the payment status in your DynoPay dashboard.`;
-
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Partial Payment Received");
     const info = await mailTransporter({
       to: recipientEmail,
       name,
       subject,
-      body: message,
+      body: htmlBody,
     });
     return info;
   } catch (e) {
