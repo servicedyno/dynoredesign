@@ -26,18 +26,6 @@ const FEE_TIERS = [
 ];
 
 /**
- * Get currency symbol for a given currency code
- */
-const getCurrencySymbol = (currency: string): string => {
-  const symbols: Record<string, string> = {
-    USD: '$', EUR: '€', GBP: '£', AUD: 'A$', CAD: 'C$', CHF: 'CHF ',
-    CNY: '¥', JPY: '¥', HKD: 'HK$', NZD: 'NZ$', SGD: 'S$',
-    BRL: 'R$', NGN: '₦', ZAR: 'R', KES: 'KSh', MXN: 'MX$'
-  };
-  return symbols[currency?.toUpperCase()] || '';
-};
-
-/**
  * Get current fee tier based on monthly volume (in USD)
  * @param monthlyVolumeUSD - Volume in USD
  * @param displayCurrency - Currency to display thresholds in
