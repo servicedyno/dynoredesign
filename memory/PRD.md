@@ -40,7 +40,7 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
 - **Admin fee email redesign** (completed 2026-02-06): Improved Platform Fee Received email to match merchant-facing email quality. Added Status badge ("Processed"), Date row, em-dash subject line. Fixed logo rendering by switching from SVG (clip-path unsupported in Gmail) to PNG served from backend static files.
 - **Merchant configuration for nomadly@moxx.co** (completed 2026-02-06): Configured crypto wallets for payment forwarding, initialized merchant pool, regenerated API key with USD currency.
 - **Payment logic fix** (completed 2026-02-06): Fixed incorrect wallet_id reference during payment creation in walletController.ts.
-- **Webhook logic fix** (completed 2026-02-06): Modified webhookService.ts to look up webhook URL from tbl_api for API-initiated payments. Fixed callMerchantWebhook to use correct `link_id` column (was referencing non-existent `payment_link_id`). Webhook URL properly stored in tbl_payment_link when passed during payment creation.
+- **Webhook logic fix** (completed 2026-02-06): Fixed `callMerchantWebhook` in `webhooks/index.ts` to read `webhook_url` from `customerData` (Redis) first — critical for the merchant crypto payment API (`POST /api/user/cryptoPayment`) which passes webhook_url per-payment but doesn't create a `tbl_payment_link` record. Also fixed reference to non-existent `payment_link_id` column (uses `link_id`). Lookup chain: customerData (Redis) → tbl_payment_link → tbl_company → tbl_api.
 
 ## Backlog
 
