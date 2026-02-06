@@ -1975,7 +1975,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             const merchantAmount = data.amount_settled - platformCharge - blockchainCharge;
             await sendAdminFeeReceivedEmail(
               adminEmail,
-              "DynoPay Admin",
+              "Dynopay Admin",
               totalFee.toFixed(2),
               data.currency,
               (data as { transaction_id?: string }).transaction_id || String(data.id),
@@ -2161,7 +2161,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
               
               await sendAdminFeeReceivedEmail(
                 adminEmail,
-                "DynoPay Admin",
+                "Dynopay Admin",
                 totalFee.toFixed(2),
                 data.currency,
                 (data as { transaction_id?: string }).transaction_id || String(data.id),
@@ -3706,12 +3706,12 @@ const cryptoVerification = async (address, webhook = true) => {
           // CUSTOMER PAYS FEES MODE
           // Customer already paid extra to cover fees
           // Merchant receives the original base amount (merchant_amount)
-          // DynoPay keeps everything else (the fees)
+          // Dynopay keeps everything else (the fees)
           
           console.log(`[cryptoVerification] Customer pays fees mode:
             - Total received: ${totalAmountReceived} ${tempCurrency}
             - Merchant should receive: ${merchant_amount} ${tempCurrency}
-            - Fees for DynoPay: ${Number(totalAmountReceived) - Number(merchant_amount)} ${tempCurrency}`);
+            - Fees for Dynopay: ${Number(totalAmountReceived) - Number(merchant_amount)} ${tempCurrency}`);
           
           userAmountToSend = Number(merchant_amount);
           adminAmountToSend = Number(totalAmountReceived) - Number(merchant_amount);
@@ -3821,7 +3821,7 @@ const cryptoVerification = async (address, webhook = true) => {
               
               await sendAdminFeeReceivedEmail(
                 adminEmail,
-                "DynoPay Admin",
+                "Dynopay Admin",
                 Number(adminAmountToSend).toFixed(8),
                 tempCurrency,
                 transactionId,
@@ -5046,7 +5046,7 @@ const createPaymentLink = async (
             <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f0fff4 0%, #e6ffed 100%); border-left: 4px solid #22c55e; border-radius: 0 8px 8px 0;">
               <h3 style="margin: 0 0 10px 0; color: #166534; font-size: 16px;">🎁 Special Offer for You!</h3>
               <p style="margin: 0 0 10px 0; color: #14532d; font-size: 14px;">
-                Want to accept crypto payments for your own business? Join DynoPay and get <strong>${refereeCodeData.discount}% off</strong> all fees for <strong>${refereeCodeData.duration} days</strong>!
+                Want to accept crypto payments for your own business? Join Dynopay and get <strong>${refereeCodeData.discount}% off</strong> all fees for <strong>${refereeCodeData.duration} days</strong>!
               </p>
               <p style="margin: 0; font-size: 14px;">
                 Use code: <strong style="background: #dcfce7; padding: 4px 8px; border-radius: 4px; font-family: monospace;">${refereeCodeData.code}</strong>
@@ -5059,7 +5059,7 @@ const createPaymentLink = async (
         }
 
         // Get company name if available
-        let companyName = "DynoPay Merchant";
+        let companyName = "Dynopay Merchant";
         if (company_id) {
           const company = await companyModel.findByPk(company_id);
           if (company) {
@@ -6166,7 +6166,7 @@ const checkFeeBalance = async () => {
         
         await sendEmail(
           adminEmail,
-          "DynoPay Admin",
+          "Dynopay Admin",
           "Low amount in Fee wallet",
           textData
         );
@@ -6374,7 +6374,7 @@ const processIncompletePayments = async () => {
                 
                 await sendAdminFeeReceivedEmail(
                   adminEmail,
-                  "DynoPay Admin",
+                  "Dynopay Admin",
                   Number(adminAmountToSend).toFixed(8),
                   tempTx.wallet_type,
                   tempTx.txId,
@@ -6529,7 +6529,7 @@ const processIncompletePayments = async () => {
                 
                 await sendAdminFeeReceivedEmail(
                   adminEmail,
-                  "DynoPay Admin",
+                  "Dynopay Admin",
                   Number(adminAmountToSend).toFixed(8),
                   tempTx.wallet_type,
                   tempTx.txId,
