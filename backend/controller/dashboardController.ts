@@ -76,18 +76,23 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       }
     }
     
-    // Get company's preferred currency from their API key
+    // Get company's preferred currency from their most recent active API key
     let preferredCurrency = "USD";
     if (company_id) {
-      const companyApiKey = await apiModel.findOne({
-        where: { 
-          company_id: company_id,
-          status: 'active'
-        },
-        order: [['createdAt', 'DESC']] // Get most recent active API key
-      });
-      if (companyApiKey?.dataValues?.base_currency) {
-        preferredCurrency = companyApiKey.dataValues.base_currency;
+      // Use raw SQL to ensure proper ordering
+      const apiKeys = await sequelize.query(
+        `SELECT base_currency FROM tbl_api 
+         WHERE company_id = :companyId AND status = 'active' 
+         ORDER BY "createdAt" DESC LIMIT 1`,
+        {
+          replacements: { companyId: company_id },
+          type: QueryTypes.SELECT,
+        }
+      ) as Array<{ base_currency: string }>;
+      
+      if (apiKeys.length > 0 && apiKeys[0].base_currency) {
+        preferredCurrency = apiKeys[0].base_currency;
+        console.log(`[Dashboard] Using currency ${preferredCurrency} for company ${company_id}`);
       }
     }
     
@@ -95,7 +100,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const cacheKey = `dashboard:${userId}:${company_id || 'all'}:${preferredCurrency}`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
-      console.log(`[Dashboard] Cache hit for user ${userId}`);
+      console.log(`[Dashboard] Cache hit for user ${userId}, currency ${preferredCurrency}`);
       return successResponseHelper(res, 200, "Dashboard data retrieved successfully", cached);
     }
 
