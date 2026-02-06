@@ -502,7 +502,7 @@ const tatumCryptoWebHook = async (
     const isFirstTransaction = !items.txId;
     const isCompletionPayment = String(items.incomplete) === "true" && 
                                 items.txId !== payload.txId;  // New transaction for underpayment completion
-    const isAlreadySuccessful = items.status === "successful" || items.status === "completed";
+    const isAlreadySuccessful = items.status === "successful" || items.status === "completed" || items.status === "recovered";
     
     // Skip if payment is already successful (prevents duplicate processing from merchant payout webhooks)
     if (isAlreadySuccessful) {
