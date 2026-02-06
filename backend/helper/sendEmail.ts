@@ -342,25 +342,30 @@ const sendSecurityAlertEmail = async (
   details: string
 ) => {
   try {
-    const subject = "🔒 Security Alert - DynoPay";
-    const message = `We detected unusual activity on your account.
+    const subject = "Security Alert - DynoPay";
+    
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">We detected unusual activity on your account.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626; margin: 24px 0;">
+        <tr><td style="padding: 20px;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #991b1b; font-family: 'Inter', Arial, sans-serif;">Alert Type: ${alertType}</p>
+          <p style="margin: 0; font-size: 14px; color: #7f1d1d; line-height: 1.5; font-family: 'Inter', Arial, sans-serif;">${details}</p>
+        </td></tr>
+      </table>
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 12px 0; font-family: 'Inter', Arial, sans-serif;">If this was you, you can ignore this message. If you didn't perform this action, please secure your account immediately:</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+        <tr><td style="padding: 8px 0 8px 16px; font-size: 14px; color: #4a4a4a; font-family: 'Inter', Arial, sans-serif;">1. Change your password</td></tr>
+        <tr><td style="padding: 8px 0 8px 16px; font-size: 14px; color: #4a4a4a; font-family: 'Inter', Arial, sans-serif;">2. Enable two-factor authentication</td></tr>
+        <tr><td style="padding: 8px 0 8px 16px; font-size: 14px; color: #4a4a4a; font-family: 'Inter', Arial, sans-serif;">3. Contact our support team</td></tr>
+      </table>
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">Your security is our priority.</p>`;
 
-⚠️ Alert Type: ${alertType}
-
-${details}
-
-If this was you, you can ignore this message. If you didn't perform this action, please secure your account immediately by:
-1. Changing your password
-2. Enabling two-factor authentication
-3. Contacting our support team
-
-Your security is our priority.`;
-
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Security Alert");
     const info = await mailTransporter({
       to: recipientEmail,
       name,
       subject,
-      body: message,
+      body: htmlBody,
     });
     return info;
   } catch (e) {
