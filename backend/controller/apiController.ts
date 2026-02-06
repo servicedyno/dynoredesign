@@ -75,23 +75,19 @@ const addApi = async (req: express.Request, res: express.Response) => {
 
     const apiKey = encrypt(keyString, process.env.API_SECRET);
 
-    // Check if API key already exists for this company, currency, AND environment
-    const isExists = await apiModel
-      .findOne({
-        where: {
-          company_id,
-          base_currency,
-          environment,
-        },
-      })
-      .then((token) => token !== null)
-      .then((isExists) => isExists);
+    // Check if API key already exists for this company (only 1 API key per company allowed)
+    const existingApiKey = await apiModel.findOne({
+      where: {
+        company_id,
+        status: 'active',
+      },
+    });
 
-    if (isExists) {
+    if (existingApiKey) {
       return errorResponseHelper(
         res,
         400,
-        `${environment === 'production' ? 'Production' : 'Development'} API key for this company and currency already exists!`
+        `This company already has an active API key. Delete the existing key first to create a new one with different settings.`
       );
     }
     
