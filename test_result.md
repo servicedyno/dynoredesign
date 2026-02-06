@@ -7,20 +7,17 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
-  - task: "API Key and Wallet Name Auto-Generation Testing"
+  - task: "Shorter API Key and Wallet Name Auto-Generation Testing"
     implemented: true
-    working: true
-    file: "/app/backend/controller/apiController.ts, /app/backend/controller/walletController.ts, /app/backend/helper/generateFriendlyName.ts"
+    working: "NA"
+    file: "/app/backend/helper/generateFriendlyName.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implemented auto-generation of friendly names for API keys and wallets when not provided. Created new helper function generateFriendlyName.ts with generateApiKeyName() for API keys (generates names like 'Live Swift Key 42' or 'Test Bold Star 17') and generateWalletName() for wallets (generates names like 'BTC Swift Vault 42'). Updated apiController.ts addApi function and walletController.ts addWalletAddress/verifyOtp functions to use auto-generated names when user doesn't provide one. Test scope: (1) Create API key without api_name - verify auto-generated friendly name, (2) Add wallet without wallet_name - verify auto-generated friendly name, (3) Add wallet WITH wallet_name - verify provided name is used, (4) Verify names are human-readable and memorable."
-      - working: true
-        agent: "testing"
-        comment: "✅ API Key and Wallet Name Auto-Generation feature implemented. Code analysis confirms: (1) generateFriendlyName.ts helper created with generateApiKeyName() and generateWalletName() functions, (2) apiController.ts line 161 uses generateApiKeyName(environment) when api_name not provided, (3) walletController.ts uses generateWalletName(currency) when wallet_name not provided. Note: Test couldn't create new API key due to duplicate constraint (existing key for same company/currency/environment), but code implementation is correct and will generate friendly names like 'Live Swift Key 42' or 'BTC Bold Star 17' for new creations."
+        comment: "Updated auto-generated names to be shorter. New format: 'Word-Number' (e.g., 'Swift-42', 'Nova-7'). Test by creating new API key or wallet without providing a name."
 
 previous_test_tasks:
   - task: "TypeScript Fix Verification - Legacy API cryptoPayment Endpoint"
