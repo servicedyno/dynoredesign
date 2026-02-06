@@ -488,7 +488,22 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
     const { company_id } = req.query;
     const userId = userData.user_id;
 
-    // Calculate user's monthly transaction volume
+    // Get company's preferred currency
+    let preferredCurrency = 'USD';
+    let conversionRate = 1;
+    
+    if (company_id) {
+      const apiKeyResult = await sequelize.query(
+        `SELECT base_currency FROM tbl_api WHERE company_id = :companyId AND status = 'active' ORDER BY "createdAt" DESC LIMIT 1`,
+        { replacements: { companyId: company_id }, type: QueryTypes.SELECT }
+      ) as Array<{ base_currency: string }>;
+      
+      if (apiKeyResult.length > 0 && apiKeyResult[0].base_currency) {
+        preferredCurrency = apiKeyResult[0].base_currency;
+      }
+    }
+
+    // Calculate user's monthly transaction volume (in USD)
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -506,26 +521,51 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
       }
     ) as Array<Record<string, unknown>>;
 
-    const monthlyVolume = parseFloat(String(monthlyVolumeResult[0]?.volume || 0));
-    const userTierInfo = getFeeTier(monthlyVolume);
+    const monthlyVolumeUSD = parseFloat(String(monthlyVolumeResult[0]?.volume || 0));
+    
+    // Get conversion rate if not USD
+    if (preferredCurrency !== 'USD') {
+      try {
+        const conversions = await currencyConvert({
+          sourceCurrency: 'USD',
+          currency: [preferredCurrency],
+          amount: 1,
+          fixedDecimal: true,
+        });
+        if (conversions && conversions[0]?.amount) {
+          conversionRate = Number(conversions[0].amount);
+        }
+      } catch (e) {
+        console.warn(`[getFeeTiers] Currency conversion failed, using USD`);
+        preferredCurrency = 'USD';
+      }
+    }
+    
+    const userTierInfo = getFeeTier(monthlyVolumeUSD, preferredCurrency, conversionRate);
+    const currencySymbol = getCurrencySymbol(preferredCurrency);
 
-    // Build tiers with indicator for current tier
+    // Build tiers with indicator for current tier (show thresholds in preferred currency)
     const tiersWithStatus = FEE_TIERS.map(tier => ({
       name: tier.name,
-      min_volume: tier.min,
-      max_volume: tier.max === Infinity ? null : tier.max,
+      min_volume: Math.round(tier.min * conversionRate),
+      max_volume: tier.max === Infinity ? null : Math.round(tier.max * conversionRate),
+      min_volume_formatted: `${currencySymbol}${Math.round(tier.min * conversionRate).toLocaleString()}`,
+      max_volume_formatted: tier.max === Infinity ? 'Unlimited' : `${currencySymbol}${Math.round(tier.max * conversionRate).toLocaleString()}`,
       description: tier.description,
       is_current: tier.name === userTierInfo.current_tier,
     }));
 
     return successResponseHelper(res, 200, "Fee tiers retrieved successfully", {
       tiers: tiersWithStatus,
+      currency: preferredCurrency,
       user_tier: {
         current_tier: userTierInfo.current_tier,
         tier_description: userTierInfo.tier_description,
         monthly_volume: userTierInfo.monthly_volume,
+        monthly_volume_formatted: `${currencySymbol}${userTierInfo.monthly_volume.toLocaleString()} ${preferredCurrency}`,
         percent_to_next_tier: userTierInfo.percent_complete,
         amount_to_next_tier: userTierInfo.amount_to_next_tier,
+        amount_to_next_tier_formatted: userTierInfo.amount_to_next_tier_formatted,
         next_tier: userTierInfo.next_tier,
       },
     });
