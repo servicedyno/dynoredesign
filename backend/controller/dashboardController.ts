@@ -76,8 +76,23 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       }
     }
     
-    // Check Redis cache first
-    const cacheKey = `dashboard:${userId}:${company_id || 'all'}`;
+    // Get company's preferred currency from their API key
+    let preferredCurrency = "USD";
+    if (company_id) {
+      const companyApiKey = await apiModel.findOne({
+        where: { 
+          company_id: company_id,
+          status: 'active'
+        },
+        order: [['createdAt', 'DESC']] // Get most recent active API key
+      });
+      if (companyApiKey?.dataValues?.base_currency) {
+        preferredCurrency = companyApiKey.dataValues.base_currency;
+      }
+    }
+    
+    // Check Redis cache first (include currency in cache key)
+    const cacheKey = `dashboard:${userId}:${company_id || 'all'}:${preferredCurrency}`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
       console.log(`[Dashboard] Cache hit for user ${userId}`);
