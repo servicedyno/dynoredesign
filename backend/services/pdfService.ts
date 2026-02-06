@@ -212,7 +212,7 @@ export const generateInvoicePDF = (invoiceData: InvoiceData): PDFKit.PDFDocument
     .fontSize(12)
     .font("Helvetica-Bold")
     .text("Total:", 360, yPosition, { width: 80, align: "right" })
-    .text(formatCurrency(invoiceData.total_usd), 450, yPosition, {
+    .text(formatCurrency(displayAmount), 450, yPosition, {
       width: 100,
       align: "right",
     });
