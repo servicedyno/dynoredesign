@@ -1965,7 +1965,7 @@ const addWalletAddress = async (
           label: label ?? currency,
           user_id,
           company_id: company_id || null,
-          wallet_name: wallet_name || label || generateWalletName(currency),
+          wallet_name: wallet_name || label || generateWalletName(),
         });
         
         // Invalidate wallet cache so getWallet returns fresh data
