@@ -7,13 +7,13 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
-  - task: "Update API documentation - fix redirect_uri/webhook_url confusion, add missing endpoints"
+  - task: "Crash Recovery for Stale 'processing' Payments — payment.confirmed webhook fix"
     implemented: true
-    working: true
-    file: "/app/backend/swagger/paths/directApi.ts, /app/backend/swagger/paths/dashboard.ts, /app/backend/swagger/paths/invoice.ts, /app/backend/swagger/index.ts"
+    working: "NA"
+    file: "/app/backend/webhooks/index.ts"
     stuck_count: 0
-    priority: "high"
-    needs_retesting: false
+    priority: "critical"
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
