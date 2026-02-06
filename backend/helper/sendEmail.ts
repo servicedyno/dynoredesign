@@ -27,6 +27,8 @@ const formatAmountWithCurrency = (amount: number, currency: string = 'USD'): str
   return `${symbol}${amount.toFixed(2)} ${currency}`;
 };
 
+const DYNOPAY_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Images/auth/dynopay-logo.png";
+
 const dynoPayEmailTemplate = (
   name: string,
   message: string,
@@ -41,156 +43,112 @@ const dynoPayEmailTemplate = (
       <meta name="x-apple-disable-message-reformatting" />
       <meta http-equiv="X-UA-Compatible" content="IE=edge" />
       <meta content="telephone=no" name="format-detection" />
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-        rel="stylesheet"
-      />
-      <style>
-        body {
-          font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-          font-size: 14px;
-          line-height: 1.6;
-          color: #1a1a2e;
-          margin: 0;
-          padding: 0;
-          background-color: #f5f7fa;
-        }
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          background-color: #ffffff;
-        }
-        .header {
-          background: linear-gradient(135deg, #1034a6 0%, #0d2570 100%);
-          padding: 24px 32px;
-          text-align: center;
-        }
-        .logo {
-          font-size: 28px;
-          font-weight: 700;
-          color: #ffffff;
-          text-decoration: none;
-          letter-spacing: -0.5px;
-        }
-        .logo span {
-          color: #f47323;
-        }
-        .content {
-          padding: 40px 32px;
-        }
-        .heading {
-          font-size: 24px;
-          font-weight: 600;
-          color: #1034a6;
-          margin: 0 0 24px 0;
-          text-align: center;
-        }
-        .greeting {
-          font-size: 16px;
-          margin-bottom: 16px;
-        }
-        .message {
-          font-size: 15px;
-          color: #4a4a4a;
-          margin-bottom: 24px;
-          white-space: pre-line;
-        }
-        .highlight-box {
-          background: linear-gradient(135deg, #f8f9ff 0%, #eef1ff 100%);
-          border-left: 4px solid #1034a6;
-          padding: 16px 20px;
-          margin: 24px 0;
-          border-radius: 0 8px 8px 0;
-        }
-        .highlight-box p {
-          margin: 0;
-          color: #1a1a2e;
-        }
-        .button {
-          display: inline-block;
-          background: linear-gradient(135deg, #f47323 0%, #e05a00 100%);
-          color: #ffffff !important;
-          text-decoration: none;
-          padding: 14px 32px;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 15px;
-          margin: 16px 0;
-        }
-        .button:hover {
-          background: linear-gradient(135deg, #e05a00 0%, #c94d00 100%);
-        }
-        .signature {
-          margin-top: 32px;
-          padding-top: 24px;
-          border-top: 1px solid #e5e7eb;
-        }
-        .footer {
-          background: #1a1a2e;
-          padding: 32px;
-          text-align: center;
-        }
-        .footer-logo {
-          font-size: 20px;
-          font-weight: 700;
-          color: #ffffff;
-          margin-bottom: 16px;
-        }
-        .footer-logo span {
-          color: #f47323;
-        }
-        .footer-text {
-          color: #9ca3af;
-          font-size: 13px;
-          margin: 8px 0;
-        }
-        .footer-links {
-          margin-top: 16px;
-        }
-        .footer-links a {
-          color: #9ca3af;
-          text-decoration: none;
-          margin: 0 12px;
-          font-size: 13px;
-        }
-        .footer-links a:hover {
-          color: #ffffff;
-        }
-        .social-links {
-          margin: 20px 0;
-        }
-        .social-links a {
-          display: inline-block;
-          margin: 0 8px;
-        }
+      <title>DynoPay</title>
+      <!--[if mso]>
+      <style type="text/css">
+        body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
       </style>
+      <![endif]-->
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <a href="https://dynopay.com" class="logo">Dyno<span>Pay</span></a>
-        </div>
-        <div class="content">
-          <h1 class="heading">${heading}</h1>
-          <p class="greeting">Hey ${name || "there"},</p>
-          <div class="message">${message}</div>
-          <div class="signature">
-            <p>Best regards,<br /><strong>The DynoPay Team</strong></p>
-          </div>
-        </div>
-        <div class="footer">
-          <div class="footer-logo">Dyno<span>Pay</span></div>
-          <p class="footer-text">Secure Crypto Payment Gateway</p>
-          <p class="footer-text">© ${new Date().getFullYear()} DynoPay. All rights reserved.</p>
-          <div class="footer-links">
-            <a href="https://dynopay.com/privacy">Privacy Policy</a>
-            <a href="https://dynopay.com/terms">Terms of Service</a>
-            <a href="https://dynopay.com/support">Support</a>
-          </div>
-        </div>
-      </div>
+    <body style="margin: 0; padding: 0; background-color: #f5f7fa; -webkit-font-smoothing: antialiased;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; table-layout: fixed;">
+        <tr>
+          <td align="center" style="padding: 20px 10px;">
+            <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #1034a6 0%, #0d2570 100%); padding: 24px 32px; text-align: center;">
+                  <a href="https://dynopay.com" style="text-decoration: none;">
+                    <img src="${DYNOPAY_LOGO_URL}" alt="DynoPay" width="140" style="height: 40px; display: inline-block;" />
+                  </a>
+                </td>
+              </tr>
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px 32px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                  <h1 style="font-size: 24px; font-weight: 600; color: #1034a6; margin: 0 0 24px 0; font-family: 'Inter', Arial, sans-serif;">${heading}</h1>
+                  <p style="font-size: 16px; color: #1a1a2e; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Hey ${name || "there"},</p>
+                  <div style="font-size: 15px; color: #4a4a4a; line-height: 1.6; font-family: 'Inter', Arial, sans-serif;">${message}</div>
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+                    <tr>
+                      <td style="font-family: 'Inter', Arial, sans-serif; font-size: 15px; color: #4a4a4a;">
+                        Best regards,<br /><strong>The DynoPay Team</strong>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <!-- Footer -->
+              <tr>
+                <td style="background: #1a1a2e; padding: 32px; text-align: center;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td align="center" style="padding-bottom: 16px;">
+                        <img src="${DYNOPAY_LOGO_URL}" alt="DynoPay" width="120" style="height: 30px; opacity: 0.9;" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="color: #9ca3af; font-size: 13px; font-family: 'Inter', Arial, sans-serif; padding-bottom: 8px;">
+                        Secure Crypto Payment Gateway
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding: 20px 0;">
+                        <table role="presentation" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="padding: 0 8px;">
+                              <a href="https://facebook.com/dynopay" target="_blank" style="text-decoration: none;">
+                                <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="28" height="28" style="display: block; border-radius: 50%;" />
+                              </a>
+                            </td>
+                            <td style="padding: 0 8px;">
+                              <a href="https://instagram.com/dynopay" target="_blank" style="text-decoration: none;">
+                                <img src="https://cdn-icons-png.flaticon.com/512/733/733558.png" alt="Instagram" width="28" height="28" style="display: block; border-radius: 50%;" />
+                              </a>
+                            </td>
+                            <td style="padding: 0 8px;">
+                              <a href="https://x.com/dynopay" target="_blank" style="text-decoration: none;">
+                                <img src="https://cdn-icons-png.flaticon.com/512/5969/5969020.png" alt="X" width="28" height="28" style="display: block; border-radius: 50%;" />
+                              </a>
+                            </td>
+                            <td style="padding: 0 8px;">
+                              <a href="https://linkedin.com/company/dynopay" target="_blank" style="text-decoration: none;">
+                                <img src="https://cdn-icons-png.flaticon.com/512/733/733561.png" alt="LinkedIn" width="28" height="28" style="display: block; border-radius: 50%;" />
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="color: #9ca3af; font-size: 13px; font-family: 'Inter', Arial, sans-serif; padding-bottom: 16px;">
+                        &copy; ${new Date().getFullYear()} DynoPay. All rights reserved.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center">
+                        <table role="presentation" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="padding: 0 12px;">
+                              <a href="https://dynopay.com/privacy" style="color: #9ca3af; text-decoration: none; font-size: 13px; font-family: 'Inter', Arial, sans-serif;">Privacy</a>
+                            </td>
+                            <td style="padding: 0 12px;">
+                              <a href="https://dynopay.com/terms" style="color: #9ca3af; text-decoration: none; font-size: 13px; font-family: 'Inter', Arial, sans-serif;">Terms</a>
+                            </td>
+                            <td style="padding: 0 12px;">
+                              <a href="https://dynopay.com/support" style="color: #9ca3af; text-decoration: none; font-size: 13px; font-family: 'Inter', Arial, sans-serif;">Support</a>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </body>
   </html>`;
   return html;
