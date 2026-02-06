@@ -199,25 +199,24 @@ const processSingleCurrency = async (
   // Strategy 1: Try cached rate first
   rate = await getCachedRate(source, currentCurrency);
 
-  if (!rate) {
-    // Strategy 2: Try FastForex API (primary)
-    const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
-    if (fastForexResult) {
-      rate = fastForexResult.rate;
-      convertedAmount = fastForexResult.converted;
+  const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
+
+  if (!rate && isCryptoConversion) {
+    // For crypto conversions, use CoinGecko first (FastForex silently returns wrong rates for crypto)
+    rate = await getCryptoRateViaCoinGecko(source, currentCurrency);
+    if (rate) {
+      console.log(`[currencyConvert] CoinGecko rate for ${source}→${currentCurrency}: ${rate}`);
       await setCachedRate(source, currentCurrency, rate);
     }
   }
 
   if (!rate) {
-    // Strategy 3: Try CoinGecko API (fallback for crypto)
-    const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
-    if (isCryptoConversion) {
-      rate = await getCryptoRateViaCoinGecko(source, currentCurrency);
-      if (rate) {
-        console.log(`[currencyConvert] Using CoinGecko fallback for ${source}→${currentCurrency}: ${rate}`);
-        await setCachedRate(source, currentCurrency, rate);
-      }
+    // For fiat-to-fiat, or as fallback: try FastForex API
+    const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
+    if (fastForexResult) {
+      rate = fastForexResult.rate;
+      convertedAmount = fastForexResult.converted;
+      await setCachedRate(source, currentCurrency, rate);
     }
   }
 
