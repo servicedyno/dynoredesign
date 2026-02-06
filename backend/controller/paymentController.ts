@@ -4965,6 +4965,28 @@ const createPaymentLink = async (
     
     console.log(`[createPaymentLink] Using company_id: ${company_id} for user: ${userData.user_id}`);
     
+    // ========================================
+    // ACTIVE API KEY CHECK: Block if no active API key exists
+    // ========================================
+    const activeApiKey = await sequelize.query<{ api_id: number }>(
+      `SELECT api_id FROM tbl_api WHERE company_id = :companyId AND status = 'active' LIMIT 1`,
+      {
+        replacements: { companyId: company_id },
+        type: QueryTypes.SELECT,
+      }
+    );
+    
+    if (!activeApiKey || activeApiKey.length === 0) {
+      return errorResponseHelper(
+        res,
+        400,
+        "An active API key is required to create a payment link. Please create one in your developer settings."
+      );
+    }
+    // ========================================
+    // END ACTIVE API KEY CHECK
+    // ========================================
+    
     // Default modes if not provided
     const allowedModes = modes ? modes.join(",") : "crypto,card";
     
