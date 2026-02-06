@@ -39,6 +39,8 @@ const allPaths = {
   ...kycPaths,
   ...directApiPaths,
   ...webhookPaths,
+  ...dashboardPaths,
+  ...invoicePaths,
 };
 
 const options: swaggerJsdoc.Options = {
