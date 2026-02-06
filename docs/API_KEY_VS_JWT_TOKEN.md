@@ -150,7 +150,7 @@ Notice the three parts separated by dots (`.`) in JWT tokens!
 
 ## Quick Action Plan
 
-1. **Open Swagger UI**: https://api-key-enforce.preview.emergentagent.com/api/docs
+1. **Open Swagger UI**: https://init-project-9.preview.emergentagent.com/api/docs
 
 2. **Find** `POST /api/user/registerUser`
 

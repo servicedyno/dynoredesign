@@ -12,8 +12,8 @@ Test Credentials:
 - Company ID: 38
 
 Backend URLs:
-- Backend: https://api-key-enforce.preview.emergentagent.com
-- Health: https://api-key-enforce.preview.emergentagent.com/health
+- Backend: https://init-project-9.preview.emergentagent.com
+- Health: https://init-project-9.preview.emergentagent.com/health
 """
 
 import requests
@@ -23,7 +23,7 @@ import sys
 from datetime import datetime, timedelta
 
 # Configuration
-BACKEND_URL = "https://api-key-enforce.preview.emergentagent.com"
+BACKEND_URL = "https://init-project-9.preview.emergentagent.com"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 TEST_COMPANY_ID = 38

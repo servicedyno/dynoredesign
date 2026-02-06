@@ -94,7 +94,7 @@ To access `/api/company/getCompany`, you need a **USER token** (has `user_id` an
 
 1. **Get your user token** (from Method 1 or 2 above)
 
-2. **Open Swagger UI**: https://api-key-enforce.preview.emergentagent.com/api/docs
+2. **Open Swagger UI**: https://init-project-9.preview.emergentagent.com/api/docs
 
 3. **Click "Authorize"** (🔓 button at top)
 

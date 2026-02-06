@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://api-key-enforce.preview.emergentagent.com/api"
+BASE_URL = "https://init-project-9.preview.emergentagent.com/api"
 
 # First get payment data
 print("1. Getting payment data...")

@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://api-key-enforce.preview.emergentagent.com
+SERVER_URL=https://init-project-9.preview.emergentagent.com
 ```
 
 **Impact:**
