@@ -387,29 +387,38 @@ const sendPaymentPendingEmail = async (
   confirmationsRequired: number = 1
 ) => {
   try {
-    const subject = "⏳ Payment Pending Confirmation - DynoPay";
-    const message = `A new payment has been detected for your company ${companyName}!
+    const subject = "Payment Pending Confirmation - DynoPay";
+    
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">A new payment has been detected for your company <strong style="color: #1a1a2e;">${companyName}</strong>!</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+        <tr><td style="padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Amount</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${amount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Status</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;"><span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">Awaiting Confirmation</span></td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${transactionId}</td></tr>
+          </table>
+        </td></tr>
+      </table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fffbeb; border-radius: 8px; margin: 0 0 24px 0;">
+        <tr><td style="padding: 16px 20px;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #92400e; font-family: 'Inter', Arial, sans-serif;">Estimated Confirmation Times</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding: 4px 0; font-size: 13px; color: #78350f; font-family: 'Inter', Arial, sans-serif;">BTC: 10-60 min (${confirmationsRequired} confirmation${confirmationsRequired > 1 ? 's' : ''})</td></tr>
+            <tr><td style="padding: 4px 0; font-size: 13px; color: #78350f; font-family: 'Inter', Arial, sans-serif;">ETH/ERC20: 1-5 min</td></tr>
+            <tr><td style="padding: 4px 0; font-size: 13px; color: #78350f; font-family: 'Inter', Arial, sans-serif;">TRX/TRC20: 1-3 min</td></tr>
+            <tr><td style="padding: 4px 0; font-size: 13px; color: #78350f; font-family: 'Inter', Arial, sans-serif;">LTC: 2-30 min &bull; DOGE: 1-10 min</td></tr>
+          </table>
+        </td></tr>
+      </table>
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">We'll notify you once the payment is fully confirmed and credited to your wallet. You can track the transaction status in your DynoPay dashboard.</p>`;
 
-💰 Amount: ${amount} ${currency}
-📝 Transaction ID: ${transactionId}
-⏳ Status: Awaiting Confirmation
-
-The transaction has been broadcast to the ${currency} network and is waiting for blockchain confirmation. This typically takes:
-• BTC: 10-60 minutes (${confirmationsRequired} confirmation${confirmationsRequired > 1 ? 's' : ''} required)
-• ETH/ERC20: 1-5 minutes
-• TRX/TRC20: 1-3 minutes
-• LTC: 2-30 minutes
-• DOGE: 1-10 minutes
-
-We'll notify you once the payment is fully confirmed and credited to your wallet.
-
-You can track the transaction status in your DynoPay dashboard.`;
-
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Payment Pending");
     const info = await mailTransporter({
       to: recipientEmail,
       name,
       subject,
-      body: message,
+      body: htmlBody,
     });
     return info;
   } catch (e) {
