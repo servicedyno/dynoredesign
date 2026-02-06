@@ -176,7 +176,7 @@ export const generateInvoicePDF = (invoiceData: InvoiceData): PDFKit.PDFDocument
 
   // --- Subtotal ---
   yPosition += 10;
-  const subtotal = invoiceData.total_usd - invoiceData.vat_amount;
+  const subtotal = displayAmount - invoiceData.vat_amount;
   doc
     .font("Helvetica")
     .text("Subtotal:", 360, yPosition, { width: 80, align: "right" })
