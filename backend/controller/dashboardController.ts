@@ -150,15 +150,38 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     // Parse results from combined query
     const stats = transactionStats[0] || {} as Record<string, string>;
     const currentCount = parseInt(String(stats.current_month_count || '0'));
-    const currentVolume = parseFloat(String(stats.current_month_volume || '0'));
+    let currentVolume = parseFloat(String(stats.current_month_volume || '0'));
     const lastCount = parseInt(String(stats.last_month_count || '0'));
-    const lastVolume = parseFloat(String(stats.last_month_volume || '0'));
+    let lastVolume = parseFloat(String(stats.last_month_volume || '0'));
     const totalCount = parseInt(String(stats.total_count || '0'));
-    const totalVolume = parseFloat(String(stats.total_volume || '0'));
+    let totalVolume = parseFloat(String(stats.total_volume || '0'));
     const pendingCount = parseInt(String(stats.pending_count || '0'));
 
-    // Calculate fee tier
-    const feeTier = getFeeTier(currentVolume);
+    // Convert volumes to preferred currency if not USD
+    if (preferredCurrency !== 'USD' && (totalVolume > 0 || currentVolume > 0)) {
+      try {
+        const conversions = await currencyConvert({
+          sourceCurrency: 'USD',
+          currency: [preferredCurrency],
+          amount: 1, // Get rate for 1 USD
+          fixedDecimal: true,
+        });
+        
+        if (conversions && conversions[0]?.amount) {
+          const rate = Number(conversions[0].amount);
+          totalVolume = totalVolume * rate;
+          currentVolume = currentVolume * rate;
+          lastVolume = lastVolume * rate;
+          console.log(`[Dashboard] Converted volumes to ${preferredCurrency} (rate: ${rate})`);
+        }
+      } catch (convErr) {
+        console.warn(`[Dashboard] Currency conversion failed, showing USD:`, convErr);
+        preferredCurrency = 'USD'; // Fallback to USD
+      }
+    }
+
+    // Calculate fee tier (always in USD for consistency)
+    const feeTier = getFeeTier(parseFloat(String(stats.current_month_volume || '0')));
 
     // Build response
     const dashboardData = {
@@ -171,7 +194,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       total_volume: {
         amount: Math.round(totalVolume * 100) / 100,
         current_month: Math.round(currentVolume * 100) / 100,
-        currency: "USD",
+        currency: preferredCurrency,
         change_percent: calculateChange(currentVolume, lastVolume),
         comparison_period: "last_month",
       },
