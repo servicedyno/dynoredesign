@@ -279,30 +279,52 @@ const sendWeeklySummaryEmail = async (
     totalVolume: number;
     completedCount: number;
     pendingCount: number;
-    currency?: string; // Base currency from company's API key
+    currency?: string;
   }
 ) => {
   try {
     const currency = summaryData.currency || 'USD';
     const currencySymbol = getCurrencySymbol(currency);
     const subject = "Your Weekly Summary - DynoPay";
-    const message = `Here's your weekly activity summary for ${summaryData.periodStart} to ${summaryData.periodEnd}:
+    
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Here's your weekly activity summary for <strong style="color: #1a1a2e;">${summaryData.periodStart}</strong> to <strong style="color: #1a1a2e;">${summaryData.periodEnd}</strong>.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+        <tr>
+          <td style="padding: 0 6px 12px 0; width: 50%;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px;">
+              <tr><td style="padding: 16px; text-align: center;">
+                <p style="font-size: 28px; font-weight: 700; color: #1034a6; margin: 0; font-family: 'Inter', Arial, sans-serif;">${summaryData.transactionCount}</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif;">Total Transactions</p>
+              </td></tr>
+            </table>
+          </td>
+          <td style="padding: 0 0 12px 6px; width: 50%;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f0fdf4; border-radius: 8px;">
+              <tr><td style="padding: 16px; text-align: center;">
+                <p style="font-size: 28px; font-weight: 700; color: #166534; margin: 0; font-family: 'Inter', Arial, sans-serif;">${currencySymbol}${summaryData.totalVolume.toFixed(2)}</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif;">Total Volume (${currency})</p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6; margin: 0 0 24px 0;">
+        <tr><td style="padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Completed</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;"><span style="background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">${summaryData.completedCount}</span></td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Pending</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right;"><span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">${summaryData.pendingCount}</span></td></tr>
+          </table>
+        </td></tr>
+      </table>
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">Log in to your dashboard for detailed analytics and insights. Keep up the great work!</p>`;
 
-📊 Weekly Statistics:
-• Total Transactions: ${summaryData.transactionCount}
-• Total Volume: ${currencySymbol}${summaryData.totalVolume.toFixed(2)} ${currency}
-• Completed: ${summaryData.completedCount}
-• Pending: ${summaryData.pendingCount}
-
-Log in to your dashboard for detailed analytics and insights.
-
-Keep up the great work!`;
-
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Weekly Summary");
     const info = await mailTransporter({
       to: recipientEmail,
       name,
       subject,
-      body: message,
+      body: htmlBody,
     });
     return info;
   } catch (e) {
