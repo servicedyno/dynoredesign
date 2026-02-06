@@ -761,7 +761,7 @@ export const setupPaymentLinkReminderCron = () => {
           
           if (reminderType && reminderColumn) {
             // Get company name
-            let companyName = "DynoPay Merchant";
+            let companyName = "Dynopay Merchant";
             if (linkData.company_id) {
               const company = await companyModel.findByPk(linkData.company_id);
               if (company) {
