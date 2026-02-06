@@ -45,14 +45,18 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
 ## Backlog
 
 ### P1 - Upcoming
+- Verify webhook fix end-to-end (need webhook URL from user for nomadly@moxx.co)
 - Public/unauthenticated endpoint for payment link creation (x-api-key header auth)
 - Auto-create default company + USD API key on new user registration
 
 ### P2 - Future
 - Update frontend components to consume `currency_info` objects from backend
 - Consolidate duplicated currency query logic into single utility function in `currencyUtils.ts`
+- Refactor base_currency dependency on encrypted API key for better maintainability
+- Unify legacy and modern payment creation paths in walletController.ts
 
 ## Test Credentials
-- Email: richard@dyno.pt
+- Email: richard@dyno.pt / nomadly@moxx.co
 - Password: Katiekendra123@
 - Company with active API keys: company_id=38
+- Nomadly API Key (USD): U2FsdGVkX18eXwAdHb7/EmrlNlzdvYrBRgCA2ayCe/WmtvG8eQ61tNLDXbMW8lFuZYyMgG+NzZ5ay0eGRuwqftP5ONh0huQ2B1+/sIitHvS2spZl4oJRK9+Wl5sYNjMrEADgdzHjfggd85iWEtbufOIENOMHXWCSmH5QObeLcVI=
