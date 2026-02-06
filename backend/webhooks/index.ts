@@ -205,7 +205,7 @@ const callUrlWithPayload = async (
       'X-DynoPay-Timestamp': timestamp.toString(),
       'X-DynoPay-Webhook-Id': String(webhookPayload.webhook_id),
       'X-DynoPay-Type': urlType, // 'webhook' or 'callback'
-      'User-Agent': 'DynoPay-Webhook/1.0',
+      'User-Agent': 'Dynopay-Webhook/1.0',
     };
     
     // Only add signature header if secret is configured
