@@ -9,15 +9,18 @@ user_problem_statement: "Auto-generate friendly names for API keys and wallets w
 current_test_task:
   - task: "Update API documentation - fix redirect_uri/webhook_url confusion, add missing endpoints"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/swagger/paths/directApi.ts, /app/backend/swagger/paths/dashboard.ts, /app/backend/swagger/paths/invoice.ts, /app/backend/swagger/index.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "1) Fixed CRITICAL redirect_uri/callback_url/webhook_url descriptions — redirect_uri now warns 'NOT a webhook', callback_url clarified as server-to-server, webhook_url marked as 'MOST MERCHANTS NEED' with full payload example. 2) Added dashboard docs (4 endpoints). 3) Added invoice docs (4 endpoints). 4) Total documented endpoints: 178. Verify at /api/docs."
+      - working: true
+        agent: "testing"
+        comment: "✅ SWAGGER API DOCUMENTATION TESTING COMPLETED: 100% success rate (9/9 tests passed). ✅ OPENAPI SPEC ENDPOINT: /api/docs.json returns HTTP 200 with valid JSON OpenAPI specification. ✅ TOTAL PATHS COUNT: Confirmed exactly 178 paths in API specification as expected. ✅ CRITICAL FIELD DESCRIPTIONS VERIFIED: All 3 cryptoPayment endpoint field descriptions correctly updated - redirect_uri contains 'NOT a webhook' warning with proper use case explanation, callback_url contains 'server-to-server' description clarifying it's different from redirect_uri, webhook_url contains 'MOST MERCHANTS NEED' emphasis with comprehensive payload example including merchant_amount, total_fee, and all webhook event types. ✅ NEW DASHBOARD ENDPOINTS: All 4 dashboard endpoints confirmed in API spec - /api/dashboard, /api/dashboard/chart, /api/dashboard/fee-tiers, /api/dashboard/recent-transactions. ✅ NEW INVOICE ENDPOINTS: All 4 invoice endpoints confirmed in API spec - /api/invoices, /api/invoices/{id}, /api/invoices/{id}/pdf, /api/transactions/{id}/invoice. ✅ SWAGGER UI ACCESSIBILITY: /api/docs endpoint loads successfully with HTTP 200, returns HTML content with Swagger UI interface working correctly. CONCLUSION: All Swagger API documentation updates are fully implemented and accessible. The critical webhook/redirect URI confusion has been resolved with clear descriptions, and all new endpoints are properly documented and available at https://init-config.preview.emergentagent.com/api/docs."
     file: "/app/backend/services/merchantPoolService.ts"
     stuck_count: 0
     priority: "high"
