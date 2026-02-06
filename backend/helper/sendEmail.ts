@@ -58,6 +58,51 @@ const dynoPayEmailTemplate = (
         body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
       </style>
       <![endif]-->
+      <meta name="color-scheme" content="light dark">
+      <meta name="supported-color-schemes" content="light dark">
+      <style type="text/css">
+        :root { color-scheme: light dark; supported-color-schemes: light dark; }
+        @media (prefers-color-scheme: dark) {
+          body, .dm-wrapper { background-color: #0f172a !important; }
+          .dm-card { background-color: #1e293b !important; box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important; }
+          .dm-content { background-color: #1e293b !important; }
+          .dm-content h1 { color: #93c5fd !important; }
+          .dm-content p { color: #e2e8f0 !important; }
+          .dm-content div { color: #e2e8f0 !important; }
+          .dm-content li { color: #e2e8f0 !important; }
+          .dm-content td { color: #e2e8f0 !important; }
+          .dm-content strong { color: #f1f5f9 !important; }
+          .dm-content a:not(.button) { color: #93c5fd !important; }
+          .dm-content [style*="color: #6b7280"] { color: #94a3b8 !important; }
+          .dm-content [style*="color: #9ca3af"] { color: #94a3b8 !important; }
+          .dm-content [style*="color: #166534"] { color: #86efac !important; }
+          .dm-content [style*="color: #92400e"] { color: #fcd34d !important; }
+          .dm-content [style*="color: #14532d"] { color: #86efac !important; }
+          .dm-content [style*="color: #dc2626"] { color: #f87171 !important; }
+          .dm-content [style*="background: #f8f9ff"] { background: #162032 !important; }
+          .dm-content [style*="background: linear-gradient(135deg, #f8f9ff"] { background: #162032 !important; }
+          .dm-content [style*="background: linear-gradient(135deg, #f0fff4"] { background: #0d2818 !important; }
+          .dm-content [style*="background: #fef2f2"] { background: #2a1215 !important; }
+          .dm-content [style*="background: #fffbeb"] { background: #27200d !important; }
+          .dm-content [style*="background: #fef3c7"] { background: #332d1a !important; }
+          .dm-content [style*="background: #f0fdf4"] { background: #0d2818 !important; }
+          .dm-content [style*="background: #dcfce7"] { background: #1a3325 !important; }
+          .dm-content [style*="background: #e5e7eb"] { background: #334155 !important; }
+          .dm-content [style*="border-bottom: 1px solid #f3f4f6"] { border-bottom-color: #334155 !important; }
+          .dm-text { color: #e2e8f0 !important; }
+          .dm-text strong { color: #f1f5f9 !important; }
+          .dm-border { border-top-color: #334155 !important; }
+          .dm-footer { background: #0b1120 !important; }
+          .dm-footer td { color: #94a3b8 !important; }
+          .dm-footer a { color: #94a3b8 !important; }
+          u + .body .dm-wrapper { background-color: #0f172a !important; }
+        }
+        @media only screen and (max-width: 600px) {
+          .dm-card { width: 100% !important; margin: 0 !important; border-radius: 0 !important; }
+          .dm-content { padding: 24px 20px !important; }
+          .dm-footer { padding: 24px 20px !important; }
+        }
+      </style>
     </head>
     <body style="margin: 0; padding: 0; background-color: #f5f7fa; -webkit-font-smoothing: antialiased;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; table-layout: fixed;">
