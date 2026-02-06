@@ -8,7 +8,7 @@ import requests
 import json
 from datetime import datetime
 
-BASE_URL = "https://init-config.preview.emergentagent.com"
+BASE_URL = "https://setup-deps-5.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials

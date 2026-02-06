@@ -15,7 +15,7 @@ Test requirements from review:
 6. Confirm 18:50 cron run completed with 0 errors
 
 Credentials: richard@dyno.pt / Katiekendra123@, company_id: 38
-Backend URL: https://init-config.preview.emergentagent.com
+Backend URL: https://setup-deps-5.preview.emergentagent.com
 """
 
 import requests
@@ -26,7 +26,7 @@ from datetime import datetime
 
 class BackendTester:
     def __init__(self):
-        self.base_url = "https://init-config.preview.emergentagent.com"
+        self.base_url = "https://setup-deps-5.preview.emergentagent.com"
         self.test_results = {}
         
     def log(self, message, level="INFO"):
