@@ -1830,6 +1830,7 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
             currency,
             label: currency,
             user_id: userData.user_id,
+            wallet_name: generateWalletName(currency),
           });
         }
       }
