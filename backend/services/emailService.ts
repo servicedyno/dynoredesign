@@ -10,9 +10,9 @@ import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService"
 // Use PNG version for email compatibility (SVG clip-path not supported by Gmail)
 const DYNOPAY_WHITE_LOGO_SVG = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Icons/home/dynopay-whiteLogo.svg";
 const getDynopayLogoUrl = () => {
-  const host = process.env.HOST;
-  if (host) {
-    return `https://${host}/dynopay-white-logo.png`;
+  const serverUrl = process.env.SERVER_URL;
+  if (serverUrl) {
+    return `${serverUrl}/dynopay-white-logo.png`;
   }
   return DYNOPAY_WHITE_LOGO_SVG;
 };
