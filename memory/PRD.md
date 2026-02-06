@@ -36,6 +36,7 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
 - Token expiry header (`X-Token-Expires-In-Days`)
 - Available currencies endpoint per company
 - **Active API key check on payment link creation** (completed 2026-02-06)
+- **Transaction display currency fix** (completed 2026-02-06): crypto amounts (ETH/BTC) now correctly convert to company's preferred fiat currency in getTransactions endpoint. Fixed both companyController.ts (was hardcoding USD source) and currencyConvert.ts (CoinGecko now tried first for crypto conversions)
 
 ## Backlog
 
