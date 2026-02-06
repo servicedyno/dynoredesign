@@ -781,13 +781,16 @@ export const sendPaymentLinkCreatedEmail = async (
 export const sendKYCRequiredEmail = async (
   email: string,
   name: string,
-  totalVolume: string
+  totalVolume: string,
+  currency: string = 'USD'
 ) => {
   try {
-    const subject = "Verification required — $5,000 volume reached";
+    const currencySymbol = getCurrencySymbol(currency);
+    const thresholdAmount = currency === 'USD' ? '5,000' : '5,000 USD equivalent';
+    const subject = `Verification required — ${currencySymbol}${thresholdAmount} volume reached`;
     const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Congratulations on reaching <strong>$${totalVolume}</strong> in transaction volume! 🎉</p>
-    <p class="message">To continue accepting payments above $5,000, we need to verify your identity. This is a regulatory requirement and helps us keep Dynopay secure.</p>
+    <p class="message">Congratulations on reaching <strong>${currencySymbol}${totalVolume} ${currency}</strong> in transaction volume! 🎉</p>
+    <p class="message">To continue accepting payments above ${currencySymbol}${thresholdAmount}, we need to verify your identity. This is a regulatory requirement and helps us keep Dynopay secure.</p>
     <div class="highlight-box">
       <p><strong>What you need:</strong></p>
       <p>✓ Government-issued ID<br />
