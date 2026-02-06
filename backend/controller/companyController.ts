@@ -685,6 +685,7 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
         ...rest,
         display_amount: Math.round(baseAmount * conversionRate * 100) / 100,
         display_currency: preferredCurrency,
+        amount_display: formatAmountForDisplay(Math.round(baseAmount * conversionRate * 100) / 100, preferredCurrency),
       };
     });
 
@@ -695,6 +696,7 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
     successResponseHelper(res, 200, message, {
       transactions: finalRes,
       currency: preferredCurrency,
+      currency_info: getCurrencyInfo(preferredCurrency),
     });
   } catch (e) {
     const message = getErrorMessage(e);
