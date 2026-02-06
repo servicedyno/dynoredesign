@@ -960,7 +960,7 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
       webhook_id: crypto.randomUUID(),
       sent_at: new Date().toISOString(),
       data: {
-        message: 'This is a test webhook from DynoPay',
+        message: 'This is a test webhook from Dynopay',
         company_id,
         company_name: result.company_name,
         test_id: crypto.randomBytes(8).toString('hex'),
@@ -970,10 +970,10 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
     // Build headers - signature only if secret configured
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'X-DynoPay-Event': 'webhook.test',
-      'X-DynoPay-Timestamp': timestamp.toString(),
-      'X-DynoPay-Webhook-Id': testPayload.webhook_id,
-      'User-Agent': 'DynoPay-Webhook/1.0',
+      'X-Dynopay-Event': 'webhook.test',
+      'X-Dynopay-Timestamp': timestamp.toString(),
+      'X-Dynopay-Webhook-Id': testPayload.webhook_id,
+      'User-Agent': 'Dynopay-Webhook/1.0',
     };
 
     // Only add signature if secret is configured
@@ -981,7 +981,7 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
       const signaturePayload = { ...testPayload, timestamp };
       const hmac = crypto.createHmac('sha256', result.webhook_secret);
       hmac.update(JSON.stringify(signaturePayload));
-      headers['X-DynoPay-Signature'] = hmac.digest('hex');
+      headers['X-Dynopay-Signature'] = hmac.digest('hex');
     }
 
     companyLogger.info(
