@@ -1,5 +1,5 @@
 /**
- * Core Type Definitions for DynoPay Application
+ * Core Type Definitions for Dynopay Application
  * 
  * This file contains all TypeScript interfaces and types used throughout
  * the application to replace 'any' types and improve type safety.
