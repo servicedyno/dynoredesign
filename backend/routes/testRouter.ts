@@ -678,4 +678,61 @@ testRouter.post("/send-payment-link-reminder", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/test/send-payment-received-email
+ * Send a test payment received email to verify new branded template
+ */
+testRouter.post("/send-payment-received-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return errorResponseHelper(res, 400, "email is required");
+    
+    const { sendPaymentReceivedEmail } = require("../helper/sendEmail");
+    const recipientName = email.split('@')[0] || "Merchant";
+    
+    await sendPaymentReceivedEmail(
+      email,
+      recipientName,
+      "0.00325000",
+      "BTC",
+      "DynoPay Test Merchant",
+      "tx_abc123def456_test_payment_received",
+      new Date().toLocaleDateString(),
+      new Date().toLocaleTimeString()
+    );
+    
+    successResponseHelper(res, 200, "Test payment received email sent", { sent_to: email });
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
+/**
+ * POST /api/test/send-payment-pending-email
+ * Send a test payment pending email to verify new branded template
+ */
+testRouter.post("/send-payment-pending-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return errorResponseHelper(res, 400, "email is required");
+    
+    const { sendPaymentPendingEmail } = require("../helper/sendEmail");
+    const recipientName = email.split('@')[0] || "Merchant";
+    
+    await sendPaymentPendingEmail(
+      email,
+      recipientName,
+      "DynoPay Test Merchant",
+      "250.00",
+      "USDT-ERC20",
+      "tx_789ghi012jkl_test_payment_pending",
+      1
+    );
+    
+    successResponseHelper(res, 200, "Test payment pending email sent", { sent_to: email });
+  } catch (e) {
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
 export default testRouter;
