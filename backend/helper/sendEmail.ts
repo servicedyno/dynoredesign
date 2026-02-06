@@ -57,9 +57,9 @@ const dynoPayEmailTemplate = (
             <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
               <!-- Header -->
               <tr>
-                <td style="background: linear-gradient(135deg, #1034a6 0%, #0d2570 100%); padding: 24px 32px; text-align: center;">
-                  <a href="https://dynopay.com" style="text-decoration: none;">
-                    <img src="${DYNOPAY_LOGO_URL}" alt="DynoPay" width="140" style="height: 40px; display: inline-block;" />
+                <td style="background: linear-gradient(135deg, #1034a6 0%, #0d2570 100%); padding: 28px 32px; text-align: center;">
+                  <a href="https://dynopay.com" style="text-decoration: none; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                    <span style="color: #ffffff;">dyno</span><span style="color: #f47323;">pay</span>
                   </a>
                 </td>
               </tr>
