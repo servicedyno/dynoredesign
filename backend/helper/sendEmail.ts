@@ -96,24 +96,29 @@ const dynoPayEmailTemplate = (
                       <td align="center" style="padding: 20px 0;">
                         <table role="presentation" cellpadding="0" cellspacing="0">
                           <tr>
-                            <td style="padding: 0 8px;">
-                              <a href="https://facebook.com/dynopay" target="_blank" style="text-decoration: none;">
-                                <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="28" height="28" style="display: block; border-radius: 50%;" />
+                            <td style="padding: 0 6px;">
+                              <a href="https://www.facebook.com/dynopay" target="_blank" style="text-decoration: none;">
+                                <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="26" height="26" style="display: block; border-radius: 50%;" />
                               </a>
                             </td>
-                            <td style="padding: 0 8px;">
-                              <a href="https://instagram.com/dynopay" target="_blank" style="text-decoration: none;">
-                                <img src="https://cdn-icons-png.flaticon.com/512/733/733558.png" alt="Instagram" width="28" height="28" style="display: block; border-radius: 50%;" />
+                            <td style="padding: 0 6px;">
+                              <a href="https://www.instagram.com/dynopay" target="_blank" style="text-decoration: none;">
+                                <img src="https://cdn-icons-png.flaticon.com/512/733/733558.png" alt="Instagram" width="26" height="26" style="display: block; border-radius: 50%;" />
                               </a>
                             </td>
-                            <td style="padding: 0 8px;">
-                              <a href="https://x.com/dynopay" target="_blank" style="text-decoration: none;">
-                                <img src="https://cdn-icons-png.flaticon.com/512/5969/5969020.png" alt="X" width="28" height="28" style="display: block; border-radius: 50%;" />
+                            <td style="padding: 0 6px;">
+                              <a href="https://x.com/dynopaycom" target="_blank" style="text-decoration: none;">
+                                <img src="https://cdn-icons-png.flaticon.com/512/5969/5969020.png" alt="X" width="26" height="26" style="display: block; border-radius: 50%;" />
                               </a>
                             </td>
-                            <td style="padding: 0 8px;">
-                              <a href="https://linkedin.com/company/dynopay" target="_blank" style="text-decoration: none;">
-                                <img src="https://cdn-icons-png.flaticon.com/512/733/733561.png" alt="LinkedIn" width="28" height="28" style="display: block; border-radius: 50%;" />
+                            <td style="padding: 0 6px;">
+                              <a href="https://www.linkedin.com/company/dynopay/" target="_blank" style="text-decoration: none;">
+                                <img src="https://cdn-icons-png.flaticon.com/512/733/733561.png" alt="LinkedIn" width="26" height="26" style="display: block; border-radius: 50%;" />
+                              </a>
+                            </td>
+                            <td style="padding: 0 6px;">
+                              <a href="https://t.me/Dynopay_Announcements" target="_blank" style="text-decoration: none;">
+                                <img src="https://cdn-icons-png.flaticon.com/512/2111/2111646.png" alt="Telegram" width="26" height="26" style="display: block; border-radius: 50%;" />
                               </a>
                             </td>
                           </tr>
