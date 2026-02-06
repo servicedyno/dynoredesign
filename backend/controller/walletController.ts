@@ -2747,14 +2747,39 @@ const getUserAnalytics = async (
 
 async function updateOtp(userData, wallet_address, currency) {
   const randomNumberOTP = Math.floor(100000 + Math.random() * 900000);
-  // Send email
+  
+  // Use branded email template for OTP
+  const { dynoPayEmailTemplate } = await import("../services/emailService");
+  const otpContent = `
+    <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">You are validating a new wallet address for <strong style="color: #1a1a2e;">${currency}</strong>.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6; margin: 24px 0;">
+      <tr><td style="padding: 20px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Wallet Address</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all; border-bottom: 1px solid #f3f4f6;">${wallet_address}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Currency</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right;">${currency}</td></tr>
+        </table>
+      </td></tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr><td align="center">
+        <div style="background: linear-gradient(135deg, #1034a6 0%, #0d2570 100%); border-radius: 8px; padding: 20px 32px; display: inline-block;">
+          <span style="font-size: 32px; font-weight: 700; color: #ffffff; letter-spacing: 8px; font-family: 'Inter', Arial, monospace;">${randomNumberOTP}</span>
+        </div>
+      </td></tr>
+    </table>
+    <p style="font-size: 14px; color: #6b7280; text-align: center; margin: 16px 0 0 0; font-family: 'Inter', Arial, sans-serif;">This code will expire in <strong>5 minutes</strong>.</p>`;
+
+  const htmlBody = dynoPayEmailTemplate(
+    "Wallet Verification Code",
+    otpContent,
+    false
+  );
+
   await mailTransporter({
     to: userData.email,
     name: userData.name,
     subject: "OTP for Wallet Address Validation",
-    body: `You are validating a new wallet address: ${wallet_address} for ${currency} currency.\n
-To proceed with adding this address, please provide this code: ${randomNumberOTP}\n
-This code will expire in 5 minutes.`,
+    body: htmlBody,
   });
 
   // Update OTP in DB with currency context
