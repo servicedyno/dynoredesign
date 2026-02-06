@@ -126,7 +126,7 @@ def analyze_crash_recovery_code() -> Dict[str, Any]:
         main_condition_line = None
         
         for i, line in enumerate(lines, 1):
-            if "isAlreadySuccessful" in line and "return res.status(200).end()" in line:
+            if "if (isAlreadySuccessful)" in line:
                 already_successful_line = i
             elif "if (isStaleProcessing && incomingAmount > 0)" in line:
                 guard_line = i
