@@ -14,6 +14,9 @@ apiRouter.put("/toggleStatus/:id", authMiddleware, apiController.toggleApiStatus
 apiRouter.post("/revoke/:id", authMiddleware, apiController.revokeApi);
 apiRouter.delete("/deleteApi/:id", authMiddleware, apiController.deleteApi);
 
+// Currency Configuration
+apiRouter.get("/availableCurrencies/:company_id", authMiddleware, apiController.getAvailableCurrencies);
+
 // API Usage & Monitoring (NEW)
 apiRouter.get("/usage/:id", authMiddleware, apiController.getApiUsageStats);
 apiRouter.get("/logs/:id", authMiddleware, apiController.getApiLogs);
