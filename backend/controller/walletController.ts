@@ -2830,12 +2830,18 @@ const validateWallet = async (
 
       await updateOtp(userData, wallet_address, currency);
 
-      // Success response
+      // Success response - consistent with update/edit/delete wallet OTP responses
       return successResponseHelper(
         res,
         200,
-        "Address is a valid address and saved successfully!",
-        { valid: true, wallet_address, wallet_name, company_id }
+        "Address validated! OTP sent to your email",
+        {
+          wallet_address,
+          wallet_type: currency,
+          company_id,
+          wallet_name: wallet_name || null,
+          email: userData.email.replace(/(.{2})(.*)(@.*)/, "$1***$3"),
+        }
       );
     } catch (e) {
       errorResponseHelper(
