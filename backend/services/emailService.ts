@@ -125,9 +125,9 @@ export const dynoPayEmailTemplate = (
                   <h1 class="heading" style="font-size: 24px; font-weight: 600; color: #1034a6; margin: 0 0 24px 0;">${heading}</h1>
                   ${content}
                   ${showButton ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;"><tr><td align="center"><a href="${buttonLink}" class="button" style="display: inline-block; background: linear-gradient(135deg, #f47323 0%, #e05a00 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">${buttonText}</a></td></tr></table>` : ''}
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+                  <table role="presentation" class="dm-border" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
                     <tr>
-                      <td style="font-family: 'Inter', Arial, sans-serif; font-size: 15px; color: #4a4a4a;">
+                      <td class="dm-text" style="font-family: 'Inter', Arial, sans-serif; font-size: 15px; color: #4a4a4a;">
                         Best regards,<br /><strong>The Dynopay Team</strong>
                       </td>
                     </tr>
