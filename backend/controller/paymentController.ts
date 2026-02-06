@@ -2753,10 +2753,21 @@ const Crypto = async (
       throw { message: "Invalid user ID for transaction" };
     }
     
-    // Ensure wallet_id is valid
-    const walletId = walletDetails.wallet_id;
+    // Look up merchant's own wallet (FK references tbl_user_wallet, not tbl_admin_wallet)
+    const legacyWalletLookup: Record<string, unknown> = {
+      user_id: Number(userId),
+      wallet_type: currency,
+    };
+    const legacyCompanyId = tokenData.company_id;
+    if (legacyCompanyId && !isNaN(Number(legacyCompanyId))) {
+      legacyWalletLookup.company_id = Number(legacyCompanyId);
+    }
+    const merchantWalletForTx = await userWalletModel.findOne({
+      where: legacyWalletLookup,
+    });
+    const walletId = merchantWalletForTx?.dataValues.wallet_id;
     if (!walletId || isNaN(Number(walletId))) {
-      throw { message: "Invalid wallet configuration" };
+      throw { message: "Invalid wallet configuration — no merchant wallet found for " + currency };
     }
     
     const userPayload = {
