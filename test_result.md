@@ -7,6 +7,19 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "Dashboard Currency Display Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/controller/dashboardController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed dashboard to show totals in company's preferred currency (from API key base_currency). Changes: (1) Fetch company's active API key to get base_currency, (2) Convert USD volumes to preferred currency using currencyConvert, (3) Display currency field with actual currency code instead of hardcoded USD. Now if company has EUR API key, dashboard shows amounts in EUR."
+
+previous_test_tasks:
   - task: "Shorter API Key and Wallet Name Auto-Generation Testing"
     implemented: true
     working: true
@@ -21,8 +34,6 @@ current_test_task:
       - working: true
         agent: "testing"
         comment: "✅ SHORTER API KEY NAME AUTO-GENERATION TESTING COMPLETED: Successfully verified the new short name format is working correctly. ✅ AUTHENTICATION: Successfully authenticated richard@dyno.pt with provided credentials (Katiekendra123@). ✅ SHORT NAME FORMAT VERIFICATION: Successfully created API keys with short auto-generated names in the correct 'Word-Number' format: 'Glow-10' (BRL currency, development environment) and 'Rush-65' (EUR currency, production environment). ✅ PATTERN VALIDATION: Both generated names match the expected pattern from generateFriendlyName.ts - single word from predefined list (Glow, Rush) followed by hyphen and number (10, 65). Names are short (under 10 characters) and NOT long format like previous 'Test Hyper Cipher 42' style. ✅ IMPLEMENTATION CONFIRMED: The generateApiKeyName() function in /app/backend/helper/generateFriendlyName.ts is working correctly and being used by the API key creation endpoint at POST /api/userApi/addApi when no api_name is provided. ✅ MULTIPLE CURRENCY SUPPORT: Tested with different base currencies (BRL, EUR) and environments (development, production) - all generate proper short names. ✅ EXISTING API KEYS: Found 7 existing API keys, some still have old long format names from before the update, but new API keys correctly use the short format. CONCLUSION: The shorter API key name auto-generation feature is fully operational and meets all requirements specified in the review request. New API keys without provided names will automatically get short, friendly names like 'Swift-42', 'Nova-7', etc."
-
-previous_test_tasks:
   - task: "TypeScript Fix Verification - Legacy API cryptoPayment Endpoint"
     implemented: true
     working: true
