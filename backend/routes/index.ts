@@ -34,7 +34,7 @@ const router = express.Router();
 router.get("/", (_req: express.Request, res: express.Response) => {
   res.status(200).json({
     status: "operational",
-    service: "DynoPay API",
+    service: "Dynopay API",
     version: "1.0.0",
     timestamp: new Date().toISOString(),
     documentation: "/api-docs",

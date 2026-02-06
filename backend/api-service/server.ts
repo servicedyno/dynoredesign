@@ -32,7 +32,7 @@ app.use("/api", apiMiddleware, router);
 
 app.get("/", async (_req: express.Request, res: express.Response) => {
   res.json({ 
-    message: "DynoPay Merchant API Service", 
+    message: "Dynopay Merchant API Service", 
     version: "1.0.0",
     documentation: "/docs"
   });

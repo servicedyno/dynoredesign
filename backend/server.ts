@@ -64,7 +64,7 @@ const log = (message: string, level: 'info' | 'error' | 'warn' = 'info') => {
   }
 };
 
-log('DynoPay Backend Starting...', 'info');
+log('Dynopay Backend Starting...', 'info');
 log(`Environment: ${process.env.NODE_ENV || 'development'}`, 'info');
 log(`Railway Environment: ${process.env.RAILWAY_ENVIRONMENT || 'not detected'}`, 'info');
 const app = express();
@@ -100,7 +100,7 @@ app.get("/health", async (_req: express.Request, res: express.Response) => {
     await sequelize.authenticate();
     res.status(200).json({ 
       status: "healthy",
-      service: "DynoPay Backend",
+      service: "Dynopay Backend",
       database: "connected",
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
@@ -108,7 +108,7 @@ app.get("/health", async (_req: express.Request, res: express.Response) => {
   } catch (error) {
     res.status(503).json({ 
       status: "unhealthy",
-      service: "DynoPay Backend",
+      service: "Dynopay Backend",
       database: "disconnected",
       error: error.message,
       timestamp: new Date().toISOString()
@@ -121,7 +121,7 @@ app.get("/", async (_req: express.Request, res: express.Response) => {
   const blockchain_fee = await getBlockchainFee();
 
   res.json({
-    message: "DynoPay Backend API",
+    message: "Dynopay Backend API",
     version: "1.0.0",
     status: "running",
     transaction_fee,

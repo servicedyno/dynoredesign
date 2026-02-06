@@ -18,12 +18,12 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "DynoPay Merchant API",
+      title: "Dynopay Merchant API",
       version: "1.0.0",
       description: `
 ## 🚀 Quick Start
 
-**Step 1:** Get your API key from [DynoPay Dashboard](https://dynopay.com/dashboard)
+**Step 1:** Get your API key from [Dynopay Dashboard](https://dynopay.com/dashboard)
 
 **Step 2:** Create a customer → Get customer token
 
@@ -57,7 +57,7 @@ const options: swaggerJsdoc.Options = {
 \`\`\`
       `,
       contact: {
-        name: "DynoPay Support",
+        name: "Dynopay Support",
         email: "support@dynopay.com",
       },
     },
@@ -148,7 +148,7 @@ export const setupMerchantSwagger = (app: Express) => {
   // Setup swagger UI with type assertion to avoid compatibility issues
   const swaggerOptions = {
     customCss,
-    customSiteTitle: "DynoPay Merchant API",
+    customSiteTitle: "Dynopay Merchant API",
     customfavIcon: "https://dynopay.com/favicon.ico",
     swaggerOptions: {
       docExpansion: 'list' as const,
