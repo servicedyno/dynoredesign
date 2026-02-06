@@ -1886,4 +1886,5 @@ export default {
   sendSubscriptionCreatedEmail,
   sendSubscriptionCancelledEmail,
   sendSubscriptionPaymentFailedEmail,
+  dynoPayEmailTemplate,
 };
