@@ -1990,7 +1990,7 @@ const addWalletAddress = async (
       // Local address validation - no external API calls needed
       let isValidAddress = false;
       
-      // Map DynoPay currency codes to wallet-address-validator currency codes
+      // Map Dynopay currency codes to wallet-address-validator currency codes
       const currencyMap = {
         'BTC': 'bitcoin',
         'ETH': 'ethereum',
@@ -3914,7 +3914,7 @@ If you didn't request this, please ignore this email or contact support immediat
     await sendEmail(
       user.dataValues.email,
       user.dataValues.name || "User",
-      "⚠️ Wallet Deletion Verification Code - DynoPay",
+      "⚠️ Wallet Deletion Verification Code - Dynopay",
       emailMessage
     );
 
