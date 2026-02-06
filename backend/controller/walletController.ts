@@ -15,6 +15,7 @@ import {
   getErrorMessage,
   sendEmail,
   successResponseHelper,
+  generateWalletName,
 } from "../helper";
 import crypto from "crypto";
 import flw from "../apis/flutterwaveApi";
