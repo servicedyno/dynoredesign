@@ -108,7 +108,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       const apiKeys = await sequelize.query(
         `SELECT base_currency FROM tbl_api 
          WHERE company_id = :companyId AND status = 'active' 
-         ORDER BY "createdAt" DESC LIMIT 1`,
+         ORDER BY CASE WHEN environment = 'production' THEN 0 ELSE 1 END, "createdAt" DESC LIMIT 1`,
         {
           replacements: { companyId: company_id },
           type: QueryTypes.SELECT,
