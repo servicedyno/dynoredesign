@@ -9,15 +9,18 @@ user_problem_statement: "Auto-generate friendly names for API keys and wallets w
 current_test_task:
   - task: "Dashboard Currency Display Fix"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/controller/dashboardController.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Fixed dashboard to show totals in company's preferred currency (from API key base_currency). Changes: (1) Fetch company's active API key to get base_currency, (2) Convert USD volumes to preferred currency using currencyConvert, (3) Display currency field with actual currency code instead of hardcoded USD. Now if company has EUR API key, dashboard shows amounts in EUR."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL BUG FOUND: Dashboard currency display fix is NOT working correctly. Expected behavior: When company_id=38 is provided, dashboard should show EUR currency (from most recent active API key ID 36 with base_currency='EUR' created 2026-02-06T01:42:24.026Z). Actual behavior: Dashboard shows USD currency instead. Root cause: The Sequelize query 'apiModel.findOne({where: {company_id: 38, status: 'active'}, order: [['createdAt', 'DESC']]})' is not selecting the correct API key. It should return API key ID 36 (EUR) but appears to be returning a different key (possibly ID 30 with USD). The API key selection logic in dashboardController.ts lines 82-92 has a bug where the ORDER BY clause is not working properly with findOne(). All other aspects work: ✅ Authentication successful, ✅ Company info retrieval works, ✅ API key data structure is correct, ✅ Dashboard without company_id correctly shows USD default, ✅ Currency conversion logic is implemented. NEEDS FIX: The Sequelize query must be corrected to properly select the most recent active API key for the company."
 
 previous_test_tasks:
   - task: "Shorter API Key and Wallet Name Auto-Generation Testing"
