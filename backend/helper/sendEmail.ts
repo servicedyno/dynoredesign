@@ -237,19 +237,28 @@ const sendTransactionConfirmedEmail = async (
 ) => {
   try {
     const subject = `Transaction ${status} - DynoPay`;
-    const message = `Your transaction has been ${status.toLowerCase()}.
+    const statusColor = status.toLowerCase() === 'confirmed' ? '#166534' : '#1034a6';
+    const statusBg = status.toLowerCase() === 'confirmed' ? '#dcfce7' : '#eef1ff';
+    
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Your transaction has been <strong style="color: ${statusColor};">${status.toLowerCase()}</strong>.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6; margin: 24px 0;">
+        <tr><td style="padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; border-bottom: 1px solid #f3f4f6; word-break: break-all;">${transactionId}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Amount</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${amount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Status</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right;"><span style="background: ${statusBg}; color: ${statusColor}; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">${status}</span></td></tr>
+          </table>
+        </td></tr>
+      </table>
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 16px 0 0 0; font-family: 'Inter', Arial, sans-serif;">You can view more details in your DynoPay dashboard.</p>`;
 
-📝 Transaction ID: ${transactionId}
-💰 Amount: ${amount} ${currency}
-✅ Status: ${status}
-
-You can view more details in your DynoPay dashboard.`;
-
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, `Transaction ${status}`);
     const info = await mailTransporter({
       to: recipientEmail,
       name,
       subject,
-      body: message,
+      body: htmlBody,
     });
     return info;
   } catch (e) {
