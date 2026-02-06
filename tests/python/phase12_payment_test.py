@@ -4,8 +4,8 @@ Phase 12 Comprehensive Payment System Testing
 ==============================================
 
 Test Environment:
-- Backend URL: https://init-project-9.preview.emergentagent.com
-- Checkout URL: https://init-project-9.preview.emergentagent.com
+- Backend URL: https://init-chain.preview.emergentagent.com
+- Checkout URL: https://init-chain.preview.emergentagent.com
 - Test Credentials: john@dyno.pt / Katiekendra123@
 - Company ID: 38
 - Existing Payment Link ID: 220
@@ -27,8 +27,8 @@ import os
 from datetime import datetime, timedelta
 
 # Configuration
-BACKEND_URL = "https://init-project-9.preview.emergentagent.com"
-CHECKOUT_URL = "https://init-project-9.preview.emergentagent.com"
+BACKEND_URL = "https://init-chain.preview.emergentagent.com"
+CHECKOUT_URL = "https://init-chain.preview.emergentagent.com"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 COMPANY_ID = 38

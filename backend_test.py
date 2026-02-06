@@ -260,7 +260,7 @@ def test_backend_health():
     print("🔍 TEST 4: Backend Health")
     print("=" * 60)
     
-    base_url = "https://init-project-9.preview.emergentagent.com"
+    base_url = "https://init-chain.preview.emergentagent.com"
     
     # Try different possible health endpoints
     health_endpoints = [
@@ -308,7 +308,7 @@ def main():
     print("🚀 DYNOPAY BACKEND CODE ANALYSIS TESTS")
     print("=" * 80)
     print("Testing 3 fixes on DynoPay backend as requested")
-    print("BASE URL: https://init-project-9.preview.emergentagent.com")
+    print("BASE URL: https://init-chain.preview.emergentagent.com")
     print("=" * 80)
     print()
     

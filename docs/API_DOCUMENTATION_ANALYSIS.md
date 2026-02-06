@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://init-project-9.preview.emergentagent.com/api/docs/
+**URL:** https://init-chain.preview.emergentagent.com/api/docs/
 
 ---
 
