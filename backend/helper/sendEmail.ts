@@ -551,36 +551,38 @@ const sendPaymentPartialExpiredEmail = async (
   try {
     const isCompleted = status === "completed_partial";
     const subject = isCompleted 
-      ? "✅ Partial Payment Processed - DynoPay"
-      : "⏰ Partial Payment Expired - DynoPay";
+      ? "Partial Payment Processed - DynoPay"
+      : "Partial Payment Expired - DynoPay";
+    const heading = isCompleted ? "Partial Payment Processed" : "Payment Grace Period Expired";
+    const borderColor = isCompleted ? '#22c55e' : '#f59e0b';
+    const statusBg = isCompleted ? '#dcfce7' : '#fef3c7';
+    const statusColor = isCompleted ? '#166534' : '#92400e';
+    const statusLabel = isCompleted ? 'Processed' : 'Expired';
     
-    const message = isCompleted
-      ? `The partial payment for your company ${companyName} has been processed.
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">${isCompleted
+        ? `The partial payment for your company <strong style="color: #1a1a2e;">${companyName}</strong> has been processed.`
+        : `The grace period for the partial payment to your company <strong style="color: #1a1a2e;">${companyName}</strong> has expired.`}</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid ${borderColor}; margin: 24px 0;">
+        <tr><td style="padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Expected Amount</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${expectedAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Received Amount</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${receivedAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Status</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;"><span style="background: ${statusBg}; color: ${statusColor}; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">${statusLabel}</span></td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${transactionId}</td></tr>
+          </table>
+        </td></tr>
+      </table>
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">${isCompleted
+        ? "The received amount has been processed with adjusted fees and forwarded to your wallet."
+        : "Since the full payment was not received within the grace period, the partial amount has been processed. Please note that fees may be higher for incomplete payments."} You can view the transaction details in your DynoPay dashboard.</p>`;
 
-💰 Expected Amount: ${expectedAmount} ${currency}
-✅ Received Amount: ${receivedAmount} ${currency}
-📝 Transaction ID: ${transactionId}
-
-The received amount has been processed with adjusted fees and forwarded to your wallet. The transaction is now complete.
-
-You can view the full transaction details in your DynoPay dashboard.`
-      : `The grace period for the partial payment to your company ${companyName} has expired.
-
-💰 Expected Amount: ${expectedAmount} ${currency}
-⚠️ Received Amount: ${receivedAmount} ${currency}
-📝 Transaction ID: ${transactionId}
-
-Since the full payment was not received within the grace period, the partial amount has been processed. Please note that fees may be higher for incomplete payments.
-
-If you believe this is an error or need assistance, please contact our support team.
-
-You can view the transaction details in your DynoPay dashboard.`;
-
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, heading);
     const info = await mailTransporter({
       to: recipientEmail,
       name,
       subject,
-      body: message,
+      body: htmlBody,
     });
     return info;
   } catch (e) {
