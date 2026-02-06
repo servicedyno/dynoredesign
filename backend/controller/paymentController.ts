@@ -5098,8 +5098,15 @@ ${refereeCodeSection}
     }
 
     // Format response to be consistent with getPaymentLinkById
+    const amountDisplay = formatAmountForDisplay(normalizedAmount, normalizedCurrency);
+    const currencyInfo = getCurrencyInfo(normalizedCurrency);
+    
     const responseData = {
       ...links.dataValues,
+      // Formatted amount display
+      amount_display: amountDisplay,
+      currency_info: currencyInfo,
+      display_value: amountDisplay.display_value, // e.g., "$123.00 USD"
       accepted_currencies: links.dataValues.accepted_currencies 
         ? links.dataValues.accepted_currencies.split(',').map((c: string) => c.trim())
         : null,  // null means all configured currencies are accepted
