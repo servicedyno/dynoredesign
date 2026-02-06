@@ -75,19 +75,21 @@ const addApi = async (req: express.Request, res: express.Response) => {
 
     const apiKey = encrypt(keyString, process.env.API_SECRET);
 
-    // Check if API key already exists for this company (only 1 API key per company allowed)
+    // Check if API key already exists for this company + environment (only 1 API key per environment allowed)
     const existingApiKey = await apiModel.findOne({
       where: {
         company_id,
+        environment,
         status: 'active',
       },
     });
 
     if (existingApiKey) {
+      const envLabel = environment === 'production' ? 'Production' : 'Development';
       return errorResponseHelper(
         res,
         400,
-        `This company already has an active API key. Delete the existing key first to create a new one with different settings.`
+        `This company already has an active ${envLabel} API key. Delete the existing key first to create a new one with different settings.`
       );
     }
     
