@@ -5201,11 +5201,21 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
         }).replace(',', '');
       };
 
+      // Get currency symbol for display
+      const getCurrencySymbol = (currency: string): string => {
+        const symbols: Record<string, string> = {
+          USD: '$', EUR: '€', GBP: '£', AUD: 'A$', CAD: 'C$', NGN: '₦', BRL: 'R$', 
+          ZAR: 'R', KES: 'KSh', GHS: 'GH₵', MXN: 'MX$', JPY: '¥', CNY: '¥'
+        };
+        return symbols[currency?.toUpperCase()] || '';
+      };
+      const currencySymbol = getCurrencySymbol(linkData.base_currency || 'USD');
+
       return {
         link_id: linkData.link_id,
         transaction_id: linkData.transaction_id,
         description: linkData.description || "No description",
-        usd_value: `$${linkData.base_amount}`,
+        display_value: `${currencySymbol}${linkData.base_amount} ${linkData.base_currency || 'USD'}`,
         base_amount: linkData.base_amount,
         base_currency: linkData.base_currency,
         created: formatDate(linkData.createdAt),
