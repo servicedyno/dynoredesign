@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-DynoPay 7 Issues Fix Verification Test
-Tests all 7 specific fixes applied to DynoPay backend as requested in review
+DynoPay Shorter API Key Name Auto-Generation Testing
+Tests the shorter auto-generated names for API keys and wallets as requested in review
 """
 
 import os
@@ -11,8 +11,9 @@ import time
 import requests
 from typing import Dict, List, Any
 import uuid
+import re
 
-class DynoPay7IssuesFixTester:
+class DynoPayShorterNameTester:
     def __init__(self):
         # Get backend URL from frontend .env file
         self.backend_url = self.get_backend_url()
@@ -89,140 +90,28 @@ class DynoPay7IssuesFixTester:
             self.log_result("Authentication", False, f"Authentication failed: {str(e)}")
             return False
     
-    # ============================================
-    # ISSUE #1: KYC Schema Fix - veriff_session_id field
-    # ============================================
-    
-    def test_issue_1_kyc_schema_fix(self):
-        """Issue #1: Test KYC Schema Fix - veriff_session_id field"""
+    def test_api_key_name_auto_generation_eur(self):
+        """Test API Key Name Auto-Generation with EUR currency"""
         print("\n" + "="*60)
-        print("ISSUE #1: KYC SCHEMA FIX - veriff_session_id FIELD")
+        print("TEST 1: API KEY NAME AUTO-GENERATION - EUR CURRENCY")
         print("="*60)
         
         if not self.jwt_token:
-            self.log_result("Issue #1 - KYC Schema", False, "No JWT token available")
+            self.log_result("API Key Auto-Generation EUR", False, "No JWT token available")
             return
             
         try:
-            response = requests.get(
-                f"{self.backend_url}/api/kyc/history",
-                headers={"Authorization": f"Bearer {self.jwt_token}"},
-                timeout=15
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                kyc_data = data.get('data', {})
-                
-                # Handle both array and object response formats
-                if isinstance(kyc_data, dict) and 'records' in kyc_data:
-                    kyc_records = kyc_data['records']
-                elif isinstance(kyc_data, list):
-                    kyc_records = kyc_data
-                else:
-                    kyc_records = []
-                
-                # Check if veriff_session_id field exists in records
-                has_veriff_session_id = False
-                veriff_session_ids = []
-                
-                for record in kyc_records:
-                    if 'veriff_session_id' in record:
-                        has_veriff_session_id = True
-                        veriff_session_ids.append(record.get('veriff_session_id'))
-                
-                if has_veriff_session_id or len(kyc_records) == 0:
-                    self.log_result(
-                        "Issue #1 - KYC Schema", 
-                        True, 
-                        f"KYC history endpoint working - veriff_session_id field available ({len(kyc_records)} records)",
-                        {
-                            "kyc_record_count": len(kyc_records),
-                            "veriff_session_id_present": has_veriff_session_id,
-                            "sample_veriff_ids": veriff_session_ids[:3] if veriff_session_ids else []
-                        }
-                    )
-                else:
-                    self.log_result("Issue #1 - KYC Schema", False, "veriff_session_id field missing from KYC records")
-            else:
-                self.log_result("Issue #1 - KYC Schema", False, f"KYC history endpoint failed with status {response.status_code} (should not return 500 error)")
-                
-        except Exception as e:
-            self.log_result("Issue #1 - KYC Schema", False, f"KYC history request failed: {str(e)}")
-    
-    # ============================================
-    # ISSUE #2: Tatum API Fix - wallet operations without subscription errors
-    # ============================================
-    
-    def test_issue_2_tatum_api_fix(self):
-        """Issue #2: Test Tatum API Fix - wallet operations without subscription errors"""
-        print("\n" + "="*60)
-        print("ISSUE #2: TATUM API FIX - WALLET OPERATIONS")
-        print("="*60)
-        
-        if not self.jwt_token:
-            self.log_result("Issue #2 - Tatum API", False, "No JWT token available")
-            return
-            
-        try:
-            response = requests.get(
-                f"{self.backend_url}/api/wallet/getWallet",
-                headers={"Authorization": f"Bearer {self.jwt_token}"},
-                timeout=15
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                wallets = data.get('data', [])
-                
-                # Check response for subscription errors
-                response_text = response.text.lower()
-                has_subscription_error = 'subscription' in response_text and 'error' in response_text
-                
-                if not has_subscription_error:
-                    self.log_result(
-                        "Issue #2 - Tatum API", 
-                        True, 
-                        f"Wallet operations working without subscription errors ({len(wallets)} wallets retrieved)",
-                        {
-                            "wallet_count": len(wallets),
-                            "no_subscription_errors": True,
-                            "response_status": response.status_code
-                        }
-                    )
-                else:
-                    self.log_result("Issue #2 - Tatum API", False, "Subscription errors detected in wallet response")
-            else:
-                self.log_result("Issue #2 - Tatum API", False, f"Wallet endpoint failed with status {response.status_code}")
-                
-        except Exception as e:
-            self.log_result("Issue #2 - Tatum API", False, f"Wallet request failed: {str(e)}")
-    
-    # ============================================
-    # ISSUE #3: KMS/Wallet Address Fix - BTC address addition without KMS/decoder error
-    # ============================================
-    
-    def test_issue_3_kms_wallet_address_fix(self):
-        """Issue #3: Test KMS/Wallet Address Fix - BTC address addition"""
-        print("\n" + "="*60)
-        print("ISSUE #3: KMS/WALLET ADDRESS FIX - BTC ADDRESS ADDITION")
-        print("="*60)
-        
-        if not self.jwt_token:
-            self.log_result("Issue #3 - KMS/Wallet Address", False, "No JWT token available")
-            return
-            
-        try:
-            # Test BTC address addition as specified in review request
-            btc_address_data = {
-                "company_id": str(self.company_id),
-                "currency": "BTC",
-                "wallet_address": "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"
+            # Create API key WITHOUT api_name field, using EUR currency
+            api_key_data = {
+                "company_id": self.company_id,
+                "base_currency": "EUR",
+                "environment": "development"
+                # Intentionally NOT including api_name to trigger auto-generation
             }
             
             response = requests.post(
-                f"{self.backend_url}/api/wallet/addWalletAddress",
-                json=btc_address_data,
+                f"{self.backend_url}/api/userApi/addApi",
+                json=api_key_data,
                 headers={
                     "Authorization": f"Bearer {self.jwt_token}",
                     "Content-Type": "application/json"
@@ -230,264 +119,360 @@ class DynoPay7IssuesFixTester:
                 timeout=15
             )
             
-            # Check for KMS/decoder errors in response
-            response_text = response.text.lower()
-            has_kms_error = 'kms' in response_text and 'error' in response_text
-            has_decoder_error = 'decoder' in response_text and 'error' in response_text
-            
-            if response.status_code in [200, 201]:
-                self.log_result(
-                    "Issue #3 - KMS/Wallet Address", 
-                    True, 
-                    "BTC address addition succeeded without KMS/decoder errors",
-                    {
-                        "response_status": response.status_code,
-                        "btc_address": btc_address_data["wallet_address"],
-                        "no_kms_errors": not has_kms_error,
-                        "no_decoder_errors": not has_decoder_error
-                    }
-                )
-            elif response.status_code == 520 and ('already exists' in response_text or 'duplicate' in response_text):
-                self.log_result(
-                    "Issue #3 - KMS/Wallet Address", 
-                    True, 
-                    "BTC address already exists (acceptable) - no KMS/decoder errors",
-                    {
-                        "response_status": response.status_code,
-                        "message": "Address already exists",
-                        "no_kms_errors": not has_kms_error,
-                        "no_decoder_errors": not has_decoder_error
-                    }
-                )
+            if response.status_code == 200:
+                data = response.json()
+                api_response = data.get('data', {})
+                api_name = api_response.get('api_name', '')
+                
+                # Check if name matches the short format "Word-Number"
+                short_name_pattern = r'^[A-Za-z]+-\d+$'
+                is_short_format = bool(re.match(short_name_pattern, api_name))
+                
+                # Check if it's NOT a long format
+                is_not_long = len(api_name) < 20 and 'Live' not in api_name and 'Key' not in api_name
+                
+                if api_name and is_short_format and is_not_long:
+                    self.log_result(
+                        "API Key Auto-Generation EUR", 
+                        True, 
+                        f"Short auto-generated name created: '{api_name}' (EUR currency)",
+                        {
+                            "api_name": api_name,
+                            "base_currency": "EUR",
+                            "environment": "development",
+                            "matches_pattern": is_short_format,
+                            "name_length": len(api_name),
+                            "api_id": api_response.get('api_id')
+                        }
+                    )
+                else:
+                    self.log_result(
+                        "API Key Auto-Generation EUR", 
+                        False, 
+                        f"Generated name '{api_name}' doesn't match short format 'Word-Number'",
+                        {
+                            "api_name": api_name,
+                            "matches_pattern": is_short_format,
+                            "is_not_long": is_not_long,
+                            "expected_pattern": "Word-Number (e.g., Swift-42)"
+                        }
+                    )
+            elif response.status_code == 400 and 'already exists' in response.text.lower():
+                # Try with GBP if EUR already exists
+                self.test_api_key_name_auto_generation_gbp()
             else:
-                error_details = {
-                    "response_status": response.status_code,
-                    "has_kms_error": has_kms_error,
-                    "has_decoder_error": has_decoder_error,
-                    "response_preview": response.text[:200]
+                self.log_result(
+                    "API Key Auto-Generation EUR", 
+                    False, 
+                    f"API key creation failed with status {response.status_code}: {response.text[:200]}"
+                )
+                
+        except Exception as e:
+            self.log_result("API Key Auto-Generation EUR", False, f"API key creation request failed: {str(e)}")
+    
+    def test_api_key_name_auto_generation_gbp(self):
+        """Test API Key Name Auto-Generation with GBP currency"""
+        print("\n" + "="*60)
+        print("TEST 2: API KEY NAME AUTO-GENERATION - GBP CURRENCY")
+        print("="*60)
+        
+        if not self.jwt_token:
+            self.log_result("API Key Auto-Generation GBP", False, "No JWT token available")
+            return
+            
+        try:
+            # Create API key WITHOUT api_name field, using GBP currency
+            api_key_data = {
+                "company_id": self.company_id,
+                "base_currency": "GBP",
+                "environment": "development"
+                # Intentionally NOT including api_name to trigger auto-generation
+            }
+            
+            response = requests.post(
+                f"{self.backend_url}/api/userApi/addApi",
+                json=api_key_data,
+                headers={
+                    "Authorization": f"Bearer {self.jwt_token}",
+                    "Content-Type": "application/json"
+                },
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                api_response = data.get('data', {})
+                api_name = api_response.get('api_name', '')
+                
+                # Check if name matches the short format "Word-Number"
+                short_name_pattern = r'^[A-Za-z]+-\d+$'
+                is_short_format = bool(re.match(short_name_pattern, api_name))
+                
+                # Check if it's NOT a long format
+                is_not_long = len(api_name) < 20 and 'Live' not in api_name and 'Key' not in api_name
+                
+                if api_name and is_short_format and is_not_long:
+                    self.log_result(
+                        "API Key Auto-Generation GBP", 
+                        True, 
+                        f"Short auto-generated name created: '{api_name}' (GBP currency)",
+                        {
+                            "api_name": api_name,
+                            "base_currency": "GBP",
+                            "environment": "development",
+                            "matches_pattern": is_short_format,
+                            "name_length": len(api_name),
+                            "api_id": api_response.get('api_id')
+                        }
+                    )
+                else:
+                    self.log_result(
+                        "API Key Auto-Generation GBP", 
+                        False, 
+                        f"Generated name '{api_name}' doesn't match short format 'Word-Number'",
+                        {
+                            "api_name": api_name,
+                            "matches_pattern": is_short_format,
+                            "is_not_long": is_not_long,
+                            "expected_pattern": "Word-Number (e.g., Nova-7)"
+                        }
+                    )
+            elif response.status_code == 400 and 'already exists' in response.text.lower():
+                # Try with BTC if GBP already exists
+                self.test_api_key_name_auto_generation_btc()
+            else:
+                self.log_result(
+                    "API Key Auto-Generation GBP", 
+                    False, 
+                    f"API key creation failed with status {response.status_code}: {response.text[:200]}"
+                )
+                
+        except Exception as e:
+            self.log_result("API Key Auto-Generation GBP", False, f"API key creation request failed: {str(e)}")
+    
+    def test_api_key_name_auto_generation_btc(self):
+        """Test API Key Name Auto-Generation with BTC currency"""
+        print("\n" + "="*60)
+        print("TEST 3: API KEY NAME AUTO-GENERATION - BTC CURRENCY")
+        print("="*60)
+        
+        if not self.jwt_token:
+            self.log_result("API Key Auto-Generation BTC", False, "No JWT token available")
+            return
+            
+        try:
+            # Create API key WITHOUT api_name field, using BTC currency
+            api_key_data = {
+                "company_id": self.company_id,
+                "base_currency": "BTC",
+                "environment": "development"
+                # Intentionally NOT including api_name to trigger auto-generation
+            }
+            
+            response = requests.post(
+                f"{self.backend_url}/api/userApi/addApi",
+                json=api_key_data,
+                headers={
+                    "Authorization": f"Bearer {self.jwt_token}",
+                    "Content-Type": "application/json"
+                },
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                api_response = data.get('data', {})
+                api_name = api_response.get('api_name', '')
+                
+                # Check if name matches the short format "Word-Number"
+                short_name_pattern = r'^[A-Za-z]+-\d+$'
+                is_short_format = bool(re.match(short_name_pattern, api_name))
+                
+                # Check if it's NOT a long format
+                is_not_long = len(api_name) < 20 and 'Live' not in api_name and 'Key' not in api_name
+                
+                if api_name and is_short_format and is_not_long:
+                    self.log_result(
+                        "API Key Auto-Generation BTC", 
+                        True, 
+                        f"Short auto-generated name created: '{api_name}' (BTC currency)",
+                        {
+                            "api_name": api_name,
+                            "base_currency": "BTC",
+                            "environment": "development",
+                            "matches_pattern": is_short_format,
+                            "name_length": len(api_name),
+                            "api_id": api_response.get('api_id')
+                        }
+                    )
+                else:
+                    self.log_result(
+                        "API Key Auto-Generation BTC", 
+                        False, 
+                        f"Generated name '{api_name}' doesn't match short format 'Word-Number'",
+                        {
+                            "api_name": api_name,
+                            "matches_pattern": is_short_format,
+                            "is_not_long": is_not_long,
+                            "expected_pattern": "Word-Number (e.g., Blaze-15)"
+                        }
+                    )
+            elif response.status_code == 400 and 'already exists' in response.text.lower():
+                # Try with NGN if BTC already exists
+                self.test_api_key_name_auto_generation_ngn()
+            else:
+                self.log_result(
+                    "API Key Auto-Generation BTC", 
+                    False, 
+                    f"API key creation failed with status {response.status_code}: {response.text[:200]}"
+                )
+                
+        except Exception as e:
+            self.log_result("API Key Auto-Generation BTC", False, f"API key creation request failed: {str(e)}")
+    
+    def test_api_key_name_auto_generation_ngn(self):
+        """Test API Key Name Auto-Generation with NGN currency"""
+        print("\n" + "="*60)
+        print("TEST 4: API KEY NAME AUTO-GENERATION - NGN CURRENCY")
+        print("="*60)
+        
+        if not self.jwt_token:
+            self.log_result("API Key Auto-Generation NGN", False, "No JWT token available")
+            return
+            
+        try:
+            # Create API key WITHOUT api_name field, using NGN currency
+            api_key_data = {
+                "company_id": self.company_id,
+                "base_currency": "NGN",
+                "environment": "development"
+                # Intentionally NOT including api_name to trigger auto-generation
+            }
+            
+            response = requests.post(
+                f"{self.backend_url}/api/userApi/addApi",
+                json=api_key_data,
+                headers={
+                    "Authorization": f"Bearer {self.jwt_token}",
+                    "Content-Type": "application/json"
+                },
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                api_response = data.get('data', {})
+                api_name = api_response.get('api_name', '')
+                
+                # Check if name matches the short format "Word-Number"
+                short_name_pattern = r'^[A-Za-z]+-\d+$'
+                is_short_format = bool(re.match(short_name_pattern, api_name))
+                
+                # Check if it's NOT a long format
+                is_not_long = len(api_name) < 20 and 'Live' not in api_name and 'Key' not in api_name
+                
+                if api_name and is_short_format and is_not_long:
+                    self.log_result(
+                        "API Key Auto-Generation NGN", 
+                        True, 
+                        f"Short auto-generated name created: '{api_name}' (NGN currency)",
+                        {
+                            "api_name": api_name,
+                            "base_currency": "NGN",
+                            "environment": "development",
+                            "matches_pattern": is_short_format,
+                            "name_length": len(api_name),
+                            "api_id": api_response.get('api_id')
+                        }
+                    )
+                else:
+                    self.log_result(
+                        "API Key Auto-Generation NGN", 
+                        False, 
+                        f"Generated name '{api_name}' doesn't match short format 'Word-Number'",
+                        {
+                            "api_name": api_name,
+                            "matches_pattern": is_short_format,
+                            "is_not_long": is_not_long,
+                            "expected_pattern": "Word-Number (e.g., Pulse-88)"
+                        }
+                    )
+            else:
+                self.log_result(
+                    "API Key Auto-Generation NGN", 
+                    False, 
+                    f"API key creation failed with status {response.status_code}: {response.text[:200]}"
+                )
+                
+        except Exception as e:
+            self.log_result("API Key Auto-Generation NGN", False, f"API key creation request failed: {str(e)}")
+    
+    def test_name_format_validation(self):
+        """Test that generated names match the expected pattern"""
+        print("\n" + "="*60)
+        print("TEST 5: NAME FORMAT VALIDATION")
+        print("="*60)
+        
+        # Test the generateFriendlyName function pattern
+        expected_words = [
+            'Swift', 'Bold', 'Nova', 'Apex', 'Pulse', 'Spark', 'Echo', 'Flux',
+            'Prime', 'Core', 'Wave', 'Blaze', 'Edge', 'Volt', 'Zoom', 'Dash',
+            'Snap', 'Beam', 'Glow', 'Rush', 'Mint', 'Jade', 'Onyx', 'Ruby',
+            'Sage', 'Lynx', 'Hawk', 'Wolf', 'Fox', 'Zap', 'Arc', 'Ion'
+        ]
+        
+        # Check if any of our test results contain valid names
+        valid_names = []
+        invalid_names = []
+        
+        for test_name, result in self.test_results.items():
+            if 'API Key Auto-Generation' in test_name and result.get('success'):
+                details = result.get('details', {})
+                api_name = details.get('api_name', '')
+                if api_name:
+                    # Check if it matches Word-Number pattern
+                    pattern_match = re.match(r'^([A-Za-z]+)-(\d+)$', api_name)
+                    if pattern_match:
+                        word, number = pattern_match.groups()
+                        if word in expected_words and 0 <= int(number) <= 99:
+                            valid_names.append(api_name)
+                        else:
+                            invalid_names.append(api_name)
+        
+        if valid_names:
+            self.log_result(
+                "Name Format Validation", 
+                True, 
+                f"Generated names follow correct format: {', '.join(valid_names)}",
+                {
+                    "valid_names": valid_names,
+                    "invalid_names": invalid_names,
+                    "expected_pattern": "Word-Number where Word is from predefined list and Number is 0-99"
                 }
-                
-                if has_kms_error or has_decoder_error:
-                    self.log_result("Issue #3 - KMS/Wallet Address", False, f"KMS/decoder errors detected in response (status {response.status_code})", error_details)
-                else:
-                    self.log_result("Issue #3 - KMS/Wallet Address", False, f"BTC address addition failed with status {response.status_code}", error_details)
-                
-        except Exception as e:
-            self.log_result("Issue #3 - KMS/Wallet Address", False, f"BTC address addition request failed: {str(e)}")
-    
-    # ============================================
-    # ISSUE #4: Device Login Alert Fix - login with different IPs should trigger alert
-    # ============================================
-    
-    def test_issue_4_device_login_alert_fix(self):
-        """Issue #4: Test Device Login Alert Fix - different IP addresses"""
-        print("\n" + "="*60)
-        print("ISSUE #4: DEVICE LOGIN ALERT FIX - DIFFERENT IP ADDRESSES")
-        print("="*60)
-        
-        try:
-            # First login with IP 1.2.3.4
-            response1 = requests.post(
-                f"{self.backend_url}/api/user/login",
-                json={
-                    "email": self.test_email,
-                    "password": self.test_password
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "X-Forwarded-For": "1.2.3.4"
-                },
-                timeout=15
             )
-            
-            time.sleep(2)  # Brief pause between logins
-            
-            # Second login with IP 5.6.7.8
-            response2 = requests.post(
-                f"{self.backend_url}/api/user/login",
-                json={
-                    "email": self.test_email,
-                    "password": self.test_password
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "X-Forwarded-For": "5.6.7.8"
-                },
-                timeout=15
+        else:
+            self.log_result(
+                "Name Format Validation", 
+                False, 
+                "No valid short names were generated in previous tests",
+                {
+                    "valid_names": valid_names,
+                    "invalid_names": invalid_names,
+                    "note": "This could be due to duplicate API keys or other creation issues"
+                }
             )
-            
-            if response1.status_code == 200 and response2.status_code == 200:
-                # Check backend logs for device alert message
-                try:
-                    import subprocess
-                    log_result = subprocess.run(
-                        ["tail", "-n", "50", "/var/log/supervisor/backend.out.log"],
-                        capture_output=True,
-                        text=True,
-                        timeout=10
-                    )
-                    
-                    log_content = log_result.stdout.lower()
-                    device_alert_found = ('[login] new device alert sent' in log_content or 
-                                        'alert check' in log_content or 
-                                        'new_device_alert:' in log_content)
-                    
-                    if device_alert_found:
-                        self.log_result(
-                            "Issue #4 - Device Login Alert", 
-                            True, 
-                            "Device login alert system is working (alert logic detected in logs)",
-                            {
-                                "first_ip": "1.2.3.4",
-                                "second_ip": "5.6.7.8",
-                                "alert_system_active": True,
-                                "both_logins_successful": True
-                            }
-                        )
-                    else:
-                        self.log_result("Issue #4 - Device Login Alert", False, "Device login alert system not detected in backend logs")
-                        
-                except Exception as log_e:
-                    self.log_result("Issue #4 - Device Login Alert", False, f"Could not check backend logs: {str(log_e)}")
-            else:
-                self.log_result("Issue #4 - Device Login Alert", False, f"Login attempts failed - Status 1: {response1.status_code}, Status 2: {response2.status_code}")
-                
-        except Exception as e:
-            self.log_result("Issue #4 - Device Login Alert", False, f"Device login alert test failed: {str(e)}")
     
-    # ============================================
-    # ISSUE #5: Currency Rates Fallback - FastForex/CoinGecko fallback
-    # ============================================
-    
-    def test_issue_5_currency_rates_fallback(self):
-        """Issue #5: Test Currency Rates Fallback - FastForex/CoinGecko"""
+    def test_existing_api_keys_format(self):
+        """Test existing API keys to see their name format"""
         print("\n" + "="*60)
-        print("ISSUE #5: CURRENCY RATES FALLBACK - FASTFOREX/COINGECKO")
-        print("="*60)
-        
-        try:
-            currency_rates_data = {
-                "source": "USD",
-                "amount": 100,
-                "currencyList": ["BTC", "ETH", "EUR"]
-            }
-            
-            response = requests.post(
-                f"{self.backend_url}/api/pay/getCurrencyRates",
-                json=currency_rates_data,
-                headers={
-                    "Authorization": f"Bearer {self.jwt_token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                rates_data = data.get('data', {})
-                
-                # Check if rates are returned for requested currencies
-                expected_currencies = ["BTC", "ETH", "EUR"]
-                rates_found = []
-                
-                for currency in expected_currencies:
-                    if currency in rates_data or currency.lower() in str(rates_data).lower():
-                        rates_found.append(currency)
-                
-                if len(rates_found) >= 2:  # At least 2 out of 3 currencies should have rates
-                    self.log_result(
-                        "Issue #5 - Currency Rates Fallback", 
-                        True, 
-                        f"Currency rates returned successfully ({len(rates_found)}/3 currencies)",
-                        {
-                            "requested_currencies": expected_currencies,
-                            "rates_found": rates_found,
-                            "source_amount": currency_rates_data["amount"],
-                            "source_currency": currency_rates_data["source"]
-                        }
-                    )
-                else:
-                    self.log_result("Issue #5 - Currency Rates Fallback", False, f"Insufficient currency rates returned ({len(rates_found)}/3)")
-            else:
-                self.log_result("Issue #5 - Currency Rates Fallback", False, f"Currency rates endpoint failed with status {response.status_code}")
-                
-        except Exception as e:
-            self.log_result("Issue #5 - Currency Rates Fallback", False, f"Currency rates request failed: {str(e)}")
-    
-    # ============================================
-    # ISSUE #6: Payment Link Creation - seed data related
-    # ============================================
-    
-    def test_issue_6_payment_link_creation(self):
-        """Issue #6: Test Payment Link Creation - seed data related"""
-        print("\n" + "="*60)
-        print("ISSUE #6: PAYMENT LINK CREATION - SEED DATA")
+        print("TEST 6: EXISTING API KEYS FORMAT CHECK")
         print("="*60)
         
         if not self.jwt_token:
-            self.log_result("Issue #6 - Payment Link Creation", False, "No JWT token available")
+            self.log_result("Existing API Keys Format", False, "No JWT token available")
             return
             
         try:
-            payment_link_data = {
-                "amount": 100,
-                "email": "test@test.com",
-                "modes": ["CRYPTO"],
-                "company_id": str(self.company_id),
-                "description": "Test"
-            }
-            
-            response = requests.post(
-                f"{self.backend_url}/api/pay/createPaymentLink",
-                json=payment_link_data,
-                headers={
-                    "Authorization": f"Bearer {self.jwt_token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                payment_link_response = data.get('data', {})
-                payment_link = payment_link_response.get('payment_link', '')
-                
-                if payment_link:
-                    self.log_result(
-                        "Issue #6 - Payment Link Creation", 
-                        True, 
-                        "Payment link creation succeeded with existing data",
-                        {
-                            "payment_link_created": bool(payment_link),
-                            "link_id": payment_link_response.get('link_id'),
-                            "amount": payment_link_data["amount"],
-                            "company_id": payment_link_data["company_id"]
-                        }
-                    )
-                else:
-                    self.log_result("Issue #6 - Payment Link Creation", False, "Payment link creation succeeded but no link returned")
-            else:
-                self.log_result("Issue #6 - Payment Link Creation", False, f"Payment link creation failed with status {response.status_code}")
-                
-        except Exception as e:
-            self.log_result("Issue #6 - Payment Link Creation", False, f"Payment link creation request failed: {str(e)}")
-    
-    # ============================================
-    # ISSUE #7: Base Currency Check - API keys with base_currency field
-    # ============================================
-    
-    def test_issue_7_base_currency_check(self):
-        """Issue #7: Test Base Currency Check - API keys with base_currency field"""
-        print("\n" + "="*60)
-        print("ISSUE #7: BASE CURRENCY CHECK - API KEYS")
-        print("="*60)
-        
-        if not self.jwt_token:
-            self.log_result("Issue #7 - Base Currency Check", False, "No JWT token available")
-            return
-            
-        try:
-            # Test API keys endpoint
             response = requests.get(
                 f"{self.backend_url}/api/userApi/getApi",
                 headers={"Authorization": f"Bearer {self.jwt_token}"},
@@ -506,42 +491,56 @@ class DynoPay7IssuesFixTester:
                 else:
                     api_list = [api_data] if api_data else []
                 
-                # Check for base_currency field in API keys
-                base_currency_found = False
-                base_currencies = []
+                short_format_names = []
+                long_format_names = []
                 
                 for api_key in api_list:
-                    if 'base_currency' in api_key:
-                        base_currency_found = True
-                        base_currencies.append(api_key.get('base_currency'))
+                    api_name = api_key.get('api_name', '')
+                    if api_name:
+                        # Check if it matches short format "Word-Number"
+                        short_pattern = r'^[A-Za-z]+-\d+$'
+                        if re.match(short_pattern, api_name) and len(api_name) < 15:
+                            short_format_names.append(api_name)
+                        else:
+                            long_format_names.append(api_name)
                 
-                if base_currency_found:
+                total_keys = len(api_list)
+                short_count = len(short_format_names)
+                
+                if short_count > 0:
                     self.log_result(
-                        "Issue #7 - Base Currency Check", 
+                        "Existing API Keys Format", 
                         True, 
-                        f"API keys contain base_currency field ({len(api_list)} keys checked)",
+                        f"Found {short_count}/{total_keys} API keys with short format names",
                         {
-                            "api_key_count": len(api_list),
-                            "base_currency_present": base_currency_found,
-                            "base_currencies_found": list(set(base_currencies))
+                            "total_api_keys": total_keys,
+                            "short_format_names": short_format_names[:5],  # Show first 5
+                            "long_format_names": long_format_names[:3],   # Show first 3
+                            "short_format_count": short_count,
+                            "long_format_count": len(long_format_names)
                         }
                     )
                 else:
-                    self.log_result("Issue #7 - Base Currency Check", False, "base_currency field not found in API keys")
+                    self.log_result(
+                        "Existing API Keys Format", 
+                        False, 
+                        f"No short format names found among {total_keys} API keys",
+                        {
+                            "total_api_keys": total_keys,
+                            "long_format_names": long_format_names[:5],
+                            "note": "All existing API keys use long format names"
+                        }
+                    )
             else:
-                self.log_result("Issue #7 - Base Currency Check", False, f"API keys endpoint failed with status {response.status_code}")
+                self.log_result("Existing API Keys Format", False, f"Failed to retrieve API keys: status {response.status_code}")
                 
         except Exception as e:
-            self.log_result("Issue #7 - Base Currency Check", False, f"API keys request failed: {str(e)}")
-    
-    # ============================================
-    # Main Test Runner
-    # ============================================
+            self.log_result("Existing API Keys Format", False, f"API keys request failed: {str(e)}")
     
     def run_all_tests(self):
-        """Run all 7 issue fix verification tests"""
+        """Run all shorter name generation tests"""
         print("="*80)
-        print("DYNOPAY 7 ISSUES FIX VERIFICATION TEST")
+        print("DYNOPAY SHORTER API KEY NAME AUTO-GENERATION TESTING")
         print("="*80)
         print(f"Backend URL: {self.backend_url}")
         print(f"Test Credentials: {self.test_email}")
@@ -553,14 +552,17 @@ class DynoPay7IssuesFixTester:
             print("\n❌ AUTHENTICATION FAILED - Cannot proceed with tests")
             return
         
-        # Run all 7 issue tests
-        self.test_issue_1_kyc_schema_fix()
-        self.test_issue_2_tatum_api_fix()
-        self.test_issue_3_kms_wallet_address_fix()
-        self.test_issue_4_device_login_alert_fix()
-        self.test_issue_5_currency_rates_fallback()
-        self.test_issue_6_payment_link_creation()
-        self.test_issue_7_base_currency_check()
+        # Check existing API keys format first
+        self.test_existing_api_keys_format()
+        
+        # Test API key auto-generation with different currencies
+        self.test_api_key_name_auto_generation_eur()
+        self.test_api_key_name_auto_generation_gbp()
+        self.test_api_key_name_auto_generation_btc()
+        self.test_api_key_name_auto_generation_ngn()
+        
+        # Validate name format
+        self.test_name_format_validation()
         
         # Print summary
         self.print_summary()
@@ -586,10 +588,24 @@ class DynoPay7IssuesFixTester:
                 print(f"  - {error}")
         
         if passed_tests == total_tests:
-            print("\n🎉 ALL 7 ISSUES VERIFIED SUCCESSFULLY!")
+            print("\n🎉 ALL SHORTER NAME GENERATION TESTS PASSED!")
         else:
-            print(f"\n⚠️  {failed_tests} ISSUE(S) NEED ATTENTION")
+            print(f"\n⚠️  {failed_tests} TEST(S) NEED ATTENTION")
+        
+        # Show successful name generations
+        successful_names = []
+        for test_name, result in self.test_results.items():
+            if 'API Key Auto-Generation' in test_name and result.get('success'):
+                details = result.get('details', {})
+                api_name = details.get('api_name', '')
+                if api_name:
+                    successful_names.append(f"{api_name} ({details.get('base_currency', 'Unknown')})")
+        
+        if successful_names:
+            print(f"\n✅ SUCCESSFULLY GENERATED SHORT NAMES:")
+            for name in successful_names:
+                print(f"  - {name}")
 
 if __name__ == "__main__":
-    tester = DynoPay7IssuesFixTester()
+    tester = DynoPayShorterNameTester()
     tester.run_all_tests()
