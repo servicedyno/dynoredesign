@@ -89,8 +89,23 @@ const getWallet = async (req: express.Request, res: express.Response) => {
   try {
     const { company_id } = req.query;
     
-    // Check cache first (30 second TTL)
-    const cacheKey = `wallet:${userData.user_id}:${company_id || 'all'}:v2`;
+    // Get company's preferred currency from their API key (production preferred)
+    let preferredCurrency = 'USD';
+    let fiatConversionRate = 1;
+    
+    if (company_id) {
+      const apiKeyResult = await sequelize.query(
+        `SELECT base_currency FROM tbl_api WHERE company_id = :companyId AND status = 'active' ORDER BY CASE WHEN environment = 'production' THEN 0 ELSE 1 END, "createdAt" DESC LIMIT 1`,
+        { replacements: { companyId: company_id }, type: QueryTypes.SELECT }
+      ) as Array<{ base_currency: string }>;
+      
+      if (apiKeyResult.length > 0 && apiKeyResult[0].base_currency) {
+        preferredCurrency = apiKeyResult[0].base_currency;
+      }
+    }
+    
+    // Check cache first (30 second TTL) - include currency in cache key
+    const cacheKey = `wallet:${userData.user_id}:${company_id || 'all'}:${preferredCurrency}:v3`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
       console.log(`[Wallet] Cache hit for user ${userData.user_id}`);
@@ -149,6 +164,24 @@ const getWallet = async (req: express.Request, res: express.Response) => {
       fixedDecimal: false,
       amount: 1,
     });
+    
+    // Get USD to preferred currency conversion rate
+    if (preferredCurrency !== 'USD') {
+      try {
+        const fiatConversions = await currencyConvert({
+          sourceCurrency: 'USD',
+          currency: [preferredCurrency],
+          amount: 1,
+          fixedDecimal: true,
+        });
+        if (fiatConversions && fiatConversions[0]?.amount) {
+          fiatConversionRate = Number(fiatConversions[0].amount);
+        }
+      } catch (e) {
+        console.warn(`[getWallet] Currency conversion failed, using USD`);
+        preferredCurrency = 'USD';
+      }
+    }
 
     // Create a map of currency to transfer rate for lookup
     const rateMap = new Map<string, number>();
