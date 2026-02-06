@@ -4,6 +4,7 @@ import downloadUserImage from "./downloadUserImage";
 import { decrypt, encrypt } from "./encryption";
 import errorResponseHelper from "./errorResponseHelper";
 import getErrorMessage from "./getErrorMessage";
+import generateFriendlyName, { generateApiKeyName, generateWalletName } from "./generateFriendlyName";
 import sendEmail, {
   sendPaymentReceivedEmail,
   sendPaymentPendingEmail,
