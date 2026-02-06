@@ -43,7 +43,7 @@ const dynoPayEmailTemplate = (
       <meta name="x-apple-disable-message-reformatting" />
       <meta http-equiv="X-UA-Compatible" content="IE=edge" />
       <meta content="telephone=no" name="format-detection" />
-      <title>DynoPay</title>
+      <title>Dynopay</title>
       <!--[if mso]>
       <style type="text/css">
         body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
@@ -72,7 +72,7 @@ const dynoPayEmailTemplate = (
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
                     <tr>
                       <td style="font-family: 'Inter', Arial, sans-serif; font-size: 15px; color: #4a4a4a;">
-                        Best regards,<br /><strong>The DynoPay Team</strong>
+                        Best regards,<br /><strong>The Dynopay Team</strong>
                       </td>
                     </tr>
                   </table>
@@ -127,7 +127,7 @@ const dynoPayEmailTemplate = (
                     </tr>
                     <tr>
                       <td align="center" style="color: #9ca3af; font-size: 13px; font-family: 'Inter', Arial, sans-serif; padding-bottom: 16px;">
-                        &copy; ${new Date().getFullYear()} DynoPay. All rights reserved.
+                        &copy; ${new Date().getFullYear()} Dynopay. All rights reserved.
                       </td>
                     </tr>
                     <tr>
@@ -167,7 +167,7 @@ const sendEmail = async (
   showImage = false
 ) => {
   try {
-    // Wrap message in DynoPay branded HTML template
+    // Wrap message in Dynopay branded HTML template
     const htmlBody = dynoPayEmailTemplate(name, message, subject, showImage);
     
     const info = await mailTransporter({
@@ -214,7 +214,7 @@ const sendPaymentReceivedEmail = async (
           </table>
         </td></tr>
       </table>
-      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 16px 0 0 0; font-family: 'Inter', Arial, sans-serif;">The funds have been credited to your wallet. You can view the full transaction details in your DynoPay dashboard.</p>`;
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 16px 0 0 0; font-family: 'Inter', Arial, sans-serif;">The funds have been credited to your wallet. You can view the full transaction details in your Dynopay dashboard.</p>`;
 
     const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Payment Received");
     const info = await mailTransporter({
@@ -241,7 +241,7 @@ const sendTransactionConfirmedEmail = async (
   status: string
 ) => {
   try {
-    const subject = `Transaction ${status} - DynoPay`;
+    const subject = `Transaction ${status} - Dynopay`;
     const statusColor = status.toLowerCase() === 'confirmed' ? '#166534' : '#1034a6';
     const statusBg = status.toLowerCase() === 'confirmed' ? '#dcfce7' : '#eef1ff';
     
@@ -256,7 +256,7 @@ const sendTransactionConfirmedEmail = async (
           </table>
         </td></tr>
       </table>
-      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 16px 0 0 0; font-family: 'Inter', Arial, sans-serif;">You can view more details in your DynoPay dashboard.</p>`;
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 16px 0 0 0; font-family: 'Inter', Arial, sans-serif;">You can view more details in your Dynopay dashboard.</p>`;
 
     const htmlBody = dynoPayEmailTemplate(name, htmlContent, `Transaction ${status}`);
     const info = await mailTransporter({
@@ -290,7 +290,7 @@ const sendWeeklySummaryEmail = async (
   try {
     const currency = summaryData.currency || 'USD';
     const currencySymbol = getCurrencySymbol(currency);
-    const subject = "Your Weekly Summary - DynoPay";
+    const subject = "Your Weekly Summary - Dynopay";
     
     const htmlContent = `
       <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Here's your weekly activity summary for <strong style="color: #1a1a2e;">${summaryData.periodStart}</strong> to <strong style="color: #1a1a2e;">${summaryData.periodEnd}</strong>.</p>
@@ -347,7 +347,7 @@ const sendSecurityAlertEmail = async (
   details: string
 ) => {
   try {
-    const subject = "Security Alert - DynoPay";
+    const subject = "Security Alert - Dynopay";
     
     const htmlContent = `
       <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">We detected unusual activity on your account.</p>
@@ -392,7 +392,7 @@ const sendPaymentPendingEmail = async (
   confirmationsRequired: number = 1
 ) => {
   try {
-    const subject = "Payment Pending Confirmation - DynoPay";
+    const subject = "Payment Pending Confirmation - Dynopay";
     
     const htmlContent = `
       <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">A new payment has been detected for your company <strong style="color: #1a1a2e;">${companyName}</strong>!</p>
@@ -416,7 +416,7 @@ const sendPaymentPendingEmail = async (
           </table>
         </td></tr>
       </table>
-      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">We'll notify you once the payment is fully confirmed and credited to your wallet. You can track the transaction status in your DynoPay dashboard.</p>`;
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">We'll notify you once the payment is fully confirmed and credited to your wallet. You can track the transaction status in your Dynopay dashboard.</p>`;
 
     const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Payment Pending");
     const info = await mailTransporter({
@@ -446,7 +446,7 @@ const sendPaymentConfirmingEmail = async (
   requiredConfirmations: number
 ) => {
   try {
-    const subject = `Payment Confirming (${currentConfirmations}/${requiredConfirmations}) - DynoPay`;
+    const subject = `Payment Confirming (${currentConfirmations}/${requiredConfirmations}) - Dynopay`;
     const progressPct = Math.min(100, Math.round((currentConfirmations / requiredConfirmations) * 100));
     const isComplete = currentConfirmations >= requiredConfirmations;
     
@@ -468,7 +468,7 @@ const sendPaymentConfirmingEmail = async (
       </table>
       <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">${isComplete
         ? "The payment has reached the required confirmations and will be credited shortly!"
-        : `${requiredConfirmations - currentConfirmations} more confirmation${requiredConfirmations - currentConfirmations > 1 ? 's' : ''} needed before the payment is credited.`} You can track the full status in your DynoPay dashboard.</p>`;
+        : `${requiredConfirmations - currentConfirmations} more confirmation${requiredConfirmations - currentConfirmations > 1 ? 's' : ''} needed before the payment is credited.`} You can track the full status in your Dynopay dashboard.</p>`;
 
     const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Payment Confirming");
     const info = await mailTransporter({
@@ -500,7 +500,7 @@ const sendPaymentPartialEmail = async (
   gracePeriodMinutes: number = 30
 ) => {
   try {
-    const subject = "Partial Payment Received - Action Required - DynoPay";
+    const subject = "Partial Payment Received - Action Required - Dynopay";
     
     const htmlContent = `
       <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">A partial payment has been received for your company <strong style="color: #1a1a2e;">${companyName}</strong>.</p>
@@ -556,8 +556,8 @@ const sendPaymentPartialExpiredEmail = async (
   try {
     const isCompleted = status === "completed_partial";
     const subject = isCompleted 
-      ? "Partial Payment Processed - DynoPay"
-      : "Partial Payment Expired - DynoPay";
+      ? "Partial Payment Processed - Dynopay"
+      : "Partial Payment Expired - Dynopay";
     const heading = isCompleted ? "Partial Payment Processed" : "Payment Grace Period Expired";
     const borderColor = isCompleted ? '#22c55e' : '#f59e0b';
     const statusBg = isCompleted ? '#dcfce7' : '#fef3c7';
@@ -580,7 +580,7 @@ const sendPaymentPartialExpiredEmail = async (
       </table>
       <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">${isCompleted
         ? "The received amount has been processed with adjusted fees and forwarded to your wallet."
-        : "Since the full payment was not received within the grace period, the partial amount has been processed. Please note that fees may be higher for incomplete payments."} You can view the transaction details in your DynoPay dashboard.</p>`;
+        : "Since the full payment was not received within the grace period, the partial amount has been processed. Please note that fees may be higher for incomplete payments."} You can view the transaction details in your Dynopay dashboard.</p>`;
 
     const htmlBody = dynoPayEmailTemplate(name, htmlContent, heading);
     const info = await mailTransporter({
@@ -610,7 +610,7 @@ const sendAdminFeeReceivedEmail = async (
   totalAmount: string
 ) => {
   try {
-    const subject = "Platform Fee Received - DynoPay";
+    const subject = "Platform Fee Received - Dynopay";
     
     const merchantAmountNum = parseFloat(merchantAmount);
     const feeAmountNum = parseFloat(feeAmount);
@@ -652,7 +652,7 @@ const sendAdminFeeReceivedEmail = async (
         </td></tr>
       </table>
       ${noticeBlock}
-      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">The fee has been credited to the admin ${currency} wallet. You can view the full transaction details in the DynoPay admin dashboard.</p>`;
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">The fee has been credited to the admin ${currency} wallet. You can view the full transaction details in the Dynopay admin dashboard.</p>`;
 
     const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Platform Fee Received");
     const info = await mailTransporter({
@@ -691,29 +691,29 @@ const sendRefereeCodeReminderEmail = async (
     
     switch (reminderType) {
       case 'week1':
-        subject = "Don't forget your exclusive DynoPay offer! 🎁";
+        subject = "Don't forget your exclusive Dynopay offer! 🎁";
         urgencyMessage = `You still have <strong>${daysRemaining} days</strong> to claim your exclusive discount.`;
         ctaText = "Claim Your Discount";
         break;
       case 'week2':
-        subject = "Your 50% discount is waiting - DynoPay 💰";
+        subject = "Your 50% discount is waiting - Dynopay 💰";
         urgencyMessage = `Your exclusive <strong>${discountPercent}% discount</strong> is still available! Only <strong>${daysRemaining} days</strong> remaining.`;
         ctaText = "Start Saving Today";
         break;
       case 'week3':
-        subject = `⏰ Only ${daysRemaining} days left on your DynoPay offer!`;
+        subject = `⏰ Only ${daysRemaining} days left on your Dynopay offer!`;
         urgencyMessage = `<strong>Time is running out!</strong> Your exclusive ${discountPercent}% discount expires in just <strong>${daysRemaining} days</strong>.`;
         ctaText = "Don't Miss Out";
         break;
       case 'final':
-        subject = "⚠️ LAST CHANCE: Your DynoPay discount expires in 3 days!";
+        subject = "⚠️ LAST CHANCE: Your Dynopay discount expires in 3 days!";
         urgencyMessage = `<strong style="color: #dc2626;">FINAL REMINDER:</strong> Your exclusive ${discountPercent}% discount expires in just <strong>${daysRemaining} days</strong>. This is your last chance!`;
         ctaText = "Claim Now Before It's Gone";
         break;
     }
     
     const message = `
-<p>We noticed you haven't claimed your exclusive DynoPay discount yet!</p>
+<p>We noticed you haven't claimed your exclusive Dynopay discount yet!</p>
 
 <div style="margin: 24px 0; padding: 20px; background: linear-gradient(135deg, #f0fff4 0%, #e6ffed 100%); border-left: 4px solid #22c55e; border-radius: 0 8px 8px 0;">
   <h3 style="margin: 0 0 12px 0; color: #166534; font-size: 18px;">🎁 Your Exclusive Offer</h3>
@@ -727,7 +727,7 @@ const sendRefereeCodeReminderEmail = async (
 
 <p style="font-size: 15px;">${urgencyMessage}</p>
 
-<h4 style="margin: 24px 0 12px 0; color: #1034a6;">Why DynoPay?</h4>
+<h4 style="margin: 24px 0 12px 0; color: #1034a6;">Why Dynopay?</h4>
 <ul style="margin: 0; padding-left: 20px; color: #4a4a4a;">
   <li>Accept crypto payments from customers worldwide</li>
   <li>Support for Bitcoin, Ethereum, USDT, and more</li>
