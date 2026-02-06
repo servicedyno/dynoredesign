@@ -1432,13 +1432,13 @@ const changeEmail = async (req: express.Request, res: express.Response) => {
       await sendEmail(
         newEmail,
         user.dataValues.name || "User",
-        "Email Address Changed - DynoPay",
-        `Your DynoPay account email has been successfully changed to this address.
+        "Email Address Changed - Dynopay",
+        `Your Dynopay account email has been successfully changed to this address.
 
 If you didn't make this change, please contact support immediately.
 
 Best regards,
-DynoPay Team`
+Dynopay Team`
       );
     } catch (emailError) {
       userLogger.error("Failed to send email change confirmation", emailError);
@@ -1519,7 +1519,7 @@ const changePhone = async (req: express.Request, res: express.Response) => {
         {
           from: process.env.TELNYX_PHONE_NUMBER,
           to: "+" + newPhone,
-          text: `Your DynoPay phone number has been successfully updated to this number. If you didn't make this change, please contact support immediately.`
+          text: `Your Dynopay phone number has been successfully updated to this number. If you didn't make this change, please contact support immediately.`
         },
         {
           headers: {
