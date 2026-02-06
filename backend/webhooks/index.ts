@@ -108,9 +108,17 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
     let webhookSecret = null;
     let companyId = customerData?.company_id;
     
-    // First try to get from payment link using link_id
+    // First, check if webhook_url was passed directly with the payment (e.g. merchant crypto payment API stores it in Redis)
+    if (customerData?.webhook_url) {
+      webhookUrl = customerData.webhook_url as string;
+      callbackUrl = (customerData?.callback_url as string) || null;
+      webhookSecret = (customerData?.webhook_secret as string) || null;
+      console.log(`[callMerchantWebhook] Using webhook URL from payment data: ${webhookUrl}`);
+    }
+    
+    // Then try payment link record (for payment link flow)
     const linkId = customerData?.link_id || customerData?.payment_link_id;
-    if (linkId) {
+    if (linkId && !webhookUrl) {
       const [linkResult] = await sequelize.query(
         `SELECT webhook_url, callback_url FROM tbl_payment_link WHERE link_id = :linkId`,
         { replacements: { linkId }, type: QueryTypes.SELECT }
