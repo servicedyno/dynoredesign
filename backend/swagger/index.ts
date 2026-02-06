@@ -43,17 +43,17 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "DynoPay API Documentation",
+      title: "Dynopay API Documentation",
       version: "1.0.0",
-      description: `# DynoPay - Crypto Payment Gateway API
+      description: `# Dynopay - Crypto Payment Gateway API
 
-Accept cryptocurrency payments with ease using DynoPay's comprehensive API.
+Accept cryptocurrency payments with ease using Dynopay's comprehensive API.
 
 ---
 
 ## 🔐 Authentication Guide
 
-DynoPay uses **two types of authentication** depending on your use case:
+Dynopay uses **two types of authentication** depending on your use case:
 
 ### 1. JWT Token (Bearer Authentication)
 **Use for:** Dashboard operations, managing your account, companies, payment links, wallets
@@ -88,7 +88,7 @@ Response contains \`accessToken\` - use this in the \`Authorization: Bearer <tok
 | Get Customer Transactions | ✅ API Key + Customer Token |
 
 **How to get API Key:**
-1. Login to DynoPay dashboard (\`POST /api/user/login\`)
+1. Login to Dynopay dashboard (\`POST /api/user/login\`)
 2. Navigate to API Keys section in dashboard
 3. Create new API key via \`POST /api/userApi/addApi\` OR use dashboard UI
 4. Copy the **encrypted API key** value (starts with long encrypted string)
@@ -206,7 +206,7 @@ POST /api/pay/createPaymentLink
 - **Best for:** Dashboard users, no-code integration, shareable payment pages
 - **Auth:** JWT Token (login to dashboard)
 - **Flow:** Create link → Share URL → Customer pays → Webhook sent
-- **Customer experience:** Redirected to DynoPay hosted payment page
+- **Customer experience:** Redirected to Dynopay hosted payment page
 - **Endpoints:** \`/api/pay/createPaymentLink\`, \`/api/pay/getAllPaymentLinks\`
 
 **⚡ Direct API (Programmatic)**
@@ -237,7 +237,7 @@ Then use the public URL as your \`webhook_url\`:
 \`\`\`
 
 **Why localhost doesn't work:**
-- DynoPay servers are in the cloud
+- Dynopay servers are in the cloud
 - Cannot reach \`http://localhost\` or \`http://127.0.0.1\` on your machine
 - Need publicly accessible URL for webhook delivery
 
@@ -248,10 +248,10 @@ Then use the public URL as your \`webhook_url\`:
 POST /your-webhook-endpoint HTTP/1.1
 Host: yourapp.com
 Content-Type: application/json
-X-DynoPay-Event: payment.confirmed
+X-Dynopay-Event: payment.confirmed
 X-DynoPay-Signature: abc123... (HMAC-SHA256, if webhook_secret configured)
-X-DynoPay-Timestamp: 1704067200
-X-DynoPay-Webhook-Id: wh_abc123
+X-Dynopay-Timestamp: 1704067200
+X-Dynopay-Webhook-Id: wh_abc123
 
 {
   "event": "payment.confirmed",
@@ -291,7 +291,7 @@ function verifyWebhook(payload, signature, secret) {
 **A: Two methods:**
 
 **Method 1: Via Dashboard (Recommended)**
-1. Login to DynoPay dashboard
+1. Login to Dynopay dashboard
 2. Navigate to Settings → API Keys
 3. Click "Create New API Key"
 4. Copy the **encrypted API key** (long string starting with U2FsdGVk...)
@@ -526,7 +526,7 @@ function verifyWebhookSignature(payload, signature, secret) {
 
 ---`,
       contact: {
-        name: "DynoPay Support",
+        name: "Dynopay Support",
         url: "https://dynopay.com/support",
         email: "support@dynopay.com",
       },
@@ -1090,7 +1090,7 @@ export const setupSwagger = (app: Express) => {
       .swagger-ui .info h3 { margin-top: 20px; color: #555; }
       .swagger-ui .info code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
     `,
-    customSiteTitle: "DynoPay API Documentation",
+    customSiteTitle: "Dynopay API Documentation",
     swaggerOptions: {
       persistAuthorization: true, // Keep authorization token on page refresh
       filter: true, // Enable filter/search box
