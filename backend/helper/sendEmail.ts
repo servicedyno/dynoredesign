@@ -123,9 +123,9 @@ const dynoPayEmailTemplate = (
                   <h1 style="font-size: 24px; font-weight: 600; color: #1034a6; margin: 0 0 24px 0; font-family: 'Inter', Arial, sans-serif;">${heading}</h1>
                   <p style="font-size: 16px; color: #1a1a2e; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Hey ${name || "there"},</p>
                   <div style="font-size: 15px; color: #4a4a4a; line-height: 1.6; font-family: 'Inter', Arial, sans-serif;">${message}</div>
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+                  <table role="presentation" class="dm-border" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
                     <tr>
-                      <td style="font-family: 'Inter', Arial, sans-serif; font-size: 15px; color: #4a4a4a;">
+                      <td class="dm-text" style="font-family: 'Inter', Arial, sans-serif; font-size: 15px; color: #4a4a4a;">
                         Best regards,<br /><strong>The Dynopay Team</strong>
                       </td>
                     </tr>
