@@ -41,15 +41,19 @@ class DynoPayTester:
         
         if response.status_code == 200:
             data = response.json()
+            print(f"Debug - Auth response data: {data}")
             self.token = data.get('token')
             self.user_id = data.get('user_id') or data.get('userId')
             user_name = data.get('name', 'Unknown')
             
+            if not self.token:
+                print("❌ No token found in response")
+                return False
+                
             # Set authorization header for future requests
             self.session.headers.update({'Authorization': f'Bearer {self.token}'})
             
             print(f"✅ Authentication successful - User ID: {self.user_id}, Name: {user_name}")
-            print(f"Token: {self.token[:20]}...")
             return True
         else:
             print(f"❌ Authentication failed - Status: {response.status_code}")
