@@ -27,7 +27,7 @@ const formatAmountWithCurrency = (amount: number, currency: string = 'USD'): str
   return `${symbol}${amount.toFixed(2)} ${currency}`;
 };
 
-const DYNOPAY_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Images/auth/dynopay-logo.png";
+const DYNOPAY_WHITE_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Icons/home/dynopay-whiteLogo.svg";
 
 const dynoPayEmailTemplate = (
   name: string,
@@ -58,8 +58,8 @@ const dynoPayEmailTemplate = (
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #1034a6 0%, #0d2570 100%); padding: 28px 32px; text-align: center;">
-                  <a href="https://dynopay.com" style="text-decoration: none; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-                    <span style="color: #ffffff;">dyno</span><span style="color: #f47323;">pay</span>
+                  <a href="https://dynopay.com" style="text-decoration: none;">
+                    <img src="${DYNOPAY_WHITE_LOGO_URL}" alt="dynopay" width="134" height="45" style="display: inline-block; max-width: 134px; height: auto;" />
                   </a>
                 </td>
               </tr>
@@ -84,7 +84,7 @@ const dynoPayEmailTemplate = (
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center" style="padding-bottom: 16px;">
-                        <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.5px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;"><span style="color: #ffffff;">dyno</span><span style="color: #f47323;">pay</span></span>
+                        <img src="${DYNOPAY_WHITE_LOGO_URL}" alt="dynopay" width="110" height="37" style="display: inline-block; max-width: 110px; height: auto; opacity: 0.9;" />
                       </td>
                     </tr>
                     <tr>
