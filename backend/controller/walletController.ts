@@ -276,6 +276,41 @@ const getWalletTransactions = async (
     });
 
     const wallet_id = walletData.dataValues.wallet_id;
+    const company_id = walletData.dataValues.company_id;
+    
+    // Get company's preferred currency
+    let preferredCurrency = 'USD';
+    let conversionRate = 1;
+    
+    if (company_id) {
+      const apiKeyResult = await sequelize.query(
+        `SELECT base_currency FROM tbl_api WHERE company_id = :companyId AND status = 'active' ORDER BY CASE WHEN environment = 'production' THEN 0 ELSE 1 END, "createdAt" DESC LIMIT 1`,
+        { replacements: { companyId: company_id }, type: QueryTypes.SELECT }
+      ) as Array<{ base_currency: string }>;
+      
+      if (apiKeyResult.length > 0 && apiKeyResult[0].base_currency) {
+        preferredCurrency = apiKeyResult[0].base_currency;
+      }
+    }
+    
+    // Get conversion rate if not USD
+    if (preferredCurrency !== 'USD') {
+      try {
+        const conversions = await currencyConvert({
+          sourceCurrency: 'USD',
+          currency: [preferredCurrency],
+          amount: 1,
+          fixedDecimal: true,
+        });
+        if (conversions && conversions[0]?.amount) {
+          conversionRate = Number(conversions[0].amount);
+        }
+      } catch (e) {
+        console.warn(`[getWalletTransactions] Currency conversion failed`);
+        preferredCurrency = 'USD';
+      }
+    }
+    
     const selfData = await selfTransactionModel.findAll({
       attributes: { exclude: ["wallet_id", "transaction_id"] },
       where: {
@@ -298,7 +333,12 @@ const getWalletTransactions = async (
 
     const customer_data = tempData.map((x: Record<string, unknown>) => {
       const { wallet_id, transaction_id, ...rest } = x;
-      return rest;
+      const baseAmount = Number(rest.base_amount || 0);
+      return {
+        ...rest,
+        display_amount: Math.round(baseAmount * conversionRate * 100) / 100,
+        display_currency: preferredCurrency,
+      };
     });
 
     const totalTransactions = (customer_data?.length || 0) + (selfData?.length || 0);
@@ -309,6 +349,7 @@ const getWalletTransactions = async (
     successResponseHelper(res, 200, message, {
       customers_transactions: customer_data,
       self_transactions: selfData,
+      currency: preferredCurrency,
     });
   } catch (e) {
     const message = getErrorMessage(e);
