@@ -1,5 +1,5 @@
 /**
- * DynoPay PDF Receipt Service
+ * Dynopay PDF Receipt Service
  * Generates branded PDF receipts for customer payments
  */
 
@@ -12,8 +12,8 @@ import path from "path";
 
 // Brand colors
 const BRAND_COLORS = {
-  primary: "#1034a6",      // DynoPay Blue
-  accent: "#f47323",       // DynoPay Orange
+  primary: "#1034a6",      // Dynopay Blue
+  accent: "#f47323",       // Dynopay Orange
   dark: "#1a1a2e",         // Footer dark
   text: "#4a4a4a",         // Body text
   lightBg: "#f8f9ff",      // Light background
@@ -60,9 +60,9 @@ export const generatePaymentReceipt = async (data: ReceiptData): Promise<Buffer>
         margin: 50,
         info: {
           Title: `Payment Receipt - ${data.transactionId}`,
-          Author: "DynoPay",
+          Author: "Dynopay",
           Subject: "Payment Receipt",
-          Creator: "DynoPay Payment Gateway",
+          Creator: "Dynopay Payment Gateway",
         },
       });
 
@@ -80,7 +80,7 @@ export const generatePaymentReceipt = async (data: ReceiptData): Promise<Buffer>
       // Header background
       doc.rect(0, 0, doc.page.width, 120).fill(BRAND_COLORS.primary);
 
-      // DynoPay Logo/Text
+      // Dynopay Logo/Text
       doc.fontSize(28)
         .fillColor("#ffffff")
         .text("Dyno", 50, 45, { continued: true })
@@ -254,7 +254,7 @@ export const generatePaymentReceipt = async (data: ReceiptData): Promise<Buffer>
 
       doc.fontSize(9)
         .fillColor("#9ca3af")
-        .text(`© ${new Date().getFullYear()} DynoPay. All rights reserved.`, 50, footerY + 70);
+        .text(`© ${new Date().getFullYear()} Dynopay. All rights reserved.`, 50, footerY + 70);
 
       doc.text("This receipt was generated automatically.", 50, footerY + 85);
 
@@ -277,7 +277,7 @@ export const generatePaymentReceipt = async (data: ReceiptData): Promise<Buffer>
  */
 export const getReceiptFilename = (transactionId: string): string => {
   const date = new Date().toISOString().split("T")[0];
-  return `DynoPay_Receipt_${transactionId.substring(0, 8)}_${date}.pdf`;
+  return `Dynopay_Receipt_${transactionId.substring(0, 8)}_${date}.pdf`;
 };
 
 export default {
