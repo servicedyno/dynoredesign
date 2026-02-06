@@ -147,7 +147,7 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
     // Validate webhook URL - localhost URLs won't work from cloud server
     const urlToCheck = webhookUrl || callbackUrl;
     if (urlToCheck && (urlToCheck.includes('localhost') || urlToCheck.includes('127.0.0.1'))) {
-      const errorMsg = `Webhook URL "${urlToCheck}" uses localhost which is unreachable from DynoPay servers. Please use a public URL.`;
+      const errorMsg = `Webhook URL "${urlToCheck}" uses localhost which is unreachable from Dynopay servers. Please use a public URL.`;
       console.error(`[callMerchantWebhook] ❌ ${errorMsg}`);
       return { success: false, error: errorMsg, url: urlToCheck };
     }
