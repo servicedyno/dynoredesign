@@ -119,7 +119,7 @@ const dynoPayEmailTemplate = (
               </tr>
               <!-- Content -->
               <tr>
-                <td style="padding: 40px 32px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                <td class="dm-content" style="padding: 40px 32px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                   <h1 style="font-size: 24px; font-weight: 600; color: #1034a6; margin: 0 0 24px 0; font-family: 'Inter', Arial, sans-serif;">${heading}</h1>
                   <p style="font-size: 16px; color: #1a1a2e; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Hey ${name || "there"},</p>
                   <div style="font-size: 15px; color: #4a4a4a; line-height: 1.6; font-family: 'Inter', Arial, sans-serif;">${message}</div>
