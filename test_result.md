@@ -7,6 +7,19 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "Fix checkMissedPayments cron bug - pool_address column does not exist"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/services/merchantPoolService.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed DB schema mismatch in checkMissedPayments (merchantPoolService.ts line 2089). The query used `pool_address: walletAddress` but Merchant_Pool_Transaction model has no `pool_address` column. Changed to `temp_address_id: addr.dataValues.temp_address_id` which is the correct FK linking to the address record. After restart, the 18:50 cron run completed successfully with 0 errors (previously errored every 5 min on address 0x0c7de1084393e8ce41c02c40cbf9f520612f596c). Test: wait for next cron cycle and verify no 'pool_address does not exist' error in backend logs."
+
+previous_test_tasks:
   - task: "Duplicate Payment Pending Email Fix + Social URLs + Template Audit"
     implemented: true
     working: true
