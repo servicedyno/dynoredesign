@@ -659,33 +659,52 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
       { type: QueryTypes.SELECT }
     );
 
-    // Convert amounts to preferred currency if not USD
-    let conversionRate = 1;
-    if (preferredCurrency !== 'USD' && resData.length > 0) {
+    // Build conversion rates: crypto/fiat base_currency → preferred currency
+    // Collect unique base currencies from transactions
+    const uniqueBaseCurrencies = [...new Set(
+      (resData as Array<Record<string, unknown>>)
+        .map(t => String(t.base_currency || ''))
+        .filter(c => c && c !== preferredCurrency)
+    )];
+
+    const conversionRates: Record<string, number> = {};
+    for (const srcCurrency of uniqueBaseCurrencies) {
       try {
         const conversions = await currencyConvert({
-          sourceCurrency: 'USD',
+          sourceCurrency: srcCurrency,
           currency: [preferredCurrency],
           amount: 1,
           fixedDecimal: true,
         });
         if (conversions && conversions[0]?.amount) {
-          conversionRate = Number(conversions[0].amount);
+          conversionRates[srcCurrency] = Number(conversions[0].amount);
         }
       } catch (convErr) {
-        console.warn(`[getTransactions] Currency conversion failed:`, convErr);
+        console.warn(`[getTransactions] Conversion ${srcCurrency}->${preferredCurrency} failed:`, convErr);
       }
     }
 
-    const finalRes = resData.map((x: Record<string, unknown>) => {
+    const finalRes = (resData as Array<Record<string, unknown>>).map((x) => {
       const { wallet_id, ...rest } = x;
-      // Add display_currency and display_amount for frontend
       const baseAmount = Number(rest.base_amount || 0);
+      const baseCurrency = String(rest.base_currency || '');
+
+      // Convert: use usd_value if available, otherwise convert base_amount via rate
+      let displayAmount: number;
+      if (baseCurrency === preferredCurrency) {
+        displayAmount = baseAmount;
+      } else if (Number(rest.usd_value) > 0 && preferredCurrency === 'USD') {
+        displayAmount = Number(rest.usd_value);
+      } else {
+        const rate = conversionRates[baseCurrency] || 0;
+        displayAmount = Math.round(baseAmount * rate * 100) / 100;
+      }
+
       return {
         ...rest,
-        display_amount: Math.round(baseAmount * conversionRate * 100) / 100,
+        display_amount: displayAmount,
         display_currency: preferredCurrency,
-        amount_display: formatAmountForDisplay(Math.round(baseAmount * conversionRate * 100) / 100, preferredCurrency),
+        amount_display: formatAmountForDisplay(displayAmount, preferredCurrency),
       };
     });
 
