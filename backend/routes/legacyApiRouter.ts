@@ -1,7 +1,7 @@
 /**
  * Legacy API Router
  * 
- * Provides backward compatibility with the OLD DynoPay API (user-api.dynopay.com)
+ * Provides backward compatibility with the OLD Dynopay API (user-api.dynopay.com)
  * 
  * These routes are mounted at /api/user/* on the main backend (port 3300)
  * and support both OLD and NEW authentication flows.
