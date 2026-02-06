@@ -138,9 +138,22 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
       webhookSecret = companyResult?.webhook_secret;
     }
     
+    // If still no webhook, check the active API key for this company (for API-initiated payments)
+    if (!webhookUrl && !callbackUrl && companyId) {
+      const [apiResult] = await sequelize.query(
+        `SELECT webhook_url, webhook_secret FROM tbl_api WHERE company_id = :companyId AND status = 'active' ORDER BY api_id DESC LIMIT 1`,
+        { replacements: { companyId }, type: QueryTypes.SELECT }
+      );
+      if (apiResult?.webhook_url) {
+        webhookUrl = apiResult.webhook_url;
+        if (!webhookSecret) webhookSecret = apiResult.webhook_secret;
+        console.log(`[callMerchantWebhook] Found webhook URL from API key for company ${companyId}: ${webhookUrl}`);
+      }
+    }
+    
     // If neither webhook_url nor callback_url configured, skip
     if (!webhookUrl && !callbackUrl) {
-      console.log("[callMerchantWebhook] No webhook URL or callback URL configured, skipping");
+      console.log("[callMerchantWebhook] No webhook URL or callback URL configured (checked: payment_link, company, API key), skipping");
       return { success: true }; // No webhook configured is not an error
     }
     
