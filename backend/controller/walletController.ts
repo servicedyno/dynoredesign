@@ -289,7 +289,7 @@ const getWalletTransactions = async (
     
     if (company_id) {
       const apiKeyResult = await sequelize.query(
-        `SELECT base_currency FROM tbl_api WHERE company_id = :companyId AND status = 'active' ORDER BY CASE WHEN environment = 'production' THEN 0 ELSE 1 END, "createdAt" DESC LIMIT 1`,
+        COMPANY_CURRENCY_QUERY,
         { replacements: { companyId: company_id }, type: QueryTypes.SELECT }
       ) as Array<{ base_currency: string }>;
       
