@@ -41,6 +41,7 @@ export const dynoPayEmailTemplate = (
   buttonText: string = "",
   buttonLink: string = ""
 ) => {
+  const LOGO_URL = getDynopayLogoUrl();
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
   <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -91,7 +92,7 @@ export const dynoPayEmailTemplate = (
               <tr>
                 <td class="header" style="background: linear-gradient(135deg, #1034a6 0%, #0d2570 100%); padding: 28px 32px; text-align: center;">
                   <a href="https://dynopay.com" style="text-decoration: none;">
-                    <img src="${DYNOPAY_WHITE_LOGO_URL}" alt="dynopay" width="134" height="45" style="display: inline-block; max-width: 134px; height: auto;" />
+                    <img src="${LOGO_URL}" alt="dynopay" width="134" height="45" style="display: inline-block; max-width: 134px; height: auto;" />
                   </a>
                 </td>
               </tr>
@@ -116,7 +117,7 @@ export const dynoPayEmailTemplate = (
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center" style="padding-bottom: 16px;">
-                        <img src="${DYNOPAY_WHITE_LOGO_URL}" alt="dynopay" width="110" height="37" style="display: inline-block; max-width: 110px; height: auto; opacity: 0.9;" />
+                        <img src="${LOGO_URL}" alt="dynopay" width="110" height="37" style="display: inline-block; max-width: 110px; height: auto; opacity: 0.9;" />
                       </td>
                     </tr>
                     <tr>
