@@ -7,9 +7,17 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
-  - task: "Fix checkMissedPayments cron bug - pool_address column does not exist"
+  - task: "Update API documentation - fix redirect_uri/webhook_url confusion, add missing endpoints"
     implemented: true
-    working: true
+    working: "NA"
+    file: "/app/backend/swagger/paths/directApi.ts, /app/backend/swagger/paths/dashboard.ts, /app/backend/swagger/paths/invoice.ts, /app/backend/swagger/index.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "1) Fixed CRITICAL redirect_uri/callback_url/webhook_url descriptions — redirect_uri now warns 'NOT a webhook', callback_url clarified as server-to-server, webhook_url marked as 'MOST MERCHANTS NEED' with full payload example. 2) Added dashboard docs (4 endpoints). 3) Added invoice docs (4 endpoints). 4) Total documented endpoints: 178. Verify at /api/docs."
     file: "/app/backend/services/merchantPoolService.ts"
     stuck_count: 0
     priority: "high"
