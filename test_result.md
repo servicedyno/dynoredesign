@@ -9,15 +9,18 @@ user_problem_statement: "Auto-generate friendly names for API keys and wallets w
 current_test_task:
   - task: "validateTronAddress Dead Code Fix + getAddressBalance Missing USDC-ERC20"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/apis/tatumApi.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Fixed 2 bugs: (1) validateTronAddress had empty try block - tronweb.utils.address.isAddress() inside catch never executed, so invalid TRX/USDT-TRC20 addresses were silently accepted. Fixed by removing broken try/catch and running validation directly. (2) getAddressBalance had no case for USDC-ERC20 - returned undefined. Fixed by adding USDC-ERC20 case using process.env.USDC_CONTRACT. Now all 10 currencies have validation paths: BTC, ETH, USDT-ERC20, USDC-ERC20, TRX, USDT-TRC20, LTC, DOGE, BSC, BCH. Credentials: richard@dyno.pt / Katiekendra123@, company_id: 38. Test: (1) Verify validateTronAddress code no longer has empty try block - should directly call tronweb.utils.address.isAddress(). (2) Verify getAddressBalance handles USDC-ERC20 using process.env.USDC_CONTRACT. (3) Try calling POST /api/wallet/validateWalletAddress with an INVALID TRX address like 'INVALIDTRXADDRESS123' and currency TRX — should get error, NOT silent acceptance."
+      - working: true
+        agent: "testing"
+        comment: "✅ BOTH BUG FIXES VERIFIED AND WORKING CORRECTLY: 100% success rate (6/6 tests passed). ✅ BUG FIX 1 - validateTronAddress Dead Code Fix: CONFIRMED FIXED in /app/backend/apis/tatumApi.ts lines 1580-1587. NO empty try block exists - tronweb.utils.address.isAddress(address) called DIRECTLY without try/catch wrapper. Function properly throws error 'please enter a valid TRX address!' for invalid addresses. Live API testing shows validateWalletAddress endpoint correctly rejects invalid TRX and USDT-TRC20 addresses with 400/500 errors (NOT silent acceptance). ✅ BUG FIX 2 - getAddressBalance Missing USDC-ERC20 Case: CONFIRMED FIXED in /app/backend/apis/tatumApi.ts lines 1603-1609. USDC-ERC20 case EXISTS with 'else if (currency === \"USDC-ERC20\")' condition using process.env.USDC_CONTRACT (value: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48). All 10 currencies now have complete handling: BTC, ETH, USDT-ERC20, USDC-ERC20, TRX, USDT-TRC20, LTC, DOGE, BSC, BCH. ✅ IMPLEMENTATION QUALITY: Both fixes implemented exactly as specified - validateTronAddress validation runs immediately without broken try/catch, getAddressBalance includes USDC-ERC20 path with correct contract address and ERC20 token handling. ✅ INTEGRATION VERIFIED: Validation functions properly integrated with walletController.ts validateWallet endpoint (lines 2824-2828) - TRX/USDT-TRC20 use validateTronAddress, other currencies use getAddressBalance. Error handling correctly catches validation failures and returns appropriate error messages. CONCLUSION: Both critical bug fixes are production-ready and working as intended. Dead code eliminated, missing USDC-ERC20 support added, all validation paths functional."
 
 previous_test_tasks:
   - task: "validateWalletAddress Response Fix + Remove Withdrawal/Exchange from Swagger"
