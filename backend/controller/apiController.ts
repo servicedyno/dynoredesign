@@ -1253,6 +1253,112 @@ const updateRateLimit = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Get Available Currencies for API Key Creation
+ * GET /api/userApi/availableCurrencies/:company_id
+ * 
+ * Returns available currencies based on existing keys:
+ * - If production key exists: currency is locked to production key's currency
+ * - If only development key exists: all currencies available (prod will set the master)
+ * - If no keys exist: all currencies available
+ */
+const getAvailableCurrencies = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { company_id } = req.params;
+    const { environment = 'production' } = req.query;
+
+    // Supported currencies
+    const SUPPORTED_BASE_CURRENCIES = [
+      { code: 'USD', name: 'US Dollar', symbol: '$' },
+      { code: 'EUR', name: 'Euro', symbol: '€' },
+      { code: 'GBP', name: 'British Pound', symbol: '£' },
+      { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
+      { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
+      { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+      { code: 'NGN', name: 'Nigerian Naira', symbol: '₦' },
+      { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
+      { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨' },
+      { code: 'BRL', name: 'Brazilian Real', symbol: 'R$' },
+      { code: 'ARS', name: 'Argentine Peso', symbol: 'ARS$' },
+      { code: 'PHP', name: 'Philippine Peso', symbol: '₱' },
+      { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
+      { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
+    ];
+
+    // Check existing keys for this company
+    const existingKeys = await apiModel.findAll({
+      where: {
+        company_id,
+        user_id: userData.user_id,
+        status: 'active',
+      },
+    });
+
+    const existingProdKey = existingKeys.find(k => k.dataValues.environment === 'production');
+    const existingDevKey = existingKeys.find(k => k.dataValues.environment === 'development');
+
+    let response: {
+      currencies: typeof SUPPORTED_BASE_CURRENCIES;
+      locked: boolean;
+      locked_currency: string | null;
+      locked_reason: string | null;
+      existing_keys: {
+        production: { exists: boolean; currency: string | null };
+        development: { exists: boolean; currency: string | null };
+      };
+      hint: string;
+    };
+
+    if (environment === 'development' && existingProdKey) {
+      // Creating dev key when prod exists - locked to prod currency
+      response = {
+        currencies: SUPPORTED_BASE_CURRENCIES.filter(c => c.code === existingProdKey.dataValues.base_currency),
+        locked: true,
+        locked_currency: existingProdKey.dataValues.base_currency,
+        locked_reason: 'Development key must match production key currency',
+        existing_keys: {
+          production: { exists: true, currency: existingProdKey.dataValues.base_currency },
+          development: { exists: !!existingDevKey, currency: existingDevKey?.dataValues.base_currency || null },
+        },
+        hint: `Currency is locked to ${existingProdKey.dataValues.base_currency} to match your production key.`,
+      };
+    } else if (environment === 'production' && existingDevKey && !existingProdKey) {
+      // Creating prod key when only dev exists - all currencies available, will sync dev
+      response = {
+        currencies: SUPPORTED_BASE_CURRENCIES,
+        locked: false,
+        locked_currency: null,
+        locked_reason: null,
+        existing_keys: {
+          production: { exists: false, currency: null },
+          development: { exists: true, currency: existingDevKey.dataValues.base_currency },
+        },
+        hint: `Your development key (${existingDevKey.dataValues.base_currency}) will be automatically updated to match the currency you choose.`,
+      };
+    } else {
+      // No restrictions
+      response = {
+        currencies: SUPPORTED_BASE_CURRENCIES,
+        locked: false,
+        locked_currency: null,
+        locked_reason: null,
+        existing_keys: {
+          production: { exists: !!existingProdKey, currency: existingProdKey?.dataValues.base_currency || null },
+          development: { exists: !!existingDevKey, currency: existingDevKey?.dataValues.base_currency || null },
+        },
+        hint: 'Select your preferred base currency for transactions and reporting.',
+      };
+    }
+
+    successResponseHelper(res, 200, "Available currencies retrieved", response);
+  } catch (e) {
+    const message = getErrorMessage(e);
+    apiLogger.error(message, { user_id: userData.user_id }, new Error(e));
+    errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   addApi,
   getApi,
@@ -1272,4 +1378,5 @@ export default {
   getApiUsageStats,
   getApiLogs,
   updateRateLimit,
+  getAvailableCurrencies,
 };
