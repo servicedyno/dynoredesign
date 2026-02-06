@@ -915,16 +915,18 @@ export const sendWeeklySummaryEmail = async (
   totalVolume: string,
   completedCount: number,
   pendingCount: number,
-  topCurrency: string
+  topCurrency: string,
+  baseCurrency: string = 'USD' // Company's base currency
 ) => {
   try {
+    const currencySymbol = getCurrencySymbol(baseCurrency);
     const subject = "Your weekly Dynopay summary";
     const content = `<p class="message">Hey ${name},</p>
     <p class="message">Here's your weekly activity summary for ${periodStart} to ${periodEnd}:</p>
     <div class="highlight-box">
       <p><strong>📊 This Week's Stats:</strong></p>
       <p>Total Transactions: <strong>${transactionCount}</strong><br />
-      Total Volume: <strong>$${totalVolume}</strong><br />
+      Total Volume: <strong>${currencySymbol}${totalVolume} ${baseCurrency}</strong><br />
       Completed: ${completedCount}<br />
       Pending: ${pendingCount}<br />
       Top Currency: ${topCurrency}</p>
