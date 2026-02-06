@@ -134,7 +134,7 @@ const dynoPayEmailTemplate = (
               </tr>
               <!-- Footer -->
               <tr>
-                <td style="background: #1a1a2e; padding: 32px; text-align: center;">
+                <td class="dm-footer" style="background: #1a1a2e; padding: 32px; text-align: center;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center" style="padding-bottom: 16px;">
