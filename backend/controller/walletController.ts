@@ -195,18 +195,20 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     for (const wallet of walletData) {
       const currentWallet = wallet.dataValues;
       const transferRate = rateMap.get(currentWallet.wallet_type) || 1;
-      const finalAmount = Number(currentWallet.amount / transferRate);
-      const amount_in_usd = Number(finalAmount).toFixed(2);
+      const amountInUSD = Number(currentWallet.amount / transferRate);
+      const amountInBaseCurrency = amountInUSD * fiatConversionRate;
       walletsWithCompanyName.push({
         ...currentWallet,
         company_name: companyMap.get(currentWallet.company_id) || 'Unknown',
-        amount_in_usd,
+        amount_in_usd: Number(amountInUSD).toFixed(2),
+        amount_in_base_currency: Number(amountInBaseCurrency).toFixed(2),
+        base_currency: preferredCurrency,
         transfer_rate: transferRate,
       });
     }
 
     // Group wallets by company
-    const groupedByCompany: { [key: string]: { company_id: number; company_name: string; wallets: Array<Record<string, unknown>> } } = {};
+    const groupedByCompany: { [key: string]: { company_id: number; company_name: string; base_currency: string; wallets: Array<Record<string, unknown>> } } = {};
     
     for (const wallet of walletsWithCompanyName) {
       const companyKey = `company_${wallet.company_id}`;
@@ -214,11 +216,12 @@ const getWallet = async (req: express.Request, res: express.Response) => {
         groupedByCompany[companyKey] = {
           company_id: wallet.company_id,
           company_name: wallet.company_name,
+          base_currency: wallet.base_currency,
           wallets: [],
         };
       }
       // Remove company_name from individual wallet since it's at group level
-      const { company_name, ...walletWithoutCompanyName } = wallet;
+      const { company_name, base_currency, ...walletWithoutCompanyName } = wallet;
       groupedByCompany[companyKey].wallets.push(walletWithoutCompanyName);
     }
 
