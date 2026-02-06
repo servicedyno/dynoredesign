@@ -58,4 +58,7 @@ export {
   decrypt,
   currencyConvert,
   arraySorting,
+  generateFriendlyName,
+  generateApiKeyName,
+  generateWalletName,
 };
