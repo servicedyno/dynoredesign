@@ -2086,7 +2086,7 @@ export const checkMissedPayments = async (): Promise<{
         // Step 4: Check merchant pool transaction records
         const poolTx = await merchantPoolTransactionModel.findOne({
           where: {
-            pool_address: walletAddress,
+            temp_address_id: addr.dataValues.temp_address_id,
             status: { [Op.in]: ['completed', 'swept'] }
           },
           order: [['created_at', 'DESC']]
