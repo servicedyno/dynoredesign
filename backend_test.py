@@ -144,29 +144,19 @@ class BackendTester:
                 self.test_results["model_schema"] = False
                 return False
             
-            # Extract the model definition
-            lines = content.split('\n')
-            in_model = False
-            has_temp_address_id = False
-            has_pool_address = False
+            # Look for temp_address_id in the model definition
+            has_temp_address_id = "temp_address_id:" in content
+            has_pool_address = "pool_address:" in content
             
-            for line in lines:
-                if "Merchant_Pool_Transaction" in line and "sequelize.define" in line:
-                    in_model = True
-                    continue
-                
-                if in_model:
-                    if "temp_address_id:" in line:
-                        has_temp_address_id = True
-                        self.log(f"✅ Found temp_address_id field: {line.strip()}")
-                    
-                    if "pool_address:" in line:
-                        has_pool_address = True
-                        self.log(f"❌ Found pool_address field: {line.strip()}")
-                    
-                    # End of model definition
-                    if line.strip().startswith("}") and "tableName" in lines[lines.index(line) + 1] if lines.index(line) + 1 < len(lines) else False:
-                        break
+            if has_temp_address_id:
+                self.log("✅ Found temp_address_id field in model")
+            else:
+                self.log("❌ temp_address_id field not found in model")
+            
+            if has_pool_address:
+                self.log("❌ Found pool_address field in model (should not exist)")
+            else:
+                self.log("✅ No pool_address field found in model")
             
             if has_temp_address_id and not has_pool_address:
                 self.log("✅ Model schema verified: Has temp_address_id, NO pool_address column")
@@ -174,10 +164,6 @@ class BackendTester:
                 return True
             else:
                 self.log("❌ Model schema verification failed")
-                if not has_temp_address_id:
-                    self.log("❌ temp_address_id field not found")
-                if has_pool_address:
-                    self.log("❌ pool_address field found (should not exist)")
                 self.test_results["model_schema"] = False
                 return False
                 
