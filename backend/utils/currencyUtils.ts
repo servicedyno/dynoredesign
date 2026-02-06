@@ -133,4 +133,19 @@ export default {
   formatAmountForDisplay,
   getCurrencyInfo,
   CURRENCY_SYMBOLS,
+  SUPPORTED_BASE_CURRENCIES,
 };
+
+/**
+ * SQL query to get company's preferred currency
+ * Priority: Active production key > Active development key > Last used key (any status) > USD default
+ */
+export const COMPANY_CURRENCY_QUERY = `
+  SELECT base_currency FROM tbl_api 
+  WHERE company_id = :companyId 
+  ORDER BY 
+    CASE WHEN status = 'active' THEN 0 ELSE 1 END,
+    CASE WHEN environment = 'production' THEN 0 ELSE 1 END, 
+    "createdAt" DESC 
+  LIMIT 1
+`;
