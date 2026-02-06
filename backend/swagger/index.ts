@@ -1054,6 +1054,7 @@ function verifyWebhookSignature(payload, signature, secret) {
       // === TRANSACTIONS & REPORTS ===
       { name: "Transactions", description: "Transaction history and export" },
       { name: "Dashboard", description: "Analytics and statistics" },
+      { name: "Invoices", description: "Transaction invoices and PDF generation" },
       { name: "Subscriptions", description: "Recurring payment management" },
       
       // === INTEGRATIONS ===
