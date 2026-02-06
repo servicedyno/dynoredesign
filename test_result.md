@@ -7,6 +7,19 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "Email Templates Overhaul - Branding, HTML Templates, Logo Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/helper/sendEmail.ts, /app/backend/services/emailService.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Major email overhaul: (1) Fixed broken logo URL in emailService.ts (was 404 to deleted DynocheckoutDarkMode repo, now points to dynopay-logo.png from DynoFrontend/dharmik-new-design). (2) Rewrote dynoPayEmailTemplate in helper/sendEmail.ts - now table-based with 100% inline styles, proper logo image, social icons (flaticon CDN), dark footer, Coinbase-level quality. (3) Converted all 9 plain-text email functions to use branded HTML template: sendPaymentReceivedEmail, sendTransactionConfirmedEmail, sendWeeklySummaryEmail, sendSecurityAlertEmail, sendPaymentPendingEmail, sendPaymentConfirmingEmail, sendPaymentPartialEmail, sendPaymentPartialExpiredEmail, sendAdminFeeReceivedEmail. Each now has styled detail tables, status badges, colored borders, proper typography. Test by code analysis: (A) Check helper/sendEmail.ts - no raw text body sends, all use dynoPayEmailTemplate wrapper. (B) Check emailService.ts logo URL points to working image. (C) Verify HTML structure uses <table> layout with inline style= attributes (not CSS classes)."
+
+previous_test_tasks:
   - task: "validateTronAddress Dead Code Fix + getAddressBalance Missing USDC-ERC20"
     implemented: true
     working: true
