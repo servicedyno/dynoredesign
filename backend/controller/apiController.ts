@@ -190,7 +190,7 @@ const addApi = async (req: express.Request, res: express.Response) => {
     await customerWalletModel.create({
       id: crypto.randomUUID(),
       customer_id: createdUser.dataValues.customer_id,
-      wallet_type: base_currency,
+      wallet_type: finalCurrency,
     });
 
     const token = await getAccessToken(createdUser.dataValues.customer_id);
@@ -217,7 +217,7 @@ const addApi = async (req: express.Request, res: express.Response) => {
 
     const resData = await apiModel.create({
       company_id,
-      base_currency: base_currency,
+      base_currency: finalCurrency,
       apiKey,
       user_id: userData.user_id,
       adminToken: token.token, // Customer token (legacy)
