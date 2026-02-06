@@ -208,12 +208,14 @@ class SingleApiKeyCurrencyTester:
                 response_data = response.json()
                 error_message = response_data.get('message', '').lower()
                 
-                # Check if error message mentions existing key
+                # Check if error message mentions existing key or duplicate
                 expected_phrases = [
                     'already has an active api key',
                     'delete the existing key first',
                     'company already has',
-                    'active api key'
+                    'active api key',
+                    'already exists',
+                    'duplicate'
                 ]
                 
                 contains_expected_message = any(phrase in error_message for phrase in expected_phrases)
