@@ -84,7 +84,7 @@ const dynoPayEmailTemplate = (
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center" style="padding-bottom: 16px;">
-                        <img src="${DYNOPAY_LOGO_URL}" alt="DynoPay" width="120" style="height: 30px; opacity: 0.9;" />
+                        <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.5px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;"><span style="color: #ffffff;">dyno</span><span style="color: #f47323;">pay</span></span>
                       </td>
                     </tr>
                     <tr>
