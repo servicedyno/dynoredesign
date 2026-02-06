@@ -19,7 +19,7 @@ export const generateRefereeCode = (): string => {
 };
 
 /**
- * Check if customer email already has a DynoPay account
+ * Check if customer email already has a Dynopay account
  */
 export const checkEmailHasAccount = async (email: string): Promise<boolean> => {
   const user = await User.findOne({
