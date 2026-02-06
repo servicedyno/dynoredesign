@@ -106,7 +106,7 @@ export const dynoPayEmailTemplate = (
         }
       </style>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #f5f7fa;">
+    <body class="body" style="margin: 0; padding: 0; background-color: #f5f7fa;">
       <table role="presentation" class="wrapper" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa;">
         <tr>
           <td align="center" style="padding: 20px 10px;">
