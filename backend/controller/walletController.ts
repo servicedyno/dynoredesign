@@ -2878,7 +2878,7 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       {
         wallet_address,
         company_id,
-        ...(wallet_name && { wallet_name })
+        wallet_name: wallet_name || generateWalletName(currency)
       },
       {
         where: {
