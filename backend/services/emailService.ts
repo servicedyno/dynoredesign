@@ -10,6 +10,22 @@ import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService"
 // Dynopay Logo URL (from official checkout repo)
 const DYNOPAY_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynocheckoutDarkMode/main/public/Logo.png";
 
+/**
+ * Get currency symbol for a given currency code
+ * @param currency - ISO 4217 currency code (e.g., 'USD', 'EUR', 'GBP')
+ * @returns Currency symbol (e.g., '$', '€', '£')
+ */
+const getCurrencySymbol = (currency: string): string => {
+  const symbols: Record<string, string> = {
+    USD: '$', EUR: '€', GBP: '£', AUD: 'A$', CAD: 'C$', CHF: 'CHF ',
+    CNY: '¥', JPY: '¥', HKD: 'HK$', NZD: 'NZ$', SGD: 'S$',
+    BRL: 'R$', ARS: 'ARS ', COP: 'COP ', CLP: 'CLP ', PEN: 'S/', MXN: 'MX$', VES: 'Bs.', UYU: '$U',
+    NGN: '₦', ZAR: 'R', KES: 'KSh', GHS: 'GH₵', TZS: 'TSh', XAF: 'FCFA ', XOF: 'CFA ', EGP: 'E£', MAD: 'MAD ',
+    UGX: 'USh', RWF: 'FRw', ETB: 'Br', ZMW: 'ZK', BWP: 'P', MUR: '₨', AOA: 'Kz', MZN: 'MT', CDF: 'FC'
+  };
+  return symbols[currency?.toUpperCase()] || `${currency} `;
+};
+
 // Base email template wrapper with proper logo
 const dynoPayEmailTemplate = (
   heading: string,
