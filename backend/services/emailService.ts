@@ -50,12 +50,15 @@ export const dynoPayEmailTemplate = (
       <meta name="x-apple-disable-message-reformatting" />
       <meta http-equiv="X-UA-Compatible" content="IE=edge" />
       <title>Dynopay</title>
+      <meta name="color-scheme" content="light dark">
+      <meta name="supported-color-schemes" content="light dark">
       <!--[if mso]>
       <style type="text/css">
         body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
       </style>
       <![endif]-->
       <style type="text/css">
+        :root { color-scheme: light dark; supported-color-schemes: light dark; }
         body { margin: 0; padding: 0; background-color: #f5f7fa; -webkit-font-smoothing: antialiased; }
         table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
         img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
@@ -80,6 +83,26 @@ export const dynoPayEmailTemplate = (
           .content { padding: 24px 20px !important; }
           .header { padding: 20px !important; }
           .footer { padding: 24px 20px !important; }
+        }
+        @media (prefers-color-scheme: dark) {
+          body, .wrapper { background-color: #0f172a !important; }
+          .main { background-color: #1e293b !important; box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important; }
+          .content { background-color: #1e293b !important; }
+          .heading { color: #93c5fd !important; }
+          .message { color: #e2e8f0 !important; }
+          .message strong { color: #f1f5f9 !important; }
+          .highlight-box { background: #162032 !important; border-left-color: #3b82f6 !important; }
+          .highlight-box p { color: #e2e8f0 !important; }
+          .highlight-box strong { color: #f1f5f9 !important; }
+          .otp-code { color: #93c5fd !important; }
+          .button { color: #ffffff !important; }
+          .dm-text { color: #e2e8f0 !important; }
+          .dm-text strong { color: #f1f5f9 !important; }
+          .dm-border { border-top-color: #334155 !important; }
+          .footer { background: #0b1120 !important; }
+          .footer td { color: #94a3b8 !important; }
+          .footer a { color: #94a3b8 !important; }
+          u + .body .wrapper { background-color: #0f172a !important; }
         }
       </style>
     </head>
