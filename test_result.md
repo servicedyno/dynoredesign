@@ -9,15 +9,18 @@ user_problem_statement: "Auto-generate friendly names for API keys and wallets w
 current_test_task:
   - task: "Single API Key Per Company + Currency Display Fix"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/controller/apiController.ts, /app/backend/controller/dashboardController.ts, /app/backend/controller/companyController.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented: (1) Only 1 active API key allowed per company - attempting to create second returns error, (2) Dashboard shows amounts in company's API key currency, (3) getTransactions endpoint returns display_amount and display_currency converted to company's preferred currency. Token is USER-level (same for all companies), not company-level."
+      - working: false
+        agent: "testing"
+        comment: "✅ PARTIAL SUCCESS (83.3% pass rate): Single API key restriction and dashboard currency display are working correctly. ✅ AUTHENTICATION: Successfully authenticated richard@dyno.pt (user_id: 28) - token is user-level as expected. ✅ SINGLE API KEY RESTRICTION: Correctly blocked duplicate API key creation for company_id=38 with error 'This company already has an active API key. Delete the existing key first to create a new one with different settings.' ✅ DASHBOARD CURRENCY DISPLAY: Dashboard correctly shows EUR currency (matches company's most recent active API key ID 36 with base_currency='EUR'). Backend logs confirm '[Dashboard] Using currency EUR for company 38'. Cache restart was required to clear stale USD cache. ❌ TRANSACTIONS CURRENCY DISPLAY: getTransactions endpoint missing display_amount and display_currency fields. Response returns array of transactions with base_currency, crypto_currency fields but no converted display fields in company's preferred currency. NEEDS FIX: Implement display_amount and display_currency conversion in getTransactions endpoint to match company's API key base_currency."
 
 previous_test_tasks:
   - task: "Dashboard Currency Display Fix"
