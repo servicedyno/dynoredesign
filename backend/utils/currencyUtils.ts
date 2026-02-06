@@ -4,17 +4,45 @@
  * Format: "$ USD", "€ EUR", "£ GBP", "₦ NGN"
  */
 
+// Supported base currencies for API keys
+export const SUPPORTED_BASE_CURRENCIES = [
+  'USD',  // US Dollar
+  'EUR',  // Euro
+  'GBP',  // British Pound
+  'AUD',  // Australian Dollar
+  'CAD',  // Canadian Dollar
+  'INR',  // Indian Rupee
+  'NGN',  // Nigerian Naira
+  'VND',  // Vietnamese Dong
+  'PKR',  // Pakistani Rupee
+  'BRL',  // Brazilian Real
+  'ARS',  // Argentine Peso
+  'PHP',  // Philippine Peso
+  'SGD',  // Singapore Dollar
+  'AED',  // UAE Dirham
+];
+
 // Currency symbols mapping
 const CURRENCY_SYMBOLS: Record<string, string> = {
-  // Major International
-  USD: '$', EUR: '€', GBP: '£', AUD: 'A$', CAD: 'C$', CHF: 'CHF',
-  CNY: '¥', JPY: '¥', HKD: 'HK$', NZD: 'NZ$', SGD: 'S$',
-  // Latin America
-  BRL: 'R$', ARS: 'ARS', COP: 'COP', CLP: 'CLP', PEN: 'S/', MXN: 'MX$', VES: 'Bs.', UYU: '$U',
-  // African
-  NGN: '₦', ZAR: 'R', KES: 'KSh', GHS: 'GH₵', TZS: 'TSh', XAF: 'FCFA', XOF: 'CFA', EGP: 'E£', MAD: 'MAD',
-  UGX: 'USh', RWF: 'FRw', ETB: 'Br', ZMW: 'ZK', BWP: 'P', MUR: '₨', AOA: 'Kz', MZN: 'MT', CDF: 'FC',
-  // Crypto (for reference, though these shouldn't be base currencies)
+  // Supported Base Currencies
+  USD: '$',      // US Dollar
+  EUR: '€',      // Euro
+  GBP: '£',      // British Pound
+  AUD: 'A$',     // Australian Dollar
+  CAD: 'C$',     // Canadian Dollar
+  INR: '₹',      // Indian Rupee
+  NGN: '₦',      // Nigerian Naira
+  VND: '₫',      // Vietnamese Dong
+  PKR: '₨',      // Pakistani Rupee
+  BRL: 'R$',     // Brazilian Real
+  ARS: 'ARS$',   // Argentine Peso
+  PHP: '₱',      // Philippine Peso
+  SGD: 'S$',     // Singapore Dollar
+  AED: 'د.إ',    // UAE Dirham
+  // Legacy/Other (kept for backward compatibility)
+  CHF: 'CHF', CNY: '¥', JPY: '¥', HKD: 'HK$', NZD: 'NZ$',
+  ZAR: 'R', KES: 'KSh', GHS: 'GH₵', MXN: 'MX$',
+  // Crypto (for reference)
   BTC: '₿', ETH: 'Ξ', USDT: '₮', USDC: 'USDC',
 };
 
