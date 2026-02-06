@@ -9,7 +9,7 @@ import json
 from typing import Dict, Any
 
 # Configuration
-BASE_URL = "https://dependency-installer-4.preview.emergentagent.com/api"
+BASE_URL = "https://api-key-enforce.preview.emergentagent.com/api"
 TEST_EMAIL = "nomadly@moxx.co"
 TEST_PASSWORD = "test123"
 

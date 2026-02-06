@@ -8,7 +8,7 @@ import json
 import os
 
 # Get backend URL
-BACKEND_URL = "https://dependency-installer-4.preview.emergentagent.com"
+BACKEND_URL = "https://api-key-enforce.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 def authenticate():

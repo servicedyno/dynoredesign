@@ -47,7 +47,7 @@ All identified CORS and API routing issues have been successfully resolved.
 
 **Verification:**
 - ✅ Local: `http://localhost:8001/api/` - Working
-- ✅ External: `https://dependency-installer-4.preview.emergentagent.com/api/` - Working
+- ✅ External: `https://api-key-enforce.preview.emergentagent.com/api/` - Working
 - ✅ Returns 200 status with comprehensive API documentation
 
 ---
@@ -102,8 +102,8 @@ if (isIgnorable) {
 
 **Changes:**
 ```diff
-- CHECKOUT_URL=https://dependency-installer-4.preview.emergentagent.com/
-+ CHECKOUT_URL=https://dependency-installer-4.preview.emergentagent.com/
+- CHECKOUT_URL=https://api-key-enforce.preview.emergentagent.com/
++ CHECKOUT_URL=https://api-key-enforce.preview.emergentagent.com/
 ```
 
 **Result:**
@@ -149,13 +149,13 @@ if (isIgnorable) {
 ### Current URL Configuration
 ```
 Backend (.env):
-├── SERVER_URL: https://dependency-installer-4.preview.emergentagent.com
-├── CHECKOUT_URL: https://dependency-installer-4.preview.emergentagent.com/
-├── FRONTEND_URL: https://dependency-installer-4.preview.emergentagent.com
+├── SERVER_URL: https://api-key-enforce.preview.emergentagent.com
+├── CHECKOUT_URL: https://api-key-enforce.preview.emergentagent.com/
+├── FRONTEND_URL: https://api-key-enforce.preview.emergentagent.com
 └── INTERNAL_BACKEND_URL: http://localhost:3300
 
 Frontend (.env):
-└── REACT_APP_BACKEND_URL: https://dependency-installer-4.preview.emergentagent.com
+└── REACT_APP_BACKEND_URL: https://api-key-enforce.preview.emergentagent.com
 ```
 
 ### CORS Configuration

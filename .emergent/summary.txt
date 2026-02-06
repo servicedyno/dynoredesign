@@ -1,161 +1,274 @@
 <analysis>**original_problem_statement:**
-The initial request was to set up and install dependencies for the project. Subsequently, the user made a series of requests to analyze and improve the DynoPay payment processing system.
-
-**PRODUCT REQUIREMENTS:**
-1.  Analyze why a specific transaction () showed an amount of .17 instead of the expected 0.
-2.  Enhance webhook responses (, , ) to be more detailed.
-3.  Update the API documentation (Swagger) to reflect the new, detailed webhook payloads in a clear, dedicated section.
-4.  Create a new endpoint () for the merchant frontend to easily determine a user's onboarding status (wallet setup, KYC, API keys).
-5.  Implement a strict KYC enforcement policy with a 0,000 threshold and a 90-day grace period, including email notifications and payment blocking.
-6.  Display in-app warnings for merchants in their KYC grace period.
-7.  Ensure the KYC warning's  correctly points to the merchant's unique Veriff verification session URL.
-8.  Perform code cleaning to improve codebase quality.
-9.  Analyze and fix inconsistencies in currency selection for payment links and direct API calls.
-10. Fix critical architectural issues with non-USD currency handling, where fees were being calculated incorrectly.
-11. Update a public fee calculator endpoint to support all fiat currencies and ensure it's documented in Swagger.
-12. Resolve bugs in wallet-related APIs, including a cache invalidation issue, and incorrect counts in the onboarding and dashboard endpoints.
+The initial request was to set up and install dependencies for the project. Following that, the user made a series of feature requests and bug reports:
+1.  **Auto-generate Names:** API name and wallet name should have a short, random, friendly name auto-generated if not provided by the user, instead of being set to .
+2.  **Shorter Names:** The auto-generated names should be made shorter.
+3.  **Currency Consistency:** The user initiated a deep dive into how  works, leading to a major effort to make the entire application (dashboard, transactions, wallets, emails, PDFs, API responses) consistent with the company's selected .
+4.  **API Key Rules:**
+    *   A company should only have one API key per environment (one for production, one for development).
+    *   The  for both keys must be the same.
+    *   The **production key** acts as the master source of truth for the currency. If a production key is created or updated with a new currency, the development key should be automatically synced to match it.
+5.  **FIAT Currency Restriction:**  for API keys must be a FIAT currency, restricted to a specific list of 14 supported currencies.
+6.  **Cache Consolidation:** The dual in-memory and Redis cache system should be simplified to a single Redis-based cache.
+7.  **API Response Formatting:** All endpoints returning monetary values should include a consistent currency info object ().
+8.  **Token Expiry:** API responses for authenticated routes should include a header indicating when the token will expire.
+9.  **Payment Link Creation:** The user asked several clarifying questions about payment link creation, Admin Tokens, and what should happen if a user has no active API key. The final pending request is to ensure users without an active API key cannot create payment links.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is a fully functional DynoPay payment processing system with a TypeScript/Node.js backend, React frontend, and PostgreSQL database. The system now has robust KYC enforcement, enhanced webhooks, a detailed onboarding status endpoint, and comprehensive API documentation.
+The application is a full-stack monolith with a React frontend and a FastAPI (TypeScript) backend using a PostgreSQL database and Redis for caching. All dependencies are installed and services are running.
 
-Recent fixes have addressed several critical bugs:
--   **Code Cleaning:** All TypeScript compilation errors have been resolved, and unused variables/imports have been cleaned up.
--   **Currency Handling:** A major architectural flaw was fixed, ensuring non-USD payments are correctly converted to USD before fee calculations are applied.
--   **API Documentation:** The Swagger documentation has been reorganized with a cleaner tag structure, and new fields () have been documented.
--   **Cache Invalidation:** A critical bug was fixed where the wallet cache was not being invalidated after add/update/delete operations, leading to stale data.
--   **Onboarding & Dashboard Bugs:** Several bugs were fixed in the  and  endpoints, which were showing incorrect wallet counts due to improper filtering (e.g., including FIAT wallets, not checking company ownership).
+The application now enforces a sophisticated set of rules around API keys and currency management. A company's base currency, determined by its production API key, dictates the currency for all financial data displayed across the system. This consistency has been implemented end-to-end, from backend controllers to email templates and PDF invoices. The API has been enhanced to provide rich, consistently formatted currency information in its responses. The caching layer has been simplified to use only Redis.
 
 **Last working item**:
--   **Last item agent was working:** Investigating why the  API endpoint returns only one wallet for a specific merchant (), even though the merchant claims to have added three wallet addresses. The agent was in the process of debugging this discrepancy.
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** backend testing agent
--   **User Testing Done:** N
+*   **Last item agent was working:** The agent was addressing the user's final request: to confirm that a user cannot create a payment link if they have deleted their API key and to implement this restriction if it doesn't already exist.
+*   **Status:** IN PROGRESS
+*   **Agent Testing Done:** N
+*   **Which testing method agent to use?** backend testing agent
+*   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1:  API returns incomplete wallet list (P0)**
-    -   **Description:** The  endpoint, when called with , returns only one wallet. The user reported that three wallets should be present. The agent's investigation points to a potential architectural issue where wallets are stored in two different database tables.
-    -   **Attempted fixes:** The agent confirmed that the  function in  works correctly for other companies and does not have a  filter that would incorrectly exclude wallets. The agent hypothesized that the two missing wallets might be stored in the separate  table, which is not being queried by the  endpoint.
-    -   **Next debug checklist:**
-        1.  Verify the hypothesis: Check if the missing wallet addresses for the user/company exist in the  table (queried via the  endpoint or by inspecting the database).
-        2.  If confirmed, modify the  function in .
-        3.  The function should query both  (for primary wallets) and  (for additional addresses) associated with the user/company.
-        4.  Consolidate the results from both queries into a single, unified list before sending the response.
-        5.  Test the  endpoint again with  to ensure it now returns all three wallets.
-    -   **Why fix this issue and what will be achieved with the fix?** This will resolve a critical data inconsistency, ensuring that merchants see all of their configured wallet addresses in the application, which is essential for managing their funds.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** backend
-    -   **Blocked on other issue:** None
+*   **Issue 1:** The  endpoint might allow link creation even if a company has no active API key. (Priority: P0)
+
+**Issues Detail:**
+*   **Issue 1:**
+    *   **Attempted fixes:** The agent has confirmed that the route  is protected by , meaning a valid user token is required. However, it has not yet verified if the controller logic itself checks for the existence of an active API key for the user's company before proceeding.
+    *   **Next debug checklist:**
+        1.  Analyze the  function in .
+        2.  At the beginning of the function, add logic to retrieve the company's active API key (similar to the logic in ).
+        3.  If no active API key is found, immediately return a 400 error with a user-friendly message, such as An active API key is required to create a payment link. Please create one in your developer settings.
+    *   **Why fix this issue and what will be achieved with the fix?** This will ensure that all payment-related actions are tied to a properly configured company profile with an active API key, preventing orphaned or misconfigured payment links.
+    *   **Status:** IN PROGRESS
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** backend
+    *   **Blocked on other issue:** None
 
 **In progress Task List**:
--   None.
+*   **Task 1:** Complete the implementation of the check in the  endpoint. (Priority: P0)
+    *   **Where to resume:** Open  and modify the  function.
+    *   **What will be achieved with this?** The application will correctly prevent users without an active API key from creating payment links.
+    *   **Status:** IN PROGRESS
+    *   **Should Test frontend/backend/both after fix?** backend
+    *   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks:**
-    -   **P1: Implement Visual Currency Selector:** Create a UI component on the frontend to allow merchants to visually select which cryptocurrencies to accept when creating a payment link.
--   **Future Tasks:**
-    -   **P2: Fee Comparison Tool:** Develop a feature that shows merchants how DynoPay's fees compare to competitors like Stripe or PayPal.
-    -   **P2: High Effort Code Cleaning:** Address deeper refactoring opportunities identified previously, such as standardizing logger usage and refactoring duplicated logic (e.g., OTP generation).
-    -   **P2: Security Monitoring Dashboards:** Build internal dashboards for monitoring security-related events.
+*   **Upcoming Tasks:**
+    *   None. All high-priority user requests have been addressed or are in progress.
+*   **Future Tasks:**
+    *   **Task 1 (P1):** Implement a public, unauthenticated endpoint for creating payment links, potentially using the legacy  header for authentication. This was discussed as a possible enhancement.
+    *   **Task 2 (P1):** Implement a workflow to automatically create a default company and a USD API key when a new user registers.
+    *   **Task 3 (P2):** Update the frontend components to consume the new, consistent  objects returned by the backend for displaying all monetary values.
 
 **Completed work in this session**
--   **Code Cleaning and Bug Fixing:** Fixed ~33 TypeScript compilation errors and logical issues introduced during a previous cleanup attempt. All code now compiles successfully. (Files: , , etc.)
--   **Currency Selection Architecture Fix:** Corrected major inconsistencies in currency selection. The system now properly filters available currencies based on the  set on a payment link and supports this feature in the Direct API. (Files: , )
--   **Non-USD Currency Handling Fix:** Resolved a critical bug where transaction fees for non-USD payments were calculated incorrectly. The system now converts all amounts to USD before applying fee tiers. (Files: )
--   **API Documentation Overhaul:** Restructured and cleaned up the Swagger API documentation by consolidating 25+ tags into logical groups and documenting newly added fields like . (Files: , )
--   **Public Fee Calculator Enhancement:** Updated the public  endpoint to support multi-currency calculations and added it to the Swagger documentation. (Files: , )
--   **Wallet Cache Invalidation Fix:** Implemented a robust cache invalidation mechanism for all wallet CRUD operations (add, update, delete) to prevent stale data from being served. (Files: , )
--   **Onboarding Status Endpoint Fix:** Corrected a bug in  that was showing incorrect wallet and address counts by improperly including FIAT wallets and querying the wrong table. (File: )
--   **Dashboard Wallet Count Fix:** Fixed a bug in  where  showed 0 for a valid company because of incorrect ownership verification logic. (File: )
+*   **Dependency Management:** Installed all required npm <command>
+
+Usage:
+
+npm install        install all the dependencies in your project
+npm install <foo>  add the <foo> dependency to your project
+npm test           run this project's tests
+npm run <foo>      run the script named <foo>
+npm <command> -h   quick help on <command>
+npm -l             display usage info for all commands
+npm help <term>    search for help on <term>
+npm help npm       more involved overview
+
+All commands:
+
+    access, adduser, audit, bugs, cache, ci, completion,
+    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
+    edit, exec, explain, explore, find-dupes, fund, get, help,
+    help-search, hook, init, install, install-ci-test,
+    install-test, link, ll, login, logout, ls, org, outdated,
+    owner, pack, ping, pkg, prefix, profile, prune, publish,
+    query, rebuild, repo, restart, root, run-script, sbom,
+    search, set, shrinkwrap, star, stars, start, stop, team,
+    test, token, uninstall, unpublish, unstar, update, version,
+    view, whoami
+
+Specify configs in the ini-formatted file:
+    /root/.npmrc
+or on the command line via: npm <command> --key=value
+
+More configuration info: npm help config
+Configuration fields: npm help 7 config
+
+npm@10.8.2 /usr/lib/node_modules/npm and 
+Usage:   
+  pip <command> [options]
+
+Commands:
+  install                     Install packages.
+  lock                        Generate a lock file.
+  download                    Download packages.
+  uninstall                   Uninstall packages.
+  freeze                      Output installed packages in requirements format.
+  inspect                     Inspect the python environment.
+  list                        List installed packages.
+  show                        Show information about installed packages.
+  check                       Verify installed packages have compatible 
+dependencies.
+  config                      Manage local and global configuration.
+  search                      Search PyPI for packages.
+  cache                       Inspect and manage pip's wheel cache.
+  index                       Inspect information available from package 
+indexes.
+  wheel                       Build wheels from your requirements.
+  hash                        Compute hashes of package archives.
+  completion                  A helper command used for command completion.
+  debug                       Show information useful for debugging.
+  help                        Show help for commands.
+
+General Options:
+  -h, --help                  Show help.
+  --debug                     Let unhandled exceptions propagate outside the
+                              main subroutine, instead of logging them to
+                              stderr.
+  --isolated                  Run pip in an isolated mode, ignoring
+                              environment variables and user configuration.
+  --require-virtualenv        Allow pip to only run in a virtual environment;
+                              exit with an error otherwise.
+  --python <python>           Run pip with the specified Python interpreter.
+  -v, --verbose               Give more output. Option is additive, and can be
+                              used up to 3 times.
+  -V, --version               Show version and exit.
+  -q, --quiet                 Give less output. Option is additive, and can be
+                              used up to 3 times (corresponding to WARNING,
+                              ERROR, and CRITICAL logging levels).
+  --log <path>                Path to a verbose appending log.
+  --no-input                  Disable prompting for input.
+  --keyring-provider <keyring_provider>
+                              Enable the credential lookup via the keyring
+                              library if user input is allowed. Specify which
+                              mechanism to use [auto, disabled, import,
+                              subprocess]. (default: auto)
+  --proxy <proxy>             Specify a proxy in the form
+                              scheme://[user:passwd@]proxy.server:port.
+  --retries <retries>         Maximum attempts to establish a new HTTP
+                              connection. (default: 5)
+  --timeout <sec>             Set the socket timeout (default 15 seconds).
+  --exists-action <action>    Default action when a path already exists:
+                              (s)witch, (i)gnore, (w)ipe, (b)ackup, (a)bort.
+  --trusted-host <hostname>   Mark this host or host:port pair as trusted,
+                              even though it does not have valid or any HTTPS.
+  --cert <path>               Path to PEM-encoded CA certificate bundle. If
+                              provided, overrides the default. See 'SSL
+                              Certificate Verification' in pip documentation
+                              for more information.
+  --client-cert <path>        Path to SSL client certificate, a single file
+                              containing the private key and the certificate
+                              in PEM format.
+  --cache-dir <dir>           Store the cache data in <dir>.
+  --no-cache-dir              Disable the cache.
+  --disable-pip-version-check
+                              Don't periodically check PyPI to determine
+                              whether a new version of pip is available for
+                              download. Implied with --no-
+                              index.
+  --no-color                  Suppress colored output.
+  --use-feature <feature>     Enable new functionality, that may be backward
+                              incompatible.
+  --use-deprecated <feature>  Enable deprecated functionality, that will be
+                              removed in the future.
+  --resume-retries <resume_retries>
+                              Maximum attempts to resume or restart an
+                              incomplete download. (default: 5) packages.
+*   **Auto-Generated Names:** Implemented a friendly name generator () for API keys and wallets.
+*   **End-to-End Currency Consistency:**
+    *   Refactored , , , , , and  to display all monetary values in the company's .
+    *   Created a centralized currency utility  to handle formatting and provide consistent currency info objects in API responses.
+*   **API Key Management Overhaul:**
+    *   Enforced a limit of one production and one development key per company in .
+    *   Implemented logic for the production key's currency to be the master, automatically syncing the development key.
+    *   Restricted  to a list of 14 supported FIAT currencies.
+    *   Implemented a fallback mechanism to use the last known currency if no active key exists, ensuring UI stability.
+*   **Cache Simplification:** Consolidated the dual in-memory/Redis cache system to a Redis-only implementation in .
+*   **API Enhancements:**
+    *   Added a  header to authenticated responses ().
+    *   Created a new endpoint  to assist the frontend with currency selection UX.
+*   **Database Cleanup:** Wrote and executed scripts to revoke duplicate API keys and update keys with non-FIAT base currencies.
+*   **Clarifications Provided:** Answered user questions regarding JWT vs. Admin tokens, token usage for payment link creation, and the user onboarding flow.
 
 **Earlier issues found/mentioned but not fixed**
--   None.
+*   None. All identified issues were addressed during the session.
 
 **Known issue recurrence from previous fork**
--   N/A
+*   N/A
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend:** Node.js, TypeScript, Express.js
--   **Frontend:** React, Vite, TailwindCSS
--   **Database:** PostgreSQL with Sequelize ORM
--   **API Documentation:** Swagger / OpenAPI
--   **Identity Verification:** Veriff
--   **Caching:** Redis
--   **Process Management:** Supervisor
+*   **Backend:** FastAPI with TypeScript ()
+*   **Frontend:** React
+*   **Database:** PostgreSQL with Sequelize
+*   **Caching:** Redis
+*   **Authentication:** JWT (user session and long-lived Admin Token)
 
 **key DB schema**
--   : { wallet_id, user_id, company_id, wallet_type, currency_type, wallet_address, amount }
--   : { user_address_id, user_id, company_id, currency, wallet_address }
--   : { kyc_id, user_id, status, veriff_session_url, threshold_reached_at }
--   : { link_id, user_id, base_amount, base_currency, accepted_currencies }
+*   **tbl_api:** 
+*   **tbl_user_transactions:** 
+*   **tbl_companies:** 
 
 **changes in tech stack**
--   None.
+*   The caching mechanism was simplified from a dual-layer (in-memory + Redis) system to a Redis-only architecture.
 
 **All files of reference**
--   : Contains the logic for all wallet operations, including the  function currently being debugged and the newly added cache invalidation logic.
--   : Heavily modified to fix currency conversion logic for fees (), respect , and enhance the public fee calculator ().
--   : Modified to fix bugs in the  endpoint related to incorrect wallet counting.
--   : Modified to fix a company ownership bug affecting the  count.
--   : Modified to export the Redis client to enable pattern-based cache invalidation.
--   : Modified to consolidate and reorganize API documentation tags.
+*   **Created:**
+    *   : Generates random names for API keys/wallets.
+    *   : Central utility for currency formatting, symbol lookup, and resolving a company's effective base currency.
+*   **Significantly Updated:**
+    *   : Core logic for API key creation, currency rules, and the new  endpoint.
+    *   , , , : Updated to fetch and display data according to the company's .
+    *   : Refactored to remove the in-memory cache.
+    *   : Modified to add the token expiry header.
 
 **Areas that need refactoring**:
--   The High Effort cleaning recommendations identified during the code analysis have not been addressed. These include standardizing logger usage and refactoring duplicated logic (e.g., OTP generation). This could be a future task.
+*   The logic for querying a company's preferred currency (the complex  clause) has been duplicated across several controllers. This should be consolidated into a single exported function in  and called from each controller to reduce code duplication and improve maintainability.
 
 **key api endpoints**
--   : **(Under Investigation)** Retrieves wallets for a user/company. Currently returns incomplete data for some users.
--   : Creates a payment link. Now correctly handles non-USD  and filters accepted payment currencies.
--   : Calculates crypto exchange rates. Now correctly converts non-USD source amounts to USD before calculating fees.
--   : **(Enhanced)** Public endpoint to estimate fees. Now supports multiple fiat currencies.
--   : **(Fixed)** Provides a consolidated onboarding status. Now correctly counts only crypto wallets with addresses.
--   : **(Fixed)** Retrieves dashboard metrics. Now correctly verifies company ownership when fetching wallet counts.
+*   : Creates API keys, enforcing all new currency and uniqueness rules.
+*   : Provides currency options to the frontend for a given company.
+*   : Returns currency-aware dashboard statistics.
+*   : Returns a list of currency-aware transactions.
+*   : Returns currency-aware wallet information.
+*   : Creates a new payment link. **(Currently being modified)**.
+*   : Backend health check.
 
 **Critical Info for New Agent**
--   ** is Bugged:** Your immediate priority is to fix the  API. The leading hypothesis is that it only queries the  table and ignores additional addresses stored in . You need to modify the function to query both tables and merge the results.
--   **Cache Invalidation is Implemented:** A new helper function, , has been added to . It uses a Redis  pattern to clear the cache for a user across all companies. This function is now called in all wallet add/update/delete operations. Be aware of this when modifying wallet logic.
--   **Non-USD Currency Flow:** Be mindful that all fee calculations are based on USD. Any function dealing with amounts in other fiat currencies must first convert the amount to USD using  before passing it to .
+*   **Production Key is Master:** The  of a company is strictly determined by its **production** API key. The development key is always automatically synced to match it. This logic is in .
+*   **Currency Fallback is Crucial:** When no *active* API key exists, the system gracefully falls back to the currency of the *most recently created* key (even if revoked/deleted). This ensures the UI remains consistent. The specific SQL query for this is the source of truth and is used in multiple controllers.
+*   **Use Currency Utils:** For any new feature involving money, you **must** use the helpers in  to get the company's currency and to format display values. This ensures consistency with the rest of the application.
+*   **Single Redis Cache:** All cache interactions are now  and go directly to Redis. The old synchronous in-memory cache is gone.
 
 **documents and test reports created in this job**
--    (Continuously updated)
--    (Currency selection tests)
--    (Non-USD currency handling tests)
+*    (updated multiple times)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:**  API for  only returns 1 wallet, but I added 3. **Status: In Progress**
-2.  **Agent:** Analyzed the  code and confirmed it works for another company. Hypothesized the issue is related to addresses being stored in a separate table.
-3.  **User:**  API for  returns , which is wrong. **Status: Resolved**
-4.  **Agent:** Fixed the dashboard endpoint by adding proper company ownership verification before querying for wallets.
-5.  **User:** Merchant  reports  shows he only added 3 wallets, but the response says  and . **Status: Resolved**
-6.  **Agent:** Fixed the onboarding status endpoint to correctly count only crypto wallets with addresses, excluding auto-created fiat wallets.
-7.  **User:** Cache is not being cleared on wallet deletion. **Status: Resolved**
-8.  **Agent:** Implemented a robust cache invalidation mechanism for all wallet CRUD operations.
-9.  **User:** Asks about a public fee calculator endpoint with a 60% discount and requests multi-currency support and API documentation for it. **Status: Completed**
-10. **User:** Asks how the system handles a 00 AUD payment, questioning currency processing and fund distribution. **Status: Completed** (Led to fixing the non-USD fee calculation bug).
+1.  **User:** Asks how to enforce that production and development keys share the same currency, suggesting a UX flow. - **Status:** In Progress
+2.  **User:** Refines the rule: the production key's currency should be the master and automatically update the development key. - **Status:** In Progress
+3.  **User:** Yes (approving the refined plan). - **Status:** Implemented
+4.  **Agent:** Provides a summary of the implemented currency sync logic. - **Status:** Completed
+5.  **User:** Asks to confirm that a user with a deleted API key cannot create payment links and should be prompted to create a new key. - **Status: PENDING (This is the active task)**
+6.  **Agent:** Begins investigation into the payment link creation flow. - **Status:** In Progress
+7.  ... (Agent continues investigation steps)
+8.  **Agent:** Confirms that payment link creation requires a token but hasn't yet checked for an active API key. - **Status:** In Progress
 
 **Project Health Check:**
--   **Broken:**  is not returning complete data for all users.
--   **Mocked:** None
+*   **Broken:** None
+*   **Mocked:** None
 
 **3rd Party Integrations**
--   **Veriff (Identity Verification):** Requires User API Key.
--   **PostgreSQL:** Database.
--   **Redis:** Caching.
+*   None added in this session.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES
--   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
--   **Known regressions:** None
+*   **Testing agent used after significant changes:** YES
+*   **Troubleshoot agent used after agent stuck in loop:** NO
+*   **Test files created:** None
+*   **Known regressions:** None
 
 **Credentials to test flow:**
--   Login with user  and password  via the API to obtain a JWT for authenticated requests.
+*   Use the  user, as this account's companies (e.g., company_id 38) and API keys have been central to testing all new features.
 
 **What agent forgot to execute**
--   Nothing was forgotten. The agent was actively investigating the latest user-reported bug before the session ended.</analysis>
+*   The agent has not yet implemented the final check in the  controller to block requests from users who do not have an active API key for their company. This is the main pending task.</analysis>

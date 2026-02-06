@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://dependency-installer-4.preview.emergentagent.com"
+BACKEND_URL = "https://api-key-enforce.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "john@dyno.pt",
     "password": "Katiekendra123@"

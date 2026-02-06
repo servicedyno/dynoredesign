@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://dependency-installer-4.preview.emergentagent.com/api/docs/
+**URL:** https://api-key-enforce.preview.emergentagent.com/api/docs/
 
 ---
 

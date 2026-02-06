@@ -152,7 +152,7 @@ const currencyData = await axios.post(
 
 **Current SERVER_URL:** 
 ```
-https://dependency-installer-4.preview.emergentagent.com
+https://api-key-enforce.preview.emergentagent.com
 ```
 
 **Issue:** API service should call `http://localhost:3300/api/pay/getCurrencyRates` for internal communication, not the external preview URL.
