@@ -4,6 +4,7 @@ import {
   errorResponseHelper,
   getErrorMessage,
   successResponseHelper,
+  generateApiKeyName,
 } from "../helper";
 import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
