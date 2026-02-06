@@ -234,11 +234,23 @@ const addApi = async (req: express.Request, res: express.Response) => {
       rate_limit_per_day: 100000,
     });
 
-    successResponseHelper(res, 200, "API generated successfully!", {
+    // Build success message
+    let successMessage = "API generated successfully!";
+    if (devKeyUpdated) {
+      successMessage = "API generated successfully! Development key currency has been updated to match.";
+    } else if (environment === 'development' && existingProdKey && requestedCurrency !== finalCurrency) {
+      successMessage = `API generated successfully! Currency set to ${finalCurrency} to match production key.`;
+    }
+
+    successResponseHelper(res, 200, successMessage, {
       ...resData.dataValues,
       ...company_data.dataValues,
       permissions: apiPermissions,
       environment,
+      currency_synced: devKeyUpdated,
+      ...(devKeyUpdated && { 
+        sync_info: `Development key updated from ${existingDevKey?.dataValues.base_currency} to ${finalCurrency}` 
+      }),
     });
   } catch (e) {
     const message = getErrorMessage(e);
