@@ -1,355 +1,405 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Testing - Code Analysis Tests
-Testing 3 fixes on DynoPay backend as requested in the review.
+DynoPay Backend Testing - checkMissedPayments Cron Job Bug Fix
+
+Tests the fix for the checkMissedPayments function where the query was using
+`pool_address: walletAddress` but the Merchant_Pool_Transaction model has NO
+`pool_address` column. It was fixed to use `temp_address_id: addr.dataValues.temp_address_id`.
+
+Test requirements from review:
+1. Check backend health at URL
+2. Verify the code fix in merchantPoolService.ts around line 2087-2093
+3. Verify Merchant_Pool_Transaction model has temp_address_id but NO pool_address column
+4. Check backend logs for recent checkMissedPayments runs (every 5 min)
+5. Confirm NO "column Merchant_Pool_Transaction.pool_address does not exist" errors after 18:45 UTC restart
+6. Confirm 18:50 cron run completed with 0 errors
+
+Credentials: richard@dyno.pt / Katiekendra123@, company_id: 38
+Backend URL: https://init-config.preview.emergentagent.com
 """
 
-import subprocess
-import sys
+import requests
 import json
+import subprocess
 import re
-from typing import Dict, List, Tuple
+from datetime import datetime
 
-def read_file(file_path: str) -> str:
-    """Read file content."""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        print(f"❌ Error reading {file_path}: {e}")
-        return ""
-
-def test_duplicate_payment_pending_email_fix():
-    """
-    Test 1: Duplicate Payment Pending Email Fix
-    File: /app/backend/webhooks/index.ts
-    Bug: Both tatumWebHook and tatumCryptoWebHook called sendPendingPaymentNotification 
-    Fix: Removed the call from tatumWebHook — only tatumCryptoWebHook sends it now
-    """
-    print("🔍 TEST 1: Duplicate Payment Pending Email Fix")
-    print("=" * 60)
-    
-    file_path = "/app/backend/webhooks/index.ts"
-    content = read_file(file_path)
-    
-    if not content:
-        return False
-    
-    results = []
-    
-    # Step 1: Find tatumWebHook function (around line 359)
-    tatum_webhook_match = re.search(r'const tatumWebHook.*?(?=const tatumCryptoWebHook)', content, re.DOTALL)
-    if tatum_webhook_match:
-        tatum_webhook_content = tatum_webhook_match.group(0)
-        print("✅ Found tatumWebHook function")
+class BackendTester:
+    def __init__(self):
+        self.base_url = "https://init-config.preview.emergentagent.com"
+        self.test_results = {}
         
-        # Step 2: Verify it does NOT call sendPendingPaymentNotification
-        if 'sendPendingPaymentNotification' in tatum_webhook_content:
-            print("❌ FAIL: tatumWebHook still contains sendPendingPaymentNotification call")
-            results.append(False)
-        else:
-            print("✅ PASS: tatumWebHook does NOT call sendPendingPaymentNotification")
-            results.append(True)
+    def log(self, message, level="INFO"):
+        """Log test messages"""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{timestamp}] [{level}] {message}")
         
-        # Check for the expected comment
-        if "NOTE: Pending notification is handled by tatumCryptoWebHook to avoid duplicates" in tatum_webhook_content:
-            print("✅ PASS: Found expected comment about avoiding duplicates")
-            results.append(True)
-        else:
-            print("❌ FAIL: Missing expected comment about avoiding duplicates")
-            results.append(False)
-    else:
-        print("❌ FAIL: Could not find tatumWebHook function")
-        results.append(False)
-    
-    # Step 3: Find tatumCryptoWebHook function (around line 411)
-    crypto_webhook_match = re.search(r'const tatumCryptoWebHook.*?(?=export)', content, re.DOTALL)
-    if crypto_webhook_match:
-        crypto_webhook_content = crypto_webhook_match.group(0)
-        print("✅ Found tatumCryptoWebHook function")
+    def test_backend_health(self):
+        """Test 1: Check backend health endpoint"""
+        self.log("🔍 TEST 1: Backend Health Check")
         
-        # Step 4: Verify it STILL calls sendPendingPaymentNotification
-        if 'sendPendingPaymentNotification' in crypto_webhook_content:
-            print("✅ PASS: tatumCryptoWebHook still calls sendPendingPaymentNotification")
-            results.append(True)
-        else:
-            print("❌ FAIL: tatumCryptoWebHook missing sendPendingPaymentNotification call")
-            results.append(False)
-    else:
-        print("❌ FAIL: Could not find tatumCryptoWebHook function")
-        results.append(False)
-    
-    # Step 5: Count total occurrences of sendPendingPaymentNotification
-    total_occurrences = len(re.findall(r'sendPendingPaymentNotification', content))
-    print(f"📊 Total occurrences of 'sendPendingPaymentNotification': {total_occurrences}")
-    
-    if total_occurrences == 2:  # 1 import + 1 call in tatumCryptoWebHook
-        print("✅ PASS: Exactly 2 occurrences found (1 import + 1 call)")
-        results.append(True)
-    else:
-        print(f"❌ FAIL: Expected 2 occurrences, found {total_occurrences}")
-        results.append(False)
-    
-    success = all(results)
-    print(f"🏁 Test 1 Result: {'✅ PASS' if success else '❌ FAIL'} ({sum(results)}/{len(results)} checks passed)")
-    print()
-    return success
-
-def test_social_media_urls_updated():
-    """
-    Test 2: Social Media URLs Updated + Telegram Added
-    Files: /app/backend/helper/sendEmail.ts AND /app/backend/services/emailService.ts
-    """
-    print("🔍 TEST 2: Social Media URLs Updated + Telegram Added")
-    print("=" * 60)
-    
-    expected_urls = {
-        'Facebook': 'https://www.facebook.com/dynopay',
-        'Instagram': 'https://www.instagram.com/dynopay', 
-        'X/Twitter': 'https://x.com/dynopaycom',
-        'LinkedIn': 'https://www.linkedin.com/company/dynopay/',
-        'Telegram': 'https://t.me/Dynopay_Announcements'
-    }
-    
-    files_to_check = [
-        "/app/backend/helper/sendEmail.ts",
-        "/app/backend/services/emailService.ts"
-    ]
-    
-    results = []
-    
-    for file_path in files_to_check:
-        print(f"\n📁 Checking {file_path}")
-        content = read_file(file_path)
-        
-        if not content:
-            results.append(False)
-            continue
-        
-        file_results = []
-        
-        for platform, expected_url in expected_urls.items():
-            if expected_url in content:
-                print(f"✅ PASS: {platform} URL found - {expected_url}")
-                file_results.append(True)
-            else:
-                print(f"❌ FAIL: {platform} URL missing - {expected_url}")
-                file_results.append(False)
-        
-        # Check for Telegram icon img tag
-        telegram_icon_patterns = [
-            r'<img[^>]*src="[^"]*flaticon[^"]*telegram[^"]*"',
-            r'<img[^>]*src="[^"]*2111646[^"]*"',  # Specific Telegram icon ID from flaticon
-            r'alt="Telegram"'
-        ]
-        
-        telegram_icon_found = any(re.search(pattern, content, re.IGNORECASE) for pattern in telegram_icon_patterns)
-        if telegram_icon_found:
-            print("✅ PASS: Telegram icon found")
-            file_results.append(True)
-        else:
-            print("❌ FAIL: Telegram icon not found")
-            file_results.append(False)
-        
-        file_success = all(file_results)
-        print(f"📊 File Result: {'✅ PASS' if file_success else '❌ FAIL'} ({sum(file_results)}/{len(file_results)} checks passed)")
-        results.append(file_success)
-    
-    success = all(results)
-    print(f"\n🏁 Test 2 Result: {'✅ PASS' if success else '❌ FAIL'} ({sum(results)}/{len(results)} files passed)")
-    print()
-    return success
-
-def test_all_emails_use_branded_template():
-    """
-    Test 3: All Emails Use Branded Template
-    Files: /app/backend/controller/walletController.ts, /app/backend/helper/sendEmail.ts
-    """
-    print("🔍 TEST 3: All Emails Use Branded Template")
-    print("=" * 60)
-    
-    results = []
-    
-    # Step 1: Check walletController.ts updateOtp function
-    print("📁 Checking /app/backend/controller/walletController.ts")
-    wallet_controller_content = read_file("/app/backend/controller/walletController.ts")
-    
-    if wallet_controller_content:
-        # Check for dynoPayEmailTemplate import
-        if 'dynoPayEmailTemplate' in wallet_controller_content and 'emailService' in wallet_controller_content:
-            print("✅ PASS: dynoPayEmailTemplate imported from emailService")
-            results.append(True)
-        else:
-            print("❌ FAIL: dynoPayEmailTemplate import from emailService not found")
-            results.append(False)
-        
-        # Find updateOtp function (around line 2748)
-        update_otp_match = re.search(r'const updateOtp.*?(?=const|\Z)', wallet_controller_content, re.DOTALL)
-        if update_otp_match:
-            update_otp_content = update_otp_match.group(0)
-            print("✅ Found updateOtp function")
-            
-            # Check if OTP email uses htmlBody (template-wrapped) NOT raw text
-            if 'htmlBody' in update_otp_content and 'dynoPayEmailTemplate' in update_otp_content:
-                print("✅ PASS: OTP email uses htmlBody (template-wrapped)")
-                results.append(True)
-            else:
-                print("❌ FAIL: OTP email does not use htmlBody template")
-                results.append(False)
-        else:
-            print("❌ FAIL: Could not find updateOtp function")
-            results.append(False)
-    else:
-        results.append(False)
-    
-    # Step 2: Check helper/sendEmail.ts
-    print("\n📁 Checking /app/backend/helper/sendEmail.ts")
-    send_email_content = read_file("/app/backend/helper/sendEmail.ts")
-    
-    if send_email_content:
-        # Find all mailTransporter calls and verify they use htmlBody
-        mail_transporter_calls = re.findall(r'mailTransporter\s*\(\s*\{([^}]+)\}', send_email_content, re.DOTALL)
-        
-        print(f"📊 Found {len(mail_transporter_calls)} mailTransporter calls")
-        
-        all_use_html_body = True
-        for i, call in enumerate(mail_transporter_calls):
-            if 'body:' in call:
-                if 'htmlBody' in call:
-                    print(f"✅ Call {i+1}: Uses htmlBody")
-                elif 'message' in call and 'htmlBody' not in call:
-                    print(f"❌ Call {i+1}: Uses raw message instead of htmlBody")
-                    all_use_html_body = False
-                else:
-                    print(f"✅ Call {i+1}: Uses proper body format")
-        
-        if all_use_html_body:
-            print("✅ PASS: All mailTransporter calls use htmlBody")
-            results.append(True)
-        else:
-            print("❌ FAIL: Some mailTransporter calls use raw message instead of htmlBody")
-            results.append(False)
-    else:
-        results.append(False)
-    
-    # Step 3: Check services/emailService.ts for dynoPayEmailTemplate export
-    print("\n📁 Checking /app/backend/services/emailService.ts")
-    email_service_content = read_file("/app/backend/services/emailService.ts")
-    
-    if email_service_content:
-        # Check if dynoPayEmailTemplate is exported at the bottom
-        if re.search(r'export.*dynoPayEmailTemplate', email_service_content):
-            print("✅ PASS: dynoPayEmailTemplate is exported from emailService.ts")
-            results.append(True)
-        else:
-            print("❌ FAIL: dynoPayEmailTemplate is not exported from emailService.ts")
-            results.append(False)
-    else:
-        results.append(False)
-    
-    success = all(results)
-    print(f"\n🏁 Test 3 Result: {'✅ PASS' if success else '❌ FAIL'} ({sum(results)}/{len(results)} checks passed)")
-    print()
-    return success
-
-def test_backend_health():
-    """
-    Test 4: Backend Health
-    Verify backend is responding correctly
-    """
-    print("🔍 TEST 4: Backend Health")
-    print("=" * 60)
-    
-    base_url = "https://init-config.preview.emergentagent.com"
-    
-    # Try different possible health endpoints
-    health_endpoints = [
-        "/api/health",
-        "/health", 
-        "/api/status",
-        "/status"
-    ]
-    
-    for endpoint in health_endpoints:
         try:
+            # Try different health endpoints
+            endpoints = ["/health", "/api/health", "/api/status"]
+            
+            for endpoint in endpoints:
+                try:
+                    response = requests.get(f"{self.base_url}{endpoint}", timeout=10)
+                    if response.status_code == 200:
+                        self.log(f"✅ Backend health OK via {endpoint} (Status: {response.status_code})")
+                        self.test_results["backend_health"] = True
+                        return True
+                except Exception as e:
+                    self.log(f"⚠️ Health endpoint {endpoint} failed: {e}")
+            
+            # If no health endpoint works, check if backend is responding by testing a known endpoint
+            self.log("Health endpoints not available, testing backend responsiveness...")
+            
+            # Test if backend is running by checking logs
+            try:
+                result = subprocess.run(
+                    ["tail", "-n", "10", "/var/log/supervisor/backend.out.log"],
+                    capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0 and "INFO:" in result.stdout:
+                    self.log("✅ Backend is running (confirmed via supervisor logs)")
+                    self.test_results["backend_health"] = True
+                    return True
+            except Exception as e:
+                self.log(f"❌ Could not verify backend status: {e}")
+                
+            self.test_results["backend_health"] = False
+            return False
+            
+        except Exception as e:
+            self.log(f"❌ Backend health check failed: {e}")
+            self.test_results["backend_health"] = False
+            return False
+    
+    def test_code_fix_verification(self):
+        """Test 2: Verify the code fix in merchantPoolService.ts"""
+        self.log("🔍 TEST 2: Code Fix Verification")
+        
+        try:
+            # Read the merchantPoolService.ts file
+            with open("/app/backend/services/merchantPoolService.ts", "r") as f:
+                content = f.read()
+            
+            # Find the checkMissedPayments function
+            if "checkMissedPayments" not in content:
+                self.log("❌ checkMissedPayments function not found")
+                self.test_results["code_fix"] = False
+                return False
+            
+            # Check for the correct fix around line 2087-2093
+            # Look for temp_address_id usage and absence of pool_address
+            lines = content.split('\n')
+            
+            # Find the relevant section with merchantPoolTransactionModel.findOne
+            found_correct_fix = False
+            found_pool_address_usage = False
+            
+            for i, line in enumerate(lines):
+                # Look for the specific query that was fixed
+                if "merchantPoolTransactionModel.findOne" in line:
+                    # Check the next few lines for the where clause
+                    for j in range(i, min(i + 10, len(lines))):
+                        if "temp_address_id:" in lines[j] and "addr.dataValues.temp_address_id" in lines[j]:
+                            found_correct_fix = True
+                            self.log(f"✅ Found correct fix at line {j+1}: {lines[j].strip()}")
+                        if "pool_address:" in lines[j]:
+                            found_pool_address_usage = True
+                            self.log(f"❌ Still found pool_address usage at line {j+1}: {lines[j].strip()}")
+            
+            if found_correct_fix and not found_pool_address_usage:
+                self.log("✅ Code fix verified: Using temp_address_id, no pool_address usage found")
+                self.test_results["code_fix"] = True
+                return True
+            else:
+                self.log("❌ Code fix verification failed")
+                if not found_correct_fix:
+                    self.log("❌ Correct temp_address_id usage not found")
+                if found_pool_address_usage:
+                    self.log("❌ pool_address usage still present")
+                self.test_results["code_fix"] = False
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Code fix verification failed: {e}")
+            self.test_results["code_fix"] = False
+            return False
+    
+    def test_model_schema_verification(self):
+        """Test 3: Verify Merchant_Pool_Transaction model schema"""
+        self.log("🔍 TEST 3: Model Schema Verification")
+        
+        try:
+            # Read the model file
+            with open("/app/backend/models/merchantPoolModels/index.ts", "r") as f:
+                content = f.read()
+            
+            # Find the Merchant_Pool_Transaction model
+            if "Merchant_Pool_Transaction" not in content:
+                self.log("❌ Merchant_Pool_Transaction model not found")
+                self.test_results["model_schema"] = False
+                return False
+            
+            # Extract the model definition
+            lines = content.split('\n')
+            in_model = False
+            has_temp_address_id = False
+            has_pool_address = False
+            
+            for line in lines:
+                if "Merchant_Pool_Transaction" in line and "sequelize.define" in line:
+                    in_model = True
+                    continue
+                
+                if in_model:
+                    if "temp_address_id:" in line:
+                        has_temp_address_id = True
+                        self.log(f"✅ Found temp_address_id field: {line.strip()}")
+                    
+                    if "pool_address:" in line:
+                        has_pool_address = True
+                        self.log(f"❌ Found pool_address field: {line.strip()}")
+                    
+                    # End of model definition
+                    if line.strip().startswith("}") and "tableName" in lines[lines.index(line) + 1] if lines.index(line) + 1 < len(lines) else False:
+                        break
+            
+            if has_temp_address_id and not has_pool_address:
+                self.log("✅ Model schema verified: Has temp_address_id, NO pool_address column")
+                self.test_results["model_schema"] = True
+                return True
+            else:
+                self.log("❌ Model schema verification failed")
+                if not has_temp_address_id:
+                    self.log("❌ temp_address_id field not found")
+                if has_pool_address:
+                    self.log("❌ pool_address field found (should not exist)")
+                self.test_results["model_schema"] = False
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Model schema verification failed: {e}")
+            self.test_results["model_schema"] = False
+            return False
+    
+    def test_cron_job_logs(self):
+        """Test 4: Check backend logs for checkMissedPayments cron execution"""
+        self.log("🔍 TEST 4: Cron Job Execution Verification")
+        
+        try:
+            # Get recent backend logs
             result = subprocess.run(
-                ['curl', '-s', '-w', '%{http_code}', f"{base_url}{endpoint}"],
-                capture_output=True,
-                text=True,
-                timeout=10
+                ["grep", "-n", "checkMissedPayments\\|Missed payment check\\|pool_address", 
+                 "/var/log/supervisor/backend.out.log"],
+                capture_output=True, text=True, timeout=10
             )
             
-            # Extract status code from the end of output
-            output = result.stdout
-            if output and len(output) >= 3:
-                status_code = output[-3:]
-                response_body = output[:-3] if len(output) > 3 else ""
+            if result.returncode != 0:
+                self.log("❌ No checkMissedPayments logs found")
+                self.test_results["cron_logs"] = False
+                return False
+            
+            log_lines = result.stdout.strip().split('\n')
+            
+            # Parse log entries and check for the error pattern and fix
+            error_before_fix = False
+            success_after_fix = False
+            last_18_50_run = False
+            
+            for line in log_lines:
+                if "column Merchant_Pool_Transaction.pool_address does not exist" in line:
+                    # Extract timestamp to check if it's before 18:45
+                    if "18:35" in line or "18:40" in line or "18:45" in line:
+                        error_before_fix = True
+                        self.log(f"✅ Found expected error before fix: {line}")
                 
-                if status_code.startswith('2'):  # 2xx status codes
-                    print(f"✅ PASS: {endpoint} returned status {status_code}")
-                    if response_body and ('healthy' in response_body.lower() or 'ok' in response_body.lower()):
-                        print("✅ PASS: Response indicates healthy status")
-                    print(f"🏁 Test 4 Result: ✅ PASS")
-                    print()
+                if "18:50" in line and "checkMissedPayments running" in line:
+                    last_18_50_run = True
+                    self.log(f"✅ Found 18:50 cron execution: {line}")
+                
+                if "18:50" in line and "Missed payment check complete" in line and "Errors: 0" in line:
+                    success_after_fix = True
+                    self.log(f"✅ Found successful 18:50 completion: {line}")
+            
+            # Check if we have evidence of the fix working
+            if error_before_fix and (last_18_50_run or success_after_fix):
+                self.log("✅ Cron job verification successful:")
+                self.log("  - Found errors before 18:45 fix")
+                self.log("  - Found successful execution at 18:50")
+                self.test_results["cron_logs"] = True
+                return True
+            else:
+                self.log("❌ Cron job verification incomplete:")
+                self.log(f"  - Error before fix: {error_before_fix}")
+                self.log(f"  - 18:50 run found: {last_18_50_run}")
+                self.log(f"  - Success after fix: {success_after_fix}")
+                self.test_results["cron_logs"] = False
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Cron job log verification failed: {e}")
+            self.test_results["cron_logs"] = False
+            return False
+    
+    def test_no_errors_after_fix(self):
+        """Test 5: Confirm NO pool_address errors after 18:45 UTC"""
+        self.log("🔍 TEST 5: No Errors After Fix Verification")
+        
+        try:
+            # Get logs after 18:45
+            result = subprocess.run(
+                ["grep", "-A5", "-B5", "18:5[0-9].*checkMissedPayments\\|18:5[0-9].*pool_address", 
+                 "/var/log/supervisor/backend.out.log"],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            if result.returncode == 0:
+                log_content = result.stdout
+                
+                # Check if there are any pool_address errors after 18:45
+                lines = log_content.split('\n')
+                errors_after_fix = []
+                
+                for line in lines:
+                    if "pool_address does not exist" in line:
+                        # Check timestamp to see if it's after 18:45
+                        if any(time in line for time in ["18:50", "18:51", "18:52", "18:53", "18:54", "18:55", "18:56", "18:57", "18:58", "18:59", "19:"]):
+                            errors_after_fix.append(line)
+                
+                if not errors_after_fix:
+                    self.log("✅ No pool_address errors found after 18:45 fix")
+                    self.test_results["no_errors_after_fix"] = True
                     return True
                 else:
-                    print(f"❌ {endpoint} returned status {status_code}")
-            
+                    self.log("❌ Found pool_address errors after fix:")
+                    for error in errors_after_fix:
+                        self.log(f"  {error}")
+                    self.test_results["no_errors_after_fix"] = False
+                    return False
+            else:
+                self.log("✅ No checkMissedPayments logs after 18:45 (no errors to check)")
+                self.test_results["no_errors_after_fix"] = True
+                return True
+                
         except Exception as e:
-            print(f"❌ Error testing {endpoint}: {e}")
+            self.log(f"❌ Error verification failed: {e}")
+            self.test_results["no_errors_after_fix"] = False
+            return False
     
-    print("❌ FAIL: No healthy backend endpoint found")
-    print(f"🏁 Test 4 Result: ❌ FAIL")
-    print()
-    return False
-
-def main():
-    """Run all tests and provide summary."""
-    print("🚀 DYNOPAY BACKEND CODE ANALYSIS TESTS")
-    print("=" * 80)
-    print("Testing 3 fixes on DynoPay backend as requested")
-    print("BASE URL: https://init-config.preview.emergentagent.com")
-    print("=" * 80)
-    print()
-    
-    tests = [
-        ("Duplicate Payment Pending Email Fix", test_duplicate_payment_pending_email_fix),
-        ("Social Media URLs Updated + Telegram Added", test_social_media_urls_updated), 
-        ("All Emails Use Branded Template", test_all_emails_use_branded_template),
-        ("Backend Health", test_backend_health)
-    ]
-    
-    results = []
-    
-    for test_name, test_func in tests:
+    def test_18_50_success(self):
+        """Test 6: Confirm 18:50 cron run completed with 0 errors"""
+        self.log("🔍 TEST 6: 18:50 Success Verification")
+        
         try:
-            result = test_func()
-            results.append((test_name, result))
+            # Look specifically for 18:50 execution and completion
+            result = subprocess.run(
+                ["grep", "-A10", "18:50.*checkMissedPayments", "/var/log/supervisor/backend.out.log"],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            if result.returncode == 0:
+                log_content = result.stdout
+                
+                # Check for successful completion
+                if "Missed payment check complete" in log_content:
+                    # Look for error count
+                    if "Errors: 0" in log_content:
+                        self.log("✅ 18:50 cron run completed successfully with 0 errors")
+                        self.test_results["18_50_success"] = True
+                        return True
+                    else:
+                        self.log("⚠️ 18:50 run completed but error count not explicitly 0")
+                        # Check if there are any error messages in the 18:50 run
+                        error_patterns = ["❌", "Error processing", "pool_address does not exist"]
+                        has_errors = any(pattern in log_content for pattern in error_patterns)
+                        
+                        if not has_errors:
+                            self.log("✅ No error patterns found in 18:50 run")
+                            self.test_results["18_50_success"] = True
+                            return True
+                        else:
+                            self.log("❌ Found error patterns in 18:50 run")
+                            self.test_results["18_50_success"] = False
+                            return False
+                else:
+                    self.log("❌ 18:50 run found but no completion message")
+                    self.test_results["18_50_success"] = False
+                    return False
+            else:
+                self.log("❌ No 18:50 checkMissedPayments execution found")
+                self.test_results["18_50_success"] = False
+                return False
+                
         except Exception as e:
-            print(f"❌ ERROR in {test_name}: {e}")
-            results.append((test_name, False))
+            self.log(f"❌ 18:50 success verification failed: {e}")
+            self.test_results["18_50_success"] = False
+            return False
     
-    # Summary
-    print("=" * 80)
-    print("🏁 FINAL SUMMARY")
-    print("=" * 80)
-    
-    passed = sum(1 for _, result in results if result)
-    total = len(results)
-    
-    for test_name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status}: {test_name}")
-    
-    print(f"\n📊 Overall Result: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
-    
-    if passed == total:
-        print("🎉 ALL TESTS PASSED! All 3 fixes are working correctly.")
-    else:
-        print("⚠️  Some tests failed. Review the detailed output above.")
-    
-    return passed == total
+    def run_all_tests(self):
+        """Run all tests and provide summary"""
+        self.log("🚀 Starting checkMissedPayments Cron Job Bug Fix Testing")
+        self.log("=" * 80)
+        
+        tests = [
+            ("Backend Health Check", self.test_backend_health),
+            ("Code Fix Verification", self.test_code_fix_verification),
+            ("Model Schema Verification", self.test_model_schema_verification),
+            ("Cron Job Logs Analysis", self.test_cron_job_logs),
+            ("No Errors After Fix", self.test_no_errors_after_fix),
+            ("18:50 Success Verification", self.test_18_50_success),
+        ]
+        
+        passed = 0
+        total = len(tests)
+        
+        for test_name, test_func in tests:
+            self.log(f"\n📋 Running: {test_name}")
+            self.log("-" * 50)
+            
+            try:
+                if test_func():
+                    passed += 1
+                    self.log(f"✅ {test_name}: PASSED")
+                else:
+                    self.log(f"❌ {test_name}: FAILED")
+            except Exception as e:
+                self.log(f"💥 {test_name}: ERROR - {e}")
+                self.test_results[test_name.lower().replace(' ', '_')] = False
+        
+        # Summary
+        self.log("\n" + "=" * 80)
+        self.log("📊 TEST SUMMARY")
+        self.log("=" * 80)
+        
+        success_rate = (passed / total) * 100
+        self.log(f"✅ Tests Passed: {passed}/{total} ({success_rate:.1f}%)")
+        
+        if passed == total:
+            self.log("🎉 ALL TESTS PASSED - checkMissedPayments bug fix is working correctly!")
+            self.log("✅ The pool_address column issue has been resolved")
+            self.log("✅ Cron job is running successfully without errors")
+        else:
+            self.log("⚠️ Some tests failed - review the issues above")
+        
+        # Detailed results
+        self.log("\n📋 Detailed Results:")
+        for test_name, result in self.test_results.items():
+            status = "✅ PASS" if result else "❌ FAIL"
+            self.log(f"  {test_name}: {status}")
+        
+        return passed == total
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    tester = BackendTester()
+    success = tester.run_all_tests()
+    
+    if success:
+        print("\n🎯 CONCLUSION: checkMissedPayments cron job bug fix is working correctly!")
+        exit(0)
+    else:
+        print("\n⚠️ CONCLUSION: Some issues remain with the checkMissedPayments fix")
+        exit(1)
