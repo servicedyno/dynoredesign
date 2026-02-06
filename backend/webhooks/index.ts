@@ -108,24 +108,15 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
     let webhookSecret = null;
     let companyId = customerData?.company_id;
     
-    // First try to get from payment link
-    if (customerData?.payment_link_id) {
+    // First try to get from payment link using link_id
+    const linkId = customerData?.link_id || customerData?.payment_link_id;
+    if (linkId) {
       const [linkResult] = await sequelize.query(
-        `SELECT webhook_url, callback_url FROM tbl_payment_link WHERE payment_link_id = :linkId`,
-        { replacements: { linkId: customerData.payment_link_id }, type: QueryTypes.SELECT }
+        `SELECT webhook_url, callback_url FROM tbl_payment_link WHERE link_id = :linkId`,
+        { replacements: { linkId }, type: QueryTypes.SELECT }
       );
       webhookUrl = linkResult?.webhook_url;
       callbackUrl = linkResult?.callback_url;
-    }
-    
-    // Also check Redis for payment link data (for createLink flow)
-    if (customerData?.link_id && (!webhookUrl || !callbackUrl)) {
-      const [linkResult] = await sequelize.query(
-        `SELECT webhook_url, callback_url FROM tbl_payment_link WHERE link_id = :linkId`,
-        { replacements: { linkId: customerData.link_id }, type: QueryTypes.SELECT }
-      );
-      if (!webhookUrl) webhookUrl = linkResult?.webhook_url;
-      if (!callbackUrl) callbackUrl = linkResult?.callback_url;
     }
     
     // If no webhook on link, try company settings
