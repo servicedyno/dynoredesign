@@ -1,7 +1,7 @@
 /**
  * Legacy API Authentication Middleware
  * 
- * Provides backward compatibility with the OLD DynoPay API (user-api.dynopay.com)
+ * Provides backward compatibility with the OLD Dynopay API (user-api.dynopay.com)
  * that used x-api-key + wallet_token authentication.
  * 
  * OLD API Flow:
