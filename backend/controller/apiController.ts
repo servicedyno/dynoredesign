@@ -65,8 +65,49 @@ const addApi = async (req: express.Request, res: express.Response) => {
       );
     }
 
+    const requestedCurrency = base_currency.toUpperCase();
+
+    // Check existing keys for this company
+    const existingKeys = await apiModel.findAll({
+      where: {
+        company_id,
+        status: 'active',
+      },
+    });
+
+    const existingProdKey = existingKeys.find(k => k.dataValues.environment === 'production');
+    const existingDevKey = existingKeys.find(k => k.dataValues.environment === 'development');
+
+    let finalCurrency = requestedCurrency;
+    let devKeyUpdated = false;
+
+    // Currency synchronization logic
+    if (environment === 'development') {
+      // Creating development key
+      if (existingProdKey) {
+        // Production key exists - development MUST match production currency
+        finalCurrency = existingProdKey.dataValues.base_currency;
+        if (requestedCurrency !== finalCurrency) {
+          console.log(`[API] Dev key currency forced to ${finalCurrency} to match production key`);
+        }
+      }
+      // If no production key, development can use any currency
+    } else {
+      // Creating production key
+      // Production key can use any currency, but development key must be updated to match
+      if (existingDevKey && existingDevKey.dataValues.base_currency !== requestedCurrency) {
+        // Update development key to match new production currency
+        await apiModel.update(
+          { base_currency: requestedCurrency },
+          { where: { api_id: existingDevKey.dataValues.api_id } }
+        );
+        devKeyUpdated = true;
+        console.log(`[API] Dev key (api_id: ${existingDevKey.dataValues.api_id}) currency updated to ${requestedCurrency} to match new production key`);
+      }
+    }
+
     const keyData = {
-      base_currency: base_currency.toUpperCase(),
+      base_currency: finalCurrency,
       company_id,
       adm_id: userData.user_id,
       env: environment,
