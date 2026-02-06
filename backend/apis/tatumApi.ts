@@ -1148,11 +1148,15 @@ const assetToOtherAddress = async ({
   let transaction;
   const tatumSdk = await getTatumSDK();
   if (currency === "BTC") {
+    // When toUTXO is provided (merchant + admin split), use multi-output; otherwise single output
+    const btcOutputs = toUTXO.length > 0
+      ? toUTXO.map((o: any) => ({ address: o.address, value: Number(Number(o.value).toFixed(8)) }))
+      : [{ address: toAddress, value: Number(Number(amount).toFixed(8)) }];
     transaction = await tatumSdk.blockchain.bitcoin.btcTransferBlockchain({
       fromAddress: [{ address: fromAddress, privateKey }],
-      to: [{ address: toAddress, value: Number(Number(amount).toFixed(8)) }],
+      to: btcOutputs,
       fee,
-      changeAddress: fromMaster ? fromAddress : toAddress,
+      changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
   } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
     transaction = await tatumSdk.blockchain.eth.ethBlockchainTransfer({
