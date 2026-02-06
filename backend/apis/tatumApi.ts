@@ -1578,14 +1578,11 @@ const assetBatchAddressesToOtherAddress = async ({
 };
 
 const validateTronAddress = (address) => {
-  try {
-  } catch (e) {
-    const status = tronweb.utils.address.isAddress(address);
-    if (status) {
-      return status;
-    } else {
-      throw { message: "please enter a valid TRX address!" };
-    }
+  const status = tronweb.utils.address.isAddress(address);
+  if (status) {
+    return status;
+  } else {
+    throw { message: "please enter a valid TRX address!" };
   }
 };
 
