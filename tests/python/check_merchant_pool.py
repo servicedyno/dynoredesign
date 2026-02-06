@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://webhook-verification.preview.emergentagent.com/api"
+BASE_URL = "https://init-config.preview.emergentagent.com/api"
 
 # Login credentials
 email = "john@dyno.pt"

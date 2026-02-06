@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://webhook-verification.preview.emergentagent.com/api/docs
+Go to: https://init-config.preview.emergentagent.com/api/docs
 
 ---
 

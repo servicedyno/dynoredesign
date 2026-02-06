@@ -24,7 +24,7 @@ from typing import Dict, Any, Optional, List
 
 class DynoPayTester:
     def __init__(self):
-        self.base_url = "https://webhook-verification.preview.emergentagent.com"
+        self.base_url = "https://init-config.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.session = requests.Session()
         self.session.headers.update({

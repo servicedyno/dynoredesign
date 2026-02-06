@@ -80,13 +80,13 @@ GET /api/wallet/getWallet
 
 **Get all wallet addresses for user (all companies):**
 ```bash
-curl -X GET "https://webhook-verification.preview.emergentagent.com/api/wallet/getWallet" \
+curl -X GET "https://init-config.preview.emergentagent.com/api/wallet/getWallet" \
   -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
 **Get wallet addresses for specific company:**
 ```bash
-curl -X GET "https://webhook-verification.preview.emergentagent.com/api/wallet/getWallet?company_id=38" \
+curl -X GET "https://init-config.preview.emergentagent.com/api/wallet/getWallet?company_id=38" \
   -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 

@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://webhook-verification.preview.emergentagent.com/api
+Development: https://init-config.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

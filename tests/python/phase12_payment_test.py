@@ -4,8 +4,8 @@ Phase 12 Comprehensive Payment System Testing
 ==============================================
 
 Test Environment:
-- Backend URL: https://webhook-verification.preview.emergentagent.com
-- Checkout URL: https://webhook-verification.preview.emergentagent.com
+- Backend URL: https://init-config.preview.emergentagent.com
+- Checkout URL: https://init-config.preview.emergentagent.com
 - Test Credentials: john@dyno.pt / Katiekendra123@
 - Company ID: 38
 - Existing Payment Link ID: 220
@@ -27,8 +27,8 @@ import os
 from datetime import datetime, timedelta
 
 # Configuration
-BACKEND_URL = "https://webhook-verification.preview.emergentagent.com"
-CHECKOUT_URL = "https://webhook-verification.preview.emergentagent.com"
+BACKEND_URL = "https://init-config.preview.emergentagent.com"
+CHECKOUT_URL = "https://init-config.preview.emergentagent.com"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 COMPANY_ID = 38

@@ -14,7 +14,7 @@ Test Credentials:
 - Email: john@dyno.pt
 - Password: Katiekendra123@
 - Company ID: 38
-- Backend URL: https://webhook-verification.preview.emergentagent.com
+- Backend URL: https://init-config.preview.emergentagent.com
 """
 
 import requests
@@ -25,7 +25,7 @@ from typing import Dict, Any, Optional
 
 class DynoPayTester:
     def __init__(self):
-        self.base_url = "https://webhook-verification.preview.emergentagent.com"
+        self.base_url = "https://init-config.preview.emergentagent.com"
         self.session = requests.Session()
         self.session.headers.update({
             'Content-Type': 'application/json',

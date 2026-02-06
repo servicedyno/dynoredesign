@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://webhook-verification.preview.emergentagent.com/api/docs/
+**URL:** https://init-config.preview.emergentagent.com/api/docs/
 
 ---
 

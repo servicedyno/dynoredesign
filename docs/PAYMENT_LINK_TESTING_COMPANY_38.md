@@ -2,7 +2,7 @@
 **Test Date**: 2026-01-26  
 **User**: richard@dyno.pt (user_id: 28, Johnny LTD)  
 **Company ID**: 38  
-**Backend URL**: https://webhook-verification.preview.emergentagent.com  
+**Backend URL**: https://init-config.preview.emergentagent.com  
 **Checkout URL**: https://dynocheckoutfix-production.up.railway.app/
 
 ---
