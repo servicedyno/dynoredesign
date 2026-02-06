@@ -15,7 +15,7 @@ Added `persistAuthorization: true` to Swagger UI configuration.
 ## How It Works Now
 
 ### 1. Authorize Once
-1. Open Swagger UI: https://init-chain.preview.emergentagent.com/api/docs
+1. Open Swagger UI: https://webhook-verification.preview.emergentagent.com/api/docs
 2. Click "Authorize" (🔓)
 3. Paste your JWT token
 4. Click "Authorize" → "Close"

@@ -9,7 +9,7 @@ import json
 from typing import Dict, List, Tuple
 from datetime import datetime
 
-BASE_URL = "https://init-chain.preview.emergentagent.com"
+BASE_URL = "https://webhook-verification.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials

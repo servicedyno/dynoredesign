@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://init-chain.preview.emergentagent.com
+SERVER_URL=https://webhook-verification.preview.emergentagent.com
 ```
 
 **Impact:**
