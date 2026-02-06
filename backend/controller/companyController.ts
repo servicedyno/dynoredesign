@@ -668,10 +668,8 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
     )];
 
     const conversionRates: Record<string, number> = {};
-    console.log(`[getTransactions] Unique base currencies to convert: ${JSON.stringify(uniqueBaseCurrencies)}, preferred: ${preferredCurrency}`);
     for (const srcCurrency of uniqueBaseCurrencies) {
       try {
-        console.log(`[getTransactions] Converting 1 ${srcCurrency} -> ${preferredCurrency}`);
         const conversions = await currencyConvert({
           sourceCurrency: srcCurrency,
           currency: [preferredCurrency],
