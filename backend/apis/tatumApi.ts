@@ -197,7 +197,7 @@ const getTatumSDK = async () => {
       });
       const gcpProjectId = process.env.GCP_PROJECT_ID || process.env.PROJECT_ID || '163670787265';
       const [version] = await client.accessSecretVersion({
-        name: `projects/${gcpProjectId}/secrets/DynoPay_Tatum/versions/latest`,
+        name: `projects/${gcpProjectId}/secrets/Dynopay_Tatum/versions/latest`,
       });
       const payload = version.payload.data.toString();
       tatumKey = payload;
@@ -237,7 +237,7 @@ const getTatumKey = async () => {
       });
       const gcpProjectId = process.env.GCP_PROJECT_ID || process.env.PROJECT_ID || '1098360994708';
       const [version] = await client.accessSecretVersion({
-        name: `projects/${gcpProjectId}/secrets/DynoPay_Tatum/versions/latest`,
+        name: `projects/${gcpProjectId}/secrets/Dynopay_Tatum/versions/latest`,
       });
       const payload = version.payload.data.toString();
       tatumKey = payload;
