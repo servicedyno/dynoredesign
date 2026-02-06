@@ -8,7 +8,7 @@ import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService"
  */
 
 // Dynopay Logo URL (from official checkout repo)
-const DYNOPAY_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynocheckoutDarkMode/main/public/Logo.png";
+const DYNOPAY_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Images/auth/dynopay-logo.png";
 
 /**
  * Get currency symbol for a given currency code
