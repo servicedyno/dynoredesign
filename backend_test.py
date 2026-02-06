@@ -282,9 +282,10 @@ def analyze_crash_recovery_code() -> Dict[str, Any]:
     recovery_return_found = False
     for i, line in enumerate(lines):
         if "if (isStaleProcessing && incomingAmount > 0)" in line:
-            # Look for return statement in the next ~50 lines (should be much closer)
+            # Look for return statement in the recovery block (within ~50 lines)
             for j in range(i, min(i+50, len(lines))):
-                if "return res.status(200).end()" in lines[j] and j < len(lines) - 10:  # Not the very end
+                if ("return res.status(200).end()" in lines[j] and 
+                    "if ((isFirstTransaction || isCompletionPayment)" not in lines[j-5:j+5]):
                     recovery_return_found = True
                     print(f"✅ Recovery block returns res.status(200).end() at line {j+1}")
                     break
