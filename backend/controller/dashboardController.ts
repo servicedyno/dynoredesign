@@ -93,11 +93,9 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     // Get company's preferred currency from their most recent active API key
     let preferredCurrency = "USD";
     if (company_id) {
-      // Use raw SQL to ensure proper ordering
+      // Get company's preferred currency (active first, then last used)
       const apiKeys = await sequelize.query(
-        `SELECT base_currency FROM tbl_api 
-         WHERE company_id = :companyId AND status = 'active' 
-         ORDER BY CASE WHEN environment = 'production' THEN 0 ELSE 1 END, "createdAt" DESC LIMIT 1`,
+        COMPANY_CURRENCY_QUERY,
         {
           replacements: { companyId: company_id },
           type: QueryTypes.SELECT,
