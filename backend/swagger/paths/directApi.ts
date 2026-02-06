@@ -201,8 +201,16 @@ export const directApiPaths = {
 **📡 Webhook Flow:**
 1. Customer sends crypto to the returned address
 2. Dynopay detects the deposit on blockchain (usually 1-3 confirmations)
-3. Webhook sent to your \`webhook_url\` with payment status updates
-4. Optional: Customer redirected to \`callback_url\` after payment
+3. Webhook sent to your \`webhook_url\` (and \`callback_url\` if set) with payment status updates
+4. Optional: Customer's browser redirected to \`redirect_uri\` after payment
+
+⚠️ **IMPORTANT — Do not confuse these fields:**
+
+| Field | Type | Purpose | Receives POST data? |
+|-------|------|---------|-------------------|
+| \`webhook_url\` | Server-to-server | Payment notifications to YOUR SERVER | ✅ Yes (POST with JSON payload) |
+| \`callback_url\` | Server-to-server | Secondary notification URL | ✅ Yes (POST with JSON payload) |
+| \`redirect_uri\` | Browser redirect | "Thank you" page for the CUSTOMER | ❌ No (just a browser redirect) |
 
 **🔗 URL Configuration Priority:**
 1. Per-payment \`webhook_url\` (this request body)
