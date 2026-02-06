@@ -303,30 +303,36 @@ class EmailTemplatesTest:
         """
         print("\n=== TEST 4: Backend Health Check ===")
         
-        health_url = f"{self.base_url}/api/health"
+        # Try login endpoint to verify backend is working (no /api/health endpoint exists)
+        test_url = f"{self.base_url}/api/user/login"
         
         try:
-            response = requests.get(health_url, timeout=10)
+            # Send invalid login to get expected 400 validation response
+            response = requests.post(test_url, 
+                                   json={"email": "test", "password": "test"}, 
+                                   timeout=10,
+                                   headers={"Content-Type": "application/json"})
             
-            if response.status_code == 200:
+            # Backend is healthy if it responds with proper validation (400 is expected)
+            if response.status_code == 400:
                 try:
-                    health_data = response.json()
-                    status = "✅ PASS"
-                    message = "Backend is healthy and responding correctly"
-                except:
-                    # If not JSON, check if it's a simple "OK" response
-                    if "ok" in response.text.lower() or response.status_code == 200:
-                        health_data = {"status": "healthy", "response": response.text}
+                    response_data = response.json()
+                    if "message" in response_data and "errors" in response_data:
                         status = "✅ PASS"
-                        message = "Backend is healthy (non-JSON response)"
+                        message = "Backend is healthy - API responding with proper validation"
+                        health_data = {"api_working": True, "validation_working": True, "response": response_data}
                     else:
-                        health_data = {"error": "Invalid response format"}
                         status = "❌ FAIL"
-                        message = f"Backend returned non-JSON response: {response.text[:100]}"
+                        message = "Backend returned 400 but invalid response format"
+                        health_data = {"api_working": True, "validation_working": False, "response": response_data}
+                except:
+                    status = "❌ FAIL"
+                    message = "Backend returned 400 but non-JSON response"
+                    health_data = {"api_working": True, "validation_working": False, "response": response.text[:200]}
             else:
-                health_data = {"status_code": response.status_code, "response": response.text}
+                health_data = {"status_code": response.status_code, "response": response.text[:200]}
                 status = "❌ FAIL"
-                message = f"Backend returned HTTP {response.status_code}"
+                message = f"Backend returned unexpected HTTP {response.status_code}"
                 
         except requests.exceptions.RequestException as e:
             health_data = {"error": str(e)}
@@ -334,7 +340,7 @@ class EmailTemplatesTest:
             message = f"Failed to connect to backend: {e}"
         
         self.results["test_4_backend_health"] = {
-            "url": health_url,
+            "test_url": test_url,
             "status": status,
             "message": message,
             "response_data": health_data,
@@ -343,7 +349,7 @@ class EmailTemplatesTest:
         
         print(f"   {status}: {message}")
         if health_data:
-            print(f"      Response: {json.dumps(health_data, indent=2)[:200]}...")
+            print(f"      Response: {json.dumps(health_data, indent=2, default=str)[:200]}...")
         
         return status == "✅ PASS"
     
