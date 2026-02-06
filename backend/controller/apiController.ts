@@ -39,8 +39,27 @@ const addApi = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 400, "Invalid environment. Must be 'production' or 'development'");
     }
 
+    // Validate base_currency is FIAT only (not crypto)
+    const validFiatCurrencies = [
+      // Major International
+      'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'HKD', 'NZD', 'SGD',
+      // Latin America (high crypto adoption)
+      'BRL', 'ARS', 'COP', 'CLP', 'PEN', 'MXN', 'VES', 'UYU',
+      // African (high crypto adoption)
+      'NGN', 'ZAR', 'KES', 'GHS', 'TZS', 'XAF', 'XOF', 'EGP', 'MAD',
+      'UGX', 'RWF', 'ETB', 'ZMW', 'BWP', 'MUR', 'AOA', 'MZN', 'CDF'
+    ];
+    
+    if (!base_currency || !validFiatCurrencies.includes(base_currency.toUpperCase())) {
+      return errorResponseHelper(
+        res, 
+        400, 
+        `Base currency must be a valid FIAT currency. Supported: ${validFiatCurrencies.join(', ')}`
+      );
+    }
+
     const keyData = {
-      base_currency,
+      base_currency: base_currency.toUpperCase(),
       company_id,
       adm_id: userData.user_id,
       env: environment,
