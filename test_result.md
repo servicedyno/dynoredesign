@@ -7,6 +7,19 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "validateWalletAddress Response Fix + Remove Withdrawal/Exchange from Swagger"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/controller/walletController.ts, /app/backend/swagger/paths/wallet.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed 2 issues: (1) POST /api/wallet/validateWalletAddress now returns consistent response with data object containing wallet_address, wallet_type, company_id, wallet_name, and masked email (e.g. 'jo***@example.com') — matching the format of update/edit/delete wallet OTP responses. Message changed to 'Address validated! OTP sent to your email'. (2) Removed Withdrawal endpoints (sendConfirmationOTP, withdrawAssets) and Exchange endpoints (exchangeCreate, confirmExchange, getExchange) from Swagger API documentation. Credentials: richard@dyno.pt / Katiekendra123@, company_id: 38. Test: (1) Call POST /api/wallet/validateWalletAddress with a valid wallet address, currency, and company_id — verify response includes data.email, data.wallet_type, data.wallet_address. (2) Check GET /api/docs — verify no Withdrawals or Exchange sections appear."
+
+previous_test_tasks:
   - task: "Single API Key Per Company + Currency Display Fix"
     implemented: true
     working: false
