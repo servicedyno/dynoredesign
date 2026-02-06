@@ -605,48 +605,56 @@ const sendAdminFeeReceivedEmail = async (
   totalAmount: string
 ) => {
   try {
-    const subject = "💰 Platform Fee Received - DynoPay";
+    const subject = "Platform Fee Received - DynoPay";
     
-    // Check if this is an under-threshold payment (merchant gets $0)
     const merchantAmountNum = parseFloat(merchantAmount);
     const feeAmountNum = parseFloat(feeAmount);
     const totalAmountNum = parseFloat(totalAmount);
     const isUnderThreshold = merchantAmountNum === 0 && feeAmountNum === totalAmountNum;
     
-    let message = `Platform fee received from ${companyName}!\n\n`;
+    let detailRows: string;
+    let noticeBlock = '';
     
     if (isUnderThreshold) {
-      // Under-threshold payment - all goes to admin
-      message += `⚠️ UNDER THRESHOLD PAYMENT - All funds to platform\n\n`;
-      message += `💰 Total Amount Received: ${feeAmount} ${currency}\n`;
-      message += `📊 Merchant Received: ${merchantAmount} ${currency} (Below minimum threshold)\n`;
-      message += `💵 Platform Received: ${feeAmount} ${currency} (100%)\n`;
-      message += `🏢 Company: ${companyName}\n\n`;
-      message += `📝 Transaction Reference:\n${transactionId}\n\n`;
-      message += `ℹ️ This payment was below the minimum forwarding threshold.\n`;
-      message += `All funds have been credited to the admin ${currency} wallet.\n`;
-      message += `The merchant will not receive any funds from this transaction.`;
+      detailRows = `
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Total Received</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${feeAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Merchant Received</td><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${merchantAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Platform Received</td><td style="padding: 8px 0; color: #166534; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${feeAmount} ${currency} (100%)</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Company</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${companyName}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${transactionId}</td></tr>`;
+      noticeBlock = `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 0 0 24px 0;">
+        <tr><td style="padding: 16px 20px;">
+          <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5; font-family: 'Inter', Arial, sans-serif;"><strong>Under Threshold:</strong> This payment was below the minimum forwarding threshold. All funds have been credited to the admin ${currency} wallet.</p>
+        </td></tr>
+      </table>`;
     } else {
-      // Normal fee distribution
-      message += `💰 Fee Amount: ${feeAmount} ${currency}\n`;
-      message += `📊 Merchant Received: ${merchantAmount} ${currency}\n`;
-      message += `💵 Total Payment: ${totalAmount} ${currency}\n`;
-      message += `🏢 Company: ${companyName}\n\n`;
-      message += `📝 Transaction Reference:\n${transactionId}\n\n`;
-      message += `Fee Breakdown:\n`;
-      message += `• Platform Fee: ${feeAmount} ${currency}\n`;
-      message += `• Merchant Net: ${merchantAmount} ${currency}\n`;
-      message += `• Total Processed: ${totalAmount} ${currency}\n\n`;
-      message += `The fee has been credited to the admin ${currency} wallet.\n\n`;
+      detailRows = `
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Platform Fee</td><td style="padding: 8px 0; color: #166534; font-size: 16px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${feeAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Merchant Net</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${merchantAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Total Processed</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${totalAmount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Company</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${companyName}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${transactionId}</td></tr>`;
     }
     
-    message += `You can view the full transaction details in the DynoPay admin dashboard.`;
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Platform fee received from <strong style="color: #1a1a2e;">${companyName}</strong>.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #22c55e; margin: 24px 0;">
+        <tr><td style="padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${detailRows}
+          </table>
+        </td></tr>
+      </table>
+      ${noticeBlock}
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">The fee has been credited to the admin ${currency} wallet. You can view the full transaction details in the DynoPay admin dashboard.</p>`;
 
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Platform Fee Received");
     const info = await mailTransporter({
       to: recipientEmail,
       name,
       subject,
-      body: message,
+      body: htmlBody,
     });
     return info;
   } catch (e) {
