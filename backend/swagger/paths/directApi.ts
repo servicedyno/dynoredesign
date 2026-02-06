@@ -238,29 +238,65 @@ export const directApiPaths = {
                 redirect_uri: {
                   type: 'string',
                   format: 'uri',
-                  description: `🔗 OPTIONAL: URL to redirect customer after payment completion. Also known as callback_url.
-                  
-**Use Case:** Redirect customer to your order confirmation page after they complete payment.
-**Note:** Customer sees this URL and can click to return to your site.`,
-                  example: 'https://yourapp.com/order/12345/success'
+                  description: `🔗 OPTIONAL: Browser redirect URL — where the customer's browser navigates after payment.
+
+**This is NOT a webhook.** No data is POSTed to this URL. It is purely a browser redirect (HTTP 302).
+
+**Use Case:** Redirect the customer to your "Thank You" or order confirmation page.
+
+⚠️ **COMMON MISTAKE:** Do NOT put your server webhook endpoint here. Use \`webhook_url\` for server-to-server notifications.`,
+                  example: 'https://yourapp.com/order/12345/thank-you'
                 },
                 callback_url: {
                   type: 'string',
                   format: 'uri',
-                  description: '🔗 OPTIONAL: Alternative name for redirect_uri (works identically)',
-                  example: 'https://yourapp.com/order/12345/success'
+                  description: `📡 OPTIONAL: Secondary server-to-server callback URL (receives POST with payment data, just like webhook_url).
+
+**How it works:** If both \`callback_url\` and \`webhook_url\` are set, Dynopay sends the webhook payload to BOTH URLs.
+
+**Use Case:** Use this if you need payment notifications sent to two different server endpoints (e.g., order service + accounting service).
+
+⚠️ **Note:** This is NOT the same as \`redirect_uri\`. This receives server-to-server POST requests with the full payment payload.`,
+                  example: 'https://yourapp.com/callbacks/payment-status'
                 },
                 webhook_url: {
                   type: 'string',
                   format: 'uri',
-                  description: `📡 OPTIONAL: URL to receive server-to-server payment status webhooks (overrides API key config).
+                  description: `📡 RECOMMENDED: Primary server-to-server webhook URL. Receives POST requests with payment status updates.
+
+⚠️ **THIS IS THE FIELD MOST MERCHANTS NEED.** If you want to be notified when a payment is made, set this field.
 
 **Webhook Events Sent:**
-- \`payment.pending\` - Deposit detected, awaiting confirmations
-- \`payment.confirmed\` - Payment fully confirmed and processed
-- \`payment.underpaid\` - Partial payment received (less than expected amount)
+- \`payment.pending\` — Deposit detected on blockchain, awaiting confirmations
+- \`payment.confirmed\` — Payment fully confirmed and processed (fulfill the order here)
+- \`payment.underpaid\` — Partial payment received (less than expected amount)
 
-**Security:** Webhooks are sent via POST with JSON payload. Validate webhook authenticity using the payment details.`,
+**Webhook Payload Example (payment.confirmed):**
+\`\`\`json
+{
+  "event": "payment.confirmed",
+  "payment_type": "direct_api",
+  "payment_id": "a3f2e1d4...",
+  "transaction_reference": "a3f2e1d4...",
+  "status": "done",
+  "amount": 0.042156,
+  "currency": "ETH",
+  "base_amount": 100,
+  "base_currency": "USD",
+  "merchant_amount": 0.040156,
+  "total_fee": 0.002,
+  "total_fee_usd": 4.75,
+  "fee_payer": "company",
+  "customer_name": "John Doe",
+  "customer_email": "john@example.com",
+  "meta_data": { "order_id": "ORD-12345" },
+  "timestamp": "2026-02-06T18:50:00.000Z"
+}
+\`\`\`
+
+**Security:** Webhooks include \`X-DynoPay-Signature\` header (HMAC-SHA256) if you have a webhook_secret configured.
+
+**Priority:** Per-payment webhook_url > API key webhook > Company webhook`,
                   example: 'https://yourapp.com/webhooks/crypto-payment'
                 },
                 fee_payer: {
