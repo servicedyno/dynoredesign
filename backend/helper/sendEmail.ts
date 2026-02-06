@@ -108,7 +108,7 @@ const dynoPayEmailTemplate = (
       <table role="presentation" class="dm-wrapper" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; table-layout: fixed;">
         <tr>
           <td align="center" style="padding: 20px 10px;">
-            <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+            <table role="presentation" class="dm-card" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #1034a6 0%, #0d2570 100%); padding: 28px 32px; text-align: center;">
