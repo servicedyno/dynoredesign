@@ -510,6 +510,121 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
+    // CRASH RECOVERY: Handle payments stuck in "processing" state
+    // This happens when the backend crashes/restarts DURING cryptoVerification — after settlement
+    // completes on-chain but BEFORE the payment.confirmed webhook is delivered to the merchant.
+    // Without this recovery, the payment is permanently stuck: txId is set (blocking retries)
+    // but the merchant never receives confirmation.
+    const isStaleProcessing = items.status === "processing" && 
+      !!items.txId && 
+      items.lastAttempt && 
+      (Date.now() - new Date(items.lastAttempt as string).getTime()) > 60000; // 1+ minute stale
+
+    if (isStaleProcessing && incomingAmount > 0) {
+      console.log("[tatumCryptoWebHook] ⚠️ CRASH RECOVERY: Payment stuck in 'processing' state");
+      console.log(`[tatumCryptoWebHook] Recovery: payment_id=${items.payment_id}, stale since ${items.lastAttempt}`);
+      
+      try {
+        // Re-attempt cryptoVerification — it handles settlement + webhook + emails
+        // If settlement already completed on-chain, this will fail (insufficient balance),
+        // and we'll fall through to the direct webhook recovery below.
+        await paymentController.cryptoVerification(address, true);
+        console.log("[tatumCryptoWebHook] ✅ Recovery: cryptoVerification completed successfully");
+        
+        // Mark as successful
+        await setRedisItem("crypto-" + address, {
+          ...items,
+          status: "successful",
+          txId: payload.txId,
+          receivedAmount: items.receivedAmount || incomingAmount,
+          completedAt: new Date().toISOString(),
+          recoveredAt: new Date().toISOString(),
+        });
+        await setRedisTTL("crypto-" + address, 1800);
+        
+        // Store processed txId
+        await setRedisItem(`processed-tx-${payload.txId}`, {
+          address: address,
+          payment_id: items.payment_id || items.ref,
+          amount: items.receivedAmount || incomingAmount,
+          processed_at: new Date().toISOString(),
+          recovered: true,
+        });
+        await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
+        
+        console.log("[tatumCryptoWebHook] ✅ Recovery complete, Redis updated");
+
+      } catch (recoveryError: unknown) {
+        const err = recoveryError as { message?: string };
+        console.error("[tatumCryptoWebHook] ⚠️ Recovery cryptoVerification failed (settlement likely already on-chain):", err.message);
+        console.log("[tatumCryptoWebHook] Attempting direct webhook delivery as recovery fallback...");
+        
+        // Settlement already happened on-chain but cryptoVerification can't re-run.
+        // Send the payment.confirmed webhook directly so the merchant isn't left in the dark.
+        try {
+          let customerData = items?.ref ? await getRedisItem(items.ref) : null;
+          if (!customerData || Object.keys(customerData).length === 0) {
+            customerData = items; // Use Redis payment data as fallback
+          }
+          
+          if (customerData) {
+            const linkId = customerData?.link_id || items?.link_id || null;
+            const paymentType = linkId ? 'payment_link' : 'direct_api';
+            
+            const recoveryWebhookResult = await callMerchantWebhook(customerData, {
+              event: "payment.confirmed",
+              payment_type: paymentType,
+              payment_id: items?.payment_id || items?.unique_tx_id,
+              transaction_reference: items.txId,
+              status: "processing",
+              amount: parseFloat(items.receivedAmount as string) || incomingAmount,
+              currency: items?.currency || payload.asset,
+              base_amount: customerData?.base_amount || items?.base_amount_usd || null,
+              base_currency: customerData?.base_currency || 'USD',
+              customer_name: customerData?.customer_name || null,
+              customer_email: customerData?.email || null,
+              description: customerData?.description || null,
+              link_id: linkId,
+              fee_payer: customerData?.fee_payer || items?.fee_payer || 'company',
+              recovered: true,
+              completed_at: new Date().toISOString(),
+            });
+            
+            if (recoveryWebhookResult.success) {
+              console.log("[tatumCryptoWebHook] ✅ Recovery: Direct webhook sent successfully");
+            } else {
+              console.error(`[tatumCryptoWebHook] ❌ Recovery: Direct webhook failed: ${recoveryWebhookResult.error}`);
+            }
+          }
+        } catch (webhookErr) {
+          console.error("[tatumCryptoWebHook] ❌ Recovery: Direct webhook error:", webhookErr);
+        }
+        
+        // Mark as recovered to prevent infinite recovery loops
+        await setRedisItem("crypto-" + address, {
+          ...items,
+          status: "recovered",
+          recoveredAt: new Date().toISOString(),
+          recoveryNote: "Settlement completed on-chain, direct webhook sent as fallback",
+        });
+        await setRedisTTL("crypto-" + address, 1800);
+        
+        // Store processed txId to prevent future duplicate processing
+        await setRedisItem(`processed-tx-${payload.txId}`, {
+          address: address,
+          payment_id: items.payment_id || items.ref,
+          amount: items.receivedAmount || incomingAmount,
+          processed_at: new Date().toISOString(),
+          recovered: true,
+        });
+        await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
+        
+        console.log("[tatumCryptoWebHook] ✅ Recovery: Marked as recovered, Redis updated");
+      }
+      
+      return res.status(200).end();
+    }
+
     if ((isFirstTransaction || isCompletionPayment) && incomingAmount > 0) {
       if (isCompletionPayment) {
         console.log("[tatumCryptoWebHook] COMPLETION payment detected for underpayment!");
