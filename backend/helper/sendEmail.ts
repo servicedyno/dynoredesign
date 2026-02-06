@@ -441,24 +441,36 @@ const sendPaymentConfirmingEmail = async (
   requiredConfirmations: number
 ) => {
   try {
-    const subject = `🔄 Payment Confirming (${currentConfirmations}/${requiredConfirmations}) - DynoPay`;
-    const message = `Good news! Your payment for ${companyName} is being confirmed.
+    const subject = `Payment Confirming (${currentConfirmations}/${requiredConfirmations}) - DynoPay`;
+    const progressPct = Math.min(100, Math.round((currentConfirmations / requiredConfirmations) * 100));
+    const isComplete = currentConfirmations >= requiredConfirmations;
+    
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Good news! Your payment for <strong style="color: #1a1a2e;">${companyName}</strong> is being confirmed.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 24px 0;">
+        <tr><td style="padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Amount</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${amount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Confirmations</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${currentConfirmations} of ${requiredConfirmations}</td></tr>
+            <tr><td colspan="2" style="padding: 12px 0 4px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e5e7eb; border-radius: 4px; height: 8px;">
+                <tr><td style="width: ${progressPct}%; background: ${isComplete ? '#22c55e' : '#3b82f6'}; border-radius: 4px; height: 8px;">&nbsp;</td><td style="height: 8px;">&nbsp;</td></tr>
+              </table>
+            </td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${transactionId}</td></tr>
+          </table>
+        </td></tr>
+      </table>
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">${isComplete
+        ? "The payment has reached the required confirmations and will be credited shortly!"
+        : `${requiredConfirmations - currentConfirmations} more confirmation${requiredConfirmations - currentConfirmations > 1 ? 's' : ''} needed before the payment is credited.`} You can track the full status in your DynoPay dashboard.</p>`;
 
-💰 Amount: ${amount} ${currency}
-📝 Transaction ID: ${transactionId}
-✅ Confirmations: ${currentConfirmations} of ${requiredConfirmations}
-
-${currentConfirmations >= requiredConfirmations 
-  ? "The payment has reached the required confirmations and will be credited shortly!"
-  : `${requiredConfirmations - currentConfirmations} more confirmation${requiredConfirmations - currentConfirmations > 1 ? 's' : ''} needed before the payment is credited.`}
-
-You can track the full status in your DynoPay dashboard.`;
-
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Payment Confirming");
     const info = await mailTransporter({
       to: recipientEmail,
       name,
       subject,
-      body: message,
+      body: htmlBody,
     });
     return info;
   } catch (e) {
