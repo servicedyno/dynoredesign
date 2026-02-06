@@ -15,7 +15,7 @@ import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance"
 // Cache TTL for dashboard data (30 seconds)
 const DASHBOARD_CACHE_TTL = 30;
 
-// Fee Tiers Configuration
+// Fee Tiers Configuration (thresholds in USD - will be converted for display)
 const FEE_TIERS = [
   { name: "Starter", min: 0, max: 10000, description: "For new users testing the platform" },
   { name: "Standard", min: 10000, max: 50000, description: "For growing users" },
@@ -25,20 +25,45 @@ const FEE_TIERS = [
 ];
 
 /**
- * Get current fee tier based on monthly volume
+ * Get currency symbol for a given currency code
  */
-const getFeeTier = (monthlyVolume: number) => {
-  const tier = FEE_TIERS.find(t => monthlyVolume >= t.min && monthlyVolume < t.max) || FEE_TIERS[FEE_TIERS.length - 1];
-  const nextTier = FEE_TIERS.find(t => t.min > monthlyVolume);
+const getCurrencySymbol = (currency: string): string => {
+  const symbols: Record<string, string> = {
+    USD: '$', EUR: '€', GBP: '£', AUD: 'A$', CAD: 'C$', CHF: 'CHF ',
+    CNY: '¥', JPY: '¥', HKD: 'HK$', NZD: 'NZ$', SGD: 'S$',
+    BRL: 'R$', NGN: '₦', ZAR: 'R', KES: 'KSh', MXN: 'MX$'
+  };
+  return symbols[currency?.toUpperCase()] || '';
+};
+
+/**
+ * Get current fee tier based on monthly volume (in USD)
+ * @param monthlyVolumeUSD - Volume in USD
+ * @param displayCurrency - Currency to display thresholds in
+ * @param conversionRate - Rate to convert USD to display currency (1 USD = X displayCurrency)
+ */
+const getFeeTier = (monthlyVolumeUSD: number, displayCurrency: string = 'USD', conversionRate: number = 1) => {
+  const tier = FEE_TIERS.find(t => monthlyVolumeUSD >= t.min && monthlyVolumeUSD < t.max) || FEE_TIERS[FEE_TIERS.length - 1];
+  const nextTier = FEE_TIERS.find(t => t.min > monthlyVolumeUSD);
+  
+  // Convert thresholds to display currency
+  const displayVolume = Math.round(monthlyVolumeUSD * conversionRate * 100) / 100;
+  const displayThreshold = tier.max === Infinity ? null : Math.round(tier.max * conversionRate);
+  const displayAmountToNext = nextTier ? Math.round((nextTier.min - monthlyVolumeUSD) * conversionRate * 100) / 100 : 0;
+  const currencySymbol = getCurrencySymbol(displayCurrency);
   
   return {
     current_tier: tier.name,
     tier_description: tier.description,
-    monthly_volume: monthlyVolume,
-    tier_threshold: tier.max === Infinity ? null : tier.max,
-    percent_complete: tier.max === Infinity ? 100 : Math.round((monthlyVolume / tier.max) * 100 * 10) / 10,
-    amount_to_next_tier: nextTier ? Math.round((nextTier.min - monthlyVolume) * 100) / 100 : 0,
+    monthly_volume: displayVolume,
+    monthly_volume_usd: monthlyVolumeUSD, // Always include USD for reference
+    tier_threshold: displayThreshold,
+    tier_threshold_formatted: displayThreshold ? `${currencySymbol}${displayThreshold.toLocaleString()} ${displayCurrency}` : 'Unlimited',
+    percent_complete: tier.max === Infinity ? 100 : Math.round((monthlyVolumeUSD / tier.max) * 100 * 10) / 10,
+    amount_to_next_tier: displayAmountToNext,
+    amount_to_next_tier_formatted: nextTier ? `${currencySymbol}${displayAmountToNext.toLocaleString()} ${displayCurrency}` : null,
     next_tier: nextTier?.name || null,
+    currency: displayCurrency,
   };
 };
 
