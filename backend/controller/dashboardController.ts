@@ -8,7 +8,7 @@ import {
   currencyConvert,
 } from "../helper";
 import { IUserType } from "../utils/types";
-import { userTransactionModel, userWalletModel, companyModel, apiModel } from "../models";
+import { userTransactionModel, userWalletModel, companyModel } from "../models";
 import sequelize from "../utils/dbInstance";
 import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 
