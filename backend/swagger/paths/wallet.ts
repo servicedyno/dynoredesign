@@ -355,7 +355,17 @@ Check your email for a 6-digit OTP code and call \`/api/wallet/verifyOtp\` with 
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Address validated! OTP sent to your email.' }
+                  message: { type: 'string', example: 'Address validated! OTP sent to your email' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      wallet_address: { type: 'string', example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' },
+                      wallet_type: { type: 'string', example: 'BTC' },
+                      company_id: { type: 'integer', example: 1 },
+                      wallet_name: { type: 'string', example: 'Main BTC Payment Address', nullable: true },
+                      email: { type: 'string', example: 'jo***@example.com', description: 'Masked email where OTP was sent' }
+                    }
+                  }
                 }
               }
             }
