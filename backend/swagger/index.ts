@@ -19,6 +19,8 @@ import { taxPaths } from "./paths/tax";
 import { kycPaths } from "./paths/kyc";
 import { directApiPaths } from "./paths/directApi";
 import { webhookPaths } from "./paths/webhooks";
+import { dashboardPaths } from "./paths/dashboard";
+import { invoicePaths } from "./paths/invoice";
 
 // Merge all paths
 const allPaths = {
