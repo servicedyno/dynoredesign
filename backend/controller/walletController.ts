@@ -17,7 +17,7 @@ import {
   successResponseHelper,
   generateWalletName,
 } from "../helper";
-import { formatAmountForDisplay, getCurrencyInfo } from "../utils/currencyUtils";
+import { formatAmountForDisplay, getCurrencyInfo, COMPANY_CURRENCY_QUERY } from "../utils/currencyUtils";
 import crypto from "crypto";
 import flw from "../apis/flutterwaveApi";
 import {
