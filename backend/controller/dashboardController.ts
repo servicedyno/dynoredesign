@@ -217,8 +217,11 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       },
       total_volume: {
         amount: Math.round(totalVolume * 100) / 100,
+        amount_formatted: formatAmountForDisplay(Math.round(totalVolume * 100) / 100, preferredCurrency).display_value,
         current_month: Math.round(currentVolume * 100) / 100,
+        current_month_formatted: formatAmountForDisplay(Math.round(currentVolume * 100) / 100, preferredCurrency).display_value,
         currency: preferredCurrency,
+        currency_info: getCurrencyInfo(preferredCurrency),
         change_percent: calculateChange(currentVolume, lastVolume),
         comparison_period: "last_month",
       },
