@@ -642,9 +642,9 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
   try {
     const id = req.params.id;
 
-    // Get company's preferred currency from their API key
+    // Get company's preferred currency from their API key (most recent active key)
     const apiKeyResult = await sequelize.query(
-      `SELECT base_currency FROM tbl_api WHERE company_id = :companyId AND status = 'active' LIMIT 1`,
+      `SELECT base_currency FROM tbl_api WHERE company_id = :companyId AND status = 'active' ORDER BY "createdAt" DESC LIMIT 1`,
       { replacements: { companyId: id }, type: QueryTypes.SELECT }
     ) as Array<{ base_currency: string }>;
     
