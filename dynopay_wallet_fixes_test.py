@@ -46,17 +46,15 @@ class DynoPayTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get("success") and "data" in data:
-                    token_data = data["data"]
-                    if "accessToken" in token_data:
-                        self.jwt_token = token_data["accessToken"]
-                        self.session.headers.update({
-                            'Authorization': f'Bearer {self.jwt_token}'
-                        })
-                        user_info = token_data.get("user", {})
-                        self.log_test("Authentication", True, 
-                                    f"Logged in as {user_info.get('name', 'Unknown')} (ID: {user_info.get('user_id')})")
-                        return True
+                if "data" in data and "accessToken" in data["data"]:
+                    self.jwt_token = data["data"]["accessToken"]
+                    self.session.headers.update({
+                        'Authorization': f'Bearer {self.jwt_token}'
+                    })
+                    user_info = data["data"].get("userData", {})
+                    self.log_test("Authentication", True, 
+                                f"Logged in as {user_info.get('name', 'Unknown')} (ID: {user_info.get('user_id')})")
+                    return True
             
             self.log_test("Authentication", False, 
                          f"Status: {response.status_code}, Response: {response.text[:200]}")
