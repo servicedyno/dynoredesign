@@ -642,6 +642,14 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
   try {
     const id = req.params.id;
 
+    // Get company's preferred currency from their API key
+    const apiKeyResult = await sequelize.query(
+      `SELECT base_currency FROM tbl_api WHERE company_id = :companyId AND status = 'active' LIMIT 1`,
+      { replacements: { companyId: id }, type: QueryTypes.SELECT }
+    ) as Array<{ base_currency: string }>;
+    
+    const preferredCurrency = apiKeyResult.length > 0 ? apiKeyResult[0].base_currency : 'USD';
+
     const resData = await sequelize.query(
       `
       select ut.*,c.customer_name,c.email,cm.company_name,cm.company_id from tbl_user_transaction ut 
@@ -650,16 +658,43 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
       { type: QueryTypes.SELECT }
     );
 
+    // Convert amounts to preferred currency if not USD
+    let conversionRate = 1;
+    if (preferredCurrency !== 'USD' && resData.length > 0) {
+      try {
+        const conversions = await currencyConvert({
+          sourceCurrency: 'USD',
+          currency: [preferredCurrency],
+          amount: 1,
+          fixedDecimal: true,
+        });
+        if (conversions && conversions[0]?.amount) {
+          conversionRate = Number(conversions[0].amount);
+        }
+      } catch (convErr) {
+        console.warn(`[getTransactions] Currency conversion failed:`, convErr);
+      }
+    }
+
     const finalRes = resData.map((x: Record<string, unknown>) => {
       const { wallet_id, ...rest } = x;
-      return rest;
+      // Add display_currency and display_amount for frontend
+      const baseAmount = Number(rest.base_amount || 0);
+      return {
+        ...rest,
+        display_amount: Math.round(baseAmount * conversionRate * 100) / 100,
+        display_currency: preferredCurrency,
+      };
     });
 
     const message = finalRes.length === 0
       ? "No transactions found for this company"
       : `Successfully retrieved ${finalRes.length} transaction${finalRes.length === 1 ? '' : 's'}`;
     
-    successResponseHelper(res, 200, message, finalRes);
+    successResponseHelper(res, 200, message, {
+      transactions: finalRes,
+      currency: preferredCurrency,
+    });
   } catch (e) {
     const message = getErrorMessage(e);
     companyLogger.error(
