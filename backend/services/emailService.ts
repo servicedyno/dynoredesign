@@ -7,8 +7,15 @@ import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService"
  * Provider: Brevo
  */
 
-// Dynopay Logo URL (from official checkout repo)
-const DYNOPAY_WHITE_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Icons/home/dynopay-whiteLogo.svg";
+// Use PNG version for email compatibility (SVG clip-path not supported by Gmail)
+const DYNOPAY_WHITE_LOGO_SVG = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Icons/home/dynopay-whiteLogo.svg";
+const getDynopayLogoUrl = () => {
+  const serverUrl = process.env.SERVER_URL || process.env.CHECKOUT_URL || '';
+  if (serverUrl) {
+    return `${serverUrl}/dynopay-white-logo.png`;
+  }
+  return DYNOPAY_WHITE_LOGO_SVG;
+};
 
 /**
  * Get currency symbol for a given currency code
