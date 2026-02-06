@@ -27,7 +27,7 @@ const getCurrencySymbol = (currency: string): string => {
 };
 
 // Base email template wrapper with proper logo
-const dynoPayEmailTemplate = (
+export const dynoPayEmailTemplate = (
   heading: string,
   content: string,
   showButton: boolean = false,
