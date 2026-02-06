@@ -1206,11 +1206,15 @@ const assetToOtherAddress = async ({
       changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
   } else if (currency === "LTC") {
+    // When toUTXO is provided (merchant + admin split), use multi-output; otherwise single output
+    const ltcOutputs = toUTXO.length > 0
+      ? toUTXO.map((o: any) => ({ address: o.address, value: Number(Number(o.value).toFixed(8)) }))
+      : [{ address: toAddress, value: Number(Number(amount).toFixed(8)) }];
     transaction = await tatumSdk.blockchain.ltc.ltcTransferBlockchain({
       fromAddress: [{ address: fromAddress, privateKey }],
-      to: [{ address: toAddress, value: Number(Number(amount).toFixed(8)) }],
+      to: ltcOutputs,
       fee,
-      changeAddress: fromMaster ? fromAddress : toAddress,
+      changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
   } else if (currency === "BCH") {
     transaction = await tatumSdk.blockchain.bcash.bchTransferBlockchain({
