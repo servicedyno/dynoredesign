@@ -2614,9 +2614,16 @@ const Crypto = async (
       qr_code = url;
     }
     
-    // Create transaction record
-    const walletDetails = await adminWalletModel.findOne({
-      where: { wallet_type: currency },
+    // Create transaction record — use merchant's own wallet (FK references tbl_user_wallet)
+    const merchantWalletLookup: Record<string, unknown> = {
+      user_id: Number(userId),
+      wallet_type: currency,
+    };
+    if (companyId && !isNaN(Number(companyId))) {
+      merchantWalletLookup.company_id = Number(companyId);
+    }
+    const walletDetails = await userWalletModel.findOne({
+      where: merchantWalletLookup,
     });
     
     const walletId = walletDetails?.dataValues.wallet_id;
