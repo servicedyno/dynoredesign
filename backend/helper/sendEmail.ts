@@ -278,15 +278,18 @@ const sendWeeklySummaryEmail = async (
     totalVolume: number;
     completedCount: number;
     pendingCount: number;
+    currency?: string; // Base currency from company's API key
   }
 ) => {
   try {
+    const currency = summaryData.currency || 'USD';
+    const currencySymbol = getCurrencySymbol(currency);
     const subject = "Your Weekly Summary - DynoPay";
     const message = `Here's your weekly activity summary for ${summaryData.periodStart} to ${summaryData.periodEnd}:
 
 📊 Weekly Statistics:
 • Total Transactions: ${summaryData.transactionCount}
-• Total Volume: $${summaryData.totalVolume.toFixed(2)}
+• Total Volume: ${currencySymbol}${summaryData.totalVolume.toFixed(2)} ${currency}
 • Completed: ${summaryData.completedCount}
 • Pending: ${summaryData.pendingCount}
 
