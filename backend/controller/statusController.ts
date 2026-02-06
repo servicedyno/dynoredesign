@@ -10,7 +10,7 @@ import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance"
 const STATUS_CACHE_TTL = 60;
 
 /**
- * Status Controller for DynoPay Status Page
+ * Status Controller for Dynopay Status Page
  * Provides endpoints for REAL service health, uptime metrics, and incident tracking
  */
 
