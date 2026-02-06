@@ -381,9 +381,13 @@ class SingleApiKeyCurrencyTester:
                 data = response.json()
                 response_data = data.get('data', {})
                 
-                # Check for currency field at root level
-                root_currency = response_data.get('currency')
-                transactions = response_data.get('transactions', [])
+                # Handle both object and list response formats
+                if isinstance(response_data, list):
+                    transactions = response_data
+                    root_currency = None  # No root currency in list format
+                else:
+                    root_currency = response_data.get('currency')
+                    transactions = response_data.get('transactions', [])
                 
                 # Check transactions for display_amount and display_currency
                 transaction_currency_fields = []
