@@ -198,18 +198,21 @@ const getWallet = async (req: express.Request, res: express.Response) => {
       const transferRate = rateMap.get(currentWallet.wallet_type) || 1;
       const amountInUSD = Number(currentWallet.amount / transferRate);
       const amountInBaseCurrency = amountInUSD * fiatConversionRate;
+      const amountDisplay = formatAmountForDisplay(amountInBaseCurrency, preferredCurrency);
       walletsWithCompanyName.push({
         ...currentWallet,
         company_name: companyMap.get(currentWallet.company_id) || 'Unknown',
         amount_in_usd: Number(amountInUSD).toFixed(2),
         amount_in_base_currency: Number(amountInBaseCurrency).toFixed(2),
+        amount_display: amountDisplay, // Full display object with symbol + code
         base_currency: preferredCurrency,
         transfer_rate: transferRate,
       });
     }
 
     // Group wallets by company
-    const groupedByCompany: { [key: string]: { company_id: number; company_name: string; base_currency: string; wallets: Array<Record<string, unknown>> } } = {};
+    const currencyInfo = getCurrencyInfo(preferredCurrency);
+    const groupedByCompany: { [key: string]: { company_id: number; company_name: string; base_currency: string; currency_info: typeof currencyInfo; wallets: Array<Record<string, unknown>> } } = {};
     
     for (const wallet of walletsWithCompanyName) {
       const companyKey = `company_${wallet.company_id}`;
@@ -218,6 +221,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
           company_id: wallet.company_id,
           company_name: wallet.company_name,
           base_currency: wallet.base_currency,
+          currency_info: getCurrencyInfo(wallet.base_currency),
           wallets: [],
         };
       }
