@@ -488,7 +488,7 @@ testRouter.post("/send-payment-link-email", async (req, res) => {
     const { sendEmail } = require("../helper");
     
     // Sample payment link email content (matching real implementation)
-    const companyName = "DynoPay Test Merchant";
+    const companyName = "Dynopay Test Merchant";
     const amount = "50.00";
     const currency = "USD";
     const description = "Monthly Subscription - Premium Plan";
@@ -500,7 +500,7 @@ testRouter.post("/send-payment-link-email", async (req, res) => {
       <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f0fff4 0%, #e6ffed 100%); border-left: 4px solid #22c55e; border-radius: 0 8px 8px 0;">
         <h3 style="margin: 0 0 10px 0; color: #166534; font-size: 16px;">🎁 Special Offer for You!</h3>
         <p style="margin: 0 0 10px 0; color: #14532d; font-size: 14px;">
-          Want to accept crypto payments for your own business? Join DynoPay and get <strong>50% off</strong> all fees for <strong>90 days</strong>!
+          Want to accept crypto payments for your own business? Join Dynopay and get <strong>50% off</strong> all fees for <strong>90 days</strong>!
         </p>
         <p style="margin: 0; font-size: 14px;">
           Use code: <strong style="background: #dcfce7; padding: 4px 8px; border-radius: 4px; font-family: monospace;">REF-TEST1234</strong>
@@ -695,7 +695,7 @@ testRouter.post("/send-payment-received-email", async (req, res) => {
       recipientName,
       "0.00325000",
       "BTC",
-      "DynoPay Test Merchant",
+      "Dynopay Test Merchant",
       "tx_abc123def456_test_payment_received",
       new Date().toLocaleDateString(),
       new Date().toLocaleTimeString()
@@ -722,7 +722,7 @@ testRouter.post("/send-payment-pending-email", async (req, res) => {
     await sendPaymentPendingEmail(
       email,
       recipientName,
-      "DynoPay Test Merchant",
+      "Dynopay Test Merchant",
       "250.00",
       "USDT-ERC20",
       "tx_789ghi012jkl_test_payment_pending",
