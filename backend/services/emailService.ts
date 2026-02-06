@@ -1003,11 +1003,18 @@ export const sendInvoiceGeneratedEmail = async (
     invoice_number: string;
     transaction_id: number;
     total_usd: number;
+    total_amount?: number; // Amount in base_currency
+    currency?: string; // Base currency (e.g., EUR, GBP)
     invoice_date: Date;
     invoice_url: string;
   }
 ) => {
   try {
+    // Use base currency amount if available, otherwise fall back to USD
+    const currency = invoiceData.currency || 'USD';
+    const amount = invoiceData.total_amount || invoiceData.total_usd;
+    const currencySymbol = getCurrencySymbol(currency);
+    
     const subject = `Invoice ${invoiceData.invoice_number} - Dynopay`;
     const content = `<p class="message">Hello ${name},</p>
     <p class="message">Your invoice has been successfully generated for transaction #${invoiceData.transaction_id}.</p>
@@ -1016,7 +1023,7 @@ export const sendInvoiceGeneratedEmail = async (
       <p>
         <strong>Invoice Number:</strong> ${invoiceData.invoice_number}<br />
         <strong>Transaction ID:</strong> ${invoiceData.transaction_id}<br />
-        <strong>Total Amount:</strong> $${invoiceData.total_usd.toFixed(2)} USD<br />
+        <strong>Total Amount:</strong> ${currencySymbol}${amount.toFixed(2)} ${currency}<br />
         <strong>Invoice Date:</strong> ${new Date(invoiceData.invoice_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
       </p>
     </div>
