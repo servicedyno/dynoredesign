@@ -39,22 +39,29 @@ const addApi = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 400, "Invalid environment. Must be 'production' or 'development'");
     }
 
-    // Validate base_currency is FIAT only (not crypto)
-    const validFiatCurrencies = [
-      // Major International
-      'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'HKD', 'NZD', 'SGD',
-      // Latin America (high crypto adoption)
-      'BRL', 'ARS', 'COP', 'CLP', 'PEN', 'MXN', 'VES', 'UYU',
-      // African (high crypto adoption)
-      'NGN', 'ZAR', 'KES', 'GHS', 'TZS', 'XAF', 'XOF', 'EGP', 'MAD',
-      'UGX', 'RWF', 'ETB', 'ZMW', 'BWP', 'MUR', 'AOA', 'MZN', 'CDF'
+    // Validate base_currency - limited to supported currencies only
+    const SUPPORTED_BASE_CURRENCIES = [
+      'USD',  // US Dollar
+      'EUR',  // Euro
+      'GBP',  // British Pound
+      'AUD',  // Australian Dollar
+      'CAD',  // Canadian Dollar
+      'INR',  // Indian Rupee
+      'NGN',  // Nigerian Naira
+      'VND',  // Vietnamese Dong
+      'PKR',  // Pakistani Rupee
+      'BRL',  // Brazilian Real
+      'ARS',  // Argentine Peso
+      'PHP',  // Philippine Peso
+      'SGD',  // Singapore Dollar
+      'AED',  // UAE Dirham
     ];
     
-    if (!base_currency || !validFiatCurrencies.includes(base_currency.toUpperCase())) {
+    if (!base_currency || !SUPPORTED_BASE_CURRENCIES.includes(base_currency.toUpperCase())) {
       return errorResponseHelper(
         res, 
         400, 
-        `Base currency must be a valid FIAT currency. Supported: ${validFiatCurrencies.join(', ')}`
+        `Base currency must be one of: ${SUPPORTED_BASE_CURRENCIES.join(', ')}`
       );
     }
 
