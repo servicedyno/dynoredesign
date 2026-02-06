@@ -86,13 +86,20 @@ def analyze_crash_recovery_code() -> Dict[str, Any]:
                 conditions_found.append("status check")
                 print("✅ Condition 1: items.status === \"processing\" found")
                 
-            if "!!items.txId" in stale_line:
-                conditions_found.append("txId check") 
-                print("✅ Condition 2: !!items.txId found")
+            # Check the next few lines for multi-line condition
+            for check_line_num in range(max(0, stale_processing_line - 1), min(len(lines), stale_processing_line + 5)):
+                check_line = lines[check_line_num]
+                if "!!items.txId" in check_line:
+                    conditions_found.append("txId check") 
+                    print("✅ Condition 2: !!items.txId found")
+                    break
                 
-            if "60000" in stale_line or "Date.now() - new Date(items.lastAttempt" in stale_line:
-                conditions_found.append("time check")
-                print("✅ Condition 3: Time elapsed > 60000ms check found")
+            for check_line_num in range(max(0, stale_processing_line - 1), min(len(lines), stale_processing_line + 5)):
+                check_line = lines[check_line_num]
+                if "60000" in check_line or ("Date.now()" in check_line and "lastAttempt" in check_line):
+                    conditions_found.append("time check")
+                    print("✅ Condition 3: Time elapsed > 60000ms check found")
+                    break
                 
             if len(conditions_found) == 3:
                 test1_results.append(True)
