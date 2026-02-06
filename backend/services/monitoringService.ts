@@ -6,7 +6,7 @@ import { log } from "../utils/loggers";
 
 /**
  * Infrastructure Monitoring Service
- * Performs real health checks on DynoPay services and stores results
+ * Performs real health checks on Dynopay services and stores results
  */
 
 interface HealthCheckResult {
