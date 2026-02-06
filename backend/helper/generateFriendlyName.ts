@@ -1,69 +1,38 @@
 /**
- * Generates friendly, memorable random names for API keys and wallets
- * Uses combinations of adjectives and nouns to create readable identifiers
+ * Generates short, friendly random names for API keys and wallets
+ * Format: "Word-123" (e.g., "Swift-42", "Nova-7")
  */
 
-const adjectives = [
-  'Swift', 'Bright', 'Bold', 'Calm', 'Cool', 'Crisp', 'Daring', 'Elite',
-  'Fast', 'Fresh', 'Grand', 'Happy', 'Keen', 'Lucky', 'Neat', 'Noble',
-  'Prime', 'Quick', 'Royal', 'Sharp', 'Smart', 'Solid', 'Steady', 'Super',
-  'Sunny', 'Turbo', 'Ultra', 'Vital', 'Wise', 'Zesty', 'Agile', 'Brave',
-  'Cyber', 'Delta', 'Eagle', 'Flash', 'Gear', 'Hyper', 'Iron', 'Jade',
-  'Lunar', 'Maple', 'Nexus', 'Orbit', 'Pixel', 'Quantum', 'Radar', 'Spark',
-  'Terra', 'Vapor', 'Wave', 'Xeno', 'Zenith', 'Apex', 'Blaze', 'Comet'
-];
-
-const nouns = [
-  'Key', 'Vault', 'Bridge', 'Gate', 'Link', 'Node', 'Core', 'Hub',
-  'Port', 'Wave', 'Flow', 'Star', 'Beam', 'Pulse', 'Shield', 'Forge',
-  'Crown', 'Blade', 'Storm', 'Flame', 'Frost', 'Stone', 'Wind', 'Tide',
-  'Peak', 'Ridge', 'Glen', 'Vale', 'Creek', 'Brook', 'Hawk', 'Wolf',
-  'Lion', 'Bear', 'Falcon', 'Phoenix', 'Dragon', 'Tiger', 'Panther', 'Raven',
-  'Anchor', 'Atlas', 'Cipher', 'Echo', 'Flux', 'Helix', 'Ion', 'Jet',
-  'Kite', 'Laser', 'Matrix', 'Nova', 'Orion', 'Prism', 'Quest', 'Ray'
+const words = [
+  'Swift', 'Bold', 'Nova', 'Apex', 'Pulse', 'Spark', 'Echo', 'Flux',
+  'Prime', 'Core', 'Wave', 'Blaze', 'Edge', 'Volt', 'Zoom', 'Dash',
+  'Snap', 'Beam', 'Glow', 'Rush', 'Mint', 'Jade', 'Onyx', 'Ruby',
+  'Sage', 'Lynx', 'Hawk', 'Wolf', 'Fox', 'Zap', 'Arc', 'Ion'
 ];
 
 /**
- * Generates a random friendly name
- * @param prefix Optional prefix to add (e.g., 'API', 'Wallet')
- * @param includeNumber Whether to append a random number for uniqueness
- * @returns A friendly random name like "Swift Key" or "API Bold Star 42"
+ * Generates a short random name like "Swift-42"
  */
-export const generateFriendlyName = (prefix?: string, includeNumber: boolean = true): string => {
-  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  
-  let name = `${adjective} ${noun}`;
-  
-  if (prefix) {
-    name = `${prefix} ${name}`;
-  }
-  
-  if (includeNumber) {
-    const randomNum = Math.floor(Math.random() * 100);
-    name = `${name} ${randomNum}`;
-  }
-  
-  return name;
+export const generateFriendlyName = (): string => {
+  const word = words[Math.floor(Math.random() * words.length)];
+  const num = Math.floor(Math.random() * 100);
+  return `${word}-${num}`;
 };
 
 /**
- * Generates a friendly name specifically for API keys
- * @param environment 'production' or 'development'
- * @returns A name like "Live Swift Key 42" or "Test Bold Star 17"
+ * Generates a short name for API keys
+ * @returns A name like "Swift-42"
  */
-export const generateApiKeyName = (environment: string = 'production'): string => {
-  const prefix = environment === 'production' ? 'Live' : 'Test';
-  return generateFriendlyName(prefix, true);
+export const generateApiKeyName = (): string => {
+  return generateFriendlyName();
 };
 
 /**
- * Generates a friendly name specifically for wallets
- * @param currency The cryptocurrency type (e.g., 'BTC', 'ETH')
- * @returns A name like "BTC Swift Vault 42"
+ * Generates a short name for wallets
+ * @returns A name like "Nova-7"
  */
-export const generateWalletName = (currency?: string): string => {
-  return generateFriendlyName(currency, true);
+export const generateWalletName = (): string => {
+  return generateFriendlyName();
 };
 
 export default generateFriendlyName;
