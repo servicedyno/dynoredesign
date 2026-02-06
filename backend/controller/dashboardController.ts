@@ -186,8 +186,12 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const totalCount = parseInt(String(stats.total_count || '0'));
     let totalVolume = parseFloat(String(stats.total_volume || '0'));
     const pendingCount = parseInt(String(stats.pending_count || '0'));
+    
+    // Store USD values for fee tier calculation
+    const currentMonthVolumeUSD = parseFloat(String(stats.current_month_volume || '0'));
 
     // Convert volumes to preferred currency if not USD
+    let conversionRate = 1;
     if (preferredCurrency !== 'USD' && (totalVolume > 0 || currentVolume > 0)) {
       try {
         const conversions = await currencyConvert({
@@ -198,20 +202,21 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
         });
         
         if (conversions && conversions[0]?.amount) {
-          const rate = Number(conversions[0].amount);
-          totalVolume = totalVolume * rate;
-          currentVolume = currentVolume * rate;
-          lastVolume = lastVolume * rate;
-          console.log(`[Dashboard] Converted volumes to ${preferredCurrency} (rate: ${rate})`);
+          conversionRate = Number(conversions[0].amount);
+          totalVolume = totalVolume * conversionRate;
+          currentVolume = currentVolume * conversionRate;
+          lastVolume = lastVolume * conversionRate;
+          console.log(`[Dashboard] Converted volumes to ${preferredCurrency} (rate: ${conversionRate})`);
         }
       } catch (convErr) {
         console.warn(`[Dashboard] Currency conversion failed, showing USD:`, convErr);
         preferredCurrency = 'USD'; // Fallback to USD
+        conversionRate = 1;
       }
     }
 
-    // Calculate fee tier (always in USD for consistency)
-    const feeTier = getFeeTier(parseFloat(String(stats.current_month_volume || '0')));
+    // Calculate fee tier (based on USD, but display in preferred currency)
+    const feeTier = getFeeTier(currentMonthVolumeUSD, preferredCurrency, conversionRate);
 
     // Build response
     const dashboardData = {
