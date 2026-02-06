@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-DynoPay Shorter API Key Name Auto-Generation Testing
-Tests the shorter auto-generated names for API keys and wallets as requested in review
+DynoPay Dashboard Currency Display Fix Testing
+Tests that dashboard shows amounts in the company's preferred currency as requested in review
 """
 
 import os
@@ -11,9 +11,8 @@ import time
 import requests
 from typing import Dict, List, Any
 import uuid
-import re
 
-class DynoPayShorterNameTester:
+class DynoPayDashboardCurrencyTester:
     def __init__(self):
         # Get backend URL from frontend .env file
         self.backend_url = self.get_backend_url()
@@ -25,7 +24,7 @@ class DynoPayShorterNameTester:
         # Test credentials from review request
         self.test_email = "richard@dyno.pt"
         self.test_password = "Katiekendra123@"
-        self.company_id = 38
+        self.expected_company_id = 38
         
     def get_backend_url(self):
         """Get backend URL from frontend .env file"""
@@ -83,395 +82,62 @@ class DynoPayShorterNameTester:
                     self.log_result("Authentication", False, "Login succeeded but no token received")
                     return False
             else:
-                self.log_result("Authentication", False, f"Login failed with status {response.status_code}")
+                self.log_result("Authentication", False, f"Login failed with status {response.status_code}: {response.text}")
                 return False
                 
         except Exception as e:
             self.log_result("Authentication", False, f"Authentication failed: {str(e)}")
             return False
     
-    def test_api_key_name_auto_generation_eur(self):
-        """Test API Key Name Auto-Generation with EUR currency"""
-        print("\n" + "="*60)
-        print("TEST 1: API KEY NAME AUTO-GENERATION - EUR CURRENCY")
-        print("="*60)
-        
-        if not self.jwt_token:
-            self.log_result("API Key Auto-Generation EUR", False, "No JWT token available")
-            return
-            
+    def get_company_info(self):
+        """Get company information to verify company_id"""
         try:
-            # Create API key WITHOUT api_name field, using EUR currency
-            api_key_data = {
-                "company_id": self.company_id,
-                "base_currency": "EUR",
-                "environment": "development"
-                # Intentionally NOT including api_name to trigger auto-generation
-            }
-            
-            response = requests.post(
-                f"{self.backend_url}/api/userApi/addApi",
-                json=api_key_data,
-                headers={
-                    "Authorization": f"Bearer {self.jwt_token}",
-                    "Content-Type": "application/json"
-                },
+            response = requests.get(
+                f"{self.backend_url}/api/company/getCompany",
+                headers={"Authorization": f"Bearer {self.jwt_token}"},
                 timeout=15
             )
             
             if response.status_code == 200:
                 data = response.json()
-                api_response = data.get('data', {})
-                api_name = api_response.get('api_name', '')
+                companies = data.get('data', [])
                 
-                # Check if name matches the short format "Word-Number"
-                short_name_pattern = r'^[A-Za-z]+-\d+$'
-                is_short_format = bool(re.match(short_name_pattern, api_name))
+                # Find company with expected ID
+                target_company = None
+                for company in companies:
+                    if company.get('company_id') == self.expected_company_id:
+                        target_company = company
+                        break
                 
-                # Check if it's NOT a long format
-                is_not_long = len(api_name) < 20 and 'Live' not in api_name and 'Key' not in api_name
-                
-                if api_name and is_short_format and is_not_long:
+                if target_company:
                     self.log_result(
-                        "API Key Auto-Generation EUR", 
+                        "Company Info", 
                         True, 
-                        f"Short auto-generated name created: '{api_name}' (EUR currency)",
+                        f"Found company {target_company.get('company_name', 'Unknown')} with ID {self.expected_company_id}",
                         {
-                            "api_name": api_name,
-                            "base_currency": "EUR",
-                            "environment": "development",
-                            "matches_pattern": is_short_format,
-                            "name_length": len(api_name),
-                            "api_id": api_response.get('api_id')
+                            "company_id": target_company.get('company_id'),
+                            "company_name": target_company.get('company_name'),
+                            "total_companies": len(companies)
                         }
                     )
+                    return target_company
                 else:
                     self.log_result(
-                        "API Key Auto-Generation EUR", 
+                        "Company Info", 
                         False, 
-                        f"Generated name '{api_name}' doesn't match short format 'Word-Number'",
-                        {
-                            "api_name": api_name,
-                            "matches_pattern": is_short_format,
-                            "is_not_long": is_not_long,
-                            "expected_pattern": "Word-Number (e.g., Swift-42)"
-                        }
+                        f"Company ID {self.expected_company_id} not found. Available companies: {[c.get('company_id') for c in companies]}"
                     )
-            elif response.status_code == 400 and 'already exists' in response.text.lower():
-                # Try with GBP if EUR already exists
-                self.test_api_key_name_auto_generation_gbp()
+                    return None
             else:
-                self.log_result(
-                    "API Key Auto-Generation EUR", 
-                    False, 
-                    f"API key creation failed with status {response.status_code}: {response.text[:200]}"
-                )
+                self.log_result("Company Info", False, f"Failed to get companies: status {response.status_code}")
+                return None
                 
         except Exception as e:
-            self.log_result("API Key Auto-Generation EUR", False, f"API key creation request failed: {str(e)}")
+            self.log_result("Company Info", False, f"Company info request failed: {str(e)}")
+            return None
     
-    def test_api_key_name_auto_generation_gbp(self):
-        """Test API Key Name Auto-Generation with GBP currency"""
-        print("\n" + "="*60)
-        print("TEST 2: API KEY NAME AUTO-GENERATION - GBP CURRENCY")
-        print("="*60)
-        
-        if not self.jwt_token:
-            self.log_result("API Key Auto-Generation GBP", False, "No JWT token available")
-            return
-            
-        try:
-            # Create API key WITHOUT api_name field, using GBP currency
-            api_key_data = {
-                "company_id": self.company_id,
-                "base_currency": "GBP",
-                "environment": "development"
-                # Intentionally NOT including api_name to trigger auto-generation
-            }
-            
-            response = requests.post(
-                f"{self.backend_url}/api/userApi/addApi",
-                json=api_key_data,
-                headers={
-                    "Authorization": f"Bearer {self.jwt_token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                api_response = data.get('data', {})
-                api_name = api_response.get('api_name', '')
-                
-                # Check if name matches the short format "Word-Number"
-                short_name_pattern = r'^[A-Za-z]+-\d+$'
-                is_short_format = bool(re.match(short_name_pattern, api_name))
-                
-                # Check if it's NOT a long format
-                is_not_long = len(api_name) < 20 and 'Live' not in api_name and 'Key' not in api_name
-                
-                if api_name and is_short_format and is_not_long:
-                    self.log_result(
-                        "API Key Auto-Generation GBP", 
-                        True, 
-                        f"Short auto-generated name created: '{api_name}' (GBP currency)",
-                        {
-                            "api_name": api_name,
-                            "base_currency": "GBP",
-                            "environment": "development",
-                            "matches_pattern": is_short_format,
-                            "name_length": len(api_name),
-                            "api_id": api_response.get('api_id')
-                        }
-                    )
-                else:
-                    self.log_result(
-                        "API Key Auto-Generation GBP", 
-                        False, 
-                        f"Generated name '{api_name}' doesn't match short format 'Word-Number'",
-                        {
-                            "api_name": api_name,
-                            "matches_pattern": is_short_format,
-                            "is_not_long": is_not_long,
-                            "expected_pattern": "Word-Number (e.g., Nova-7)"
-                        }
-                    )
-            elif response.status_code == 400 and 'already exists' in response.text.lower():
-                # Try with BTC if GBP already exists
-                self.test_api_key_name_auto_generation_btc()
-            else:
-                self.log_result(
-                    "API Key Auto-Generation GBP", 
-                    False, 
-                    f"API key creation failed with status {response.status_code}: {response.text[:200]}"
-                )
-                
-        except Exception as e:
-            self.log_result("API Key Auto-Generation GBP", False, f"API key creation request failed: {str(e)}")
-    
-    def test_api_key_name_auto_generation_btc(self):
-        """Test API Key Name Auto-Generation with BTC currency"""
-        print("\n" + "="*60)
-        print("TEST 3: API KEY NAME AUTO-GENERATION - BTC CURRENCY")
-        print("="*60)
-        
-        if not self.jwt_token:
-            self.log_result("API Key Auto-Generation BTC", False, "No JWT token available")
-            return
-            
-        try:
-            # Create API key WITHOUT api_name field, using BTC currency
-            api_key_data = {
-                "company_id": self.company_id,
-                "base_currency": "BTC",
-                "environment": "development"
-                # Intentionally NOT including api_name to trigger auto-generation
-            }
-            
-            response = requests.post(
-                f"{self.backend_url}/api/userApi/addApi",
-                json=api_key_data,
-                headers={
-                    "Authorization": f"Bearer {self.jwt_token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                api_response = data.get('data', {})
-                api_name = api_response.get('api_name', '')
-                
-                # Check if name matches the short format "Word-Number"
-                short_name_pattern = r'^[A-Za-z]+-\d+$'
-                is_short_format = bool(re.match(short_name_pattern, api_name))
-                
-                # Check if it's NOT a long format
-                is_not_long = len(api_name) < 20 and 'Live' not in api_name and 'Key' not in api_name
-                
-                if api_name and is_short_format and is_not_long:
-                    self.log_result(
-                        "API Key Auto-Generation BTC", 
-                        True, 
-                        f"Short auto-generated name created: '{api_name}' (BTC currency)",
-                        {
-                            "api_name": api_name,
-                            "base_currency": "BTC",
-                            "environment": "development",
-                            "matches_pattern": is_short_format,
-                            "name_length": len(api_name),
-                            "api_id": api_response.get('api_id')
-                        }
-                    )
-                else:
-                    self.log_result(
-                        "API Key Auto-Generation BTC", 
-                        False, 
-                        f"Generated name '{api_name}' doesn't match short format 'Word-Number'",
-                        {
-                            "api_name": api_name,
-                            "matches_pattern": is_short_format,
-                            "is_not_long": is_not_long,
-                            "expected_pattern": "Word-Number (e.g., Blaze-15)"
-                        }
-                    )
-            elif response.status_code == 400 and 'already exists' in response.text.lower():
-                # Try with NGN if BTC already exists
-                self.test_api_key_name_auto_generation_ngn()
-            else:
-                self.log_result(
-                    "API Key Auto-Generation BTC", 
-                    False, 
-                    f"API key creation failed with status {response.status_code}: {response.text[:200]}"
-                )
-                
-        except Exception as e:
-            self.log_result("API Key Auto-Generation BTC", False, f"API key creation request failed: {str(e)}")
-    
-    def test_api_key_name_auto_generation_ngn(self):
-        """Test API Key Name Auto-Generation with NGN currency"""
-        print("\n" + "="*60)
-        print("TEST 4: API KEY NAME AUTO-GENERATION - NGN CURRENCY")
-        print("="*60)
-        
-        if not self.jwt_token:
-            self.log_result("API Key Auto-Generation NGN", False, "No JWT token available")
-            return
-            
-        try:
-            # Create API key WITHOUT api_name field, using NGN currency
-            api_key_data = {
-                "company_id": self.company_id,
-                "base_currency": "NGN",
-                "environment": "development"
-                # Intentionally NOT including api_name to trigger auto-generation
-            }
-            
-            response = requests.post(
-                f"{self.backend_url}/api/userApi/addApi",
-                json=api_key_data,
-                headers={
-                    "Authorization": f"Bearer {self.jwt_token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                api_response = data.get('data', {})
-                api_name = api_response.get('api_name', '')
-                
-                # Check if name matches the short format "Word-Number"
-                short_name_pattern = r'^[A-Za-z]+-\d+$'
-                is_short_format = bool(re.match(short_name_pattern, api_name))
-                
-                # Check if it's NOT a long format
-                is_not_long = len(api_name) < 20 and 'Live' not in api_name and 'Key' not in api_name
-                
-                if api_name and is_short_format and is_not_long:
-                    self.log_result(
-                        "API Key Auto-Generation NGN", 
-                        True, 
-                        f"Short auto-generated name created: '{api_name}' (NGN currency)",
-                        {
-                            "api_name": api_name,
-                            "base_currency": "NGN",
-                            "environment": "development",
-                            "matches_pattern": is_short_format,
-                            "name_length": len(api_name),
-                            "api_id": api_response.get('api_id')
-                        }
-                    )
-                else:
-                    self.log_result(
-                        "API Key Auto-Generation NGN", 
-                        False, 
-                        f"Generated name '{api_name}' doesn't match short format 'Word-Number'",
-                        {
-                            "api_name": api_name,
-                            "matches_pattern": is_short_format,
-                            "is_not_long": is_not_long,
-                            "expected_pattern": "Word-Number (e.g., Pulse-88)"
-                        }
-                    )
-            else:
-                self.log_result(
-                    "API Key Auto-Generation NGN", 
-                    False, 
-                    f"API key creation failed with status {response.status_code}: {response.text[:200]}"
-                )
-                
-        except Exception as e:
-            self.log_result("API Key Auto-Generation NGN", False, f"API key creation request failed: {str(e)}")
-    
-    def test_name_format_validation(self):
-        """Test that generated names match the expected pattern"""
-        print("\n" + "="*60)
-        print("TEST 5: NAME FORMAT VALIDATION")
-        print("="*60)
-        
-        # Test the generateFriendlyName function pattern
-        expected_words = [
-            'Swift', 'Bold', 'Nova', 'Apex', 'Pulse', 'Spark', 'Echo', 'Flux',
-            'Prime', 'Core', 'Wave', 'Blaze', 'Edge', 'Volt', 'Zoom', 'Dash',
-            'Snap', 'Beam', 'Glow', 'Rush', 'Mint', 'Jade', 'Onyx', 'Ruby',
-            'Sage', 'Lynx', 'Hawk', 'Wolf', 'Fox', 'Zap', 'Arc', 'Ion'
-        ]
-        
-        # Check if any of our test results contain valid names
-        valid_names = []
-        invalid_names = []
-        
-        for test_name, result in self.test_results.items():
-            if 'API Key Auto-Generation' in test_name and result.get('success'):
-                details = result.get('details', {})
-                api_name = details.get('api_name', '')
-                if api_name:
-                    # Check if it matches Word-Number pattern
-                    pattern_match = re.match(r'^([A-Za-z]+)-(\d+)$', api_name)
-                    if pattern_match:
-                        word, number = pattern_match.groups()
-                        if word in expected_words and 0 <= int(number) <= 99:
-                            valid_names.append(api_name)
-                        else:
-                            invalid_names.append(api_name)
-        
-        if valid_names:
-            self.log_result(
-                "Name Format Validation", 
-                True, 
-                f"Generated names follow correct format: {', '.join(valid_names)}",
-                {
-                    "valid_names": valid_names,
-                    "invalid_names": invalid_names,
-                    "expected_pattern": "Word-Number where Word is from predefined list and Number is 0-99"
-                }
-            )
-        else:
-            self.log_result(
-                "Name Format Validation", 
-                False, 
-                "No valid short names were generated in previous tests",
-                {
-                    "valid_names": valid_names,
-                    "invalid_names": invalid_names,
-                    "note": "This could be due to duplicate API keys or other creation issues"
-                }
-            )
-    
-    def test_existing_api_keys_format(self):
-        """Test existing API keys to see their name format"""
-        print("\n" + "="*60)
-        print("TEST 6: EXISTING API KEYS FORMAT CHECK")
-        print("="*60)
-        
-        if not self.jwt_token:
-            self.log_result("Existing API Keys Format", False, "No JWT token available")
-            return
-            
+    def get_api_key_currency(self):
+        """Get API keys and check their base_currency"""
         try:
             response = requests.get(
                 f"{self.backend_url}/api/userApi/getApi",
@@ -491,78 +157,292 @@ class DynoPayShorterNameTester:
                 else:
                     api_list = [api_data] if api_data else []
                 
-                short_format_names = []
-                long_format_names = []
-                
+                # Find API keys for the target company
+                company_api_keys = []
                 for api_key in api_list:
-                    api_name = api_key.get('api_name', '')
-                    if api_name:
-                        # Check if it matches short format "Word-Number"
-                        short_pattern = r'^[A-Za-z]+-\d+$'
-                        if re.match(short_pattern, api_name) and len(api_name) < 15:
-                            short_format_names.append(api_name)
-                        else:
-                            long_format_names.append(api_name)
+                    if api_key.get('company_id') == self.expected_company_id:
+                        company_api_keys.append(api_key)
                 
-                total_keys = len(api_list)
-                short_count = len(short_format_names)
-                
-                if short_count > 0:
-                    self.log_result(
-                        "Existing API Keys Format", 
-                        True, 
-                        f"Found {short_count}/{total_keys} API keys with short format names",
-                        {
-                            "total_api_keys": total_keys,
-                            "short_format_names": short_format_names[:5],  # Show first 5
-                            "long_format_names": long_format_names[:3],   # Show first 3
-                            "short_format_count": short_count,
-                            "long_format_count": len(long_format_names)
-                        }
-                    )
+                if company_api_keys:
+                    # Get the most recent active API key
+                    active_keys = [k for k in company_api_keys if k.get('status') == 'active']
+                    if active_keys:
+                        # Sort by creation date (most recent first)
+                        active_keys.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
+                        primary_key = active_keys[0]
+                        
+                        base_currency = primary_key.get('base_currency', 'USD')
+                        self.log_result(
+                            "API Key Currency", 
+                            True, 
+                            f"Company {self.expected_company_id} has API key with base_currency: {base_currency}",
+                            {
+                                "api_id": primary_key.get('api_id'),
+                                "api_name": primary_key.get('api_name'),
+                                "base_currency": base_currency,
+                                "status": primary_key.get('status'),
+                                "environment": primary_key.get('environment'),
+                                "total_company_keys": len(company_api_keys),
+                                "active_keys": len(active_keys)
+                            }
+                        )
+                        return base_currency
+                    else:
+                        self.log_result(
+                            "API Key Currency", 
+                            False, 
+                            f"No active API keys found for company {self.expected_company_id}. Total keys: {len(company_api_keys)}"
+                        )
+                        return None
                 else:
                     self.log_result(
-                        "Existing API Keys Format", 
+                        "API Key Currency", 
                         False, 
-                        f"No short format names found among {total_keys} API keys",
-                        {
-                            "total_api_keys": total_keys,
-                            "long_format_names": long_format_names[:5],
-                            "note": "All existing API keys use long format names"
-                        }
+                        f"No API keys found for company {self.expected_company_id}. Total API keys: {len(api_list)}"
                     )
+                    return None
             else:
-                self.log_result("Existing API Keys Format", False, f"Failed to retrieve API keys: status {response.status_code}")
+                self.log_result("API Key Currency", False, f"Failed to get API keys: status {response.status_code}")
+                return None
                 
         except Exception as e:
-            self.log_result("Existing API Keys Format", False, f"API keys request failed: {str(e)}")
+            self.log_result("API Key Currency", False, f"API key request failed: {str(e)}")
+            return None
+    
+    def test_dashboard_with_company_filter(self, expected_currency):
+        """Test dashboard with company_id filter - should show company's preferred currency"""
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/dashboard",
+                params={"company_id": self.expected_company_id},
+                headers={"Authorization": f"Bearer {self.jwt_token}"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                dashboard_data = data.get('data', {})
+                total_volume = dashboard_data.get('total_volume', {})
+                currency = total_volume.get('currency', 'USD')
+                amount = total_volume.get('amount', 0)
+                
+                if currency == expected_currency:
+                    self.log_result(
+                        "Dashboard With Company Filter", 
+                        True, 
+                        f"Dashboard correctly shows currency as {currency} (expected: {expected_currency})",
+                        {
+                            "company_id": self.expected_company_id,
+                            "currency": currency,
+                            "expected_currency": expected_currency,
+                            "total_amount": amount,
+                            "current_month": total_volume.get('current_month', 0),
+                            "total_transactions": dashboard_data.get('total_transactions', {}).get('count', 0)
+                        }
+                    )
+                    return True
+                else:
+                    self.log_result(
+                        "Dashboard With Company Filter", 
+                        False, 
+                        f"Dashboard shows currency as {currency}, expected {expected_currency}",
+                        {
+                            "company_id": self.expected_company_id,
+                            "actual_currency": currency,
+                            "expected_currency": expected_currency,
+                            "total_volume_data": total_volume
+                        }
+                    )
+                    return False
+            else:
+                self.log_result(
+                    "Dashboard With Company Filter", 
+                    False, 
+                    f"Dashboard request failed: status {response.status_code}: {response.text[:200]}"
+                )
+                return False
+                
+        except Exception as e:
+            self.log_result("Dashboard With Company Filter", False, f"Dashboard request failed: {str(e)}")
+            return False
+    
+    def test_dashboard_without_company_filter(self):
+        """Test dashboard without company_id filter - should show USD as default"""
+        try:
+            response = requests.get(
+                f"{self.backend_url}/api/dashboard",
+                headers={"Authorization": f"Bearer {self.jwt_token}"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                dashboard_data = data.get('data', {})
+                total_volume = dashboard_data.get('total_volume', {})
+                currency = total_volume.get('currency', 'USD')
+                amount = total_volume.get('amount', 0)
+                
+                if currency == 'USD':
+                    self.log_result(
+                        "Dashboard Without Company Filter", 
+                        True, 
+                        f"Dashboard correctly shows default currency as USD",
+                        {
+                            "currency": currency,
+                            "total_amount": amount,
+                            "current_month": total_volume.get('current_month', 0),
+                            "total_transactions": dashboard_data.get('total_transactions', {}).get('count', 0)
+                        }
+                    )
+                    return True
+                else:
+                    self.log_result(
+                        "Dashboard Without Company Filter", 
+                        False, 
+                        f"Dashboard shows currency as {currency}, expected USD for default",
+                        {
+                            "actual_currency": currency,
+                            "expected_currency": "USD",
+                            "total_volume_data": total_volume
+                        }
+                    )
+                    return False
+            else:
+                self.log_result(
+                    "Dashboard Without Company Filter", 
+                    False, 
+                    f"Dashboard request failed: status {response.status_code}: {response.text[:200]}"
+                )
+                return False
+                
+        except Exception as e:
+            self.log_result("Dashboard Without Company Filter", False, f"Dashboard request failed: {str(e)}")
+            return False
+    
+    def test_currency_conversion_logic(self, expected_currency):
+        """Test that amounts are properly converted when currency is not USD"""
+        if expected_currency == 'USD':
+            self.log_result(
+                "Currency Conversion Logic", 
+                True, 
+                "Currency is USD, no conversion needed",
+                {"currency": expected_currency}
+            )
+            return True
+            
+        try:
+            # Get dashboard data with company filter
+            response = requests.get(
+                f"{self.backend_url}/api/dashboard",
+                params={"company_id": self.expected_company_id},
+                headers={"Authorization": f"Bearer {self.jwt_token}"},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                dashboard_data = data.get('data', {})
+                total_volume = dashboard_data.get('total_volume', {})
+                
+                # Get dashboard data without company filter (USD)
+                usd_response = requests.get(
+                    f"{self.backend_url}/api/dashboard",
+                    headers={"Authorization": f"Bearer {self.jwt_token}"},
+                    timeout=15
+                )
+                
+                if usd_response.status_code == 200:
+                    usd_data = usd_response.json()
+                    usd_dashboard_data = usd_data.get('data', {})
+                    usd_total_volume = usd_dashboard_data.get('total_volume', {})
+                    
+                    company_amount = total_volume.get('amount', 0)
+                    usd_amount = usd_total_volume.get('amount', 0)
+                    company_currency = total_volume.get('currency', 'USD')
+                    
+                    # If amounts are different, conversion likely occurred
+                    if company_amount != usd_amount and company_currency != 'USD':
+                        self.log_result(
+                            "Currency Conversion Logic", 
+                            True, 
+                            f"Currency conversion detected: {usd_amount} USD vs {company_amount} {company_currency}",
+                            {
+                                "usd_amount": usd_amount,
+                                "converted_amount": company_amount,
+                                "converted_currency": company_currency,
+                                "conversion_ratio": round(company_amount / usd_amount, 4) if usd_amount > 0 else 0
+                            }
+                        )
+                        return True
+                    elif company_amount == usd_amount and company_currency != 'USD':
+                        self.log_result(
+                            "Currency Conversion Logic", 
+                            False, 
+                            f"No conversion detected: amounts are identical ({company_amount}) but currencies differ (USD vs {company_currency})",
+                            {
+                                "usd_amount": usd_amount,
+                                "company_amount": company_amount,
+                                "company_currency": company_currency
+                            }
+                        )
+                        return False
+                    else:
+                        self.log_result(
+                            "Currency Conversion Logic", 
+                            True, 
+                            f"Amounts match as expected for same currency or zero amounts",
+                            {
+                                "amount": company_amount,
+                                "currency": company_currency
+                            }
+                        )
+                        return True
+                else:
+                    self.log_result("Currency Conversion Logic", False, f"Failed to get USD dashboard: status {usd_response.status_code}")
+                    return False
+            else:
+                self.log_result("Currency Conversion Logic", False, f"Failed to get company dashboard: status {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Currency Conversion Logic", False, f"Currency conversion test failed: {str(e)}")
+            return False
     
     def run_all_tests(self):
-        """Run all shorter name generation tests"""
+        """Run all dashboard currency display tests"""
         print("="*80)
-        print("DYNOPAY SHORTER API KEY NAME AUTO-GENERATION TESTING")
+        print("DYNOPAY DASHBOARD CURRENCY DISPLAY FIX TESTING")
         print("="*80)
         print(f"Backend URL: {self.backend_url}")
         print(f"Test Credentials: {self.test_email}")
-        print(f"Company ID: {self.company_id}")
+        print(f"Expected Company ID: {self.expected_company_id}")
         print("="*80)
         
-        # Authenticate first
+        # Step 1: Authenticate
         if not self.authenticate_user():
             print("\n❌ AUTHENTICATION FAILED - Cannot proceed with tests")
             return
         
-        # Check existing API keys format first
-        self.test_existing_api_keys_format()
+        # Step 2: Get company info
+        company_info = self.get_company_info()
+        if not company_info:
+            print("\n❌ COMPANY INFO FAILED - Cannot proceed with tests")
+            return
         
-        # Test API key auto-generation with different currencies
-        self.test_api_key_name_auto_generation_eur()
-        self.test_api_key_name_auto_generation_gbp()
-        self.test_api_key_name_auto_generation_btc()
-        self.test_api_key_name_auto_generation_ngn()
+        # Step 3: Get API key currency
+        api_key_currency = self.get_api_key_currency()
+        if not api_key_currency:
+            print("\n❌ API KEY CURRENCY FAILED - Cannot proceed with tests")
+            return
         
-        # Validate name format
-        self.test_name_format_validation()
+        # Step 4: Test dashboard with company filter
+        self.test_dashboard_with_company_filter(api_key_currency)
+        
+        # Step 5: Test dashboard without company filter
+        self.test_dashboard_without_company_filter()
+        
+        # Step 6: Test currency conversion logic
+        self.test_currency_conversion_logic(api_key_currency)
         
         # Print summary
         self.print_summary()
@@ -588,24 +468,33 @@ class DynoPayShorterNameTester:
                 print(f"  - {error}")
         
         if passed_tests == total_tests:
-            print("\n🎉 ALL SHORTER NAME GENERATION TESTS PASSED!")
+            print("\n🎉 ALL DASHBOARD CURRENCY DISPLAY TESTS PASSED!")
+            print("✅ Dashboard shows amounts in company's preferred currency when company_id is provided")
+            print("✅ Dashboard shows USD as default when no company_id is provided")
+            print("✅ Currency conversion logic is working correctly")
         else:
             print(f"\n⚠️  {failed_tests} TEST(S) NEED ATTENTION")
+            
+        # Show key findings
+        print("\n" + "="*80)
+        print("KEY FINDINGS")
+        print("="*80)
         
-        # Show successful name generations
-        successful_names = []
         for test_name, result in self.test_results.items():
-            if 'API Key Auto-Generation' in test_name and result.get('success'):
+            if result['success']:
                 details = result.get('details', {})
-                api_name = details.get('api_name', '')
-                if api_name:
-                    successful_names.append(f"{api_name} ({details.get('base_currency', 'Unknown')})")
-        
-        if successful_names:
-            print(f"\n✅ SUCCESSFULLY GENERATED SHORT NAMES:")
-            for name in successful_names:
-                print(f"  - {name}")
+                if test_name == "API Key Currency":
+                    currency = details.get('base_currency', 'Unknown')
+                    print(f"✅ Company API Key Base Currency: {currency}")
+                elif test_name == "Dashboard With Company Filter":
+                    currency = details.get('currency', 'Unknown')
+                    amount = details.get('total_amount', 0)
+                    print(f"✅ Dashboard with Company Filter: {amount} {currency}")
+                elif test_name == "Dashboard Without Company Filter":
+                    currency = details.get('currency', 'Unknown')
+                    amount = details.get('total_amount', 0)
+                    print(f"✅ Dashboard without Company Filter: {amount} {currency}")
 
 if __name__ == "__main__":
-    tester = DynoPayShorterNameTester()
+    tester = DynoPayDashboardCurrencyTester()
     tester.run_all_tests()
