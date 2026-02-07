@@ -419,12 +419,8 @@ const estimateFees = async (req: express.Request, res: express.Response) => {
     const tempFees = {};
     const keys = Object.keys(batchFees);
     const tempCurrency = currency === "USDT-ERC20" ? "ETH" : currency;
-    const currentAmount = await currencyConvert({
-      currency: ["USD"],
-      sourceCurrency: tempCurrency,
-      amount: 1,
-      fixedDecimal: true,
-    });
+    const usdRate = await convertToUSD(tempCurrency, 1);
+    const currentAmount = [{ amount: usdRate }];
     for (let i = 0; i < keys.length; i++) {
       if (currency === "USDT-ERC20") {
         if (["fast"].indexOf(keys[i]) !== -1) {
