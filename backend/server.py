@@ -6,10 +6,11 @@ Required because supervisor configuration expects Python/uvicorn on port 8001.
 
 Architecture:
 - Python/uvicorn: Lightweight proxy on port 8001 (supervisor requirement)
-- Main Backend: Node.js on internal port 3300 (handles all business logic)
-- API Service: Node.js on port 3301 (external merchant API)
+- Main Backend: Node.js on internal port 3300 (handles all business logic + merchant API)
 
 The proxy adds minimal overhead (<5ms) and allows the project to remain pure Node.js.
+Note: The api-service (port 3301) has been retired — all merchant API endpoints
+are now served by the main backend's merchantApiRouter.
 """
 
 import subprocess
