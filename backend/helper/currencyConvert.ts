@@ -262,8 +262,16 @@ const processSingleCurrency = async (
 
   const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
 
+  // Strategy 2: For crypto — Tatum first (already paid for, reliable)
   if (!rate && isCryptoConversion) {
-    // For crypto conversions, use CoinGecko first (FastForex silently returns wrong rates for crypto)
+    rate = await getCryptoRateViaTatum(source, currentCurrency);
+    if (rate) {
+      await setCachedRate(source, currentCurrency, rate);
+    }
+  }
+
+  // Strategy 3: CoinGecko fallback for crypto
+  if (!rate && isCryptoConversion) {
     rate = await getCryptoRateViaCoinGecko(source, currentCurrency);
     if (rate) {
       console.log(`[currencyConvert] CoinGecko rate for ${source}→${currentCurrency}: ${rate}`);
@@ -271,8 +279,8 @@ const processSingleCurrency = async (
     }
   }
 
+  // Strategy 4: FastForex for fiat-to-fiat, or as final fallback
   if (!rate) {
-    // For fiat-to-fiat, or as fallback: try FastForex API
     const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
     if (fastForexResult) {
       rate = fastForexResult.rate;
@@ -282,8 +290,7 @@ const processSingleCurrency = async (
   }
 
   if (!rate) {
-    // No rate available from any API - fail safely
-    console.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - both FastForex and CoinGecko failed`);
+    console.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - all providers failed (Tatum, CoinGecko, FastForex)`);
     throw new Error(`Currency conversion failed for ${source}→${currentCurrency}. Please try again later.`);
   }
 
