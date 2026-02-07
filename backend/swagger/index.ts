@@ -556,8 +556,12 @@ function verifyWebhookSignature(payload, signature, secret) {
     },
     servers: [
       {
-        url: process.env.SERVER_URL || "http://localhost:8001",
-        description: "API Server",
+        url: (process.env.SERVER_URL || "http://localhost:8001") + "/api",
+        description: "Default API (backward compatible, maps to v1)",
+      },
+      {
+        url: (process.env.SERVER_URL || "http://localhost:8001") + "/api/v1",
+        description: "Versioned API v1 (recommended for new integrations)",
       },
     ],
     components: {
