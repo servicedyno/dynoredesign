@@ -342,7 +342,7 @@ const processSingleCurrency = async (
   }
 
   if (!rate) {
-    console.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - all providers failed (Tatum, CoinGecko, FastForex)`);
+    console.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - all providers failed (FastForex, Tatum, CoinGecko)`);
     throw new Error(`Currency conversion failed for ${source}→${currentCurrency}. Please try again later.`);
   }
 
