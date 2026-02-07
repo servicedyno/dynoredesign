@@ -2519,6 +2519,22 @@ export const detectOrphanPayments = async (): Promise<{
           continue;
         }
 
+        // Skip gas dust residuals on native currencies (not actual payments)
+        // These are leftover from admin gas funding for forwarding tx fees
+        const DUST_THRESHOLDS: Record<string, number> = {
+          BTC: 0.00005,    // ~$5 at $100k/BTC
+          ETH: 0.002,      // ~$5 at $2500/ETH
+          TRX: 20,         // ~$5 at $0.25/TRX
+          LTC: 0.05,       // ~$5 at $100/LTC
+          DOGE: 25,        // ~$5 at $0.20/DOGE
+          BCH: 0.01,       // ~$5 at $500/BCH
+          BSC: 0.008,      // ~$5 at $600/BNB
+        };
+        const dustThreshold = DUST_THRESHOLDS[walletType] || 0;
+        if (!TOKEN_CHAINS.includes(walletType) && balance < dustThreshold) {
+          continue; // Gas dust, not an orphan payment
+        }
+
         // If the balance matches known admin_fee_balance (accumulated fees), skip
         // Allow 1% tolerance for rounding
         if (existingAdminBalance > 0 && Math.abs(balance - existingAdminBalance) / existingAdminBalance < 0.01) {
