@@ -669,14 +669,9 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
     const conversionRates: Record<string, number> = {};
     for (const srcCurrency of uniqueBaseCurrencies) {
       try {
-        const conversions = await currencyConvert({
-          sourceCurrency: srcCurrency,
-          currency: [preferredCurrency],
-          amount: 1,
-          fixedDecimal: true,
-        });
-        if (conversions && conversions[0]?.amount) {
-          conversionRates[srcCurrency] = Number(conversions[0].amount);
+        const result = await convertToFiat(srcCurrency, preferredCurrency, 1);
+        if (result.amount) {
+          conversionRates[srcCurrency] = result.amount;
         }
       } catch (convErr) {
         console.warn(`[getTransactions] Conversion ${srcCurrency}->${preferredCurrency} failed:`, convErr);
