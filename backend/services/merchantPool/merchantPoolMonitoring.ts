@@ -375,8 +375,26 @@ export const checkMissedPayments = async (): Promise<{
         const incomingTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 5);
         
         if (!incomingTxs || incomingTxs.length === 0) {
-          console.log(`[MerchantPool] ❌ No incoming transactions found despite balance > 0. Skipping.`);
-          result.errors.push(`No transactions found for ${walletAddress} despite balance ${balance}`);
+          // Track repeated failures to avoid infinite retry loops
+          const failKey = `missed-check-fail:${walletAddress}`;
+          const failData = await getRedisItem(failKey);
+          const failCount = parseInt(failData?.count || '0', 10) + 1;
+          
+          await setRedisItem(failKey, { count: String(failCount), lastCheck: new Date().toISOString() });
+          
+          if (failCount >= 3) {
+            console.log(`[MerchantPool] ⚠️ ${walletAddress} - No incoming txs found after ${failCount} checks. Balance ${balance} ${walletType} is likely pre-existing dust. Releasing address.`);
+            // Release the reservation to stop repeated false alerts
+            await merchantTempAddressModel.update(
+              { status: 'AVAILABLE', current_payment_id: null, expected_amount: null, reserved_until: null, current_company_id: null },
+              { where: { wallet_address: walletAddress } }
+            );
+            await deleteRedisItem(failKey);
+            result.errors.push(`Released ${walletAddress} after ${failCount} failed tx lookups (dust: ${balance} ${walletType})`);
+          } else {
+            console.log(`[MerchantPool] ❌ No incoming transactions found for ${walletAddress} (attempt ${failCount}/3). Will retry.`);
+            result.errors.push(`No transactions found for ${walletAddress} (attempt ${failCount}/3)`);
+          }
           continue;
         }
 
