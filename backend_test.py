@@ -77,12 +77,15 @@ class DynoPayBackendTester:
         status_code, data = self.make_request("POST", "/api/user/login", self.credentials)
         
         if status_code == 200:
-            token = data.get("token")
+            # Check for token in different possible locations
+            token = data.get("token") or data.get("accessToken") or (data.get("data", {}).get("accessToken"))
             if token:
                 self.auth_token = token
-                self.log_test("TEST 2 - User Authentication", "PASS", f"Login successful, token: {token[:20]}...")
+                user_data = data.get("data", {}).get("userData", {})
+                user_info = f"user_id={user_data.get('user_id')}, name={user_data.get('name')}"
+                self.log_test("TEST 2 - User Authentication", "PASS", f"Login successful, {user_info}, token: {token[:20]}...")
             else:
-                self.log_test("TEST 2 - User Authentication", "FAIL", f"No token in response: {data}")
+                self.log_test("TEST 2 - User Authentication", "FAIL", f"No token found in response: {data}")
         else:
             self.log_test("TEST 2 - User Authentication", "FAIL", f"HTTP {status_code}: {data}")
 
