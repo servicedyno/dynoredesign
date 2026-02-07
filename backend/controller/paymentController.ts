@@ -5442,7 +5442,8 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
     accepted_currencies,  // Array of crypto types to accept
     callback_url, 
     redirect_url, 
-    webhook_url 
+    webhook_url,
+    name,                 // Customer name
   } = req.body;
   
   try {
