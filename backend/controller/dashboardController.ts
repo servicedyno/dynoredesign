@@ -468,14 +468,7 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
     let conversionRate = 1;
     
     if (company_id) {
-      const apiKeyResult = await sequelize.query(
-        COMPANY_CURRENCY_QUERY,
-        { replacements: { companyId: company_id }, type: QueryTypes.SELECT }
-      ) as Array<{ base_currency: string }>;
-      
-      if (apiKeyResult.length > 0 && apiKeyResult[0].base_currency) {
-        preferredCurrency = apiKeyResult[0].base_currency;
-      }
+      preferredCurrency = await getCompanyBaseCurrency(company_id);
     }
 
     // Calculate user's monthly transaction volume (in USD)
