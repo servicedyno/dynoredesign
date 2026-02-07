@@ -175,36 +175,37 @@ const getCryptoRateViaTatum = async (from: string, to: string): Promise<number |
 };
 
 /**
- * Get rate from FastForex API (supports both crypto and fiat)
+ * Get rate from FastForex API (primary provider — 150-300ms)
+ * Uses fetch-one endpoint for optimal speed
  */
 const getFastForexRate = async (from: string, to: string, amount: number): Promise<{ rate: number; converted: number } | null> => {
+  const apiKey = FASTFOREX_API_KEY || process.env.FAST_FOREX_KEY;
+  if (!apiKey) return null;
+  
   try {
-    const { data } = await axios.get(`https://api.fastforex.io/convert`, {
+    const { data } = await axios.get(`https://api.fastforex.io/fetch-one`, {
       params: {
-        api_key: process.env.FAST_FOREX_KEY,
-        from: from,
-        to: to,
-        amount: amount,
+        api_key: apiKey,
+        from: from.toUpperCase(),
+        to: to.toUpperCase(),
       },
-      timeout: 10000,
+      timeout: 5000,
     });
 
-    if (data.result && data.result.rate) {
-      console.log(`[currencyConvert] FastForex rate for ${from}→${to}: ${data.result.rate}`);
-      return {
-        rate: data.result.rate,
-        converted: data.result[to],
-      };
+    if (data.result) {
+      const rate = data.result[to.toUpperCase()];
+      if (rate && rate > 0) {
+        console.log(`[currencyConvert] FastForex rate for ${from}→${to}: ${rate} (${data.ms}ms server)`);
+        return {
+          rate: rate,
+          converted: amount * rate,
+        };
+      }
     }
   } catch (error: unknown) {
     const err = error as { response?: { data?: { error?: string }; status?: number }; message?: string };
     const errorMsg = err.response?.data?.error || err.message;
     console.warn(`[currencyConvert] FastForex API failed for ${from}→${to}: ${errorMsg}`);
-    
-    // Check if it's a plan restriction error
-    if (errorMsg?.includes('No access') || errorMsg?.includes('plan') || err.response?.status === 403) {
-      console.warn(`[currencyConvert] FastForex plan restriction detected, will try CoinGecko fallback`);
-    }
   }
   return null;
 };
