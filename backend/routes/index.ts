@@ -36,8 +36,15 @@ router.get("/", (_req: express.Request, res: express.Response) => {
     status: "operational",
     service: "Dynopay API",
     version: "1.0.0",
+    api_version: "v1",
     timestamp: new Date().toISOString(),
-    documentation: "/api-docs",
+    documentation: "/api/docs",
+    versioning: {
+      current: "v1",
+      base_url: "/api",
+      versioned_url: "/api/v1",
+      note: "Both /api/* and /api/v1/* are supported. Use /api/v1/* for explicit version pinning."
+    },
     endpoints: {
       authentication: "/api/user",
       admin: "/api/admin",
