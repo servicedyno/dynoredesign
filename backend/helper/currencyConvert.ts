@@ -7,8 +7,8 @@ interface CurrencyRateList {
   transferRate: number;
 }
 
-// Cache TTL in seconds (30 minutes — protects against API outages/rate limits)
-const RATE_CACHE_TTL = 1800;
+// Cache TTL in seconds (5 minutes for rates)
+const RATE_CACHE_TTL = 300;
 
 // List of crypto currencies
 const CRYPTO_CURRENCIES = ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT', 'USDC', 'BNB', 'XRP', 'ADA', 'SOL'];
