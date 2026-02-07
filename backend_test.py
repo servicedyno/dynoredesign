@@ -97,13 +97,14 @@ class DynoPayTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('data') and len(data['data']) > 0:
-                    api_data = data['data'][0]  # Get first API key
-                    self.api_key = api_data.get('api_key')
+                if data.get('data') and data['data'].get('all') and len(data['data']['all']) > 0:
+                    api_data = data['data']['all'][0]  # Get first API key
+                    self.api_key = api_data.get('apiKey')  # Note: it's 'apiKey' not 'api_key'
                     if self.api_key:
                         company_id = api_data.get('company_id')
                         environment = api_data.get('environment', 'unknown')
-                        self.log(f"✅ API key retrieved - Company ID: {company_id}, Environment: {environment}")
+                        api_name = api_data.get('api_name', 'Unknown')
+                        self.log(f"✅ API key retrieved - Name: {api_name}, Company ID: {company_id}, Environment: {environment}")
                         return True
                     else:
                         self.log("❌ No API key found in response")
