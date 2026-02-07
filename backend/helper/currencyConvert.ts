@@ -1,5 +1,4 @@
 import axios from "axios";
-import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 
 interface CurrencyRateList {
   currency: string;
