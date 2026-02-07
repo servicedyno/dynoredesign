@@ -849,6 +849,7 @@ export const releaseAddress = async (
     locked_at: null,
     last_used_at: new Date(),
     last_merchant_payout: isUTXO ? null : new Date(),
+    last_payment_context: null, // Clear saved context after successful payment
   });
 
   console.log(`[MerchantPool] ✅ Released address ${poolAddress.dataValues.wallet_address} (${walletType})`);
