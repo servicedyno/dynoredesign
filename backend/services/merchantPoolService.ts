@@ -1110,8 +1110,43 @@ export const cleanupStaleAddresses = async (
       await address.update({ status: "IN_USE" });
       retryCount++;
     } else {
-      // Release stuck RESERVED/PROCESSING
+      // Release stuck RESERVED/PROCESSING — save context first for orphan detection
       console.log(`[MerchantPool] 🚨 Force-releasing stuck address: ${addrStr}`);
+      
+      // Save payment context before wiping (same as releaseExpiredReservations)
+      if (address.dataValues.current_payment_id) {
+        try {
+          const staleRedisData = await getRedisItem("crypto-" + addrStr);
+          let staleCustomerData: Record<string, unknown> = {};
+          if (staleRedisData?.ref) {
+            staleCustomerData = await getRedisItem(staleRedisData.ref) || {};
+          }
+          const staleContext = {
+            payment_id: address.dataValues.current_payment_id,
+            company_id: address.dataValues.current_company_id,
+            owner_user_id: address.dataValues.owner_user_id,
+            expected_amount: address.dataValues.expected_amount,
+            wallet_type: address.dataValues.wallet_type,
+            saved_at: new Date().toISOString(),
+            saved_by: 'cleanupStaleAddresses',
+            fee_payer: staleRedisData?.fee_payer || 'company',
+            base_currency: staleRedisData?.base_currency || staleCustomerData?.base_currency || 'USD',
+            base_amount: staleRedisData?.base_amount || staleRedisData?.amount || null,
+            webhook_url: staleRedisData?.webhook_url || null,
+            callback_url: staleRedisData?.callback_url || null,
+            link_id: staleRedisData?.link_id || staleCustomerData?.link_id || null,
+            ref: staleRedisData?.ref || null,
+            adm_id: staleCustomerData?.adm_id || address.dataValues.owner_user_id,
+            customer_name: staleCustomerData?.customer_name || null,
+            customer_email: staleCustomerData?.customer_email || null,
+          };
+          await address.update({ last_payment_context: JSON.stringify(staleContext) });
+          console.log(`[MerchantPool] 💾 Saved context for stuck address ${addrStr}`);
+        } catch (ctxErr) {
+          console.warn(`[MerchantPool] ⚠️ Failed to save context for stuck address ${addrStr}`);
+        }
+      }
+      
       await address.update({
         status: "AVAILABLE",
         current_payment_id: null,
@@ -1119,6 +1154,7 @@ export const cleanupStaleAddresses = async (
         expected_amount: null,
         reserved_until: null,
         locked_at: null,
+        // NOTE: last_payment_context preserved for orphan detection
       });
       releasedCount++;
     }
