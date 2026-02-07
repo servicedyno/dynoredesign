@@ -28,12 +28,9 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 # Internal port for Node.js backend
 NODE_PORT = 3300
-# API Service port
-API_SERVICE_PORT = int(os.environ.get('API_SERVICE_PORT', 3301))
 
 # Process references
 NODE_PROCESS = None
-API_SERVICE_PROCESS = None
 HTTP_CLIENT = None
 
 print("""
