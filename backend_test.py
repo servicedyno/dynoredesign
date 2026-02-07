@@ -142,14 +142,16 @@ class DynoPayTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('token'):
-                    self.customer_token = data['token']
-                    customer_info = data.get('data', {})
+                response_data = data.get('data', {})
+                if response_data.get('token'):
+                    self.customer_token = response_data['token']
+                    customer_info = response_data
                     self.log(f"✅ Customer created - Email: {customer_data['email']}")
                     self.log(f"   Customer ID: {customer_info.get('customer_id')}")
                     return True
                 else:
                     self.log("❌ Customer creation failed: No token in response")
+                    self.log(f"   Response structure: {list(data.keys()) if data else 'None'}")
                     return False
             else:
                 self.log(f"❌ Customer creation failed: HTTP {response.status_code}")
