@@ -1573,16 +1573,29 @@ const createCryptoPayment = async (
       let exchange_rate = 0;
       
       try {
-        // Get the crypto amount for the TOTAL value (base + tax) using FastForex
-        // Convert from ORIGINAL currency (e.g., AUD) to crypto
-        const cryptoRates = await currencyConvert({
-          sourceCurrency: baseCurrency,
-          currency: [requestedCurrency],
-          amount: totalAmountWithTax,  // Use total with tax in original currency
-          fixedDecimal: false,
-        });
-        const total_crypto_amount = parseFloat(cryptoRates[0]?.amount?.toString() || '0');
-        exchange_rate = parseFloat(cryptoRates[0]?.transferRate?.toString() || '0');
+        // PERFORMANCE FIX: Use cached exchange rate from api-service if available
+        // This avoids a redundant ~100-300ms external API call to FastForex
+        const cachedRate = items?.cached_transfer_rate ? parseFloat(String(items.cached_transfer_rate)) : 0;
+        const cachedCurrency = items?.cached_crypto_currency || null;
+        const hasCachedRate = cachedRate > 0 && cachedCurrency === requestedCurrency && taxAmount === 0;
+        
+        let total_crypto_amount: number;
+        if (hasCachedRate) {
+          // Use cached rate — same currency, no tax adjustment needed
+          total_crypto_amount = totalAmountWithTax * cachedRate;
+          exchange_rate = cachedRate;
+          console.log(`[createCryptoPayment] Using cached exchange rate: 1 ${baseCurrency} = ${cachedRate} ${requestedCurrency} (saved ~200ms)`);
+        } else {
+          // Fresh conversion needed (different currency, tax involved, or no cache)
+          const cryptoRates = await currencyConvert({
+            sourceCurrency: baseCurrency,
+            currency: [requestedCurrency],
+            amount: totalAmountWithTax,
+            fixedDecimal: false,
+          });
+          total_crypto_amount = parseFloat(cryptoRates[0]?.amount?.toString() || '0');
+          exchange_rate = parseFloat(cryptoRates[0]?.transferRate?.toString() || '0');
+        }
         
         // Calculate base crypto amount (without tax) for merchant amount calculation
         // Use ratio from original currency amounts
