@@ -1753,6 +1753,15 @@ const createCryptoPayment = async (
         is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",  // CRITICAL: Include merchant pool flag
         // FIX: Store crypto invoice expiry for polling countdown
         crypto_invoice_expires_at: cryptoInvoiceExpiresAt,
+        // BUGFIX: Store merchant webhook info directly in crypto-{address}
+        // Previously only stored in customer-{ref}, which made webhook delivery fragile.
+        // If customer-{ref} was lost (Redis eviction, DB reconstruction fallback),
+        // callMerchantWebhook would find NO webhook URL and silently skip notification.
+        webhook_url: items?.webhook_url || null,
+        callback_url: items?.callback_url || null,
+        webhook_secret: items?.webhook_secret || null,
+        company_id: items?.company_id || null,
+        link_id: items?.link_id || null,
         // Tax tracking
         ...(taxInfo && {
           tax_enabled: "true",
