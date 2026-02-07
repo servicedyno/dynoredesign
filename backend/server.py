@@ -189,9 +189,8 @@ async def ensure_services_started():
     global HTTP_CLIENT, SERVICES_STARTED
     
     if not SERVICES_STARTED:
-        # Start Node.js services
+        # Start Node.js backend (merchant API is now part of main backend)
         start_node_backend()
-        start_api_service()
         
         # Start monitoring thread
         threading.Thread(target=monitor_services, daemon=True).start()
@@ -202,7 +201,7 @@ async def ensure_services_started():
             timeout=httpx.Timeout(60.0, connect=10.0)
         )
         
-        print("✅ Proxy ready on port 8001 → Node.js on port 3300", flush=True)
+        print("Proxy ready on port 8001 -> Node.js on port 3300", flush=True)
         SERVICES_STARTED = True
 
 # ASGI application
