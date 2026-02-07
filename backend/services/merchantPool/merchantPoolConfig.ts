@@ -8,8 +8,8 @@ import { Op } from "sequelize";
 import {
   UTXO_CHAINS as MODEL_UTXO_CHAINS,
   TOKEN_CHAINS as MODEL_TOKEN_CHAINS,
-} from "../models";
-import { getErrorMessage } from "../helper";
+} from "../../models";
+import { getErrorMessage } from "../../helper";
 
 // Configuration
 export const POOL_CONFIG = {

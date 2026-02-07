@@ -8,8 +8,8 @@ import {
   merchantTempAddressModel,
   merchantPoolTransactionModel,
   MERCHANT_POOL_CRYPTO_TYPES,
-} from "../models";
-import { POOL_CONFIG, getSweepConfig } from "./merchantPool/merchantPoolConfig";
+} from "../../models";
+import { POOL_CONFIG, getSweepConfig } from "./merchantPoolConfig";
 
 /**
  * Record pool transaction for audit

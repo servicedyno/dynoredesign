@@ -9,11 +9,11 @@ import {
   merchantWalletModel,
   merchantTempAddressModel,
   CHAIN_XPUB_MAPPING,
-} from "../models";
-import tatumApi from "../apis/tatumApi";
-import sequelize from "../utils/dbInstance";
-import { getErrorMessage } from "../helper";
-import { POOL_CONFIG } from "./merchantPool/merchantPoolConfig";
+} from "../../models";
+import tatumApi from "../../apis/tatumApi";
+import sequelize from "../../utils/dbInstance";
+import { getErrorMessage } from "../../helper";
+import { POOL_CONFIG } from "./merchantPoolConfig";
 
 /**
  * Get or create merchant's xpub/mnemonic for a chain
