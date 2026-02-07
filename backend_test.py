@@ -345,7 +345,7 @@ class DynoPayP2Tester:
 
 def main():
     # Test configuration from review request
-    BASE_URL = "https://init-stack.preview.emergentagent.com"
+    BASE_URL = "https://setup-deps-6.preview.emergentagent.com"
     
     print("🧪 DynoPay P2 Changes Testing")
     print("Testing the two P2 changes:")

@@ -10,7 +10,7 @@ DynoPay provides API endpoints to create crypto payments with your own custom UI
 
 ### 📍 Where to Find Them
 
-Open Swagger UI: https://init-stack.preview.emergentagent.com/api/docs
+Open Swagger UI: https://setup-deps-6.preview.emergentagent.com/api/docs
 
 Look for the **"Payment Processing"** section. You should see:
 
@@ -366,7 +366,7 @@ const interval = setInterval(async () => {
 
 ### Step 1: Find the Endpoints
 
-1. Open Swagger: https://init-stack.preview.emergentagent.com/api/docs
+1. Open Swagger: https://setup-deps-6.preview.emergentagent.com/api/docs
 2. Scroll to **"Payment Processing"** section
 3. You'll see all these endpoints listed
 

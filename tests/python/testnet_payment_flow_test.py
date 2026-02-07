@@ -5,7 +5,7 @@ Tests complete end-to-end payment flow on testnet including payment creation,
 confirmation, fund distribution, and admin sweep functionality.
 
 Environment: Testnet Mode (TATUM_TESTNET=true, ethereum-sepolia)
-Backend URL: https://init-stack.preview.emergentagent.com
+Backend URL: https://setup-deps-6.preview.emergentagent.com
 Test User: nomadly@moxx.co
 """
 
@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 
 class TestnetPaymentFlowTester:
     def __init__(self):
-        self.backend_url = "https://init-stack.preview.emergentagent.com"
+        self.backend_url = "https://setup-deps-6.preview.emergentagent.com"
         self.test_results = {}
         self.errors = []
         self.jwt_token = None
