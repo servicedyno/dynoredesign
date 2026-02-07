@@ -334,16 +334,16 @@ class DynoPayP2Tester:
 def main():
     # Test configuration from review request
     BASE_URL = "https://init-stack.preview.emergentagent.com"
-    EMAIL = "richard@dyno.pt"
-    PASSWORD = "Katiekendra123@"
     
-    print("🧪 DynoPay Webhook URL Bug Fix Testing")
-    print(f"Testing the webhook_url bug fix implementation...")
+    print("🧪 DynoPay P2 Changes Testing")
+    print("Testing the two P2 changes:")
+    print("1. Verify api-service directory deleted")
+    print("2. Verify API versioning (backward compatible)")
     print(f"Target: {BASE_URL}")
     print()
     
-    tester = DynoPayTester(BASE_URL, EMAIL, PASSWORD)
-    results = tester.run_comprehensive_test()
+    tester = DynoPayP2Tester(BASE_URL, "", "")  # Email/password not needed for these tests
+    results = tester.run_p2_tests()
     tester.print_summary(results)
     
     # Return appropriate exit code
