@@ -169,7 +169,7 @@ class DynoPayBackendTester:
             self.log_test("TEST 5 - Payment GetData", "FAIL", f"HTTP {status_code}: {data}")
 
     def test_6_fee_calculator(self):
-        """TEST 6 - FEE CALCULATOR: POST /api/pay/calculateCheckoutFees with auth token"""
+        """TEST 6 - FEE CALCULATOR: POST /api/pay/calculateFees with auth token"""
         if not self.auth_token:
             self.log_test("TEST 6 - Fee Calculator", "SKIP", "No auth token available")
             return
@@ -177,7 +177,7 @@ class DynoPayBackendTester:
         headers = {"Authorization": f"Bearer {self.auth_token}"}
         payload = {"amount": 100, "cryptocurrency": "ETH"}
         
-        status_code, data = self.make_request("POST", "/api/pay/calculateCheckoutFees", payload, headers)
+        status_code, data = self.make_request("POST", "/api/pay/calculateFees", payload, headers)
         
         if status_code == 200:
             platform_fee = data.get("platform_fee")
