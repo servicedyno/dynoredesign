@@ -1,11 +1,11 @@
 import express from "express";
 import {
-  currencyConvert,
   errorResponseHelper,
   getErrorMessage,
   sendEmail,
   successResponseHelper,
 } from "../helper";
+import { convertToMultiple } from "../utils/currencyUtils";
 import { adminLogger } from "../utils/loggers";
 import {
   deleteRedisItem,
