@@ -2314,19 +2314,11 @@ const confirmExchange = async (req: express.Request, res: express.Response) => {
             },
           });
 
-          const wallet1_balance = await currencyConvert({
-            currency: ["USD"],
-            sourceCurrency: user1_exchange_wallet.dataValues.wallet_type,
-            amount: user1_exchange_wallet.dataValues.amount,
-            fixedDecimal: true,
-          });
+          const w1Result = await convertToFiat(user1_exchange_wallet.dataValues.wallet_type, 'USD', user1_exchange_wallet.dataValues.amount);
+          const wallet1_balance = [{ amount: w1Result.amount, transferRate: w1Result.rate }];
 
-          const wallet2_balance = await currencyConvert({
-            currency: ["USD"],
-            sourceCurrency: user2_exchange_wallet.dataValues.wallet_type,
-            amount: user2_exchange_wallet.dataValues.amount,
-            fixedDecimal: true,
-          });
+          const w2Result = await convertToFiat(user2_exchange_wallet.dataValues.wallet_type, 'USD', user2_exchange_wallet.dataValues.amount);
+          const wallet2_balance = [{ amount: w2Result.amount, transferRate: w2Result.rate }];
 
           console.log("wallet_1", wallet1_balance, "wallet_2", wallet2_balance);
 
