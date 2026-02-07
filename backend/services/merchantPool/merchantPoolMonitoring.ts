@@ -220,6 +220,30 @@ export const checkMissedPayments = async (): Promise<{
           continue;
         }
 
+        // Skip dust balances — leftover gas residue is not a real payment
+        const DUST_THRESHOLDS: Record<string, number> = {
+          ETH: 0.0005,      // ~$1
+          BTC: 0.00002,     // ~$1
+          LTC: 0.01,        // ~$1
+          DOGE: 5,           // ~$1
+          TRX: 5,            // ~$1
+          'USDT-ERC20': 0.5,
+          'USDT-TRC20': 0.5,
+          'USDC-ERC20': 0.5,
+        };
+        const dustThreshold = DUST_THRESHOLDS[walletType] || 0.001;
+        
+        if (balance < dustThreshold) {
+          console.log(`[MerchantPool] ⏭️ ${walletAddress} - dust balance ${balance} ${walletType} (below ${dustThreshold} threshold), skipping`);
+          continue;
+        }
+
+        // Skip if expected_amount is 0 — no payment was actually requested for this address
+        if (expectedAmount <= 0) {
+          console.log(`[MerchantPool] ⏭️ ${walletAddress} - expected_amount is ${expectedAmount}, likely stale reservation with dust. Skipping.`);
+          continue;
+        }
+
         console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${balance} ${walletType} (reserved ${minutesSinceReserved.toFixed(1)} min ago)`);
 
         let redisData = await getRedisItem("crypto-" + walletAddress);
