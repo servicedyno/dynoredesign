@@ -2138,19 +2138,11 @@ const exchangeCreate = async (req: express.Request, res: express.Response) => {
           },
         });
 
-        const wallet1_balance = await currencyConvert({
-          currency: ["USD"],
-          sourceCurrency: user1Wallet.dataValues.wallet_type,
-          amount: user1Wallet.dataValues.amount,
-          fixedDecimal: true,
-        });
+        const wallet1_usd = await convertToUSD(user1Wallet.dataValues.wallet_type, user1Wallet.dataValues.amount);
+        const wallet1_balance = [{ amount: wallet1_usd }];
 
-        const wallet2_balance = await currencyConvert({
-          currency: ["USD"],
-          sourceCurrency: user2Wallet.dataValues.wallet_type,
-          amount: user2Wallet.dataValues.amount,
-          fixedDecimal: true,
-        });
+        const wallet2_usd = await convertToUSD(user2Wallet.dataValues.wallet_type, user2Wallet.dataValues.amount);
+        const wallet2_balance = [{ amount: wallet2_usd }];
 
         console.log("wallet_1", wallet1_balance, "wallet_2", wallet2_balance);
 
