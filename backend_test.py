@@ -61,14 +61,16 @@ class DynoPayBackendTester:
             return 0, {"error": str(e)}
 
     def test_1_backend_health(self):
-        """TEST 1 - BACKEND HEALTH: GET /health → expect 200 with {"status":"healthy","database":"connected"}"""
-        status_code, data = self.make_request("GET", "/health")
+        """TEST 1 - BACKEND HEALTH: GET /api/status → expect 200 with operational status"""
+        status_code, data = self.make_request("GET", "/api/status")
         
         if status_code == 200:
-            if data.get("status") == "healthy" and data.get("database") == "connected":
-                self.log_test("TEST 1 - Backend Health", "PASS", f"Health check successful: {data}")
+            overall_status = data.get("data", {}).get("overall_status")
+            if overall_status == "operational":
+                services_count = len(data.get("data", {}).get("services", []))
+                self.log_test("TEST 1 - Backend Health", "PASS", f"Backend operational with {services_count} services")
             else:
-                self.log_test("TEST 1 - Backend Health", "FAIL", f"Health check response invalid: {data}")
+                self.log_test("TEST 1 - Backend Health", "FAIL", f"Backend not operational: {overall_status}")
         else:
             self.log_test("TEST 1 - Backend Health", "FAIL", f"HTTP {status_code}: {data}")
 
