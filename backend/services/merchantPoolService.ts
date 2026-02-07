@@ -2707,16 +2707,15 @@ export const detectOrphanPayments = async (): Promise<{
             // Record in pool transactions
             await recordPoolTransaction({
               tempAddressId: tempAddressId,
-              type: 'orphan_recovery',
-              from_address: walletAddress,
-              to_address: 'merchant+admin (via cryptoVerification)',
-              amount: balance,
-              currency: walletType,
-              tx_hash: latestTx.txId,
+              ownerUserId: ownerId,
+              companyId: companyId as number,
+              paymentReference: `orphan-recovery:${paymentId as string}`,
+              walletType: walletType,
+              paymentAmount: balance,
+              merchantAmount: 0,
+              adminFeeAmount: 0,
+              incomingTxId: latestTx.txId,
               status: 'completed',
-              notes: `Orphan payment recovered. Original payment: ${paymentContext?.payment_id || 'N/A'}. Context preserved: ${!!lastContextRaw}`,
-              payment_id: paymentId as string,
-              company_id: companyId as number,
             });
 
             // Step 7: If cryptoVerification doesn't handle webhook (e.g., context was partial),
