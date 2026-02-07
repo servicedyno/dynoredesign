@@ -8,7 +8,7 @@ import requests
 import json
 from datetime import datetime
 
-BASE_URL = "https://payment-cache-test.preview.emergentagent.com"
+BASE_URL = "https://init-stack.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials

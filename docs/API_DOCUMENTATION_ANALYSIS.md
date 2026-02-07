@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://payment-cache-test.preview.emergentagent.com/api/docs/
+**URL:** https://init-stack.preview.emergentagent.com/api/docs/
 
 ---
 

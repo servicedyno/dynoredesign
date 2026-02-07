@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://payment-cache-test.preview.emergentagent.com/api"
+BASE_URL = "https://init-stack.preview.emergentagent.com/api"
 
 print("=" * 80)
 print("VERIFYING FIXES")

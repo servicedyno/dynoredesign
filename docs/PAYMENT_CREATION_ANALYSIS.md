@@ -206,7 +206,7 @@ const { id } = await tatumApi.createSubscription(
 
 **Current SERVER_URL:**
 ```env
-SERVER_URL=https://payment-cache-test.preview.emergentagent.com
+SERVER_URL=https://init-stack.preview.emergentagent.com
 ```
 
 ---

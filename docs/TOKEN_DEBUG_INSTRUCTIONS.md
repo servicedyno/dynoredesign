@@ -4,7 +4,7 @@
 
 I've added debugging to see what's in your token. Please:
 
-1. **Go to Swagger UI**: https://payment-cache-test.preview.emergentagent.com/api/docs
+1. **Go to Swagger UI**: https://init-stack.preview.emergentagent.com/api/docs
 
 2. **Make sure you're authorized**:
    - Click the "Authorize" button (🔓)

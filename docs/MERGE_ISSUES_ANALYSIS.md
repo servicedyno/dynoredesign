@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://payment-cache-test.preview.emergentagent.com
+SERVER_URL=https://init-stack.preview.emergentagent.com
 ```
 
 **Impact:**

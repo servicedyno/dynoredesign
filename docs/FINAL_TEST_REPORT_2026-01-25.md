@@ -329,5 +329,5 @@ The system demonstrates:
 
 **Report Generated:** January 25, 2026  
 **Test Credentials:** nomadly@moxx.co  
-**Backend URL:** https://payment-cache-test.preview.emergentagent.com  
+**Backend URL:** https://init-stack.preview.emergentagent.com  
 **Tester:** Main Development Agent

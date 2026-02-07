@@ -136,7 +136,7 @@
     "overall_status": "\u2705 PASS"
   },
   "test_4_backend_health": {
-    "test_url": "https://payment-cache-test.preview.emergentagent.com/api/user/login",
+    "test_url": "https://init-stack.preview.emergentagent.com/api/user/login",
     "status": "\u2705 PASS",
     "message": "Backend is healthy - API responding with proper validation",
     "response_data": {

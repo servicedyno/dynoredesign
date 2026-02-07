@@ -7,7 +7,7 @@ import requests
 import json
 
 def debug_api_key_response():
-    backend_url = "https://payment-cache-test.preview.emergentagent.com"
+    backend_url = "https://init-stack.preview.emergentagent.com"
     
     # First authenticate
     auth_response = requests.post(

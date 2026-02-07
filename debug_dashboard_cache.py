@@ -8,7 +8,7 @@ import json
 import time
 
 # Test credentials
-backend_url = "https://payment-cache-test.preview.emergentagent.com"
+backend_url = "https://init-stack.preview.emergentagent.com"
 test_email = "richard@dyno.pt"
 test_password = "Katiekendra123@"
 company_id = 38

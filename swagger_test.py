@@ -365,7 +365,7 @@ class DynoPaySwaggerTester:
 
 def main():
     # Backend URL from environment
-    backend_url = "https://payment-cache-test.preview.emergentagent.com"
+    backend_url = "https://init-stack.preview.emergentagent.com"
     
     tester = DynoPaySwaggerTester(backend_url)
     success = tester.run_all_tests()

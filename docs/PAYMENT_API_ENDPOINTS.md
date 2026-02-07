@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://payment-cache-test.preview.emergentagent.com/api
+Development: https://init-stack.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 
