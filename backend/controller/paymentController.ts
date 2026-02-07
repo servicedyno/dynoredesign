@@ -5612,6 +5612,10 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
       updateData.webhook_url = webhook_url || null;
     }
 
+    if (name !== undefined) {
+      updateData.customer_name = name || null;
+    }
+
     // Check if there are any fields to update
     if (Object.keys(updateData).length === 0) {
       return errorResponseHelper(res, 400, "No valid fields provided for update");
