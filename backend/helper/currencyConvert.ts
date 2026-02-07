@@ -70,11 +70,16 @@ const getCachedRate = async (from: string, to: string): Promise<number | null> =
 };
 
 /**
- * Cache exchange rate to Redis with TTL
+ * Cache exchange rate to both memory and Redis
  */
 const setCachedRate = async (from: string, to: string, rate: number): Promise<void> => {
+  const cacheKey = `rate_cache:${from}:${to}`;
+  
+  // Layer 1: Always write to memory cache (instant, reliable)
+  memoryRateCache.set(cacheKey, { rate, timestamp: Date.now() });
+  
+  // Layer 2: Write to Redis (best-effort, survives restart)
   try {
-    const cacheKey = `rate_cache:${from}:${to}`;
     await setRedisItem(cacheKey, { rate: rate.toString(), timestamp: Date.now().toString() });
     await setRedisTTL(cacheKey, RATE_CACHE_TTL);
   } catch (e) {
