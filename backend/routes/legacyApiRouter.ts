@@ -18,12 +18,13 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import Crypto from "crypto";
-import axios from "axios";
 import { QueryTypes } from "sequelize";
 import sequelize from "../utils/dbInstance";
 import legacyApiAuthMiddleware, { validateApiKey } from "../middleware/legacyApiAuthMiddleware";
 import { decrypt } from "../helper/encryption";
 import { setRedisItem } from "../utils/redisInstance";
+import { convertToMultiple } from "../utils/currencyUtils";
+import { paymentController } from "../controller";
 
 const router = express.Router();
 
