@@ -1156,9 +1156,15 @@ const createCryptoPayment = async (
     
     if (data) {
       let finalRes;
-      if (DEBUG) console.log('[DEBUG] Step 3: About to call getRedisItem with key:', "customer-" + data.uniqueRef);
       
-      const items = await getRedisItem("customer-" + data.uniqueRef);
+      // NORMALIZE: Ensure uniqueRef always uses "customer-" prefix for consistent Redis key lookups
+      // Normal flow passes "customer-{ref}", Legacy API passes just "{transactionId}"
+      const rawRef = data.uniqueRef;
+      const normalizedRef = rawRef.startsWith("customer-") ? rawRef : "customer-" + rawRef;
+      
+      if (DEBUG) console.log('[DEBUG] Step 3: About to call getRedisItem with key:', normalizedRef);
+      
+      const items = await getRedisItem(normalizedRef);
       
       if (DEBUG) console.log('[DEBUG] Step 4: Redis item retrieved successfully:', { adm_id: items?.adm_id, company_id: items?.company_id });
 
