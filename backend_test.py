@@ -365,7 +365,7 @@ class DynoPayBackendTester:
             # Check for isStaleProcessing variable with 3 conditions
             isStaleProcessing_found = "isStaleProcessing" in webhook_code
             status_processing_check = "status === 'processing'" in webhook_code
-            txid_check = "!!txId" in webhook_code or "!!items.txId" in webhook_code
+            txid_check = "!!items.txId" in webhook_code
             time_elapsed_check = "> 60000" in webhook_code
             
             # Check for 'recovered' status in isAlreadySuccessful
@@ -386,16 +386,16 @@ class DynoPayBackendTester:
             self.log_test("TEST 12 - Crash Recovery Code", "FAIL", f"Error reading file: {e}")
 
     def test_13_configurable_timeout_verification(self):
-        """TEST 13 - CONFIGURABLE TIMEOUT VERIFICATION: Check merchantPoolService.ts uses env variable"""
+        """TEST 13 - CONFIGURABLE TIMEOUT VERIFICATION: Check merchantPoolConfig.ts uses env variable"""
         print("\n🔍 TEST 13 - Configurable Timeout Verification")
         
         try:
-            with open("/app/backend/services/merchantPoolService.ts", "r") as f:
-                service_code = f.read()
+            with open("/app/backend/services/merchantPool/merchantPoolConfig.ts", "r") as f:
+                config_code = f.read()
             
-            # Check line ~41 for RESERVATION_TIMEOUT_MINUTES reads from process.env
-            env_read_check = "process.env.RESERVATION_TIMEOUT_MINUTES" in service_code
-            not_hardcoded_30 = "RESERVATION_TIMEOUT_MINUTES: 30" not in service_code
+            # Check for RESERVATION_TIMEOUT_MINUTES reads from process.env
+            env_read_check = "process.env.RESERVATION_TIMEOUT_MINUTES" in config_code
+            not_hardcoded_30 = "RESERVATION_TIMEOUT_MINUTES: 30" not in config_code
             
             # Check .env has RESERVATION_TIMEOUT_MINUTES=120
             with open("/app/backend/.env", "r") as f:
