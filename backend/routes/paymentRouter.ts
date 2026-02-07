@@ -51,12 +51,6 @@ paymentRouter.post(
   paymentController.getCurrencyRates
 );
 
-// Public endpoint for internal service-to-service calls (API service → Main backend)
-paymentRouter.post(
-  "/getCurrencyRatesInternal",
-  paymentController.getCurrencyRates
-);
-
 // Public endpoint for blockchain network fees (used by checkout pages)
 paymentRouter.get(
   "/network-fees",
