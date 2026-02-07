@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://pool-address-build.preview.emergentagent.com/api/docs
+Go to: https://test-suite-16.preview.emergentagent.com/api/docs
 
 ---
 
