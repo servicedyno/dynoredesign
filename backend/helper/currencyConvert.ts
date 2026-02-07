@@ -7,12 +7,15 @@ interface CurrencyRateList {
   transferRate: number;
 }
 
-// Cache TTL in seconds (5 minutes for rates)
-const RATE_CACHE_TTL = 300;
+// Cache TTL in seconds
+const RATE_CACHE_TTL = 5; // 5 seconds — crypto prices change rapidly
 
 // In-memory rate cache (Layer 1 — zero latency, survives Redis disconnects)
 const memoryRateCache = new Map<string, { rate: number; timestamp: number }>();
-const MEMORY_CACHE_TTL_MS = 60_000; // 60 seconds in-memory (rates don't change fast)
+const MEMORY_CACHE_TTL_MS = 5_000; // 5 seconds — matches user requirement for crypto freshness
+
+// FastForex API key (primary rate provider — 150-300ms vs Tatum's 1-6s)
+const FASTFOREX_API_KEY = process.env.FASTFOREX_API_KEY || '';
 
 // List of crypto currencies
 const CRYPTO_CURRENCIES = ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT', 'USDC', 'BNB', 'XRP', 'ADA', 'SOL'];
