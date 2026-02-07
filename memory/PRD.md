@@ -19,9 +19,8 @@
 - Files: `backend/routes/crypto.ts`, `backend/routes/paymentLinks.ts`, `backend/webhooks/tatum.ts`
 
 ### Bug Fix: Slow payment creation (DONE - Dec 2025)
-- Cached exchange rate in legacyApiRouter, passed via Redis to skip redundant currencyConvert call
+- Cached exchange rate in merchantApiRouter, passed via Redis to skip redundant currencyConvert call
 - Verified: `hasCached=true`, "saved ~200ms" confirmed in logs
-- Files: `backend/routes/merchantApiRouter.ts`, `backend/routes/crypto.ts`
 
 ### Architecture: Unified Merchant API (DONE - Dec 2025)
 - Retired `api-service` (separate Node.js process on port 3301) — no longer started
@@ -30,12 +29,18 @@
 - Replaced all HTTP self-calls with direct DB/controller calls
 - Removed `/getCurrencyRatesInternal` endpoint (no longer needed)
 - Updated `server.py` to only launch main backend
-- Zero breaking changes for existing merchants (same URLs, auth, response format)
+- Zero breaking changes for existing merchants
+
+### Bug Fix: Stale base_currency from encrypted API key (DONE - Dec 2025)
+- Root cause: `validateApiKey` in `legacyApiAuthMiddleware.ts` returned `base_currency` from the encrypted API key payload, which was frozen at key creation time (GBP). DB column was updated to USD but the encrypted payload wasn't regenerated.
+- Fix: middleware now fetches `base_currency`, `webhook_url`, `webhook_secret` from `tbl_api` DB table (source of truth) and overrides the encrypted payload values.
+- Verified: Bozzmail payments now correctly show `base_currency: "USD"` and ETH amount calculated from USD.
 
 ### Files Modified
 - `backend/routes/merchantApiRouter.ts` (NEW — unified merchant API)
 - `backend/routes/index.ts` (updated import)
 - `backend/routes/paymentRouter.ts` (removed getCurrencyRatesInternal)
+- `backend/middleware/legacyApiAuthMiddleware.ts` (fetch base_currency from DB)
 - `backend/server.py` (removed api-service startup)
 - `backend/routes/legacyApiRouter.ts` (DELETED)
 
