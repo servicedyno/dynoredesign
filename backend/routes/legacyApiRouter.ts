@@ -335,6 +335,10 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     const effectiveWebhookSecret = data.webhook_secret || null;
     
     console.log(`[LegacyAPI] cryptoPayment - Company: ${data.company_id}, Amount: ${amount}, Currency: ${normalizedCurrency}`);
+    console.log(`[LegacyAPI] webhook_url from body: ${webhook_url || 'NOT PROVIDED'}`);
+    console.log(`[LegacyAPI] webhook_url from API key: ${data.webhook_url || 'NOT SET'}`);
+    console.log(`[LegacyAPI] effectiveWebhookUrl: ${effectiveWebhookUrl || 'NULL'}`);
+    console.log(`[LegacyAPI] callback_url: ${callback_url || 'NOT PROVIDED'}`);
     
     // Build Redis payload
     const redisPayload = {
