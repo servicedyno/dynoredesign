@@ -62,13 +62,16 @@ class DynoPayTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('access_token'):
-                    self.jwt_token = data['access_token']
-                    user_info = data.get('user', {})
+                # Handle both accessToken and access_token formats
+                token = data.get('data', {}).get('accessToken') or data.get('access_token')
+                if token:
+                    self.jwt_token = token
+                    user_info = data.get('data', {}).get('userData', {}) or data.get('user', {})
                     self.log(f"✅ Login successful - User: {user_info.get('name', 'Unknown')} (ID: {user_info.get('user_id')})")
                     return True
                 else:
                     self.log(f"❌ Login failed: No access token in response")
+                    self.log(f"   Response structure: {list(data.keys())}")
                     return False
             else:
                 self.log(f"❌ Login failed: HTTP {response.status_code}")
