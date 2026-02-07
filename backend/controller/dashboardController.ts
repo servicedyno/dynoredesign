@@ -89,20 +89,11 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       }
     }
     
-    // Get company's preferred currency from their most recent active API key
+    // Get company's preferred currency
     let preferredCurrency = "USD";
     if (company_id) {
-      // Get company's preferred currency (active first, then last used)
-      const apiKeys = await sequelize.query(
-        COMPANY_CURRENCY_QUERY,
-        {
-          replacements: { companyId: company_id },
-          type: QueryTypes.SELECT,
-        }
-      ) as Array<{ base_currency: string }>;
-      
-      if (apiKeys.length > 0 && apiKeys[0].base_currency) {
-        preferredCurrency = apiKeys[0].base_currency;
+      preferredCurrency = await getCompanyBaseCurrency(company_id);
+      if (preferredCurrency !== 'USD') {
         console.log(`[Dashboard] Using currency ${preferredCurrency} for company ${company_id}`);
       }
     }
