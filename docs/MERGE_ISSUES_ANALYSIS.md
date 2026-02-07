@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://bootstrap-deps.preview.emergentagent.com
+SERVER_URL=https://payment-cache-test.preview.emergentagent.com
 ```
 
 **Impact:**

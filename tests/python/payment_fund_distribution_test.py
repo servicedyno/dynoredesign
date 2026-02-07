@@ -14,7 +14,7 @@ Test Credentials:
 - Email: john@dyno.pt
 - Password: Katiekendra123@
 - Company ID: 38
-- Backend URL: https://bootstrap-deps.preview.emergentagent.com
+- Backend URL: https://payment-cache-test.preview.emergentagent.com
 """
 
 import requests
@@ -25,7 +25,7 @@ from typing import Dict, Any, Optional
 
 class DynoPayTester:
     def __init__(self):
-        self.base_url = "https://bootstrap-deps.preview.emergentagent.com"
+        self.base_url = "https://payment-cache-test.preview.emergentagent.com"
         self.session = requests.Session()
         self.session.headers.update({
             'Content-Type': 'application/json',

@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://bootstrap-deps.preview.emergentagent.com"
+backend_url = "https://payment-cache-test.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(

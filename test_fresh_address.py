@@ -7,7 +7,7 @@ import requests
 import json
 
 # Test with a fresh BTC address that likely doesn't exist in the system
-base_url = "https://bootstrap-deps.preview.emergentagent.com"
+base_url = "https://payment-cache-test.preview.emergentagent.com"
 test_email = "richard@dyno.pt"
 test_password = "Katiekendra123@"
 company_id = 38

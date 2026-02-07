@@ -376,7 +376,7 @@ class DynoPayTester:
 
 def main():
     # Test configuration from review request
-    BASE_URL = "https://bootstrap-deps.preview.emergentagent.com"
+    BASE_URL = "https://payment-cache-test.preview.emergentagent.com"
     EMAIL = "richard@dyno.pt"
     PASSWORD = "Katiekendra123@"
     

@@ -12,8 +12,8 @@ Test Credentials:
 - Company ID: 38
 
 Backend URLs:
-- Backend: https://bootstrap-deps.preview.emergentagent.com
-- Health: https://bootstrap-deps.preview.emergentagent.com/health
+- Backend: https://payment-cache-test.preview.emergentagent.com
+- Health: https://payment-cache-test.preview.emergentagent.com/health
 """
 
 import requests
@@ -23,7 +23,7 @@ import sys
 from datetime import datetime, timedelta
 
 # Configuration
-BACKEND_URL = "https://bootstrap-deps.preview.emergentagent.com"
+BACKEND_URL = "https://payment-cache-test.preview.emergentagent.com"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 TEST_COMPANY_ID = 38

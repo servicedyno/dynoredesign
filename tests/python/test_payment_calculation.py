@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://bootstrap-deps.preview.emergentagent.com/api"
+BASE_URL = "https://payment-cache-test.preview.emergentagent.com/api"
 
 # First get payment data
 print("1. Getting payment data...")
