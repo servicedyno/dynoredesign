@@ -49,9 +49,24 @@ const options: swaggerJsdoc.Options = {
     info: {
       title: "Dynopay API Documentation",
       version: "1.0.0",
-      description: `# Dynopay - Crypto Payment Gateway API
+      description: `# Dynopay - Crypto Payment Gateway API (v1)
 
 Accept cryptocurrency payments with ease using Dynopay's comprehensive API.
+
+---
+
+## 📌 API Versioning
+
+All endpoints are available under both base paths:
+
+| Base Path | Description |
+|-----------|-------------|
+| \`/api/...\` | Default (backward compatible, currently maps to v1) |
+| \`/api/v1/...\` | Explicitly versioned — recommended for new integrations |
+
+**Example:** \`POST /api/user/login\` and \`POST /api/v1/user/login\` are identical.
+
+Existing integrations require **no code changes**. When a future v2 is released, \`/api/v1/...\` will continue working as-is.
 
 ---
 
