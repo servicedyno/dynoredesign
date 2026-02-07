@@ -1632,7 +1632,9 @@ const getAddressBalance = async (address: string, currency: string) => {
     try {
       const tempRes = await tatumSdk.blockchain.tron.tronGetAccount(address);
       if (tempRes && tempRes?.trc20) {
-        console.log(tempRes?.trc20, tempRes.trc20[0]);
+        if (tempRes.trc20.length > 0) {
+          console.log(`[getAddressBalance] TRC20 tokens found: ${tempRes.trc20.length} entries`);
+        }
         res = {
           balance: Number(tempRes.trc20[0]?.[process.env.TRX_CONTRACT]) / 1000000,
         };
