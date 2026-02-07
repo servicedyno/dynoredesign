@@ -1585,6 +1585,7 @@ const createCryptoPayment = async (
         const cachedRate = items?.cached_transfer_rate ? parseFloat(String(items.cached_transfer_rate)) : 0;
         const cachedCurrency = items?.cached_crypto_currency || null;
         const hasCachedRate = cachedRate > 0 && cachedCurrency === requestedCurrency && taxAmount === 0;
+        console.log(`[createCryptoPayment] Cache debug: rate=${items?.cached_transfer_rate}, currency=${items?.cached_crypto_currency}, parsed=${cachedRate}, requested=${requestedCurrency}, tax=${taxAmount}, hasCached=${hasCachedRate}`);
         
         let total_crypto_amount: number;
         if (hasCachedRate) {
