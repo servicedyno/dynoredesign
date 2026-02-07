@@ -68,6 +68,19 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
 - Replaced payment creation HTTP call with direct `paymentController.createCryptoPayment` call via mock req/res
 - Removed `axios` dependency and `getBackendURL` helper from legacyApiRouter
 
+## base_currency Decoupling (completed 2026-02-07)
+- Created `getCompanyBaseCurrency(companyId)` utility in `currencyUtils.ts`
+- Replaced 6 duplicated query + parse blocks across walletController (2), companyController (1), dashboardController (2) with single function call
+- Handles null/undefined companyId, query failures, and missing results with 'USD' fallback
+
+## Webhook E2E Verification (completed 2026-02-07)
+- Created `tests/test_webhook_e2e.ts` with 4 E2E tests using live webhook.site endpoints
+- Test 1: Basic delivery (payload fields, headers, user-agent)
+- Test 2: HMAC-SHA256 signed webhook (signature generation + verification)
+- Test 3: Callback + webhook dual delivery
+- Test 4: DB delivery log persistence (tbl_webhook_delivery_log)
+- All 4 tests pass with real HTTP delivery to external endpoint
+
 ## Backlog
 
 ### P1 - Upcoming
