@@ -84,13 +84,11 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
 ## Backlog
 
 ### P1 - Upcoming
-- Verify webhook fix end-to-end (need webhook URL from user for nomadly@moxx.co)
 - Public/unauthenticated endpoint for payment link creation (x-api-key header auth)
 - Auto-create default company + USD API key on new user registration
 
 ### P2 - Future
 - Update frontend components to consume `currency_info` objects from backend
-- Refactor base_currency dependency on encrypted API key for better maintainability
 - Migrate remaining 14 `currencyConvert` calls in paymentController to utility helpers (requires deeper payment flow testing)
 
 ## Test Credentials
