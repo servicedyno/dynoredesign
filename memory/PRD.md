@@ -42,14 +42,22 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
 - **Payment logic fix** (completed 2026-02-06): Fixed incorrect wallet_id reference during payment creation in walletController.ts.
 - **Webhook logic fix** (completed 2026-02-06): Fixed `callMerchantWebhook` in `webhooks/index.ts` to read `webhook_url` from `customerData` (Redis) first — critical for the merchant crypto payment API (`POST /api/user/cryptoPayment`) which passes webhook_url per-payment but doesn't create a `tbl_payment_link` record. Also fixed reference to non-existent `payment_link_id` column (uses `link_id`). Lookup chain: customerData (Redis) → tbl_payment_link → tbl_company → tbl_api.
 
+## Orphan Payment Feature (completed 2026-02-07)
+- **Configurable Reservation Timeout**: Address reservation timeout now configurable via `RESERVATION_TIMEOUT_MINUTES` env var (set to 120 minutes)
+- **Orphan Payment Detection**: `detectOrphanPayments` cron job scans AVAILABLE addresses for late payments using preserved `last_payment_context`
+- **Payment Context Preservation**: `last_payment_context` JSONB column on `tbl_merchant_pool_addresses` preserves payment details after address expiry
+- **Build fix**: Fixed TypeScript errors in `detectOrphanPayments` — `ref` property inclusion in object literal, `tempAddressId` camelCase, and `recordPoolTransaction` call signature alignment
+
 ## Backlog
 
 ### P1 - Upcoming
+- Full E2E verification of orphan payment flow (simulate expired address + late payment)
 - Verify webhook fix end-to-end (need webhook URL from user for nomadly@moxx.co)
 - Public/unauthenticated endpoint for payment link creation (x-api-key header auth)
 - Auto-create default company + USD API key on new user registration
 
 ### P2 - Future
+- Refactor `merchantPoolService.ts` into smaller specialized modules
 - Update frontend components to consume `currency_info` objects from backend
 - Consolidate duplicated currency query logic into single utility function in `currencyUtils.ts`
 - Refactor base_currency dependency on encrypted API key for better maintainability
