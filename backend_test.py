@@ -287,9 +287,11 @@ class DynoPayBackendTester:
         status_code, data = self.make_request("GET", "/api/dashboard", headers=headers, params=params)
         
         if status_code == 200:
-            has_stats = any(key in data for key in ["total_volume", "transaction_count", "total_transactions", "volume"])
+            dashboard_data = data.get("data", data)
+            has_stats = any(key in dashboard_data for key in ["total_volume", "total_transactions", "volume", "transaction_count"])
             if has_stats:
-                self.log_test("TEST 9 - Dashboard", "PASS", f"Dashboard stats retrieved successfully: {list(data.keys())}")
+                stats_found = [key for key in ["total_volume", "total_transactions", "pending_transactions", "active_wallets"] if key in dashboard_data]
+                self.log_test("TEST 9 - Dashboard", "PASS", f"Dashboard stats retrieved successfully: {stats_found}")
             else:
                 self.log_test("TEST 9 - Dashboard", "FAIL", f"Dashboard missing expected stats: {data}")
         else:
