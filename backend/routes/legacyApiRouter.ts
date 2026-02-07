@@ -330,9 +330,6 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     
     const cryptoAmount = cryptoRates[0].amount;
     
-    // Build Redis payload
-    const redisPayload = {
-      customer_id: customerData[0].customer_id,
     // Determine effective webhook URL
     const effectiveWebhookUrl = webhook_url || data.webhook_url || null;
     const effectiveWebhookSecret = data.webhook_secret || null;
