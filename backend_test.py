@@ -354,7 +354,7 @@ class DynoPayTester:
         verification = results["webhook_fix_verification"]
         if verification:
             self.log(f"\nImplementation Verification:")
-            self.log(f"  Webhook URL in crypto-{address}: {'✅' if verification.get('webhook_url_stored_in_crypto_key') else '❌'}")
+            self.log(f"  Webhook URL in crypto-{{address}}: {'✅' if verification.get('webhook_url_stored_in_crypto_key') else '❌'}")
             self.log(f"  Merge Logic in Handler: {'✅' if verification.get('merge_logic_in_webhook_handler') else '❌'}")
             self.log(f"  Performance Fix: {'✅' if verification.get('performance_fix_implemented') else '❌'}")
             self.log(f"  Cached Rate Logic: {'✅' if verification.get('cached_rate_logic') else '❌'}")
