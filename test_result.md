@@ -7,6 +7,54 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "BUGFIX: webhook_url not stored in crypto-{address} Redis key + Performance fix for double currency conversion"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/controller/paymentController.ts, /app/backend/webhooks/index.ts, /app/backend/api-service/controller/index.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          BUGFIX for ETH payment: webhook_url passed in payment request but not registered in primary payment data store.
+          
+          ROOT CAUSE: crypto-{address} Redis key (the primary data store for webhook handler) did NOT include 
+          webhook_url, callback_url, or webhook_secret. These were ONLY in customer-{ref} Redis key.
+          When webhook handler couldn't find customer-{ref} (lost, evicted, DB-reconstructed), 
+          callMerchantWebhook found NO webhook URL and silently skipped merchant notification.
+          
+          FIXES APPLIED:
+          
+          1. BUGFIX (paymentController.ts - createCryptoPayment, line ~1734):
+             Added webhook_url, callback_url, webhook_secret, company_id, link_id to crypto-{address} Redis store.
+             Now webhook handler has direct access to webhook fields without chaining to customer-{ref}.
+          
+          2. BUGFIX (paymentController.ts - addPayment, line ~1089):
+             Same fix for payment link flow's crypto-{address} Redis store.
+          
+          3. BUGFIX (webhooks/index.ts - tatumCryptoWebHook, line ~660):
+             Added merge logic: if customerData from customer-{ref} is missing webhook_url,
+             merge it from items (crypto-{address}) as fallback. Applied to both normal and recovery paths.
+          
+          4. PERFORMANCE FIX (paymentController.ts - createCryptoPayment, line ~1575):
+             api-service now caches exchange rate (cached_transfer_rate, cached_crypto_amount, cached_crypto_currency)
+             in customer-{ref} Redis. createCryptoPayment uses cached rate when available (same currency, no tax),
+             skipping redundant ~111ms FastForex API call.
+          
+          5. PERFORMANCE FIX (api-service/controller/index.ts, line ~364):
+             Added cached_transfer_rate, cached_crypto_amount, cached_crypto_currency to customer-{ref} Redis payload.
+          
+          VERIFY:
+          1. Create ETH payment via Legacy API with webhook_url in body
+          2. Check Redis crypto-{address} key contains webhook_url, callback_url, webhook_secret
+          3. Check log shows "Using cached exchange rate" (performance fix)
+          4. Check backend /health is 200
+          
+          Credentials: richard@dyno.pt / Katiekendra123@
+          Base URL: https://bootstrap-deps.preview.emergentagent.com
+
   - task: "Full Regression Test — Verify All Recent Implementations After Dependency Reinstall"
     implemented: true
     working: true
