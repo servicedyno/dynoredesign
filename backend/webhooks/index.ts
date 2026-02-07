@@ -591,6 +591,25 @@ const tatumCryptoWebHook = async (
             customerData = items; // Use Redis payment data as fallback
           }
           
+          // BUGFIX: Merge webhook info from crypto-{address} (items) for recovery path
+          if (customerData && customerData !== items) {
+            if (!customerData.webhook_url && items?.webhook_url) {
+              customerData.webhook_url = items.webhook_url;
+            }
+            if (!customerData.callback_url && items?.callback_url) {
+              customerData.callback_url = items.callback_url;
+            }
+            if (!customerData.webhook_secret && items?.webhook_secret) {
+              customerData.webhook_secret = items.webhook_secret;
+            }
+            if (!customerData.company_id && items?.company_id) {
+              customerData.company_id = items.company_id;
+            }
+            if (!customerData.link_id && items?.link_id) {
+              customerData.link_id = items.link_id;
+            }
+          }
+          
           if (customerData) {
             const linkId = customerData?.link_id || items?.link_id || null;
             const paymentType = linkId ? 'payment_link' : 'direct_api';
