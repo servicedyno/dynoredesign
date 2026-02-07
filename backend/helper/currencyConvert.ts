@@ -359,36 +359,28 @@ const processSingleCurrency = async (
   let rate: number | null = null;
   let convertedAmount: number | null = null;
 
-  // Strategy 1: Try cached rate first (memory → Redis, 5s TTL)
-  rate = await getCachedRate(source, currentCurrency);
-
   const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
 
-  // Strategy 2: FastForex — PRIMARY provider (150-300ms, supports crypto + fiat)
-  if (!rate) {
-    const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
-    if (fastForexResult) {
-      rate = fastForexResult.rate;
-      convertedAmount = fastForexResult.converted;
-      await setCachedRate(source, currentCurrency, rate);
-    }
+  // Strategy 1: FastForex — ALWAYS called fresh for real-time payments (150-300ms)
+  const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
+  if (fastForexResult) {
+    rate = fastForexResult.rate;
+    convertedAmount = fastForexResult.converted;
   }
 
-  // Strategy 3: Tatum — fallback for crypto conversions
+  // Strategy 2: Background cache — CoinGecko rates refreshed every 60s (instant, 0 API calls)
+  if (!rate) {
+    rate = getBackgroundCachedRate(source, currentCurrency);
+  }
+
+  // Strategy 3: Tatum — direct fallback if FastForex + cache both failed
   if (!rate) {
     rate = await getCryptoRateViaTatum(source, currentCurrency);
-    if (rate) {
-      await setCachedRate(source, currentCurrency, rate);
-    }
   }
 
-  // Strategy 4: CoinGecko — last resort for crypto
+  // Strategy 4: CoinGecko — direct last resort
   if (!rate && isCryptoConversion) {
     rate = await getCryptoRateViaCoinGecko(source, currentCurrency);
-    if (rate) {
-      console.log(`[currencyConvert] CoinGecko rate for ${source}→${currentCurrency}: ${rate}`);
-      await setCachedRate(source, currentCurrency, rate);
-    }
   }
 
   if (!rate) {
