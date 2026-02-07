@@ -63,6 +63,67 @@ const setCachedRate = async (from: string, to: string, rate: number): Promise<vo
 };
 
 /**
+ * Tatum rate IDs — maps our currency codes to Tatum's /v3/tatum/rate/{id}
+ */
+const TATUM_RATE_IDS: Record<string, string> = {
+  BTC: 'BTC', ETH: 'ETH', TRX: 'TRX', LTC: 'LTC', DOGE: 'DOGE',
+  BCH: 'BCH', BNB: 'BNB', USDT: 'USDT', USDC: 'USDC', XRP: 'XRP',
+  ADA: 'ADA', SOL: 'SOL',
+};
+
+/**
+ * Get crypto→USD rate from Tatum (already paid for, reliable, no extra cost)
+ */
+const getTatumRate = async (crypto: string): Promise<number | null> => {
+  const id = TATUM_RATE_IDS[crypto.toUpperCase()];
+  if (!id) return null;
+
+  try {
+    const { data } = await axios.get(
+      `https://api.tatum.io/v3/tatum/rate/${id}`,
+      {
+        params: { basePair: 'USD' },
+        headers: { 'x-api-key': process.env.TATUM_KEY },
+        timeout: 5000,
+      }
+    );
+    const rate = parseFloat(data?.value);
+    if (rate > 0) {
+      console.log(`[currencyConvert] Tatum rate for ${crypto}→USD: ${rate}`);
+      return rate;
+    }
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.warn(`[currencyConvert] Tatum rate API failed for ${crypto}: ${err.message}`);
+  }
+  return null;
+};
+
+/**
+ * Get rate using Tatum for crypto conversions
+ * Handles crypto-to-fiat, fiat-to-crypto, and crypto-to-crypto via USD
+ */
+const getCryptoRateViaTatum = async (from: string, to: string): Promise<number | null> => {
+  const fromIsCrypto = CRYPTO_CURRENCIES.includes(from.toUpperCase());
+  const toIsCrypto = CRYPTO_CURRENCIES.includes(to.toUpperCase());
+  const isStable = (c: string) => ['USDT', 'USDC'].includes(c.toUpperCase());
+
+  if (fromIsCrypto && !toIsCrypto) {
+    if (isStable(from)) return 1;
+    return await getTatumRate(from);
+  } else if (!fromIsCrypto && toIsCrypto) {
+    if (isStable(to)) return 1;
+    const rate = await getTatumRate(to);
+    if (rate) return 1 / rate;
+  } else if (fromIsCrypto && toIsCrypto) {
+    const fromUSD = isStable(from) ? 1 : await getTatumRate(from);
+    const toUSD = isStable(to) ? 1 : await getTatumRate(to);
+    if (fromUSD && toUSD) return fromUSD / toUSD;
+  }
+  return null;
+};
+
+/**
  * Get rate from FastForex API (supports both crypto and fiat)
  */
 const getFastForexRate = async (from: string, to: string, amount: number): Promise<{ rate: number; converted: number } | null> => {
