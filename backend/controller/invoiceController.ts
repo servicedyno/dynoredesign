@@ -164,10 +164,31 @@ export const autoGenerateInvoice = async (
       }
     }
 
-    // Calculate totals
-    const unitPrice = baseAmount;
-    const totalUsd = baseAmount + fixedFee + vatAmount;
-    const totalCrypto = totalUsd; // Should be converted based on exchange rate
+    // Get company's preferred display currency
+    const preferredCurrency = await getCompanyBaseCurrency(companyId);
+    
+    // Convert amounts to preferred currency if not USD
+    let displayBaseAmount = baseAmount;
+    let displayFixedFee = fixedFee;
+    let displayVatAmount = vatAmount;
+    
+    if (preferredCurrency !== 'USD' && preferredCurrency !== (txData.base_currency || 'USD')) {
+      try {
+        const result = await convertToFiat('USD', preferredCurrency, 1);
+        if (result.amount) {
+          const rate = result.amount;
+          displayBaseAmount = baseAmount * rate;
+          displayFixedFee = fixedFee * rate;
+          displayVatAmount = vatAmount * rate;
+        }
+      } catch (convErr) {
+        console.warn(`[Invoice] Currency conversion to ${preferredCurrency} failed, using base amounts`);
+      }
+    }
+
+    // Calculate totals in preferred currency
+    const unitPrice = displayBaseAmount;
+    const totalAmount = displayBaseAmount + displayFixedFee + displayVatAmount;
 
     // Generate invoice number
     const invoiceNumber = await generateInvoiceNumber();
@@ -185,13 +206,13 @@ export const autoGenerateInvoice = async (
       unit_price: unitPrice,
       quantity: 1,
       vat_rate: vatRate,
-      vat_amount: vatAmount,
-      fixed_fee: fixedFee,
+      vat_amount: displayVatAmount,
+      fixed_fee: displayFixedFee,
       transaction_fee_percent: transactionFeePercent,
       blockchain_buffer_percent: bufferPercent,
-      total_usd: totalUsd,
-      total_crypto: totalCrypto,
-      crypto_currency: txData.base_currency || "USD",
+      total_usd: totalAmount,
+      total_crypto: totalAmount,
+      crypto_currency: preferredCurrency,
       payment_terms: "Payment due upon receipt",
       invoice_date: new Date(),
     };
