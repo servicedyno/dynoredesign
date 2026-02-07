@@ -235,6 +235,9 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
       accepted_currencies,
     } = req.body;
     
+    // Debug: log all body keys to trace webhook_url
+    console.log(`[LegacyAPI] Request body keys: ${Object.keys(req.body).join(', ')}`);
+    
     // Validate required fields
     if (!amount || amount <= 0) {
       return res.status(400).json({
