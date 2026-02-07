@@ -8,8 +8,27 @@ const redisClient = createClient({
   },
 });
 
+let lastApiRedisErrorLog = 0;
+
 redisClient.on("error", (err) => {
-  console.log("Redis Client Error", err.message);
+  const now = Date.now();
+  const msg = err.message || '';
+  if (msg.includes('ECONNRESET') || msg.includes('Connection timeout') || msg.includes('Socket closed')) {
+    if (now - lastApiRedisErrorLog < 60000) return;
+    lastApiRedisErrorLog = now;
+    console.log("[API] Redis connection issue (throttled):", msg);
+  } else {
+    console.log("[API] Redis Client Error:", msg);
+  }
+});
+
+redisClient.on("reconnecting", () => {
+  redisConnected = false;
+});
+
+redisClient.on("ready", () => {
+  redisConnected = true;
+  console.log("[API] Redis connection ready");
 });
 
 let redisConnected = false;
