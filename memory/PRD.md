@@ -57,6 +57,17 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
   - `merchantPoolMonitoring.ts` (822 lines) — subscriptions, missed payments, orphan detection
   - `merchantPoolService.ts` (111 lines) — backward-compatible re-export hub
 
+## Currency Utils Consolidation (completed 2026-02-07)
+- Added `convertToUSD`, `convertToCrypto`, `convertToFiat`, `convertToMultiple` helpers to `currencyUtils.ts`
+- Replaced boilerplate `currencyConvert({...})` calls across: walletController, companyController, dashboardController, adminController, merchantPoolSweep
+- Remaining 14 calls in paymentController are complex crypto rate calculations in production payment flows (intentionally preserved)
+
+## Legacy/Modern Payment Path Unification (completed 2026-02-07)
+- Eliminated HTTP self-calls in `legacyApiRouter.ts` (was calling itself via `axios.post` to `getCurrencyRatesInternal` and `createCryptoPayment`)
+- Replaced rate HTTP call with direct `convertToMultiple` import
+- Replaced payment creation HTTP call with direct `paymentController.createCryptoPayment` call via mock req/res
+- Removed `axios` dependency and `getBackendURL` helper from legacyApiRouter
+
 ## Backlog
 
 ### P1 - Upcoming
