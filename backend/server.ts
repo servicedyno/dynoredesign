@@ -20,6 +20,7 @@ import {
 } from "./models";
 // Unused imports removed: currencyConvert, encrypt, sendEmail
 import { getErrorMessage } from "./helper";
+import { refreshBackgroundRateCache } from "./helper/currencyConvert";
 import cron from "node-cron";
 import { getTransactionFee, getBlockchainFee, paymentController } from "./controller";
 import sequelize from "./utils/dbInstance";
