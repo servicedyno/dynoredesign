@@ -78,13 +78,19 @@ const getTatumRate = async (crypto: string): Promise<number | null> => {
   const id = TATUM_RATE_IDS[crypto.toUpperCase()];
   if (!id) return null;
 
+  const apiKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
+  if (!apiKey) {
+    console.warn(`[currencyConvert] Tatum: no API key configured`);
+    return null;
+  }
+
   try {
     const { data } = await axios.get(
       `https://api.tatum.io/v3/tatum/rate/${id}`,
       {
         params: { basePair: 'USD' },
-        headers: { 'x-api-key': process.env.TATUM_KEY },
-        timeout: 5000,
+        headers: { 'x-api-key': apiKey },
+        timeout: 15000,
       }
     );
     const rate = parseFloat(data?.value);
