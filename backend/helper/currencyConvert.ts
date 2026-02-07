@@ -453,5 +453,4 @@ const currencyConvert = async ({
   return currencyRateList;
 };
 
-export { refreshBackgroundRateCache };
 export default currencyConvert;
