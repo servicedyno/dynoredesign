@@ -171,7 +171,7 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
     const enrichedEventData = { ...eventData };
     if (eventData.amount && eventData.currency && companyId) {
       try {
-        const preferredCurrency = await getCompanyBaseCurrency(companyId);
+        const preferredCurrency = await getCompanyBaseCurrency(companyId as string | number);
         const cryptoAmount = Number(eventData.amount);
         if (cryptoAmount > 0 && preferredCurrency) {
           const fiatResult = await convertToFiat(String(eventData.currency), preferredCurrency, cryptoAmount);
