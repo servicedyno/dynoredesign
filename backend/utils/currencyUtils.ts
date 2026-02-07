@@ -133,6 +133,26 @@ export const getCurrencyInfo = (currency: string = 'USD'): {
 // =============================================
 
 import currencyConvert from "../helper/currencyConvert";
+import { QueryTypes } from "sequelize";
+import sequelizeInstance from "./dbInstance";
+
+/**
+ * Get a company's preferred base currency from their API key config.
+ * Priority: active production key > active dev key > last used key > 'USD' default.
+ */
+export const getCompanyBaseCurrency = async (companyId: number | string | null | undefined): Promise<string> => {
+  if (!companyId) return 'USD';
+  try {
+    const result = await sequelizeInstance.query(
+      COMPANY_CURRENCY_QUERY,
+      { replacements: { companyId }, type: QueryTypes.SELECT }
+    ) as Array<{ base_currency: string }>;
+    return (result.length > 0 && result[0].base_currency) ? result[0].base_currency : 'USD';
+  } catch (err) {
+    console.warn(`[getCompanyBaseCurrency] Query failed for company ${companyId}, defaulting to USD`);
+    return 'USD';
+  }
+};
 
 /**
  * Convert any currency amount to USD (most common pattern).
