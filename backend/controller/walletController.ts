@@ -291,14 +291,9 @@ const getWalletTransactions = async (
     // Get conversion rate if not USD
     if (preferredCurrency !== 'USD') {
       try {
-        const conversions = await currencyConvert({
-          sourceCurrency: 'USD',
-          currency: [preferredCurrency],
-          amount: 1,
-          fixedDecimal: true,
-        });
-        if (conversions && conversions[0]?.amount) {
-          conversionRate = Number(conversions[0].amount);
+        const result = await convertToFiat('USD', preferredCurrency, 1);
+        if (result.amount) {
+          conversionRate = result.amount;
         }
       } catch (e) {
         console.warn(`[getWalletTransactions] Currency conversion failed`);
