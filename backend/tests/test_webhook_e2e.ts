@@ -90,15 +90,17 @@ async function testBasicDelivery() {
   assert(body.webhook_id !== undefined, "webhook_id should be present");
   assert(body.sent_at !== undefined, "sent_at should be present");
   
-  // Check headers
-  const headers = latest.headers as Record<string, unknown>;
-  assert(headers["x-dynopay-event"] === "payment.confirmed", "X-DynoPay-Event header should match");
-  assert(headers["x-dynopay-timestamp"] !== undefined, "X-DynoPay-Timestamp header should be present");
-  assert(headers["x-dynopay-webhook-id"] !== undefined, "X-DynoPay-Webhook-Id should be present");
-  assert(headers["user-agent"] === "Dynopay-Webhook/1.0", "User-Agent should be Dynopay-Webhook/1.0");
+  // Check headers (webhook.site stores values as arrays)
+  const headers = latest.headers as Record<string, string[]>;
+  const getHeader = (h: Record<string, string[]>, key: string) => h[key]?.[0];
+  
+  assert(getHeader(headers, "x-dynopay-event") === "payment.confirmed", "X-DynoPay-Event header should match");
+  assert(getHeader(headers, "x-dynopay-timestamp") !== undefined, "X-DynoPay-Timestamp header should be present");
+  assert(getHeader(headers, "x-dynopay-webhook-id") !== undefined, "X-DynoPay-Webhook-Id should be present");
+  assert(getHeader(headers, "user-agent") === "Dynopay-Webhook/1.0", "User-Agent should be Dynopay-Webhook/1.0");
   
   // No signature header when no secret
-  assert(!headers["x-dynopay-signature"], "No signature header when no secret");
+  assert(!getHeader(headers, "x-dynopay-signature"), "No signature header when no secret");
   
   console.log("  Basic delivery verified OK");
 }
