@@ -2553,7 +2553,11 @@ const getUserAnalytics = async (
       periodType,
       year = new Date().getFullYear(),
       month = new Date().getMonth() + 1,
+      company_id,
     } = req.body;
+
+    // Get company's preferred currency for analytics display
+    const preferredCurrency = await getCompanyBaseCurrency(company_id);
 
     const totalTransactionsIncoming = (
       await userTransactionModel.findAndCountAll({
