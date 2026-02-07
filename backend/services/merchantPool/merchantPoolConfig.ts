@@ -16,7 +16,7 @@ export const POOL_CONFIG = {
   INITIAL_SIZE: parseInt(process.env.MERCHANT_POOL_INITIAL_SIZE || "2"),
   
   // Pre-warming: minimum AVAILABLE addresses to maintain per merchant per chain
-  MIN_AVAILABLE: parseInt(process.env.MERCHANT_POOL_MIN_AVAILABLE || "1"),
+  MIN_AVAILABLE: parseInt(process.env.MERCHANT_POOL_MIN_AVAILABLE || "2"),
   
   // Timeout settings
   RESERVATION_TIMEOUT_MINUTES: parseInt(process.env.RESERVATION_TIMEOUT_MINUTES || "120"),
