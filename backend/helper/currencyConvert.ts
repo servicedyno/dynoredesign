@@ -34,17 +34,33 @@ const COINGECKO_IDS: Record<string, string> = {
 };
 
 /**
- * Get cached exchange rate from Redis
+ * Get cached exchange rate — checks in-memory cache first, then Redis
  */
 const getCachedRate = async (from: string, to: string): Promise<number | null> => {
+  const cacheKey = `rate_cache:${from}:${to}`;
+  
+  // Layer 1: In-memory cache (instant, no network)
+  const memCached = memoryRateCache.get(cacheKey);
+  if (memCached) {
+    const age = Date.now() - memCached.timestamp;
+    if (age < MEMORY_CACHE_TTL_MS) {
+      console.log(`[currencyConvert] Using memory-cached rate for ${from}→${to}: ${memCached.rate} (age: ${Math.floor(age / 1000)}s)`);
+      return memCached.rate;
+    }
+    memoryRateCache.delete(cacheKey); // expired
+  }
+  
+  // Layer 2: Redis cache (survives server restart)
   try {
-    const cacheKey = `rate_cache:${from}:${to}`;
     const cached = await getRedisItem(cacheKey) as { rate?: string; timestamp?: string } | null;
     if (cached && cached.rate && cached.timestamp) {
       const age = (Date.now() - Number(cached.timestamp)) / 1000;
       if (age < RATE_CACHE_TTL) {
-        console.log(`[currencyConvert] Using cached rate for ${from}→${to}: ${cached.rate} (age: ${Math.floor(age)}s)`);
-        return Number(cached.rate);
+        const rate = Number(cached.rate);
+        // Populate memory cache from Redis hit
+        memoryRateCache.set(cacheKey, { rate, timestamp: Date.now() });
+        console.log(`[currencyConvert] Using Redis-cached rate for ${from}→${to}: ${rate} (age: ${Math.floor(age)}s)`);
+        return rate;
       }
     }
   } catch (e) {
