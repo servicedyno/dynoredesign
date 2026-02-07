@@ -1620,14 +1620,30 @@ const getAddressBalance = async (address: string, currency: string) => {
     );
     res = { balance: Number(tempRes.balance) / 1000000 };
   } else if (currency === "TRX") {
-    res = await tatumSdk.blockchain.tron.tronGetAccount(address);
+    try {
+      res = await tatumSdk.blockchain.tron.tronGetAccount(address);
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      if ((err.message || '').includes('account.not.found') || (err.message || '').includes('not.found')) {
+        res = { balance: '0' };
+      } else { throw e; }
+    }
   } else if (currency === "USDT-TRC20") {
-    const tempRes = await tatumSdk.blockchain.tron.tronGetAccount(address);
-    if (tempRes && tempRes?.trc20) {
-      console.log(tempRes?.trc20, tempRes.trc20[0]);
-      res = {
-        balance: Number(tempRes.trc20[0]?.[process.env.TRX_CONTRACT]) / 1000000,
-      };
+    try {
+      const tempRes = await tatumSdk.blockchain.tron.tronGetAccount(address);
+      if (tempRes && tempRes?.trc20) {
+        console.log(tempRes?.trc20, tempRes.trc20[0]);
+        res = {
+          balance: Number(tempRes.trc20[0]?.[process.env.TRX_CONTRACT]) / 1000000,
+        };
+      } else {
+        res = { balance: '0' };
+      }
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      if ((err.message || '').includes('account.not.found') || (err.message || '').includes('not.found')) {
+        res = { balance: '0' };
+      } else { throw e; }
     }
   } else if (currency === "LTC") {
     res = await tatumSdk.blockchain.ltc.ltcGetBalanceOfAddress(address);
