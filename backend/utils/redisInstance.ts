@@ -10,7 +10,28 @@ const redisClient = createClient({
 });
 
 redisClient.on("error", err => {
-  log(`Redis Client Error: ${err.message}`, "error");
+  // Suppress noisy repeated ECONNRESET logs — only log once per 60s
+  const now = Date.now();
+  const msg = err.message || '';
+  if (msg.includes('ECONNRESET') || msg.includes('Connection timeout') || msg.includes('Socket closed')) {
+    if (now - lastRedisErrorLog < 60000) return; // throttle: 1 log per minute
+    lastRedisErrorLog = now;
+    log(`Redis connection issue (throttled): ${msg}`, "error");
+  } else {
+    log(`Redis Client Error: ${msg}`, "error");
+  }
+});
+
+let lastRedisErrorLog = 0;
+
+redisClient.on("reconnecting", () => {
+  redisConnected = false;
+  log("Redis reconnecting...", "info");
+});
+
+redisClient.on("ready", () => {
+  redisConnected = true;
+  log("Redis connection ready", "info");
 });
 
 let redisConnected = false;
