@@ -2666,12 +2666,8 @@ const getUserAnalytics = async (
       const feeIndex = totalFee.findIndex(
         (x) => x.wallet_type === totalIncome[i]?.base_currency
       );
-      const currencyData = await currencyConvert({
-        sourceCurrency: totalIncome[i]?.base_currency,
-        currency: ["USD"],
-        amount: totalIncome[i].amount,
-        fixedDecimal: true,
-      });
+      const fiatResult = await convertToFiat(totalIncome[i]?.base_currency, 'USD', totalIncome[i].amount);
+      const currencyData = [{ amount: fiatResult.amount, transferRate: fiatResult.rate }];
       const feeAmount = totalFee[feeIndex]?.fee_amount || 0;
       revenue_performance.push({
         ...totalIncome[i],
