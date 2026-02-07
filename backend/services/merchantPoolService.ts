@@ -728,10 +728,56 @@ export const releaseExpiredReservations = async (
 
   let releasedCount = 0;
 
-  // Handle expired with NO payment - just release to AVAILABLE with new subscription
+  // Handle expired with NO payment - save context then release to AVAILABLE
   for (const address of expiredNoPayment) {
     try {
       const addrWalletType = address.dataValues.wallet_type;
+      const walletAddr = address.dataValues.wallet_address;
+      
+      // ============================================
+      // ORPHAN RECOVERY: Save payment context BEFORE wiping
+      // This allows detectOrphanPayments to recover late payments
+      // ============================================
+      if (address.dataValues.current_payment_id) {
+        try {
+          // Read Redis data before it expires
+          const redisData = await getRedisItem("crypto-" + walletAddr);
+          let customerData: Record<string, unknown> = {};
+          if (redisData?.ref) {
+            customerData = await getRedisItem(redisData.ref) || {};
+          }
+          
+          const paymentContext = {
+            payment_id: address.dataValues.current_payment_id,
+            company_id: address.dataValues.current_company_id,
+            owner_user_id: address.dataValues.owner_user_id,
+            expected_amount: address.dataValues.expected_amount,
+            wallet_type: addrWalletType,
+            reserved_until: address.dataValues.reserved_until,
+            saved_at: new Date().toISOString(),
+            fee_payer: redisData?.fee_payer || 'company',
+            merchant_amount: redisData?.merchant_amount || null,
+            base_currency: redisData?.base_currency || customerData?.base_currency || 'USD',
+            base_amount: redisData?.base_amount || redisData?.amount || null,
+            webhook_url: redisData?.webhook_url || null,
+            callback_url: redisData?.callback_url || null,
+            link_id: redisData?.link_id || customerData?.link_id || null,
+            apply_tax: redisData?.apply_tax || null,
+            ref: redisData?.ref || null,
+            customer_name: customerData?.customer_name || null,
+            customer_email: customerData?.customer_email || null,
+            adm_id: customerData?.adm_id || address.dataValues.owner_user_id,
+          };
+          
+          await address.update({
+            last_payment_context: JSON.stringify(paymentContext),
+          }, { transaction });
+          
+          console.log(`[MerchantPool] 💾 Saved payment context for ${walletAddr} (payment: ${paymentContext.payment_id})`);
+        } catch (ctxError) {
+          console.warn(`[MerchantPool] ⚠️ Failed to save payment context for ${walletAddr}:`, ctxError);
+        }
+      }
       
       // Create new subscription
       let subscriptionId = address.dataValues.subscription_id;
@@ -755,9 +801,10 @@ export const releaseExpiredReservations = async (
         reserved_until: null,
         locked_at: null,
         subscription_id: subscriptionId,
+        // NOTE: last_payment_context is NOT cleared here - preserved for orphan detection
       }, { transaction });
 
-      console.log(`[MerchantPool] ⏰ Released expired reservation: ${address.dataValues.wallet_address} (no payment)`);
+      console.log(`[MerchantPool] ⏰ Released expired reservation: ${address.dataValues.wallet_address} (no payment, context saved)`);
       releasedCount++;
     } catch (error) {
       console.error(`[MerchantPool] ❌ Failed to release expired address ${address.dataValues.wallet_address}:`, error);
