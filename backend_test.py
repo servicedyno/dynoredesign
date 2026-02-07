@@ -232,7 +232,7 @@ class BackendTester:
                     # End of Direct API block, start of Payment Link block
                     break
                 elif direct_api_block_started:
-                    if "// Fall through to cryptoVerification" in line or "falling through to cryptoVerification" in line:
+                    if "falling through to cryptoVerification" in line:
                         found_fall_through_comment = True
                     if "return res.status(200).end()" in line:
                         found_early_return = True
