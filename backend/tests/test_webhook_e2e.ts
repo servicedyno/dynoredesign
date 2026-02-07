@@ -188,8 +188,9 @@ async function testCallbackAndWebhook() {
   assert(received.length >= 1, "Should receive at least 1 delivery");
   
   const latest = received[0];
-  const headers = latest.headers as Record<string, unknown>;
-  assert(headers["x-dynopay-type"] === "callback", "Type should be callback when URLs match");
+  const headers = latest.headers as Record<string, string[]>;
+  const getHeader = (h: Record<string, string[]>, key: string) => h[key]?.[0];
+  assert(getHeader(headers, "x-dynopay-type") === "callback", "Type should be callback when URLs match");
   
   console.log("  Callback delivery verified OK");
 }
