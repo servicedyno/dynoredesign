@@ -23,7 +23,7 @@ import base64
 import re
 
 # Configuration
-BACKEND_URL = "https://test-suite-16.preview.emergentagent.com"
+BACKEND_URL = "https://bootstrap-deps.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Test credentials

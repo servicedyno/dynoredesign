@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://test-suite-16.preview.emergentagent.com/api"
+BASE_URL = "https://bootstrap-deps.preview.emergentagent.com/api"
 
 # Login credentials
 email = "john@dyno.pt"

@@ -6,7 +6,7 @@ Test BTC Mainnet Payment Creation
 import requests
 import json
 
-BASE_URL = "https://test-suite-16.preview.emergentagent.com/api"
+BASE_URL = "https://bootstrap-deps.preview.emergentagent.com/api"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 

@@ -2,7 +2,7 @@
 """
 DynoPay Backend Comprehensive Regression Test Suite
 Tests all critical features after fresh dependency reinstall
-Base URL: https://test-suite-16.preview.emergentagent.com
+Base URL: https://bootstrap-deps.preview.emergentagent.com
 Credentials: richard@dyno.pt / Katiekendra123@ (company_id: 38)
 """
 
@@ -14,7 +14,7 @@ import re
 
 class DynoPayBackendTester:
     def __init__(self):
-        self.base_url = "https://test-suite-16.preview.emergentagent.com"
+        self.base_url = "https://bootstrap-deps.preview.emergentagent.com"
         self.credentials = {
             "email": "richard@dyno.pt", 
             "password": "Katiekendra123@"

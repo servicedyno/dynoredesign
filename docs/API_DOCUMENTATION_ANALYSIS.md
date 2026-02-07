@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://test-suite-16.preview.emergentagent.com/api/docs/
+**URL:** https://bootstrap-deps.preview.emergentagent.com/api/docs/
 
 ---
 
