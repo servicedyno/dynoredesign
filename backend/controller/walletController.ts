@@ -2655,16 +2655,17 @@ const getUserAnalytics = async (
       const feeIndex = totalFee.findIndex(
         (x) => x.wallet_type === totalIncome[i]?.base_currency
       );
-      const fiatResult = await convertToFiat(totalIncome[i]?.base_currency, 'USD', totalIncome[i].amount);
+      const fiatResult = await convertToFiat(totalIncome[i]?.base_currency, preferredCurrency, totalIncome[i].amount);
       const currencyData = [{ amount: fiatResult.amount, transferRate: fiatResult.rate }];
       const feeAmount = totalFee[feeIndex]?.fee_amount || 0;
       revenue_performance.push({
         ...totalIncome[i],
-        amount_in_usd: currencyData[0].amount,
+        amount_in_fiat: currencyData[0].amount,
+        amount_in_usd: currencyData[0].amount, // backward compat
+        display_currency: preferredCurrency,
         fee_amount: Number(feeAmount).toFixed(8),
-        fee_in_usd: Number(feeAmount * currencyData[0].transferRate).toFixed(
-          2
-        ),
+        fee_in_fiat: Number(feeAmount * currencyData[0].transferRate).toFixed(2),
+        fee_in_usd: Number(feeAmount * currencyData[0].transferRate).toFixed(2), // backward compat
       });
     }
 
