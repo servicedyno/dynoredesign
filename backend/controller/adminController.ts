@@ -124,12 +124,7 @@ const getWallets = async (_req: express.Request, res: express.Response) => {
       currencyList.push(walletData[i].dataValues.wallet_type);
     }
 
-    const currencyData = await currencyConvert({
-      currency: currencyList,
-      sourceCurrency: "USD",
-      fixedDecimal: false,
-      amount: 1,
-    });
+    const currencyData = await convertToMultiple("USD", currencyList, 1, false);
 
     const returnData = [];
 
