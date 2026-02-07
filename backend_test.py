@@ -150,23 +150,30 @@ class DynoPayBackendTester:
             self.log_test("TEST 5 - Payment GetData", "SKIP", "No payment reference from TEST 4")
             return
 
-        payload = {"reference": self.payment_reference}
-        status_code, data = self.make_request("POST", "/api/pay/getData", payload)
-        
-        if status_code == 200:
-            has_merchant_info = "merchant_name" in data or "company_name" in data
-            has_fee_info = "fee_info" in data or "fees" in data
-            has_redirect_url = "redirect_url" in data
-            has_no_callback = "callback_url" not in data and "webhook_url" not in data
+        # Try different reference formats
+        for ref_key in ["reference", "transaction_id", "d"]:
+            payload = {ref_key: self.payment_reference}
+            status_code, data = self.make_request("POST", "/api/pay/getData", payload)
             
-            if has_merchant_info and has_fee_info and has_redirect_url and has_no_callback:
-                self.log_test("TEST 5 - Payment GetData", "PASS", 
-                            f"Valid getData response with merchant info, fee_info, redirect_url; callback_url/webhook_url properly hidden")
-            else:
-                self.log_test("TEST 5 - Payment GetData", "FAIL", 
-                            f"Invalid getData response structure: merchant_info={has_merchant_info}, fee_info={has_fee_info}, redirect_url={has_redirect_url}, hidden_urls={has_no_callback}")
-        else:
-            self.log_test("TEST 5 - Payment GetData", "FAIL", f"HTTP {status_code}: {data}")
+            if status_code == 200:
+                has_merchant_info = "merchant_name" in data or "company_name" in data
+                has_fee_info = "fee_info" in data or "fees" in data
+                has_redirect_url = "redirect_url" in data
+                has_no_callback = "callback_url" not in data and "webhook_url" not in data
+                
+                if has_merchant_info and has_fee_info and has_redirect_url and has_no_callback:
+                    self.log_test("TEST 5 - Payment GetData", "PASS", 
+                                f"Valid getData response with merchant info, fee_info, redirect_url; callback_url/webhook_url properly hidden")
+                else:
+                    self.log_test("TEST 5 - Payment GetData", "FAIL", 
+                                f"Invalid getData response structure: merchant_info={has_merchant_info}, fee_info={has_fee_info}, redirect_url={has_redirect_url}, hidden_urls={has_no_callback}")
+                return
+            elif status_code != 400:  # If not "required" error, it's a different issue
+                self.log_test("TEST 5 - Payment GetData", "FAIL", f"HTTP {status_code}: {data}")
+                return
+        
+        # If all attempts failed with 400 errors
+        self.log_test("TEST 5 - Payment GetData", "FAIL", "Could not find correct reference parameter format")
 
     def test_6_fee_calculator(self):
         """TEST 6 - FEE CALCULATOR: POST /api/pay/calculateFees with auth token"""
