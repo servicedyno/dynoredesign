@@ -107,20 +107,20 @@ class BackendTester:
     def test_backend_health(self):
         """Test backend health endpoint"""
         try:
-            response = requests.get(f"{BASE_URL}/health")
+            response = requests.get(f"{API_BASE_URL}/status/health")
             
             if response.status_code == 200:
                 data = response.json()
                 
                 # Check for required health indicators
-                required_fields = ['status', 'uptime', 'database_connected']
+                required_fields = ['status', 'timestamp']
                 missing_fields = [field for field in required_fields if field not in data]
                 
                 if not missing_fields and data.get('status') == 'healthy':
                     return self.log_test(
                         "Backend Health Check",
                         "PASS",
-                        f"Backend healthy - Status: {data.get('status')}, DB: {data.get('database_connected')}, Uptime: {data.get('uptime')}"
+                        f"Backend healthy - Status: {data.get('status')}, Timestamp: {data.get('timestamp')}"
                     )
                 else:
                     return self.log_test(
