@@ -137,59 +137,8 @@ const COINGECKO_IDS: Record<string, string> = {
   SOL: 'solana',
 };
 
-/**
- * Get cached exchange rate — checks in-memory cache first, then Redis
- */
-const getCachedRate = async (from: string, to: string): Promise<number | null> => {
-  const cacheKey = `rate_cache:${from}:${to}`;
-  
-  // Layer 1: In-memory cache (instant, no network)
-  const memCached = memoryRateCache.get(cacheKey);
-  if (memCached) {
-    const age = Date.now() - memCached.timestamp;
-    if (age < MEMORY_CACHE_TTL_MS) {
-      console.log(`[currencyConvert] Using memory-cached rate for ${from}→${to}: ${memCached.rate} (age: ${Math.floor(age / 1000)}s)`);
-      return memCached.rate;
-    }
-    memoryRateCache.delete(cacheKey); // expired
-  }
-  
-  // Layer 2: Redis cache (survives server restart)
-  try {
-    const cached = await getRedisItem(cacheKey) as { rate?: string; timestamp?: string } | null;
-    if (cached && cached.rate && cached.timestamp) {
-      const age = (Date.now() - Number(cached.timestamp)) / 1000;
-      if (age < RATE_CACHE_TTL) {
-        const rate = Number(cached.rate);
-        // Populate memory cache from Redis hit
-        memoryRateCache.set(cacheKey, { rate, timestamp: Date.now() });
-        console.log(`[currencyConvert] Using Redis-cached rate for ${from}→${to}: ${rate} (age: ${Math.floor(age)}s)`);
-        return rate;
-      }
-    }
-  } catch (e) {
-    console.warn(`[currencyConvert] Cache read failed for ${from}→${to}`);
-  }
-  return null;
-};
-
-/**
- * Cache exchange rate to both memory and Redis
- */
-const setCachedRate = async (from: string, to: string, rate: number): Promise<void> => {
-  const cacheKey = `rate_cache:${from}:${to}`;
-  
-  // Layer 1: Always write to memory cache (instant, reliable)
-  memoryRateCache.set(cacheKey, { rate, timestamp: Date.now() });
-  
-  // Layer 2: Write to Redis (best-effort, survives restart)
-  try {
-    await setRedisItem(cacheKey, { rate: rate.toString(), timestamp: Date.now().toString() });
-    await setRedisTTL(cacheKey, RATE_CACHE_TTL);
-  } catch (e) {
-    console.warn(`[currencyConvert] Cache write failed for ${from}→${to}`);
-  }
-};
+// No per-request cache — FastForex is always called fresh for real-time payments
+// Background cache (CoinGecko 60s) is the ONLY fallback cache
 
 /**
  * Tatum rate IDs — maps our currency codes to Tatum's /v3/tatum/rate/{id}
