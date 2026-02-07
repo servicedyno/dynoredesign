@@ -3,6 +3,7 @@
 ## Original Problem Statement
 1. Analyze the ETH payment creation process — fix slow API response and missing webhook_url.
 2. Architecture cleanup — unify routing between legacyApiRouter.ts and api-service.
+3. Analyze and fix payment link update flow for all fields.
 
 ## Architecture
 - Python proxy (`server.py`) on port 8001 → Node.js backend on port 3300
@@ -24,39 +25,21 @@
 
 ### Architecture: Unified Merchant API (DONE - Dec 2025)
 - Retired `api-service` (separate Node.js process on port 3301) — no longer started
-- Deleted `legacyApiRouter.ts`, replaced with `merchantApiRouter.ts`
-- Migrated 5 endpoints from api-service: createPayment, addFunds, useWallet, getCryptoTransaction, getSingleTransaction
-- Replaced all HTTP self-calls with direct DB/controller calls
-- Removed `/getCurrencyRatesInternal` endpoint (no longer needed)
-- Updated `server.py` to only launch main backend
+- Created `merchantApiRouter.ts` with all 10 merchant endpoints
+- Replaced HTTP self-calls with direct DB/controller calls
 - Zero breaking changes for existing merchants
 
 ### Bug Fix: Stale base_currency from encrypted API key (DONE - Dec 2025)
-- Root cause: `validateApiKey` in `legacyApiAuthMiddleware.ts` returned `base_currency` from the encrypted API key payload, which was frozen at key creation time (GBP). DB column was updated to USD but the encrypted payload wasn't regenerated.
-- Fix: middleware now fetches `base_currency`, `webhook_url`, `webhook_secret` from `tbl_api` DB table (source of truth) and overrides the encrypted payload values.
-- Verified: Bozzmail payments now correctly show `base_currency: "USD"` and ETH amount calculated from USD.
+- Middleware now fetches `base_currency`, `webhook_url`, `webhook_secret` from `tbl_api` DB (source of truth)
 
-### Files Modified
-- `backend/routes/merchantApiRouter.ts` (NEW — unified merchant API)
-- `backend/routes/index.ts` (updated import)
-- `backend/routes/paymentRouter.ts` (removed getCurrencyRatesInternal)
-- `backend/middleware/legacyApiAuthMiddleware.ts` (fetch base_currency from DB)
-- `backend/server.py` (removed api-service startup)
-- `backend/routes/legacyApiRouter.ts` (DELETED)
+### Bug Fix: Payment Link Update — 4 Issues Fixed (DONE - Dec 2025)
+1. **`customer_name` not updatable**: Added `name` field handling in `updatePaymentLink`, stored as `customer_name` in both DB and Redis
+2. **Stale `amount` in Redis**: Now syncs `amount` alongside `base_amount` during update
+3. **Redis key expiry breaks link**: When Redis key is missing during update, reconstructs full payload from DB + wallet config, flagged with `reconstructed: true`
+4. **`crypto-{address}` stale data**: After updating `customer-{ref}`, also updates `webhook_url` and `callback_url` on active `crypto-{address}` key if payment is pending
 
-### Merchant API Endpoints (all at /api/user/*)
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| createUser | POST | x-api-key | Create customer |
-| cryptoPayment | POST | x-api-key + JWT | Direct crypto payment (QR + address) |
-| createPayment | POST | x-api-key + JWT | Checkout redirect URL |
-| addFunds | POST | x-api-key + JWT | Fund wallet via checkout |
-| useWallet | POST | x-api-key + JWT | Debit from wallet |
-| getBalance | GET | x-api-key + JWT | Wallet balance |
-| getTransactions | GET | x-api-key + JWT | Transaction history |
-| getSingleTransaction/:id | GET | x-api-key + JWT | Single transaction |
-| getCryptoTransaction/:address | GET | x-api-key + JWT | Verify crypto payment |
-| getSupportedCurrency | GET | x-api-key | Available currencies |
+Files modified: `backend/controller/paymentController.ts`
 
 ## Prioritized Backlog
 - P2: Delete `backend/api-service/` directory entirely (currently kept for reference)
+- P2: API versioning (`/api/v2/user/*`) for future evolution
