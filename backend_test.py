@@ -257,37 +257,45 @@ class BackendTester:
                     "Could not find Direct API if statement"
                 )
             
-            # Test 4: Verify Payment Link path has early return  
-            payment_link_has_return = False
-            lines = content.split('\n')
-            in_payment_link_block = False
-            
-            for i, line in enumerate(lines):
-                # Look for the else block that contains "PAYMENT LINK"
-                if "} else {" in line:
-                    # Check next few lines for PAYMENT LINK comment
-                    for j in range(i+1, min(i+5, len(lines))):
-                        if "PAYMENT LINK" in lines[j]:
-                            in_payment_link_block = True
+            # Test 4: Verify Payment Link path has early return
+            # Find the else block and check if it contains the return statement
+            else_pos = content.find("} else {")
+            if else_pos != -1:
+                # Find the end of the else block by matching braces
+                brace_count = 0
+                else_start = content.find("{", else_pos) + 1
+                else_end = else_start
+                
+                for i in range(else_start, len(content)):
+                    if content[i] == '{':
+                        brace_count += 1
+                    elif content[i] == '}':
+                        if brace_count == 0:
+                            else_end = i
                             break
-                elif in_payment_link_block and "return res.status(200).end()" in line:
-                    payment_link_has_return = True
-                    break
-                elif in_payment_link_block and line.strip() == "}" and "}" in line:
-                    # End of else block
-                    break
-            
-            if payment_link_has_return:
-                self.log_test(
-                    "Code Structure - Payment Link Early Return",
-                    "PASS",
-                    "Payment Link path correctly returns early after setting underpaid status"
-                )
+                        brace_count -= 1
+                
+                payment_link_block = content[else_start:else_end]
+                has_payment_link_comment = "PAYMENT LINK" in payment_link_block
+                has_early_return = "return res.status(200).end()" in payment_link_block
+                
+                if has_payment_link_comment and has_early_return:
+                    self.log_test(
+                        "Code Structure - Payment Link Early Return",
+                        "PASS",
+                        "Payment Link path correctly returns early after setting underpaid status"
+                    )
+                else:
+                    self.log_test(
+                        "Code Structure - Payment Link Early Return",
+                        "FAIL",
+                        f"Payment Link comment found: {has_payment_link_comment}, Early return found: {has_early_return}"
+                    )
             else:
                 self.log_test(
                     "Code Structure - Payment Link Early Return",
                     "FAIL",
-                    "Payment Link path missing early return"
+                    "Could not find else block for Payment Link path"
                 )
             
             return True
