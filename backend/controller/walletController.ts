@@ -4167,16 +4167,33 @@ const exportTransactions = async (req: express.Request, res: express.Response) =
       { type: QueryTypes.SELECT }
     );
 
+    // Get company's preferred currency for the value column
+    const preferredCurrency = await getCompanyBaseCurrency(company_id);
+    let fiatConversionRate = 1;
+    if (preferredCurrency !== 'USD') {
+      try {
+        const result = await convertToFiat('USD', preferredCurrency, 1);
+        if (result.amount) fiatConversionRate = result.amount;
+      } catch { /* fallback to USD */ }
+    }
+
     // Convert to CSV format
-    const csvHeaders = 'Transaction ID,Date & Time,Crypto,Amount,Currency,USD Value,Status,Customer,Company,Payment Mode,Type,Reference\n';
+    const csvHeaders = `Transaction ID,Date & Time,Crypto,Amount,Currency,${preferredCurrency} Value,Status,Customer,Company,Payment Mode,Type,Reference\n`;
     const csvRows = transactions.map((tx: Record<string, unknown>) => {
+      let fiatValue: string | number = '';
+      const baseAmount = Number(tx.amount || 0);
+      if (tx.base_currency === 'USD') {
+        fiatValue = (baseAmount * fiatConversionRate).toFixed(2);
+      } else if (tx.base_currency === preferredCurrency) {
+        fiatValue = baseAmount.toFixed(2);
+      }
       return [
         tx.transaction_id || '',
         tx.date_time || '',
         tx.crypto || tx.base_currency || '',
         tx.amount || 0,
         tx.base_currency || '',
-        tx.base_currency === 'USD' ? tx.amount : '',
+        fiatValue,
         tx.status || '',
         tx.customer_name || '',
         tx.company_name || '',
