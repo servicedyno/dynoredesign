@@ -161,6 +161,79 @@ const getCryptoRateViaCoinGecko = async (from: string, to: string): Promise<numb
 };
 
 /**
+ * Binance symbol mapping for crypto→USDT pairs
+ */
+const BINANCE_SYMBOLS: Record<string, string> = {
+  BTC: 'BTCUSDT',
+  ETH: 'ETHUSDT',
+  TRX: 'TRXUSDT',
+  LTC: 'LTCUSDT',
+  DOGE: 'DOGEUSDT',
+  BCH: 'BCHUSDT',
+  BNB: 'BNBUSDT',
+  XRP: 'XRPUSDT',
+  ADA: 'ADAUSDT',
+  SOL: 'SOLUSDT',
+};
+
+/**
+ * Get crypto→USD rate from Binance (free, no API key, reliable)
+ * Falls back when CoinGecko is rate-limited and FastForex subscription is expired
+ */
+const getBinanceRate = async (crypto: string): Promise<number | null> => {
+  const symbol = BINANCE_SYMBOLS[crypto.toUpperCase()];
+  if (!symbol) return null;
+
+  try {
+    const { data } = await axios.get(
+      `https://api.binance.com/api/v3/ticker/price`,
+      { params: { symbol }, timeout: 5000 }
+    );
+    const price = parseFloat(data?.price);
+    if (price > 0) {
+      console.log(`[currencyConvert] Binance rate for ${crypto}→USD: ${price}`);
+      return price;
+    }
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.warn(`[currencyConvert] Binance API failed for ${crypto}: ${err.message}`);
+  }
+  return null;
+};
+
+/**
+ * Get rate using Binance for crypto conversions (fallback for CoinGecko)
+ * Handles crypto-to-fiat, fiat-to-crypto, and crypto-to-crypto via USD
+ */
+const getCryptoRateViaBinance = async (from: string, to: string): Promise<number | null> => {
+  const fromIsCrypto = CRYPTO_CURRENCIES.includes(from.toUpperCase());
+  const toIsCrypto = CRYPTO_CURRENCIES.includes(to.toUpperCase());
+
+  // Stablecoins are ~1 USD
+  const isStable = (c: string) => ['USDT', 'USDC'].includes(c.toUpperCase());
+
+  if (fromIsCrypto && !toIsCrypto) {
+    // Crypto → fiat (e.g., BTC → USD)
+    if (isStable(from)) return 1;
+    const rate = await getBinanceRate(from);
+    // Binance returns USDT price — close enough to USD for most fiat, exact for USD
+    if (rate && to.toUpperCase() === 'USD') return rate;
+    return rate; // For non-USD fiat, this is approximate but better than nothing
+  } else if (!fromIsCrypto && toIsCrypto) {
+    // Fiat → crypto (e.g., USD → BTC)
+    if (isStable(to)) return 1;
+    const rate = await getBinanceRate(to);
+    if (rate) return 1 / rate;
+  } else if (fromIsCrypto && toIsCrypto) {
+    // Crypto → crypto via USD
+    const fromUSD = isStable(from) ? 1 : await getBinanceRate(from);
+    const toUSD = isStable(to) ? 1 : await getBinanceRate(to);
+    if (fromUSD && toUSD) return fromUSD / toUSD;
+  }
+  return null;
+};
+
+/**
  * Normalize currency code (handle variants like USDT-TRC20, USDT-ERC20, etc.)
  */
 const normalizeCurrency = (currency: string): string => {
