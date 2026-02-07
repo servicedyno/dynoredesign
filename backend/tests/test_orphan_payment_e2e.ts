@@ -14,7 +14,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import sequelize from "../utils/dbInstance";
-import { setRedisItem, getRedisItem, connectRedis } from "../utils/redisInstance";
+import { setRedisItem, getRedisItem, connectRedis, deleteRedisItem } from "../utils/redisInstance";
 import { releaseExpiredReservations, detectOrphanPayments } from "../services/merchantPoolService";
 
 const TEST_PAYMENT_ID = `test-orphan-e2e-${Date.now()}`;
@@ -77,8 +77,8 @@ async function restoreOriginal() {
   );
   // Clean up Redis
   const walletAddr = originalState.wallet_address as string;
-  await setRedisItem("crypto-" + walletAddr, null);
-  await setRedisItem(TEST_REF, null);
+  await deleteRedisItem("crypto-" + walletAddr);
+  await deleteRedisItem(TEST_REF);
   console.log("  Restored original state and cleaned Redis");
 }
 
