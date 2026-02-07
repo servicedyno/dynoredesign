@@ -238,7 +238,7 @@ export const prewarmPoolAddresses = async (): Promise<{
         'wallet_type',
       ],
       where: {
-        owner_user_id: { [sequelize.Sequelize.Op.ne]: null },
+        owner_user_id: { [Op.ne]: null },
       },
       group: ['owner_user_id', 'wallet_type'],
       raw: true,
