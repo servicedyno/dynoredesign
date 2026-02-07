@@ -285,8 +285,8 @@ const processSingleCurrency = async (
 
   const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
 
-  // Strategy 2: For crypto — Tatum first (already paid for, reliable)
-  if (!rate && isCryptoConversion) {
+  // Strategy 2: Tatum — works for crypto AND fiat-to-fiat (via USDT proxy)
+  if (!rate) {
     rate = await getCryptoRateViaTatum(source, currentCurrency);
     if (rate) {
       await setCachedRate(source, currentCurrency, rate);
