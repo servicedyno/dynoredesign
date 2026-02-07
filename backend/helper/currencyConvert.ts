@@ -10,6 +10,10 @@ interface CurrencyRateList {
 // Cache TTL in seconds (5 minutes for rates)
 const RATE_CACHE_TTL = 300;
 
+// In-memory rate cache (Layer 1 — zero latency, survives Redis disconnects)
+const memoryRateCache = new Map<string, { rate: number; timestamp: number }>();
+const MEMORY_CACHE_TTL_MS = 60_000; // 60 seconds in-memory (rates don't change fast)
+
 // List of crypto currencies
 const CRYPTO_CURRENCIES = ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT', 'USDC', 'BNB', 'XRP', 'ADA', 'SOL'];
 
