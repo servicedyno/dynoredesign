@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://crypto-wallet-sync-2.preview.emergentagent.com/api
+Development: https://install-flow-2.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

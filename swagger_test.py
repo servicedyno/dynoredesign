@@ -365,7 +365,7 @@ class DynoPaySwaggerTester:
 
 def main():
     # Backend URL from environment
-    backend_url = "https://crypto-wallet-sync-2.preview.emergentagent.com"
+    backend_url = "https://install-flow-2.preview.emergentagent.com"
     
     tester = DynoPaySwaggerTester(backend_url)
     success = tester.run_all_tests()

@@ -329,5 +329,5 @@ The system demonstrates:
 
 **Report Generated:** January 25, 2026  
 **Test Credentials:** nomadly@moxx.co  
-**Backend URL:** https://crypto-wallet-sync-2.preview.emergentagent.com  
+**Backend URL:** https://install-flow-2.preview.emergentagent.com  
 **Tester:** Main Development Agent

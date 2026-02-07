@@ -8,7 +8,7 @@ import json
 import os
 
 # Get backend URL
-BACKEND_URL = "https://crypto-wallet-sync-2.preview.emergentagent.com"
+BACKEND_URL = "https://install-flow-2.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 def authenticate():

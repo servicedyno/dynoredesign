@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://crypto-wallet-sync-2.preview.emergentagent.com/api"
+BASE_URL = "https://install-flow-2.preview.emergentagent.com/api"
 
 print("=" * 80)
 print("VERIFYING FIXES")

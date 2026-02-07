@@ -7,7 +7,7 @@ import requests
 import json
 
 # Test credentials
-backend_url = "https://crypto-wallet-sync-2.preview.emergentagent.com"
+backend_url = "https://install-flow-2.preview.emergentagent.com"
 test_email = "richard@dyno.pt"
 test_password = "Katiekendra123@"
 company_id = 38

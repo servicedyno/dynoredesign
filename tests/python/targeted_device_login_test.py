@@ -14,7 +14,7 @@ import subprocess
 
 class TargetedDeviceLoginTester:
     def __init__(self):
-        self.backend_url = "https://crypto-wallet-sync-2.preview.emergentagent.com"
+        self.backend_url = "https://install-flow-2.preview.emergentagent.com"
         self.test_results = {}
         self.errors = []
         
