@@ -1,3 +1,5 @@
+import express from "express";
+import { convertToUSD as convertToUSDUtil } from "../utils/currencyUtils";
 import {
   currencyConvert,
   decrypt,
