@@ -7,15 +7,116 @@ interface CurrencyRateList {
   transferRate: number;
 }
 
-// Cache TTL in seconds
-const RATE_CACHE_TTL = 5; // 5 seconds — crypto prices change rapidly
+// ============================================
+// BACKGROUND RATE CACHE (CoinGecko every 60s — free, saves FastForex API calls)
+// ============================================
 
-// In-memory rate cache (Layer 1 — zero latency, survives Redis disconnects)
-const memoryRateCache = new Map<string, { rate: number; timestamp: number }>();
-const MEMORY_CACHE_TTL_MS = 5_000; // 5 seconds — matches user requirement for crypto freshness
+// Background cache: populated by CoinGecko every 60s, used ONLY as fallback
+const backgroundRateCache = new Map<string, { rate: number; timestamp: number }>();
+const BACKGROUND_CACHE_TTL_MS = 90_000; // 90s — slightly longer than refresh interval for overlap
 
-// FastForex API key (primary rate provider — 150-300ms vs Tatum's 1-6s)
+// FastForex API key (primary real-time provider — 150-300ms)
 const FASTFOREX_API_KEY = process.env.FASTFOREX_API_KEY || '';
+
+// Common fiat currencies to pre-cache rates for
+const CACHE_FIAT_TARGETS = ['USD', 'EUR', 'GBP', 'BRL'];
+// Core crypto currencies to pre-cache
+const CACHE_CRYPTO_TARGETS = ['ETH', 'BTC', 'TRX', 'LTC', 'DOGE'];
+
+/**
+ * Background rate refresh — called every 60s by cron
+ * Fetches ALL crypto rates from CoinGecko in minimal API calls (free)
+ * If CoinGecko rate-limited → falls back to Tatum
+ */
+export const refreshBackgroundRateCache = async (): Promise<void> => {
+  const startTime = Date.now();
+  let provider = 'CoinGecko';
+  let ratesUpdated = 0;
+  
+  try {
+    // CoinGecko: Fetch ALL crypto→USD rates in 1 API call
+    const coinIds = CACHE_CRYPTO_TARGETS
+      .map(c => COINGECKO_IDS[c])
+      .filter(Boolean)
+      .join(',');
+    const fiatTargets = CACHE_FIAT_TARGETS.map(f => f.toLowerCase()).join(',');
+    
+    const { data } = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/price`,
+      {
+        params: { ids: coinIds, vs_currencies: fiatTargets },
+        timeout: 8000,
+      }
+    );
+
+    // Store rates in background cache
+    for (const crypto of CACHE_CRYPTO_TARGETS) {
+      const coinId = COINGECKO_IDS[crypto];
+      if (!coinId || !data[coinId]) continue;
+      
+      for (const fiat of CACHE_FIAT_TARGETS) {
+        const priceInFiat = data[coinId][fiat.toLowerCase()];
+        if (priceInFiat && priceInFiat > 0) {
+          // Crypto→Fiat (e.g., ETH→USD = 2040)
+          const cryptoToFiat = `rate_bg:${crypto}:${fiat}`;
+          backgroundRateCache.set(cryptoToFiat, { rate: priceInFiat, timestamp: Date.now() });
+          
+          // Fiat→Crypto (e.g., USD→ETH = 1/2040)
+          const fiatToCrypto = `rate_bg:${fiat}:${crypto}`;
+          backgroundRateCache.set(fiatToCrypto, { rate: 1 / priceInFiat, timestamp: Date.now() });
+          
+          ratesUpdated += 2;
+        }
+      }
+    }
+  } catch (error: unknown) {
+    const err = error as { response?: { status?: number }; message?: string };
+    const isRateLimited = err.response?.status === 429;
+    
+    if (isRateLimited) {
+      console.warn(`[BackgroundCache] CoinGecko rate-limited, falling back to Tatum`);
+    } else {
+      console.warn(`[BackgroundCache] CoinGecko failed: ${err.message}, falling back to Tatum`);
+    }
+    
+    // Fallback: Tatum (already paid for, no extra cost)
+    provider = 'Tatum';
+    for (const crypto of CACHE_CRYPTO_TARGETS) {
+      for (const fiat of CACHE_FIAT_TARGETS) {
+        try {
+          const priceInFiat = await getTatumRate(crypto, fiat);
+          if (priceInFiat && priceInFiat > 0) {
+            backgroundRateCache.set(`rate_bg:${crypto}:${fiat}`, { rate: priceInFiat, timestamp: Date.now() });
+            backgroundRateCache.set(`rate_bg:${fiat}:${crypto}`, { rate: 1 / priceInFiat, timestamp: Date.now() });
+            ratesUpdated += 2;
+          }
+        } catch {
+          // Skip this pair silently
+        }
+      }
+    }
+  }
+  
+  const elapsed = Date.now() - startTime;
+  console.log(`[BackgroundCache] ✅ Refreshed ${ratesUpdated} rates via ${provider} in ${elapsed}ms`);
+};
+
+/**
+ * Get rate from background cache (populated by CoinGecko every 60s)
+ * Used ONLY as fallback when real-time providers fail
+ */
+const getBackgroundCachedRate = (from: string, to: string): number | null => {
+  const cacheKey = `rate_bg:${from}:${to}`;
+  const cached = backgroundRateCache.get(cacheKey);
+  if (cached) {
+    const age = Date.now() - cached.timestamp;
+    if (age < BACKGROUND_CACHE_TTL_MS) {
+      console.log(`[currencyConvert] Using background-cached rate for ${from}→${to}: ${cached.rate} (age: ${Math.floor(age / 1000)}s, source: CoinGecko/Tatum)`);
+      return cached.rate;
+    }
+  }
+  return null;
+};
 
 // List of crypto currencies
 const CRYPTO_CURRENCIES = ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT', 'USDC', 'BNB', 'XRP', 'ADA', 'SOL'];
