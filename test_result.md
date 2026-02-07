@@ -7,6 +7,45 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "P2: Delete api-service directory + Lightweight API versioning (/api/v1)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.ts, /app/backend/routes/index.ts, /app/backend/swagger/index.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          TWO P2 BACKLOG ITEMS COMPLETED:
+          
+          1. DELETED backend/api-service/ directory:
+             - Directory fully removed (was retired, all functionality already in merchantApiRouter.ts)
+             - Cleaned 3 stale comments referencing api-service in paymentController.ts, merchantApiRouter.ts, routes/index.ts
+             - Updated ports reference in test_result.md (removed port 3301)
+             - No active imports existed from api-service — zero functional impact
+          
+          2. LIGHTWEIGHT API VERSIONING:
+             - server.ts: Added `app.use("/api/v1", router)` alongside existing `app.use("/api", router)`
+             - routes/index.ts: Base route now returns api_version: "v1" and versioning info
+             - swagger/index.ts: Updated title to include (v1), added versioning section to description,
+               server description notes both /api/* and /api/v1/* availability
+             - ZERO BREAKING CHANGES: All existing /api/* routes work identically
+             - Merchants can optionally use /api/v1/* for explicit version pinning
+          
+          VERIFY:
+          1. GET /health returns 200 healthy
+          2. GET /api returns JSON with api_version: "v1" and versioning object
+          3. GET /api/v1 returns IDENTICAL response to GET /api
+          4. POST /api/user/login and POST /api/v1/user/login both return same response
+          5. GET /api/docs returns Swagger UI with versioning note in description
+          6. /app/backend/api-service/ directory does NOT exist
+          7. No grep matches for "api-service" in active .ts files (excluding comments in test_result.md)
+          
+          Credentials: richard@dyno.pt / Katiekendra123@
+          Base URL: https://init-stack.preview.emergentagent.com
+
   - task: "BUGFIX: webhook_url not stored in crypto-{address} Redis key + Performance fix for double currency conversion"
     implemented: true
     working: true
