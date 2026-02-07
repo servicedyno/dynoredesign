@@ -963,9 +963,10 @@ const tatumCryptoWebHook = async (
         console.log(`[tatumCryptoWebHook] Minor underpayment ($${underpaymentAmountUsd.toFixed(2)}) within threshold ($${underpaymentThresholdUsd}) - accepting as full payment`);
       }
       
-      // FULL, OVERPAYMENT, or MINOR UNDERPAYMENT: Process normally
-      // For completion payments, store the cumulative amount
-      const finalReceivedAmount = isCompletionPayment ? totalReceivedAmount : incomingAmount;
+      // FULL, OVERPAYMENT, MINOR UNDERPAYMENT, or DIRECT API UNDERPAYMENT: Process normally
+      // For completion payments or Direct API underpayments, use totalReceivedAmount
+      const isDirectApiUnderpayment = isUnderpayment && !isMinorUnderpayment && !(customerData?.link_id || items?.link_id);
+      const finalReceivedAmount = (isCompletionPayment || isDirectApiUnderpayment) ? totalReceivedAmount : incomingAmount;
       console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address, "final amount:", finalReceivedAmount);
       
       // Hard failures that should NOT be retried
