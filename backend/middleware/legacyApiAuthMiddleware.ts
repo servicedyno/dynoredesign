@@ -78,6 +78,22 @@ const validateApiKey = async (apiKey: string): Promise<ApiKeyData | null> => {
       return null;
     }
     
+    // Fetch current base_currency + webhook config from DB (source of truth)
+    // The encrypted key payload may have stale values if settings were updated after key creation
+    const dbApiData = await sequelize.query<{ base_currency: string; webhook_url: string | null; webhook_secret: string | null }>(
+      `SELECT base_currency, webhook_url, webhook_secret FROM tbl_api WHERE company_id=$1 AND user_id=$2 AND "apiKey"=$3 LIMIT 1`,
+      {
+        bind: [company_id, adm_id, apiKey],
+        type: QueryTypes.SELECT
+      }
+    );
+    
+    if (dbApiData.length > 0) {
+      apiData.base_currency = dbApiData[0].base_currency || apiData.base_currency;
+      if (dbApiData[0].webhook_url) apiData.webhook_url = dbApiData[0].webhook_url;
+      if (dbApiData[0].webhook_secret) apiData.webhook_secret = dbApiData[0].webhook_secret;
+    }
+    
     return apiData;
   } catch (error) {
     console.error("[LegacyAuth] API key validation error:", error);
