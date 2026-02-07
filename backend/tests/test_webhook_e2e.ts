@@ -135,20 +135,21 @@ async function testSignedWebhook() {
   
   const received = await getReceivedWebhooks();
   const latest = received[0];
-  const headers = latest.headers as Record<string, unknown>;
+  const headers = latest.headers as Record<string, string[]>;
+  const getHeader = (h: Record<string, string[]>, key: string) => h[key]?.[0];
   const body = JSON.parse(latest.content as string);
   
   assert(body.event === "payment.pending", "Event should be payment.pending");
-  assert(headers["x-dynopay-signature"] !== undefined, "Signature header should be present");
+  assert(getHeader(headers, "x-dynopay-signature") !== undefined, "Signature header should be present");
   
   // Verify the signature ourselves
-  const timestamp = Number(headers["x-dynopay-timestamp"]);
+  const timestamp = Number(getHeader(headers, "x-dynopay-timestamp"));
   const signaturePayload = { ...body, timestamp };
   const expectedSig = crypto.createHmac("sha256", testSecret)
     .update(JSON.stringify(signaturePayload))
     .digest("hex");
   
-  assert(headers["x-dynopay-signature"] === expectedSig, "Signature should be valid HMAC-SHA256");
+  assert(getHeader(headers, "x-dynopay-signature") === expectedSig, "Signature should be valid HMAC-SHA256");
   
   // Test the verifyWebhookSignature helper
   const payloadStr = JSON.stringify(signaturePayload);
