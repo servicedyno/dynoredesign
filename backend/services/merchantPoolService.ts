@@ -30,6 +30,7 @@ export {
   getOrCreateMerchantWallet,
   addAddressToMerchantPool,
   initializeMerchantPool,
+  prewarmPoolAddresses,
 } from "./merchantPool/merchantPoolWallet";
 
 // Reservation & address lifecycle
