@@ -1389,12 +1389,7 @@ const getCurrencyRates = async (
   try {
     const { source, amount, currencyList, fixedDecimal = true } = req.body;
 
-    const currencyRateList = await currencyConvert({
-      sourceCurrency: source,
-      currency: currencyList,
-      amount,
-      fixedDecimal,
-    });
+    const currencyRateList = await convertToMultiple(source, currencyList, amount, fixedDecimal);
 
     successResponseHelper(res, 200, "Currency rates retrieved successfully", currencyRateList);
   } catch (e) {
