@@ -642,13 +642,8 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
   try {
     const id = req.params.id;
 
-    // Get company's preferred currency from their API key (active first, then last used)
-    const apiKeyResult = await sequelize.query(
-      COMPANY_CURRENCY_QUERY,
-      { replacements: { companyId: id }, type: QueryTypes.SELECT }
-    ) as Array<{ base_currency: string }>;
-    
-    const preferredCurrency = apiKeyResult.length > 0 ? apiKeyResult[0].base_currency : 'USD';
+    // Get company's preferred currency
+    const preferredCurrency = await getCompanyBaseCurrency(id);
 
     const resData = await sequelize.query(
       `
