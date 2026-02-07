@@ -1580,7 +1580,7 @@ const createCryptoPayment = async (
       let exchange_rate = 0;
       
       try {
-        // PERFORMANCE FIX: Use cached exchange rate from api-service if available
+        // PERFORMANCE FIX: Use cached exchange rate if available
         // This avoids a redundant ~100-300ms external API call to FastForex
         const cachedRate = items?.cached_transfer_rate ? parseFloat(String(items.cached_transfer_rate)) : 0;
         const cachedCurrency = items?.cached_crypto_currency || null;

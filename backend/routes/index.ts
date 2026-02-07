@@ -59,8 +59,7 @@ router.get("/", (_req: express.Request, res: express.Response) => {
 });
 
 router.use("/user", userRouter);
-// Merchant API routes (unified — replaces legacy api-service on port 3301)
-// Supports both OLD (x-api-key + wallet_token) and NEW (x-api-key + customer JWT) auth
+// Merchant API routes (unified) — supports both OLD and NEW auth flows
 router.use("/user", merchantApiRouter);
 router.use("/admin", adminRouter);
 router.use("/company", companyRouter);

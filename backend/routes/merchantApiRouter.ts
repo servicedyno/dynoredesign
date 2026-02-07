@@ -2,9 +2,6 @@
  * Merchant API Router (unified)
  * 
  * Single source of truth for all merchant-facing API endpoints.
- * Replaces the previous split between legacyApiRouter (main backend)
- * and api-service (separate process on port 3301).
- * 
  * All endpoints use direct DB/controller calls — no HTTP self-calls.
  * 
  * Auth: x-api-key header (required) + customer JWT (optional for some endpoints)
