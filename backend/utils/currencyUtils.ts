@@ -127,6 +127,89 @@ export const getCurrencyInfo = (currency: string = 'USD'): {
   };
 };
 
+// =============================================
+// Consolidated Currency Conversion Helpers
+// Wrap the raw currencyConvert() to eliminate boilerplate at call sites.
+// =============================================
+
+import currencyConvert from "../helper/currencyConvert";
+
+/**
+ * Convert any currency amount to USD (most common pattern).
+ * Returns the USD amount as a number.
+ */
+export const convertToUSD = async (sourceCurrency: string, amount: number): Promise<number> => {
+  if (sourceCurrency === 'USD') return amount;
+  const result = await currencyConvert({
+    currency: ['USD'],
+    sourceCurrency,
+    amount,
+    fixedDecimal: true,
+  });
+  return Number(result[0]?.amount || 0);
+};
+
+/**
+ * Convert a fiat/crypto amount into a target crypto currency.
+ * Returns { amount, rate }.
+ */
+export const convertToCrypto = async (
+  baseCurrency: string,
+  cryptoType: string,
+  amount: number,
+): Promise<{ amount: number; rate: number }> => {
+  const result = await currencyConvert({
+    currency: [cryptoType],
+    sourceCurrency: baseCurrency,
+    amount,
+    fixedDecimal: false,
+  });
+  return {
+    amount: Number(result[0]?.amount || 0),
+    rate: Number(result[0]?.transferRate || 0),
+  };
+};
+
+/**
+ * Convert a crypto/fiat amount into a target fiat currency.
+ * Returns { amount, rate }.
+ */
+export const convertToFiat = async (
+  sourceCurrency: string,
+  targetFiat: string,
+  amount: number,
+): Promise<{ amount: number; rate: number }> => {
+  if (sourceCurrency === targetFiat) return { amount, rate: 1 };
+  const result = await currencyConvert({
+    currency: [targetFiat],
+    sourceCurrency,
+    amount,
+    fixedDecimal: true,
+  });
+  return {
+    amount: Number(result[0]?.amount || 0),
+    rate: Number(result[0]?.transferRate || 0),
+  };
+};
+
+/**
+ * Get rates for multiple target currencies at once.
+ * Returns the full CurrencyRateList array.
+ */
+export const convertToMultiple = async (
+  sourceCurrency: string,
+  targets: string[],
+  amount: number,
+  fixedDecimal: boolean = true,
+): Promise<Array<{ currency: string; amount: number; transferRate: number }>> => {
+  return await currencyConvert({
+    currency: targets,
+    sourceCurrency,
+    amount,
+    fixedDecimal,
+  });
+};
+
 export default {
   getCurrencySymbol,
   formatCurrency,
@@ -134,6 +217,10 @@ export default {
   getCurrencyInfo,
   CURRENCY_SYMBOLS,
   SUPPORTED_BASE_CURRENCIES,
+  convertToUSD,
+  convertToCrypto,
+  convertToFiat,
+  convertToMultiple,
 };
 
 /**
