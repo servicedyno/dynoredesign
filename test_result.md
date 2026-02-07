@@ -7,6 +7,47 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "FIX: Direct API underpayment should process immediately (not wait like Payment Link)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/webhooks/index.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          FIX: Direct API (cryptoPayment) underpayments now process immediately instead of waiting.
+          
+          PROBLEM: When a Direct API payment received less than expected, the webhook handler
+          treated it identically to a Payment Link underpayment — set incomplete flag, waited
+          30 minutes for remaining ETH. This is wrong for Direct API: whatever is received should
+          be processed immediately.
+          
+          FIX in webhooks/index.ts (tatumCryptoWebHook, underpayment block ~line 841):
+          1. Added check: is this a Payment Link (has link_id) or Direct API (no link_id)?
+          2. DIRECT API path: 
+             - Updates Redis with status="processing" and actual receivedAmount
+             - Sends informational payment.underpaid webhook to merchant
+             - Falls through to cryptoVerification (does NOT return early)
+             - cryptoVerification handles fund distribution:
+               • Above min forwarding threshold ($3): split between merchant + admin per fee tiers
+               • Below min forwarding threshold: 100% to admin
+             - payment.confirmed webhook sent after processing
+          3. PAYMENT LINK path: Unchanged (set incomplete flag, wait 30 min grace period)
+          4. Updated finalReceivedAmount calculation to use totalReceivedAmount for Direct API underpayments
+          
+          VERIFY:
+          1. Code review: line ~844 checks isDirectApi = !linkIdUnderpaid
+          2. Direct API path does NOT call return — falls through to cryptoVerification
+          3. Payment Link path still returns res.status(200).end() after setting incomplete
+          4. finalReceivedAmount (line ~968) includes isDirectApiUnderpayment condition
+          5. Backend healthy, no compilation errors
+          
+          Credentials: richard@dyno.pt / Katiekendra123@
+          Base URL: https://setup-deps-6.preview.emergentagent.com
+
   - task: "P2: Delete api-service directory + Lightweight API versioning (/api/v1)"
     implemented: true
     working: true
