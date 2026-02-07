@@ -361,6 +361,11 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
       }
     );
 
+    // Cache the exchange rate from getCurrencyRatesInternal so createCryptoPayment
+    // doesn't need to make a redundant currencyConvert call (~100-300ms saved)
+    const cachedTransferRate = currencyData.data.data[0]?.transferRate || null;
+    const cachedCryptoAmount = currencyData.data.data[0]?.amount || null;
+
     const redisPayload = {
       customer_id: customerData.dataValues.customer_id,
       company_id: data.company_id,
@@ -377,6 +382,10 @@ const cryptoPayment = async (req: express.Request, res: express.Response) => {
       webhook_url: effectiveWebhookUrl,
       webhook_secret: effectiveWebhookSecret,
       callback_url: callback_url || null,
+      // Cache exchange rate to avoid redundant API call in createCryptoPayment
+      cached_transfer_rate: cachedTransferRate,
+      cached_crypto_amount: cachedCryptoAmount,
+      cached_crypto_currency: currency,
       ...(meta_data && { meta_data: JSON.stringify(meta_data) }),
     };
 
