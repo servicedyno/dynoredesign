@@ -205,21 +205,8 @@ const checkSweepProfitability = async (
     let feeUSD = 0;
     
     try {
-      const balanceConversion = await currencyConvert({
-        currency: ["USD"],
-        sourceCurrency: walletType,
-        amount: balance,
-        fixedDecimal: true,
-      });
-      balanceUSD = parseFloat(String(balanceConversion[0]?.amount || "0"));
-      
-      const feeConversion = await currencyConvert({
-        currency: ["USD"],
-        sourceCurrency: walletType,
-        amount: estimatedFee,
-        fixedDecimal: true,
-      });
-      feeUSD = parseFloat(String(feeConversion[0]?.amount || "0"));
+      balanceUSD = await convertToUSD(walletType, balance);
+      feeUSD = await convertToUSD(walletType, estimatedFee);
     } catch (convError) {
       console.warn(`[MerchantPool] Could not convert to USD for profitability check:`, convError);
       return { profitable: true, estimatedFee };
