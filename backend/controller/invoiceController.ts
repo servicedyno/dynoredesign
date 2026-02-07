@@ -234,7 +234,8 @@ export const autoGenerateInvoice = async (
         await sendInvoiceGeneratedEmail(userData.email, userData.name, {
           invoice_number: invoiceNumber,
           transaction_id: transactionId,
-          total_usd: totalUsd,
+          total_usd: totalAmount,
+          currency: preferredCurrency,
           invoice_date: new Date(),
           invoice_url: invoiceUrl,
         });
