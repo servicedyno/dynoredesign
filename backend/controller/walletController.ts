@@ -2676,6 +2676,7 @@ const getUserAnalytics = async (
       paymentSuccessRates,
       historicalTrends,
       revenue_performance,
+      display_currency: preferredCurrency,
     };
 
     successResponseHelper(res, 200, "Analytics data retrieved successfully", returnData);
