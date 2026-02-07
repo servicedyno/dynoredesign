@@ -4,7 +4,7 @@
  * Handles wallet creation, address generation, and pool initialization.
  */
 
-import { Transaction } from "sequelize";
+import { Transaction, Op } from "sequelize";
 import {
   merchantWalletModel,
   merchantTempAddressModel,
