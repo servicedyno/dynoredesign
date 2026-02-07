@@ -110,17 +110,16 @@ def start_api_service():
 
 def stop_all():
     """Stop all services gracefully."""
-    global NODE_PROCESS, API_SERVICE_PROCESS
+    global NODE_PROCESS
     
-    for name, proc in [("Backend", NODE_PROCESS), ("API", API_SERVICE_PROCESS)]:
-        if proc and proc.poll() is None:
-            print(f"Stopping {name}...", flush=True)
-            proc.terminate()
-            try:
-                proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait()
+    if NODE_PROCESS and NODE_PROCESS.poll() is None:
+        print("Stopping Backend...", flush=True)
+        NODE_PROCESS.terminate()
+        try:
+            NODE_PROCESS.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            NODE_PROCESS.kill()
+            NODE_PROCESS.wait()
 
 atexit.register(stop_all)
 signal.signal(signal.SIGTERM, lambda s, f: (stop_all(), sys.exit(0)))
