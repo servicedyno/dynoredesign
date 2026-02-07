@@ -47,17 +47,24 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
 - **Orphan Payment Detection**: `detectOrphanPayments` cron job scans AVAILABLE addresses for late payments using preserved `last_payment_context`
 - **Payment Context Preservation**: `last_payment_context` JSONB column on `tbl_merchant_pool_addresses` preserves payment details after address expiry
 - **Build fix**: Fixed TypeScript errors in `detectOrphanPayments` — `ref` property inclusion in object literal, `tempAddressId` camelCase, and `recordPoolTransaction` call signature alignment
+- **E2E Tests**: 3/3 passing — context preservation, orphan detection scan, context cleanup
+- **Refactor (completed 2026-02-07)**: Split 2800-line `merchantPoolService.ts` into 6 focused modules under `services/merchantPool/`:
+  - `merchantPoolConfig.ts` (175 lines) — constants, config, types, withRetry
+  - `merchantPoolWallet.ts` (214 lines) — wallet creation, address generation, pool init
+  - `merchantPoolReservation.ts` (580 lines) — reservation, release, payment tracking
+  - `merchantPoolSweep.ts` (624 lines) — gas funding, sweep execution, scheduled sweeps
+  - `merchantPoolTransaction.ts` (112 lines) — transaction recording, pool status
+  - `merchantPoolMonitoring.ts` (822 lines) — subscriptions, missed payments, orphan detection
+  - `merchantPoolService.ts` (111 lines) — backward-compatible re-export hub
 
 ## Backlog
 
 ### P1 - Upcoming
-- Full E2E verification of orphan payment flow (simulate expired address + late payment)
 - Verify webhook fix end-to-end (need webhook URL from user for nomadly@moxx.co)
 - Public/unauthenticated endpoint for payment link creation (x-api-key header auth)
 - Auto-create default company + USD API key on new user registration
 
 ### P2 - Future
-- Refactor `merchantPoolService.ts` into smaller specialized modules
 - Update frontend components to consume `currency_info` objects from backend
 - Consolidate duplicated currency query logic into single utility function in `currencyUtils.ts`
 - Refactor base_currency dependency on encrypted API key for better maintainability
