@@ -127,20 +127,15 @@ signal.signal(signal.SIGINT, lambda s, f: (stop_all(), sys.exit(0)))
 
 def monitor_services():
     """Monitor and restart crashed services."""
-    global NODE_PROCESS, API_SERVICE_PROCESS
+    global NODE_PROCESS
     
     while True:
         time.sleep(10)
         
         if NODE_PROCESS and NODE_PROCESS.poll() is not None:
-            print("⚠️  Backend crashed, restarting...", flush=True)
+            print("Warning: Backend crashed, restarting...", flush=True)
             time.sleep(2)
             start_node_backend()
-        
-        if API_SERVICE_PROCESS and API_SERVICE_PROCESS.poll() is not None:
-            print("⚠️  API crashed, restarting...", flush=True)
-            time.sleep(2)
-            start_api_service()
 
 # Lightweight reverse proxy
 async def proxy_request(scope, receive, send):
