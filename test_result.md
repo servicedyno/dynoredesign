@@ -9,7 +9,7 @@ user_problem_statement: "Auto-generate friendly names for API keys and wallets w
 current_test_task:
   - task: "Fix 1: Configurable Reservation Timeout (120 min) + Fix 2: Orphan Payment Detection on AVAILABLE addresses"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/services/merchantPoolService.ts, /app/backend/models/merchantPoolModels/index.ts, /app/backend/server.ts"
     stuck_count: 0
     priority: "critical"
