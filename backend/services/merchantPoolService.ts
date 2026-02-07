@@ -1249,10 +1249,20 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     console.log(`[MerchantPool] 🧹 Starting sweep for ${poolAddress.dataValues.wallet_address}`);
     
     // Get actual balance from blockchain
-    const balanceData = await tatumApi.getAddressBalance(
-      poolAddress.dataValues.wallet_address,
-      walletType
-    );
+    let balanceData;
+    try {
+      balanceData = await tatumApi.getAddressBalance(
+        poolAddress.dataValues.wallet_address,
+        walletType
+      );
+    } catch (balanceError: unknown) {
+      const balErr = balanceError as { message?: string };
+      if ((balErr.message || '').includes('account.not.found') || (balErr.message || '').includes('not.found')) {
+        console.log(`[MerchantPool] ⏭️ Sweep skipped - account not yet activated on-chain: ${poolAddress.dataValues.wallet_address}`);
+        return { success: true, amount: 0, message: "Account not activated on-chain" };
+      }
+      throw balanceError;
+    }
     const actualBalance = parseFloat(balanceData?.balance || "0");
 
     if (actualBalance <= 0) {
