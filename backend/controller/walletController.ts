@@ -159,24 +159,14 @@ const getWallet = async (req: express.Request, res: express.Response) => {
       currencyList.push(walletData[i].dataValues.wallet_type);
     }
 
-    const currencyData = await currencyConvert({
-      currency: currencyList,
-      sourceCurrency: "USD",
-      fixedDecimal: false,
-      amount: 1,
-    });
+    const currencyData = await convertToMultiple("USD", currencyList, 1, false);
     
     // Get USD to preferred currency conversion rate
     if (preferredCurrency !== 'USD') {
       try {
-        const fiatConversions = await currencyConvert({
-          sourceCurrency: 'USD',
-          currency: [preferredCurrency],
-          amount: 1,
-          fixedDecimal: true,
-        });
-        if (fiatConversions && fiatConversions[0]?.amount) {
-          fiatConversionRate = Number(fiatConversions[0].amount);
+        const fiatResult = await convertToFiat('USD', preferredCurrency, 1);
+        if (fiatResult.amount) {
+          fiatConversionRate = fiatResult.amount;
         }
       } catch (e) {
         console.warn(`[getWallet] Currency conversion failed, using USD`);
