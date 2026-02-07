@@ -8,6 +8,7 @@ import axios from "axios";
 import { paymentController } from "../controller";
 import { sendPendingPaymentNotification } from "../services/pendingPaymentService";
 import { QueryTypes } from "sequelize";
+import { getCompanyBaseCurrency, convertToFiat } from "../utils/currencyUtils";
 
 /**
  * Generate HMAC-SHA256 signature for webhook payload
