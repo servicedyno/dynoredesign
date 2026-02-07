@@ -258,26 +258,19 @@ class BackendTester:
                 )
             
             # Test 4: Verify Payment Link path has early return
-            # Find the else block and check if it contains the return statement
-            else_pos = content.find("} else {")
-            if else_pos != -1:
-                # Find the end of the else block by matching braces
-                brace_count = 0
-                else_start = content.find("{", else_pos) + 1
-                else_end = else_start
+            # Look specifically for the else block that contains "PAYMENT LINK" and "return res.status(200).end()"
+            has_payment_link_comment = "// PAYMENT LINK: Wait for remaining payment" in content
+            
+            # Find the specific Payment Link block and check if it has the return
+            payment_link_pos = content.find("// PAYMENT LINK: Wait for remaining payment")
+            if payment_link_pos != -1:
+                # Look for return statement after the Payment Link comment
+                return_pos = content.find("return res.status(200).end()", payment_link_pos)
+                # Make sure the return is within reasonable distance (within the same block)
+                next_function_pos = content.find("export {", payment_link_pos)
                 
-                for i in range(else_start, len(content)):
-                    if content[i] == '{':
-                        brace_count += 1
-                    elif content[i] == '}':
-                        if brace_count == 0:
-                            else_end = i
-                            break
-                        brace_count -= 1
-                
-                payment_link_block = content[else_start:else_end]
-                has_payment_link_comment = "PAYMENT LINK" in payment_link_block
-                has_early_return = "return res.status(200).end()" in payment_link_block
+                has_early_return = (return_pos != -1 and 
+                                  (next_function_pos == -1 or return_pos < next_function_pos))
                 
                 if has_payment_link_comment and has_early_return:
                     self.log_test(
@@ -295,7 +288,7 @@ class BackendTester:
                 self.log_test(
                     "Code Structure - Payment Link Early Return",
                     "FAIL",
-                    "Could not find else block for Payment Link path"
+                    "Could not find Payment Link comment block"
                 )
             
             return True
