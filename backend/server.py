@@ -76,38 +76,6 @@ def start_node_backend():
         print(f"❌ ERROR: Node.js Backend failed to start", flush=True)
         sys.exit(1)
 
-def start_api_service():
-    """Start API Service."""
-    global API_SERVICE_PROCESS
-    
-    env = os.environ.copy()
-    env['API_SERVICE_PORT'] = str(API_SERVICE_PORT)
-    
-    print(f"🚀 Starting API Service (port {API_SERVICE_PORT})...", flush=True)
-    
-    API_SERVICE_PROCESS = subprocess.Popen(
-        ['/app/backend/node_modules/.bin/ts-node', '--transpile-only', 'api-service/server.ts'],
-        cwd='/app/backend',
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        bufsize=1,
-        universal_newlines=True
-    )
-    
-    # Stream output
-    def stream():
-        for line in iter(API_SERVICE_PROCESS.stdout.readline, ''):
-            if line:
-                print(f"[API] {line.rstrip()}", flush=True)
-    
-    threading.Thread(target=stream, daemon=True).start()
-    
-    time.sleep(3)
-    
-    if API_SERVICE_PROCESS.poll() is None:
-        print(f"✅ API Service running (PID: {API_SERVICE_PROCESS.pid})", flush=True)
-
 def stop_all():
     """Stop all services gracefully."""
     global NODE_PROCESS
