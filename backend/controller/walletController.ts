@@ -9,7 +9,6 @@ import {
 import sequelize from "../utils/dbInstance";
 import { Op, QueryTypes } from "sequelize";
 import {
-  currencyConvert,
   decrypt,
   errorResponseHelper,
   getErrorMessage,
