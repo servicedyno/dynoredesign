@@ -93,7 +93,11 @@ app.use("/videos", express.static(path.join(uploadsPath, "videos")));
 // Setup Swagger API documentation
 setupSwagger(app);
 
+// API Versioning: Mount routes at both /api (backward compat) and /api/v1 (versioned)
+// Existing merchants keep using /api/... — no code changes needed
+// New integrations can use /api/v1/... for explicit versioning
 app.use("/api", router);
+app.use("/api/v1", router);
 
 // Health check endpoint for Railway
 app.get("/health", async (_req: express.Request, res: express.Response) => {
