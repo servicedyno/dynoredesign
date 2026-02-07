@@ -2025,7 +2025,7 @@ export const checkMissedPayments = async (): Promise<{
       // Calculate time since reservation started
       // reserved_until is typically 30 min from reservation start
       const minutesUntilExpiry = (reservedUntil.getTime() - now.getTime()) / 60000;
-      const minutesSinceReserved = 30 - minutesUntilExpiry;
+      const minutesSinceReserved = POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES - minutesUntilExpiry;
       
       // CRITICAL: Only process if reserved for MORE than grace period
       // This ensures webhooks have plenty of time to arrive first
