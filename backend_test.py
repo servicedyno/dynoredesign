@@ -250,18 +250,24 @@ class BackendTester:
                     f"Fall-through comment found: {found_fall_through_comment}, Early return found: {found_early_return}"
                 )
             
-            # Test 4: Verify Payment Link path has early return
+            # Test 4: Verify Payment Link path has early return  
             payment_link_has_return = False
             lines = content.split('\n')
-            payment_link_block_started = False
+            in_payment_link_block = False
             
-            for line in lines:
-                if "} else {" in line and "PAYMENT LINK" in content[content.find(line):content.find(line)+200]:
-                    payment_link_block_started = True
-                elif payment_link_block_started and "return res.status(200).end()" in line:
+            for i, line in enumerate(lines):
+                # Look for the else block that contains "PAYMENT LINK"
+                if "} else {" in line:
+                    # Check next few lines for PAYMENT LINK comment
+                    for j in range(i+1, min(i+5, len(lines))):
+                        if "PAYMENT LINK" in lines[j]:
+                            in_payment_link_block = True
+                            break
+                elif in_payment_link_block and "return res.status(200).end()" in line:
                     payment_link_has_return = True
                     break
-                elif payment_link_block_started and line.strip() == "}":
+                elif in_payment_link_block and line.strip() == "}" and "}" in line:
+                    # End of else block
                     break
             
             if payment_link_has_return:
