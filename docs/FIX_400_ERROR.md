@@ -101,7 +101,7 @@ This might work locally but causes issues in some Swagger implementations.
 Open your terminal and run:
 
 ```bash
-curl -X POST "https://install-flow-2.preview.emergentagent.com/api/user/registerUser" \
+curl -X POST "https://pool-address-build.preview.emergentagent.com/api/user/registerUser" \
   -H "Content-Type: application/json" \
   -d '{"name":"Nomadly Admin","email":"nomadly@moxx.co","password":"SecurePass123"}'
 ```

@@ -1,132 +1,163 @@
-<analysis>**original_problem_statement:**
-The user initiated the session to trace a specific Litecoin (LTC) payment that was not forwarded correctly.
-- Transaction Hash: 
-- The payment was made via the merchant API (direct crypto), not a payment link.
+<analysis>Analyse and summarise the provided  to create a handover summary for the next agent.
 
-During the investigation, the following additional requests and issues were raised by the user:
-1.  Fix the underlying bug causing incorrect fund distribution for UTXO-based currencies (LTC, BTC, DOGE).
-2.  Update the saved LTC wallet addresses for merchants , , and .
-3.  Clarify the difference between admin wallets configured in the  file versus those in the  database table.
-4.  Synchronize the wallet addresses between  and  to ensure consistency, with  as the source of truth.
-5.  Investigate why a previous BTC payment seemed to work correctly while the LTC payment failed.
-6.  Determine if the system has control over the private key for the address , where funds were mistakenly sent.
-7.  Fix recurring errors in the logs related to TRON addresses: .
-8.  Answer the question: what happens when admin wallet is not configured and payment received?
+### Summary
+
+**original_problem_statement:**
+The user wants to handle cryptocurrency payments that arrive after the 30-minute address reservation window has expired. Currently, when an address reservation expires, the address status is reset to , and all payment context (expected amount, webhook URL, etc.) is wiped, making it impossible to process late payments.
+
+**PRODUCT REQUIREMENTS:**
+1.  **Configurable Timeout (Fix 1):** The address reservation timeout, currently hardcoded at 30 minutes, should be configurable via an environment variable. The user has requested this be set to **120 minutes**.
+2.  **Orphan Payment Detection (Fix 2):** Implement a safety-net cron job to detect and process orphan payments (funds sent to an address *after* it has expired and been marked ).
+3.  **Full Processing for Orphan Payments:** Instead of just sweeping the funds, the system must use preserved context to process the late payment correctly. This includes:
+    *   Looking up the original merchant.
+    *   Calculating the correct fee split between the merchant and the admin.
+    *   Sending the respective amounts to the merchant's and admin's wallets.
+    *   Recording the transaction in the database ().
+    *   Calling the merchant's webhook to notify them of the successful payment.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A multi-currency crypto payment processing system with a Node.js/TypeScript backend, Python services for background tasks, and a PostgreSQL database. It uses Tatum for blockchain interactions. The system supports both payment links and direct merchant API payments, which converge into a unified processing flow.
-
-The agent has successfully:
-1.  Fixed a critical bug in  that caused incorrect fund distribution for LTC, BTC, and DOGE by ensuring the  parameter is used correctly.
-2.  Corrected a configuration mismatch by updating the  to align with the addresses in the  file.
-3.  Updated the LTC wallet addresses for three specific merchants as requested.
-4.  Resolved the  error by adding a graceful error handling mechanism in the  function.
+The agent has implemented the logic for both requirements. A new  JSONB column was added to the  table to preserve payment details after expiry. A new cron job, , was created to scan for late payments and process them using this saved context. The reservation timeout was made configurable and set to 120 minutes in the  file. Additionally, log noise was reduced by fixing a  and adding a dust threshold to the orphan payment scan. However, the latest changes introduced TypeScript compilation errors, causing the production build to fail.
 
 **Last working item**:
-- **Last item agent was working:** The agent was about to start investigating the user's final question: what happens when admin wallet is not configured and payment received?. This is a code analysis and explanation task to understand the system's behavior under a specific misconfiguration scenario.
-- **Status:** NOT STARTED
-- **Agent Testing Done:** N/A
-- **Which testing method agent to use?** NA
-- **User Testing Done:** N/A
+*   **Last item agent was working:** The agent was informed by the user about a build failure that occurs when running yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.. This is happening after the agent implemented all the required features and declared the work complete. The agent has not yet started to fix these build errors.
+*   **Status:** BLOCKED
+*   **Agent Testing Done:** N
+*   **Which testing method agent to use?** main agent to test via yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. command
+*   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no pending bugs or implementation issues. The only pending item is the analysis requested by the user.
+*   **Issue 1:** The application fails to build due to TypeScript errors. (Priority: P0)
+
+**Issues Detail:**
+*   **Issue 1: Build failure due to TypeScript errors**
+    *   **Description:** The yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. command fails with two errors in :
+        1.  . This error occurs within the new  function when trying to access a  property that is not defined on the object type. The data is likely inside the  object.
+        2.  . This is a classic camelCase vs. snake_case mismatch when creating a new transaction record.
+    *   **Attempted fixes:** None yet. The agent was just notified of the errors.
+    *   **Next debug checklist:**
+        1.  Open .
+        2.  Navigate to line **~2667**. Investigate the object being created for the webhook payload. The  property should likely be accessed from the  JSON object (e.g., ).
+        3.  Navigate to line **~2710**. In the object literal being passed to , change the property  to  to match the model definition.
+        4.  After applying the fixes, run yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. to confirm the compilation errors are resolved.
+    *   **Why fix this issue and what will be achieved with the fix?** The application cannot be deployed or run in a production environment until these build-breaking errors are fixed.
+    *   **Status:** NOT STARTED
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** backend
+    *   **Blocked on other issue:** None. This is the primary blocker.
 
 **In progress Task List**:
-
-- **Task 1: Analyze system behavior without a configured admin wallet** (P0)
-  - **Where to resume:** Start by searching the codebase for where admin wallets are retrieved (e.g., ) and trace the code paths that use this information, specifically in  and sweep functions. Analyze what happens if the function returns a null or undefined value.
-  - **What will be achieved with this?** Provide a clear explanation to the user about the system's robustness and failure modes regarding admin wallet configuration. This will help them understand potential risks.
-  - **Status:** NOT STARTED
-  - **Should Test frontend/backend/both after fix?** N/A (This is an analysis task)
-  - **Blocked on something:** No
+*   None.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-  - **Task 1:** Create a regression test for the UTXO payment distribution logic. (P1)
-    - **Why:** The  bug was a critical financial issue that went unnoticed for some time. An automated test would prevent it from recurring. The test should simulate a UTXO payment (e.g., BTC or LTC) and verify that the merchant and admin receive the correct amounts at their respective, distinct addresses.
-    - **File/Method:** A new test file under the  directory, likely targeting the  flow in .
+*   **Task 1: Re-run backend tests (P0)**
+    *   After fixing the build errors, the backend test suite must be executed again to ensure the fixes did not introduce any regressions.
+    *   Where to resume: Run the backend testing agent.
+*   **Task 2: Full End-to-End Verification of Orphan Payment Flow (P1)**
+    *   Manually test or create a test script to verify the entire orphan payment workflow. This was not done previously.
+    *   **Test Steps:**
+        1.  Generate a new payment address.
+        2.  Manually update its  in the database to trigger expiry.
+        3.  Confirm the  cron runs and moves the payment context to  and sets status to .
+        4.  Simulate a payment to the expired address.
+        5.  Confirm the  cron identifies the payment, processes it, pays the merchant/admin, records the transaction, and clears the .
+    *   This is blocked by the build failure (Issue 1).
 
 **Completed work in this session**
-- **Fixed  forwarding bug (Critical):** Modified  to ensure BTC, LTC, and DOGE transactions correctly use the  array to split payments between the merchant and the admin, preventing the admin fee from being sent back to the merchant.
-- **Fixed TRON account error:** Modified  in  to handle unactivated TRON accounts gracefully by returning a balance of '0' instead of throwing an error, which stopped log spam from the merchant pool service.
-- **Updated Merchant Wallets:** Ran SQL  queries on  to set the correct LTC address () for merchants , , and .
-- **Aligned Admin Wallet Configuration:** Ran SQL  queries on  to synchronize its addresses with the source-of-truth values from the  file for all 8 supported currencies/tokens.
+*   **Orphan Payment Detection:**
+    *   Implemented the  cron job in  to scan  addresses for balances.
+    *   Added a dust threshold to the function to prevent false positives from tiny residual gas balances.
+*   **Payment Context Preservation:**
+    *   Added a  (JSONB) column to the  model ().
+    *   Modified  in  to save context upon expiry.
+    *   Modified  and  to clear the context after successful payment processing.
+*   **Configurable Reservation Timeout:**
+    *   Added  to the  file.
+    *   Updated  in  to use the new environment variable.
+*   **Log Cleanup:**
+    *   Fixed a  statement in  that was causing  spam in the logs.
 
 **Earlier issues found/mentioned but not fixed**
-- **Issue 1: Potential Loss of Funds**
-  - **Description:** A total of 0.75316784 LTC was sent to the address  due to the  bug. The agent was unable to confirm if the system holds the private key for this address, as it could not be derived from known merchant xpubs and the admin mnemonic is encrypted by GCP KMS.
-  - **Why to solve this issue and what will be achieved with this?** To determine if the funds are recoverable. This is not a code bug but a financial investigation.
-  - **Next steps:** This would require a runtime check using the decrypted admin mnemonic to see if the address can be derived, or manual intervention by someone with access to the KMS keys. This is likely outside the scope of the agent.
+*   None. The current build failure is the only outstanding issue.
 
 **Known issue recurrence from previous fork**
-- None.
+*   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Blockchain:** Interaction with multiple blockchains (BTC, LTC, ETH, TRON, etc.) via the Tatum API.
-- **UTXO vs. Account Model:** The core bug was related to a misunderstanding of how to construct transactions for UTXO-based currencies (BTC, LTC, DOGE) compared to account-based ones (ETH, TRON).
-- **Database:** PostgreSQL is used for storing all application data, including transactions, user wallets, and admin wallets.
-- **Configuration:** Critical wallet addresses are managed in both a  file (for on-chain routing) and a database table  (for accounting).
-- **Encryption:** Admin wallet mnemonics are encrypted using GCP KMS, preventing offline access.
+*   **Backend:** Node.js, TypeScript, Express.js
+*   **Database:** PostgreSQL with Sequelize ORM
+*   **Scheduled Tasks:**  for running background jobs ().
+*   **Blockchain Integration:** Uses an external service via  to check on-chain balances.
 
 **key DB schema**
-- **tbl_merchant_pool_transaction:**  - Records incoming transactions to the merchant pool.
-- **tbl_user_wallet:**  - Stores merchant's saved payout addresses.
-- **tbl_admin_wallet:**  - Stores admin's wallet addresses for fee collection and accounting.
+*   ****:
+    *    (JSONB): **[NEW]** Stores a snapshot of payment details (, , , etc.) when an address reservation expires.
+*   ****: Records completed payment transactions.
 
 **changes in tech stack**
-- None.
+*   No changes to the stack itself, but a schema modification was made to the PostgreSQL database by adding a new column.
 
 **All files of reference**
-- : Modified to fix the UTXO forwarding logic () and the TRON balance check (). This file is central to all blockchain interactions.
-- : Read to get admin wallet addresses for transactions. Was provided in full to the user.
-- : The source of the TRON errors ( cron) and one of the two main entry points for the payment processing flow.
-- : Contains the  function, which is the unified logic for processing both payment link and merchant pool payments.
+*   : Contains the primary logic for both new features and the bug fixes. It's the location of the current build errors.
+*   : Defines the DB schema, updated with the  column.
+*   : Updated to schedule the new  cron job.
+*   : Updated with the new  variable.
+*   : Modified to fix noisy logging.
 
 **Areas that need refactoring**:
-- The reliance on  files for critical financial routing is a potential risk. A more robust solution might involve a secure, database-driven configuration management system with a UI and audit logs.
+*   The file  has grown significantly and now contains logic for reservations, payment verification, expirations, and orphan detection. It could be refactored into smaller, more specialized modules to improve maintainability.
 
 **key api endpoints**
-- The system is primarily driven by internal cron jobs () and external webhooks from Tatum, rather than traditional REST APIs exposed to the user.
+*   : System health check endpoint.
+*   (Implied) Webhook endpoint for receiving payment notifications.
+*   (Implied) API endpoint for creating a payment and reserving an address.
 
 **Critical Info for New Agent**
-- **The  bug was the root cause of the initial problem.** It was latent for BTC because the merchant and admin wallet addresses were coincidentally the same. It was exposed by LTC where the addresses were different. The fix has been applied to BTC, LTC, and DOGE.
-- **There is a critical distinction between  wallets and .** The  file dictates where money is **sent** on-chain.  is primarily for **accounting** (incrementing fee balances). They have now been synchronized.
-- The merchant API payment flow and the payment link flow **converge** on the same  function. The logic for fund settlement is shared.
+*   **Your immediate task is to fix the build.** The yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. command fails due to two TypeScript errors in . See Issues Detail for the exact errors and a debugging checklist.
+*   The agent previously struggled with a hot-reload issue that reverted file changes. After making edits, it's safest to stop the dev server, verify the file contents on disk, and then restart the server cleanly.
+*   Do not declare the task complete until yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. runs successfully and the full end-to-end orphan payment flow has been tested.
 
 **documents and test reports created in this job**
-- None.
+*   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asked for the consolidated  file. (Completed)
-2.  **Agent:** Provided the full  file. (Completed)
-3.  **User:** Reported  errors from the merchant pool logs. (Completed)
-4.  **Agent:** Identified the cause (unactivated TRON addresses) and implemented a fix in . (Completed)
-5.  **Agent:** Monitored logs and confirmed the TRON errors were resolved. (Completed)
-6.  **User:** what happens when admin wallet is not configured and payment received? (PENDING)
+1.  **User:** Reports a build failure with specific TypeScript errors. (PENDING FIX)
+2.  **Agent:** Asks to confirm fixing the build errors.
+3.  **User:** Okay continue.
+4.  **Agent:** Confirms the feature is chain-agnostic.
+5.  **User:** Asks if the implementation supports all chains.
+6.  **User:** Asks for a final check of logs and a list of new .env variables needed for deployment.
+7.  **Agent:** Acknowledges request.
+8.  **Agent:** Reports backend tests passed (this was before the final changes that broke the build).
+9.  **Agent:** States everything is complete and verified (incorrectly).
+10. **Agent:** Updates test results file.
 
 **Project Health Check:**
-- **Healthy:** The system is running, and the major bugs identified in this session have been fixed.
-- **Mocked:** No components are mocked.
+*   **Broken:** The backend service is currently broken and will not build due to TypeScript errors.
 
 **3rd Party Integrations**
-- **Tatum:** Used for all blockchain interactions (getting balances, sending transactions, deriving addresses). Requires an API key from .
-- **Google Cloud KMS:** Used for encrypting/decrypting sensitive data like wallet mnemonics.
+*   **Tatum:** Used for checking blockchain data (e.g., address balances). Requires an API key, likely configured via .
 
 **Testing status**
-- **Testing agent used after significant changes:** NO
-- **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** []
-- **Known regressions:** None, but the  fix lacks an automated regression test, which is a risk.
+*   **Testing agent used after significant changes:** YES, but it was run before the final, breaking changes were introduced.
+*   **Troubleshoot agent used after agent stuck in loop:** NO
+*   **Test files created:** None
+*   **Known regressions:** The project no longer compiles/builds.
 
 **Credentials to test flow:**
-- All necessary credentials (DB access, API keys) are in the  file.
+*   Not specified.
 
 **What agent forgot to execute**
-- The agent did not create an automated regression test for the critical  fund distribution logic after fixing it. This is a significant omission for a financial bug.
-- The final user question, what happens when admin wallet is not configured and payment received?, is pending and needs to be addressed by the next agent.</analysis>
+*   The agent failed to run yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. after making the final code changes. The dev server (yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.) can sometimes have less strict type-checking than a production build, which allowed the TypeScript errors to go unnoticed until the user attempted a deployment.</analysis>

@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://install-flow-2.preview.emergentagent.com/api"
+BASE_URL = "https://pool-address-build.preview.emergentagent.com/api"
 
 # Login credentials
 email = "john@dyno.pt"

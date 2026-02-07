@@ -7,7 +7,7 @@ import requests
 import json
 
 def debug_api_key_response():
-    backend_url = "https://install-flow-2.preview.emergentagent.com"
+    backend_url = "https://pool-address-build.preview.emergentagent.com"
     
     # First authenticate
     auth_response = requests.post(
