@@ -130,12 +130,15 @@ class DynoPayBackendTester:
         status_code, data = self.make_request("POST", "/api/pay/createPaymentLink", payload, headers)
         
         if status_code == 200:
-            transaction_id = data.get("transaction_id")
-            link_url = data.get("link")
+            # Handle nested data structure
+            link_data = data.get("data", data)
+            transaction_id = link_data.get("transaction_id")
+            link_url = link_data.get("link") or link_data.get("payment_link")
+            
             if transaction_id and link_url:
-                self.payment_reference = data.get("reference", transaction_id)
+                self.payment_reference = transaction_id
                 self.log_test("TEST 4 - Payment Link Creation", "PASS", 
-                            f"Payment link created: transaction_id={transaction_id}, link={link_url}")
+                            f"Payment link created: transaction_id={transaction_id}, link={link_url[:50]}...")
             else:
                 self.log_test("TEST 4 - Payment Link Creation", "FAIL", f"Missing transaction_id or link: {data}")
         else:
