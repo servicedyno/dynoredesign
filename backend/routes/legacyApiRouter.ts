@@ -31,11 +31,6 @@ const router = express.Router();
 // Supported crypto types
 const CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
 
-// Helper to get internal backend URL
-const getBackendURL = () => {
-  return process.env.INTERNAL_BACKEND_URL || process.env.SERVER_URL || 'http://localhost:3300';
-};
-
 // Helper to get available currencies for a company
 const getAvailableCurrencies = async (userId: number, companyId: number): Promise<string[]> => {
   const wallets = await sequelize.query<{ wallet_type: string }>(
