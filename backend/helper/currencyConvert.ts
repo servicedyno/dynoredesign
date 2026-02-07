@@ -78,22 +78,28 @@ export const refreshBackgroundRateCache = async (): Promise<void> => {
       console.warn(`[BackgroundCache] CoinGecko failed: ${err.message}, falling back to Tatum`);
     }
     
-    // Fallback: Tatum (already paid for, no extra cost)
+    // Fallback: Tatum — parallelize all rate fetches (already paid for, no extra cost)
     provider = 'Tatum';
+    const tatumPromises: Promise<void>[] = [];
     for (const crypto of CACHE_CRYPTO_TARGETS) {
       for (const fiat of CACHE_FIAT_TARGETS) {
-        try {
-          const priceInFiat = await getTatumRate(crypto, fiat);
-          if (priceInFiat && priceInFiat > 0) {
-            backgroundRateCache.set(`rate_bg:${crypto}:${fiat}`, { rate: priceInFiat, timestamp: Date.now() });
-            backgroundRateCache.set(`rate_bg:${fiat}:${crypto}`, { rate: 1 / priceInFiat, timestamp: Date.now() });
-            ratesUpdated += 2;
-          }
-        } catch {
-          // Skip this pair silently
-        }
+        tatumPromises.push(
+          (async () => {
+            try {
+              const priceInFiat = await getTatumRate(crypto, fiat);
+              if (priceInFiat && priceInFiat > 0) {
+                backgroundRateCache.set(`rate_bg:${crypto}:${fiat}`, { rate: priceInFiat, timestamp: Date.now() });
+                backgroundRateCache.set(`rate_bg:${fiat}:${crypto}`, { rate: 1 / priceInFiat, timestamp: Date.now() });
+                ratesUpdated += 2;
+              }
+            } catch {
+              // Skip this pair silently
+            }
+          })()
+        );
       }
     }
+    await Promise.allSettled(tatumPromises);
   }
   
   const elapsed = Date.now() - startTime;
