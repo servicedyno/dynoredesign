@@ -80,6 +80,7 @@ export default {
   getOrCreateMerchantWallet,
   addAddressToMerchantPool,
   initializeMerchantPool,
+  prewarmPoolAddresses,
   reserveAddress,
   getAvailableAddress,
   markPaymentReceived,
