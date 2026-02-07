@@ -9,11 +9,11 @@ user_problem_statement: "Auto-generate friendly names for API keys and wallets w
 current_test_task:
   - task: "Fix 1: Configurable Reservation Timeout (120 min) + Fix 2: Orphan Payment Detection on AVAILABLE addresses"
     implemented: true
-    working: pending
+    working: false
     file: "/app/backend/services/merchantPoolService.ts, /app/backend/models/merchantPoolModels/index.ts, /app/backend/server.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -45,6 +45,35 @@ current_test_task:
           7. Verify cron registered in server.ts (grep detectOrphanPayments)
           8. Check backend health endpoint returns healthy
           9. Check backend logs for "[OrphanDetect]" entries showing successful scan
+      - working: false
+        agent: "testing"
+        comment: |
+          ❌ ORPHAN PAYMENT RECOVERY TESTING FAILED - CRITICAL ISSUES FOUND:
+          
+          🚨 FIX 1 - CONFIGURABLE RESERVATION TIMEOUT: 2 CRITICAL FAILURES
+          ❌ Line 41: RESERVATION_TIMEOUT_MINUTES: 30, (hardcoded instead of reading from env)
+          ❌ Line 2028: const minutesSinceReserved = 30 - minutesUntilExpiry; (hardcoded 30 instead of POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES)
+          ✅ .env has RESERVATION_TIMEOUT_MINUTES=120 correctly set
+          
+          STATUS: FIX 1 NOT PROPERLY IMPLEMENTED - The reservation timeout is still hardcoded to 30 minutes in two locations despite .env being configured for 120 minutes.
+          
+          🔧 FIX 2 - ORPHAN PAYMENT DETECTION: 5/6 COMPONENTS WORKING
+          ✅ last_payment_context column exists in Sequelize model (DataTypes.TEXT)
+          ✅ cleanupStaleAddresses saves payment context before wiping addresses
+          ✅ detectOrphanPayments function exists with correct logic (AVAILABLE address scan, balance check, cryptoVerification, merchant webhook)
+          ✅ detectOrphanPayments exported from module (line 2762)
+          ✅ Cron job registered in server.ts (*/10 * * * *)
+          ✅ Backend logs show 48 OrphanDetect entries with successful scans (62 addresses scanned)
+          
+          STATUS: FIX 2 MOSTLY WORKING but releaseExpiredReservations does NOT save context before wiping (only cleanupStaleAddresses does).
+          
+          ✅ BACKEND HEALTH: Healthy (200 OK, database connected)
+          ✅ CRON EXECUTION: OrphanDetect running every 10 minutes, successfully scanning addresses
+          
+          REQUIRED FIXES:
+          1. Update line 41: RESERVATION_TIMEOUT_MINUTES: parseInt(process.env.RESERVATION_TIMEOUT_MINUTES || "120")
+          2. Update line 2028: const minutesSinceReserved = POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES - minutesUntilExpiry;
+          3. Add context saving logic to releaseExpiredReservations function (currently only in cleanupStaleAddresses)
   - task: "Crash Recovery for Stale 'processing' Payments — payment.confirmed webhook fix"
     implemented: true
     working: true
