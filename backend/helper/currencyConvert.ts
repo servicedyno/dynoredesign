@@ -108,7 +108,7 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
 
 /**
  * Get rate using Tatum for crypto conversions
- * Handles crypto-to-fiat, fiat-to-crypto, and crypto-to-crypto
+ * Handles crypto-to-fiat, fiat-to-crypto, crypto-to-crypto, AND fiat-to-fiat (via USDT proxy)
  * Uses Tatum's basePair to get direct fiat rates (EUR, GBP, etc.) — no USD intermediary needed
  */
 const getCryptoRateViaTatum = async (from: string, to: string): Promise<number | null> => {
@@ -131,6 +131,17 @@ const getCryptoRateViaTatum = async (from: string, to: string): Promise<number |
     const fromUSD = isStable(from) ? 1 : await getTatumRate(from, 'USD');
     const toUSD = isStable(to) ? 1 : await getTatumRate(to, 'USD');
     if (fromUSD && toUSD) return fromUSD / toUSD;
+  } else {
+    // Fiat → fiat (e.g., GBP → USD, EUR → CAD) — use USDT as USD proxy
+    // USDT ≈ $1 USD, so USDT→GBP rate ≈ USD→GBP rate
+    const fromRate = from.toUpperCase() === 'USD' ? 1 : await getTatumRate('USDT', from);
+    const toRate = to.toUpperCase() === 'USD' ? 1 : await getTatumRate('USDT', to);
+    if (fromRate && toRate) {
+      // fromRate = "1 USDT in FROM currency", toRate = "1 USDT in TO currency"
+      const rate = toRate / fromRate;
+      console.log(`[currencyConvert] Tatum fiat rate ${from}→${to}: ${rate} (via USDT proxy)`);
+      return rate;
+    }
   }
   return null;
 };
