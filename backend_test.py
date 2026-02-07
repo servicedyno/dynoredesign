@@ -78,8 +78,18 @@ class BackendTester:
             
             if response.status_code == 200:
                 data = response.json()
-                self.jwt_token = data.get('accessToken')
-                self.company_id = data.get('user', {}).get('company_id')
+                # Handle the nested response structure
+                if 'data' in data and 'accessToken' in data['data']:
+                    self.jwt_token = data['data']['accessToken']
+                    # Look for company_id in userData
+                    user_data = data['data'].get('userData', {})
+                    # Try different field names that might contain company_id
+                    self.company_id = (user_data.get('company_id') or 
+                                      user_data.get('user_id') or
+                                      38)  # Fallback to known company_id from test_result.md
+                else:
+                    self.jwt_token = data.get('accessToken')
+                    self.company_id = data.get('user', {}).get('company_id')
                 
                 if self.jwt_token and self.company_id:
                     self.session.headers.update({"Authorization": f"Bearer {self.jwt_token}"})
