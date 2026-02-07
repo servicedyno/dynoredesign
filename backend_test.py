@@ -369,7 +369,7 @@ class DynoPayBackendTester:
             time_elapsed_check = "> 60000" in webhook_code
             
             # Check for 'recovered' status in isAlreadySuccessful
-            recovered_status_check = "'recovered'" in webhook_code and "isAlreadySuccessful" in webhook_code
+            recovered_status_check = ("'recovered'" in webhook_code or '"recovered"' in webhook_code) and "isAlreadySuccessful" in webhook_code
             
             conditions_met = sum([isStaleProcessing_found, status_processing_check, txid_check, time_elapsed_check])
             
