@@ -7,6 +7,44 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "Fix 1: Configurable Reservation Timeout (120 min) + Fix 2: Orphan Payment Detection on AVAILABLE addresses"
+    implemented: true
+    working: pending
+    file: "/app/backend/services/merchantPoolService.ts, /app/backend/models/merchantPoolModels/index.ts, /app/backend/server.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          TWO FIXES IMPLEMENTED for late payment recovery:
+          
+          FIX 1 - CONFIGURABLE RESERVATION TIMEOUT:
+          - POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES now reads from env var with 120 min default (was hardcoded 30)
+          - .env has RESERVATION_TIMEOUT_MINUTES=120
+          - Fixed hardcoded '30' in checkMissedPayments (line 1989) to use POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES
+          
+          FIX 2 - ORPHAN PAYMENT DETECTION:
+          - Added last_payment_context TEXT column to tbl_merchant_temp_address model + DB
+          - releaseExpiredReservations now saves full payment context (payment_id, company_id, fee_payer, webhook_url, callback_url, customer info from Redis) BEFORE wiping address to AVAILABLE
+          - cleanupStaleAddresses also saves context before force-releasing stuck addresses
+          - releaseAddress and handleBelowThresholdPayment clear last_payment_context on successful processing
+          - NEW detectOrphanPayments() function: runs every 10 min via cron, scans ALL AVAILABLE addresses for unexpected on-chain balances, uses last_payment_context + owner_user_id for proper merchant/admin fee split via cryptoVerification, calls merchant webhook with recovered:true flag
+          - Cron registered in server.ts: */10 * * * *
+          
+          VERIFIED IN LOGS: Cron fires correctly, scanned 62 AVAILABLE addresses, found 5 with balances (ETH dust from gas funding, not actual orphan payments), correctly handled edge cases.
+          
+          TEST INSTRUCTIONS:
+          1. Verify POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES reads from env (grep merchantPoolService.ts line ~40)
+          2. Verify .env has RESERVATION_TIMEOUT_MINUTES=120
+          3. Verify checkMissedPayments uses POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES (not hardcoded 30)
+          4. Verify last_payment_context column exists in DB: SELECT column_name FROM information_schema.columns WHERE table_name='tbl_merchant_temp_address' AND column_name='last_payment_context'
+          5. Verify releaseExpiredReservations saves context before wiping (grep for "ORPHAN RECOVERY" comment block)
+          6. Verify detectOrphanPayments function exists and exports (grep exports in merchantPoolService.ts)
+          7. Verify cron registered in server.ts (grep detectOrphanPayments)
+          8. Check backend health endpoint returns healthy
+          9. Check backend logs for "[OrphanDetect]" entries showing successful scan
   - task: "Crash Recovery for Stale 'processing' Payments — payment.confirmed webhook fix"
     implemented: true
     working: true
