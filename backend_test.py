@@ -236,7 +236,7 @@ class DynoPayBackendTester:
             
             # Test getSupportedCurrency
             api_headers = {"x-api-key": self.api_key}
-            status_code, data = self.make_request("POST", "/api/user/getSupportedCurrency", headers=api_headers)
+            status_code, data = self.make_request("GET", "/api/user/getSupportedCurrency", headers=api_headers)
             if status_code == 200 and isinstance(data, list):
                 self.log_test("TEST 7B - Get Supported Currency", "PASS", f"Retrieved {len(data)} supported currencies")
             else:
