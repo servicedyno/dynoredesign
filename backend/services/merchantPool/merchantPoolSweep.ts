@@ -11,7 +11,8 @@ import {
   ACCOUNT_CHAINS,
 } from "../../models";
 import tatumApi from "../../apis/tatumApi";
-import { getErrorMessage, currencyConvert } from "../../helper";
+import { getErrorMessage } from "../../helper";
+import { convertToUSD, convertToFiat } from "../../utils/currencyUtils";
 import {
   POOL_CONFIG,
   UTXO_CHAINS,
