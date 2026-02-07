@@ -2665,8 +2665,6 @@ export const detectOrphanPayments = async (): Promise<{
           link_id: paymentContext?.link_id || null,
         };
 
-        reconstructedRedis.ref = customerRef as string;
-
         // Set up Redis data
         await setRedisItem("crypto-" + walletAddress, reconstructedRedis);
         await setRedisItem(customerRef as string, customerData);
