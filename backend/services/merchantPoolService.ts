@@ -2627,6 +2627,9 @@ export const detectOrphanPayments = async (): Promise<{
         const baseCurrency = (paymentContext?.base_currency as string) || 'USD';
         const baseAmount = paymentContext?.base_amount || paymentContext?.expected_amount || null;
 
+        // Reconstruct customer ref
+        const customerRef = paymentContext?.ref || `orphan-customer-${paymentId}`;
+
         // Reconstruct Redis crypto-{address} data
         const reconstructedRedis = {
           mode: 'CRYPTO',
@@ -2645,14 +2648,12 @@ export const detectOrphanPayments = async (): Promise<{
           originalExpectedAmount: expectedAmount || balance,
           processedByOrphanDetect: 'true',
           recoveredAt: new Date().toISOString(),
+          ref: customerRef as string,
           // Carry over webhook/callback if available
           ...(paymentContext?.webhook_url && { webhook_url: paymentContext.webhook_url }),
           ...(paymentContext?.callback_url && { callback_url: paymentContext.callback_url }),
           ...(paymentContext?.link_id && { link_id: paymentContext.link_id }),
         };
-
-        // Reconstruct customer ref
-        const customerRef = paymentContext?.ref || `orphan-customer-${paymentId}`;
         const customerData = {
           adm_id: paymentContext?.adm_id || ownerId,
           company_id: companyId,
@@ -2707,7 +2708,7 @@ export const detectOrphanPayments = async (): Promise<{
 
             // Record in pool transactions
             await recordPoolTransaction({
-              temp_address_id: tempAddressId,
+              tempAddressId: tempAddressId,
               type: 'orphan_recovery',
               from_address: walletAddress,
               to_address: 'merchant+admin (via cryptoVerification)',
