@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://dependency-prep.preview.emergentagent.com/api"
+BASE_URL = "https://crypto-wallet-sync-2.preview.emergentagent.com/api"
 
 # Login
 login_response = requests.post(f"{BASE_URL}/user/login", json={

@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://dependency-prep.preview.emergentagent.com"
+backend_url = "https://crypto-wallet-sync-2.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(

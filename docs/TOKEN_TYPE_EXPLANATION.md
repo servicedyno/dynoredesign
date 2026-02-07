@@ -94,7 +94,7 @@ To access `/api/company/getCompany`, you need a **USER token** (has `user_id` an
 
 1. **Get your user token** (from Method 1 or 2 above)
 
-2. **Open Swagger UI**: https://dependency-prep.preview.emergentagent.com/api/docs
+2. **Open Swagger UI**: https://crypto-wallet-sync-2.preview.emergentagent.com/api/docs
 
 3. **Click "Authorize"** (🔓 button at top)
 
