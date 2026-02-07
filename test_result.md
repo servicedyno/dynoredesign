@@ -2560,8 +2560,7 @@ technical_details:
 
 ports:
   - "8001: Python ASGI proxy (supervisor requirement)"
-  - "3300: Node.js main backend (internal)"
-  - "3301: Node.js API service (external merchant API)"
+  - "3300: Node.js main backend (internal, handles all API + merchant endpoints)"
 
 
   - task: "Per-Merchant Pool System Implementation"
