@@ -62,29 +62,37 @@ export const reserveAddress = async (
       const addressToSubscribe = poolAddress.dataValues.wallet_address;
       const addressId = poolAddress.dataValues.temp_address_id;
       
-      console.log(`[MerchantPool] 🔄 Updating subscription with company info for ${addressToSubscribe}`);
-      console.log(`[MerchantPool]    Company: ${effectiveCompanyId}, User: ${userId}, AddressId: ${addressId}`);
-      
       let subscriptionId = poolAddress.dataValues.subscription_id;
       
-      try {
-        const subResult = await tatumApi.createSubscriptionBlockBeeStyle(
-          addressToSubscribe,
-          walletType,
-          effectiveCompanyId || 0,
-          userId,
-          addressId
-        );
-        
-        if (subResult?.id) {
-          subscriptionId = subResult.id;
-          console.log(`[MerchantPool] ✅ Subscription updated with company info: ${subscriptionId}`);
-          console.log(`[MerchantPool]    URL: ${subResult.url}`);
+      // ASYNC: Update subscription URL with company info in background
+      // The base subscription already exists (from pre-warming or initial creation)
+      // so webhooks will still be delivered even if this update is delayed
+      // The checkMissedPayments cron (5 min) acts as safety net
+      const subscriptionUpdatePromise = (async () => {
+        try {
+          console.log(`[MerchantPool] 🔄 Updating subscription with company info for ${addressToSubscribe} (async)`);
+          const subResult = await tatumApi.createSubscriptionBlockBeeStyle(
+            addressToSubscribe,
+            walletType,
+            effectiveCompanyId || 0,
+            userId,
+            addressId
+          );
+          
+          if (subResult?.id) {
+            subscriptionId = subResult.id;
+            // Update DB with new subscription ID if changed
+            await poolAddress.update({ subscription_id: subscriptionId });
+            console.log(`[MerchantPool] ✅ Subscription updated with company info: ${subscriptionId}`);
+            console.log(`[MerchantPool]    URL: ${subResult.url}`);
+          }
+        } catch (subError: unknown) {
+          const errorMsg = subError instanceof Error ? subError.message : String(subError);
+          console.error(`[MerchantPool] ⚠️ Async subscription update failed (will retry via cron):`, errorMsg);
         }
-      } catch (subError: unknown) {
-        const errorMsg = subError instanceof Error ? subError.message : String(subError);
-        console.error(`[MerchantPool] ⚠️ Subscription update failed:`, errorMsg);
-      }
+      })();
+
+      // Don't await — let it run in background while we complete the reservation
 
       const reservedUntil = new Date();
       reservedUntil.setMinutes(reservedUntil.getMinutes() + POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES);
