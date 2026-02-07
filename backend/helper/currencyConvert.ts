@@ -72,9 +72,10 @@ const TATUM_RATE_IDS: Record<string, string> = {
 };
 
 /**
- * Get crypto→USD rate from Tatum (already paid for, reliable, no extra cost)
+ * Get crypto rate from Tatum in any fiat (already paid for, reliable, no extra cost)
+ * Tatum supports basePair for any fiat: USD, EUR, GBP, CAD, AUD, JPY, CHF, etc.
  */
-const getTatumRate = async (crypto: string): Promise<number | null> => {
+const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<number | null> => {
   const id = TATUM_RATE_IDS[crypto.toUpperCase()];
   if (!id) return null;
 
@@ -88,26 +89,27 @@ const getTatumRate = async (crypto: string): Promise<number | null> => {
     const { data } = await axios.get(
       `https://api.tatum.io/v3/tatum/rate/${id}`,
       {
-        params: { basePair: 'USD' },
+        params: { basePair: fiat.toUpperCase() },
         headers: { 'x-api-key': apiKey },
         timeout: 15000,
       }
     );
     const rate = parseFloat(data?.value);
     if (rate > 0) {
-      console.log(`[currencyConvert] Tatum rate for ${crypto}→USD: ${rate}`);
+      console.log(`[currencyConvert] Tatum rate for ${crypto}→${fiat}: ${rate}`);
       return rate;
     }
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.warn(`[currencyConvert] Tatum rate API failed for ${crypto}: ${err.message}`);
+    console.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message}`);
   }
   return null;
 };
 
 /**
  * Get rate using Tatum for crypto conversions
- * Handles crypto-to-fiat, fiat-to-crypto, and crypto-to-crypto via USD
+ * Handles crypto-to-fiat, fiat-to-crypto, and crypto-to-crypto
+ * Uses Tatum's basePair to get direct fiat rates (EUR, GBP, etc.) — no USD intermediary needed
  */
 const getCryptoRateViaTatum = async (from: string, to: string): Promise<number | null> => {
   const fromIsCrypto = CRYPTO_CURRENCIES.includes(from.toUpperCase());
@@ -115,15 +117,19 @@ const getCryptoRateViaTatum = async (from: string, to: string): Promise<number |
   const isStable = (c: string) => ['USDT', 'USDC'].includes(c.toUpperCase());
 
   if (fromIsCrypto && !toIsCrypto) {
+    // Crypto → fiat (e.g., BTC → EUR) — Tatum returns crypto price in target fiat directly
     if (isStable(from)) return 1;
-    return await getTatumRate(from);
+    const priceInFiat = await getTatumRate(from, to);
+    if (priceInFiat) return priceInFiat;  // This is "1 BTC = X EUR"
   } else if (!fromIsCrypto && toIsCrypto) {
+    // Fiat → crypto (e.g., EUR → BTC) — invert: 1/price
     if (isStable(to)) return 1;
-    const rate = await getTatumRate(to);
-    if (rate) return 1 / rate;
+    const priceInFiat = await getTatumRate(to, from);
+    if (priceInFiat) return 1 / priceInFiat;  // "1 EUR = 1/X BTC"
   } else if (fromIsCrypto && toIsCrypto) {
-    const fromUSD = isStable(from) ? 1 : await getTatumRate(from);
-    const toUSD = isStable(to) ? 1 : await getTatumRate(to);
+    // Crypto → crypto (e.g., ETH → BTC) — convert via USD
+    const fromUSD = isStable(from) ? 1 : await getTatumRate(from, 'USD');
+    const toUSD = isStable(to) ? 1 : await getTatumRate(to, 'USD');
     if (fromUSD && toUSD) return fromUSD / toUSD;
   }
   return null;
