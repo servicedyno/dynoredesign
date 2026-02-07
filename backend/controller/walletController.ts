@@ -94,7 +94,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     let fiatConversionRate = 1;
     
     if (company_id) {
-      preferredCurrency = await getCompanyBaseCurrency(company_id);
+      preferredCurrency = await getCompanyBaseCurrency(company_id as string);
     }
     
     // Check cache first (30 second TTL) - include currency in cache key
@@ -270,7 +270,7 @@ const getWalletTransactions = async (
     let conversionRate = 1;
     
     if (company_id) {
-      preferredCurrency = await getCompanyBaseCurrency(company_id);
+      preferredCurrency = await getCompanyBaseCurrency(company_id as string);
     }
     
     // Get conversion rate if not USD

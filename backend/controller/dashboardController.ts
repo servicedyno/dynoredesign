@@ -92,7 +92,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     // Get company's preferred currency
     let preferredCurrency = "USD";
     if (company_id) {
-      preferredCurrency = await getCompanyBaseCurrency(company_id);
+      preferredCurrency = await getCompanyBaseCurrency(company_id as string);
       if (preferredCurrency !== 'USD') {
         console.log(`[Dashboard] Using currency ${preferredCurrency} for company ${company_id}`);
       }
