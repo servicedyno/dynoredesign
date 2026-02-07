@@ -180,15 +180,10 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     let conversionRate = 1;
     if (preferredCurrency !== 'USD' && (totalVolume > 0 || currentVolume > 0)) {
       try {
-        const conversions = await currencyConvert({
-          sourceCurrency: 'USD',
-          currency: [preferredCurrency],
-          amount: 1, // Get rate for 1 USD
-          fixedDecimal: true,
-        });
+        const result = await convertToFiat('USD', preferredCurrency, 1);
         
-        if (conversions && conversions[0]?.amount) {
-          conversionRate = Number(conversions[0].amount);
+        if (result.amount) {
+          conversionRate = result.amount;
           totalVolume = totalVolume * conversionRate;
           currentVolume = currentVolume * conversionRate;
           lastVolume = lastVolume * conversionRate;
