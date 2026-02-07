@@ -1,186 +1,486 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Testing - Orphan Payment Recovery Fixes Verification
-Tests the two fixes: Configurable Reservation Timeout + Orphan Payment Detection
-READ-ONLY verification as requested
+DynoPay Backend Comprehensive Regression Test Suite
+Tests all critical features after fresh dependency reinstall
+Base URL: https://test-suite-16.preview.emergentagent.com
+Credentials: richard@dyno.pt / Katiekendra123@ (company_id: 38)
 """
 
 import requests
 import json
-import os
-import subprocess
 import time
+from typing import Dict, Any, Optional, List, Tuple
+import re
 
-def log_result(test_name, success, details=""):
-    status = "✅" if success else "❌"
-    print(f"{status} {test_name}")
-    if details:
-        print(f"   {details}")
-    return success
+class DynoPayBackendTester:
+    def __init__(self):
+        self.base_url = "https://test-suite-16.preview.emergentagent.com"
+        self.credentials = {
+            "email": "richard@dyno.pt", 
+            "password": "Katiekendra123@"
+        }
+        self.company_id = "38"
+        self.auth_token: Optional[str] = None
+        self.api_key: Optional[str] = None
+        self.results: Dict[str, Dict] = {}
 
-def run_bash_command(command):
-    """Execute bash command and return output"""
-    try:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, cwd="/app/backend")
-        return result.returncode == 0, result.stdout.strip(), result.stderr.strip()
-    except Exception as e:
-        return False, "", str(e)
+    def log_test(self, test_name: str, status: str, details: str = "", response_data: Any = None):
+        """Log test results"""
+        self.results[test_name] = {
+            "status": status,
+            "details": details,
+            "response_data": response_data
+        }
+        status_symbol = "✅" if status == "PASS" else "❌"
+        print(f"{status_symbol} {test_name}: {status}")
+        if details:
+            print(f"   Details: {details}")
 
-def main():
-    print("=" * 80)
-    print("DYNOPAY ORPHAN PAYMENT RECOVERY FIXES VERIFICATION")
-    print("READ-ONLY testing as requested in review")
-    print("=" * 80)
-    
-    backend_url = "http://localhost:8001"
-    total_tests = 0
-    passed_tests = 0
-    
-    # =================================================================
-    # FIX 1 VERIFICATION: Configurable Reservation Timeout (120 min)
-    # =================================================================
-    print("\n🔧 FIX 1: CONFIGURABLE RESERVATION TIMEOUT VERIFICATION")
-    print("-" * 60)
-    
-    # Test 1.1: Check line ~41 for environment variable usage
-    total_tests += 1
-    success, stdout, stderr = run_bash_command("grep -n 'RESERVATION_TIMEOUT_MINUTES.*parseInt.*process.env' services/merchantPoolService.ts")
-    if success and "120" in stdout:
-        passed_tests += log_result("Line 41: Uses parseInt(process.env.RESERVATION_TIMEOUT_MINUTES)", True, 
-                                 f"Found: {stdout.split(':')[2].strip()}")
-    else:
-        log_result("Line 41: Uses parseInt(process.env.RESERVATION_TIMEOUT_MINUTES)", False, 
-                  "Still hardcoded or incorrect format")
-    
-    # Test 1.2: Check .env file has RESERVATION_TIMEOUT_MINUTES=120
-    total_tests += 1
-    success, stdout, stderr = run_bash_command("grep 'RESERVATION_TIMEOUT_MINUTES=120' .env")
-    if success:
-        passed_tests += log_result(".env has RESERVATION_TIMEOUT_MINUTES=120", True)
-    else:
-        log_result(".env has RESERVATION_TIMEOUT_MINUTES=120", False, "Missing or incorrect value")
-    
-    # Test 1.3: Check minutesSinceReserved uses POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES
-    total_tests += 1
-    success, stdout, stderr = run_bash_command("grep -n 'minutesSinceReserved.*POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES' services/merchantPoolService.ts")
-    if success:
-        passed_tests += log_result("minutesSinceReserved uses POOL_CONFIG value", True,
-                                 f"Line {stdout.split(':')[0]}: Correct implementation")
-    else:
-        log_result("minutesSinceReserved uses POOL_CONFIG value", False, "Still hardcoded 30")
-    
-    # =================================================================
-    # FIX 2 VERIFICATION: Orphan Payment Detection
-    # =================================================================
-    print("\n🔧 FIX 2: ORPHAN PAYMENT DETECTION VERIFICATION")
-    print("-" * 60)
-    
-    # Test 2.1: Check DB column exists
-    total_tests += 1
-    db_check_cmd = '''node -e "const{Sequelize}=require('sequelize');require('dotenv').config();const s=new Sequelize(process.env.DB_NAME,process.env.USER_NAME,process.env.PASSWORD,{host:process.env.HOST,port:process.env.DB_PORT,dialect:'postgres',logging:false});(async()=>{const[c]=await s.query(\\"SELECT column_name FROM information_schema.columns WHERE table_name='tbl_merchant_temp_address' AND column_name='last_payment_context'\\");console.log('exists:',c.length>0);await s.close()})()"'''
-    success, stdout, stderr = run_bash_command(db_check_cmd)
-    if success and "exists: true" in stdout:
-        passed_tests += log_result("DB column last_payment_context exists", True)
-    else:
-        log_result("DB column last_payment_context exists", False, f"Output: {stdout}")
-    
-    # Test 2.2: Check model has DataTypes.TEXT definition
-    total_tests += 1
-    success, stdout, stderr = run_bash_command("grep -A2 -B2 'last_payment_context' models/merchantPoolModels/index.ts")
-    if success and "DataTypes.TEXT" in stdout:
-        passed_tests += log_result("Model has last_payment_context DataTypes.TEXT", True)
-    else:
-        log_result("Model has last_payment_context DataTypes.TEXT", False)
-    
-    # Test 2.3: Check ORPHAN RECOVERY comment in releaseExpiredReservations
-    total_tests += 1
-    success, stdout, stderr = run_bash_command("grep -n 'ORPHAN RECOVERY' services/merchantPoolService.ts")
-    if success:
-        passed_tests += log_result("ORPHAN RECOVERY comment exists", True, f"Line {stdout.split(':')[0]}")
+    def make_request(self, method: str, endpoint: str, data: Dict = None, headers: Dict = None, params: Dict = None) -> Tuple[int, Dict]:
+        """Make HTTP request and return status code and response data"""
+        url = f"{self.base_url}{endpoint}"
+        default_headers = {"Content-Type": "application/json"}
+        if headers:
+            default_headers.update(headers)
         
-        # Test 2.3b: Verify context saving code exists near the comment
-        total_tests += 1
-        success2, stdout2, stderr2 = run_bash_command("grep -A10 'ORPHAN RECOVERY' services/merchantPoolService.ts | grep 'JSON.stringify'")
-        if success2:
-            passed_tests += log_result("Context saving with JSON.stringify found", True)
+        try:
+            if method == "GET":
+                response = requests.get(url, headers=default_headers, params=params, timeout=10)
+            elif method == "POST":
+                response = requests.post(url, json=data, headers=default_headers, params=params, timeout=10)
+            else:
+                raise ValueError(f"Unsupported method: {method}")
+            
+            try:
+                response_data = response.json()
+            except:
+                response_data = {"text": response.text[:500] if response.text else ""}
+                
+            return response.status_code, response_data
+        except Exception as e:
+            return 0, {"error": str(e)}
+
+    def test_1_backend_health(self):
+        """TEST 1 - BACKEND HEALTH: GET /health → expect 200 with {"status":"healthy","database":"connected"}"""
+        status_code, data = self.make_request("GET", "/health")
+        
+        if status_code == 200:
+            if data.get("status") == "healthy" and data.get("database") == "connected":
+                self.log_test("TEST 1 - Backend Health", "PASS", f"Health check successful: {data}")
+            else:
+                self.log_test("TEST 1 - Backend Health", "FAIL", f"Health check response invalid: {data}")
         else:
-            log_result("Context saving with JSON.stringify found", False)
-    else:
-        log_result("ORPHAN RECOVERY comment exists", False)
-        total_tests += 1  # Add the skipped 2.3b test
-    
-    # Test 2.4: Check detectOrphanPayments function exists
-    total_tests += 1
-    success, stdout, stderr = run_bash_command("grep -n 'export const detectOrphanPayments' services/merchantPoolService.ts")
-    if success:
-        passed_tests += log_result("detectOrphanPayments function exists", True, f"Line {stdout.split(':')[0]}")
-    else:
-        log_result("detectOrphanPayments function exists", False)
-    
-    # Test 2.5: Check detectOrphanPayments is exported
-    total_tests += 1
-    success, stdout, stderr = run_bash_command("grep -A10 -B5 'detectOrphanPayments,' services/merchantPoolService.ts")
-    if success and "export" in stdout:
-        passed_tests += log_result("detectOrphanPayments is exported", True)
-    else:
-        log_result("detectOrphanPayments is exported", False)
-    
-    # Test 2.6: Check cron job registered
-    total_tests += 1
-    success, stdout, stderr = run_bash_command("grep -A3 -B3 'detectOrphanPayments' server.ts")
-    if success and "*/10 * * * *" in stdout:
-        passed_tests += log_result("Cron job registered (*/10 * * * *)", True)
-    else:
-        log_result("Cron job registered (*/10 * * * *)", False)
-    
-    # =================================================================
-    # BACKEND HEALTH & FUNCTIONALITY TESTS
-    # =================================================================
-    print("\n🏥 BACKEND HEALTH & FUNCTIONALITY TESTS")
-    print("-" * 60)
-    
-    # Test 3.1: Backend health endpoint
-    total_tests += 1
-    try:
-        response = requests.get(f"{backend_url}/health", timeout=10)
-        if response.status_code == 200 and "healthy" in response.text:
-            passed_tests += log_result("Backend health check", True, f"Status: {response.json().get('status', 'unknown')}")
+            self.log_test("TEST 1 - Backend Health", "FAIL", f"HTTP {status_code}: {data}")
+
+    def test_2_user_authentication(self):
+        """TEST 2 - USER AUTHENTICATION: POST /api/user/login with credentials → expect 200 with JWT token"""
+        status_code, data = self.make_request("POST", "/api/user/login", self.credentials)
+        
+        if status_code == 200:
+            token = data.get("token")
+            if token:
+                self.auth_token = token
+                self.log_test("TEST 2 - User Authentication", "PASS", f"Login successful, token: {token[:20]}...")
+            else:
+                self.log_test("TEST 2 - User Authentication", "FAIL", f"No token in response: {data}")
         else:
-            log_result("Backend health check", False, f"HTTP {response.status_code}")
-    except Exception as e:
-        log_result("Backend health check", False, str(e))
-    
-    # Test 3.2: Check OrphanDetect logs
-    total_tests += 1
-    success, stdout, stderr = run_bash_command("grep 'OrphanDetect' /var/log/supervisor/backend.out.log | tail -5")
-    if success and stdout:
-        passed_tests += log_result("OrphanDetect logs present", True, "Cron job is running")
-        print(f"   Recent logs: {stdout}")
-    else:
-        log_result("OrphanDetect logs present", False, "No recent logs found")
-    
-    # =================================================================
-    # SUMMARY
-    # =================================================================
-    print("\n" + "=" * 80)
-    print("VERIFICATION SUMMARY")
-    print("=" * 80)
-    
-    success_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
-    print(f"Tests Passed: {passed_tests}/{total_tests} ({success_rate:.1f}%)")
-    
-    # Detailed status for each fix
-    print(f"\n📊 FIX STATUS:")
-    
-    if success_rate >= 90:
-        print("🎉 OVERALL STATUS: Both fixes are properly implemented!")
-    elif success_rate >= 70:
-        print("⚠️  OVERALL STATUS: Most components working, minor issues detected")
-    else:
-        print("❌ OVERALL STATUS: Critical issues found that need immediate attention")
-    
-    print(f"\n🔗 Backend URL: {backend_url}")
-    print("✅ READ-ONLY verification completed as requested")
+            self.log_test("TEST 2 - User Authentication", "FAIL", f"HTTP {status_code}: {data}")
+
+    def test_3_swagger_api_docs(self):
+        """TEST 3 - SWAGGER API DOCS: GET /api/docs → HTML content, GET /api/docs.json → valid JSON OpenAPI spec"""
+        # Test Swagger UI
+        status_code, data = self.make_request("GET", "/api/docs")
+        if status_code == 200 and "swagger" in str(data).lower():
+            self.log_test("TEST 3A - Swagger UI", "PASS", f"Swagger UI accessible at /api/docs")
+        else:
+            self.log_test("TEST 3A - Swagger UI", "FAIL", f"HTTP {status_code}: Swagger UI not accessible")
+        
+        # Test OpenAPI spec
+        status_code, data = self.make_request("GET", "/api/docs.json")
+        if status_code == 200 and "openapi" in data:
+            paths_count = len(data.get("paths", {}))
+            self.log_test("TEST 3B - OpenAPI Spec", "PASS", f"Valid OpenAPI spec with {paths_count} paths")
+        else:
+            self.log_test("TEST 3B - OpenAPI Spec", "FAIL", f"HTTP {status_code}: Invalid OpenAPI spec")
+
+    def test_4_payment_link_creation(self):
+        """TEST 4 - PAYMENT LINK CREATION: POST /api/pay/createPaymentLink with auth token"""
+        if not self.auth_token:
+            self.log_test("TEST 4 - Payment Link Creation", "SKIP", "No auth token available")
+            return
+
+        headers = {"Authorization": f"Bearer {self.auth_token}"}
+        payload = {
+            "amount": "50",
+            "base_currency": "USD",
+            "payment_type": "CRYPTO",
+            "company_id": self.company_id,
+            "fee_payer": "customer",
+            "description": "Regression test",
+            "callback_url": "https://webhook.site/test",
+            "redirect_url": "https://example.com/success",
+            "webhook_url": "https://webhook.site/webhook"
+        }
+        
+        status_code, data = self.make_request("POST", "/api/pay/createPaymentLink", payload, headers)
+        
+        if status_code == 200:
+            transaction_id = data.get("transaction_id")
+            link_url = data.get("link")
+            if transaction_id and link_url:
+                self.payment_reference = data.get("reference", transaction_id)
+                self.log_test("TEST 4 - Payment Link Creation", "PASS", 
+                            f"Payment link created: transaction_id={transaction_id}, link={link_url}")
+            else:
+                self.log_test("TEST 4 - Payment Link Creation", "FAIL", f"Missing transaction_id or link: {data}")
+        else:
+            self.log_test("TEST 4 - Payment Link Creation", "FAIL", f"HTTP {status_code}: {data}")
+
+    def test_5_payment_getdata(self):
+        """TEST 5 - PAYMENT GETDATA: Use payment link reference from TEST 4 to call POST /api/pay/getData"""
+        if not hasattr(self, 'payment_reference'):
+            self.log_test("TEST 5 - Payment GetData", "SKIP", "No payment reference from TEST 4")
+            return
+
+        payload = {"reference": self.payment_reference}
+        status_code, data = self.make_request("POST", "/api/pay/getData", payload)
+        
+        if status_code == 200:
+            has_merchant_info = "merchant_name" in data or "company_name" in data
+            has_fee_info = "fee_info" in data or "fees" in data
+            has_redirect_url = "redirect_url" in data
+            has_no_callback = "callback_url" not in data and "webhook_url" not in data
+            
+            if has_merchant_info and has_fee_info and has_redirect_url and has_no_callback:
+                self.log_test("TEST 5 - Payment GetData", "PASS", 
+                            f"Valid getData response with merchant info, fee_info, redirect_url; callback_url/webhook_url properly hidden")
+            else:
+                self.log_test("TEST 5 - Payment GetData", "FAIL", 
+                            f"Invalid getData response structure: merchant_info={has_merchant_info}, fee_info={has_fee_info}, redirect_url={has_redirect_url}, hidden_urls={has_no_callback}")
+        else:
+            self.log_test("TEST 5 - Payment GetData", "FAIL", f"HTTP {status_code}: {data}")
+
+    def test_6_fee_calculator(self):
+        """TEST 6 - FEE CALCULATOR: POST /api/pay/calculateCheckoutFees with auth token"""
+        if not self.auth_token:
+            self.log_test("TEST 6 - Fee Calculator", "SKIP", "No auth token available")
+            return
+
+        headers = {"Authorization": f"Bearer {self.auth_token}"}
+        payload = {"amount": 100, "cryptocurrency": "ETH"}
+        
+        status_code, data = self.make_request("POST", "/api/pay/calculateCheckoutFees", payload, headers)
+        
+        if status_code == 200:
+            platform_fee = data.get("platform_fee")
+            blockchain_fee = data.get("blockchain_fee")
+            total_fees = data.get("total_fees")
+            net_to_merchant = data.get("net_to_merchant")
+            
+            # Platform fee should be 1% = $1 for $100
+            if platform_fee == 1 and blockchain_fee and total_fees and net_to_merchant:
+                self.log_test("TEST 6 - Fee Calculator", "PASS", 
+                            f"Fee calculation successful: platform_fee={platform_fee} (1%), blockchain_fee={blockchain_fee}, total_fees={total_fees}, net_to_merchant={net_to_merchant}")
+            else:
+                self.log_test("TEST 6 - Fee Calculator", "FAIL", f"Invalid fee calculation: {data}")
+        else:
+            self.log_test("TEST 6 - Fee Calculator", "FAIL", f"HTTP {status_code}: {data}")
+
+    def test_7_legacy_api(self):
+        """TEST 7 - LEGACY API: Get API key and test legacy endpoints"""
+        if not self.auth_token:
+            self.log_test("TEST 7 - Legacy API", "SKIP", "No auth token available")
+            return
+
+        headers = {"Authorization": f"Bearer {self.auth_token}"}
+        
+        # Get API key
+        status_code, data = self.make_request("GET", "/api/userApi/getApi", headers=headers)
+        if status_code == 200:
+            api_keys = data.get("data", [])
+            company_38_key = None
+            for key in api_keys:
+                if str(key.get("company_id")) == self.company_id:
+                    company_38_key = key.get("api_key")
+                    break
+            
+            if not company_38_key:
+                self.log_test("TEST 7A - Get API Key", "FAIL", f"No API key found for company {self.company_id}")
+                return
+                
+            self.api_key = company_38_key
+            self.log_test("TEST 7A - Get API Key", "PASS", f"Retrieved API key for company {self.company_id}")
+            
+            # Test getSupportedCurrency
+            api_headers = {"x-api-key": self.api_key}
+            status_code, data = self.make_request("POST", "/api/user/getSupportedCurrency", headers=api_headers)
+            if status_code == 200 and isinstance(data, list):
+                self.log_test("TEST 7B - Get Supported Currency", "PASS", f"Retrieved {len(data)} supported currencies")
+            else:
+                self.log_test("TEST 7B - Get Supported Currency", "FAIL", f"HTTP {status_code}: {data}")
+            
+            # Test createUser
+            user_payload = {"email": "regressiontest@test.com", "name": "Regression User"}
+            status_code, data = self.make_request("POST", "/api/user/createUser", user_payload, api_headers)
+            if status_code == 200:
+                self.log_test("TEST 7C - Create User", "PASS", f"User creation successful or already exists")
+            else:
+                self.log_test("TEST 7C - Create User", "FAIL", f"HTTP {status_code}: {data}")
+        else:
+            self.log_test("TEST 7A - Get API Key", "FAIL", f"HTTP {status_code}: {data}")
+
+    def test_8_wallet_validation_trx(self):
+        """TEST 8 - WALLET VALIDATION (TRX Dead Code Fix): POST /api/wallet/validateWalletAddress with invalid TRX address"""
+        if not self.auth_token:
+            self.log_test("TEST 8 - Wallet Validation TRX", "SKIP", "No auth token available")
+            return
+
+        headers = {"Authorization": f"Bearer {self.auth_token}"}
+        payload = {
+            "address": "INVALIDTRXADDRESS123",
+            "currency": "TRX",
+            "company_id": self.company_id
+        }
+        
+        status_code, data = self.make_request("POST", "/api/wallet/validateWalletAddress", payload, headers)
+        
+        # Should return error (400/500), NOT silent acceptance
+        if status_code in [400, 500]:
+            self.log_test("TEST 8 - Wallet Validation TRX", "PASS", f"Invalid TRX address correctly rejected: HTTP {status_code}")
+        elif status_code == 200:
+            self.log_test("TEST 8 - Wallet Validation TRX", "FAIL", f"Invalid TRX address silently accepted: {data}")
+        else:
+            self.log_test("TEST 8 - Wallet Validation TRX", "FAIL", f"Unexpected HTTP {status_code}: {data}")
+
+    def test_9_dashboard(self):
+        """TEST 9 - DASHBOARD: GET /api/dashboard?company_id=38 with auth token"""
+        if not self.auth_token:
+            self.log_test("TEST 9 - Dashboard", "SKIP", "No auth token available")
+            return
+
+        headers = {"Authorization": f"Bearer {self.auth_token}"}
+        params = {"company_id": self.company_id}
+        
+        status_code, data = self.make_request("GET", "/api/dashboard", headers=headers, params=params)
+        
+        if status_code == 200:
+            has_stats = any(key in data for key in ["total_volume", "transaction_count", "total_transactions", "volume"])
+            if has_stats:
+                self.log_test("TEST 9 - Dashboard", "PASS", f"Dashboard stats retrieved successfully: {list(data.keys())}")
+            else:
+                self.log_test("TEST 9 - Dashboard", "FAIL", f"Dashboard missing expected stats: {data}")
+        else:
+            self.log_test("TEST 9 - Dashboard", "FAIL", f"HTTP {status_code}: {data}")
+
+    def test_10_api_key_management(self):
+        """TEST 10 - API KEY MANAGEMENT (Single Key Per Company): Test duplicate key creation blocking"""
+        if not self.auth_token:
+            self.log_test("TEST 10 - API Key Management", "SKIP", "No auth token available")
+            return
+
+        headers = {"Authorization": f"Bearer {self.auth_token}"}
+        
+        # Get existing keys
+        status_code, data = self.make_request("GET", "/api/userApi/getApi", headers=headers)
+        if status_code == 200:
+            existing_keys = data.get("data", [])
+            company_38_keys = [key for key in existing_keys if str(key.get("company_id")) == self.company_id and key.get("status") == "active"]
+            
+            if company_38_keys:
+                # Try to create another key (should fail)
+                new_key_payload = {
+                    "company_id": self.company_id,
+                    "base_currency": "BRL", 
+                    "environment": "development"
+                }
+                status_code, data = self.make_request("POST", "/api/userApi/addApi", new_key_payload, headers)
+                
+                if status_code in [400, 409] and "active" in str(data).lower() and "key" in str(data).lower():
+                    self.log_test("TEST 10 - API Key Management", "PASS", f"Duplicate key creation correctly blocked: {data}")
+                else:
+                    self.log_test("TEST 10 - API Key Management", "FAIL", f"Duplicate key creation not blocked: HTTP {status_code}, {data}")
+            else:
+                self.log_test("TEST 10 - API Key Management", "SKIP", f"No existing active keys for company {self.company_id}")
+        else:
+            self.log_test("TEST 10 - API Key Management", "FAIL", f"HTTP {status_code}: {data}")
+
+    def test_11_onboarding_status(self):
+        """TEST 11 - ONBOARDING STATUS: GET /api/user/onboarding-status with auth token"""
+        if not self.auth_token:
+            self.log_test("TEST 11 - Onboarding Status", "SKIP", "No auth token available")
+            return
+
+        headers = {"Authorization": f"Bearer {self.auth_token}"}
+        status_code, data = self.make_request("GET", "/api/user/onboarding-status", headers=headers)
+        
+        if status_code == 200:
+            required_fields = ["wallet_setup", "kyc_status", "api_key_status", "company_setup", "onboarding_complete"]
+            has_all_fields = all(field in data for field in required_fields)
+            
+            if has_all_fields:
+                self.log_test("TEST 11 - Onboarding Status", "PASS", f"Onboarding status complete with all fields: {list(data.keys())}")
+            else:
+                missing_fields = [field for field in required_fields if field not in data]
+                self.log_test("TEST 11 - Onboarding Status", "FAIL", f"Missing required fields: {missing_fields}")
+        else:
+            self.log_test("TEST 11 - Onboarding Status", "FAIL", f"HTTP {status_code}: {data}")
+
+    def test_12_crash_recovery_code_verification(self):
+        """TEST 12 - CRASH RECOVERY CODE VERIFICATION: Verify crash recovery logic in webhooks/index.ts"""
+        print("\n🔍 TEST 12 - Crash Recovery Code Verification")
+        
+        try:
+            with open("/app/backend/webhooks/index.ts", "r") as f:
+                webhook_code = f.read()
+            
+            # Check for isStaleProcessing variable with 3 conditions
+            isStaleProcessing_found = "isStaleProcessing" in webhook_code
+            status_processing_check = "status === 'processing'" in webhook_code
+            txid_check = "!!txId" in webhook_code or "!!items.txId" in webhook_code
+            time_elapsed_check = "> 60000" in webhook_code
+            
+            # Check for 'recovered' status in isAlreadySuccessful
+            recovered_status_check = "'recovered'" in webhook_code and "isAlreadySuccessful" in webhook_code
+            
+            conditions_met = sum([isStaleProcessing_found, status_processing_check, txid_check, time_elapsed_check])
+            
+            if conditions_met >= 3 and recovered_status_check:
+                self.log_test("TEST 12 - Crash Recovery Code", "PASS", 
+                            f"Crash recovery logic verified: isStaleProcessing with {conditions_met}/4 conditions + recovered status check")
+            else:
+                self.log_test("TEST 12 - Crash Recovery Code", "FAIL", 
+                            f"Crash recovery logic incomplete: {conditions_met}/4 conditions met, recovered_status_check={recovered_status_check}")
+                
+        except FileNotFoundError:
+            self.log_test("TEST 12 - Crash Recovery Code", "FAIL", "webhooks/index.ts file not found")
+        except Exception as e:
+            self.log_test("TEST 12 - Crash Recovery Code", "FAIL", f"Error reading file: {e}")
+
+    def test_13_configurable_timeout_verification(self):
+        """TEST 13 - CONFIGURABLE TIMEOUT VERIFICATION: Check merchantPoolService.ts uses env variable"""
+        print("\n🔍 TEST 13 - Configurable Timeout Verification")
+        
+        try:
+            with open("/app/backend/services/merchantPoolService.ts", "r") as f:
+                service_code = f.read()
+            
+            # Check line ~41 for RESERVATION_TIMEOUT_MINUTES reads from process.env
+            env_read_check = "process.env.RESERVATION_TIMEOUT_MINUTES" in service_code
+            not_hardcoded_30 = "RESERVATION_TIMEOUT_MINUTES: 30" not in service_code
+            
+            # Check .env has RESERVATION_TIMEOUT_MINUTES=120
+            with open("/app/backend/.env", "r") as f:
+                env_content = f.read()
+            
+            env_config_check = "RESERVATION_TIMEOUT_MINUTES=120" in env_content
+            
+            if env_read_check and not_hardcoded_30 and env_config_check:
+                self.log_test("TEST 13 - Configurable Timeout", "PASS", 
+                            "RESERVATION_TIMEOUT_MINUTES reads from environment (not hardcoded), .env configured for 120 minutes")
+            else:
+                self.log_test("TEST 13 - Configurable Timeout", "FAIL", 
+                            f"Timeout configuration issues: env_read={env_read_check}, not_hardcoded={not_hardcoded_30}, env_config={env_config_check}")
+                
+        except FileNotFoundError as e:
+            self.log_test("TEST 13 - Configurable Timeout", "FAIL", f"Required file not found: {e}")
+        except Exception as e:
+            self.log_test("TEST 13 - Configurable Timeout", "FAIL", f"Error checking configuration: {e}")
+
+    def test_14_cron_job_verification(self):
+        """TEST 14 - CRON JOB VERIFICATION: Check backend logs for cron evidence"""
+        print("\n🔍 TEST 14 - Cron Job Verification")
+        
+        try:
+            import subprocess
+            import os
+            
+            # Check backend logs for checkMissedPayments and OrphanDetect entries
+            log_files = [
+                "/var/log/supervisor/backend.out.log",
+                "/var/log/supervisor/backend.err.log"
+            ]
+            
+            found_checkMissedPayments = False
+            found_OrphanDetect = False
+            found_cron_evidence = False
+            
+            for log_file in log_files:
+                if os.path.exists(log_file):
+                    try:
+                        result = subprocess.run(["tail", "-n", "100", log_file], capture_output=True, text=True)
+                        log_content = result.stdout
+                        
+                        if "checkMissedPayments" in log_content or "MissedPayment" in log_content:
+                            found_checkMissedPayments = True
+                        
+                        if "OrphanDetect" in log_content:
+                            found_OrphanDetect = True
+                            
+                        if "cron" in log_content.lower() or "*/10" in log_content or "*/5" in log_content:
+                            found_cron_evidence = True
+                            
+                    except Exception as e:
+                        print(f"   Warning: Could not read {log_file}: {e}")
+            
+            cron_features_found = sum([found_checkMissedPayments, found_OrphanDetect, found_cron_evidence])
+            
+            if cron_features_found >= 2:
+                self.log_test("TEST 14 - Cron Job Verification", "PASS", 
+                            f"Cron job evidence found: checkMissedPayments={found_checkMissedPayments}, OrphanDetect={found_OrphanDetect}, cron_schedule={found_cron_evidence}")
+            else:
+                self.log_test("TEST 14 - Cron Job Verification", "FAIL", 
+                            f"Insufficient cron evidence: {cron_features_found}/3 features found")
+                
+        except Exception as e:
+            self.log_test("TEST 14 - Cron Job Verification", "FAIL", f"Error checking cron jobs: {e}")
+
+    def run_all_tests(self):
+        """Run all regression tests in sequence"""
+        print("🚀 Starting DynoPay Backend Comprehensive Regression Test")
+        print(f"Base URL: {self.base_url}")
+        print(f"Credentials: {self.credentials['email']}")
+        print("=" * 80)
+        
+        # Run all tests
+        self.test_1_backend_health()
+        self.test_2_user_authentication()
+        self.test_3_swagger_api_docs()
+        self.test_4_payment_link_creation()
+        self.test_5_payment_getdata()
+        self.test_6_fee_calculator()
+        self.test_7_legacy_api()
+        self.test_8_wallet_validation_trx()
+        self.test_9_dashboard()
+        self.test_10_api_key_management()
+        self.test_11_onboarding_status()
+        self.test_12_crash_recovery_code_verification()
+        self.test_13_configurable_timeout_verification()
+        self.test_14_cron_job_verification()
+        
+        # Calculate results
+        total_tests = len(self.results)
+        passed_tests = sum(1 for result in self.results.values() if result["status"] == "PASS")
+        failed_tests = sum(1 for result in self.results.values() if result["status"] == "FAIL")
+        skipped_tests = sum(1 for result in self.results.values() if result["status"] == "SKIP")
+        
+        print("\n" + "=" * 80)
+        print("🎯 REGRESSION TEST SUMMARY")
+        print("=" * 80)
+        print(f"Total Tests: {total_tests}")
+        print(f"✅ Passed: {passed_tests}")
+        print(f"❌ Failed: {failed_tests}")
+        print(f"⏭️  Skipped: {skipped_tests}")
+        print(f"📊 Pass Rate: {(passed_tests / (total_tests - skipped_tests) * 100):.1f}%" if (total_tests - skipped_tests) > 0 else "N/A")
+        
+        # Show failures
+        if failed_tests > 0:
+            print("\n❌ FAILED TESTS:")
+            for test_name, result in self.results.items():
+                if result["status"] == "FAIL":
+                    print(f"   • {test_name}: {result['details']}")
+        
+        return passed_tests, failed_tests, skipped_tests, total_tests
 
 if __name__ == "__main__":
-    main()
+    tester = DynoPayBackendTester()
+    tester.run_all_tests()
