@@ -1,365 +1,444 @@
 #!/usr/bin/env python3
 """
-DynoPay P2 Changes Testing
-Tests the two P2 changes:
-1. Verify api-service directory deleted
-2. Verify API versioning (backward compatible)
+DynoPay Backend Testing - Direct API Underpayment Fix Verification
+=================================================================
+
+This script tests the fix for Direct API underpayment handling in DynoPay's webhook handler.
+The fix ensures Direct API underpayments are processed immediately with actual received amount,
+while Payment Link underpayments still wait for remaining payment.
+
+Test Focus:
+1. Code review verification of branching logic
+2. Backend health check
+3. TypeScript compilation verification
 """
 
 import requests
 import json
-import time
-import sys
 import os
-import glob
-from typing import Dict, Any
+from datetime import datetime
 
-class DynoPayP2Tester:
-    def __init__(self, base_url: str, email: str, password: str):
-        self.base_url = base_url.rstrip('/')
-        self.email = email
-        self.password = password
+# Configuration
+BASE_URL = "https://setup-deps-6.preview.emergentagent.com"
+API_BASE_URL = f"{BASE_URL}/api"
+
+# Test credentials from review request
+TEST_EMAIL = "richard@dyno.pt"
+TEST_PASSWORD = "Katiekendra123@"
+
+class BackendTester:
+    def __init__(self):
         self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json',
-            'User-Agent': 'DynoPay-Webhook-Bug-Fix-Tester/1.0'
-        })
         self.jwt_token = None
-        self.api_key = None
-        self.customer_token = None
-        
-    def log(self, message: str):
-        """Log test messages with timestamp"""
-        print(f"[{time.strftime('%H:%M:%S')}] {message}")
-    
-    def test_backend_health(self) -> bool:
-        """Test backend health endpoint"""
-        self.log("🏥 Testing backend health...")
-        try:
-            response = self.session.get(f"{self.base_url}/health")
-            if response.status_code == 200:
-                self.log("✅ Backend health check passed")
-                return True
-            else:
-                self.log(f"❌ Backend health check failed: HTTP {response.status_code}")
-                self.log(f"   Response: {response.text[:200]}")
-                return False
-        except Exception as e:
-            self.log(f"❌ Backend health check failed: {e}")
-            return False
+        self.company_id = None
+        self.results = {
+            "timestamp": datetime.now().isoformat(),
+            "tests": [],
+            "summary": {
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "success_rate": 0
+            }
+        }
 
-    def test_api_service_directory_deleted(self) -> Dict[str, Any]:
-        """TASK 1: Verify api-service directory deleted"""
-        self.log("📂 Testing api-service directory deletion...")
-        results = {
-            "directory_not_exists": False,
-            "no_typescript_imports": False,
-            "backend_healthy": False
+    def log_test(self, test_name, status, details, expected=None, actual=None):
+        """Log test result"""
+        test_result = {
+            "test": test_name,
+            "status": status,
+            "details": details,
+            "timestamp": datetime.now().isoformat()
         }
         
-        # 1. Check directory doesn't exist
-        api_service_path = "/app/backend/api-service/"
-        if not os.path.exists(api_service_path):
-            self.log("✅ api-service directory does NOT exist")
-            results["directory_not_exists"] = True
+        if expected is not None:
+            test_result["expected"] = expected
+        if actual is not None:
+            test_result["actual"] = actual
+            
+        self.results["tests"].append(test_result)
+        self.results["summary"]["total"] += 1
+        
+        if status == "PASS":
+            self.results["summary"]["passed"] += 1
+            print(f"✅ {test_name}")
         else:
-            self.log("❌ api-service directory still exists")
-        
-        # 2. Check for TypeScript imports (grep for "from.*api-service")
-        self.log("🔍 Checking for TypeScript imports referencing api-service...")
-        try:
-            backend_path = "/app/backend"
-            ts_files = glob.glob(f"{backend_path}/**/*.ts", recursive=True)
-            api_service_imports = []
+            self.results["summary"]["failed"] += 1
+            print(f"❌ {test_name}: {details}")
             
-            for file_path in ts_files:
-                if "node_modules" in file_path:
-                    continue
-                try:
-                    with open(file_path, 'r') as f:
-                        content = f.read()
-                        lines = content.split('\n')
-                        for line_num, line in enumerate(lines, 1):
-                            if 'from' in line and 'api-service' in line and not line.strip().startswith('//'):
-                                api_service_imports.append(f"{file_path}:{line_num}: {line.strip()}")
-                except Exception:
-                    continue
-            
-            if not api_service_imports:
-                self.log("✅ No active TypeScript imports reference 'api-service'")
-                results["no_typescript_imports"] = True
-            else:
-                self.log(f"❌ Found {len(api_service_imports)} TypeScript imports referencing api-service:")
-                for imp in api_service_imports[:5]:  # Show first 5
-                    self.log(f"   {imp}")
-        
-        except Exception as e:
-            self.log(f"⚠️  Could not check TypeScript imports: {e}")
-        
-        # 3. Backend health
-        results["backend_healthy"] = self.test_backend_health()
-        
-        return results
+        return status == "PASS"
 
-    def test_api_versioning(self) -> Dict[str, Any]:
-        """TASK 2: Verify API versioning (backward compatible)"""
-        self.log("🔄 Testing API versioning...")
-        results = {
-            "api_root_returns_v1": False,
-            "api_v1_identical": False,
-            "login_api_works": False,
-            "login_v1_works": False,
-            "docs_accessible": False,
-            "docs_json_has_v1": False,
-            "api_root_response": None,
-            "api_v1_response": None
-        }
-        
-        # 1. GET /api should return JSON with api_version="v1" and versioning object
-        self.log("📡 Testing GET /api...")
+    def authenticate(self):
+        """Authenticate with DynoPay backend"""
         try:
-            response = self.session.get(f"{self.base_url}/api")
+            response = self.session.post(f"{API_BASE_URL}/user/login", json={
+                "email": TEST_EMAIL,
+                "password": TEST_PASSWORD
+            })
+            
             if response.status_code == 200:
                 data = response.json()
-                results["api_root_response"] = data
+                self.jwt_token = data.get('accessToken')
+                self.company_id = data.get('user', {}).get('company_id')
                 
-                api_version = data.get("api_version")
-                versioning = data.get("versioning")
+                if self.jwt_token and self.company_id:
+                    self.session.headers.update({"Authorization": f"Bearer {self.jwt_token}"})
+                    return self.log_test(
+                        "Authentication",
+                        "PASS",
+                        f"Successfully authenticated user (company_id: {self.company_id})"
+                    )
+                else:
+                    return self.log_test(
+                        "Authentication", 
+                        "FAIL",
+                        f"Missing token or company_id in response: {data}"
+                    )
+            else:
+                return self.log_test(
+                    "Authentication",
+                    "FAIL", 
+                    f"HTTP {response.status_code}: {response.text}"
+                )
                 
-                if api_version == "v1" and versioning:
-                    self.log("✅ GET /api returns api_version='v1' and versioning object")
-                    results["api_root_returns_v1"] = True
-                    self.log(f"   Versioning fields: {list(versioning.keys()) if versioning else 'None'}")
-                else:
-                    self.log(f"❌ GET /api missing required fields - api_version: {api_version}, versioning: {bool(versioning)}")
-            else:
-                self.log(f"❌ GET /api failed: HTTP {response.status_code}")
         except Exception as e:
-            self.log(f"❌ GET /api failed: {e}")
-        
-        # 2. GET /api/v1 should return IDENTICAL JSON to GET /api
-        self.log("📡 Testing GET /api/v1...")
-        try:
-            response = self.session.get(f"{self.base_url}/api/v1")
-            if response.status_code == 200:
-                data = response.json()
-                results["api_v1_response"] = data
-                
-                # Compare with /api response (excluding timestamp which changes)
-                if results["api_root_response"]:
-                    api_root = results["api_root_response"].copy()
-                    api_v1 = data.copy()
-                    
-                    # Remove timestamp fields for comparison as they will be different
-                    api_root.pop('timestamp', None)
-                    api_v1.pop('timestamp', None)
-                    
-                    if api_v1 == api_root:
-                        self.log("✅ GET /api/v1 returns IDENTICAL JSON to GET /api (excluding timestamp)")
-                        results["api_v1_identical"] = True
-                    else:
-                        self.log("❌ GET /api/v1 response differs from GET /api")
-                        # Find the differences
-                        for key in set(api_root.keys()) | set(api_v1.keys()):
-                            if api_root.get(key) != api_v1.get(key):
-                                self.log(f"   Difference in '{key}': {api_root.get(key)} vs {api_v1.get(key)}")
-                else:
-                    self.log("❌ Cannot compare /api/v1 - /api response not available")
-            else:
-                self.log(f"❌ GET /api/v1 failed: HTTP {response.status_code}")
-        except Exception as e:
-            self.log(f"❌ GET /api/v1 failed: {e}")
-        
-        # 3. POST /api/user/login should return 200 with accessToken
-        self.log("🔐 Testing POST /api/user/login...")
-        try:
-            login_data = {
-                "email": "richard@dyno.pt",
-                "password": "Katiekendra123@"
-            }
-            response = self.session.post(f"{self.base_url}/api/user/login", json=login_data)
-            if response.status_code == 200:
-                data = response.json()
-                access_token = data.get('data', {}).get('accessToken') or data.get('access_token')
-                if access_token:
-                    self.log("✅ POST /api/user/login returns 200 with accessToken")
-                    results["login_api_works"] = True
-                else:
-                    self.log("❌ POST /api/user/login missing accessToken in response")
-            else:
-                self.log(f"❌ POST /api/user/login failed: HTTP {response.status_code}")
-        except Exception as e:
-            self.log(f"❌ POST /api/user/login failed: {e}")
-        
-        # 4. POST /api/v1/user/login should return 200 with accessToken (same endpoint via versioned path)
-        self.log("🔐 Testing POST /api/v1/user/login...")
-        try:
-            login_data = {
-                "email": "richard@dyno.pt",
-                "password": "Katiekendra123@"
-            }
-            response = self.session.post(f"{self.base_url}/api/v1/user/login", json=login_data)
-            if response.status_code == 200:
-                data = response.json()
-                access_token = data.get('data', {}).get('accessToken') or data.get('access_token')
-                if access_token:
-                    self.log("✅ POST /api/v1/user/login returns 200 with accessToken")
-                    results["login_v1_works"] = True
-                else:
-                    self.log("❌ POST /api/v1/user/login missing accessToken in response")
-            else:
-                self.log(f"❌ POST /api/v1/user/login failed: HTTP {response.status_code}")
-        except Exception as e:
-            self.log(f"❌ POST /api/v1/user/login failed: {e}")
-        
-        # 5. GET /api/docs should return 200 (Swagger UI loads)
-        self.log("📚 Testing GET /api/docs...")
-        try:
-            response = self.session.get(f"{self.base_url}/api/docs")
-            if response.status_code == 200 and "swagger" in response.text.lower():
-                self.log("✅ GET /api/docs returns 200 (Swagger UI loads)")
-                results["docs_accessible"] = True
-            else:
-                self.log(f"❌ GET /api/docs failed or not Swagger UI: HTTP {response.status_code}")
-        except Exception as e:
-            self.log(f"❌ GET /api/docs failed: {e}")
-        
-        # 6. GET /api/docs.json should contain "v1" in the info.description field
-        self.log("📄 Testing GET /api/docs.json...")
-        try:
-            response = self.session.get(f"{self.base_url}/api/docs.json")
-            if response.status_code == 200:
-                data = response.json()
-                description = data.get('info', {}).get('description', '')
-                if 'v1' in description:
-                    self.log("✅ GET /api/docs.json contains 'v1' in info.description")
-                    results["docs_json_has_v1"] = True
-                else:
-                    self.log(f"❌ GET /api/docs.json missing 'v1' in description: {description[:100]}...")
-            else:
-                self.log(f"❌ GET /api/docs.json failed: HTTP {response.status_code}")
-        except Exception as e:
-            self.log(f"❌ GET /api/docs.json failed: {e}")
-        
-        return results
-    
-    def run_p2_tests(self) -> Dict[str, Any]:
-        """Run P2 changes comprehensive test"""
-        self.log("🧪 Starting DynoPay P2 Changes Testing...")
-        self.log(f"   Base URL: {self.base_url}")
-        self.log("")
-        
-        results = {
-            "test_start_time": time.strftime('%Y-%m-%d %H:%M:%S'),
-            "task1_api_service_deleted": {},
-            "task2_api_versioning": {},
-            "overall_success": False,
-            "errors": []
-        }
-        
-        try:
-            # TASK 1: Verify api-service directory deleted
-            self.log("="*50)
-            self.log("TASK 1: Verify api-service directory deleted")
-            self.log("="*50)
-            results["task1_api_service_deleted"] = self.test_api_service_directory_deleted()
-            
-            self.log("")
-            
-            # TASK 2: Verify API versioning (backward compatible)
-            self.log("="*50)
-            self.log("TASK 2: Verify API versioning (backward compatible)")
-            self.log("="*50)
-            results["task2_api_versioning"] = self.test_api_versioning()
-            
-            # Overall success assessment
-            task1_success = all([
-                results["task1_api_service_deleted"].get("directory_not_exists", False),
-                results["task1_api_service_deleted"].get("no_typescript_imports", False),
-                results["task1_api_service_deleted"].get("backend_healthy", False)
-            ])
-            
-            task2_success = all([
-                results["task2_api_versioning"].get("api_root_returns_v1", False),
-                results["task2_api_versioning"].get("api_v1_identical", False),
-                results["task2_api_versioning"].get("login_api_works", False),
-                results["task2_api_versioning"].get("login_v1_works", False),
-                results["task2_api_versioning"].get("docs_accessible", False),
-                results["task2_api_versioning"].get("docs_json_has_v1", False)
-            ])
-            
-            results["task1_success"] = task1_success
-            results["task2_success"] = task2_success
-            results["overall_success"] = task1_success and task2_success
-            
-        except Exception as e:
-            error_msg = f"Test suite failed with exception: {e}"
-            self.log(f"❌ {error_msg}")
-            results["errors"].append(error_msg)
-        
-        return results
-    
-    def print_summary(self, results: Dict[str, Any]):
-        """Print test summary"""
-        self.log("\n" + "="*60)
-        self.log("📊 DYNOPAY P2 CHANGES TEST SUMMARY")
-        self.log("="*60)
-        
-        test_status = "✅ PASSED" if results["overall_success"] else "❌ FAILED"
-        self.log(f"Overall Status: {test_status}")
-        
-        # TASK 1 Results
-        task1 = results["task1_api_service_deleted"]
-        task1_success = results.get("task1_success", False)
-        self.log(f"\nTASK 1 - API Service Directory Deleted: {'✅ PASSED' if task1_success else '❌ FAILED'}")
-        self.log(f"  1. Directory does NOT exist: {'✅' if task1.get('directory_not_exists') else '❌'}")
-        self.log(f"  2. No TypeScript imports: {'✅' if task1.get('no_typescript_imports') else '❌'}")
-        self.log(f"  3. Backend healthy (GET /health): {'✅' if task1.get('backend_healthy') else '❌'}")
-        
-        # TASK 2 Results
-        task2 = results["task2_api_versioning"]
-        task2_success = results.get("task2_success", False)
-        self.log(f"\nTASK 2 - API Versioning (Backward Compatible): {'✅ PASSED' if task2_success else '❌ FAILED'}")
-        self.log(f"  1. GET /api returns JSON with api_version='v1': {'✅' if task2.get('api_root_returns_v1') else '❌'}")
-        self.log(f"  2. GET /api/v1 identical to GET /api: {'✅' if task2.get('api_v1_identical') else '❌'}")
-        self.log(f"  3. POST /api/user/login works: {'✅' if task2.get('login_api_works') else '❌'}")
-        self.log(f"  4. POST /api/v1/user/login works: {'✅' if task2.get('login_v1_works') else '❌'}")
-        self.log(f"  5. GET /api/docs accessible: {'✅' if task2.get('docs_accessible') else '❌'}")
-        self.log(f"  6. GET /api/docs.json has 'v1': {'✅' if task2.get('docs_json_has_v1') else '❌'}")
-        
-        # Show API responses if available
-        if task2.get('api_root_response'):
-            api_resp = task2['api_root_response']
-            self.log(f"\nAPI Root Response Preview:")
-            self.log(f"  api_version: {api_resp.get('api_version')}")
-            if api_resp.get('versioning'):
-                versioning_keys = list(api_resp['versioning'].keys()) if isinstance(api_resp['versioning'], dict) else []
-                self.log(f"  versioning keys: {versioning_keys}")
-        
-        if results.get("errors"):
-            self.log(f"\nErrors Encountered:")
-            for error in results["errors"]:
-                self.log(f"  ❌ {error}")
-        
-        self.log("\n" + "="*60)
+            return self.log_test("Authentication", "FAIL", f"Exception: {str(e)}")
 
-def main():
-    # Test configuration from review request
-    BASE_URL = "https://setup-deps-6.preview.emergentagent.com"
-    
-    print("🧪 DynoPay P2 Changes Testing")
-    print("Testing the two P2 changes:")
-    print("1. Verify api-service directory deleted")
-    print("2. Verify API versioning (backward compatible)")
-    print(f"Target: {BASE_URL}")
-    print()
-    
-    tester = DynoPayP2Tester(BASE_URL, "", "")  # Email/password not needed for these tests
-    results = tester.run_p2_tests()
-    tester.print_summary(results)
-    
-    # Return appropriate exit code
-    sys.exit(0 if results["overall_success"] else 1)
+    def test_backend_health(self):
+        """Test backend health endpoint"""
+        try:
+            response = requests.get(f"{BASE_URL}/health")
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check for required health indicators
+                required_fields = ['status', 'uptime', 'database_connected']
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields and data.get('status') == 'healthy':
+                    return self.log_test(
+                        "Backend Health Check",
+                        "PASS",
+                        f"Backend healthy - Status: {data.get('status')}, DB: {data.get('database_connected')}, Uptime: {data.get('uptime')}"
+                    )
+                else:
+                    return self.log_test(
+                        "Backend Health Check",
+                        "FAIL",
+                        f"Unhealthy response - Missing fields: {missing_fields}, Data: {data}"
+                    )
+            else:
+                return self.log_test(
+                    "Backend Health Check",
+                    "FAIL",
+                    f"HTTP {response.status_code}: {response.text}"
+                )
+                
+        except Exception as e:
+            return self.log_test("Backend Health Check", "FAIL", f"Exception: {str(e)}")
+
+    def verify_webhook_code_structure(self):
+        """Verify the webhook handler code structure for Direct API vs Payment Link logic"""
+        try:
+            # Read the webhook file to verify code structure
+            webhook_file_path = "/app/backend/webhooks/index.ts"
+            
+            if not os.path.exists(webhook_file_path):
+                return self.log_test(
+                    "Code Structure - Webhook File Exists",
+                    "FAIL",
+                    f"Webhook file not found at {webhook_file_path}"
+                )
+            
+            with open(webhook_file_path, 'r') as f:
+                content = f.read()
+            
+            # Test 1: Check for Direct API vs Payment Link branching logic
+            required_patterns = [
+                "const linkIdUnderpaid = customerData?.link_id || items?.link_id || null;",
+                "const isDirectApi = !linkIdUnderpaid;",
+                "if (isDirectApi) {",
+                "// DIRECT API: Process immediately",
+                "status: \"processing\"",
+                "// PAYMENT LINK: Wait for remaining payment",
+                "status: \"underpaid\"",
+                "incomplete: \"true\"",
+                "return res.status(200).end();"
+            ]
+            
+            missing_patterns = []
+            for pattern in required_patterns:
+                if pattern not in content:
+                    missing_patterns.append(pattern)
+            
+            if not missing_patterns:
+                self.log_test(
+                    "Code Structure - Direct API vs Payment Link Branching",
+                    "PASS",
+                    "All required branching logic patterns found in webhook handler"
+                )
+            else:
+                self.log_test(
+                    "Code Structure - Direct API vs Payment Link Branching",
+                    "FAIL",
+                    f"Missing patterns: {missing_patterns}"
+                )
+            
+            # Test 2: Check finalReceivedAmount calculation
+            final_amount_patterns = [
+                "const isDirectApiUnderpayment = isUnderpayment && !isMinorUnderpayment && !(customerData?.link_id || items?.link_id);",
+                "const finalReceivedAmount = (isCompletionPayment || isDirectApiUnderpayment) ? totalReceivedAmount : incomingAmount;"
+            ]
+            
+            missing_final_patterns = []
+            for pattern in final_amount_patterns:
+                if pattern not in content:
+                    missing_final_patterns.append(pattern)
+            
+            if not missing_final_patterns:
+                self.log_test(
+                    "Code Structure - finalReceivedAmount Calculation",
+                    "PASS",
+                    "Correct finalReceivedAmount calculation logic found"
+                )
+            else:
+                self.log_test(
+                    "Code Structure - finalReceivedAmount Calculation",
+                    "FAIL",
+                    f"Missing finalReceivedAmount patterns: {missing_final_patterns}"
+                )
+            
+            # Test 3: Verify Direct API path does NOT return early
+            lines = content.split('\n')
+            direct_api_block_started = False
+            found_fall_through_comment = False
+            found_early_return = False
+            
+            for i, line in enumerate(lines):
+                if "if (isDirectApi) {" in line:
+                    direct_api_block_started = True
+                elif direct_api_block_started and "} else {" in line:
+                    # End of Direct API block, start of Payment Link block
+                    break
+                elif direct_api_block_started:
+                    if "// Fall through to cryptoVerification" in line or "falling through to cryptoVerification" in line:
+                        found_fall_through_comment = True
+                    if "return res.status(200).end()" in line:
+                        found_early_return = True
+            
+            if found_fall_through_comment and not found_early_return:
+                self.log_test(
+                    "Code Structure - Direct API No Early Return",
+                    "PASS",
+                    "Direct API path has fall-through comment and no early return"
+                )
+            else:
+                self.log_test(
+                    "Code Structure - Direct API No Early Return",
+                    "FAIL",
+                    f"Fall-through comment found: {found_fall_through_comment}, Early return found: {found_early_return}"
+                )
+            
+            # Test 4: Verify Payment Link path has early return
+            payment_link_has_return = False
+            lines = content.split('\n')
+            payment_link_block_started = False
+            
+            for line in lines:
+                if "} else {" in line and "PAYMENT LINK" in content[content.find(line):content.find(line)+200]:
+                    payment_link_block_started = True
+                elif payment_link_block_started and "return res.status(200).end()" in line:
+                    payment_link_has_return = True
+                    break
+                elif payment_link_block_started and line.strip() == "}":
+                    break
+            
+            if payment_link_has_return:
+                self.log_test(
+                    "Code Structure - Payment Link Early Return",
+                    "PASS",
+                    "Payment Link path correctly returns early after setting underpaid status"
+                )
+            else:
+                self.log_test(
+                    "Code Structure - Payment Link Early Return",
+                    "FAIL",
+                    "Payment Link path missing early return"
+                )
+            
+            return True
+            
+        except Exception as e:
+            return self.log_test("Code Structure Verification", "FAIL", f"Exception: {str(e)}")
+
+    def verify_cryptoverification_fund_distribution(self):
+        """Verify cryptoVerification handles fund distribution correctly"""
+        try:
+            payment_controller_path = "/app/backend/controller/paymentController.ts"
+            
+            if not os.path.exists(payment_controller_path):
+                return self.log_test(
+                    "Fund Distribution - Payment Controller Exists",
+                    "FAIL",
+                    f"Payment controller not found at {payment_controller_path}"
+                )
+            
+            with open(payment_controller_path, 'r') as f:
+                content = f.read()
+            
+            # Check for fund distribution logic
+            fund_distribution_patterns = [
+                "if (Number(amountInUSD[0].amount) < Number(minForwarding)) {",
+                "adminAmountToSend = Number(totalAmountReceived);",
+                "userAmountToSend = 0;",
+                "// Under threshold - all to admin",
+                "// Normal distribution"
+            ]
+            
+            missing_fund_patterns = []
+            for pattern in fund_distribution_patterns:
+                if pattern not in content:
+                    missing_fund_patterns.append(pattern)
+            
+            if not missing_fund_patterns:
+                return self.log_test(
+                    "Fund Distribution Logic",
+                    "PASS",
+                    "Correct fund distribution logic found in cryptoVerification"
+                )
+            else:
+                return self.log_test(
+                    "Fund Distribution Logic",
+                    "FAIL",
+                    f"Missing fund distribution patterns: {missing_fund_patterns}"
+                )
+                
+        except Exception as e:
+            return self.log_test("Fund Distribution Verification", "FAIL", f"Exception: {str(e)}")
+
+    def check_typescript_compilation(self):
+        """Check for TypeScript compilation errors"""
+        try:
+            # Check supervisor logs for TypeScript errors
+            import subprocess
+            result = subprocess.run(
+                ["tail", "-n", "100", "/var/log/supervisor/backend.err.log"], 
+                capture_output=True, 
+                text=True
+            )
+            
+            error_indicators = [
+                "error TS",
+                "TypeError:",
+                "SyntaxError:",
+                "ReferenceError:",
+                "Cannot find module",
+                "Property does not exist"
+            ]
+            
+            found_errors = []
+            for line in result.stdout.split('\n'):
+                for error_indicator in error_indicators:
+                    if error_indicator in line:
+                        found_errors.append(line.strip())
+            
+            if not found_errors:
+                return self.log_test(
+                    "TypeScript Compilation Check",
+                    "PASS",
+                    "No TypeScript compilation errors found in backend logs"
+                )
+            else:
+                return self.log_test(
+                    "TypeScript Compilation Check",
+                    "FAIL",
+                    f"TypeScript errors found: {found_errors[:3]}"  # Show first 3 errors
+                )
+                
+        except Exception as e:
+            return self.log_test("TypeScript Compilation Check", "FAIL", f"Exception: {str(e)}")
+
+    def run_comprehensive_test(self):
+        """Run all tests for Direct API underpayment fix verification"""
+        print("=" * 80)
+        print("DYNOPAY DIRECT API UNDERPAYMENT FIX TESTING")
+        print("=" * 80)
+        print(f"Testing against: {BASE_URL}")
+        print(f"Test user: {TEST_EMAIL}")
+        print()
+
+        # Test 1: Backend Health
+        print("1. Backend Health Check")
+        self.test_backend_health()
+        print()
+
+        # Test 2: Authentication
+        print("2. Authentication")
+        if not self.authenticate():
+            print("❌ Authentication failed - skipping API tests")
+            print()
+        else:
+            print()
+
+        # Test 3: Code Structure Verification
+        print("3. Code Structure Verification")
+        self.verify_webhook_code_structure()
+        print()
+
+        # Test 4: Fund Distribution Logic
+        print("4. Fund Distribution Logic")
+        self.verify_cryptoverification_fund_distribution()
+        print()
+
+        # Test 5: TypeScript Compilation
+        print("5. TypeScript Compilation Check")
+        self.check_typescript_compilation()
+        print()
+
+        # Calculate final results
+        self.results["summary"]["success_rate"] = (
+            self.results["summary"]["passed"] / self.results["summary"]["total"] * 100
+            if self.results["summary"]["total"] > 0 else 0
+        )
+
+        # Print final summary
+        print("=" * 80)
+        print("DIRECT API UNDERPAYMENT FIX TEST SUMMARY")
+        print("=" * 80)
+        print(f"Total Tests: {self.results['summary']['total']}")
+        print(f"Passed: {self.results['summary']['passed']}")
+        print(f"Failed: {self.results['summary']['failed']}")
+        print(f"Success Rate: {self.results['summary']['success_rate']:.1f}%")
+        print()
+
+        # Print failed tests details
+        failed_tests = [test for test in self.results["tests"] if test["status"] == "FAIL"]
+        if failed_tests:
+            print("FAILED TESTS:")
+            for test in failed_tests:
+                print(f"❌ {test['test']}: {test['details']}")
+            print()
+
+        # Determine overall status
+        if self.results["summary"]["success_rate"] >= 95:
+            print("🎉 OVERALL STATUS: ALL CRITICAL TESTS PASSED")
+            print("   Direct API underpayment fix is properly implemented")
+        elif self.results["summary"]["success_rate"] >= 75:
+            print("⚠️  OVERALL STATUS: MOSTLY WORKING WITH MINOR ISSUES")
+            print("   Core functionality implemented but some minor issues detected")
+        else:
+            print("🚨 OVERALL STATUS: CRITICAL ISSUES FOUND")
+            print("   Direct API underpayment fix needs attention")
+
+        return self.results
 
 if __name__ == "__main__":
-    main()
+    tester = BackendTester()
+    results = tester.run_comprehensive_test()
+    
+    # Save results
+    with open('/app/direct_api_underpayment_test_results.json', 'w') as f:
+        json.dump(results, f, indent=2)
+    
+    print(f"\nDetailed results saved to: /app/direct_api_underpayment_test_results.json")
