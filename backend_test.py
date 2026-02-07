@@ -208,8 +208,14 @@ class DynoPayBackendTester:
             api_keys = data.get("data", [])
             company_38_key = None
             for key in api_keys:
-                if str(key.get("company_id")) == self.company_id:
-                    company_38_key = key.get("api_key")
+                # Handle both dict and string formats
+                if isinstance(key, dict):
+                    if str(key.get("company_id")) == self.company_id:
+                        company_38_key = key.get("api_key")
+                        break
+                elif isinstance(key, str):
+                    # If it's a string, it might be the API key itself
+                    company_38_key = key
                     break
             
             if not company_38_key:
