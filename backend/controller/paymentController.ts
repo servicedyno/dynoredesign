@@ -148,18 +148,10 @@ const RETRY_CONFIG = {
 const convertToUSD = async (amount: number, currency: string): Promise<number> => {
   try {
     if (!amount || amount <= 0) return 0;
-    if (currency === 'USD') return amount;
-    
-    const converted = await currencyConvert({
-      sourceCurrency: currency,
-      currency: ['USD'],
-      amount: amount,
-      fixedDecimal: true,
-    });
-    return Number(converted[0]?.amount || 0);
+    return await convertToUSDUtil(currency, amount);
   } catch (error) {
     console.error(`[convertToUSD] Failed to convert ${amount} ${currency} to USD:`, error);
-    return 0; // Return 0 if conversion fails
+    return 0;
   }
 };
 
