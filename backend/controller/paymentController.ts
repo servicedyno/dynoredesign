@@ -5650,6 +5650,8 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
         // Get existing Redis data to preserve fields not in database
         const existingRedisData = await getRedisItem("customer-" + uniqueRef);
         
+        let updatedRedisPayload: Record<string, unknown>;
+        
         if (existingRedisData && Object.keys(existingRedisData).length > 0) {
           // Calculate new available_currencies based on accepted_currencies
           let newAvailableCurrencies = existingRedisData.available_currencies || existingRedisData.all_configured_currencies || [];
@@ -5663,11 +5665,12 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
           }
           
           // Merge updated fields with existing Redis data
-          const updatedRedisPayload = {
+          updatedRedisPayload = {
             ...existingRedisData,
             // Update all fields that could have changed
             email: linkData.email,
             base_amount: linkData.base_amount,
+            amount: linkData.base_amount,  // FIX: Sync 'amount' alongside 'base_amount' for code paths that read 'amount'
             base_currency: linkData.base_currency,
             description: linkData.description,
             expires_at: linkData.expires_at,
@@ -5679,13 +5682,92 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
             allowedModes: linkData.allowedModes,
             accepted_currencies: linkData.accepted_currencies,
             available_currencies: newAvailableCurrencies,
+            customer_name: linkData.customer_name,
             updatedAt: new Date().toISOString(),
           };
-          
-          await setRedisItem("customer-" + uniqueRef, updatedRedisPayload);
-          console.log(`[updatePaymentLink] Redis updated for key: customer-${uniqueRef}, available_currencies: ${JSON.stringify(newAvailableCurrencies)}`);
         } else {
-          console.warn(`[updatePaymentLink] No existing Redis data found for key: customer-${uniqueRef}`);
+          // FIX: Redis key expired/evicted — reconstruct from DB to keep payment link functional
+          console.warn(`[updatePaymentLink] Redis key customer-${uniqueRef} missing, reconstructing from DB`);
+          
+          // Fetch configured wallets for available_currencies
+          const company_id = linkData.company_id;
+          const walletWhereClause: Record<string, unknown> = {
+            user_id: userData.user_id,
+            wallet_type: { [Op.in]: cryptoTypes },
+            wallet_address: { [Op.not]: null },
+          };
+          if (company_id) {
+            walletWhereClause.company_id = company_id;
+          }
+          const configuredWallets = await userWalletModel.findAll({
+            where: walletWhereClause,
+            attributes: ['wallet_type'],
+          });
+          const reconstructedCurrencies = [...new Set(configuredWallets.map((w) => (w.dataValues as { wallet_type: string }).wallet_type))];
+          
+          let availableCurrencies = reconstructedCurrencies;
+          if (linkData.accepted_currencies) {
+            availableCurrencies = linkData.accepted_currencies.split(',').map((c: string) => c.trim());
+          }
+          
+          updatedRedisPayload = {
+            transaction_id: linkData.transaction_id,
+            email: linkData.email,
+            allowedModes: linkData.allowedModes,
+            base_amount: linkData.base_amount,
+            amount: linkData.base_amount,
+            base_currency: linkData.base_currency,
+            user_id: linkData.user_id,
+            adm_id: linkData.user_id,
+            company_id: company_id,
+            payment_link: linkData.payment_link,
+            description: linkData.description,
+            expires_at: linkData.expires_at,
+            callback_url: linkData.callback_url,
+            redirect_url: linkData.redirect_url,
+            webhook_url: linkData.webhook_url,
+            fee_payer: linkData.fee_payer || 'company',
+            apply_tax: linkData.apply_tax || false,
+            accepted_currencies: linkData.accepted_currencies,
+            customer_name: linkData.customer_name,
+            pathType: "createLink",
+            link_id: linkData.link_id,
+            available_currencies: availableCurrencies,
+            all_configured_currencies: reconstructedCurrencies,
+            createdAt: linkData.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            reconstructed: true,  // Flag so we know this was rebuilt
+          };
+          console.log(`[updatePaymentLink] Reconstructed Redis payload for customer-${uniqueRef}`);
+        }
+        
+        await setRedisItem("customer-" + uniqueRef, updatedRedisPayload);
+        console.log(`[updatePaymentLink] Redis updated for key: customer-${uniqueRef}`);
+        
+        // FIX: If an active crypto address exists, update crypto-{address} Redis key too
+        // This handles the edge case where merchant updates webhook_url/amount AFTER
+        // a customer has initiated payment but BEFORE it's confirmed
+        const activeAddress = updatedRedisPayload.active_crypto_address as { address?: string } | undefined;
+        if (activeAddress?.address) {
+          const cryptoRedisData = await getRedisItem("crypto-" + activeAddress.address);
+          if (cryptoRedisData && cryptoRedisData.status === 'pending') {
+            const cryptoUpdates: Record<string, unknown> = {};
+            
+            if (updateData.webhook_url !== undefined) {
+              cryptoUpdates.webhook_url = linkData.webhook_url;
+            }
+            if (updateData.callback_url !== undefined) {
+              cryptoUpdates.callback_url = linkData.callback_url;
+            }
+            
+            if (Object.keys(cryptoUpdates).length > 0) {
+              await setRedisItem("crypto-" + activeAddress.address, {
+                ...cryptoRedisData,
+                ...cryptoUpdates,
+              });
+              console.log(`[updatePaymentLink] Also updated crypto-${activeAddress.address} with: ${Object.keys(cryptoUpdates).join(', ')}`);
+            }
+          }
         }
       } else {
         console.warn(`[updatePaymentLink] Could not extract uniqueRef from payment_link: ${paymentLinkUrl}`);
