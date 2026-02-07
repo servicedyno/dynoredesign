@@ -145,14 +145,26 @@ class DynoPayP2Tester:
                 data = response.json()
                 results["api_v1_response"] = data
                 
-                # Compare with /api response
-                if results["api_root_response"] and data == results["api_root_response"]:
-                    self.log("✅ GET /api/v1 returns IDENTICAL JSON to GET /api")
-                    results["api_v1_identical"] = True
+                # Compare with /api response (excluding timestamp which changes)
+                if results["api_root_response"]:
+                    api_root = results["api_root_response"].copy()
+                    api_v1 = data.copy()
+                    
+                    # Remove timestamp fields for comparison as they will be different
+                    api_root.pop('timestamp', None)
+                    api_v1.pop('timestamp', None)
+                    
+                    if api_v1 == api_root:
+                        self.log("✅ GET /api/v1 returns IDENTICAL JSON to GET /api (excluding timestamp)")
+                        results["api_v1_identical"] = True
+                    else:
+                        self.log("❌ GET /api/v1 response differs from GET /api")
+                        # Find the differences
+                        for key in set(api_root.keys()) | set(api_v1.keys()):
+                            if api_root.get(key) != api_v1.get(key):
+                                self.log(f"   Difference in '{key}': {api_root.get(key)} vs {api_v1.get(key)}")
                 else:
-                    self.log("❌ GET /api/v1 response differs from GET /api")
-                    if results["api_root_response"]:
-                        self.log("   Differences found in response structure")
+                    self.log("❌ Cannot compare /api/v1 - /api response not available")
             else:
                 self.log(f"❌ GET /api/v1 failed: HTTP {response.status_code}")
         except Exception as e:
