@@ -1,59 +1,59 @@
 {
-  "timestamp": "2026-02-07T20:57:03.407234",
+  "timestamp": "2026-02-07T20:57:33.637602",
   "tests": [
     {
       "test": "Backend Health Check",
       "status": "PASS",
-      "details": "Backend healthy - Status: healthy, Timestamp: 2026-02-07T20:57:03.568Z",
-      "timestamp": "2026-02-07T20:57:03.573837"
+      "details": "Backend healthy - Status: healthy, Timestamp: 2026-02-07T20:57:34.351Z",
+      "timestamp": "2026-02-07T20:57:34.354479"
     },
     {
       "test": "Authentication",
       "status": "PASS",
       "details": "Successfully authenticated user (company_id: 28)",
-      "timestamp": "2026-02-07T20:57:04.690801"
+      "timestamp": "2026-02-07T20:57:35.486258"
     },
     {
       "test": "Code Structure - Direct API vs Payment Link Branching",
       "status": "PASS",
       "details": "All required branching logic patterns found in webhook handler",
-      "timestamp": "2026-02-07T20:57:04.691115"
+      "timestamp": "2026-02-07T20:57:35.486615"
     },
     {
       "test": "Code Structure - finalReceivedAmount Calculation",
       "status": "PASS",
       "details": "Correct finalReceivedAmount calculation logic found",
-      "timestamp": "2026-02-07T20:57:04.691137"
+      "timestamp": "2026-02-07T20:57:35.486638"
     },
     {
       "test": "Code Structure - Direct API No Early Return",
-      "status": "FAIL",
-      "details": "Fall-through comment found: False, Early return found: False",
-      "timestamp": "2026-02-07T20:57:04.691300"
+      "status": "PASS",
+      "details": "Direct API path has fall-through comment and no early return",
+      "timestamp": "2026-02-07T20:57:35.486671"
     },
     {
       "test": "Code Structure - Payment Link Early Return",
       "status": "FAIL",
-      "details": "Payment Link path missing early return",
-      "timestamp": "2026-02-07T20:57:04.691491"
+      "details": "Payment Link comment found: False, Early return found: False",
+      "timestamp": "2026-02-07T20:57:35.486703"
     },
     {
       "test": "Fund Distribution Logic",
       "status": "PASS",
       "details": "Correct fund distribution logic found in cryptoVerification",
-      "timestamp": "2026-02-07T20:57:04.692473"
+      "timestamp": "2026-02-07T20:57:35.487756"
     },
     {
       "test": "TypeScript Compilation Check",
       "status": "PASS",
       "details": "No TypeScript compilation errors found in backend logs",
-      "timestamp": "2026-02-07T20:57:04.697229"
+      "timestamp": "2026-02-07T20:57:35.492951"
     }
   ],
   "summary": {
     "total": 8,
-    "passed": 6,
-    "failed": 2,
-    "success_rate": 75.0
+    "passed": 7,
+    "failed": 1,
+    "success_rate": 87.5
   }
 }
