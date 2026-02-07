@@ -18,33 +18,28 @@ current_test_task:
       - working: "NA"
         agent: "main"
         comment: |
-          TWO FIXES IMPLEMENTED for late payment recovery:
+          TWO FIXES RE-APPLIED (after hot reload reverted first attempt):
           
           FIX 1 - CONFIGURABLE RESERVATION TIMEOUT:
-          - POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES now reads from env var with 120 min default (was hardcoded 30)
-          - .env has RESERVATION_TIMEOUT_MINUTES=120
-          - Fixed hardcoded '30' in checkMissedPayments (line 1989) to use POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES
+          - Line 41: RESERVATION_TIMEOUT_MINUTES: parseInt(process.env.RESERVATION_TIMEOUT_MINUTES || "120")
+          - .env: RESERVATION_TIMEOUT_MINUTES=120
+          - Line 2075: minutesSinceReserved = POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES - minutesUntilExpiry (was hardcoded 30)
           
           FIX 2 - ORPHAN PAYMENT DETECTION:
-          - Added last_payment_context TEXT column to tbl_merchant_temp_address model + DB
-          - releaseExpiredReservations now saves full payment context (payment_id, company_id, fee_payer, webhook_url, callback_url, customer info from Redis) BEFORE wiping address to AVAILABLE
-          - cleanupStaleAddresses also saves context before force-releasing stuck addresses
-          - releaseAddress and handleBelowThresholdPayment clear last_payment_context on successful processing
-          - NEW detectOrphanPayments() function: runs every 10 min via cron, scans ALL AVAILABLE addresses for unexpected on-chain balances, uses last_payment_context + owner_user_id for proper merchant/admin fee split via cryptoVerification, calls merchant webhook with recovered:true flag
-          - Cron registered in server.ts: */10 * * * *
+          - last_payment_context column in model + DB
+          - releaseExpiredReservations: saves full context (Redis + DB) BEFORE wiping to AVAILABLE
+          - cleanupStaleAddresses: saves context before force-releasing  
+          - releaseAddress + handleBelowThresholdPayment: clears last_payment_context on success
+          - detectOrphanPayments(): scans AVAILABLE, checks balances, recovers via cryptoVerification
+          - Cron: */10 * * * * in server.ts
           
-          VERIFIED IN LOGS: Cron fires correctly, scanned 62 AVAILABLE addresses, found 5 with balances (ETH dust from gas funding, not actual orphan payments), correctly handled edge cases.
-          
-          TEST INSTRUCTIONS:
-          1. Verify POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES reads from env (grep merchantPoolService.ts line ~40)
-          2. Verify .env has RESERVATION_TIMEOUT_MINUTES=120
-          3. Verify checkMissedPayments uses POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES (not hardcoded 30)
-          4. Verify last_payment_context column exists in DB: SELECT column_name FROM information_schema.columns WHERE table_name='tbl_merchant_temp_address' AND column_name='last_payment_context'
-          5. Verify releaseExpiredReservations saves context before wiping (grep for "ORPHAN RECOVERY" comment block)
-          6. Verify detectOrphanPayments function exists and exports (grep exports in merchantPoolService.ts)
-          7. Verify cron registered in server.ts (grep detectOrphanPayments)
-          8. Check backend health endpoint returns healthy
-          9. Check backend logs for "[OrphanDetect]" entries showing successful scan
+          VERIFY:
+          1. Line 41 reads from env (not hardcoded 30)
+          2. Line ~2075 uses POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES
+          3. "ORPHAN RECOVERY" comment block exists in releaseExpiredReservations
+          4. DB column last_payment_context exists
+          5. detectOrphanPayments exported and cron registered
+          6. Backend healthy
       - working: false
         agent: "testing"
         comment: |
