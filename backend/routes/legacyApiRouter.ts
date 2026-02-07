@@ -303,32 +303,15 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
       });
     }
     
+    // Get currency rates (direct call instead of HTTP self-call)
     const localCurrency = normalizedCurrency.includes("USDT") ? "usdt" : normalizedCurrency.toLowerCase();
-    
-    // Determine effective webhook URL
-    const effectiveWebhookUrl = webhook_url || data.webhook_url || null;
-    const effectiveWebhookSecret = data.webhook_secret || null;
-    
-    console.log(`[LegacyAPI] cryptoPayment - Company: ${data.company_id}, Amount: ${amount}, Currency: ${normalizedCurrency}`);
-    
-    // Get currency rates
-    let currencyData;
+    let cryptoRates;
     try {
-      currencyData = await axios.post(
-        getBackendURL() + "/api/pay/getCurrencyRatesInternal",
-        {
-          source: data.base_currency || 'USD',
-          amount: amount,
-          currencyList: [localCurrency],
-          fixedDecimal: false,
-          fee_payer: fee_payer,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${res.locals.token}`,
-          },
-          timeout: 10000
-        }
+      cryptoRates = await convertToMultiple(
+        data.base_currency || 'USD',
+        [localCurrency],
+        amount,
+        false,
       );
     } catch (rateError) {
       console.error("[LegacyAPI] Currency rate error:", rateError);
@@ -337,6 +320,15 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
         message: "Failed to get currency rates"
       });
     }
+    
+    if (!cryptoRates || cryptoRates.length === 0 || !cryptoRates[0]?.amount) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to get currency conversion rate"
+      });
+    }
+    
+    const cryptoAmount = cryptoRates[0].amount;
     
     // Build Redis payload
     const redisPayload = {
