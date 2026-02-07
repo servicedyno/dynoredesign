@@ -663,6 +663,7 @@ export const handleBelowThresholdPayment = async (
     reserved_until: null,
     locked_at: null,
     last_used_at: new Date(),
+    last_payment_context: null, // Clear saved context after below-threshold processing
   });
 
   // Record transaction
