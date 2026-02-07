@@ -685,6 +685,28 @@ const tatumCryptoWebHook = async (
         }
       }
       
+      // BUGFIX: Merge webhook info from crypto-{address} into customerData as fallback.
+      // The crypto-{address} key now stores webhook_url, callback_url, webhook_secret directly.
+      // This ensures merchant webhook delivery even if customer-{ref} was lost or reconstructed from DB.
+      if (customerData) {
+        if (!customerData.webhook_url && items?.webhook_url) {
+          customerData.webhook_url = items.webhook_url;
+          console.log(`[tatumCryptoWebHook] Merged webhook_url from crypto-{address}: ${items.webhook_url}`);
+        }
+        if (!customerData.callback_url && items?.callback_url) {
+          customerData.callback_url = items.callback_url;
+        }
+        if (!customerData.webhook_secret && items?.webhook_secret) {
+          customerData.webhook_secret = items.webhook_secret;
+        }
+        if (!customerData.company_id && items?.company_id) {
+          customerData.company_id = items.company_id;
+        }
+        if (!customerData.link_id && items?.link_id) {
+          customerData.link_id = items.link_id;
+        }
+      }
+      
       // Send pending notification for first transaction
       if (customerData && customerData.adm_id) {
         try {
