@@ -196,17 +196,19 @@ class DynoPayTester:
             response_time = round((end_time - start_time) * 1000, 2)  # Convert to milliseconds
             
             if response.status_code == 200:
-                data = response.json()
-                result = {
-                    "success": True,
-                    "response_time_ms": response_time,
-                    "transaction_id": data.get('transaction_id'),
-                    "address": data.get('address'),
-                    "crypto_amount": data.get('crypto_amount'),
-                    "qr_code": data.get('qr_code'),
-                    "webhook_url": webhook_url,
-                    "response_data": data
-                }
+                response_data = response.json()
+                if response_data.get('success') and response_data.get('data'):
+                    data = response_data['data']
+                    result = {
+                        "success": True,
+                        "response_time_ms": response_time,
+                        "transaction_id": data.get('transaction_id'),
+                        "address": data.get('address'),
+                        "crypto_amount": data.get('amount'),  # Note: 'amount' field contains crypto amount
+                        "qr_code": data.get('qr_code'),
+                        "webhook_url": webhook_url,
+                        "response_data": data
+                    }
                 
                 self.log(f"✅ ETH payment created successfully!")
                 self.log(f"   Transaction ID: {result['transaction_id']}")
