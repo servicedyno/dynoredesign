@@ -468,7 +468,7 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
     let conversionRate = 1;
     
     if (company_id) {
-      preferredCurrency = await getCompanyBaseCurrency(company_id);
+      preferredCurrency = await getCompanyBaseCurrency(company_id as string);
     }
 
     // Calculate user's monthly transaction volume (in USD)
