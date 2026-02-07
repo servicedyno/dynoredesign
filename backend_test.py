@@ -220,34 +220,41 @@ class BackendTester:
                 )
             
             # Test 3: Verify Direct API path does NOT return early
-            lines = content.split('\n')
-            direct_api_block_started = False
-            found_fall_through_comment = False
-            found_early_return = False
+            # Search for the "falling through" comment and verify no early return in Direct API block
+            found_fall_through_comment = "falling through to cryptoVerification" in content
             
-            for i, line in enumerate(lines):
-                if "if (isDirectApi) {" in line:
-                    direct_api_block_started = True
-                elif direct_api_block_started and "} else {" in line:
-                    # End of Direct API block, start of Payment Link block
-                    break
-                elif direct_api_block_started:
-                    if "falling through to cryptoVerification" in line:
-                        found_fall_through_comment = True
-                    if "return res.status(200).end()" in line:
-                        found_early_return = True
-            
-            if found_fall_through_comment and not found_early_return:
-                self.log_test(
-                    "Code Structure - Direct API No Early Return",
-                    "PASS",
-                    "Direct API path has fall-through comment and no early return"
-                )
+            # Extract the Direct API block by finding the if statement and matching else
+            direct_api_start = content.find("if (isDirectApi) {")
+            if direct_api_start != -1:
+                # Find the matching else block
+                else_pos = content.find("} else {", direct_api_start)
+                if else_pos != -1:
+                    direct_api_block = content[direct_api_start:else_pos]
+                    found_early_return_in_direct = "return res.status(200).end()" in direct_api_block
+                    
+                    if found_fall_through_comment and not found_early_return_in_direct:
+                        self.log_test(
+                            "Code Structure - Direct API No Early Return",
+                            "PASS",
+                            "Direct API path has fall-through comment and no early return"
+                        )
+                    else:
+                        self.log_test(
+                            "Code Structure - Direct API No Early Return",
+                            "FAIL",
+                            f"Fall-through comment found: {found_fall_through_comment}, Early return found: {found_early_return_in_direct}"
+                        )
+                else:
+                    self.log_test(
+                        "Code Structure - Direct API No Early Return",
+                        "FAIL",
+                        "Could not find matching else block for Direct API if statement"
+                    )
             else:
                 self.log_test(
                     "Code Structure - Direct API No Early Return",
                     "FAIL",
-                    f"Fall-through comment found: {found_fall_through_comment}, Early return found: {found_early_return}"
+                    "Could not find Direct API if statement"
                 )
             
             # Test 4: Verify Payment Link path has early return  
