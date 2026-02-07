@@ -309,12 +309,22 @@ const processSingleCurrency = async (
   let rate: number | null = null;
   let convertedAmount: number | null = null;
 
-  // Strategy 1: Try cached rate first
+  // Strategy 1: Try cached rate first (memory → Redis, 5s TTL)
   rate = await getCachedRate(source, currentCurrency);
 
   const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
 
-  // Strategy 2: Tatum — works for crypto AND fiat-to-fiat (via USDT proxy)
+  // Strategy 2: FastForex — PRIMARY provider (150-300ms, supports crypto + fiat)
+  if (!rate) {
+    const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
+    if (fastForexResult) {
+      rate = fastForexResult.rate;
+      convertedAmount = fastForexResult.converted;
+      await setCachedRate(source, currentCurrency, rate);
+    }
+  }
+
+  // Strategy 3: Tatum — fallback for crypto conversions
   if (!rate) {
     rate = await getCryptoRateViaTatum(source, currentCurrency);
     if (rate) {
@@ -322,21 +332,11 @@ const processSingleCurrency = async (
     }
   }
 
-  // Strategy 3: CoinGecko fallback for crypto
+  // Strategy 4: CoinGecko — last resort for crypto
   if (!rate && isCryptoConversion) {
     rate = await getCryptoRateViaCoinGecko(source, currentCurrency);
     if (rate) {
       console.log(`[currencyConvert] CoinGecko rate for ${source}→${currentCurrency}: ${rate}`);
-      await setCachedRate(source, currentCurrency, rate);
-    }
-  }
-
-  // Strategy 4: FastForex for fiat-to-fiat, or as final fallback
-  if (!rate) {
-    const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
-    if (fastForexResult) {
-      rate = fastForexResult.rate;
-      convertedAmount = fastForexResult.converted;
       await setCachedRate(source, currentCurrency, rate);
     }
   }
