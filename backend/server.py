@@ -34,10 +34,10 @@ NODE_PROCESS = None
 HTTP_CLIENT = None
 
 print("""
-╔══════════════════════════════════════════════════════════╗
-║  DynoPay - Node.js Backend with Python Launcher          ║
-║  Pure Node.js/TypeScript backend via lightweight proxy   ║
-╚══════════════════════════════════════════════════════════╝
++----------------------------------------------------------+
+|  DynoPay - Node.js Backend with Python Launcher          |
+|  Pure Node.js/TypeScript backend via lightweight proxy   |
++----------------------------------------------------------+
 """, flush=True)
 
 def start_node_backend():
