@@ -31,6 +31,7 @@ import { cronLogger } from "../utils/loggers";
 // log import removed - not used
 import { currencyConvert, getErrorMessage } from "../helper";
 import { paymentController } from "../controller";
+import { callMerchantWebhook } from "../webhooks";
 
 // Configuration
 const POOL_CONFIG = {
