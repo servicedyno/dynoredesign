@@ -16,7 +16,7 @@ import {
   successResponseHelper,
   generateWalletName,
 } from "../helper";
-import { formatAmountForDisplay, getCurrencyInfo, COMPANY_CURRENCY_QUERY, convertToUSD, convertToFiat, convertToMultiple } from "../utils/currencyUtils";
+import { formatAmountForDisplay, getCurrencyInfo, COMPANY_CURRENCY_QUERY, convertToUSD, convertToFiat, convertToMultiple, getCompanyBaseCurrency } from "../utils/currencyUtils";
 import crypto from "crypto";
 import flw from "../apis/flutterwaveApi";
 import {

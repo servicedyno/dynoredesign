@@ -4,7 +4,7 @@ import {
   getErrorMessage,
   successResponseHelper,
 } from "../helper";
-import { formatAmountForDisplay, getCurrencyInfo, COMPANY_CURRENCY_QUERY, convertToFiat } from "../utils/currencyUtils";
+import { formatAmountForDisplay, getCurrencyInfo, COMPANY_CURRENCY_QUERY, convertToFiat, getCompanyBaseCurrency } from "../utils/currencyUtils";
 import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
 import { companyModel, userModel } from "../models";
