@@ -331,6 +331,11 @@ const startServer = async () => {
     log(`🚀 Server is listening on port ${port}!`, 'info');
     log(`📚 Swagger docs available at /api/docs`, 'info');
     log(`❤️ Health check available at /health`, 'info');
+    
+    // Pre-populate background rate cache on startup (so first payment has fallback rates)
+    refreshBackgroundRateCache().catch(err => {
+      log(`Initial rate cache population failed: ${err.message}`, "error");
+    });
   });
 };
 
