@@ -228,6 +228,15 @@ cron.schedule("*/3 * * * *", function () {
   });
 });
 
+// Background rate cache: Refresh crypto rates every 60 seconds via CoinGecko (free)
+// Saves FastForex API calls — only real-time payments call FastForex
+// CoinGecko rates serve as fallback when FastForex/Tatum unavailable
+cron.schedule("* * * * *", function () {
+  refreshBackgroundRateCache().catch(err => {
+    log(`Cron: Background rate cache refresh failed: ${err.message}`, "error");
+  });
+});
+
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
 setupWeeklySummaryCron();
 
