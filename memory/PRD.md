@@ -81,6 +81,13 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
 - Test 4: DB delivery log persistence (tbl_webhook_delivery_log)
 - All 4 tests pass with real HTTP delivery to external endpoint
 
+## End-to-End Preferred Currency (completed 2026-02-07)
+- **Invoice**: Uses `getCompanyBaseCurrency` to display amounts in merchant's preferred fiat (GBP, EUR, etc.) instead of hardcoded USD
+- **CSV Export**: Column header and values now use preferred currency with conversion rate
+- **User Analytics**: `revenue_performance` converts to preferred currency; response includes `display_currency` field
+- **Webhook Payloads**: Enriched with `base_amount`, `base_currency`, `exchange_rate` in merchant's preferred fiat (non-blocking fallback if conversion fails)
+- All changes preserve backward compat (`amount_in_usd`, `fee_in_usd` fields kept alongside new `amount_in_fiat`, `fee_in_fiat`)
+
 ## Backlog
 
 ### P1 - Upcoming
