@@ -1,59 +1,59 @@
 {
-  "timestamp": "2026-02-07T20:56:05.472729",
+  "timestamp": "2026-02-07T20:57:03.407234",
   "tests": [
     {
       "test": "Backend Health Check",
-      "status": "FAIL",
-      "details": "Exception: Expecting value: line 1 column 1 (char 0)",
-      "timestamp": "2026-02-07T20:56:05.526766"
+      "status": "PASS",
+      "details": "Backend healthy - Status: healthy, Timestamp: 2026-02-07T20:57:03.568Z",
+      "timestamp": "2026-02-07T20:57:03.573837"
     },
     {
       "test": "Authentication",
-      "status": "FAIL",
-      "details": "Missing token or company_id in response: {'message': 'Login Successful!', 'data': {'userData': {'user_id': 28, 'name': 'Dynotech LDA', 'email': 'richard@dyno.pt', 'username': 'dynotech', 'mobile': '351912345679', 'photo': 'https://f5006fc4-5cad-480e-8552-90fd171f8760.preview.emergentagent.comimages/user_3o7s3yfuyof.png', 'login_type': 'EMAIL', 'customer_id': None, 'external_id': None, 'status': 'active', 'createdAt': '2026-01-25T18:17:47.008Z', 'updatedAt': '2026-02-07T20:56:07.599Z', 'verified_otp': '988573', 'otp_expired': '2026-02-06T12:33:32.231Z', 'otp_currency': 'LTC', 'reset_token': 'a576bcd291cc3701def847e5604e6204aaae190b911642c5fb4f3bb7a3a4e69a', 'reset_token_expiry': '2026-01-31T02:46:43.574Z', 'google_id': None, 'wallet_reminder_sent': False, 'referral_code': None, 'referral_count': 0, 'referral_bonus_earned': '0.00', 'referred_by_code': None, 'referred_by_referee_code': None, 'fee_discount_percent': '0.00', 'fee_discount_expires_at': None, 'fee_discount_reason': None, 'last_login_ip': '34.16.56.64'}, 'accessToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyOCwibmFtZSI6IkR5bm90ZWNoIExEQSIsImVtYWlsIjoicmljaGFyZEBkeW5vLnB0IiwidXNlcm5hbWUiOiJkeW5vdGVjaCIsIm1vYmlsZSI6IjM1MTkxMjM0NTY3OSIsInBob3RvIjoiaHR0cHM6Ly9mNTAwNmZjNC01Y2FkLTQ4MGUtODU1Mi05MGZkMTcxZjg3NjAucHJldmlldy5lbWVyZ2VudGFnZW50LmNvbWltYWdlcy91c2VyXzNvN3MzeWZ1eW9mLnBuZyIsImxvZ2luX3R5cGUiOiJFTUFJTCIsImN1c3RvbWVyX2lkIjpudWxsLCJleHRlcm5hbF9pZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwiY3JlYXRlZEF0IjoiMjAyNi0wMS0yNVQxODoxNzo0Ny4wMDhaIiwidXBkYXRlZEF0IjoiMjAyNi0wMi0wN1QyMDo1NjowNy41OTlaIiwidmVyaWZpZWRfb3RwIjoiOTg4NTczIiwib3RwX2V4cGlyZWQiOiIyMDI2LTAyLTA2VDEyOjMzOjMyLjIzMVoiLCJvdHBfY3VycmVuY3kiOiJMVEMiLCJyZXNldF90b2tlbiI6ImE1NzZiY2QyOTFjYzM3MDFkZWY4NDdlNTYwNGU2MjA0YWFhZTE5MGI5MTE2NDJjNWZiNGYzYmI3YTNhNGU2OWEiLCJyZXNldF90b2tlbl9leHBpcnkiOiIyMDI2LTAxLTMxVDAyOjQ2OjQzLjU3NFoiLCJnb29nbGVfaWQiOm51bGwsIndhbGxldF9yZW1pbmRlcl9zZW50IjpmYWxzZSwicmVmZXJyYWxfY29kZSI6bnVsbCwicmVmZXJyYWxfY291bnQiOjAsInJlZmVycmFsX2JvbnVzX2Vhcm5lZCI6IjAuMDAiLCJyZWZlcnJlZF9ieV9jb2RlIjpudWxsLCJyZWZlcnJlZF9ieV9yZWZlcmVlX2NvZGUiOm51bGwsImZlZV9kaXNjb3VudF9wZXJjZW50IjoiMC4wMCIsImZlZV9kaXNjb3VudF9leHBpcmVzX2F0IjpudWxsLCJmZWVfZGlzY291bnRfcmVhc29uIjpudWxsLCJsYXN0X2xvZ2luX2lwIjoiMzQuMTYuNTYuNjQiLCJpYXQiOjE3NzA0OTc3NjcsImV4cCI6MTc3MTEwMjU2N30.6NLnaA6hYvuLdfrWBJEpqM-Ath9BCKWpGMmMVIM5Cmo'}}",
-      "timestamp": "2026-02-07T20:56:07.841276"
+      "status": "PASS",
+      "details": "Successfully authenticated user (company_id: 28)",
+      "timestamp": "2026-02-07T20:57:04.690801"
     },
     {
       "test": "Code Structure - Direct API vs Payment Link Branching",
       "status": "PASS",
       "details": "All required branching logic patterns found in webhook handler",
-      "timestamp": "2026-02-07T20:56:07.841607"
+      "timestamp": "2026-02-07T20:57:04.691115"
     },
     {
       "test": "Code Structure - finalReceivedAmount Calculation",
       "status": "PASS",
       "details": "Correct finalReceivedAmount calculation logic found",
-      "timestamp": "2026-02-07T20:56:07.841630"
+      "timestamp": "2026-02-07T20:57:04.691137"
     },
     {
       "test": "Code Structure - Direct API No Early Return",
       "status": "FAIL",
       "details": "Fall-through comment found: False, Early return found: False",
-      "timestamp": "2026-02-07T20:56:07.841785"
+      "timestamp": "2026-02-07T20:57:04.691300"
     },
     {
       "test": "Code Structure - Payment Link Early Return",
       "status": "FAIL",
       "details": "Payment Link path missing early return",
-      "timestamp": "2026-02-07T20:56:07.842106"
+      "timestamp": "2026-02-07T20:57:04.691491"
     },
     {
       "test": "Fund Distribution Logic",
       "status": "PASS",
       "details": "Correct fund distribution logic found in cryptoVerification",
-      "timestamp": "2026-02-07T20:56:07.843050"
+      "timestamp": "2026-02-07T20:57:04.692473"
     },
     {
       "test": "TypeScript Compilation Check",
       "status": "PASS",
       "details": "No TypeScript compilation errors found in backend logs",
-      "timestamp": "2026-02-07T20:56:07.848420"
+      "timestamp": "2026-02-07T20:57:04.697229"
     }
   ],
   "summary": {
     "total": 8,
-    "passed": 4,
-    "failed": 4,
-    "success_rate": 50.0
+    "passed": 6,
+    "failed": 2,
+    "success_rate": 75.0
   }
 }
