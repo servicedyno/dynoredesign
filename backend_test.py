@@ -309,7 +309,11 @@ class DynoPayBackendTester:
         status_code, data = self.make_request("GET", "/api/userApi/getApi", headers=headers)
         if status_code == 200:
             existing_keys = data.get("data", [])
-            company_38_keys = [key for key in existing_keys if str(key.get("company_id")) == self.company_id and key.get("status") == "active"]
+            company_38_keys = []
+            for key in existing_keys:
+                # Handle both dict and string formats
+                if isinstance(key, dict) and str(key.get("company_id")) == self.company_id and key.get("status") == "active":
+                    company_38_keys.append(key)
             
             if company_38_keys:
                 # Try to create another key (should fail)
