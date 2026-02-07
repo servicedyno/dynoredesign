@@ -77,9 +77,8 @@ Crypto payment processing platform (DynoPay) with full-stack monolith: React fro
 
 ### P2 - Future
 - Update frontend components to consume `currency_info` objects from backend
-- Consolidate duplicated currency query logic into single utility function in `currencyUtils.ts`
 - Refactor base_currency dependency on encrypted API key for better maintainability
-- Unify legacy and modern payment creation paths in walletController.ts
+- Migrate remaining 14 `currencyConvert` calls in paymentController to utility helpers (requires deeper payment flow testing)
 
 ## Test Credentials
 - Email: richard@dyno.pt / nomadly@moxx.co
