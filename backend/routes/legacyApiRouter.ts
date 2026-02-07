@@ -359,6 +359,10 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
       webhook_url: effectiveWebhookUrl,
       webhook_secret: effectiveWebhookSecret,
       callback_url: callback_url || null,
+      // Cache exchange rate to avoid redundant ~100-300ms FastForex call in createCryptoPayment
+      cached_transfer_rate: cryptoRates[0]?.transferRate || null,
+      cached_crypto_amount: cryptoRates[0]?.amount || null,
+      cached_crypto_currency: normalizedCurrency,
       ...(meta_data && { meta_data: JSON.stringify(meta_data) }),
     };
     
