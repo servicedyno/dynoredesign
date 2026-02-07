@@ -333,6 +333,15 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     // Build Redis payload
     const redisPayload = {
       customer_id: customerData[0].customer_id,
+    // Determine effective webhook URL
+    const effectiveWebhookUrl = webhook_url || data.webhook_url || null;
+    const effectiveWebhookSecret = data.webhook_secret || null;
+    
+    console.log(`[LegacyAPI] cryptoPayment - Company: ${data.company_id}, Amount: ${amount}, Currency: ${normalizedCurrency}`);
+    
+    // Build Redis payload
+    const redisPayload = {
+      customer_id: customerData[0].customer_id,
       company_id: data.company_id,
       adm_id: data.adm_id,
       base_currency: data.base_currency || 'USD',
@@ -353,35 +362,47 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     
     await setRedisItem("customer-" + transactionId, redisPayload);
     
-    // Create crypto payment
-    const payload = {
+    // Create crypto payment (direct controller call instead of HTTP self-call)
+    const paymentBody = {
       uniqueRef: transactionId,
-      amount: currencyData.data.data[0].amount,
+      amount: cryptoAmount,
       currency: normalizedCurrency,
     };
     
-    let paymentResult;
-    try {
-      paymentResult = await axios.post(
-        getBackendURL() + "/api/pay/createCryptoPayment",
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${res.locals.token}`,
-          },
-          timeout: 30000
-        }
-      );
-    } catch (paymentError: any) {
-      console.error("[LegacyAPI] createCryptoPayment error:", paymentError?.response?.data || paymentError.message);
-      return res.status(500).json({
+    // Capture the response from createCryptoPayment via intercepting res
+    let capturedData: Record<string, unknown> | null = null;
+    let capturedStatus = 200;
+    
+    const mockRes = {
+      locals: { token: res.locals.token },
+      status(code: number) {
+        capturedStatus = code;
+        return {
+          json(body: unknown) {
+            capturedData = body as Record<string, unknown>;
+            return this;
+          }
+        };
+      },
+    } as unknown as express.Response;
+    
+    const mockReq = {
+      ...req,
+      body: paymentBody,
+    } as express.Request;
+    
+    await paymentController.createCryptoPayment(mockReq, mockRes);
+    
+    if (capturedStatus !== 200 || !capturedData) {
+      console.error("[LegacyAPI] createCryptoPayment failed:", capturedData);
+      return res.status(capturedStatus || 500).json({
         success: false,
-        message: "Failed to create crypto payment",
-        error: paymentError?.response?.data?.message || paymentError.message
+        message: (capturedData as Record<string, unknown>)?.message || "Failed to create crypto payment",
       });
     }
     
-    const { qr_code, address, transaction_id } = paymentResult.data.data;
+    const paymentData = (capturedData as Record<string, unknown>).data as Record<string, unknown>;
+    const { qr_code, address, transaction_id } = paymentData;
     
     console.log(`[LegacyAPI] Payment created - TX: ${transaction_id}, Address: ${address}`);
     
@@ -392,7 +413,7 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
         transaction_id,
         qr_code,
         address: normalizedCurrency === "BCH" ? "bitcoincash:" + address : address,
-        amount: currencyData.data.data[0].amount,
+        amount: cryptoAmount,
         currency: normalizedCurrency,
         base_amount: amount,
         base_currency: data.base_currency || 'USD',
