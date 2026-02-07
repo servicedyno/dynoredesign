@@ -207,6 +207,16 @@ cron.schedule("*/5 * * * *", function () {
   });
 });
 
+// Detect orphan payments on AVAILABLE addresses (every 10 minutes)
+// Safety net: catches payments sent AFTER reservation expired and address was released
+// Uses saved last_payment_context for proper merchant/admin fee split
+cron.schedule("*/10 * * * *", function () {
+  log("Cron: detectOrphanPayments running", "info");
+  merchantPoolService.detectOrphanPayments().catch(err => {
+    log(`Cron: Orphan payment detection failed: ${err.message}`, "error");
+  });
+});
+
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
 setupWeeklySummaryCron();
 
