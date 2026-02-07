@@ -2355,6 +2355,348 @@ export const checkMissedPayments = async (): Promise<{
   return result;
 };
 
+// ============================================
+// ORPHAN PAYMENT DETECTION
+// ============================================
+// Safety net: Scans AVAILABLE addresses for unexpected on-chain balances.
+// When a customer sends payment AFTER reservation expired, the address is
+// already AVAILABLE and checkMissedPayments won't see it.
+// This function catches those late ("orphan") payments and processes them
+// with proper merchant/admin fee split using saved payment context.
+// ============================================
+
+export const detectOrphanPayments = async (): Promise<{
+  checked: number;
+  found: number;
+  processed: number;
+  alreadyProcessed: number;
+  sweptToAdmin: number;
+  errors: string[];
+}> => {
+  const result = {
+    checked: 0,
+    found: 0,
+    processed: 0,
+    alreadyProcessed: 0,
+    sweptToAdmin: 0,
+    errors: [] as string[],
+  };
+
+  try {
+    console.log("[OrphanDetect] 🔍 Scanning AVAILABLE addresses for orphan payments...");
+
+    // Get ALL AVAILABLE pool addresses
+    const availableAddresses = await merchantTempAddressModel.findAll({
+      where: {
+        status: "AVAILABLE",
+      },
+      attributes: [
+        'temp_address_id',
+        'wallet_address',
+        'wallet_type',
+        'owner_user_id',
+        'admin_fee_balance',
+        'last_payment_context',
+        'subscription_id',
+      ],
+    });
+
+    console.log(`[OrphanDetect] 📋 Found ${availableAddresses.length} AVAILABLE addresses to scan`);
+
+    for (const addr of availableAddresses) {
+      result.checked++;
+
+      const walletAddress = addr.dataValues.wallet_address;
+      const walletType = addr.dataValues.wallet_type;
+      const ownerId = addr.dataValues.owner_user_id;
+      const tempAddressId = addr.dataValues.temp_address_id;
+      const existingAdminBalance = parseFloat(addr.dataValues.admin_fee_balance || '0');
+      const lastContextRaw = addr.dataValues.last_payment_context;
+
+      try {
+        // Step 1: Check actual blockchain balance
+        let balanceResult;
+        try {
+          balanceResult = await tatumApi.getAddressBalance(walletAddress, walletType);
+        } catch (balanceError: unknown) {
+          const balErr = balanceError as { message?: string };
+          const errMsg = balErr.message || '';
+          // TRON/unused addresses return account.not.found — expected, skip silently
+          if (errMsg.includes('account.not.found') || errMsg.includes('not.found')) {
+            continue;
+          }
+          throw balanceError;
+        }
+        const balance = parseFloat(balanceResult?.balance || '0');
+
+        // No balance → nothing to recover
+        if (balance <= 0) {
+          continue;
+        }
+
+        // If the balance matches known admin_fee_balance (accumulated fees), skip
+        // Allow 1% tolerance for rounding
+        if (existingAdminBalance > 0 && Math.abs(balance - existingAdminBalance) / existingAdminBalance < 0.01) {
+          continue; // This is expected accumulated admin fees, not an orphan payment
+        }
+
+        // For token chains (USDT/USDC), existing balance could be accumulated fees
+        // Only flag as orphan if balance significantly exceeds known admin_fee_balance
+        if (TOKEN_CHAINS.includes(walletType) && balance <= existingAdminBalance * 1.01) {
+          continue;
+        }
+
+        // Step 2: Check if this is already being processed
+        const existingRedis = await getRedisItem("crypto-" + walletAddress);
+        if (existingRedis?.txId || existingRedis?.status === 'processing') {
+          result.alreadyProcessed++;
+          continue;
+        }
+
+        // Check recent pool transactions — if we already recorded a tx for this address recently, skip
+        const recentPoolTx = await merchantPoolTransactionModel.findOne({
+          where: {
+            temp_address_id: tempAddressId,
+            status: { [Op.in]: ['completed', 'swept'] },
+          },
+          order: [['created_at', 'DESC']],
+        });
+        if (recentPoolTx) {
+          const hoursSince = (Date.now() - new Date(recentPoolTx.dataValues.created_at).getTime()) / 3600000;
+          if (hoursSince < 4) {
+            // Recent transaction exists — likely already handled
+            result.alreadyProcessed++;
+            continue;
+          }
+        }
+
+        // ============================================
+        // ORPHAN PAYMENT DETECTED
+        // ============================================
+        result.found++;
+        console.log(`[OrphanDetect] ⚠️ ORPHAN PAYMENT DETECTED on AVAILABLE address: ${walletAddress}`);
+        console.log(`[OrphanDetect]   - Balance: ${balance} ${walletType}`);
+        console.log(`[OrphanDetect]   - Known admin fees: ${existingAdminBalance}`);
+        console.log(`[OrphanDetect]   - Excess (orphan amount): ${(balance - existingAdminBalance).toFixed(8)} ${walletType}`);
+        console.log(`[OrphanDetect]   - Owner merchant: ${ownerId}`);
+        console.log(`[OrphanDetect]   - Has saved context: ${!!lastContextRaw}`);
+
+        // Step 3: Fetch blockchain transaction details
+        const incomingTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 10);
+        if (!incomingTxs || incomingTxs.length === 0) {
+          console.log(`[OrphanDetect] ❌ No incoming transactions found for ${walletAddress} despite balance. Skipping.`);
+          result.errors.push(`No transactions found for ${walletAddress} despite balance ${balance}`);
+          continue;
+        }
+
+        const latestTx = incomingTxs[0];
+
+        // Duplicate prevention
+        const processedTxKey = `processed-tx-${latestTx.txId}`;
+        const alreadyProcessedTx = await getRedisItem(processedTxKey);
+        if (alreadyProcessedTx && Object.keys(alreadyProcessedTx).length > 0) {
+          console.log(`[OrphanDetect] ⏭️ Transaction ${latestTx.txId} already processed. Skipping.`);
+          result.alreadyProcessed++;
+          continue;
+        }
+
+        // Step 3.5: Verify transaction is confirmed
+        const confirmationCheck = await tatumApi.getTransactionConfirmations(latestTx.txId, walletType);
+        if (!confirmationCheck.confirmed) {
+          console.log(`[OrphanDetect] ⏳ Tx not yet confirmed (${confirmationCheck.confirmations}/${confirmationCheck.required}). Will retry next cycle.`);
+          continue;
+        }
+
+        // Step 4: Load payment context
+        let paymentContext: Record<string, unknown> | null = null;
+        if (lastContextRaw) {
+          try {
+            paymentContext = JSON.parse(lastContextRaw as string);
+            console.log(`[OrphanDetect] 📋 Loaded payment context: payment_id=${paymentContext?.payment_id}, company=${paymentContext?.company_id}`);
+          } catch {
+            console.warn(`[OrphanDetect] ⚠️ Failed to parse last_payment_context for ${walletAddress}`);
+          }
+        }
+
+        // Step 5: Reconstruct Redis data and process via cryptoVerification
+        const companyId = paymentContext?.company_id || null;
+        const paymentId = paymentContext?.payment_id || `orphan-${walletAddress}-${Date.now()}`;
+        const feePayer = (paymentContext?.fee_payer as string) || 'company';
+        const expectedAmount = parseFloat((paymentContext?.expected_amount as string) || '0');
+        const baseCurrency = (paymentContext?.base_currency as string) || 'USD';
+        const baseAmount = paymentContext?.base_amount || paymentContext?.expected_amount || null;
+
+        // Reconstruct Redis crypto-{address} data
+        const reconstructedRedis = {
+          mode: 'CRYPTO',
+          amount: expectedAmount || balance,
+          status: 'processing',
+          currency: walletType,
+          payment_id: paymentId,
+          is_merchant_pool: 'true',
+          adm_id: ownerId,
+          company_id: companyId,
+          fee_payer: feePayer,
+          base_currency: baseCurrency,
+          base_amount: baseAmount,
+          txId: latestTx.txId,
+          receivedAmount: balance,
+          originalExpectedAmount: expectedAmount || balance,
+          processedByOrphanDetect: 'true',
+          recoveredAt: new Date().toISOString(),
+          // Carry over webhook/callback if available
+          ...(paymentContext?.webhook_url && { webhook_url: paymentContext.webhook_url }),
+          ...(paymentContext?.callback_url && { callback_url: paymentContext.callback_url }),
+          ...(paymentContext?.link_id && { link_id: paymentContext.link_id }),
+        };
+
+        // Reconstruct customer ref
+        const customerRef = paymentContext?.ref || `orphan-customer-${paymentId}`;
+        const customerData = {
+          adm_id: paymentContext?.adm_id || ownerId,
+          company_id: companyId,
+          base_currency: baseCurrency,
+          customer_name: paymentContext?.customer_name || null,
+          customer_email: paymentContext?.customer_email || null,
+          webhook_url: paymentContext?.webhook_url || null,
+          callback_url: paymentContext?.callback_url || null,
+          link_id: paymentContext?.link_id || null,
+        };
+
+        reconstructedRedis.ref = customerRef as string;
+
+        // Set up Redis data
+        await setRedisItem("crypto-" + walletAddress, reconstructedRedis);
+        await setRedisItem(customerRef as string, customerData);
+
+        // Mark txId as processed (prevent duplicates)
+        await setRedisItem(processedTxKey, {
+          address: walletAddress,
+          amount: balance,
+          processedAt: new Date().toISOString(),
+          processedBy: 'detectOrphanPayments',
+          hadContext: !!lastContextRaw,
+        });
+
+        console.log(`[OrphanDetect] 📝 Redis reconstructed. Calling cryptoVerification...`);
+
+        // Step 6: Call cryptoVerification to handle the actual fund distribution
+        try {
+          const verificationResult = await paymentController.cryptoVerification(walletAddress, true) as { 
+            duplicate?: boolean; 
+            status?: number; 
+            paymentStatus?: string 
+          };
+
+          if (verificationResult?.duplicate) {
+            console.log(`[OrphanDetect] ⏭️ Payment was already processed (duplicate)`);
+            result.alreadyProcessed++;
+          } else if (
+            verificationResult?.status === 200 || 
+            verificationResult?.paymentStatus === 'completed' || 
+            verificationResult?.paymentStatus === 'complete'
+          ) {
+            console.log(`[OrphanDetect] ✅ ORPHAN PAYMENT SUCCESSFULLY RECOVERED!`);
+            console.log(`[OrphanDetect]   - Address: ${walletAddress}`);
+            console.log(`[OrphanDetect]   - Amount: ${balance} ${walletType}`);
+            console.log(`[OrphanDetect]   - TxId: ${latestTx.txId}`);
+            console.log(`[OrphanDetect]   - Original payment: ${paymentContext?.payment_id || 'unknown'}`);
+            console.log(`[OrphanDetect]   - Merchant: ${ownerId}, Company: ${companyId || 'unknown'}`);
+            result.processed++;
+
+            // Record in pool transactions
+            await recordPoolTransaction({
+              temp_address_id: tempAddressId,
+              type: 'orphan_recovery',
+              from_address: walletAddress,
+              to_address: 'merchant+admin (via cryptoVerification)',
+              amount: balance,
+              currency: walletType,
+              tx_hash: latestTx.txId,
+              status: 'completed',
+              notes: `Orphan payment recovered. Original payment: ${paymentContext?.payment_id || 'N/A'}. Context preserved: ${!!lastContextRaw}`,
+              payment_id: paymentId as string,
+              company_id: companyId as number,
+            });
+
+            // Step 7: If cryptoVerification doesn't handle webhook (e.g., context was partial),
+            // send recovery webhook directly
+            if (paymentContext?.webhook_url || paymentContext?.callback_url || companyId) {
+              try {
+                await callMerchantWebhook(customerData, {
+                  event: 'payment.confirmed',
+                  payment_id: paymentId,
+                  transaction_reference: latestTx.txId,
+                  status: 'completed',
+                  amount: balance,
+                  currency: walletType,
+                  recovered: true,
+                  recovery_type: 'orphan_detection',
+                  original_payment_id: paymentContext?.payment_id || null,
+                  customer_name: paymentContext?.customer_name || null,
+                  customer_email: paymentContext?.customer_email || null,
+                });
+                console.log(`[OrphanDetect] 📤 Recovery webhook sent to merchant`);
+              } catch (webhookError) {
+                console.warn(`[OrphanDetect] ⚠️ Recovery webhook failed (non-blocking):`, webhookError);
+              }
+            }
+
+            // Clear the saved context after successful recovery
+            await addr.update({ last_payment_context: null });
+
+            cronLogger?.info?.("ORPHAN PAYMENT RECOVERED", {
+              address: walletAddress,
+              currency: walletType,
+              amount: balance,
+              txId: latestTx.txId,
+              originalPaymentId: paymentContext?.payment_id,
+              ownerId,
+              companyId,
+              hadContext: !!lastContextRaw,
+            });
+          } else {
+            console.log(`[OrphanDetect] ⚠️ cryptoVerification returned:`, verificationResult);
+            result.errors.push(`Verification returned unexpected result for ${walletAddress}`);
+          }
+        } catch (verifyError: unknown) {
+          const err = verifyError as { paymentStatus?: string; amount?: number; message?: string };
+          if (err?.paymentStatus === 'incomplete') {
+            console.log(`[OrphanDetect] 📋 Partial orphan payment - ${err.amount} remaining`);
+            result.processed++;
+            await addr.update({ last_payment_context: null });
+          } else {
+            console.error(`[OrphanDetect] ❌ cryptoVerification failed:`, err.message || verifyError);
+            result.errors.push(`Verification failed for ${walletAddress}: ${err.message || 'Unknown error'}`);
+          }
+        }
+
+      } catch (error: unknown) {
+        const err = error as { message?: string };
+        console.error(`[OrphanDetect] ❌ Error processing ${walletAddress}:`, err.message);
+        result.errors.push(`Processing failed for ${walletAddress}: ${err.message}`);
+      }
+    }
+
+    console.log(`[OrphanDetect] ✅ Orphan payment scan complete:`);
+    console.log(`[OrphanDetect]   - Scanned: ${result.checked}`);
+    console.log(`[OrphanDetect]   - Already processed: ${result.alreadyProcessed}`);
+    console.log(`[OrphanDetect]   - Orphans found: ${result.found}`);
+    console.log(`[OrphanDetect]   - Successfully recovered: ${result.processed}`);
+    console.log(`[OrphanDetect]   - Swept to admin: ${result.sweptToAdmin}`);
+    if (result.errors.length > 0) {
+      console.log(`[OrphanDetect]   - Errors: ${result.errors.length}`);
+    }
+
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error("[OrphanDetect] ❌ Orphan detection scan failed:", err.message);
+    result.errors.push(`Global error: ${err.message}`);
+  }
+
+  return result;
+};
+
 export default {
   getOrCreateMerchantWallet,
   addAddressToMerchantPool,
@@ -2379,6 +2721,7 @@ export default {
   processQueuedPayments,
   ensurePoolSubscriptions,
   checkMissedPayments,
+  detectOrphanPayments,
   POOL_CONFIG,
   UTXO_CHAINS,
   NATIVE_CURRENCIES,
