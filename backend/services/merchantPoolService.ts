@@ -1980,7 +1980,20 @@ export const checkMissedPayments = async (): Promise<{
 
       try {
         // Step 1: Check actual blockchain balance
-        const balanceResult = await tatumApi.getAddressBalance(walletAddress, walletType);
+        let balanceResult;
+        try {
+          balanceResult = await tatumApi.getAddressBalance(walletAddress, walletType);
+        } catch (balanceError: unknown) {
+          const balErr = balanceError as { message?: string };
+          const errMsg = balErr.message || '';
+          // TRON addresses that haven't been activated on-chain will return "account.not.found"
+          // This is expected for new/unused pool addresses - skip silently
+          if (errMsg.includes('account.not.found') || errMsg.includes('not.found')) {
+            console.log(`[MerchantPool] ⏭️ ${walletAddress} - account not yet activated on-chain (${walletType}), skipping`);
+            continue;
+          }
+          throw balanceError; // Re-throw unexpected errors
+        }
         const balance = parseFloat(balanceResult?.balance || '0');
 
         // If no balance, customer hasn't paid yet - skip
