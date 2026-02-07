@@ -917,7 +917,18 @@ export const fundGasIfNeeded = async (
     // ═══════════════════════════════════════════════════════════════════
     // STEP 1: Check existing gas balance
     // ═══════════════════════════════════════════════════════════════════
-    const balanceResult = await tatumApi.getAddressBalance(tempAddress, gasToken);
+    let balanceResult;
+    try {
+      balanceResult = await tatumApi.getAddressBalance(tempAddress, gasToken);
+    } catch (balanceError: unknown) {
+      const balErr = balanceError as { message?: string };
+      if ((balErr.message || '').includes('account.not.found') || (balErr.message || '').includes('not.found')) {
+        console.log(`[SmartGas] Account not yet activated on-chain: ${tempAddress}, assuming 0 balance`);
+        balanceResult = { balance: '0' };
+      } else {
+        throw balanceError;
+      }
+    }
     let currentBalance = Number(balanceResult?.balance ?? 0);
     
     // Convert from SUN to TRX for TRON
