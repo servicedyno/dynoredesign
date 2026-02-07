@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """
-DynoPay Webhook URL Bug Fix Testing
-Tests the webhook_url bug fix implementation where crypto-{address} Redis key
-now includes webhook_url, callback_url, webhook_secret, and performance fix
-for cached exchange rates.
+DynoPay P2 Changes Testing
+Tests the two P2 changes:
+1. Verify api-service directory deleted
+2. Verify API versioning (backward compatible)
 """
 
 import requests
 import json
 import time
 import sys
+import os
+import glob
 from typing import Dict, Any
 
-class DynoPayTester:
+class DynoPayP2Tester:
     def __init__(self, base_url: str, email: str, password: str):
         self.base_url = base_url.rstrip('/')
         self.email = email
