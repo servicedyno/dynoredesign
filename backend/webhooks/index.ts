@@ -167,17 +167,40 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
     
     let lastResult: WebhookResult = { success: true };
     
+    // Enrich event data with fiat equivalent in the merchant's preferred currency
+    const enrichedEventData = { ...eventData };
+    if (eventData.amount && eventData.currency && companyId) {
+      try {
+        const preferredCurrency = await getCompanyBaseCurrency(companyId);
+        const cryptoAmount = Number(eventData.amount);
+        if (cryptoAmount > 0 && preferredCurrency) {
+          const fiatResult = await convertToFiat(String(eventData.currency), preferredCurrency, cryptoAmount);
+          if (fiatResult.amount > 0) {
+            enrichedEventData.base_amount = Number(fiatResult.amount.toFixed(2));
+            enrichedEventData.base_currency = preferredCurrency;
+            enrichedEventData.exchange_rate = fiatResult.rate;
+          }
+        }
+      } catch (convErr) {
+        // Non-blocking — send webhook without fiat enrichment
+        console.warn(`[callMerchantWebhook] Fiat enrichment failed:`, convErr);
+      }
+    }
+    // Preserve any base_amount/base_currency already set by the caller
+    if (eventData.base_amount) enrichedEventData.base_amount = eventData.base_amount;
+    if (eventData.base_currency) enrichedEventData.base_currency = eventData.base_currency;
+    
     // Call callback_url first (instant notification, synchronous)
     if (callbackUrl) {
-      lastResult = await callUrlWithPayload(callbackUrl, eventData, webhookSecret, Number(companyId), 'callback');
+      lastResult = await callUrlWithPayload(callbackUrl, enrichedEventData, webhookSecret, Number(companyId), 'callback');
     }
     
     // Then call webhook_url (transaction updates, can be same or different)
     if (webhookUrl && webhookUrl !== callbackUrl) {
-      lastResult = await callUrlWithPayload(webhookUrl, eventData, webhookSecret, Number(companyId), 'webhook');
+      lastResult = await callUrlWithPayload(webhookUrl, enrichedEventData, webhookSecret, Number(companyId), 'webhook');
     } else if (webhookUrl && !callbackUrl) {
       // If only webhook_url is configured (no callback_url)
-      lastResult = await callUrlWithPayload(webhookUrl, eventData, webhookSecret, Number(companyId), 'webhook');
+      lastResult = await callUrlWithPayload(webhookUrl, enrichedEventData, webhookSecret, Number(companyId), 'webhook');
     }
     
     return lastResult;
