@@ -212,3 +212,84 @@ export const initializeMerchantPool = async (
     throw error;
   }
 };
+
+
+/**
+ * Pre-warm pool addresses for active merchants.
+ * 
+ * Checks each merchant+chain combination that has been used before.
+ * If AVAILABLE count is below MIN_AVAILABLE, creates new addresses
+ * in the background so the next payment request has an address ready.
+ * 
+ * This eliminates the ~3-4s Tatum API call bottleneck during payment creation.
+ */
+export const prewarmPoolAddresses = async (): Promise<{
+  checked: number;
+  created: number;
+  errors: string[];
+}> => {
+  const result = { checked: 0, created: 0, errors: [] as string[] };
+  
+  try {
+    // Find all distinct merchant+chain combos that have pool addresses
+    const activePoolGroups = await merchantTempAddressModel.findAll({
+      attributes: [
+        [sequelize.fn('DISTINCT', sequelize.col('owner_user_id')), 'owner_user_id'],
+        'wallet_type',
+      ],
+      where: {
+        owner_user_id: { [sequelize.Sequelize.Op.ne]: null },
+      },
+      group: ['owner_user_id', 'wallet_type'],
+      raw: true,
+    }) as unknown as Array<{ owner_user_id: number; wallet_type: string }>;
+
+    console.log(`[PreWarm] Checking ${activePoolGroups.length} merchant+chain combinations...`);
+
+    for (const group of activePoolGroups) {
+      result.checked++;
+      const { owner_user_id: userId, wallet_type: walletType } = group;
+
+      try {
+        // Count currently AVAILABLE addresses for this merchant+chain
+        const availableCount = await merchantTempAddressModel.count({
+          where: {
+            owner_user_id: userId,
+            wallet_type: walletType,
+            status: 'AVAILABLE',
+          },
+        });
+
+        if (availableCount >= POOL_CONFIG.MIN_AVAILABLE) {
+          continue; // Already has enough available addresses
+        }
+
+        const toCreate = POOL_CONFIG.MIN_AVAILABLE - availableCount;
+        console.log(`[PreWarm] 🔥 Merchant ${userId} / ${walletType}: ${availableCount} available, creating ${toCreate} more...`);
+
+        for (let i = 0; i < toCreate; i++) {
+          try {
+            await addAddressToMerchantPool(userId, walletType);
+            result.created++;
+            console.log(`[PreWarm] ✅ Created pre-warmed ${walletType} address for merchant ${userId}`);
+          } catch (createError) {
+            const msg = getErrorMessage(createError);
+            console.error(`[PreWarm] ❌ Failed to create ${walletType} for merchant ${userId}: ${msg}`);
+            result.errors.push(`${walletType}:${userId} - ${msg}`);
+          }
+        }
+      } catch (groupError) {
+        const msg = getErrorMessage(groupError);
+        result.errors.push(`Check ${walletType}:${userId} - ${msg}`);
+      }
+    }
+
+    console.log(`[PreWarm] Complete: checked=${result.checked}, created=${result.created}, errors=${result.errors.length}`);
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    console.error(`[PreWarm] ❌ Pre-warming failed:`, msg);
+    result.errors.push(msg);
+  }
+
+  return result;
+};
