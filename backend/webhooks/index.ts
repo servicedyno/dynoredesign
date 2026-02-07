@@ -839,66 +839,123 @@ const tatumCryptoWebHook = async (
       // UNDERPAYMENT: Set incomplete flag and DON'T process as full payment
       // UNLESS it's within the acceptable threshold
       if (isUnderpayment && !isMinorUnderpayment) {
-        console.log("[tatumCryptoWebHook] UNDERPAYMENT detected (exceeds threshold) - setting incomplete flag");
+        // Determine if this is a Payment Link or Direct API payment
+        const linkIdUnderpaid = customerData?.link_id || items?.link_id || null;
+        const isDirectApi = !linkIdUnderpaid;
         
-        const remainingAmount = expectedAmount - totalReceivedAmount;
-        
-        // Set Redis state for underpayment - this allows verifyCryptoPayment to return underpaid status
-        await setRedisItem("crypto-" + address, {
-          ...items,
-          status: "underpaid",
-          incomplete: "true",
-          txId: payload.txId,
-          receivedAmount: totalReceivedAmount,  // Total cumulative amount
-          previousAmount: totalReceivedAmount,  // For next completion payment
-          previousTxId: payload.txId,
-          amount: remainingAmount,  // Now amount is the REMAINING amount
-          originalExpectedAmount: expectedAmount,  // Store original for reference
-          partialPaymentTimestamp: items?.partialPaymentTimestamp || new Date().toISOString(),
-          lastAttempt: new Date().toISOString(),
-        });
-        
-        // Set TTL for underpayment grace period (30 minutes)
-        await setRedisTTL("crypto-" + address, 1800);
-        
-        // Send underpayment webhook to merchant
-        // ENHANCED: Include customer details and payment context
-        if (customerData && customerData.company_id) {
-          const linkIdUnderpaid = customerData?.link_id || null;
-          const paymentTypeUnderpaid = linkIdUnderpaid ? 'payment_link' : 'direct_api';
+        if (isDirectApi) {
+          // DIRECT API: Process immediately with actual received amount
+          // Whatever is received gets processed — funds split between merchant and admin
+          // If below forwarding threshold, all goes to admin
+          console.log(`[tatumCryptoWebHook] UNDERPAYMENT on DIRECT API — processing immediately with received amount`);
+          console.log(`[tatumCryptoWebHook]   Expected: ${expectedAmount}, Received: ${totalReceivedAmount}, Shortfall: ${(expectedAmount - totalReceivedAmount).toFixed(8)}`);
           
-          const underpaidWebhookResult = await callMerchantWebhook(customerData, {
-            event: 'payment.underpaid',
-            payment_type: paymentTypeUnderpaid,
-            address: address,
+          // Update Redis with actual received amount so cryptoVerification uses it
+          await setRedisItem("crypto-" + address, {
+            ...items,
+            status: "processing",
             txId: payload.txId,
-            amount_received: totalReceivedAmount,
-            amount_expected: expectedAmount,
-            amount_remaining: remainingAmount,
-            currency: items?.currency || payload.asset,
-            payment_id: items?.payment_id || items?.unique_tx_id,
-            status: 'underpaid',
-            // ENHANCED: Add base amount context
-            base_amount: customerData?.base_amount || items?.base_amount_usd || null,
-            base_currency: customerData?.base_currency || 'USD',
-            // ENHANCED: Customer & payment link details
-            customer_name: customerData?.customer_name || null,
-            customer_email: customerData?.email || null,
-            description: customerData?.description || null,
-            link_id: linkIdUnderpaid,
-            fee_payer: customerData?.fee_payer || items?.fee_payer || 'company',
-            grace_period_minutes: 30,
-            timestamp: new Date().toISOString(),
+            receivedAmount: totalReceivedAmount,
+            originalExpectedAmount: expectedAmount,
+            lastAttempt: new Date().toISOString(),
           });
-          if (underpaidWebhookResult.success) {
-            console.log("[tatumCryptoWebHook] ✅ Enhanced underpayment webhook sent to merchant");
-          } else {
-            console.error(`[tatumCryptoWebHook] ❌ Underpayment webhook failed: ${underpaidWebhookResult.error}`);
+          
+          // Send underpaid notification to merchant (informational, before processing)
+          if (customerData && customerData.company_id) {
+            const remainingAmount = expectedAmount - totalReceivedAmount;
+            const underpaidWebhookResult = await callMerchantWebhook(customerData, {
+              event: 'payment.underpaid',
+              payment_type: 'direct_api',
+              address: address,
+              txId: payload.txId,
+              amount_received: totalReceivedAmount,
+              amount_expected: expectedAmount,
+              amount_remaining: remainingAmount,
+              currency: items?.currency || payload.asset,
+              payment_id: items?.payment_id || items?.unique_tx_id,
+              status: 'underpaid',
+              base_amount: customerData?.base_amount || items?.base_amount_usd || null,
+              base_currency: customerData?.base_currency || 'USD',
+              customer_name: customerData?.customer_name || null,
+              customer_email: customerData?.email || null,
+              description: customerData?.description || null,
+              link_id: null,
+              fee_payer: customerData?.fee_payer || items?.fee_payer || 'company',
+              note: 'Direct API: processing with actual received amount',
+              timestamp: new Date().toISOString(),
+            });
+            if (underpaidWebhookResult.success) {
+              console.log("[tatumCryptoWebHook] ✅ Direct API underpaid notification sent");
+            } else {
+              console.error(`[tatumCryptoWebHook] ❌ Direct API underpaid notification failed: ${underpaidWebhookResult.error}`);
+            }
           }
+          
+          // Fall through to cryptoVerification below (DO NOT return)
+          // cryptoVerification will handle fund distribution:
+          //   - Above min forwarding threshold: split between merchant and admin
+          //   - Below min forwarding threshold: 100% to admin
+          console.log("[tatumCryptoWebHook] Direct API underpayment — falling through to cryptoVerification");
+          
+        } else {
+          // PAYMENT LINK: Wait for remaining payment (existing behavior)
+          console.log("[tatumCryptoWebHook] UNDERPAYMENT on PAYMENT LINK — setting incomplete flag, waiting for remaining");
+          
+          const remainingAmount = expectedAmount - totalReceivedAmount;
+          
+          // Set Redis state for underpayment - this allows verifyCryptoPayment to return underpaid status
+          await setRedisItem("crypto-" + address, {
+            ...items,
+            status: "underpaid",
+            incomplete: "true",
+            txId: payload.txId,
+            receivedAmount: totalReceivedAmount,  // Total cumulative amount
+            previousAmount: totalReceivedAmount,  // For next completion payment
+            previousTxId: payload.txId,
+            amount: remainingAmount,  // Now amount is the REMAINING amount
+            originalExpectedAmount: expectedAmount,  // Store original for reference
+            partialPaymentTimestamp: items?.partialPaymentTimestamp || new Date().toISOString(),
+            lastAttempt: new Date().toISOString(),
+          });
+          
+          // Set TTL for underpayment grace period (30 minutes)
+          await setRedisTTL("crypto-" + address, 1800);
+          
+          // Send underpayment webhook to merchant
+          if (customerData && customerData.company_id) {
+            const paymentTypeUnderpaid = 'payment_link';
+            
+            const underpaidWebhookResult = await callMerchantWebhook(customerData, {
+              event: 'payment.underpaid',
+              payment_type: paymentTypeUnderpaid,
+              address: address,
+              txId: payload.txId,
+              amount_received: totalReceivedAmount,
+              amount_expected: expectedAmount,
+              amount_remaining: remainingAmount,
+              currency: items?.currency || payload.asset,
+              payment_id: items?.payment_id || items?.unique_tx_id,
+              status: 'underpaid',
+              base_amount: customerData?.base_amount || items?.base_amount_usd || null,
+              base_currency: customerData?.base_currency || 'USD',
+              customer_name: customerData?.customer_name || null,
+              customer_email: customerData?.email || null,
+              description: customerData?.description || null,
+              link_id: linkIdUnderpaid,
+              fee_payer: customerData?.fee_payer || items?.fee_payer || 'company',
+              grace_period_minutes: 30,
+              timestamp: new Date().toISOString(),
+            });
+            if (underpaidWebhookResult.success) {
+              console.log("[tatumCryptoWebHook] ✅ Payment link underpayment webhook sent to merchant");
+            } else {
+              console.error(`[tatumCryptoWebHook] ❌ Payment link underpayment webhook failed: ${underpaidWebhookResult.error}`);
+            }
+          }
+          
+          console.log("[tatumCryptoWebHook] Payment link underpayment recorded, waiting for remaining payment");
+          return res.status(200).end();
         }
-        
-        console.log("[tatumCryptoWebHook] Underpayment recorded, waiting for remaining payment");
-        return res.status(200).end();
       }
       
       // Log if minor underpayment was accepted
