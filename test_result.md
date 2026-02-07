@@ -7,6 +7,41 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "Full Regression Test — Verify All Recent Implementations After Dependency Reinstall"
+    implemented: true
+    working: "pending"
+    file: "/app/backend/server.ts, /app/backend/controller/paymentController.ts, /app/backend/webhooks/index.ts, /app/backend/services/merchantPoolService.ts, /app/backend/controller/walletController.ts, /app/backend/apis/tatumApi.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          REGRESSION TEST after fresh dependency install. All services running healthy.
+          Backend health: 200 OK, database connected, uptime confirmed.
+          Frontend: webpack compiled successfully, serving on port 3000.
+          
+          TEST SCOPE (comprehensive regression covering all critical features):
+          
+          1. BACKEND HEALTH: GET /health returns 200 with database connected
+          2. AUTHENTICATION: POST /api/user/login with richard@dyno.pt / Katiekendra123@ returns JWT token
+          3. SWAGGER API DOCS: GET /api/docs returns HTML, GET /api/docs.json returns valid OpenAPI spec
+          4. PAYMENT LINK CREATION: POST /api/pay/createPaymentLink creates link with fee_payer, callback_url, webhook_url, redirect_url
+          5. PAYMENT GETDATA: POST /api/pay/getData returns merchant info, fee_info, redirect_url (hides callback_url/webhook_url)
+          6. FEE CALCULATOR: POST /api/pay/calculateCheckoutFees returns platform_fee (1%), blockchain_fee, total_fees, net_to_merchant
+          7. LEGACY API: POST /api/user/createUser with x-api-key, POST /api/user/cryptoPayment, GET /api/user/getSupportedCurrency
+          8. WALLET VALIDATION: POST /api/wallet/validateWalletAddress with invalid TRX address should reject (not silent accept)
+          9. DASHBOARD: GET /api/dashboard returns stats with company_id filtering
+          10. API KEY MANAGEMENT: POST /api/userApi/addApi enforces single key per company, auto-generates short name (Word-Number format)
+          11. ONBOARDING STATUS: GET /api/user/onboarding-status returns wallet_setup, kyc_status, api_key_status, company_setup
+          12. CRON JOBS: Check backend logs for checkMissedPayments and OrphanDetect entries
+          13. CRASH RECOVERY: Verify isStaleProcessing logic exists in webhooks/index.ts (line ~518) with 3 conditions
+          14. CONFIGURABLE TIMEOUT: Verify RESERVATION_TIMEOUT_MINUTES reads from env (not hardcoded 30)
+          
+          Credentials: richard@dyno.pt / Katiekendra123@, company_id: 38
+          Base URL: https://test-suite-16.preview.emergentagent.com
+
   - task: "Fix 1: Configurable Reservation Timeout (120 min) + Fix 2: Orphan Payment Detection on AVAILABLE addresses"
     implemented: true
     working: true
