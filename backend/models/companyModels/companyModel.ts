@@ -95,7 +95,7 @@ const companyModel = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: null,
-      comment: "Grace period in minutes for partial payment completion. Default 30 if not set.",
+      comment: "Grace period in minutes for partial payment completion on Payment Links. Max 30, default 30 if not set. Does NOT apply to Direct API payments.",
     },
     // Multi-tenant: Company backend URL for webhooks
     backend_url: {
