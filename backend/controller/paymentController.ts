@@ -2945,7 +2945,8 @@ const settleCryptoTransaction = async ({
           if (poolAddressRecord) {
             console.log(`[settleCryptoTransaction] 🔧 SmartGas: Checking ${wallet_type} gas for ${currency} merchant transfer (${merchantSendAmount} → ${userAddress})...`);
             gasFundingResult = await merchantPoolService.fundGasIfNeeded(
-              poolAddressRecord, currency, merchantSendAmount, userAddress
+              poolAddressRecord as unknown as { dataValues: { wallet_address: string }; update: (data: Record<string, unknown>) => Promise<void> },
+              currency, merchantSendAmount, userAddress
             );
           } else {
             console.warn(`[settleCryptoTransaction] ⚠️ Pool address record not found for ${fromAddress}, skipping SmartGas`);
