@@ -355,7 +355,7 @@ See the response examples below for detailed payload structures.
                 },
                 'payment_link_underpaid': {
                   summary: '⚠️ PAYMENT LINK: Partial Payment (Underpaid)',
-                  description: 'Sent when customer sends less than required for a Payment Link. 30-minute grace period to complete.',
+                  description: 'Sent when customer sends less than required for a Payment Link. Grace period (up to 30 min, configurable per company) to complete.',
                   value: {
                     event: 'payment.underpaid',
                     payment_type: 'payment_link',
@@ -379,8 +379,8 @@ See the response examples below for detailed payload structures.
                   }
                 },
                 'direct_api_underpaid': {
-                  summary: '⚠️ DIRECT API: Partial Payment (Underpaid)',
-                  description: 'Sent when customer sends less than required for a Direct API Payment. Note: link_id is null.',
+                  summary: '⚠️ DIRECT API: Underpaid (Informational — processed immediately)',
+                  description: 'Sent when customer sends less than required for a Direct API Payment. This is INFORMATIONAL ONLY — the payment is processed immediately with whatever was received. No grace period, no waiting. A payment.confirmed webhook follows shortly after.',
                   value: {
                     event: 'payment.underpaid',
                     payment_type: 'direct_api',
@@ -399,7 +399,7 @@ See the response examples below for detailed payload structures.
                     description: 'Invoice Payment',
                     link_id: null,
                     fee_payer: 'customer',
-                    grace_period_minutes: 30,
+                    note: 'Direct API: processing with actual received amount',
                     timestamp: '2026-02-04T16:30:00.000Z'
                   }
                 }
