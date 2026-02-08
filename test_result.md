@@ -768,6 +768,39 @@ current_test_task:
         comment: "✅ CHECKMISSEDPAYMENTS CRON BUG FIX TESTING COMPLETED: 100% success rate (6/6 tests passed). ✅ BACKEND HEALTH: Backend responding correctly at /health endpoint (status 200). ✅ CODE FIX VERIFIED: Found correct fix at line 2089 in merchantPoolService.ts - now uses `temp_address_id: addr.dataValues.temp_address_id` instead of the non-existent `pool_address` field. No pool_address usage found anywhere in the codebase. ✅ MODEL SCHEMA VERIFIED: Merchant_Pool_Transaction model correctly has `temp_address_id` field with proper FK reference to tbl_merchant_temp_address, and NO `pool_address` column exists. ✅ CRON JOB EXECUTION: Found evidence of the bug (3 pool_address errors at 18:35, 18:40, 18:45) and successful 18:50 execution after the fix was applied. Cron runs every 5 minutes as expected. ✅ NO ERRORS AFTER FIX: Confirmed NO 'column Merchant_Pool_Transaction.pool_address does not exist' errors occurred after 18:45 UTC restart. ✅ 18:50 SUCCESS CONFIRMED: The 18:50 cron run completed successfully with no error patterns found, proving the fix is working. CONCLUSION: The checkMissedPayments cron job bug fix is fully operational and production-ready. The DB schema mismatch has been resolved and the cron job now runs without errors every 5 minutes."
 
 previous_test_tasks:
+  - task: "BUGFIX: USDT-TRC20 feeEstimation fast:5 → fast:20 + USDC-ERC20 added to feeEstimation"
+    implemented: true
+    working: true
+    file: "/app/backend/apis/tatumApi.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TATUM API BUG FIXES TESTING COMPLETED: 100% success rate (6/6 tests passed).
+          
+          🎉 BUG FIX 1 - USDT-TRC20 FEEESTIMATION UPDATE: FULLY VERIFIED
+          ✅ 'fast: 5' completely removed from tatumApi.ts (0 matches found - correctly removed)
+          ✅ 'fast: 20' found exactly 2 times in tatumApi.ts (lines 1013 and 1136)
+          ✅ USDT-TRC20 block in feeEstimation (~line 1008) now has fast: 20 with detailed comment about TRC20 energy costs
+          ✅ Comment explains: "TRC20 token transfer requires energy (~31k existing, ~65k new holder), at 420 SUN/energy, with SmartGas 1.3x buffer = 20 TRX"
+          
+          🎉 BUG FIX 2 - USDC-ERC20 ADDED TO FEEESTIMATION: FULLY IMPLEMENTED
+          ✅ feeEstimation array (line 938): ["ETH", "BSC", "USDT-ERC20", "USDC-ERC20"] - USDC-ERC20 correctly included
+          ✅ batchFeeEstimation array (line 1054): ["ETH", "BSC", "USDT-ERC20", "USDC-ERC20"] - USDC-ERC20 correctly included
+          ✅ isERC20 logic: `currency === "USDT-ERC20" || currency === "USDC-ERC20"` found in both functions
+          ✅ Contract mapping verified: USDC-ERC20 → process.env.USDC_CONTRACT, USDT-ERC20 → process.env.ETH_CONTRACT
+          ✅ ERC20 tokens correctly use: chain "ETH", type "TRANSFER_ERC20", and only 'fast' fee (no medium/slow)
+          ✅ ERC20 tokens use full gasLimit (not 25% reduction like regular ETH transfers)
+          
+          🔧 HEALTH CHECKS: ALL PASSED
+          ✅ TypeScript compilation: npx tsc --noEmit returns 0 errors in /app/backend
+          ✅ Backend health: GET /api/status/health returns HTTP 200 with {"status":"healthy","timestamp":"2026-02-08T14:23:53.219Z","version":"1.0.0"}
+          
+          CONCLUSION: Both bug fixes are production-ready and working correctly. USDT-TRC20 fee estimation now uses appropriate 20 TRX fee instead of 5 TRX, and USDC-ERC20 support has been fully added to prevent TypeError crashes in fee estimation functions.
+          
   - task: "Duplicate Payment Pending Email Fix + Social URLs + Template Audit"
     implemented: true
     working: true
