@@ -1124,21 +1124,24 @@ const batchFeeEstimation = async ({
 
     console.log({ gasFees });
 
-    let gasPrice = gasFees?.gasPrice > 30 ? 30 : gasFees?.gasPrice;
+    let gasPrice = Math.max(1, Math.min(30, gasFees?.gasPrice || 1));
+    // Percentage-based buffer: 10% + 0.5 Gwei priority tip (was flat +1 Gwei)
+    const batchGasBuffer = Math.ceil(gasPrice * 1.1 + 0.5);
+    console.log(`[EVM Gas] ⛽ Batch price: ${gasPrice} Gwei, buffered=${batchGasBuffer} Gwei (was ${gasPrice + 1})`);
 
     fees = {
       fast: Number(
-        Number(((gasPrice + 1) * gasFees?.gasLimit) / 1000000000) * totalAddress
+        Number(((batchGasBuffer) * gasFees?.gasLimit) / 1000000000) * totalAddress
       ).toFixed(8),
       ...(!isERC20 && {
         medium: Number(
           Number(
-            ((gasPrice + 1) * ((gasFees?.gasLimit * 50) / 100)) / 1000000000
+            ((batchGasBuffer) * ((gasFees?.gasLimit * 50) / 100)) / 1000000000
           ) * totalAddress
         ).toFixed(8),
         slow: Number(
           Number(
-            ((gasPrice + 1) * ((gasFees?.gasLimit * 25) / 100)) / 1000000000
+            ((batchGasBuffer) * ((gasFees?.gasLimit * 25) / 100)) / 1000000000
           ) * totalAddress
         ).toFixed(8),
       }),
