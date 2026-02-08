@@ -3140,6 +3140,47 @@ ports:
     message: "🎉 EMAIL TEMPLATES OVERHAUL TESTING COMPLETED: 100% success rate (4/4 tests passed) - ALL EMAIL TEMPLATES ARE NOW PROFESSIONALLY BRANDED! ✅ TEST 1 - ALL 9 PLAIN-TEXT EMAILS CONVERTED: sendPaymentReceivedEmail, sendTransactionConfirmedEmail, sendWeeklySummaryEmail, sendPaymentPendingEmail, sendPaymentConfirmingEmail, sendPaymentPartialEmail, sendPaymentPartialExpiredEmail, sendSecurityAlertEmail, sendAdminFeeReceivedEmail - EVERY FUNCTION now uses dynoPayEmailTemplate() wrapper and passes htmlBody (NOT raw text 'body: message') to mailTransporter. Zero plain-text emails remain. ✅ TEST 2 - TEMPLATE QUALITY VERIFIED: dynoPayEmailTemplate uses professional table layout with <table role='presentation'> (NOT div-based), 100% inline style= attributes (email client compatible), DynoPay logo image properly embedded, social media icons from flaticon CDN, footer with Privacy/Terms/Support links - meets Coinbase-level branding standards. ✅ TEST 3 - LOGO URL FIX WORKING: Both emailService.ts and helper/sendEmail.ts use correct logo URL 'https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Images/auth/dynopay-logo.png' (returns HTTP 200), old broken 'DynocheckoutDarkMode' URL completely removed. ✅ TEST 4 - BACKEND HEALTHY: API responding correctly, no crashes from email template changes. CONCLUSION: Complete email templates overhaul is production-ready! All emails now use professional HTML templates with proper branding, table-based layout, inline styles, working logos, and social media integration."
   - agent: "testing"
     message: "🎉 COMPREHENSIVE REGRESSION TEST COMPLETED: 75% success rate (12/16 tests passed) after fresh dependency reinstall. ALL CRITICAL BACKEND FUNCTIONALITY IS OPERATIONAL: ✅ Backend Health (5 services operational), ✅ JWT Authentication working, ✅ 178 API endpoints documented in Swagger, ✅ Payment Link Creation successful, ✅ Fee Calculator operational (platform_fee=0.4%, blockchain_fee=$2), ✅ TRX Wallet Validation rejecting invalid addresses, ✅ Dashboard stats functional, ✅ Crash Recovery Logic verified (isStaleProcessing + recovered status), ✅ Configurable Timeout reading from environment (120 min), ✅ Cron Jobs running (OrphanDetect entries). Minor issues identified: Payment GetData reference format, Legacy API key authentication (403 errors), Onboarding Status response structure. VERDICT: Backend is PRODUCTION READY after dependency reinstall - all core payment processing functionality operational with 75% regression test pass rate."
+  - task: "BUGFIX: USDT-TRC20 feeEstimation too low (fast:5→20) + USDC-ERC20 missing from feeEstimation (crash)"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/apis/tatumApi.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          TWO BUGS FIXED in apis/tatumApi.ts:
+
+          BUG 1 — USDT-TRC20 feeEstimation returned { fast: 5 } (5 TRX).
+          SmartGas funded only 6.5 TRX (5×1.3 buffer). Actual TRON TRC20 transfer
+          costs ~13 TRX (existing USDT holder) or ~27 TRX (new holder).
+          Result: merchant transfer fails, TRX burned as penalty, USDT stuck.
+          FIX: Changed fast: 5 → fast: 20 in BOTH feeEstimation (line ~1013) 
+          AND batchFeeEstimation (line ~1136). With 1.3x buffer = 26 TRX funded,
+          safely covers existing-holder transfers.
+          
+          BUG 2 — USDC-ERC20 was NOT in the feeEstimation ERC20 branch.
+          Line 938: ["ETH","BSC","USDT-ERC20"] — USDC-ERC20 missing.
+          feeEstimation("USDC-ERC20") returned undefined.
+          In assetToOtherAddress: fee?.gasLimit.toString() → TypeError crash.
+          No USDC-ERC20 payment or sweep could succeed.
+          FIX: Added "USDC-ERC20" to both feeEstimation and batchFeeEstimation
+          arrays. Added isERC20 helper variable for clean contract address routing
+          (USDC-ERC20 → process.env.USDC_CONTRACT, USDT-ERC20 → process.env.ETH_CONTRACT).
+          
+          VERIFY:
+          1. grep "fast: 5" apis/tatumApi.ts → should return 0 matches
+          2. grep "fast: 20" apis/tatumApi.ts → should return 2 matches (feeEstimation + batchFeeEstimation)  
+          3. grep "USDC-ERC20.*indexOf" apis/tatumApi.ts → should return 2 matches
+          4. grep "isERC20" apis/tatumApi.ts → should return multiple matches
+          5. npx tsc --noEmit → 0 errors
+          6. GET /health → healthy
+          
+          Credentials: richard@dyno.pt / Katiekendra123@
+          Base URL: https://init-install.preview.emergentagent.com
   - task: "SmartGas Integration for Token Merchant Transfers (USDT-TRC20, USDT-ERC20, USDC-ERC20)"
     implemented: true
     working: "NA"
