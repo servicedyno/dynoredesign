@@ -552,7 +552,11 @@ const tatumCryptoWebHook = async (
         // Re-attempt cryptoVerification — it handles settlement + webhook + emails
         // If settlement already completed on-chain, this will fail (insufficient balance),
         // and we'll fall through to the direct webhook recovery below.
-        await paymentController.cryptoVerification(address, true);
+        const recoveryResult = await paymentController.cryptoVerification(address, true);
+        // BUGFIX: detect internal error return (not thrown)
+        if (recoveryResult && recoveryResult.status && recoveryResult.status >= 400) {
+          throw new Error(`Recovery cryptoVerification returned error status ${recoveryResult.status}: ${recoveryResult.message || 'Settlement failed'}`);
+        }
         console.log("[tatumCryptoWebHook] ✅ Recovery: cryptoVerification completed successfully");
         
         // Mark as successful
