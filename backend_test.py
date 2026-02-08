@@ -81,9 +81,9 @@ def get_api_keys(token: str) -> Dict[str, Any]:
     
     encrypted_key = target_key.get("apiKey")
     if not encrypted_key:
-        raise TestFailedException(f"No encrypted_key in API key: {target_key}")
+        raise TestFailedException(f"No apiKey in API key: {target_key}")
     
-    log_success(f"Found API key for company_id 38: {target_key.get('key_name', 'N/A')}")
+    log_success(f"Found API key for company_id 38: {target_key.get('api_name', 'N/A')}")
     return target_key
 
 def create_customer(api_key: str, token: str) -> Dict[str, Any]:
