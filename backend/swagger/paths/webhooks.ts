@@ -485,7 +485,18 @@ Custom metadata passed when creating the payment link.
 | \`amount_received\` | number | Amount received so far (crypto) |
 | \`amount_expected\` | number | Total amount expected (crypto) |
 | \`amount_remaining\` | number | Remaining amount needed (crypto) |
-| \`grace_period_minutes\` | number | Minutes left to complete payment |`,
+| \`grace_period_minutes\` | number | Minutes left to complete payment (**Payment Links only**) |
+| \`note\` | string | Processing note (**Direct API only** — e.g., "processing with actual received amount") |
+
+### ⚠️ Important: Payment Link vs Direct API Underpayments
+
+| Behavior | Payment Links | Direct API |
+|----------|:------------:|:----------:|
+| Grace period | ✅ Waits for remainder (up to 30 min, configurable per company) | ❌ No waiting — processed immediately |
+| \`grace_period_minutes\` field | ✅ Present | ❌ Not present |
+| Underpayment threshold | ✅ Minor underpayments accepted as full (configurable per company) | ❌ All underpayments processed as-is |
+| Overpayment threshold | ✅ Excess detected and reported (configurable per company) | ❌ Full amount processed to merchant |
+| Webhook meaning | Action needed: customer has time to send remainder | Informational only: \`payment.confirmed\` follows immediately |`,
       responses: {
         200: {
           description: 'Field reference documentation',
