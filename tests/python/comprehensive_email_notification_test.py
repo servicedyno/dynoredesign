@@ -11,7 +11,7 @@ Test Scope:
 5. Email Service Templates Verification
 6. Weekly Summary Cron Enabled
 
-Backend URL: https://init-install.preview.emergentagent.com
+Backend URL: https://install-helper-26.preview.emergentagent.com
 """
 
 import requests
@@ -21,7 +21,7 @@ import sys
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://init-install.preview.emergentagent.com"
+BACKEND_URL = "https://install-helper-26.preview.emergentagent.com"
 TEST_USER_EMAIL = "john@dyno.pt"
 TEST_USER_PASSWORD = "Katiekendra123@"
 

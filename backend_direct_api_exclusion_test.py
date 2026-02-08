@@ -21,7 +21,7 @@ import re
 from typing import Dict, Any, Optional
 
 # Test Configuration
-BASE_URL = "https://init-install.preview.emergentagent.com"
+BASE_URL = "https://install-helper-26.preview.emergentagent.com"
 CREDENTIALS = {
     "email": "richard@dyno.pt",
     "password": "Katiekendra123@"
