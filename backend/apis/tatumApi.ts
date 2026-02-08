@@ -938,6 +938,13 @@ const feeEstimation = async (
   } else if (["ETH", "BSC", "USDT-ERC20", "USDC-ERC20"].indexOf(currency) !== -1) {
     const isERC20 = currency === "USDT-ERC20" || currency === "USDC-ERC20";
     const localAmount: number = Number(amount);
+    // ERC-20 tokens (USDT/USDC) have 6 decimals; ETH has 18 — truncate to avoid BigNumber parse errors
+    const decimals = isERC20 ? 6 : 8;
+    const factor = Math.pow(10, decimals);
+    const safeEstimateAmount = (Math.floor(localAmount * factor) / factor).toString();
+    if (isERC20) {
+      console.log(`[getGasFee] ${currency} amount for gas estimation: ${localAmount} → truncated to ${decimals} decimals: ${safeEstimateAmount}`);
+    }
     const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
       chain: isERC20 ? "ETH" : currency,
       type: isERC20 ? "TRANSFER_ERC20" : "TRANSFER_NFT",
@@ -946,7 +953,7 @@ const feeEstimation = async (
         contractAddress: currency === "USDC-ERC20" ? process.env.USDC_CONTRACT : process.env.ETH_CONTRACT,
       }),
       recipient: toAddress,
-      amount: localAmount.toString(),
+      amount: safeEstimateAmount,
     })) as FeeEvmBased;
 
     console.log(gasFees);
