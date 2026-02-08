@@ -952,7 +952,7 @@ const tatumCryptoWebHook = async (
               description: customerData?.description || null,
               link_id: linkIdUnderpaid,
               fee_payer: customerData?.fee_payer || items?.fee_payer || 'company',
-              grace_period_minutes: 30,
+              grace_period_minutes: merchantGracePeriodMinutes,
               timestamp: new Date().toISOString(),
             });
             if (underpaidWebhookResult.success) {
