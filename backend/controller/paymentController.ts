@@ -2886,6 +2886,7 @@ const settleCryptoTransaction = async ({
     let merchantTransactionDetails;
     let totalBlockchainFee = 0;
     let merchantSendAmount = 0;
+    let gasFundingResult: { funded: boolean; amount: number; txId?: string; reason?: string } = { funded: false, amount: 0 };
 
     // NEW APPROACH: Single transfer to merchant, admin fee stays in temp address for later sweep
     // This eliminates nonce collision issues for account-based chains (ETH, TRX, BSC)
