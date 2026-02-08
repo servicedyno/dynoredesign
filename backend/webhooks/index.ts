@@ -1018,7 +1018,12 @@ const tatumCryptoWebHook = async (
         
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
-            await paymentController.cryptoVerification(address, true);
+            const verifyResult = await paymentController.cryptoVerification(address, true);
+            // BUGFIX: cryptoVerification catches errors internally and returns {status: 500, message}
+            // instead of throwing — detect this and treat it as a failure
+            if (verifyResult && verifyResult.status && verifyResult.status >= 400) {
+              throw new Error(`cryptoVerification returned error status ${verifyResult.status}: ${verifyResult.message || 'Settlement failed'}`);
+            }
             console.log("[tatumCryptoWebHook] cryptoVerification completed successfully");
             lastError = null;
             break;
