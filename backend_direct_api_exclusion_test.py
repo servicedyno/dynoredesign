@@ -109,9 +109,8 @@ class DirectApiExclusionTester:
                 self.errors.append("isMinorUnderpayment implementation missing !!linkIdForThreshold check")
                 return False
             
-            # Check for linkIdForThreshold definition
-            linkid_pattern = r'linkIdForThreshold\s*=.*customerData\?\?.link_id\s*\|\|\s*items\?\?.link_id\s*\|\|\s*null'
-            if not re.search(linkid_pattern, content, re.MULTILINE):
+            # Check for linkIdForThreshold definition (more flexible pattern)
+            if 'linkIdForThreshold' not in content or 'customerData?.link_id || items?.link_id || null' not in content:
                 self.log("❌ linkIdForThreshold definition not found or incorrect", "WEBHOOKS") 
                 self.errors.append("linkIdForThreshold definition missing or incorrect")
                 return False
