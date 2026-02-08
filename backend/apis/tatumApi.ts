@@ -15,6 +15,7 @@ import { buildUrl } from "../helper";
 import {
   calculateOptimalFeeLimit,
   calculateDynamicTRC20Fee,
+  calculateDynamicTRXNativeFee,
   logCostSavings,
 } from "../services/tronEnergyService";
 
