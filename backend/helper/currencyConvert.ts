@@ -192,7 +192,6 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
     );
     const rate = parseFloat(data?.value);
     if (rate > 0) {
-      console.log(`[currencyConvert] Tatum rate for ${crypto}→${fiat}: ${rate}`);
       return rate;
     }
   } catch (error: unknown) {
