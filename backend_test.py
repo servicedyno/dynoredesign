@@ -1,546 +1,312 @@
 #!/usr/bin/env python3
-"""
-Backend Testing for Fallback Safety Net Fixes
-Testing the two fallback safety net fixes for missed/incomplete merchant pool payments in DynoPay.
-"""
 
+import re
 import requests
 import json
 import sys
-import time
-from datetime import datetime, timezone
 
-# Test configuration
-BASE_URL = "https://dep-installer-44.preview.emergentagent.com"
-CREDENTIALS = {
-    "email": "richard@dyno.pt",
-    "password": "Katiekendra123@"
-}
+def log_test_result(test_name, success, details=""):
+    """Log test results consistently"""
+    status = "✅ PASS" if success else "❌ FAIL" 
+    print(f"{status}: {test_name}")
+    if details:
+        print(f"    {details}")
+    return success
 
-class BackendTester:
-    def __init__(self):
-        self.base_url = BASE_URL
-        self.auth_token = None
-        self.session = requests.Session()
-        self.results = {
-            "total_tests": 0,
-            "passed_tests": 0,
-            "failed_tests": 0,
-            "test_details": []
-        }
+def check_backend_health():
+    """Test 6: Backend health check"""
+    try:
+        response = requests.get("https://dep-installer-44.preview.emergentagent.com/api/status/health", timeout=10)
+        success = response.status_code == 200 and "healthy" in response.text
+        return log_test_result("Backend Health Check", success, f"Status: {response.status_code}, Response: {response.text[:100]}")
+    except Exception as e:
+        return log_test_result("Backend Health Check", False, f"Error: {str(e)}")
 
-    def log_test_result(self, test_name, passed, details="", expected="", actual=""):
-        """Log test result with details"""
-        self.results["total_tests"] += 1
-        if passed:
-            self.results["passed_tests"] += 1
-            status = "✅ PASS"
+def verify_webhooks_index_implementation():
+    """Test 1: Code verification in webhooks/index.ts"""
+    print("\n=== Testing webhooks/index.ts Implementation ===")
+    
+    try:
+        with open('/app/backend/webhooks/index.ts', 'r') as f:
+            content = f.read()
+        
+        tests_passed = 0
+        total_tests = 5
+        
+        # Test 1.1: merchantGracePeriodMinutes variable exists and initialized to 30
+        if 'merchantGracePeriodMinutes = 30' in content:
+            log_test_result("merchantGracePeriodMinutes variable initialization", True, "Found: merchantGracePeriodMinutes = 30")
+            tests_passed += 1
         else:
-            self.results["failed_tests"] += 1
-            status = "❌ FAIL"
+            log_test_result("merchantGracePeriodMinutes variable initialization", False, "Not found: merchantGracePeriodMinutes = 30")
         
-        result = {
-            "test_name": test_name,
-            "status": status,
-            "details": details,
-            "expected": expected,
-            "actual": actual,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-        self.results["test_details"].append(result)
+        # Test 1.2: company.grace_period_minutes fetched and capped with Math.min
+        if 'Math.min(parseInt(String(company.dataValues.grace_period_minutes)), 30)' in content:
+            log_test_result("Grace period fetch and cap", True, "Found: Math.min with 30 cap")
+            tests_passed += 1
+        else:
+            log_test_result("Grace period fetch and cap", False, "Not found: Math.min capping to 30")
         
-        print(f"{status} - {test_name}")
-        if details:
-            print(f"    Details: {details}")
-        if not passed and expected and actual:
-            print(f"    Expected: {expected}")
-            print(f"    Actual: {actual}")
-
-    def authenticate(self):
-        """Authenticate with backend and get token"""
-        try:
-            print("🔐 Authenticating with backend...")
-            
-            response = self.session.post(
-                f"{self.base_url}/api/user/login",
-                json=CREDENTIALS,
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.auth_token = data.get("data", {}).get("accessToken")
-                if self.auth_token:
-                    self.session.headers.update({
-                        "Authorization": f"Bearer {self.auth_token}",
-                        "Content-Type": "application/json"
-                    })
-                    user_info = data.get("data", {})
-                    self.log_test_result(
-                        "Backend Authentication", 
-                        True,
-                        f"User: {user_info.get('name', 'N/A')} (ID: {user_info.get('user_id', 'N/A')})"
-                    )
-                    return True
-                else:
-                    self.log_test_result(
-                        "Backend Authentication", 
-                        False,
-                        "No access token in response"
-                    )
-                    return False
+        # Test 1.3: Redis TTL uses merchantGracePeriodMinutes * 60
+        if 'merchantGracePeriodMinutes * 60' in content and 'graceTtlSeconds' in content:
+            log_test_result("Redis TTL uses dynamic grace period", True, "Found: merchantGracePeriodMinutes * 60")
+            tests_passed += 1
+        else:
+            log_test_result("Redis TTL uses dynamic grace period", False, "Not found: merchantGracePeriodMinutes * 60")
+        
+        # Test 1.4: Webhook payload uses merchantGracePeriodMinutes
+        if 'grace_period_minutes: merchantGracePeriodMinutes' in content:
+            log_test_result("Webhook payload uses merchantGracePeriodMinutes", True, "Found: grace_period_minutes: merchantGracePeriodMinutes")
+            tests_passed += 1
+        else:
+            log_test_result("Webhook payload uses merchantGracePeriodMinutes", False, "Not found: grace_period_minutes: merchantGracePeriodMinutes")
+        
+        # Test 1.5: Direct API path does NOT reference grace period
+        # Extract Direct API block (between isDirectApi and else block)
+        direct_api_pattern = r'if \(isDirectApi\) \{(.*?)\} else \{'
+        direct_api_match = re.search(direct_api_pattern, content, re.DOTALL)
+        
+        if direct_api_match:
+            direct_api_code = direct_api_match.group(1)
+            if 'grace' not in direct_api_code.lower() and 'merchantGracePeriodMinutes' not in direct_api_code:
+                log_test_result("Direct API path does NOT reference grace period", True, "Direct API block clean of grace period references")
+                tests_passed += 1
             else:
-                self.log_test_result(
-                    "Backend Authentication", 
-                    False, 
-                    f"HTTP {response.status_code}: {response.text[:200]}"
-                )
-                return False
-                
-        except Exception as e:
-            self.log_test_result(
-                "Backend Authentication", 
-                False, 
-                f"Exception: {str(e)}"
-            )
+                log_test_result("Direct API path does NOT reference grace period", False, "Found grace period references in Direct API block")
+        else:
+            log_test_result("Direct API path does NOT reference grace period", False, "Could not find Direct API block")
+        
+        return tests_passed == total_tests
+    
+    except Exception as e:
+        log_test_result("webhooks/index.ts verification", False, f"Error reading file: {str(e)}")
+        return False
+
+def verify_payment_controller_process_incomplete():
+    """Test 2: Code verification in paymentController.ts - processIncompletePayments"""
+    print("\n=== Testing paymentController.ts - processIncompletePayments ===")
+    
+    try:
+        with open('/app/backend/controller/paymentController.ts', 'r') as f:
+            content = f.read()
+        
+        tests_passed = 0
+        total_tests = 4
+        
+        # Test 2.1: SQL query uses INTERVAL '5 minutes'
+        if "INTERVAL '5 minutes'" in content:
+            log_test_result("SQL query uses INTERVAL '5 minutes'", True, "Found: INTERVAL '5 minutes'")
+            tests_passed += 1
+        else:
+            log_test_result("SQL query uses INTERVAL '5 minutes'", False, "Not found: INTERVAL '5 minutes'")
+        
+        # Test 2.2: Per-company grace period fetched inside loop
+        if 'companyModel.findOne' in content and 'companyGracePeriodMinutes' in content:
+            log_test_result("Per-company grace period fetched in loop", True, "Found: companyModel.findOne with companyGracePeriodMinutes")
+            tests_passed += 1
+        else:
+            log_test_result("Per-company grace period fetched in loop", False, "Not found: per-company grace period fetch")
+        
+        # Test 2.3: Grace period capped with Math.min(..., 30)
+        if 'Math.min(parseInt(String(companyRecord.dataValues.grace_period_minutes)), 30)' in content:
+            log_test_result("Grace period capped at 30 minutes", True, "Found: Math.min capping to 30")
+            tests_passed += 1
+        else:
+            log_test_result("Grace period capped at 30 minutes", False, "Not found: Math.min capping")
+        
+        # Test 2.4: Skip condition exists
+        if 'minutesSincePartial < companyGracePeriodMinutes' in content and 'continue' in content:
+            log_test_result("Skip condition for grace period", True, "Found: skip condition with continue")
+            tests_passed += 1
+        else:
+            log_test_result("Skip condition for grace period", False, "Not found: skip condition")
+        
+        return tests_passed == total_tests
+    
+    except Exception as e:
+        log_test_result("processIncompletePayments verification", False, f"Error reading file: {str(e)}")
+        return False
+
+def verify_payment_controller_add_verify():
+    """Test 3: Code verification in paymentController.ts - addPayment + verifyCryptoPayment"""
+    print("\n=== Testing paymentController.ts - addPayment + verifyCryptoPayment ===")
+    
+    try:
+        with open('/app/backend/controller/paymentController.ts', 'r') as f:
+            content = f.read()
+        
+        tests_passed = 0
+        total_tests = 2
+        
+        # Test 3.1: Check around lines 438-439 area (getData function grace period)
+        lines = content.split('\n')
+        found_cap_438 = False
+        for i, line in enumerate(lines[430:450], 430):  # Check lines 430-450
+            if 'Math.min' in line and 'grace_period_minutes' in line and '30' in line:
+                log_test_result("Math.min grace period cap around line 439", True, f"Found at line {i+1}: {line.strip()}")
+                found_cap_438 = True
+                tests_passed += 1
+                break
+        
+        if not found_cap_438:
+            log_test_result("Math.min grace period cap around line 439", False, "Not found around lines 438-439")
+        
+        # Test 3.2: Check around lines 3141-3143 area (another grace period reference)
+        found_cap_3141 = False
+        for i, line in enumerate(lines[3130:3150], 3130):  # Check lines 3130-3150
+            if 'Math.min' in line and 'grace_period_minutes' in line and '30' in line:
+                log_test_result("Math.min grace period cap around line 3143", True, f"Found at line {i+1}: {line.strip()}")
+                found_cap_3141 = True
+                tests_passed += 1
+                break
+        
+        if not found_cap_3141:
+            log_test_result("Math.min grace period cap around line 3143", False, "Not found around lines 3141-3143")
+        
+        return tests_passed == total_tests
+    
+    except Exception as e:
+        log_test_result("addPayment + verifyCryptoPayment verification", False, f"Error reading file: {str(e)}")
+        return False
+
+def verify_company_controller_update():
+    """Test 4: Code verification in companyController.ts - updateCompany"""
+    print("\n=== Testing companyController.ts - updateCompany ===")
+    
+    try:
+        with open('/app/backend/controller/companyController.ts', 'r') as f:
+            content = f.read()
+        
+        tests_passed = 0
+        total_tests = 2
+        
+        # Test 4.1: Validation block exists for grace_period_minutes 1-30
+        validation_patterns = [
+            'grace_period_minutes must be at least 1 minute',
+            'grace_period_minutes cannot exceed 30 minutes',
+            'parsed < 1',
+            'parsed > 30'
+        ]
+        
+        found_validation = all(pattern in content for pattern in validation_patterns)
+        if found_validation:
+            log_test_result("Validation block for grace_period_minutes (1-30)", True, "Found all validation patterns")
+            tests_passed += 1
+        else:
+            log_test_result("Validation block for grace_period_minutes (1-30)", False, "Missing validation patterns")
+        
+        # Test 4.2: Returns 400 error for invalid values
+        if 'errorResponseHelper(res, 400' in content and 'grace_period_minutes' in content:
+            log_test_result("Returns 400 error for invalid grace period", True, "Found 400 error response")
+            tests_passed += 1
+        else:
+            log_test_result("Returns 400 error for invalid grace period", False, "Not found 400 error response")
+        
+        return tests_passed == total_tests
+    
+    except Exception as e:
+        log_test_result("updateCompany verification", False, f"Error reading file: {str(e)}")
+        return False
+
+def verify_company_model():
+    """Test 5: Code verification in companyModel.ts"""
+    print("\n=== Testing companyModel.ts ===")
+    
+    try:
+        with open('/app/backend/models/companyModels/companyModel.ts', 'r') as f:
+            content = f.read()
+        
+        tests_passed = 0
+        total_tests = 1
+        
+        # Test 5.1: grace_period_minutes comment mentions "Max 30" and "Payment Links" and "Direct API"
+        comment_patterns = ['Max 30', 'Payment Link', 'NOT.*Direct API']
+        
+        found_comment = all(pattern in content for pattern in comment_patterns)
+        if found_comment:
+            log_test_result("Comment mentions Max 30, Payment Links, and NOT Direct API", True, "Found all required comment patterns")
+            tests_passed += 1
+        else:
+            log_test_result("Comment mentions Max 30, Payment Links, and NOT Direct API", False, "Missing comment patterns")
+        
+        return tests_passed == total_tests
+    
+    except Exception as e:
+        log_test_result("companyModel.ts verification", False, f"Error reading file: {str(e)}")
+        return False
+
+def check_typescript_compilation():
+    """Test 7: Check for TypeScript compilation errors"""
+    print("\n=== Testing TypeScript Compilation ===")
+    
+    try:
+        # Check supervisor status
+        import subprocess
+        result = subprocess.run(['sudo', 'supervisorctl', 'status'], capture_output=True, text=True, timeout=10)
+        
+        if 'backend' in result.stdout and 'RUNNING' in result.stdout:
+            log_test_result("Backend service running", True, "Backend is running via supervisor")
+        else:
+            log_test_result("Backend service running", False, f"Backend status: {result.stdout}")
             return False
-
-    def test_backend_health(self):
-        """Test backend health endpoint"""
-        try:
-            print("\n🏥 Testing backend health...")
-            
-            response = self.session.get(f"{self.base_url}/api/status/health", timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                status = data.get("status")
-                if status == "healthy":
-                    self.log_test_result(
-                        "Backend Health Check", 
-                        True,
-                        f"Status: {status}, Version: {data.get('version', 'N/A')}"
-                    )
-                else:
-                    self.log_test_result(
-                        "Backend Health Check", 
-                        False,
-                        f"Unhealthy status: {status}"
-                    )
-            else:
-                self.log_test_result(
-                    "Backend Health Check", 
-                    False,
-                    f"HTTP {response.status_code}: {response.text[:200]}"
-                )
-                
-        except Exception as e:
-            self.log_test_result(
-                "Backend Health Check", 
-                False, 
-                f"Exception: {str(e)}"
-            )
-
-    def test_checkMissedPayments_fix_code_review(self):
-        """Code review of checkMissedPayments fix in merchantPoolMonitoring.ts"""
-        print("\n🔍 CODE REVIEW: checkMissedPayments fix (merchantPoolMonitoring.ts)")
         
-        try:
-            # Read the file and check for required patterns
-            with open('/app/backend/services/merchantPool/merchantPoolMonitoring.ts', 'r') as f:
-                content = f.read()
-            
-            # Test 1: Check for failCount >= 3 condition
-            if 'failCount >= 3' in content:
-                self.log_test_result(
-                    "checkMissedPayments: failCount >= 3 check", 
-                    True,
-                    "Found failCount >= 3 condition"
-                )
-            else:
-                self.log_test_result(
-                    "checkMissedPayments: failCount >= 3 check", 
-                    False,
-                    "failCount >= 3 condition not found"
-                )
-            
-            # Test 2: Check for hasPaymentContext logic
-            if 'hasPaymentContext = !!currentPaymentId && balance > (dustThreshold * 5)' in content:
-                self.log_test_result(
-                    "checkMissedPayments: hasPaymentContext logic", 
-                    True,
-                    "Found hasPaymentContext condition with dust threshold check"
-                )
-            else:
-                self.log_test_result(
-                    "checkMissedPayments: hasPaymentContext logic", 
-                    False,
-                    "hasPaymentContext condition not found or incorrect"
-                )
-            
-            # Test 3: Check for last_payment_context retrieval
-            if 'merchantTempAddressModel.findOne({ where: { wallet_address: walletAddress } })' in content:
-                self.log_test_result(
-                    "checkMissedPayments: DB context retrieval", 
-                    True,
-                    "Found merchantTempAddressModel.findOne for last_payment_context"
-                )
-            else:
-                self.log_test_result(
-                    "checkMissedPayments: DB context retrieval", 
-                    False,
-                    "DB context retrieval not found"
-                )
-            
-            # Test 4: Check for Redis reconstruction
-            if 'reconstructedRedis' in content and 'processedByFallback' in content:
-                self.log_test_result(
-                    "checkMissedPayments: Redis reconstruction", 
-                    True,
-                    "Found Redis reconstruction with fallback marker"
-                )
-            else:
-                self.log_test_result(
-                    "checkMissedPayments: Redis reconstruction", 
-                    False,
-                    "Redis reconstruction logic not found"
-                )
-            
-            # Test 5: Check for customer ref reconstruction
-            if 'custRef' in content and 'existingCustData' in content:
-                self.log_test_result(
-                    "checkMissedPayments: Customer ref reconstruction", 
-                    True,
-                    "Found customer reference reconstruction logic"
-                )
-            else:
-                self.log_test_result(
-                    "checkMissedPayments: Customer ref reconstruction", 
-                    False,
-                    "Customer reference reconstruction not found"
-                )
-            
-            # Test 6: Check for cryptoVerification call
-            if 'paymentController.cryptoVerification(walletAddress, true)' in content:
-                self.log_test_result(
-                    "checkMissedPayments: cryptoVerification call", 
-                    True,
-                    "Found cryptoVerification call with correct parameters"
-                )
-            else:
-                self.log_test_result(
-                    "checkMissedPayments: cryptoVerification call", 
-                    False,
-                    "cryptoVerification call not found or incorrect"
-                )
-            
-            # Test 7: Check for recovery logging
-            if 'MISSED PAYMENT RECOVERED VIA CONTEXT' in content:
-                self.log_test_result(
-                    "checkMissedPayments: Recovery logging", 
-                    True,
-                    "Found recovery event logging"
-                )
-            else:
-                self.log_test_result(
-                    "checkMissedPayments: Recovery logging", 
-                    False,
-                    "Recovery event logging not found"
-                )
-                
-        except Exception as e:
-            self.log_test_result(
-                "checkMissedPayments: Code review", 
-                False, 
-                f"Exception reading file: {str(e)}"
-            )
-
-    def test_processIncompletePayments_fix_code_review(self):
-        """Code review of processIncompletePayments fix in paymentController.ts"""
-        print("\n🔍 CODE REVIEW: processIncompletePayments fix (paymentController.ts)")
+        # Check for TypeScript errors in logs
+        log_result = subprocess.run(['tail', '-n', '100', '/var/log/supervisor/backend.out.log'], 
+                                   capture_output=True, text=True, timeout=10)
         
-        try:
-            # Read the file and check for required patterns
-            with open('/app/backend/controller/paymentController.ts', 'r') as f:
-                content = f.read()
-            
-            # Test 1: Check for merchantTempAddressModel import
-            if 'merchantTempAddressModel' in content and 'from "../models"' in content:
-                self.log_test_result(
-                    "processIncompletePayments: Model imports", 
-                    True,
-                    "Found merchantTempAddressModel import"
-                )
-            else:
-                self.log_test_result(
-                    "processIncompletePayments: Model imports", 
-                    False,
-                    "merchantTempAddressModel import not found"
-                )
-            
-            # Test 2: Check for merchant pool query
-            merchant_pool_query = "merchantTempAddressModel.findAll({\n        where: {\n          status: 'IN_USE',\n          current_payment_id: { [Op.ne]: null },\n          expected_amount: { [Op.gt]: 0 },"
-            if merchant_pool_query in content:
-                self.log_test_result(
-                    "processIncompletePayments: Merchant pool query", 
-                    True,
-                    "Found correct merchantTempAddressModel query with required conditions"
-                )
-            else:
-                # Check for simplified version
-                if "status: 'IN_USE'" in content and "current_payment_id: { [Op.ne]: null }" in content:
-                    self.log_test_result(
-                        "processIncompletePayments: Merchant pool query", 
-                        True,
-                        "Found merchant pool query with required conditions"
-                    )
-                else:
-                    self.log_test_result(
-                        "processIncompletePayments: Merchant pool query", 
-                        False,
-                        "Merchant pool query not found or incorrect"
-                    )
-            
-            # Test 3: Check for 60-minute grace period filter
-            if 'minutesSinceReserved < 60' in content:
-                self.log_test_result(
-                    "processIncompletePayments: Grace period filter", 
-                    True,
-                    "Found 60-minute grace period filter"
-                )
-            else:
-                self.log_test_result(
-                    "processIncompletePayments: Grace period filter", 
-                    False,
-                    "60-minute grace period filter not found"
-                )
-            
-            # Test 4: Check for customerTransactionModel duplicate check
-            if 'customerTransactionModel.findOne' in content and 'transaction_reference' in content:
-                self.log_test_result(
-                    "processIncompletePayments: Duplicate check", 
-                    True,
-                    "Found customerTransactionModel duplicate check"
-                )
-            else:
-                self.log_test_result(
-                    "processIncompletePayments: Duplicate check", 
-                    False,
-                    "Duplicate transaction check not found"
-                )
-            
-            # Test 5: Check for balance check via tatumApi
-            if 'tatumApi.getAddressBalance' in content and 'actualBalance' in content:
-                self.log_test_result(
-                    "processIncompletePayments: Balance check", 
-                    True,
-                    "Found on-chain balance check via Tatum API"
-                )
-            else:
-                self.log_test_result(
-                    "processIncompletePayments: Balance check", 
-                    False,
-                    "On-chain balance check not found"
-                )
-            
-            # Test 6: Check for Redis reconstruction from last_payment_context
-            if 'last_payment_context' in content and 'JSON.parse' in content:
-                self.log_test_result(
-                    "processIncompletePayments: Context reconstruction", 
-                    True,
-                    "Found last_payment_context reconstruction logic"
-                )
-            else:
-                self.log_test_result(
-                    "processIncompletePayments: Context reconstruction", 
-                    False,
-                    "Context reconstruction not found"
-                )
-            
-            # Test 7: Check for cryptoVerification processing
-            if 'cryptoVerification(walletAddress, true)' in content:
-                self.log_test_result(
-                    "processIncompletePayments: Processing call", 
-                    True,
-                    "Found cryptoVerification processing call"
-                )
-            else:
-                self.log_test_result(
-                    "processIncompletePayments: Processing call", 
-                    False,
-                    "cryptoVerification processing call not found"
-                )
-            
-            # Test 8: Check for proper error handling
-            if 'try {' in content and 'catch (poolError)' in content:
-                self.log_test_result(
-                    "processIncompletePayments: Error handling", 
-                    True,
-                    "Found proper try/catch error handling"
-                )
-            else:
-                self.log_test_result(
-                    "processIncompletePayments: Error handling", 
-                    False,
-                    "Error handling not found or incomplete"
-                )
-                
-        except Exception as e:
-            self.log_test_result(
-                "processIncompletePayments: Code review", 
-                False, 
-                f"Exception reading file: {str(e)}"
-            )
-
-    def test_required_imports(self):
-        """Verify all required imports are present in paymentController.ts"""
-        print("\n📦 Testing required imports in paymentController.ts")
+        ts_errors = [
+            'error TS',
+            'compilation failed',
+            'typescript error',
+            'type error',
+            'cannot find name'
+        ]
         
-        try:
-            with open('/app/backend/controller/paymentController.ts', 'r') as f:
-                content = f.read()
-            
-            required_imports = [
-                'Op',
-                'getRedisItem', 
-                'setRedisItem',
-                'tatumApi',
-                'customerTransactionModel',
-                'merchantTempAddressModel'
-            ]
-            
-            for import_name in required_imports:
-                if import_name in content:
-                    self.log_test_result(
-                        f"Import verification: {import_name}", 
-                        True,
-                        f"{import_name} import found"
-                    )
-                else:
-                    self.log_test_result(
-                        f"Import verification: {import_name}", 
-                        False,
-                        f"{import_name} import not found"
-                    )
-                    
-        except Exception as e:
-            self.log_test_result(
-                "Import verification", 
-                False, 
-                f"Exception: {str(e)}"
-            )
-
-    def test_typescript_compilation(self):
-        """Test for TypeScript compilation errors"""
-        print("\n🔧 Testing TypeScript compilation...")
+        has_ts_errors = any(error.lower() in log_result.stdout.lower() for error in ts_errors)
         
-        try:
-            # Check backend logs for compilation errors
-            import subprocess
-            result = subprocess.run(
-                ["tail", "-n", "200", "/var/log/supervisor/backend.err.log"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            error_patterns = [
-                'error TS',
-                'Compilation failed',
-                'Type error',
-                'Cannot find module',
-                'Property does not exist',
-                'Argument of type',
-                'Type \'undefined\' is not assignable'
-            ]
-            
-            compilation_errors = []
-            for line in result.stdout.split('\n'):
-                for pattern in error_patterns:
-                    if pattern in line:
-                        compilation_errors.append(line.strip())
-                        break
-            
-            if compilation_errors:
-                self.log_test_result(
-                    "TypeScript Compilation", 
-                    False,
-                    f"Found {len(compilation_errors)} compilation errors",
-                    "No compilation errors",
-                    f"Errors: {compilation_errors[:3]}"  # Show first 3 errors
-                )
-            else:
-                self.log_test_result(
-                    "TypeScript Compilation", 
-                    True,
-                    "No TypeScript compilation errors found"
-                )
-                
-        except Exception as e:
-            self.log_test_result(
-                "TypeScript Compilation", 
-                False, 
-                f"Exception: {str(e)}"
-            )
-
-    def generate_summary(self):
-        """Generate test summary"""
-        print("\n" + "="*60)
-        print("🧪 FALLBACK SAFETY NET FIXES TEST SUMMARY")
-        print("="*60)
-        
-        total = self.results["total_tests"]
-        passed = self.results["passed_tests"]
-        failed = self.results["failed_tests"]
-        success_rate = (passed / total * 100) if total > 0 else 0
-        
-        print(f"Total Tests: {total}")
-        print(f"Passed: {passed} ✅")
-        print(f"Failed: {failed} ❌")
-        print(f"Success Rate: {success_rate:.1f}%")
-        
-        if failed > 0:
-            print(f"\n❌ FAILED TESTS ({failed}):")
-            for result in self.results["test_details"]:
-                if "❌ FAIL" in result["status"]:
-                    print(f"  - {result['test_name']}: {result['details']}")
-        
-        if passed == total:
-            print(f"\n🎉 ALL TESTS PASSED! Both fallback safety net fixes are properly implemented.")
+        if has_ts_errors:
+            log_test_result("No TypeScript compilation errors", False, "Found TypeScript errors in logs")
+            return False
         else:
-            print(f"\n⚠️  {failed} test(s) failed. Please review the implementation.")
-        
-        return success_rate >= 90  # Consider 90%+ as success
+            log_test_result("No TypeScript compilation errors", True, "No TypeScript errors found")
+            return True
+    
+    except Exception as e:
+        log_test_result("TypeScript compilation check", False, f"Error checking logs: {str(e)}")
+        return False
 
 def main():
-    """Main test execution"""
-    print("🚀 Starting Backend Testing for Fallback Safety Net Fixes")
-    print("="*60)
+    """Run all tests for per-merchant grace period implementation"""
+    print("🔍 TESTING: Per-merchant grace period for Payment Link underpayments (max 30 min cap)")
+    print("=" * 80)
     
-    tester = BackendTester()
+    # Track results
+    all_tests = []
     
-    # Step 1: Authentication
-    if not tester.authenticate():
-        print("❌ Authentication failed. Cannot proceed with tests.")
-        sys.exit(1)
+    # Run all verification tests
+    all_tests.append(verify_webhooks_index_implementation())
+    all_tests.append(verify_payment_controller_process_incomplete())
+    all_tests.append(verify_payment_controller_add_verify())
+    all_tests.append(verify_company_controller_update())
+    all_tests.append(verify_company_model())
+    all_tests.append(check_backend_health())
+    all_tests.append(check_typescript_compilation())
     
-    # Step 2: Health Check
-    tester.test_backend_health()
+    # Calculate results
+    total_tests = len(all_tests)
+    passed_tests = sum(all_tests)
+    success_rate = (passed_tests / total_tests) * 100
     
-    # Step 3: Code Review Tests
-    tester.test_checkMissedPayments_fix_code_review()
-    tester.test_processIncompletePayments_fix_code_review()
+    print("\n" + "=" * 80)
+    print(f"📊 TEST RESULTS: {passed_tests}/{total_tests} tests passed ({success_rate:.1f}%)")
+    print("=" * 80)
     
-    # Step 4: Import Verification
-    tester.test_required_imports()
-    
-    # Step 5: TypeScript Compilation Check
-    tester.test_typescript_compilation()
-    
-    # Step 6: Generate Summary
-    success = tester.generate_summary()
-    
-    return success
+    if passed_tests == total_tests:
+        print("🎉 ALL TESTS PASSED! Per-merchant grace period implementation is working correctly.")
+        return True
+    else:
+        print("⚠️ SOME TESTS FAILED! Please review the implementation.")
+        return False
 
 if __name__ == "__main__":
     success = main()
