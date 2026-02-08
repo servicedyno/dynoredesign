@@ -307,6 +307,7 @@ const getCoinGeckoRate = async (crypto: string, fiat: string): Promise<number | 
 
     const rate = response.data[coinId]?.[fiat.toLowerCase()];
     if (rate) {
+      console.log(`[currencyConvert] CoinGecko rate for ${crypto}→${fiat}: ${rate}`);
       return rate;
     }
   } catch (error: unknown) {
