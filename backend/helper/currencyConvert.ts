@@ -117,7 +117,7 @@ const getBackgroundCachedRate = (from: string, to: string): number | null => {
   if (cached) {
     const age = Date.now() - cached.timestamp;
     if (age < BACKGROUND_CACHE_TTL_MS) {
-      // Silent hit — only log at debug level to reduce noise
+      console.log(`[currencyConvert] Using background-cached rate for ${from}→${to}: ${cached.rate} (age: ${Math.floor(age / 1000)}s, source: CoinGecko/Tatum)`);
       return cached.rate;
     }
   }
