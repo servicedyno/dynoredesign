@@ -170,7 +170,7 @@ def run_tests():
         
         # 2. Get API keys
         api_key_data = get_api_keys(token)
-        encrypted_key = api_key_data["encrypted_key"]
+        encrypted_key = api_key_data["apiKey"]
         
         # 3. Create customer
         customer = create_customer(encrypted_key, token)
