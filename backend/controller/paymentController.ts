@@ -3111,6 +3111,8 @@ const settleCryptoTransaction = async ({
       sendAmount: merchantSendAmount,
       blockchainFee: totalBlockchainFee,
       adminFeeRetained: Number(receivedAmount),  // Track admin fee for sweep
+      gasFunded: gasFundingResult.amount || 0,  // SmartGas: amount of TRX/ETH funded
+      gasFundingTxId: gasFundingResult.txId || null,  // SmartGas: gas funding TX hash
     };
   } catch (error) {
     const message = getErrorMessage(error);
