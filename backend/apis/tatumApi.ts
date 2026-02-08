@@ -1063,6 +1063,10 @@ const batchFeeEstimation = async ({
     // Handle Multiple Transactions
     const gasFeesArray = await Promise.all(
       fromAddresses.map(async (fromAddress) => {
+        // ERC-20 tokens (USDT/USDC) have 6 decimals — truncate to avoid BigNumber parse errors
+        const sweepDecimals = isERC20 ? 6 : 8;
+        const sweepFactor = Math.pow(10, sweepDecimals);
+        const safeSweepAmount = (Math.floor(Number(amount) * sweepFactor) / sweepFactor).toString();
         const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
           chain: isERC20 ? "ETH" : currency,
           type: isERC20 ? "TRANSFER_ERC20" : "TRANSFER_NFT",
@@ -1071,7 +1075,7 @@ const batchFeeEstimation = async ({
             contractAddress: currency === "USDC-ERC20" ? process.env.USDC_CONTRACT : process.env.ETH_CONTRACT,
           }),
           recipient: toAddresses[0].address,
-          amount: amount.toString(),
+          amount: safeSweepAmount,
         })) as FeeEvmBased;
 
         return gasFees;
