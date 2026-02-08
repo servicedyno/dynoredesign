@@ -469,7 +469,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
 /**
  * Sweep addresses by USD threshold
  */
-export const sweepByThreshold = async (): Promise<void> => {
+export const sweepByThreshold = async (): Promise<number> => {
   const addressesWithFees = await merchantTempAddressModel.findAll({
     where: {
       status: "AVAILABLE",
@@ -477,7 +477,10 @@ export const sweepByThreshold = async (): Promise<void> => {
     },
   });
 
-  console.log(`[MerchantPool] Checking ${addressesWithFees.length} AVAILABLE addresses for threshold-based sweep...`);
+  // Skip logging entirely when nothing to check
+  if (addressesWithFees.length === 0) return 0;
+
+  console.log(`[MerchantPool] 💰 Threshold sweep: checking ${addressesWithFees.length} AVAILABLE addresses...`);
 
   const eligibleAddresses = [];
   
@@ -495,14 +498,10 @@ export const sweepByThreshold = async (): Promise<void> => {
       
       const usdAmount = await convertToUSD(walletType, cryptoAmount);
       
-      console.log(`[MerchantPool] ${walletAddress} (${walletType}): ${cryptoAmount} = $${usdAmount.toFixed(2)} USD (threshold: $${sweepConfig.value})`);
-      
       if (usdAmount >= (sweepConfig.value || 30)) {
-        console.log(`[MerchantPool]    ✅ Threshold met - marking for sweep`);
+        console.log(`[MerchantPool] ✅ ${walletAddress} (${walletType}): $${usdAmount.toFixed(2)} >= $${sweepConfig.value} threshold — sweeping`);
         await address.update({ status: "IN_USE" });
         eligibleAddresses.push(address);
-      } else {
-        console.log(`[MerchantPool]    ⏳ Below threshold - continuing to accumulate`);
       }
     } catch (error) {
       const message = getErrorMessage(error);
@@ -510,7 +509,9 @@ export const sweepByThreshold = async (): Promise<void> => {
     }
   }
 
-  console.log(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for threshold sweep`);
+  if (eligibleAddresses.length > 0) {
+    console.log(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for threshold sweep`);
+  }
 
   for (const address of eligibleAddresses) {
     try {
@@ -519,6 +520,8 @@ export const sweepByThreshold = async (): Promise<void> => {
       console.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
     }
   }
+  
+  return eligibleAddresses.length;
 };
 
 /**
