@@ -267,6 +267,7 @@ const getFastForexRate = async (from: string, to: string, amount: number): Promi
     if (data.result) {
       const rate = data.result[to.toUpperCase()];
       if (rate && rate > 0) {
+        console.log(`[currencyConvert] FastForex rate for ${from}→${to}: ${rate} (${data.ms}ms server)`);
         return {
           rate: rate,
           converted: amount * rate,
