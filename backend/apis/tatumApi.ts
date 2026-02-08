@@ -1448,20 +1448,38 @@ const assetBatchAddressesToOtherAddress = async ({
     transactions = transactionResponse;
   } else if (currency === "USDT-TRC20") {
     let transactionResponse: Array<{ txId: string; status: string; reason: string | null; fromAddress: unknown; toAddress?: string; errorMessage?: string; error?: string; cause?: string }> = [];
+
+    // Calculate dynamic feeLimit once for the batch (destination is the same)
+    let batchFeeLimit = 15; // Default fallback (was hardcoded 50)
+    try {
+      const feeLimitResult = await calculateOptimalFeeLimit(
+        fromAddress[0]?.address || destinationAddress,
+        destinationAddress,
+        process.env.TRX_CONTRACT
+      );
+      batchFeeLimit = feeLimitResult.feeLimit;
+      logCostSavings("batchTRC20Transfer", 50, batchFeeLimit, {
+        addressCount: fromAddress.length,
+        energyDeficit: feeLimitResult.energyDeficit,
+      });
+    } catch (feeLimitError) {
+      console.warn(`[assetBatchAddressesToOtherAddress] ⚠️ Dynamic feeLimit failed, using fallback ${batchFeeLimit} TRX`);
+    }
+
     // Send assets from all addresses to one address
     await Promise.allSettled(
       fromAddress.map(async (fromAddr) => {
         try {
           console.log("###USDT-TRC20 PAYLOAD: ", {
             amount: Number(fromAddr.value).toFixed(2).toString(),
-            feeLimit: 50,
+            feeLimit: batchFeeLimit,
             fromPrivateKey: fromAddr.privateKey,
             to: destinationAddress,
             tokenAddress: process.env.TRX_CONTRACT,
           });
           const result = await tatumSdk.blockchain.tron.tronTransferTrc20({
             amount: Number(fromAddr.value).toFixed(2).toString(),
-            feeLimit: 50,
+            feeLimit: batchFeeLimit,
             fromPrivateKey: fromAddr.privateKey,
             to: destinationAddress,
             tokenAddress: process.env.TRX_CONTRACT,
