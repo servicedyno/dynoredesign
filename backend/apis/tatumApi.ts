@@ -1242,7 +1242,7 @@ const assetToOtherAddress = async ({
 
     transaction = await tatumSdk.blockchain.tron.tronTransferTrc20({
       amount: truncatedAmount,
-      feeLimit: 50,
+      feeLimit: optimalFeeLimit,
       fromPrivateKey: privateKey,
       to: toAddress,
       tokenAddress: process.env.TRX_CONTRACT,
