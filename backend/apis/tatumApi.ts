@@ -1006,8 +1006,11 @@ const feeEstimation = async (
       slow: 3,
     };
   } else if (currency === "USDT-TRC20") {
+    // TRC20 token transfer on TRON requires energy (~31k for existing holder, ~65k for new holder)
+    // At 420 SUN/energy: ~13 TRX (existing) to ~27 TRX (new holder)
+    // With SmartGas 1.3x buffer: 20 × 1.3 = 26 TRX — covers existing holders safely
     fees = {
-      fast: 5,
+      fast: 20,
     };
   }
 
