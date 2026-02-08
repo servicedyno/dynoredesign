@@ -6744,6 +6744,149 @@ const processIncompletePayments = async () => {
     } else {
       console.log("No incomplete payments found that exceeded 1-hour grace period.");
     }
+    
+    // ============================================
+    // MERCHANT POOL: Also check for incomplete/underpaid pool addresses
+    // This covers payment link underpayments that used merchant pool addresses
+    // where the Redis key expired before the payment was processed
+    // ============================================
+    try {
+      const poolAddresses = await merchantTempAddressModel.findAll({
+        where: {
+          status: 'IN_USE',
+          current_payment_id: { [Op.ne]: null },
+          expected_amount: { [Op.gt]: 0 },
+        }
+      });
+      
+      if (poolAddresses.length > 0) {
+        console.log(`[processIncompletePayments] Found ${poolAddresses.length} merchant pool addresses IN_USE, checking for expired grace period...`);
+        
+        for (const poolAddr of poolAddresses) {
+          try {
+            const walletAddress = poolAddr.dataValues.wallet_address;
+            const walletType = poolAddr.dataValues.wallet_type;
+            const expectedAmount = parseFloat(poolAddr.dataValues.expected_amount || '0');
+            const paymentId = poolAddr.dataValues.current_payment_id;
+            const reservedAt = new Date(poolAddr.dataValues.reserved_at || poolAddr.dataValues.updatedAt);
+            const minutesSinceReserved = (Date.now() - reservedAt.getTime()) / 60000;
+            
+            // Only process if reserved for more than 60 minutes (grace period expired)
+            if (minutesSinceReserved < 60) {
+              continue; // Still within grace period
+            }
+            
+            console.log(`[processIncompletePayments] Pool address ${walletAddress} reserved ${minutesSinceReserved.toFixed(1)} min ago — checking balance...`);
+            
+            // Check if already processed
+            const existingTx = await customerTransactionModel.findOne({
+              where: {
+                [Op.or]: [
+                  { transaction_reference: paymentId },
+                  { transaction_reference: { [Op.like]: `%${walletAddress}%` } }
+                ],
+                status: { [Op.in]: ['successful', 'completed', 'confirmed'] }
+              }
+            });
+            
+            if (existingTx) {
+              console.log(`[processIncompletePayments] Pool ${walletAddress} already processed (tx: ${existingTx.dataValues.transaction_reference}). Skipping.`);
+              continue;
+            }
+            
+            // Check on-chain balance
+            const balanceData = await tatumApi.getAddressBalance(walletAddress, walletType);
+            const actualBalance = Number(balanceData?.balance || 0);
+            
+            if (actualBalance <= 0) {
+              console.log(`[processIncompletePayments] Pool ${walletAddress} has no balance. Skipping.`);
+              continue;
+            }
+            
+            console.log(`[processIncompletePayments] Pool ${walletAddress} has ${actualBalance} ${walletType} (expected ${expectedAmount}) — grace period expired, processing...`);
+            
+            // Get or reconstruct Redis data
+            let redisData = await getRedisItem("crypto-" + walletAddress);
+            
+            if (!redisData || Object.keys(redisData).length === 0) {
+              // Reconstruct from last_payment_context or DB fields
+              const lastContextRaw = poolAddr.dataValues.last_payment_context;
+              let paymentContext = null;
+              if (lastContextRaw) {
+                try {
+                  paymentContext = typeof lastContextRaw === 'string' ? JSON.parse(lastContextRaw) : lastContextRaw;
+                } catch (e) {
+                  console.warn(`[processIncompletePayments] Failed to parse last_payment_context for ${walletAddress}`);
+                }
+              }
+              
+              redisData = {
+                mode: 'CRYPTO',
+                amount: String(expectedAmount),
+                status: 'processing',
+                currency: walletType,
+                payment_id: paymentId,
+                unique_tx_id: paymentId,
+                is_merchant_pool: 'true',
+                temp_id: String(poolAddr.dataValues.temp_address_id),
+                adm_id: String(paymentContext?.adm_id || poolAddr.dataValues.owner_user_id),
+                company_id: String(paymentContext?.company_id || poolAddr.dataValues.current_company_id),
+                receivedAmount: String(actualBalance),
+                originalExpectedAmount: String(expectedAmount),
+                fee_payer: paymentContext?.fee_payer || 'company',
+                merchant_amount: paymentContext?.merchant_amount || null,
+                base_currency: paymentContext?.base_currency || 'USD',
+                base_amount: paymentContext?.base_amount || null,
+                webhook_url: paymentContext?.webhook_url || null,
+                callback_url: paymentContext?.callback_url || null,
+                link_id: paymentContext?.link_id || null,
+                ref: paymentContext?.ref || `customer-${paymentId}`,
+                processedByFallback: 'true',
+                lastAttempt: new Date().toISOString(),
+              };
+              
+              // Also reconstruct customer ref
+              const custRef = redisData.ref;
+              const existingCustData = await getRedisItem(custRef);
+              if (!existingCustData || Object.keys(existingCustData).length === 0) {
+                const custData = {
+                  adm_id: redisData.adm_id,
+                  company_id: redisData.company_id,
+                  base_currency: redisData.base_currency,
+                  base_amount: redisData.base_amount,
+                  fee_payer: redisData.fee_payer,
+                  merchant_amount: redisData.merchant_amount,
+                  webhook_url: redisData.webhook_url,
+                  callback_url: redisData.callback_url,
+                  link_id: redisData.link_id,
+                };
+                await setRedisItem(custRef, custData);
+              }
+              
+              await setRedisItem("crypto-" + walletAddress, redisData);
+              console.log(`[processIncompletePayments] Reconstructed Redis data for pool ${walletAddress}`);
+            } else {
+              // Update existing Redis data with current balance
+              redisData.status = 'processing';
+              redisData.receivedAmount = String(actualBalance);
+              redisData.lastAttempt = new Date().toISOString();
+              redisData.processedByFallback = 'true';
+              await setRedisItem("crypto-" + walletAddress, redisData);
+            }
+            
+            // Process via cryptoVerification
+            console.log(`[processIncompletePayments] 🚀 Processing pool ${walletAddress} via cryptoVerification...`);
+            const verificationResult = await cryptoVerification(walletAddress, true);
+            console.log(`[processIncompletePayments] ✅ Pool ${walletAddress} processed successfully`);
+            
+          } catch (poolError) {
+            console.error(`[processIncompletePayments] ❌ Failed to process pool address:`, poolError.message || poolError);
+          }
+        }
+      }
+    } catch (poolScanError) {
+      console.error("[processIncompletePayments] Error scanning merchant pool addresses:", poolScanError.message || poolScanError);
+    }
   } catch (e) {
     console.error("Error in processIncompletePayments:", e);
     const message = getErrorMessage(e);
