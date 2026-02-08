@@ -79,6 +79,7 @@ export const refreshBackgroundRateCache = async (): Promise<void> => {
     }
     
     // Fallback: Tatum — parallelize all rate fetches (already paid for, no extra cost)
+    // Note: Some pairs may 403 (e.g., TRX→GBP) — getTatumRate handles negative caching silently
     provider = 'Tatum';
     const tatumPromises: Promise<void>[] = [];
     for (const crypto of CACHE_CRYPTO_TARGETS) {
