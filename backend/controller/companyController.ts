@@ -435,6 +435,19 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
       const serverUrl = process.env.SERVER_URL?.endsWith('/') ? process.env.SERVER_URL : process.env.SERVER_URL + '/';
       photo = serverUrl + "images/" + file.filename;
     }
+    
+    // Validate grace_period_minutes: max 30 minutes (Payment Link only, not Direct API)
+    if (data.grace_period_minutes !== undefined && data.grace_period_minutes !== null) {
+      const parsed = parseInt(String(data.grace_period_minutes));
+      if (isNaN(parsed) || parsed < 1) {
+        return errorResponseHelper(res, 400, "grace_period_minutes must be at least 1 minute");
+      }
+      if (parsed > 30) {
+        return errorResponseHelper(res, 400, "grace_period_minutes cannot exceed 30 minutes");
+      }
+      data.grace_period_minutes = parsed;
+    }
+    
     const resData = await companyModel.update(
       {
         ...data,
