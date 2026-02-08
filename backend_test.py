@@ -64,11 +64,14 @@ def get_api_keys(token: str) -> Dict[str, Any]:
         raise TestFailedException(f"Failed to get API keys: {response.status_code} - {response.text}")
     
     data = response.json()
-    api_keys = data.get("data", [])
+    api_keys_data = data.get("data", {})
+    
+    # Get all keys from the response structure
+    all_keys = api_keys_data.get("all", [])
     
     # Find API key for company_id 38 (Bozzmail)
     target_key = None
-    for key in api_keys:
+    for key in all_keys:
         if key.get("company_id") == 38:
             target_key = key
             break
