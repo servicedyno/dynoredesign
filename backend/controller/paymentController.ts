@@ -2935,7 +2935,51 @@ const settleCryptoTransaction = async ({
       );
 
       merchantSendAmount = Number(userAmount);
-      
+
+      // === SmartGas: Fund gas (TRX/ETH) to temp address BEFORE token transfer ===
+      try {
+        if (isMerchantPool) {
+          const poolAddressRecord = await merchantTempAddressModel.findOne({
+            where: { wallet_address: fromAddress },
+          });
+          if (poolAddressRecord) {
+            console.log(`[settleCryptoTransaction] 🔧 SmartGas: Checking ${wallet_type} gas for ${currency} merchant transfer (${merchantSendAmount} → ${userAddress})...`);
+            gasFundingResult = await merchantPoolService.fundGasIfNeeded(
+              poolAddressRecord, currency, merchantSendAmount, userAddress
+            );
+          } else {
+            console.warn(`[settleCryptoTransaction] ⚠️ Pool address record not found for ${fromAddress}, skipping SmartGas`);
+          }
+        } else {
+          // Legacy temp address — use lightweight wrapper (no DB gas tracking)
+          console.log(`[settleCryptoTransaction] 🔧 SmartGas: Checking ${wallet_type} gas for legacy ${currency} transfer...`);
+          gasFundingResult = await merchantPoolService.fundGasIfNeeded(
+            { dataValues: { wallet_address: fromAddress }, update: async () => {} },
+            currency, merchantSendAmount, userAddress
+          );
+        }
+
+        // Wait for gas funding TX to confirm before attempting the token transfer
+        if (gasFundingResult.funded && gasFundingResult.txId) {
+          console.log(`[settleCryptoTransaction] ⏳ Waiting for gas funding TX ${gasFundingResult.txId} confirmation (${wallet_type})...`);
+          const gasConfirmation = await tatumApi.waitForTransactionConfirmation(
+            gasFundingResult.txId,
+            wallet_type,
+            30000  // 30s timeout — TRX ~3s blocks, ETH ~12s blocks
+          );
+          if (gasConfirmation.confirmed) {
+            console.log(`[settleCryptoTransaction] ✅ Gas funding confirmed in block ${gasConfirmation.blockNumber}`);
+          } else {
+            console.warn(`[settleCryptoTransaction] ⚠️ Gas funding TX not confirmed in timeout — proceeding with retry logic`);
+          }
+        } else if (!gasFundingResult.funded && gasFundingResult.reason) {
+          console.log(`[settleCryptoTransaction] ℹ️ SmartGas: ${gasFundingResult.reason}`);
+        }
+      } catch (gasError) {
+        console.error(`[settleCryptoTransaction] ⚠️ SmartGas funding failed: ${getErrorMessage(gasError)} — proceeding anyway (retry may succeed)`);
+      }
+      // === End SmartGas ===
+
       // Retry merchant transfer for token transfers
       merchantTransactionDetails = await withRetry(
         () => tatumApi.assetToOtherAddress({
