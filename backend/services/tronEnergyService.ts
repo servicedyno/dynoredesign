@@ -428,6 +428,128 @@ export const logCostSavings = (
   );
 };
 
+// ─── TRX Native Transfer Fee ────────────────────────────────────────────────
+
+// Bandwidth needed for a simple TRX native transfer (~270 bytes)
+const TRX_NATIVE_BANDWIDTH = 270;
+
+/**
+ * Calculate fee for a native TRX transfer.
+ * TRX native transfers use ONLY Bandwidth (no Energy).
+ * With 600 free daily Bandwidth points, most transfers are FREE.
+ * If bandwidth exhausted: ~0.27 TRX per transfer (270 bytes × 1000 SUN/byte).
+ */
+export const calculateDynamicTRXNativeFee = async (
+  senderAddress?: string
+): Promise<{ fast: number; medium: number; slow: number; bandwidthFree: boolean }> => {
+  let bandwidthFree = false;
+
+  if (senderAddress) {
+    try {
+      const resources = await getAccountResources(senderAddress);
+      if (resources.availableBandwidth >= TRX_NATIVE_BANDWIDTH) {
+        bandwidthFree = true;
+      }
+    } catch (_e) {
+      // Continue assuming no free bandwidth
+    }
+  }
+
+  if (bandwidthFree) {
+    console.log(`[TronEnergy] 🆓 TRX native transfer: FREE (bandwidth available)`);
+    return { fast: 0, medium: 0, slow: 0, bandwidthFree: true };
+  }
+
+  // Worst case: burn TRX for bandwidth
+  const networkParams = await getTronNetworkParams();
+  const costSun = TRX_NATIVE_BANDWIDTH * networkParams.bandwidthPriceSun;
+  const costTRX = costSun / 1_000_000;
+  const fee = Math.max(Math.ceil(costTRX * 1.1 * 10) / 10, 0.5); // 10% buffer, min 0.5 TRX
+
+  console.log(
+    `[TronEnergy] 📊 TRX native fee: ${fee} TRX (${TRX_NATIVE_BANDWIDTH} bandwidth @ ${networkParams.bandwidthPriceSun} SUN/point)`
+  );
+
+  return { fast: fee, medium: fee, slow: fee, bandwidthFree: false };
+};
+
+// ─── Optimization Diagnostics ────────────────────────────────────────────────
+
+/**
+ * Returns a full diagnostic snapshot of TRON fee optimization status.
+ * Useful for monitoring dashboards and verifying the service works.
+ */
+export const getOptimizationDiagnostics = async (
+  testAddress?: string
+): Promise<Record<string, unknown>> => {
+  const networkParams = await getTronNetworkParams();
+
+  let accountResources = null;
+  if (testAddress) {
+    try {
+      accountResources = await getAccountResources(testAddress);
+    } catch (_e) {
+      accountResources = { error: "Failed to fetch" };
+    }
+  }
+
+  // Calculate comparison: old vs new fees
+  const oldTRC20FeeTRX = 20;
+  const oldFeeLimitTRX = 50;
+  const oldNativeTRXFee = 10;
+
+  // New dynamic calculations
+  const newEnergyDeficit = TRC20_ENERGY.EXISTING_RECIPIENT; // Worst case: no staked Energy
+  const newTRC20CostSun = newEnergyDeficit * networkParams.energyPriceSun + TRC20_BANDWIDTH * networkParams.bandwidthPriceSun;
+  const newTRC20CostTRX = newTRC20CostSun / 1_000_000;
+
+  const newNativeCostSun = TRX_NATIVE_BANDWIDTH * networkParams.bandwidthPriceSun;
+  const newNativeCostTRX = newNativeCostSun / 1_000_000;
+
+  return {
+    service: "TRON Energy Optimization Service",
+    status: "active",
+    networkParams: {
+      energyPriceSun: networkParams.energyPriceSun,
+      bandwidthPriceSun: networkParams.bandwidthPriceSun,
+      fetchedAt: new Date(networkParams.timestamp).toISOString(),
+      source: "TronGrid API (cached 5 min)",
+    },
+    trc20Transfer: {
+      energyRequired: {
+        existingRecipient: TRC20_ENERGY.EXISTING_RECIPIENT,
+        newRecipient: TRC20_ENERGY.NEW_RECIPIENT,
+      },
+      bandwidthRequired: TRC20_BANDWIDTH,
+      costEstimate: {
+        worstCaseTRX: Math.ceil(newTRC20CostTRX * 1.2),
+        oldHardcodedTRX: oldTRC20FeeTRX,
+        savingsPercent: (((oldTRC20FeeTRX - newTRC20CostTRX) / oldTRC20FeeTRX) * 100).toFixed(1),
+      },
+      feeLimit: {
+        oldHardcodedTRX: oldFeeLimitTRX,
+        newDynamicMaxTRX: parseInt(process.env.TRON_MAX_FEE_LIMIT_TRX || "30"),
+        newDynamicMinTRX: parseInt(process.env.TRON_MIN_FEE_LIMIT_TRX || "5"),
+      },
+    },
+    trxNativeTransfer: {
+      bandwidthRequired: TRX_NATIVE_BANDWIDTH,
+      costEstimate: {
+        withBandwidthTRX: 0,
+        withoutBandwidthTRX: Math.ceil(newNativeCostTRX * 1.1 * 10) / 10,
+        oldHardcodedTRX: oldNativeTRXFee,
+        savingsPercent: (((oldNativeTRXFee - newNativeCostTRX) / oldNativeTRXFee) * 100).toFixed(1),
+      },
+    },
+    accountResources: accountResources,
+    config: {
+      TRON_MIN_FEE_LIMIT_TRX: process.env.TRON_MIN_FEE_LIMIT_TRX || "5",
+      TRON_MAX_FEE_LIMIT_TRX: process.env.TRON_MAX_FEE_LIMIT_TRX || "30",
+      TRON_ENERGY_PRICE_SUN: process.env.TRON_ENERGY_PRICE_SUN || "auto (from TronGrid)",
+    },
+  };
+};
+
 export default {
   getTronNetworkParams,
   getAccountResources,
