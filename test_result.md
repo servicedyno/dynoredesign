@@ -7,6 +7,63 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "TRON TRC20 Fee Optimization — Dynamic Energy-Aware feeLimit & SmartGas"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/tronEnergyService.ts"
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/services/blockchainFeeService.ts"
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          TRON TRC20 Fee Optimization — 5-phase implementation:
+          
+          PHASE 1: NEW tronEnergyService.ts
+          - getTronNetworkParams(): Fetches live Energy price (100 SUN post Proposal #104) from TronGrid API
+          - getAccountResources(address): Checks staked Energy/Bandwidth for any TRON address
+          - isRecipientActivatedForToken(): Checks if recipient is new (130k energy) vs existing (65k)
+          - calculateOptimalFeeLimit(): Dynamic feeLimit based on Energy available + network price
+          - calculateDynamicTRC20Fee(): Returns TRX cost considering available staked Energy
+          - logCostSavings(): Logs old vs new fee comparison for visibility
+          - All results cached in Redis (5-min network params, 30-sec account resources)
+          
+          PHASE 2: tatumApi.ts — Dynamic feeLimit + fee estimation
+          - feeEstimation() for USDT-TRC20: Replaced hardcoded "fast: 20" with calculateDynamicTRC20Fee()
+          - assetToOtherAddress() USDT-TRC20: Replaced "feeLimit: 50" with calculateOptimalFeeLimit()
+          - assetBatchAddressesToOtherAddress() USDT-TRC20: Replaced "feeLimit: 50" (2 locations) with dynamic feeLimit
+          - batchFeeEstimation() for USDT-TRC20: Replaced "fast: 20" with dynamic calculation
+          
+          PHASE 3: blockchainFeeService.ts
+          - fetchTronFee(): Now uses getTronNetworkParams() for live data, Tatum API as fallback
+          - Updated fallback energy price from stale 420 SUN to 100 SUN (post Proposal #104)
+          
+          PHASE 4: merchantPoolSweep.ts — Energy-aware SmartGas
+          - fundGasIfNeeded(): Now checks staked Energy before funding TRX
+          - If account has ≥65k Energy + sufficient Bandwidth → ZERO gas funding (full savings)
+          - If account has Energy but not Bandwidth → funds only ~0.5 TRX for bandwidth
+          - Falls through to standard fee estimation if Energy insufficient
+          
+          PHASE 5: Configuration
+          - Added TRON_MIN_FEE_LIMIT_TRX=5, TRON_MAX_FEE_LIMIT_TRX=30 to .env
+          - Optional TRON_ENERGY_PRICE_SUN override for testing/emergencies
+          
+          VERIFY:
+          1. Backend healthy, no TS compilation errors
+          2. No "feeLimit: 50" remaining in tatumApi.ts (should see dynamic values)
+          3. tronEnergyService.ts exists with all exported functions
+          4. blockchainFeeService.ts references getTronNetworkParams (not hardcoded 420)
+          5. merchantPoolSweep.ts imports from tronEnergyService and checks Energy before funding
+          6. .env has TRON_MIN_FEE_LIMIT_TRX and TRON_MAX_FEE_LIMIT_TRX
+          7. Create a USDT-TRC20 payment via Legacy API and check logs for "[TronEnergy]" entries
+          
+          Credentials: richard@dyno.pt / Katiekendra123@
+          Base URL: https://code-analyzer-256.preview.emergentagent.com
   - task: "SmartGas Integration for Merchant Token Transfers Testing"
     implemented: true
     working: true
