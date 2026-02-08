@@ -7,6 +7,39 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "FIX: Fallback safety nets for missed/incomplete merchant pool payments"
+    implemented: true
+    working: "NA"
+    files: 
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          TWO FIXES for fallback safety nets:
+          
+          FIX 1: checkMissedPayments (merchantPoolMonitoring.ts ~line 377)
+          PROBLEM: When Tatum getIncomingTransactions returned empty 3 times, the code classified 
+          real payment balance as "pre-existing dust" and released the address, losing the funds.
+          FIX: Before giving up, check if address has current_payment_id AND balance > 5x dust threshold.
+          If so, reconstruct Redis data from last_payment_context (saved in DB) and process via 
+          cryptoVerification. Only classify as dust if no payment context exists.
+          
+          FIX 2: processIncompletePayments (paymentController.ts ~line 6744)
+          PROBLEM: This cron only scanned tbl_user_temp_address (non-pool). Merchant pool addresses 
+          (tbl_merchant_temp_address) were completely missed, so payment link underpayments on pool 
+          addresses never got processed after grace period.
+          FIX: Added merchant pool scanning section. Queries tbl_merchant_temp_address WHERE 
+          status='IN_USE' AND reserved > 60 minutes. Checks balance, reconstructs Redis from 
+          last_payment_context, and processes via cryptoVerification.
+          
+          Credentials: richard@dyno.pt / Katiekendra123@
+          Base URL: https://setup-deps-6.preview.emergentagent.com
+
   - task: "FIX: Direct API underpayment should process immediately (not wait like Payment Link)"
     implemented: true
     working: true
