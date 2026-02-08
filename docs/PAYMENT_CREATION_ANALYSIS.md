@@ -206,7 +206,7 @@ const { id } = await tatumApi.createSubscription(
 
 **Current SERVER_URL:**
 ```env
-SERVER_URL=https://dep-installer-44.preview.emergentagent.com
+SERVER_URL=https://dependency-setup-11.preview.emergentagent.com
 ```
 
 ---

@@ -10,7 +10,7 @@ import sys
 import re
 
 # Configuration
-BASE_URL = "https://dep-installer-44.preview.emergentagent.com"
+BASE_URL = "https://dependency-setup-11.preview.emergentagent.com"
 
 def test_backend_health():
     """Test 7: Backend Health Check"""
