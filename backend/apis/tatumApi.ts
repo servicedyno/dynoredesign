@@ -171,20 +171,22 @@ async function decryptSymmetric(ciphertext, keyId) {
   return plaintext;
 }
 
+let tatumSdkInitLogged = false;
+
 const getTatumSDK = async () => {
   try {
     // Use testnet key if in testnet mode
     if (isTestnet() && process.env.TATUM_TESTNET_KEY) {
-      console.log('[getTatumSDK] Using TESTNET key');
+      if (!tatumSdkInitLogged) console.log('[getTatumSDK] Using TESTNET key');
       const tatumSdk = TatumApi(process.env.TATUM_TESTNET_KEY);
+      tatumSdkInitLogged = true;
       return tatumSdk;
     }
     
     let tatumKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
-    console.log('[getTatumSDK] tatumKey exists:', !!tatumKey, 'length:', tatumKey?.length);
     
     if (!tatumKey) {
-      console.log('[getTatumSDK] No Tatum key found in .env, attempting Secret Manager...');
+      if (!tatumSdkInitLogged) console.log('[getTatumSDK] No Tatum key found in .env, attempting Secret Manager...');
       const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
       const client = new SecretManagerServiceClient({
         credentials: {
@@ -201,13 +203,14 @@ const getTatumSDK = async () => {
       });
       const payload = version.payload.data.toString();
       tatumKey = payload;
-      console.log('[getTatumSDK] Using key from Secret Manager');
+      if (!tatumSdkInitLogged) console.log('[getTatumSDK] Using key from Secret Manager');
     } else {
-      console.log('[getTatumSDK] Using key from .env file');
+      if (!tatumSdkInitLogged) console.log('[getTatumSDK] Using key from .env file');
     }
     
     const tatumSdk = TatumApi(tatumKey);
-    console.log('[getTatumSDK] TatumApi initialized:', !!tatumSdk);
+    if (!tatumSdkInitLogged) console.log('[getTatumSDK] TatumApi initialized: true');
+    tatumSdkInitLogged = true;
     return tatumSdk;
   } catch (e) {
     console.log('[getTatumSDK] ERROR:', e);
