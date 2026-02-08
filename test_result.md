@@ -646,6 +646,54 @@ current_test_task:
           CONCLUSION: Both fixes are NOW FULLY IMPLEMENTED and production-ready. The previous failures have been corrected:
           - Reservation timeout now uses configurable 120-minute value from environment
           - Orphan payment detection system fully operational with context saving and recovery logic
+  - task: "API Documentation (Swagger) Update for Direct API vs Payment Link Differences"
+    implemented: true
+    working: true
+    files:
+      - "/api/docs (Swagger UI)"
+      - "/api/docs.json (OpenAPI specification)"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ API DOCUMENTATION VERIFICATION COMPLETED: 100% success rate (7/7 tests passed).
+          
+          🎉 ALL SWAGGER DOCUMENTATION REQUIREMENTS SUCCESSFULLY VERIFIED:
+          
+          ✅ TEST 1 - SWAGGER UI ACCESSIBILITY: /api/docs returns HTTP 200 with HTML content - Swagger UI interface fully accessible
+          ✅ TEST 2 - OPENAPI SPEC VALIDITY: /api/docs.json returns HTTP 200 with valid JSON containing exactly 178 documented API paths
+          ✅ TEST 3 - DIRECT API ENDPOINT DOCUMENTATION: /api/user/cryptoPayment POST description contains ALL required phrases:
+            - "No grace period" - Direct API payments process immediately ✅
+            - "No underpayment threshold" - No minimum payment comparison ✅ 
+            - "No overpayment threshold" - No maximum payment handling ✅
+            - "Payment Links only" - Settings apply only to Payment Links ✅
+          ✅ TEST 4 - COMPANY SETTINGS DOCUMENTATION: /api/company/updateCompany/{id} PUT description properly documents:
+            - "Payment Links only" restriction - payment settings don't affect Direct API ✅
+            - "max: 30 min" grace period limit clearly documented ✅
+          ✅ TEST 5 - WEBHOOK DOCUMENTATION: Webhook examples correctly differentiate between Direct API and Payment Link:
+            - Direct API underpaid example has "note" field instead of grace_period_minutes ✅
+            - Payment Link underpaid example retains grace_period_minutes field ✅
+            - Webhook documentation section found with proper examples ✅
+          ✅ TEST 6 - FAQ SECTION WITH COMPARISON TABLE: API info description includes comprehensive comparison:
+            - Markdown table structure with pipe characters found ✅
+            - "Payment Links" vs "Direct API" references present ✅
+            - "❌ Not used" indicators for Direct API exclusions ✅
+            - Payment settings comparison (grace_period, underpayment, overpayment) documented ✅
+          ✅ TEST 7 - BACKEND HEALTH: /health endpoint returns HTTP 200 - backend operational ✅
+          
+          🔧 DOCUMENTATION VERIFICATION RESULTS:
+          1. ✅ Swagger UI accessible at https://dep-installer-44.preview.emergentagent.com/api/docs
+          2. ✅ OpenAPI specification valid JSON with 178 documented API endpoints
+          3. ✅ Direct API cryptoPayment endpoint clearly documents no grace period, no thresholds
+          4. ✅ Company settings properly annotated "Payment Links only" with max 30min cap
+          5. ✅ Webhook examples correctly show Direct API vs Payment Link differences
+          6. ✅ FAQ section includes comprehensive comparison table with ❌ Not used indicators
+          7. ✅ Backend health check passed - all services operational
+          
+          CONCLUSION: API documentation has been successfully updated to clearly differentiate between Direct API and Payment Link payment handling. All required documentation elements are present and correctly describe the behavioral differences between the two payment methods.
   - task: "Crash Recovery for Stale 'processing' Payments — payment.confirmed webhook fix"
     implemented: true
     working: true
