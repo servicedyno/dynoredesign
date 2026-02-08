@@ -436,7 +436,7 @@ const getData = async (req: express.Request, res: express.Response) => {
           
           // Override defaults with company-specific settings if configured
           if (companyData.grace_period_minutes !== undefined && companyData.grace_period_minutes !== null) {
-            paymentSettings.grace_period_minutes = parseInt(String(companyData.grace_period_minutes));
+            paymentSettings.grace_period_minutes = Math.min(parseInt(String(companyData.grace_period_minutes)), 30); // Max 30 minutes
           }
           if (companyData.overpayment_threshold_usd !== undefined && companyData.overpayment_threshold_usd !== null) {
             paymentSettings.overpayment_threshold_usd = parseFloat(String(companyData.overpayment_threshold_usd));
