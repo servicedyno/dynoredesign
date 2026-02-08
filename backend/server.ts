@@ -135,6 +135,23 @@ app.get("/", async (_req: express.Request, res: express.Response) => {
   });
 });
 
+// ─── Fee Optimization Diagnostics ────────────────────────────────────────────
+app.get("/diagnostics/fee-optimization", async (req: express.Request, res: express.Response) => {
+  try {
+    const testAddress = req.query.address as string | undefined;
+    const diagnostics = await getOptimizationDiagnostics(testAddress);
+    res.status(200).json({
+      success: true,
+      ...diagnostics,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: getErrorMessage(error),
+    });
+  }
+});
+
 cron.schedule("*/30 * * * *", function () {
   log("Cron: USDT check running", "info");
   paymentController.checkingUSDT();
