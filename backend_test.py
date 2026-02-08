@@ -220,14 +220,14 @@ def verify_company_model():
         total_tests = 1
         
         # Test 5.1: grace_period_minutes comment mentions "Max 30" and "Payment Links" and "Direct API"
-        comment_patterns = ['Max 30', 'Payment Link', 'NOT.*Direct API']
+        comment_patterns = ['Max 30', 'Payment Link', 'Does NOT apply to Direct API']
         
         found_comment = all(pattern in content for pattern in comment_patterns)
         if found_comment:
-            log_test_result("Comment mentions Max 30, Payment Links, and NOT Direct API", True, "Found all required comment patterns")
+            log_test_result("Comment mentions Max 30, Payment Links, and Does NOT apply to Direct API", True, "Found all required comment patterns")
             tests_passed += 1
         else:
-            log_test_result("Comment mentions Max 30, Payment Links, and NOT Direct API", False, "Missing comment patterns")
+            log_test_result("Comment mentions Max 30, Payment Links, and Does NOT apply to Direct API", False, "Missing comment patterns")
         
         return tests_passed == total_tests
     
