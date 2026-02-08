@@ -144,7 +144,7 @@ def create_usdt_trc20_payment(api_key: str, token: str) -> Dict[str, Any]:
         raise TestFailedException(f"No payment data in response: {data}")
     
     # Verify required fields
-    required_fields = ["temp_address", "crypto_amount", "currency"]
+    required_fields = ["address", "amount", "currency"]
     missing_fields = [field for field in required_fields if not payment.get(field)]
     if missing_fields:
         raise TestFailedException(f"Missing required fields in payment response: {missing_fields}")
@@ -153,8 +153,9 @@ def create_usdt_trc20_payment(api_key: str, token: str) -> Dict[str, Any]:
         raise TestFailedException(f"Expected currency USDT-TRC20, got: {payment.get('currency')}")
     
     log_success(f"USDT-TRC20 payment created:")
-    log_success(f"  - Address: {payment.get('temp_address')}")
-    log_success(f"  - Amount: {payment.get('crypto_amount')} {payment.get('currency')}")
+    log_success(f"  - Address: {payment.get('address')}")
+    log_success(f"  - Amount: {payment.get('amount')} {payment.get('currency')}")
+    log_success(f"  - Transaction ID: {payment.get('transaction_id')}")
     
     return payment
 
