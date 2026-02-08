@@ -925,8 +925,10 @@ const tatumCryptoWebHook = async (
             lastAttempt: new Date().toISOString(),
           });
           
-          // Set TTL for underpayment grace period (30 minutes)
-          await setRedisTTL("crypto-" + address, 1800);
+          // Set TTL for underpayment grace period (merchant-specific, max 30 minutes)
+          const graceTtlSeconds = merchantGracePeriodMinutes * 60;
+          console.log(`[tatumCryptoWebHook] Setting grace period TTL: ${merchantGracePeriodMinutes} minutes (${graceTtlSeconds}s) for company ${customerData?.company_id}`);
+          await setRedisTTL("crypto-" + address, graceTtlSeconds);
           
           // Send underpayment webhook to merchant
           if (customerData && customerData.company_id) {
