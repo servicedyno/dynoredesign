@@ -3149,6 +3149,50 @@ ports:
         agent: "testing"
         comment: "✅ VERIFIED: Invoice API Fee Hiding working correctly. GET /api/invoices endpoint returns empty response (no invoices found) which is valid behavior. The fee hiding logic is properly implemented - when invoices exist, they will contain processing_fee but hide internal fee fields (fixed_fee, transaction_fee_percent, blockchain_buffer_percent) as required."
 
+  - task: "BUGFIX: checkSweepProfitability 3 bugs + sweep fundGasIfNeeded missing params"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          FOUR FIXES in merchantPoolSweep.ts checkSweepProfitability + sweep fundGasIfNeeded:
+          
+          BUG A — `fast` property never extracted from feeData.
+          USDT-TRC20 feeData = { fast: 20 }, but code only checked gasPrice/gasLimit, fee, slow.
+          estimatedFee always = 0 for TRC20.
+          FIX: Added `feeData?.fast` as first check (preferred, works for all token types).
+          
+          BUG B — gasPrice/gasLimit division by 1e18 instead of 1e9.
+          gasPrice from feeEstimation is in Gwei (1e9 Wei), but code divided by 1e18.
+          Result: estimatedFee ≈ 0 for all ERC20 tokens.
+          FIX: Changed divisor from 1e18 to 1e9.
+          
+          BUG C — Fee converted using token price (USDT/USDC) instead of gas token (TRX/ETH).
+          convertToUSD("USDT-TRC20", 20) → $20 (wrong! Should be 20 TRX → $5.60).
+          FIX: Added `const feeCurrency = GAS_TOKEN_MAPPING[walletType] || walletType` and
+          use feeCurrency for fee→USD conversion. Added logging for profitability.
+          
+          BUG D — Sweep fundGasIfNeeded called without transfer parameters.
+          Was: fundGasIfNeeded(poolAddress, walletType) → defaults to amount=100, recipient=feeWallet.
+          FIX: Now passes actualBalance and adminWallet for accurate gas estimation:
+          fundGasIfNeeded(poolAddress, walletType, actualBalance, adminWalletForGas).
+          
+          VERIFY:
+          1. grep "GAS_TOKEN_MAPPING\[walletType\]" merchantPoolSweep.ts → should find in profitability check
+          2. grep "1e9" merchantPoolSweep.ts → should find the corrected divisor
+          3. grep "feeData?.fast" merchantPoolSweep.ts → should find the new extraction
+          4. grep "actualBalance, adminWalletForGas" merchantPoolSweep.ts → should find in sweep fundGasIfNeeded call
+          5. npx tsc --noEmit → 0 errors
+          6. GET /health → healthy
+          
+          Credentials: richard@dyno.pt / Katiekendra123@
+          Base URL: https://init-install.preview.emergentagent.com
   - task: "Architecture Fixes Testing - Payment getData Endpoint"
     implemented: true
     working: true
