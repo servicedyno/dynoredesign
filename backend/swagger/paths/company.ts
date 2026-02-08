@@ -313,16 +313,16 @@
  *               overpayment_threshold_usd:
  *                 type: number
  *                 format: float
- *                 description: '💰 OPTIONAL: Minimum overpayment amount (USD) to trigger special handling. If customer overpays by less than this amount, it will be treated as exact payment. Default: $5.00'
+ *                 description: '💰 OPTIONAL: Minimum overpayment amount (USD) to trigger special handling. **Payment Links only** — Direct API processes full amount regardless. Default: $5.00'
  *                 example: 5.00
  *               underpayment_threshold_usd:
  *                 type: number
  *                 format: float
- *                 description: '💰 OPTIONAL: Maximum underpayment amount (USD) to accept as full payment. If customer underpays by less than this amount, payment is accepted as complete. Default: $1.00'
+ *                 description: '💰 OPTIONAL: Maximum underpayment amount (USD) to accept as full payment. **Payment Links only** — Direct API processes whatever is received. Default: $1.00'
  *                 example: 1.00
  *               grace_period_minutes:
  *                 type: integer
- *                 description: '⏱️ OPTIONAL: Time (in minutes) to allow customer to complete partial/underpayment. Default: 30 minutes'
+ *                 description: '⏱️ OPTIONAL: Time (in minutes) to allow customer to complete partial/underpayment. **Payment Links only** — Direct API processes immediately. Min: 1, Max: 30. Default: 30 minutes'
  *                 example: 30
  *     responses:
  *       200:
