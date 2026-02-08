@@ -383,8 +383,119 @@ export const checkMissedPayments = async (): Promise<{
           await setRedisItem(failKey, { count: String(failCount), lastCheck: new Date().toISOString() });
           
           if (failCount >= 3) {
+            // Before giving up, check if this is a REAL payment with significant balance
+            // If address has current_payment_id and balance is above dust, try to process using last_payment_context
+            const hasPaymentContext = !!currentPaymentId && balance > (dustThreshold * 5); // Well above dust
+            
+            if (hasPaymentContext) {
+              console.log(`[MerchantPool] ⚠️ ${walletAddress} - Tatum tx lookup failed ${failCount} times BUT address has payment context and significant balance ${balance} ${walletType}`);
+              console.log(`[MerchantPool] 🔄 Attempting to process using payment context (bypassing tx lookup)...`);
+              
+              // Try to get last_payment_context from DB
+              const addrRecord = await merchantTempAddressModel.findOne({ where: { wallet_address: walletAddress } });
+              const lastContextRaw = addrRecord?.dataValues?.last_payment_context;
+              let paymentContext = null;
+              
+              if (lastContextRaw) {
+                try {
+                  paymentContext = typeof lastContextRaw === 'string' ? JSON.parse(lastContextRaw) : lastContextRaw;
+                  console.log(`[MerchantPool] 📝 Found last_payment_context for ${walletAddress} (payment: ${paymentContext.payment_id})`);
+                } catch (e) {
+                  console.warn(`[MerchantPool] ⚠️ Failed to parse last_payment_context for ${walletAddress}`);
+                }
+              }
+              
+              // Reconstruct Redis data from payment context or DB fields
+              const reconstructedRedis = {
+                mode: 'CRYPTO',
+                amount: String(expectedAmount),
+                status: 'processing',
+                currency: walletType,
+                payment_id: currentPaymentId,
+                unique_tx_id: currentPaymentId,
+                is_merchant_pool: 'true',
+                temp_id: String(addr.dataValues.temp_address_id),
+                adm_id: String(paymentContext?.adm_id || ownerId),
+                company_id: String(paymentContext?.company_id || companyId),
+                receivedAmount: String(balance),
+                originalExpectedAmount: String(expectedAmount),
+                fee_payer: paymentContext?.fee_payer || 'company',
+                merchant_amount: paymentContext?.merchant_amount || null,
+                base_currency: paymentContext?.base_currency || 'USD',
+                base_amount: paymentContext?.base_amount || null,
+                webhook_url: paymentContext?.webhook_url || null,
+                callback_url: paymentContext?.callback_url || null,
+                link_id: paymentContext?.link_id || null,
+                ref: paymentContext?.ref || `customer-${currentPaymentId}`,
+                processedByFallback: 'true',
+                txLookupFailed: 'true',
+                lastAttempt: new Date().toISOString(),
+              };
+              
+              // Also reconstruct customer ref
+              const custRef = reconstructedRedis.ref;
+              const existingCustData = await getRedisItem(custRef);
+              if (!existingCustData || Object.keys(existingCustData).length === 0) {
+                const custData = {
+                  adm_id: reconstructedRedis.adm_id,
+                  company_id: reconstructedRedis.company_id,
+                  base_currency: reconstructedRedis.base_currency,
+                  base_amount: reconstructedRedis.base_amount,
+                  fee_payer: reconstructedRedis.fee_payer,
+                  merchant_amount: reconstructedRedis.merchant_amount,
+                  webhook_url: reconstructedRedis.webhook_url,
+                  callback_url: reconstructedRedis.callback_url,
+                  link_id: reconstructedRedis.link_id,
+                  customer_name: paymentContext?.customer_name || null,
+                  customer_email: paymentContext?.customer_email || null,
+                };
+                await setRedisItem(custRef, custData);
+                console.log(`[MerchantPool] 📝 Reconstructed customer data: ${custRef}`);
+              }
+              
+              await setRedisItem("crypto-" + walletAddress, reconstructedRedis);
+              console.log(`[MerchantPool] 📝 Reconstructed Redis data for ${walletAddress} — processing via cryptoVerification`);
+              
+              try {
+                const verificationResult = await paymentController.cryptoVerification(walletAddress, true) as { duplicate?: boolean; status?: number; paymentStatus?: string };
+                
+                if (verificationResult?.duplicate) {
+                  console.log(`[MerchantPool] ⏭️ Payment already processed (duplicate)`);
+                  result.alreadyProcessed++;
+                } else if (verificationResult?.status === 200 || verificationResult?.paymentStatus === 'completed' || verificationResult?.paymentStatus === 'complete') {
+                  console.log(`[MerchantPool] ✅ MISSED PAYMENT RECOVERED (via context fallback)!`);
+                  console.log(`[MerchantPool]   - Address: ${walletAddress}, Amount: ${balance} ${walletType}`);
+                  result.processed++;
+                  
+                  cronLogger?.info?.("MISSED PAYMENT RECOVERED VIA CONTEXT", {
+                    address: walletAddress,
+                    currency: walletType,
+                    amount: balance,
+                    expectedAmount,
+                    paymentId: currentPaymentId,
+                    txLookupFailed: true,
+                  });
+                } else {
+                  console.log(`[MerchantPool] ⚠️ cryptoVerification returned:`, verificationResult);
+                  result.errors.push(`Context fallback verification returned unexpected result for ${walletAddress}`);
+                }
+              } catch (verifyError: unknown) {
+                const err = verifyError as { paymentStatus?: string; amount?: number; message?: string };
+                if (err?.paymentStatus === 'incomplete') {
+                  console.log(`[MerchantPool] 📋 Partial payment via context fallback - ${err.amount} ${walletType} remaining`);
+                  result.processed++;
+                } else {
+                  console.error(`[MerchantPool] ❌ Context fallback cryptoVerification failed:`, err.message || verifyError);
+                  result.errors.push(`Context fallback verification failed for ${walletAddress}: ${err.message}`);
+                }
+              }
+              
+              await deleteRedisItem(failKey);
+              continue;
+            }
+            
+            // No payment context or balance too low — truly dust, release
             console.log(`[MerchantPool] ⚠️ ${walletAddress} - No incoming txs found after ${failCount} checks. Balance ${balance} ${walletType} is likely pre-existing dust. Releasing address.`);
-            // Release the reservation to stop repeated false alerts
             await merchantTempAddressModel.update(
               { status: 'AVAILABLE', current_payment_id: null, expected_amount: null, reserved_until: null, current_company_id: null },
               { where: { wallet_address: walletAddress } }
