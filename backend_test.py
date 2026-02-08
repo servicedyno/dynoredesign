@@ -12,7 +12,7 @@ import sys
 from typing import Dict, Any, List
 
 # Test configuration
-BASE_URL = "https://install-helper-26.preview.emergentagent.com"
+BASE_URL = "https://code-analyzer-256.preview.emergentagent.com"
 CREDENTIALS = {
     "email": "richard@dyno.pt", 
     "password": "Katiekendra123@"

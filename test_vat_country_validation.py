@@ -8,7 +8,7 @@ import requests
 import json
 from datetime import datetime
 
-BASE_URL = "https://install-helper-26.preview.emergentagent.com"
+BASE_URL = "https://code-analyzer-256.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials

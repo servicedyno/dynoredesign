@@ -27,7 +27,7 @@ import os
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://install-helper-26.preview.emergentagent.com"
+BACKEND_URL = "https://code-analyzer-256.preview.emergentagent.com"
 TEST_USER_EMAIL = "richard@dyno.pt"
 TEST_USER_PASSWORD = "Katiekendra123@"
 COMPANY_ID = 38

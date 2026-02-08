@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://install-helper-26.preview.emergentagent.com/api"
+BASE_URL = "https://code-analyzer-256.preview.emergentagent.com/api"
 
 # First get payment data
 print("1. Getting payment data...")

@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://install-helper-26.preview.emergentagent.com/api
+Development: https://code-analyzer-256.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 
