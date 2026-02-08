@@ -831,7 +831,10 @@ const tatumCryptoWebHook = async (
       }
       
       // Check if underpayment is within acceptable threshold (treat as full payment)
-      const isMinorUnderpayment = isUnderpayment && underpaymentAmountUsd <= underpaymentThresholdUsd;
+      // NOTE: Minor underpayment threshold ONLY applies to Payment Links
+      // Direct API processes whatever is received — no threshold logic
+      const linkIdForThreshold = customerData?.link_id || items?.link_id || null;
+      const isMinorUnderpayment = isUnderpayment && !!linkIdForThreshold && underpaymentAmountUsd <= underpaymentThresholdUsd;
       
       console.log(`[tatumCryptoWebHook] Payment analysis:
         - Expected: ${expectedAmount} ${items?.currency || payload.asset}
