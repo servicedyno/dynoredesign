@@ -239,7 +239,6 @@ const getCryptoRateViaTatum = async (from: string, to: string): Promise<number |
     if (fromRate && toRate) {
       // fromRate = "1 USDT in FROM currency", toRate = "1 USDT in TO currency"
       const rate = toRate / fromRate;
-      console.log(`[currencyConvert] Tatum fiat rate ${from}→${to}: ${rate} (via USDT proxy)`);
       return rate;
     }
   }
