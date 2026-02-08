@@ -1,468 +1,547 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Testing - Direct API Underpayment Fix Verification
-=================================================================
-
-This script tests the fix for Direct API underpayment handling in DynoPay's webhook handler.
-The fix ensures Direct API underpayments are processed immediately with actual received amount,
-while Payment Link underpayments still wait for remaining payment.
-
-Test Focus:
-1. Code review verification of branching logic
-2. Backend health check
-3. TypeScript compilation verification
+Backend Testing for Fallback Safety Net Fixes
+Testing the two fallback safety net fixes for missed/incomplete merchant pool payments in DynoPay.
 """
 
 import requests
 import json
-import os
-from datetime import datetime
+import sys
+import time
+from datetime import datetime, timezone
 
-# Configuration
+# Test configuration
 BASE_URL = "https://setup-deps-6.preview.emergentagent.com"
-API_BASE_URL = f"{BASE_URL}/api"
-
-# Test credentials from review request
-TEST_EMAIL = "richard@dyno.pt"
-TEST_PASSWORD = "Katiekendra123@"
+CREDENTIALS = {
+    "email": "richard@dyno.pt",
+    "password": "Katiekendra123@"
+}
 
 class BackendTester:
     def __init__(self):
+        self.base_url = BASE_URL
+        self.auth_token = None
         self.session = requests.Session()
-        self.jwt_token = None
-        self.company_id = None
         self.results = {
-            "timestamp": datetime.now().isoformat(),
-            "tests": [],
-            "summary": {
-                "total": 0,
-                "passed": 0,
-                "failed": 0,
-                "success_rate": 0
-            }
+            "total_tests": 0,
+            "passed_tests": 0,
+            "failed_tests": 0,
+            "test_details": []
         }
 
-    def log_test(self, test_name, status, details, expected=None, actual=None):
-        """Log test result"""
-        test_result = {
-            "test": test_name,
+    def log_test_result(self, test_name, passed, details="", expected="", actual=""):
+        """Log test result with details"""
+        self.results["total_tests"] += 1
+        if passed:
+            self.results["passed_tests"] += 1
+            status = "✅ PASS"
+        else:
+            self.results["failed_tests"] += 1
+            status = "❌ FAIL"
+        
+        result = {
+            "test_name": test_name,
             "status": status,
             "details": details,
-            "timestamp": datetime.now().isoformat()
+            "expected": expected,
+            "actual": actual,
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
+        self.results["test_details"].append(result)
         
-        if expected is not None:
-            test_result["expected"] = expected
-        if actual is not None:
-            test_result["actual"] = actual
-            
-        self.results["tests"].append(test_result)
-        self.results["summary"]["total"] += 1
-        
-        if status == "PASS":
-            self.results["summary"]["passed"] += 1
-            print(f"✅ {test_name}")
-        else:
-            self.results["summary"]["failed"] += 1
-            print(f"❌ {test_name}: {details}")
-            
-        return status == "PASS"
+        print(f"{status} - {test_name}")
+        if details:
+            print(f"    Details: {details}")
+        if not passed and expected and actual:
+            print(f"    Expected: {expected}")
+            print(f"    Actual: {actual}")
 
     def authenticate(self):
-        """Authenticate with DynoPay backend"""
+        """Authenticate with backend and get token"""
         try:
-            response = self.session.post(f"{API_BASE_URL}/user/login", json={
-                "email": TEST_EMAIL,
-                "password": TEST_PASSWORD
-            })
+            print("🔐 Authenticating with backend...")
+            
+            response = self.session.post(
+                f"{self.base_url}/api/user/login",
+                json=CREDENTIALS,
+                timeout=10
+            )
             
             if response.status_code == 200:
                 data = response.json()
-                # Handle the nested response structure
-                if 'data' in data and 'accessToken' in data['data']:
-                    self.jwt_token = data['data']['accessToken']
-                    # Look for company_id in userData
-                    user_data = data['data'].get('userData', {})
-                    # Try different field names that might contain company_id
-                    self.company_id = (user_data.get('company_id') or 
-                                      user_data.get('user_id') or
-                                      38)  # Fallback to known company_id from test_result.md
-                else:
-                    self.jwt_token = data.get('accessToken')
-                    self.company_id = data.get('user', {}).get('company_id')
-                
-                if self.jwt_token and self.company_id:
-                    self.session.headers.update({"Authorization": f"Bearer {self.jwt_token}"})
-                    return self.log_test(
-                        "Authentication",
-                        "PASS",
-                        f"Successfully authenticated user (company_id: {self.company_id})"
+                self.auth_token = data.get("data", {}).get("accessToken")
+                if self.auth_token:
+                    self.session.headers.update({
+                        "Authorization": f"Bearer {self.auth_token}",
+                        "Content-Type": "application/json"
+                    })
+                    user_info = data.get("data", {})
+                    self.log_test_result(
+                        "Backend Authentication", 
+                        True,
+                        f"User: {user_info.get('name', 'N/A')} (ID: {user_info.get('user_id', 'N/A')})"
                     )
+                    return True
                 else:
-                    return self.log_test(
-                        "Authentication", 
-                        "FAIL",
-                        f"Missing token or company_id in response: {data}"
+                    self.log_test_result(
+                        "Backend Authentication", 
+                        False,
+                        "No access token in response"
                     )
+                    return False
             else:
-                return self.log_test(
-                    "Authentication",
-                    "FAIL", 
-                    f"HTTP {response.status_code}: {response.text}"
+                self.log_test_result(
+                    "Backend Authentication", 
+                    False, 
+                    f"HTTP {response.status_code}: {response.text[:200]}"
                 )
+                return False
                 
         except Exception as e:
-            return self.log_test("Authentication", "FAIL", f"Exception: {str(e)}")
+            self.log_test_result(
+                "Backend Authentication", 
+                False, 
+                f"Exception: {str(e)}"
+            )
+            return False
 
     def test_backend_health(self):
         """Test backend health endpoint"""
         try:
-            response = requests.get(f"{API_BASE_URL}/status/health")
+            print("\n🏥 Testing backend health...")
+            
+            response = self.session.get(f"{self.base_url}/api/status/health", timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
-                
-                # Check for required health indicators
-                required_fields = ['status', 'timestamp']
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if not missing_fields and data.get('status') == 'healthy':
-                    return self.log_test(
-                        "Backend Health Check",
-                        "PASS",
-                        f"Backend healthy - Status: {data.get('status')}, Timestamp: {data.get('timestamp')}"
+                status = data.get("status")
+                if status == "healthy":
+                    self.log_test_result(
+                        "Backend Health Check", 
+                        True,
+                        f"Status: {status}, Version: {data.get('version', 'N/A')}"
                     )
                 else:
-                    return self.log_test(
-                        "Backend Health Check",
-                        "FAIL",
-                        f"Unhealthy response - Missing fields: {missing_fields}, Data: {data}"
+                    self.log_test_result(
+                        "Backend Health Check", 
+                        False,
+                        f"Unhealthy status: {status}"
                     )
             else:
-                return self.log_test(
-                    "Backend Health Check",
-                    "FAIL",
-                    f"HTTP {response.status_code}: {response.text}"
+                self.log_test_result(
+                    "Backend Health Check", 
+                    False,
+                    f"HTTP {response.status_code}: {response.text[:200]}"
                 )
                 
         except Exception as e:
-            return self.log_test("Backend Health Check", "FAIL", f"Exception: {str(e)}")
+            self.log_test_result(
+                "Backend Health Check", 
+                False, 
+                f"Exception: {str(e)}"
+            )
 
-    def verify_webhook_code_structure(self):
-        """Verify the webhook handler code structure for Direct API vs Payment Link logic"""
+    def test_checkMissedPayments_fix_code_review(self):
+        """Code review of checkMissedPayments fix in merchantPoolMonitoring.ts"""
+        print("\n🔍 CODE REVIEW: checkMissedPayments fix (merchantPoolMonitoring.ts)")
+        
         try:
-            # Read the webhook file to verify code structure
-            webhook_file_path = "/app/backend/webhooks/index.ts"
-            
-            if not os.path.exists(webhook_file_path):
-                return self.log_test(
-                    "Code Structure - Webhook File Exists",
-                    "FAIL",
-                    f"Webhook file not found at {webhook_file_path}"
-                )
-            
-            with open(webhook_file_path, 'r') as f:
+            # Read the file and check for required patterns
+            with open('/app/backend/services/merchantPool/merchantPoolMonitoring.ts', 'r') as f:
                 content = f.read()
             
-            # Test 1: Check for Direct API vs Payment Link branching logic
-            required_patterns = [
-                "const linkIdUnderpaid = customerData?.link_id || items?.link_id || null;",
-                "const isDirectApi = !linkIdUnderpaid;",
-                "if (isDirectApi) {",
-                "// DIRECT API: Process immediately",
-                "status: \"processing\"",
-                "// PAYMENT LINK: Wait for remaining payment",
-                "status: \"underpaid\"",
-                "incomplete: \"true\"",
-                "return res.status(200).end();"
-            ]
-            
-            missing_patterns = []
-            for pattern in required_patterns:
-                if pattern not in content:
-                    missing_patterns.append(pattern)
-            
-            if not missing_patterns:
-                self.log_test(
-                    "Code Structure - Direct API vs Payment Link Branching",
-                    "PASS",
-                    "All required branching logic patterns found in webhook handler"
+            # Test 1: Check for failCount >= 3 condition
+            if 'failCount >= 3' in content:
+                self.log_test_result(
+                    "checkMissedPayments: failCount >= 3 check", 
+                    True,
+                    "Found failCount >= 3 condition"
                 )
             else:
-                self.log_test(
-                    "Code Structure - Direct API vs Payment Link Branching",
-                    "FAIL",
-                    f"Missing patterns: {missing_patterns}"
+                self.log_test_result(
+                    "checkMissedPayments: failCount >= 3 check", 
+                    False,
+                    "failCount >= 3 condition not found"
                 )
             
-            # Test 2: Check finalReceivedAmount calculation
-            final_amount_patterns = [
-                "const isDirectApiUnderpayment = isUnderpayment && !isMinorUnderpayment && !(customerData?.link_id || items?.link_id);",
-                "const finalReceivedAmount = (isCompletionPayment || isDirectApiUnderpayment) ? totalReceivedAmount : incomingAmount;"
-            ]
-            
-            missing_final_patterns = []
-            for pattern in final_amount_patterns:
-                if pattern not in content:
-                    missing_final_patterns.append(pattern)
-            
-            if not missing_final_patterns:
-                self.log_test(
-                    "Code Structure - finalReceivedAmount Calculation",
-                    "PASS",
-                    "Correct finalReceivedAmount calculation logic found"
+            # Test 2: Check for hasPaymentContext logic
+            if 'hasPaymentContext = !!currentPaymentId && balance > (dustThreshold * 5)' in content:
+                self.log_test_result(
+                    "checkMissedPayments: hasPaymentContext logic", 
+                    True,
+                    "Found hasPaymentContext condition with dust threshold check"
                 )
             else:
-                self.log_test(
-                    "Code Structure - finalReceivedAmount Calculation",
-                    "FAIL",
-                    f"Missing finalReceivedAmount patterns: {missing_final_patterns}"
+                self.log_test_result(
+                    "checkMissedPayments: hasPaymentContext logic", 
+                    False,
+                    "hasPaymentContext condition not found or incorrect"
                 )
             
-            # Test 3: Verify Direct API path does NOT return early
-            # Search for the "falling through" comment and verify no early return in Direct API block
-            found_fall_through_comment = "falling through to cryptoVerification" in content
+            # Test 3: Check for last_payment_context retrieval
+            if 'merchantTempAddressModel.findOne({ where: { wallet_address: walletAddress } })' in content:
+                self.log_test_result(
+                    "checkMissedPayments: DB context retrieval", 
+                    True,
+                    "Found merchantTempAddressModel.findOne for last_payment_context"
+                )
+            else:
+                self.log_test_result(
+                    "checkMissedPayments: DB context retrieval", 
+                    False,
+                    "DB context retrieval not found"
+                )
             
-            # Extract the Direct API block by finding the if statement and matching else
-            direct_api_start = content.find("if (isDirectApi) {")
-            if direct_api_start != -1:
-                # Find the matching else block
-                else_pos = content.find("} else {", direct_api_start)
-                if else_pos != -1:
-                    direct_api_block = content[direct_api_start:else_pos]
-                    found_early_return_in_direct = "return res.status(200).end()" in direct_api_block
+            # Test 4: Check for Redis reconstruction
+            if 'reconstructedRedis' in content and 'processedByFallback' in content:
+                self.log_test_result(
+                    "checkMissedPayments: Redis reconstruction", 
+                    True,
+                    "Found Redis reconstruction with fallback marker"
+                )
+            else:
+                self.log_test_result(
+                    "checkMissedPayments: Redis reconstruction", 
+                    False,
+                    "Redis reconstruction logic not found"
+                )
+            
+            # Test 5: Check for customer ref reconstruction
+            if 'custRef' in content and 'existingCustData' in content:
+                self.log_test_result(
+                    "checkMissedPayments: Customer ref reconstruction", 
+                    True,
+                    "Found customer reference reconstruction logic"
+                )
+            else:
+                self.log_test_result(
+                    "checkMissedPayments: Customer ref reconstruction", 
+                    False,
+                    "Customer reference reconstruction not found"
+                )
+            
+            # Test 6: Check for cryptoVerification call
+            if 'paymentController.cryptoVerification(walletAddress, true)' in content:
+                self.log_test_result(
+                    "checkMissedPayments: cryptoVerification call", 
+                    True,
+                    "Found cryptoVerification call with correct parameters"
+                )
+            else:
+                self.log_test_result(
+                    "checkMissedPayments: cryptoVerification call", 
+                    False,
+                    "cryptoVerification call not found or incorrect"
+                )
+            
+            # Test 7: Check for recovery logging
+            if 'MISSED PAYMENT RECOVERED VIA CONTEXT' in content:
+                self.log_test_result(
+                    "checkMissedPayments: Recovery logging", 
+                    True,
+                    "Found recovery event logging"
+                )
+            else:
+                self.log_test_result(
+                    "checkMissedPayments: Recovery logging", 
+                    False,
+                    "Recovery event logging not found"
+                )
+                
+        except Exception as e:
+            self.log_test_result(
+                "checkMissedPayments: Code review", 
+                False, 
+                f"Exception reading file: {str(e)}"
+            )
+
+    def test_processIncompletePayments_fix_code_review(self):
+        """Code review of processIncompletePayments fix in paymentController.ts"""
+        print("\n🔍 CODE REVIEW: processIncompletePayments fix (paymentController.ts)")
+        
+        try:
+            # Read the file and check for required patterns
+            with open('/app/backend/controller/paymentController.ts', 'r') as f:
+                content = f.read()
+            
+            # Test 1: Check for merchantTempAddressModel import
+            if 'merchantTempAddressModel' in content and 'from "../models"' in content:
+                self.log_test_result(
+                    "processIncompletePayments: Model imports", 
+                    True,
+                    "Found merchantTempAddressModel import"
+                )
+            else:
+                self.log_test_result(
+                    "processIncompletePayments: Model imports", 
+                    False,
+                    "merchantTempAddressModel import not found"
+                )
+            
+            # Test 2: Check for merchant pool query
+            merchant_pool_query = "merchantTempAddressModel.findAll({\n        where: {\n          status: 'IN_USE',\n          current_payment_id: { [Op.ne]: null },\n          expected_amount: { [Op.gt]: 0 },"
+            if merchant_pool_query in content:
+                self.log_test_result(
+                    "processIncompletePayments: Merchant pool query", 
+                    True,
+                    "Found correct merchantTempAddressModel query with required conditions"
+                )
+            else:
+                # Check for simplified version
+                if "status: 'IN_USE'" in content and "current_payment_id: { [Op.ne]: null }" in content:
+                    self.log_test_result(
+                        "processIncompletePayments: Merchant pool query", 
+                        True,
+                        "Found merchant pool query with required conditions"
+                    )
+                else:
+                    self.log_test_result(
+                        "processIncompletePayments: Merchant pool query", 
+                        False,
+                        "Merchant pool query not found or incorrect"
+                    )
+            
+            # Test 3: Check for 60-minute grace period filter
+            if 'minutesSinceReserved < 60' in content:
+                self.log_test_result(
+                    "processIncompletePayments: Grace period filter", 
+                    True,
+                    "Found 60-minute grace period filter"
+                )
+            else:
+                self.log_test_result(
+                    "processIncompletePayments: Grace period filter", 
+                    False,
+                    "60-minute grace period filter not found"
+                )
+            
+            # Test 4: Check for customerTransactionModel duplicate check
+            if 'customerTransactionModel.findOne' in content and 'transaction_reference' in content:
+                self.log_test_result(
+                    "processIncompletePayments: Duplicate check", 
+                    True,
+                    "Found customerTransactionModel duplicate check"
+                )
+            else:
+                self.log_test_result(
+                    "processIncompletePayments: Duplicate check", 
+                    False,
+                    "Duplicate transaction check not found"
+                )
+            
+            # Test 5: Check for balance check via tatumApi
+            if 'tatumApi.getAddressBalance' in content and 'actualBalance' in content:
+                self.log_test_result(
+                    "processIncompletePayments: Balance check", 
+                    True,
+                    "Found on-chain balance check via Tatum API"
+                )
+            else:
+                self.log_test_result(
+                    "processIncompletePayments: Balance check", 
+                    False,
+                    "On-chain balance check not found"
+                )
+            
+            # Test 6: Check for Redis reconstruction from last_payment_context
+            if 'last_payment_context' in content and 'JSON.parse' in content:
+                self.log_test_result(
+                    "processIncompletePayments: Context reconstruction", 
+                    True,
+                    "Found last_payment_context reconstruction logic"
+                )
+            else:
+                self.log_test_result(
+                    "processIncompletePayments: Context reconstruction", 
+                    False,
+                    "Context reconstruction not found"
+                )
+            
+            # Test 7: Check for cryptoVerification processing
+            if 'cryptoVerification(walletAddress, true)' in content:
+                self.log_test_result(
+                    "processIncompletePayments: Processing call", 
+                    True,
+                    "Found cryptoVerification processing call"
+                )
+            else:
+                self.log_test_result(
+                    "processIncompletePayments: Processing call", 
+                    False,
+                    "cryptoVerification processing call not found"
+                )
+            
+            # Test 8: Check for proper error handling
+            if 'try {' in content and 'catch (poolError)' in content:
+                self.log_test_result(
+                    "processIncompletePayments: Error handling", 
+                    True,
+                    "Found proper try/catch error handling"
+                )
+            else:
+                self.log_test_result(
+                    "processIncompletePayments: Error handling", 
+                    False,
+                    "Error handling not found or incomplete"
+                )
+                
+        except Exception as e:
+            self.log_test_result(
+                "processIncompletePayments: Code review", 
+                False, 
+                f"Exception reading file: {str(e)}"
+            )
+
+    def test_required_imports(self):
+        """Verify all required imports are present in paymentController.ts"""
+        print("\n📦 Testing required imports in paymentController.ts")
+        
+        try:
+            with open('/app/backend/controller/paymentController.ts', 'r') as f:
+                content = f.read()
+            
+            required_imports = [
+                'Op',
+                'getRedisItem', 
+                'setRedisItem',
+                'tatumApi',
+                'customerTransactionModel',
+                'merchantTempAddressModel'
+            ]
+            
+            for import_name in required_imports:
+                if import_name in content:
+                    self.log_test_result(
+                        f"Import verification: {import_name}", 
+                        True,
+                        f"{import_name} import found"
+                    )
+                else:
+                    self.log_test_result(
+                        f"Import verification: {import_name}", 
+                        False,
+                        f"{import_name} import not found"
+                    )
                     
-                    if found_fall_through_comment and not found_early_return_in_direct:
-                        self.log_test(
-                            "Code Structure - Direct API No Early Return",
-                            "PASS",
-                            "Direct API path has fall-through comment and no early return"
-                        )
-                    else:
-                        self.log_test(
-                            "Code Structure - Direct API No Early Return",
-                            "FAIL",
-                            f"Fall-through comment found: {found_fall_through_comment}, Early return found: {found_early_return_in_direct}"
-                        )
-                else:
-                    self.log_test(
-                        "Code Structure - Direct API No Early Return",
-                        "FAIL",
-                        "Could not find matching else block for Direct API if statement"
-                    )
-            else:
-                self.log_test(
-                    "Code Structure - Direct API No Early Return",
-                    "FAIL",
-                    "Could not find Direct API if statement"
-                )
-            
-            # Test 4: Verify Payment Link path has early return
-            # Look specifically for the else block that contains "PAYMENT LINK" and "return res.status(200).end()"
-            has_payment_link_comment = "// PAYMENT LINK: Wait for remaining payment" in content
-            
-            # Find the specific Payment Link block and check if it has the return
-            payment_link_pos = content.find("// PAYMENT LINK: Wait for remaining payment")
-            if payment_link_pos != -1:
-                # Look for return statement after the Payment Link comment
-                return_pos = content.find("return res.status(200).end()", payment_link_pos)
-                # Make sure the return is within reasonable distance (within the same block)
-                next_function_pos = content.find("export {", payment_link_pos)
-                
-                has_early_return = (return_pos != -1 and 
-                                  (next_function_pos == -1 or return_pos < next_function_pos))
-                
-                if has_payment_link_comment and has_early_return:
-                    self.log_test(
-                        "Code Structure - Payment Link Early Return",
-                        "PASS",
-                        "Payment Link path correctly returns early after setting underpaid status"
-                    )
-                else:
-                    self.log_test(
-                        "Code Structure - Payment Link Early Return",
-                        "FAIL",
-                        f"Payment Link comment found: {has_payment_link_comment}, Early return found: {has_early_return}"
-                    )
-            else:
-                self.log_test(
-                    "Code Structure - Payment Link Early Return",
-                    "FAIL",
-                    "Could not find Payment Link comment block"
-                )
-            
-            return True
-            
         except Exception as e:
-            return self.log_test("Code Structure Verification", "FAIL", f"Exception: {str(e)}")
+            self.log_test_result(
+                "Import verification", 
+                False, 
+                f"Exception: {str(e)}"
+            )
 
-    def verify_cryptoverification_fund_distribution(self):
-        """Verify cryptoVerification handles fund distribution correctly"""
+    def test_typescript_compilation(self):
+        """Test for TypeScript compilation errors"""
+        print("\n🔧 Testing TypeScript compilation...")
+        
         try:
-            payment_controller_path = "/app/backend/controller/paymentController.ts"
-            
-            if not os.path.exists(payment_controller_path):
-                return self.log_test(
-                    "Fund Distribution - Payment Controller Exists",
-                    "FAIL",
-                    f"Payment controller not found at {payment_controller_path}"
-                )
-            
-            with open(payment_controller_path, 'r') as f:
-                content = f.read()
-            
-            # Check for fund distribution logic
-            fund_distribution_patterns = [
-                "if (Number(amountInUSD[0].amount) < Number(minForwarding)) {",
-                "adminAmountToSend = Number(totalAmountReceived);",
-                "userAmountToSend = 0;",
-                "// Under threshold - all to admin",
-                "// Normal distribution"
-            ]
-            
-            missing_fund_patterns = []
-            for pattern in fund_distribution_patterns:
-                if pattern not in content:
-                    missing_fund_patterns.append(pattern)
-            
-            if not missing_fund_patterns:
-                return self.log_test(
-                    "Fund Distribution Logic",
-                    "PASS",
-                    "Correct fund distribution logic found in cryptoVerification"
-                )
-            else:
-                return self.log_test(
-                    "Fund Distribution Logic",
-                    "FAIL",
-                    f"Missing fund distribution patterns: {missing_fund_patterns}"
-                )
-                
-        except Exception as e:
-            return self.log_test("Fund Distribution Verification", "FAIL", f"Exception: {str(e)}")
-
-    def check_typescript_compilation(self):
-        """Check for TypeScript compilation errors"""
-        try:
-            # Check supervisor logs for TypeScript errors
+            # Check backend logs for compilation errors
             import subprocess
             result = subprocess.run(
-                ["tail", "-n", "100", "/var/log/supervisor/backend.err.log"], 
-                capture_output=True, 
-                text=True
+                ["tail", "-n", "200", "/var/log/supervisor/backend.err.log"],
+                capture_output=True,
+                text=True,
+                timeout=10
             )
             
-            error_indicators = [
-                "error TS",
-                "TypeError:",
-                "SyntaxError:",
-                "ReferenceError:",
-                "Cannot find module",
-                "Property does not exist"
+            error_patterns = [
+                'error TS',
+                'Compilation failed',
+                'Type error',
+                'Cannot find module',
+                'Property does not exist',
+                'Argument of type',
+                'Type \'undefined\' is not assignable'
             ]
             
-            found_errors = []
+            compilation_errors = []
             for line in result.stdout.split('\n'):
-                for error_indicator in error_indicators:
-                    if error_indicator in line:
-                        found_errors.append(line.strip())
+                for pattern in error_patterns:
+                    if pattern in line:
+                        compilation_errors.append(line.strip())
+                        break
             
-            if not found_errors:
-                return self.log_test(
-                    "TypeScript Compilation Check",
-                    "PASS",
-                    "No TypeScript compilation errors found in backend logs"
+            if compilation_errors:
+                self.log_test_result(
+                    "TypeScript Compilation", 
+                    False,
+                    f"Found {len(compilation_errors)} compilation errors",
+                    "No compilation errors",
+                    f"Errors: {compilation_errors[:3]}"  # Show first 3 errors
                 )
             else:
-                return self.log_test(
-                    "TypeScript Compilation Check",
-                    "FAIL",
-                    f"TypeScript errors found: {found_errors[:3]}"  # Show first 3 errors
+                self.log_test_result(
+                    "TypeScript Compilation", 
+                    True,
+                    "No TypeScript compilation errors found"
                 )
                 
         except Exception as e:
-            return self.log_test("TypeScript Compilation Check", "FAIL", f"Exception: {str(e)}")
+            self.log_test_result(
+                "TypeScript Compilation", 
+                False, 
+                f"Exception: {str(e)}"
+            )
 
-    def run_comprehensive_test(self):
-        """Run all tests for Direct API underpayment fix verification"""
-        print("=" * 80)
-        print("DYNOPAY DIRECT API UNDERPAYMENT FIX TESTING")
-        print("=" * 80)
-        print(f"Testing against: {BASE_URL}")
-        print(f"Test user: {TEST_EMAIL}")
-        print()
-
-        # Test 1: Backend Health
-        print("1. Backend Health Check")
-        self.test_backend_health()
-        print()
-
-        # Test 2: Authentication
-        print("2. Authentication")
-        if not self.authenticate():
-            print("❌ Authentication failed - skipping API tests")
-            print()
+    def generate_summary(self):
+        """Generate test summary"""
+        print("\n" + "="*60)
+        print("🧪 FALLBACK SAFETY NET FIXES TEST SUMMARY")
+        print("="*60)
+        
+        total = self.results["total_tests"]
+        passed = self.results["passed_tests"]
+        failed = self.results["failed_tests"]
+        success_rate = (passed / total * 100) if total > 0 else 0
+        
+        print(f"Total Tests: {total}")
+        print(f"Passed: {passed} ✅")
+        print(f"Failed: {failed} ❌")
+        print(f"Success Rate: {success_rate:.1f}%")
+        
+        if failed > 0:
+            print(f"\n❌ FAILED TESTS ({failed}):")
+            for result in self.results["test_details"]:
+                if "❌ FAIL" in result["status"]:
+                    print(f"  - {result['test_name']}: {result['details']}")
+        
+        if passed == total:
+            print(f"\n🎉 ALL TESTS PASSED! Both fallback safety net fixes are properly implemented.")
         else:
-            print()
+            print(f"\n⚠️  {failed} test(s) failed. Please review the implementation.")
+        
+        return success_rate >= 90  # Consider 90%+ as success
 
-        # Test 3: Code Structure Verification
-        print("3. Code Structure Verification")
-        self.verify_webhook_code_structure()
-        print()
-
-        # Test 4: Fund Distribution Logic
-        print("4. Fund Distribution Logic")
-        self.verify_cryptoverification_fund_distribution()
-        print()
-
-        # Test 5: TypeScript Compilation
-        print("5. TypeScript Compilation Check")
-        self.check_typescript_compilation()
-        print()
-
-        # Calculate final results
-        self.results["summary"]["success_rate"] = (
-            self.results["summary"]["passed"] / self.results["summary"]["total"] * 100
-            if self.results["summary"]["total"] > 0 else 0
-        )
-
-        # Print final summary
-        print("=" * 80)
-        print("DIRECT API UNDERPAYMENT FIX TEST SUMMARY")
-        print("=" * 80)
-        print(f"Total Tests: {self.results['summary']['total']}")
-        print(f"Passed: {self.results['summary']['passed']}")
-        print(f"Failed: {self.results['summary']['failed']}")
-        print(f"Success Rate: {self.results['summary']['success_rate']:.1f}%")
-        print()
-
-        # Print failed tests details
-        failed_tests = [test for test in self.results["tests"] if test["status"] == "FAIL"]
-        if failed_tests:
-            print("FAILED TESTS:")
-            for test in failed_tests:
-                print(f"❌ {test['test']}: {test['details']}")
-            print()
-
-        # Determine overall status
-        if self.results["summary"]["success_rate"] >= 95:
-            print("🎉 OVERALL STATUS: ALL CRITICAL TESTS PASSED")
-            print("   Direct API underpayment fix is properly implemented")
-        elif self.results["summary"]["success_rate"] >= 75:
-            print("⚠️  OVERALL STATUS: MOSTLY WORKING WITH MINOR ISSUES")
-            print("   Core functionality implemented but some minor issues detected")
-        else:
-            print("🚨 OVERALL STATUS: CRITICAL ISSUES FOUND")
-            print("   Direct API underpayment fix needs attention")
-
-        return self.results
+def main():
+    """Main test execution"""
+    print("🚀 Starting Backend Testing for Fallback Safety Net Fixes")
+    print("="*60)
+    
+    tester = BackendTester()
+    
+    # Step 1: Authentication
+    if not tester.authenticate():
+        print("❌ Authentication failed. Cannot proceed with tests.")
+        sys.exit(1)
+    
+    # Step 2: Health Check
+    tester.test_backend_health()
+    
+    # Step 3: Code Review Tests
+    tester.test_checkMissedPayments_fix_code_review()
+    tester.test_processIncompletePayments_fix_code_review()
+    
+    # Step 4: Import Verification
+    tester.test_required_imports()
+    
+    # Step 5: TypeScript Compilation Check
+    tester.test_typescript_compilation()
+    
+    # Step 6: Generate Summary
+    success = tester.generate_summary()
+    
+    return success
 
 if __name__ == "__main__":
-    tester = BackendTester()
-    results = tester.run_comprehensive_test()
-    
-    # Save results
-    with open('/app/direct_api_underpayment_test_results.json', 'w') as f:
-        json.dump(results, f, indent=2)
-    
-    print(f"\nDetailed results saved to: /app/direct_api_underpayment_test_results.json")
+    success = main()
+    sys.exit(0 if success else 1)
