@@ -1018,12 +1018,25 @@ const feeEstimation = async (
       slow: 3,
     };
   } else if (currency === "USDT-TRC20") {
-    // TRC20 token transfer on TRON requires energy (~31k for existing holder, ~65k for new holder)
-    // At 420 SUN/energy: ~13 TRX (existing) to ~27 TRX (new holder)
-    // With SmartGas 1.3x buffer: 20 × 1.3 = 26 TRX — covers existing holders safely
-    fees = {
-      fast: 20,
-    };
+    // Dynamic TRC20 fee calculation using live TRON Energy price
+    // Post Proposal #104 (Aug 2025): Energy reduced from 420 → 100 SUN/unit
+    try {
+      const dynamicFee = await calculateDynamicTRC20Fee(fromAddress);
+      logCostSavings("feeEstimation", 20, dynamicFee.fast, {
+        energyPrice: dynamicFee.energyPrice,
+        energyAvailable: dynamicFee.energyAvailable,
+        sender: fromAddress,
+      });
+      fees = {
+        fast: dynamicFee.fast,
+      };
+    } catch (feeCalcError) {
+      console.warn(`[feeEstimation] ⚠️ Dynamic TRC20 fee failed, using fallback 14 TRX:`, feeCalcError);
+      // Fallback: 65k energy × 100 SUN + bandwidth ≈ 7 TRX, with buffer ≈ 14 TRX
+      fees = {
+        fast: 14,
+      };
+    }
   }
 
   return fees;
