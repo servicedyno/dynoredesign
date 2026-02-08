@@ -1133,11 +1133,9 @@ const batchFeeEstimation = async ({
     };
   } else if (currency === "USDT-TRC20") {
     fees = {
-      fast: 5,
+      fast: 20,
     };
   }
-  return fees;
-};
 
 const assetToOtherAddress = async ({
   currency,
