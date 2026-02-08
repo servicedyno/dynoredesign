@@ -299,6 +299,22 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     if (isToken) {
       const fundResult = await fundGasIfNeeded(poolAddress as unknown as { dataValues: { wallet_address: string }; update: (data: Record<string, unknown>) => Promise<void> }, walletType);
       gasFunding = { ...fundResult, txId: fundResult.txId || null };
+
+      // Wait for gas funding TX confirmation before attempting the sweep transfer
+      if (gasFunding.funded && gasFunding.txId) {
+        const gasToken = GAS_TOKEN_MAPPING[walletType] || 'TRX';
+        console.log(`[MerchantPool] ⏳ Waiting for gas funding TX ${gasFunding.txId} confirmation (${gasToken})...`);
+        const gasConfirmation = await tatumApi.waitForTransactionConfirmation(
+          gasFunding.txId,
+          gasToken,
+          30000  // 30s timeout
+        );
+        if (gasConfirmation.confirmed) {
+          console.log(`[MerchantPool] ✅ Gas funding confirmed in block ${gasConfirmation.blockNumber}`);
+        } else {
+          console.warn(`[MerchantPool] ⚠️ Gas funding TX not confirmed in timeout — proceeding with retry logic`);
+        }
+      }
     } else {
       console.log(`[MerchantPool] Native ${walletType} - gas comes from remaining balance, no external funding needed`);
     }
