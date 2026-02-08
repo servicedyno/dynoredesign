@@ -3094,3 +3094,42 @@ ports:
     message: "🎉 EMAIL TEMPLATES OVERHAUL TESTING COMPLETED: 100% success rate (4/4 tests passed) - ALL EMAIL TEMPLATES ARE NOW PROFESSIONALLY BRANDED! ✅ TEST 1 - ALL 9 PLAIN-TEXT EMAILS CONVERTED: sendPaymentReceivedEmail, sendTransactionConfirmedEmail, sendWeeklySummaryEmail, sendPaymentPendingEmail, sendPaymentConfirmingEmail, sendPaymentPartialEmail, sendPaymentPartialExpiredEmail, sendSecurityAlertEmail, sendAdminFeeReceivedEmail - EVERY FUNCTION now uses dynoPayEmailTemplate() wrapper and passes htmlBody (NOT raw text 'body: message') to mailTransporter. Zero plain-text emails remain. ✅ TEST 2 - TEMPLATE QUALITY VERIFIED: dynoPayEmailTemplate uses professional table layout with <table role='presentation'> (NOT div-based), 100% inline style= attributes (email client compatible), DynoPay logo image properly embedded, social media icons from flaticon CDN, footer with Privacy/Terms/Support links - meets Coinbase-level branding standards. ✅ TEST 3 - LOGO URL FIX WORKING: Both emailService.ts and helper/sendEmail.ts use correct logo URL 'https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Images/auth/dynopay-logo.png' (returns HTTP 200), old broken 'DynocheckoutDarkMode' URL completely removed. ✅ TEST 4 - BACKEND HEALTHY: API responding correctly, no crashes from email template changes. CONCLUSION: Complete email templates overhaul is production-ready! All emails now use professional HTML templates with proper branding, table-based layout, inline styles, working logos, and social media integration."
   - agent: "testing"
     message: "🎉 COMPREHENSIVE REGRESSION TEST COMPLETED: 75% success rate (12/16 tests passed) after fresh dependency reinstall. ALL CRITICAL BACKEND FUNCTIONALITY IS OPERATIONAL: ✅ Backend Health (5 services operational), ✅ JWT Authentication working, ✅ 178 API endpoints documented in Swagger, ✅ Payment Link Creation successful, ✅ Fee Calculator operational (platform_fee=0.4%, blockchain_fee=$2), ✅ TRX Wallet Validation rejecting invalid addresses, ✅ Dashboard stats functional, ✅ Crash Recovery Logic verified (isStaleProcessing + recovered status), ✅ Configurable Timeout reading from environment (120 min), ✅ Cron Jobs running (OrphanDetect entries). Minor issues identified: Payment GetData reference format, Legacy API key authentication (403 errors), Onboarding Status response structure. VERDICT: Backend is PRODUCTION READY after dependency reinstall - all core payment processing functionality operational with 75% regression test pass rate."
+  - task: "SmartGas Integration for Token Merchant Transfers (USDT-TRC20, USDT-ERC20, USDC-ERC20)"
+    implemented: true
+    working: "NA"
+    files:
+      - "controller/paymentController.ts"
+      - "services/merchantPool/merchantPoolSweep.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          SmartGas integration for merchant token transfers. Three changes:
+
+          1. controller/paymentController.ts — settleCryptoTransaction (token branch):
+             - Added fundGasIfNeeded() call BEFORE tronTransferTrc20/ethTransfer for USDT-TRC20, USDT-ERC20, USDC-ERC20
+             - For merchant pool: fetches pool address record, calls merchantPoolService.fundGasIfNeeded(poolAddressRecord, currency, amount, recipient)
+             - For legacy: uses lightweight wrapper with no-op update
+             - Waits for gas TX confirmation (30s timeout) before proceeding with token transfer
+             - Added gasFunded and gasFundingTxId to settlement return object for audit trail
+             - Updated recordPoolTransaction to use actual gasFunded amount instead of hardcoded 0
+
+          2. services/merchantPool/merchantPoolSweep.ts — sweepPoolAddress:
+             - Added waitForTransactionConfirmation after fundGasIfNeeded returns with a funded TX
+             - 30s timeout for gas confirmation before proceeding with sweep transfer
+             - Uses GAS_TOKEN_MAPPING to determine gas token (TRX/ETH) for confirmation check
+
+          3. Audit trail: settleCryptoTransaction now returns gasFunded/gasFundingTxId, 
+             cryptoVerification logs SmartGas details, recordPoolTransaction stores actual gas funded amount.
+
+          TypeScript compiles with 0 errors. Backend healthy and running.
+          
+          TEST: Verify TypeScript compilation (npx tsc --noEmit), backend health (/health), 
+          and code presence of fundGasIfNeeded in settleCryptoTransaction token branch.
+          Verify sweep flow also has waitForTransactionConfirmation after gas funding.
+          
+          Credentials: richard@dyno.pt / Katiekendra123@
+          Base URL: https://dependency-setup-11.preview.emergentagent.com
