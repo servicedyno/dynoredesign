@@ -664,12 +664,12 @@ The response includes \`available_currencies\` array when the merchant specified
 - If no restriction was set, this field will be absent (call \`/configured-currencies\` endpoint instead)
 - Frontend should use this to filter the cryptocurrency selector
 
-**Payment Timing Settings:**
+**Payment Timing Settings (Payment Links only — Direct API ignores these):**
 The response includes \`payment_settings\` object with:
 - \`initial_window_minutes\`: Time to complete payment after selecting crypto (default: 15 min)
-- \`grace_period_minutes\`: Time to complete partial payment (default: 30 min, configurable per company)
-- \`overpayment_threshold_usd\`: Minimum overpayment to trigger special handling (default: $5)
-- \`underpayment_threshold_usd\`: Maximum underpayment to accept as full payment (default: $1)
+- \`grace_period_minutes\`: Time to complete partial payment (default: 30 min, max: 30 min, configurable per company)
+- \`overpayment_threshold_usd\`: Minimum overpayment to trigger special handling (default: $5, configurable per company)
+- \`underpayment_threshold_usd\`: Maximum underpayment to accept as full payment (default: $1, configurable per company)
 
 **Tax Calculation:**
 When \`apply_tax: true\` was set during payment link creation:
