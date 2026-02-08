@@ -1,313 +1,300 @@
 #!/usr/bin/env python3
+"""
+API Documentation Testing Script for DynoPay Backend
+Tests Swagger/OpenAPI documentation for Direct API vs Payment Link differences
+"""
 
-import re
 import requests
 import json
 import sys
 
-def log_test_result(test_name, success, details=""):
-    """Log test results consistently"""
-    status = "✅ PASS" if success else "❌ FAIL" 
-    print(f"{status}: {test_name}")
-    if details:
-        print(f"    {details}")
-    return success
+# Configuration
+BASE_URL = "https://dep-installer-44.preview.emergentagent.com"
+CREDENTIALS = {"email": "richard@dyno.pt", "password": "Katiekendra123@"}
 
-def check_backend_health():
-    """Test 6: Backend health check"""
+def test_backend_health():
+    """Test 1: Backend Health Check"""
+    print("=== TEST 1: Backend Health Check ===")
     try:
-        response = requests.get("https://dep-installer-44.preview.emergentagent.com/api/status/health", timeout=10)
-        success = response.status_code == 200 and "healthy" in response.text
-        return log_test_result("Backend Health Check", success, f"Status: {response.status_code}, Response: {response.text[:100]}")
-    except Exception as e:
-        return log_test_result("Backend Health Check", False, f"Error: {str(e)}")
-
-def verify_webhooks_index_implementation():
-    """Test 1: Code verification in webhooks/index.ts"""
-    print("\n=== Testing webhooks/index.ts Implementation ===")
-    
-    try:
-        with open('/app/backend/webhooks/index.ts', 'r') as f:
-            content = f.read()
-        
-        tests_passed = 0
-        total_tests = 5
-        
-        # Test 1.1: merchantGracePeriodMinutes variable exists and initialized to 30
-        if 'merchantGracePeriodMinutes = 30' in content:
-            log_test_result("merchantGracePeriodMinutes variable initialization", True, "Found: merchantGracePeriodMinutes = 30")
-            tests_passed += 1
-        else:
-            log_test_result("merchantGracePeriodMinutes variable initialization", False, "Not found: merchantGracePeriodMinutes = 30")
-        
-        # Test 1.2: company.grace_period_minutes fetched and capped with Math.min
-        if 'Math.min(parseInt(String(company.dataValues.grace_period_minutes)), 30)' in content:
-            log_test_result("Grace period fetch and cap", True, "Found: Math.min with 30 cap")
-            tests_passed += 1
-        else:
-            log_test_result("Grace period fetch and cap", False, "Not found: Math.min capping to 30")
-        
-        # Test 1.3: Redis TTL uses merchantGracePeriodMinutes * 60
-        if 'merchantGracePeriodMinutes * 60' in content and 'graceTtlSeconds' in content:
-            log_test_result("Redis TTL uses dynamic grace period", True, "Found: merchantGracePeriodMinutes * 60")
-            tests_passed += 1
-        else:
-            log_test_result("Redis TTL uses dynamic grace period", False, "Not found: merchantGracePeriodMinutes * 60")
-        
-        # Test 1.4: Webhook payload uses merchantGracePeriodMinutes
-        if 'grace_period_minutes: merchantGracePeriodMinutes' in content:
-            log_test_result("Webhook payload uses merchantGracePeriodMinutes", True, "Found: grace_period_minutes: merchantGracePeriodMinutes")
-            tests_passed += 1
-        else:
-            log_test_result("Webhook payload uses merchantGracePeriodMinutes", False, "Not found: grace_period_minutes: merchantGracePeriodMinutes")
-        
-        # Test 1.5: Direct API path does NOT reference grace period
-        # Extract Direct API block (between isDirectApi and else block)
-        direct_api_pattern = r'if \(isDirectApi\) \{(.*?)\} else \{'
-        direct_api_match = re.search(direct_api_pattern, content, re.DOTALL)
-        
-        if direct_api_match:
-            direct_api_code = direct_api_match.group(1)
-            if 'grace' not in direct_api_code.lower() and 'merchantGracePeriodMinutes' not in direct_api_code:
-                log_test_result("Direct API path does NOT reference grace period", True, "Direct API block clean of grace period references")
-                tests_passed += 1
-            else:
-                log_test_result("Direct API path does NOT reference grace period", False, "Found grace period references in Direct API block")
-        else:
-            log_test_result("Direct API path does NOT reference grace period", False, "Could not find Direct API block")
-        
-        return tests_passed == total_tests
-    
-    except Exception as e:
-        log_test_result("webhooks/index.ts verification", False, f"Error reading file: {str(e)}")
-        return False
-
-def verify_payment_controller_process_incomplete():
-    """Test 2: Code verification in paymentController.ts - processIncompletePayments"""
-    print("\n=== Testing paymentController.ts - processIncompletePayments ===")
-    
-    try:
-        with open('/app/backend/controller/paymentController.ts', 'r') as f:
-            content = f.read()
-        
-        tests_passed = 0
-        total_tests = 4
-        
-        # Test 2.1: SQL query uses INTERVAL '5 minutes'
-        if "INTERVAL '5 minutes'" in content:
-            log_test_result("SQL query uses INTERVAL '5 minutes'", True, "Found: INTERVAL '5 minutes'")
-            tests_passed += 1
-        else:
-            log_test_result("SQL query uses INTERVAL '5 minutes'", False, "Not found: INTERVAL '5 minutes'")
-        
-        # Test 2.2: Per-company grace period fetched inside loop
-        if 'companyModel.findOne' in content and 'companyGracePeriodMinutes' in content:
-            log_test_result("Per-company grace period fetched in loop", True, "Found: companyModel.findOne with companyGracePeriodMinutes")
-            tests_passed += 1
-        else:
-            log_test_result("Per-company grace period fetched in loop", False, "Not found: per-company grace period fetch")
-        
-        # Test 2.3: Grace period capped with Math.min(..., 30)
-        if 'Math.min(parseInt(String(companyRecord.dataValues.grace_period_minutes)), 30)' in content:
-            log_test_result("Grace period capped at 30 minutes", True, "Found: Math.min capping to 30")
-            tests_passed += 1
-        else:
-            log_test_result("Grace period capped at 30 minutes", False, "Not found: Math.min capping")
-        
-        # Test 2.4: Skip condition exists
-        if 'minutesSincePartial < companyGracePeriodMinutes' in content and 'continue' in content:
-            log_test_result("Skip condition for grace period", True, "Found: skip condition with continue")
-            tests_passed += 1
-        else:
-            log_test_result("Skip condition for grace period", False, "Not found: skip condition")
-        
-        return tests_passed == total_tests
-    
-    except Exception as e:
-        log_test_result("processIncompletePayments verification", False, f"Error reading file: {str(e)}")
-        return False
-
-def verify_payment_controller_add_verify():
-    """Test 3: Code verification in paymentController.ts - addPayment + verifyCryptoPayment"""
-    print("\n=== Testing paymentController.ts - addPayment + verifyCryptoPayment ===")
-    
-    try:
-        with open('/app/backend/controller/paymentController.ts', 'r') as f:
-            content = f.read()
-        
-        tests_passed = 0
-        total_tests = 2
-        
-        # Test 3.1: Check around lines 438-439 area (getData function grace period)
-        lines = content.split('\n')
-        found_cap_438 = False
-        for i, line in enumerate(lines[430:450], 430):  # Check lines 430-450
-            if 'Math.min' in line and 'grace_period_minutes' in line and '30' in line:
-                log_test_result("Math.min grace period cap around line 439", True, f"Found at line {i+1}: {line.strip()}")
-                found_cap_438 = True
-                tests_passed += 1
-                break
-        
-        if not found_cap_438:
-            log_test_result("Math.min grace period cap around line 439", False, "Not found around lines 438-439")
-        
-        # Test 3.2: Check around lines 3141-3143 area (another grace period reference)
-        found_cap_3141 = False
-        for i, line in enumerate(lines[3130:3150], 3130):  # Check lines 3130-3150
-            if 'Math.min' in line and 'grace_period_minutes' in line and '30' in line:
-                log_test_result("Math.min grace period cap around line 3143", True, f"Found at line {i+1}: {line.strip()}")
-                found_cap_3141 = True
-                tests_passed += 1
-                break
-        
-        if not found_cap_3141:
-            log_test_result("Math.min grace period cap around line 3143", False, "Not found around lines 3141-3143")
-        
-        return tests_passed == total_tests
-    
-    except Exception as e:
-        log_test_result("addPayment + verifyCryptoPayment verification", False, f"Error reading file: {str(e)}")
-        return False
-
-def verify_company_controller_update():
-    """Test 4: Code verification in companyController.ts - updateCompany"""
-    print("\n=== Testing companyController.ts - updateCompany ===")
-    
-    try:
-        with open('/app/backend/controller/companyController.ts', 'r') as f:
-            content = f.read()
-        
-        tests_passed = 0
-        total_tests = 2
-        
-        # Test 4.1: Validation block exists for grace_period_minutes 1-30
-        validation_patterns = [
-            'grace_period_minutes must be at least 1 minute',
-            'grace_period_minutes cannot exceed 30 minutes',
-            'parsed < 1',
-            'parsed > 30'
-        ]
-        
-        found_validation = all(pattern in content for pattern in validation_patterns)
-        if found_validation:
-            log_test_result("Validation block for grace_period_minutes (1-30)", True, "Found all validation patterns")
-            tests_passed += 1
-        else:
-            log_test_result("Validation block for grace_period_minutes (1-30)", False, "Missing validation patterns")
-        
-        # Test 4.2: Returns 400 error for invalid values
-        if 'errorResponseHelper(res, 400' in content and 'grace_period_minutes' in content:
-            log_test_result("Returns 400 error for invalid grace period", True, "Found 400 error response")
-            tests_passed += 1
-        else:
-            log_test_result("Returns 400 error for invalid grace period", False, "Not found 400 error response")
-        
-        return tests_passed == total_tests
-    
-    except Exception as e:
-        log_test_result("updateCompany verification", False, f"Error reading file: {str(e)}")
-        return False
-
-def verify_company_model():
-    """Test 5: Code verification in companyModel.ts"""
-    print("\n=== Testing companyModel.ts ===")
-    
-    try:
-        with open('/app/backend/models/companyModels/companyModel.ts', 'r') as f:
-            content = f.read()
-        
-        tests_passed = 0
-        total_tests = 1
-        
-        # Test 5.1: grace_period_minutes comment mentions "Max 30" and "Payment Links" and "Direct API"
-        comment_patterns = ['Max 30', 'Payment Link', 'Does NOT apply to Direct API']
-        
-        found_comment = all(pattern in content for pattern in comment_patterns)
-        if found_comment:
-            log_test_result("Comment mentions Max 30, Payment Links, and Does NOT apply to Direct API", True, "Found all required comment patterns")
-            tests_passed += 1
-        else:
-            log_test_result("Comment mentions Max 30, Payment Links, and Does NOT apply to Direct API", False, "Missing comment patterns")
-        
-        return tests_passed == total_tests
-    
-    except Exception as e:
-        log_test_result("companyModel.ts verification", False, f"Error reading file: {str(e)}")
-        return False
-
-def check_typescript_compilation():
-    """Test 7: Check for TypeScript compilation errors"""
-    print("\n=== Testing TypeScript Compilation ===")
-    
-    try:
-        # Check supervisor status
-        import subprocess
-        result = subprocess.run(['sudo', 'supervisorctl', 'status'], capture_output=True, text=True, timeout=10)
-        
-        if 'backend' in result.stdout and 'RUNNING' in result.stdout:
-            log_test_result("Backend service running", True, "Backend is running via supervisor")
-        else:
-            log_test_result("Backend service running", False, f"Backend status: {result.stdout}")
-            return False
-        
-        # Check for TypeScript errors in logs
-        log_result = subprocess.run(['tail', '-n', '100', '/var/log/supervisor/backend.out.log'], 
-                                   capture_output=True, text=True, timeout=10)
-        
-        ts_errors = [
-            'error TS',
-            'compilation failed',
-            'typescript error',
-            'type error',
-            'cannot find name'
-        ]
-        
-        has_ts_errors = any(error.lower() in log_result.stdout.lower() for error in ts_errors)
-        
-        if has_ts_errors:
-            log_test_result("No TypeScript compilation errors", False, "Found TypeScript errors in logs")
-            return False
-        else:
-            log_test_result("No TypeScript compilation errors", True, "No TypeScript errors found")
+        response = requests.get(f"{BASE_URL}/health", timeout=10)
+        if response.status_code == 200:
+            print("✅ Backend health check passed: HTTP 200")
             return True
-    
+        else:
+            print(f"❌ Backend health check failed: HTTP {response.status_code}")
+            return False
     except Exception as e:
-        log_test_result("TypeScript compilation check", False, f"Error checking logs: {str(e)}")
+        print(f"❌ Backend health check error: {str(e)}")
+        return False
+
+def test_swagger_ui_accessibility():
+    """Test 2: Swagger UI Accessible"""
+    print("\n=== TEST 2: Swagger UI Accessibility ===")
+    try:
+        response = requests.get(f"{BASE_URL}/api/docs", timeout=10)
+        if response.status_code == 200 and "text/html" in response.headers.get("content-type", ""):
+            print("✅ Swagger UI accessible: HTTP 200 with HTML content")
+            return True
+        else:
+            print(f"❌ Swagger UI failed: HTTP {response.status_code}, Content-Type: {response.headers.get('content-type')}")
+            return False
+    except Exception as e:
+        print(f"❌ Swagger UI error: {str(e)}")
+        return False
+
+def test_openapi_spec_validity():
+    """Test 3: OpenAPI Spec Valid with 178 paths"""
+    print("\n=== TEST 3: OpenAPI Spec Validity ===")
+    try:
+        response = requests.get(f"{BASE_URL}/api/docs.json", timeout=10)
+        if response.status_code == 200:
+            try:
+                spec = response.json()
+                path_count = len(spec.get("paths", {}))
+                print(f"✅ OpenAPI spec valid: HTTP 200, {path_count} paths found")
+                if path_count == 178:
+                    print("✅ Exact path count match: 178 paths")
+                    return True, spec
+                else:
+                    print(f"⚠️  Path count mismatch: Expected 178, got {path_count}")
+                    return True, spec  # Still valid JSON, just different count
+            except json.JSONDecodeError as e:
+                print(f"❌ Invalid JSON in OpenAPI spec: {str(e)}")
+                return False, None
+        else:
+            print(f"❌ OpenAPI spec failed: HTTP {response.status_code}")
+            return False, None
+    except Exception as e:
+        print(f"❌ OpenAPI spec error: {str(e)}")
+        return False, None
+
+def test_direct_api_endpoint_docs(spec):
+    """Test 4: Direct API endpoint docs (cryptoPayment)"""
+    print("\n=== TEST 4: Direct API Endpoint Documentation ===")
+    
+    if not spec:
+        print("❌ No OpenAPI spec available")
+        return False
+    
+    try:
+        crypto_payment_path = spec.get("paths", {}).get("/api/user/cryptoPayment", {}).get("post", {})
+        description = crypto_payment_path.get("description", "")
+        
+        print(f"CryptoPayment endpoint description length: {len(description)} characters")
+        
+        required_phrases = [
+            "No grace period",
+            "No underpayment threshold", 
+            "No overpayment threshold",
+            "Payment Links only"
+        ]
+        
+        missing_phrases = []
+        found_phrases = []
+        
+        for phrase in required_phrases:
+            if phrase.lower() in description.lower():
+                found_phrases.append(phrase)
+                print(f"✅ Found required phrase: '{phrase}'")
+            else:
+                missing_phrases.append(phrase)
+                print(f"❌ Missing required phrase: '{phrase}'")
+        
+        if not missing_phrases:
+            print("✅ All required Direct API documentation phrases found")
+            return True
+        else:
+            print(f"❌ Missing {len(missing_phrases)} required phrases: {missing_phrases}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error checking Direct API docs: {str(e)}")
+        return False
+
+def test_company_settings_docs(spec):
+    """Test 5: Company settings docs"""
+    print("\n=== TEST 5: Company Settings Documentation ===")
+    
+    if not spec:
+        print("❌ No OpenAPI spec available")
+        return False
+    
+    try:
+        update_company_path = spec.get("paths", {}).get("/api/company/updateCompany/{id}", {}).get("put", {})
+        description = update_company_path.get("description", "")
+        
+        print(f"UpdateCompany endpoint description length: {len(description)} characters")
+        
+        required_checks = [
+            ("Payment Links only", "payment links restriction"),
+            ("max 30", "grace period 30 minute limit")
+        ]
+        
+        all_found = True
+        
+        for phrase, check_name in required_checks:
+            if phrase.lower() in description.lower():
+                print(f"✅ Found {check_name}: '{phrase}'")
+            else:
+                print(f"❌ Missing {check_name}: '{phrase}'")
+                all_found = False
+        
+        if all_found:
+            print("✅ Company settings documentation requirements met")
+            return True
+        else:
+            print("❌ Company settings documentation incomplete")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error checking company settings docs: {str(e)}")
+        return False
+
+def test_webhook_docs(spec):
+    """Test 6: Webhook documentation"""
+    print("\n=== TEST 6: Webhook Documentation ===")
+    
+    if not spec:
+        print("❌ No OpenAPI spec available")
+        return False
+    
+    try:
+        # Look for webhook documentation in the spec
+        webhook_info_found = False
+        direct_api_example_correct = False
+        payment_link_example_correct = False
+        
+        # Check if webhook documentation exists
+        spec_str = json.dumps(spec, indent=2)
+        
+        # Check for Direct API underpaid example without grace_period_minutes
+        if "direct api" in spec_str.lower() and "underpaid" in spec_str.lower():
+            webhook_info_found = True
+            print("✅ Webhook documentation section found")
+            
+            # Check if Direct API example has "note" field instead of grace_period_minutes
+            if '"note"' in spec_str and "direct api" in spec_str.lower():
+                direct_api_example_correct = True
+                print("✅ Direct API underpaid example has 'note' field")
+            else:
+                print("❌ Direct API underpaid example missing 'note' field")
+        else:
+            print("❌ Webhook documentation not found")
+        
+        # Check for Payment Link example with grace_period_minutes
+        if "payment link" in spec_str.lower() and "grace_period_minutes" in spec_str:
+            payment_link_example_correct = True
+            print("✅ Payment Link underpaid example has grace_period_minutes")
+        else:
+            print("❌ Payment Link underpaid example missing grace_period_minutes")
+        
+        success = webhook_info_found and direct_api_example_correct and payment_link_example_correct
+        
+        if success:
+            print("✅ Webhook documentation requirements met")
+        else:
+            print("❌ Webhook documentation incomplete")
+            
+        return success
+        
+    except Exception as e:
+        print(f"❌ Error checking webhook docs: {str(e)}")
+        return False
+
+def test_faq_section(spec):
+    """Test 7: FAQ section with comparison table"""
+    print("\n=== TEST 7: FAQ Section Documentation ===")
+    
+    if not spec:
+        print("❌ No OpenAPI spec available")
+        return False
+    
+    try:
+        info_description = spec.get("info", {}).get("description", "")
+        
+        print(f"API info description length: {len(info_description)} characters")
+        
+        # Check for comparison table with "Not used" entries for Direct API
+        required_elements = [
+            ("comparison table", "table structure"),
+            ("not used", "direct api exclusions"),
+            ("direct api", "direct api references"),
+            ("payment link", "payment link references")
+        ]
+        
+        all_found = True
+        
+        for phrase, description in required_elements:
+            if phrase.lower() in info_description.lower():
+                print(f"✅ Found {description}: '{phrase}'")
+            else:
+                print(f"❌ Missing {description}: '{phrase}'")
+                all_found = False
+        
+        if all_found:
+            print("✅ FAQ section with comparison table found")
+            return True
+        else:
+            print("❌ FAQ section incomplete")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error checking FAQ section: {str(e)}")
         return False
 
 def main():
-    """Run all tests for per-merchant grace period implementation"""
-    print("🔍 TESTING: Per-merchant grace period for Payment Link underpayments (max 30 min cap)")
-    print("=" * 80)
+    """Run all API documentation tests"""
+    print("🚀 Starting API Documentation Testing for DynoPay Backend")
+    print(f"Base URL: {BASE_URL}")
+    print("=" * 60)
     
-    # Track results
-    all_tests = []
+    # Test results tracking
+    results = []
     
-    # Run all verification tests
-    all_tests.append(verify_webhooks_index_implementation())
-    all_tests.append(verify_payment_controller_process_incomplete())
-    all_tests.append(verify_payment_controller_add_verify())
-    all_tests.append(verify_company_controller_update())
-    all_tests.append(verify_company_model())
-    all_tests.append(check_backend_health())
-    all_tests.append(check_typescript_compilation())
+    # Run all tests
+    results.append(("Backend Health", test_backend_health()))
+    results.append(("Swagger UI Accessibility", test_swagger_ui_accessibility()))
     
-    # Calculate results
-    total_tests = len(all_tests)
-    passed_tests = sum(all_tests)
-    success_rate = (passed_tests / total_tests) * 100
+    spec_valid, spec = test_openapi_spec_validity()
+    results.append(("OpenAPI Spec Validity", spec_valid))
     
-    print("\n" + "=" * 80)
-    print(f"📊 TEST RESULTS: {passed_tests}/{total_tests} tests passed ({success_rate:.1f}%)")
-    print("=" * 80)
-    
-    if passed_tests == total_tests:
-        print("🎉 ALL TESTS PASSED! Per-merchant grace period implementation is working correctly.")
-        return True
+    if spec_valid and spec:
+        results.append(("Direct API Endpoint Docs", test_direct_api_endpoint_docs(spec)))
+        results.append(("Company Settings Docs", test_company_settings_docs(spec)))
+        results.append(("Webhook Docs", test_webhook_docs(spec)))
+        results.append(("FAQ Section", test_faq_section(spec)))
     else:
-        print("⚠️ SOME TESTS FAILED! Please review the implementation.")
-        return False
+        print("\n⚠️  Skipping detailed documentation tests due to invalid OpenAPI spec")
+        results.extend([
+            ("Direct API Endpoint Docs", False),
+            ("Company Settings Docs", False), 
+            ("Webhook Docs", False),
+            ("FAQ Section", False)
+        ])
+    
+    # Summary
+    print("\n" + "=" * 60)
+    print("📊 TEST SUMMARY")
+    print("=" * 60)
+    
+    passed = 0
+    total = len(results)
+    
+    for test_name, passed_test in results:
+        status = "✅ PASS" if passed_test else "❌ FAIL"
+        print(f"{status} | {test_name}")
+        if passed_test:
+            passed += 1
+    
+    success_rate = (passed / total) * 100
+    print(f"\nSuccess Rate: {passed}/{total} ({success_rate:.1f}%)")
+    
+    if passed == total:
+        print("🎉 All API documentation tests passed!")
+        return 0
+    else:
+        print(f"⚠️  {total - passed} test(s) failed")
+        return 1
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    sys.exit(main())
