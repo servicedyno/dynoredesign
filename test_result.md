@@ -7,6 +7,58 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "Per-merchant grace period for Payment Link underpayments (max 30 min cap)"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/webhooks/index.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/controller/companyController.ts"
+      - "/app/backend/models/companyModels/companyModel.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          FIX: Per-merchant grace period for Payment Link underpayments, capped at max 30 minutes.
+          Direct API payments do NOT use grace period/underpayment waiting (already correct — processes immediately).
+          
+          CHANGES MADE:
+          
+          1. webhooks/index.ts — Payment Link underpayment block:
+             - Now fetches merchant's grace_period_minutes from tbl_company
+             - Caps at max 30: Math.min(company.grace_period_minutes, 30)
+             - Redis TTL uses merchantGracePeriodMinutes * 60 (was hardcoded 1800)
+             - Webhook payload uses merchantGracePeriodMinutes (was hardcoded 30)
+             - Logs the merchant-specific grace period applied
+          
+          2. paymentController.ts — processIncompletePayments cron:
+             - SQL now queries partial payments older than 5 min (was hardcoded 30 min)
+             - In loop, fetches each company's grace_period_minutes (capped at 30)
+             - Skips if merchant's grace period hasn't expired yet
+             - Merchants with shorter grace (e.g., 10 min) get processed sooner
+          
+          3. paymentController.ts — addPayment + verifyCryptoPayment:
+             - Added Math.min(value, 30) cap when reading company grace_period_minutes
+          
+          4. companyController.ts — updateCompany:
+             - Added validation: grace_period_minutes must be 1-30
+             - Returns 400 error if > 30 or < 1
+          
+          5. companyModel.ts — Updated comment to document max 30 and Payment Link only
+          
+          VERIFY:
+          1. Code: grep for "Math.min.*grace.*30\|merchantGracePeriodMinutes\|graceTtlSeconds" in webhooks/index.ts and paymentController.ts
+          2. Code: In processIncompletePayments, query uses '5 minutes' interval, loop checks per-company grace
+          3. Code: companyController.ts has validation block for grace_period_minutes > 30
+          4. Code: companyModel.ts comment mentions "Max 30" and "Payment Links"
+          5. Direct API path (isDirectApi block in webhooks/index.ts) does NOT reference grace period
+          6. Backend healthy with no TS errors
+          
+          Credentials: richard@dyno.pt / Katiekendra123@
+          Base URL: https://dep-installer-44.preview.emergentagent.com
   - task: "FIX: Fallback safety nets for missed/incomplete merchant pool payments"
     implemented: true
     working: true
