@@ -7,6 +7,7 @@
 
 import axios from "axios";
 import { getRedisItem, setRedisItem } from "../utils/redisInstance";
+import { getTronNetworkParams } from "./tronEnergyService";
 
 // Tatum API base URL
 const TATUM_API_URL = "https://api.tatum.io/v3";
