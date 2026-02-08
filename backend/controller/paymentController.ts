@@ -3140,7 +3140,7 @@ const verifyCryptoPayment = async (
         }
         if (company?.dataValues?.grace_period_minutes !== undefined && 
             company?.dataValues?.grace_period_minutes !== null) {
-          gracePeriodMinutes = parseInt(company.dataValues.grace_period_minutes);
+          gracePeriodMinutes = Math.min(parseInt(company.dataValues.grace_period_minutes), 30); // Max 30 minutes
         }
       } catch (e) {
         console.log("[verifyCryptoPayment] Could not fetch merchant settings:", e);
