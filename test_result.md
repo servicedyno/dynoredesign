@@ -121,6 +121,24 @@ current_test_task:
           No grace period. No underpayment threshold. No overpayment threshold.
           
           Payment Link behavior unchanged: Uses merchant's thresholds + grace period as before.
+      - working: "NA"
+        agent: "main"
+        comment: |
+          DOCS UPDATE: API documentation updated to reflect Direct API vs Payment Link behavior.
+          
+          FILES UPDATED:
+          1. swagger/index.ts — FAQ section: Added comparison table (grace_period, underpayment_threshold,
+             overpayment_threshold → "✅ Used" for Payment Links, "❌ Not used" for Direct API)
+          2. swagger/paths/directApi.ts — cryptoPayment endpoint: Added "Direct API Payment Handling"
+             section explaining no grace period, no thresholds, immediate processing
+          3. swagger/paths/webhooks.ts — Updated payment.underpaid event description (Payment Links wait,
+             Direct API informational only). Updated Direct API underpaid example (removed grace_period_minutes,
+             added note field). Added comparison table in field reference.
+          4. swagger/paths/company.ts — All 3 payment settings now annotated "Payment Links only — Direct API
+             ignores this" in create, get, and update endpoints. grace_period_minutes notes max: 30.
+          5. swagger/paths/payment.ts — getData endpoint: payment_settings described as "Payment Links only"
+          
+          All 178 API paths still loading. Backend healthy.
       - working: true
         agent: "testing"
         comment: |
