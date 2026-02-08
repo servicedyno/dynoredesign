@@ -1013,11 +1013,19 @@ const feeEstimation = async (
       fast: (bytes * result).toFixed(8),
     };
   } else if (currency === "TRX") {
-    fees = {
-      fast: 10,
-      medium: 5,
-      slow: 3,
-    };
+    // Dynamic TRX native fee: free with bandwidth, ~0.3 TRX otherwise (was hardcoded 10)
+    try {
+      const trxFee = await calculateDynamicTRXNativeFee(fromAddress);
+      logCostSavings("feeEstimation-TRX", 10, trxFee.fast, { bandwidthFree: trxFee.bandwidthFree });
+      fees = {
+        fast: trxFee.fast,
+        medium: trxFee.medium,
+        slow: trxFee.slow,
+      };
+    } catch (_trxFeeError) {
+      console.warn(`[feeEstimation] ⚠️ Dynamic TRX fee failed, using fallback 1 TRX`);
+      fees = { fast: 1, medium: 1, slow: 1 };
+    }
   } else if (currency === "USDT-TRC20") {
     // Dynamic TRC20 fee calculation using live TRON Energy price
     // Post Proposal #104 (Aug 2025): Energy reduced from 420 → 100 SUN/unit
