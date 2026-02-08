@@ -80,38 +80,76 @@ export const fundGasIfNeeded = async (
 
     let estimatedGas = 0;
     
-    try {
-      let contractAddress: string | undefined;
-      if (walletType === 'USDT-ERC20') {
-        contractAddress = process.env.ETH_CONTRACT;
-      } else if (walletType === 'USDC-ERC20') {
-        contractAddress = process.env.USDC_CONTRACT;
-      } else if (walletType === 'USDT-TRC20') {
-        contractAddress = process.env.TRX_CONTRACT;
+    // === Energy-Aware Optimization for TRC20 ===
+    // Check if the address has staked Energy that covers the transfer
+    if (gasToken === "TRX" && (walletType === 'USDT-TRC20')) {
+      try {
+        const accountResources = await getAccountResources(tempAddress);
+        if (accountResources.hasSufficientEnergy) {
+          console.log(
+            `[SmartGas] ⚡ ENERGY OPTIMIZATION: ${tempAddress} has ${accountResources.availableEnergy} Energy ` +
+            `(need ${TRC20_ENERGY.EXISTING_RECIPIENT}) — staked Energy covers transfer!`
+          );
+          logCostSavings("SmartGas-EnergySkip", POOL_CONFIG.TRX_GAS_FALLBACK, 0, {
+            availableEnergy: accountResources.availableEnergy,
+            address: tempAddress,
+          });
+          // Only need a tiny amount for bandwidth (if not covered by free bandwidth)
+          if (accountResources.availableBandwidth >= 345) {
+            // Both Energy and Bandwidth covered — no TRX needed!
+            console.log(`[SmartGas] ✅ Full Energy+Bandwidth coverage — zero gas funding needed`);
+            await poolAddress.update({ gas_balance: currentBalance });
+            return { funded: false, amount: 0, reason: 'Staked Energy+Bandwidth covers transfer' };
+          }
+          // Only need bandwidth cost (~0.345 TRX)
+          estimatedGas = 0.5;
+          console.log(`[SmartGas] 📊 Energy covered, only bandwidth cost needed: ~${estimatedGas} TRX`);
+        } else {
+          console.log(
+            `[SmartGas] 📊 Energy check: ${accountResources.availableEnergy} available ` +
+            `(need ${TRC20_ENERGY.EXISTING_RECIPIENT}) — will use dynamic fee estimation`
+          );
+        }
+      } catch (resourceError) {
+        console.warn(`[SmartGas] ⚠️ Energy check failed: ${getErrorMessage(resourceError)}, proceeding with fee estimation`);
       }
-      
-      const estimationRecipient = recipientAddress || feeWalletAddress;
-      const estimationAmount = transferAmount || 100;
-      
-      const feeEstimate = await tatumApi.feeEstimation(
-        walletType,
-        tempAddress,
-        estimationRecipient,
-        estimationAmount,
-        contractAddress
-      );
-      
-      if (gasToken === "ETH") {
-        estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? feeEstimate?.slow ?? 0);
-      } else if (gasToken === "TRX") {
-        estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 5);
+    }
+
+    // Standard fee estimation (skipped if Energy optimization already set estimatedGas)
+    if (estimatedGas === 0) {
+      try {
+        let contractAddress: string | undefined;
+        if (walletType === 'USDT-ERC20') {
+          contractAddress = process.env.ETH_CONTRACT;
+        } else if (walletType === 'USDC-ERC20') {
+          contractAddress = process.env.USDC_CONTRACT;
+        } else if (walletType === 'USDT-TRC20') {
+          contractAddress = process.env.TRX_CONTRACT;
+        }
+        
+        const estimationRecipient = recipientAddress || feeWalletAddress;
+        const estimationAmount = transferAmount || 100;
+        
+        const feeEstimate = await tatumApi.feeEstimation(
+          walletType,
+          tempAddress,
+          estimationRecipient,
+          estimationAmount,
+          contractAddress
+        );
+        
+        if (gasToken === "ETH") {
+          estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? feeEstimate?.slow ?? 0);
+        } else if (gasToken === "TRX") {
+          estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 5);
+        }
+        
+        console.log(`[SmartGas] Estimated gas for ${walletType} transfer: ${estimatedGas} ${gasToken}`);
+        
+      } catch (estimationError) {
+        console.warn(`[SmartGas] Gas estimation failed, using fallback:`, getErrorMessage(estimationError));
+        estimatedGas = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_FALLBACK : POOL_CONFIG.ETH_GAS_FALLBACK;
       }
-      
-      console.log(`[SmartGas] Estimated gas for ${walletType} transfer: ${estimatedGas} ${gasToken}`);
-      
-    } catch (estimationError) {
-      console.warn(`[SmartGas] Gas estimation failed, using fallback:`, getErrorMessage(estimationError));
-      estimatedGas = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_FALLBACK : POOL_CONFIG.ETH_GAS_FALLBACK;
     }
 
     const requiredGas = estimatedGas * POOL_CONFIG.GAS_SAFETY_BUFFER;
