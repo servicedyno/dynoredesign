@@ -9,7 +9,7 @@ user_problem_statement: "Auto-generate friendly names for API keys and wallets w
 current_test_task:
   - task: "Per-merchant grace period for Payment Link underpayments (max 30 min cap)"
     implemented: true
-    working: "NA"
+    working: true
     files:
       - "/app/backend/webhooks/index.ts"
       - "/app/backend/controller/paymentController.ts"
@@ -17,7 +17,7 @@ current_test_task:
       - "/app/backend/models/companyModels/companyModel.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
