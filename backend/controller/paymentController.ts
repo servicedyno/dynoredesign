@@ -3883,6 +3883,7 @@ const cryptoVerification = async (address, webhook = true) => {
           - Merchant amount sent: ${adminTransferResult.sendAmount} ${tempCurrency}
           - Merchant TX: ${adminTransferResult.transactionDetails?.txId || 'N/A'}
           - Admin fee retained for sweep: ${adminTransferResult.adminFeeRetained || 0} ${tempCurrency}
+          - SmartGas funded: ${adminTransferResult.gasFunded || 0} (TX: ${adminTransferResult.gasFundingTxId || 'N/A'})
           - Is Merchant Pool: ${tempData.is_merchant_pool}
         `);
 
