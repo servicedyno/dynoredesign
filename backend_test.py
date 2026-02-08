@@ -1,197 +1,227 @@
 #!/usr/bin/env python3
+
 """
-SmartGas Integration Tests for DynoPay Backend
-Tests merchant token transfers with SmartGas functionality
+DYNOPAY BACKEND TESTING SUITE - TATUM API BUG FIXES
+Testing Agent for verifying two specific bug fixes in tatumApi.ts
+Date: 2026-02-08
 """
 
-import requests
-import json
+import subprocess
 import sys
-from typing import Dict, Any
+import json
+import requests
 
+# Test configuration
 BASE_URL = "https://init-install.preview.emergentagent.com"
 CREDENTIALS = {
     "email": "richard@dyno.pt",
     "password": "Katiekendra123@"
 }
 
-class TestFailedException(Exception):
-    pass
+def run_command(cmd, cwd=None):
+    """Execute command and return result"""
+    try:
+        result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True, timeout=30)
+        return result.returncode == 0, result.stdout.strip(), result.stderr.strip()
+    except subprocess.TimeoutExpired:
+        return False, "", "Command timeout"
 
-def log_test(message: str):
-    print(f"[TEST] {message}")
+def test_grep_patterns():
+    """Test grep patterns for bug fixes in tatumApi.ts"""
+    print("=== TESTING GREP PATTERNS FOR BUG FIXES ===")
+    
+    tests = []
+    
+    # Test 1: Verify "fast: 5" was removed (should return 0 matches)
+    success, stdout, stderr = run_command('grep -n "fast: 5" /app/backend/apis/tatumApi.ts', cwd='/app/backend')
+    if success:
+        # If grep succeeds, it found matches - this is a failure
+        tests.append({
+            "name": "BUG 1: 'fast: 5' removal verification",
+            "passed": False,
+            "details": f"❌ FAILED: Found {len(stdout.splitlines())} matches for 'fast: 5' (should be 0)\n{stdout}"
+        })
+    else:
+        # If grep fails (exit code 1), it found no matches - this is success
+        tests.append({
+            "name": "BUG 1: 'fast: 5' removal verification", 
+            "passed": True,
+            "details": "✅ PASSED: No 'fast: 5' found in tatumApi.ts (correctly removed)"
+        })
+    
+    # Test 2: Verify "fast: 20" exists exactly twice
+    success, stdout, stderr = run_command('grep -n "fast: 20" /app/backend/apis/tatumApi.ts', cwd='/app/backend')
+    if success:
+        matches = stdout.splitlines()
+        if len(matches) == 2:
+            tests.append({
+                "name": "BUG 1: 'fast: 20' verification (2 matches expected)",
+                "passed": True,
+                "details": f"✅ PASSED: Found exactly 2 matches for 'fast: 20':\n{stdout}"
+            })
+        else:
+            tests.append({
+                "name": "BUG 1: 'fast: 20' verification (2 matches expected)",
+                "passed": False,
+                "details": f"❌ FAILED: Found {len(matches)} matches for 'fast: 20' (expected 2)\n{stdout}"
+            })
+    else:
+        tests.append({
+            "name": "BUG 1: 'fast: 20' verification (2 matches expected)",
+            "passed": False,
+            "details": f"❌ FAILED: No matches found for 'fast: 20'\n{stderr}"
+        })
+    
+    # Test 3: Verify USDC-ERC20 in feeEstimation array
+    success, stdout, stderr = run_command('grep -n "USDC-ERC20" /app/backend/apis/tatumApi.ts', cwd='/app/backend')
+    if success:
+        matches = stdout.splitlines()
+        # Should find USDC-ERC20 in both feeEstimation and batchFeeEstimation arrays
+        usdc_in_arrays = [line for line in matches if '"USDC-ERC20"' in line and 'indexOf' in line]
+        if len(usdc_in_arrays) >= 2:
+            tests.append({
+                "name": "BUG 2: USDC-ERC20 array inclusion verification",
+                "passed": True,
+                "details": f"✅ PASSED: Found USDC-ERC20 in array checks:\n{chr(10).join(usdc_in_arrays)}"
+            })
+        else:
+            tests.append({
+                "name": "BUG 2: USDC-ERC20 array inclusion verification",
+                "passed": False,
+                "details": f"❌ FAILED: Expected USDC-ERC20 in at least 2 array checks, found {len(usdc_in_arrays)}\nAll matches:\n{stdout}"
+            })
+    else:
+        tests.append({
+            "name": "BUG 2: USDC-ERC20 array inclusion verification",
+            "passed": False,
+            "details": f"❌ FAILED: No USDC-ERC20 found in tatumApi.ts\n{stderr}"
+        })
+    
+    # Test 4: Verify isERC20 logic includes both USDT-ERC20 and USDC-ERC20
+    success, stdout, stderr = run_command('grep -n "isERC20.*USDT-ERC20.*USDC-ERC20" /app/backend/apis/tatumApi.ts', cwd='/app/backend')
+    if success:
+        matches = stdout.splitlines()
+        if len(matches) >= 2:  # Should be in both feeEstimation and batchFeeEstimation
+            tests.append({
+                "name": "BUG 2: isERC20 logic verification",
+                "passed": True,
+                "details": f"✅ PASSED: Found isERC20 logic including both tokens:\n{stdout}"
+            })
+        else:
+            tests.append({
+                "name": "BUG 2: isERC20 logic verification",
+                "passed": False,
+                "details": f"❌ FAILED: Expected isERC20 logic in 2 locations, found {len(matches)}\n{stdout}"
+            })
+    else:
+        tests.append({
+            "name": "BUG 2: isERC20 logic verification",
+            "passed": False,
+            "details": f"❌ FAILED: isERC20 logic not found\n{stderr}"
+        })
+    
+    return tests
 
-def log_success(message: str):
-    print(f"[✅] {message}")
-
-def log_failure(message: str):
-    print(f"[❌] {message}")
-
-def authenticate() -> str:
-    """Login and get JWT token"""
-    log_test("Authenticating...")
+def test_typescript_compilation():
+    """Test TypeScript compilation"""
+    print("=== TESTING TYPESCRIPT COMPILATION ===")
     
-    response = requests.post(
-        f"{BASE_URL}/api/user/login",
-        json=CREDENTIALS,
-        headers={"Content-Type": "application/json"}
-    )
+    success, stdout, stderr = run_command('npx tsc --noEmit', cwd='/app/backend')
     
-    if response.status_code != 200:
-        raise TestFailedException(f"Authentication failed: {response.status_code} - {response.text}")
-    
-    data = response.json()
-    if not data.get("data", {}).get("accessToken"):
-        raise TestFailedException(f"No access token in response: {data}")
-    
-    token = data["data"]["accessToken"]
-    log_success(f"Authentication successful")
-    return token
-
-def get_api_keys(token: str) -> Dict[str, Any]:
-    """Get API keys for company_id 38 (Bozzmail)"""
-    log_test("Getting API keys...")
-    
-    response = requests.get(
-        f"{BASE_URL}/api/userApi/getApi",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
+    if success and not stderr:
+        return {
+            "name": "TypeScript compilation",
+            "passed": True,
+            "details": "✅ PASSED: No TypeScript compilation errors"
         }
-    )
-    
-    if response.status_code != 200:
-        raise TestFailedException(f"Failed to get API keys: {response.status_code} - {response.text}")
-    
-    data = response.json()
-    api_keys_data = data.get("data", {})
-    
-    # Get all keys from the response structure
-    all_keys = api_keys_data.get("all", [])
-    
-    # Find API key for company_id 38 (Bozzmail)
-    target_key = None
-    for key in all_keys:
-        if key.get("company_id") == 38:
-            target_key = key
-            break
-    
-    if not target_key:
-        raise TestFailedException(f"No API key found for company_id 38. Available keys: {[k.get('company_id') for k in all_keys]}")
-    
-    encrypted_key = target_key.get("apiKey")
-    if not encrypted_key:
-        raise TestFailedException(f"No apiKey in API key: {target_key}")
-    
-    log_success(f"Found API key for company_id 38: {target_key.get('api_name', 'N/A')}")
-    return target_key
-
-def create_customer(api_key: str, token: str) -> Dict[str, Any]:
-    """Create test customer via Direct API"""
-    log_test("Creating test customer...")
-    
-    customer_data = {
-        "name": "SmartGas Test",
-        "email": "smartgas-test@bozzmail.pt"
-    }
-    
-    response = requests.post(
-        f"{BASE_URL}/api/user/createUser",
-        json=customer_data,
-        headers={
-            "x-api-key": api_key,
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
+    else:
+        return {
+            "name": "TypeScript compilation",
+            "passed": False,
+            "details": f"❌ FAILED: TypeScript compilation errors:\nSTDOUT: {stdout}\nSTDERR: {stderr}"
         }
-    )
-    
-    if response.status_code != 200:
-        raise TestFailedException(f"Customer creation failed: {response.status_code} - {response.text}")
-    
-    data = response.json()
-    customer = data.get("data")
-    if not customer:
-        raise TestFailedException(f"No customer data in response: {data}")
-    
-    log_success(f"Customer created: {customer.get('customer_id', 'N/A')}")
-    return customer
 
-def create_usdt_trc20_payment(api_key: str, token: str) -> Dict[str, Any]:
-    """Create USDT-TRC20 payment via Direct API"""
-    log_test("Creating USDT-TRC20 payment...")
-    
-    payment_data = {
-        "amount": 10,
-        "currency": "USDT-TRC20"
-    }
-    
-    response = requests.post(
-        f"{BASE_URL}/api/user/cryptoPayment",
-        json=payment_data,
-        headers={
-            "x-api-key": api_key,
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-    )
-    
-    if response.status_code != 200:
-        raise TestFailedException(f"Payment creation failed: {response.status_code} - {response.text}")
-    
-    data = response.json()
-    payment = data.get("data")
-    if not payment:
-        raise TestFailedException(f"No payment data in response: {data}")
-    
-    # Verify required fields
-    required_fields = ["address", "amount", "currency"]
-    missing_fields = [field for field in required_fields if not payment.get(field)]
-    if missing_fields:
-        raise TestFailedException(f"Missing required fields in payment response: {missing_fields}")
-    
-    if payment.get("currency") != "USDT-TRC20":
-        raise TestFailedException(f"Expected currency USDT-TRC20, got: {payment.get('currency')}")
-    
-    log_success(f"USDT-TRC20 payment created:")
-    log_success(f"  - Address: {payment.get('address')}")
-    log_success(f"  - Amount: {payment.get('amount')} {payment.get('currency')}")
-    log_success(f"  - Transaction ID: {payment.get('transaction_id')}")
-    
-    return payment
-
-def run_tests():
-    """Run all SmartGas integration tests"""
-    print("="*60)
-    print("SMARTGAS INTEGRATION TESTS FOR DYNOPAY BACKEND")
-    print("="*60)
+def test_backend_health():
+    """Test backend health endpoint"""
+    print("=== TESTING BACKEND HEALTH ===")
     
     try:
-        # 1. Authenticate
-        token = authenticate()
-        
-        # 2. Get API keys
-        api_key_data = get_api_keys(token)
-        encrypted_key = api_key_data["apiKey"]
-        
-        # 3. Create customer
-        customer = create_customer(encrypted_key, token)
-        
-        # 4. Create USDT-TRC20 payment
-        payment = create_usdt_trc20_payment(encrypted_key, token)
-        
-        print("\n" + "="*60)
-        log_success("ALL SMARTGAS INTEGRATION TESTS PASSED")
-        print("="*60)
-        
-        return True
-        
-    except TestFailedException as e:
-        log_failure(f"Test failed: {e}")
-        return False
+        response = requests.get(f"{BASE_URL}/api/status/health", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy":
+                return {
+                    "name": "Backend health check",
+                    "passed": True,
+                    "details": f"✅ PASSED: Backend healthy - {data}"
+                }
+            else:
+                return {
+                    "name": "Backend health check",
+                    "passed": False,
+                    "details": f"❌ FAILED: Backend unhealthy - {data}"
+                }
+        else:
+            return {
+                "name": "Backend health check",
+                "passed": False,
+                "details": f"❌ FAILED: HTTP {response.status_code} - {response.text}"
+            }
     except Exception as e:
-        log_failure(f"Unexpected error: {e}")
+        return {
+            "name": "Backend health check",
+            "passed": False,
+            "details": f"❌ FAILED: Exception - {str(e)}"
+        }
+
+def run_all_tests():
+    """Run all tests and generate report"""
+    print("🧪 DYNOPAY TATUM API BUG FIXES TESTING")
+    print("=" * 60)
+    
+    all_tests = []
+    
+    # Run grep pattern tests
+    all_tests.extend(test_grep_patterns())
+    
+    # Run TypeScript compilation test
+    all_tests.append(test_typescript_compilation())
+    
+    # Run backend health test
+    all_tests.append(test_backend_health())
+    
+    # Generate summary
+    passed_count = sum(1 for test in all_tests if test["passed"])
+    total_count = len(all_tests)
+    
+    print("\n" + "=" * 60)
+    print("📊 TEST RESULTS SUMMARY")
+    print("=" * 60)
+    
+    for test in all_tests:
+        status = "✅ PASS" if test["passed"] else "❌ FAIL"
+        print(f"{status} - {test['name']}")
+        if not test["passed"]:
+            print(f"    {test['details']}")
+        print()
+    
+    print("-" * 60)
+    print(f"🎯 OVERALL RESULT: {passed_count}/{total_count} tests passed")
+    
+    if passed_count == total_count:
+        print("✅ ALL TESTS PASSED - BUG FIXES VERIFIED SUCCESSFULLY")
+        return True
+    else:
+        print("❌ SOME TESTS FAILED - REVIEW REQUIRED")
+        
+        print("\n📝 DETAILED FAILURE ANALYSIS:")
+        for test in all_tests:
+            if not test["passed"]:
+                print(f"\n{test['name']}:")
+                print(f"  {test['details']}")
+        
         return False
 
 if __name__ == "__main__":
-    success = run_tests()
+    success = run_all_tests()
     sys.exit(0 if success else 1)
