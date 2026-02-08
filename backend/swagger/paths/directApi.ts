@@ -221,6 +221,13 @@ export const directApiPaths = {
 - \`company\` (default) - You pay fees, deducted from your portion
 - \`customer\` - Customer pays extra to cover fees
 
+**⚠️ Direct API Payment Handling:**
+- Whatever crypto amount is received gets processed immediately
+- **No grace period** — underpayments are processed with the actual received amount
+- **No underpayment threshold** — even small shortfalls are processed as-is (not accepted as full)
+- **No overpayment threshold** — excess is included in the merchant's payment
+- Company-level \`grace_period_minutes\`, \`underpayment_threshold_usd\`, and \`overpayment_threshold_usd\` settings apply to **Payment Links only**
+
 **💡 USE CASE:** Programmatic crypto payments with custom checkout UI, embedded payments, API-first integration`,
       security: [{ ApiKeyAuth: [], BearerAuth: [] }],
       requestBody: {
