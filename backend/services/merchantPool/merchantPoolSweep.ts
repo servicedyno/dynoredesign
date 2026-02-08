@@ -582,6 +582,8 @@ export const sweepByTime = async (): Promise<number> => {
       console.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
     }
   }
+  
+  return eligibleAddresses.length;
 };
 
 /**
