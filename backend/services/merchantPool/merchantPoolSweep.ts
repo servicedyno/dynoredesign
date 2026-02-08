@@ -187,14 +187,19 @@ interface ProfitabilityResult {
 const checkSweepProfitability = async (
   walletType: string,
   balance: number,
-  feeData: { fixedFee: number; transactionFee: number; blockchainBuffer: number; totalDeduction: number; gasPrice?: string; gasLimit?: string; fee?: string; slow?: string } | number
+  feeData: { fixedFee: number; transactionFee: number; blockchainBuffer: number; totalDeduction: number; gasPrice?: string; gasLimit?: string; fee?: string; slow?: string; fast?: string | number } | number
 ): Promise<ProfitabilityResult> => {
   try {
+    // Extract estimated gas fee from feeData (in gas token units: TRX or ETH)
     let estimatedFee = 0;
     if (typeof feeData === "number") {
       estimatedFee = feeData;
+    } else if (feeData?.fast) {
+      // Preferred: 'fast' is already in gas token units (TRX for TRC20, ETH for ERC20)
+      estimatedFee = parseFloat(String(feeData.fast));
     } else if (feeData?.gasPrice && feeData?.gasLimit) {
-      estimatedFee = (parseFloat(feeData.gasPrice) * parseInt(feeData.gasLimit)) / 1e18;
+      // Fallback: gasPrice is in Gwei, gasLimit is unitless → result in ETH
+      estimatedFee = (parseFloat(feeData.gasPrice) * parseInt(feeData.gasLimit)) / 1e9;
     } else if (feeData?.fee) {
       estimatedFee = parseFloat(feeData.fee);
     } else if (feeData?.slow) {
@@ -204,13 +209,19 @@ const checkSweepProfitability = async (
     let balanceUSD = 0;
     let feeUSD = 0;
     
+    // Gas fees are in the gas token (TRX/ETH), not the token itself (USDT/USDC)
+    // Use GAS_TOKEN_MAPPING to get the correct currency for fee→USD conversion
+    const feeCurrency = GAS_TOKEN_MAPPING[walletType] || walletType;
+    
     try {
       balanceUSD = await convertToUSD(walletType, balance);
-      feeUSD = await convertToUSD(walletType, estimatedFee);
+      feeUSD = await convertToUSD(feeCurrency, estimatedFee);
     } catch (convError) {
       console.warn(`[MerchantPool] Could not convert to USD for profitability check:`, convError);
       return { profitable: true, estimatedFee };
     }
+    
+    console.log(`[MerchantPool] Profitability: ${walletType} balance=$${balanceUSD.toFixed(2)}, gas fee=${estimatedFee} ${feeCurrency} ($${feeUSD.toFixed(2)})`);
     
     const PROFITABILITY_THRESHOLD = 0.5;
     const profitable = feeUSD < (balanceUSD * PROFITABILITY_THRESHOLD);
