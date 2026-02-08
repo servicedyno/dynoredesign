@@ -3963,7 +3963,7 @@ const cryptoVerification = async (address, webhook = true) => {
             paymentAmount: Number(totalAmountReceived),
             merchantAmount: Number(userAmountToSend),
             adminFeeAmount: Number(adminAmountToSend),
-            gasFunded: 0,  // Gas funded amount (if applicable)
+            gasFunded: adminTransferResult.gasFunded || 0,  // SmartGas: actual TRX/ETH funded
             gasUsed: adminTransferResult.blockchainFee || 0,
             incomingTxId: transactionId,
             merchantTxId: adminTransferResult.transactionDetails?.txId,
