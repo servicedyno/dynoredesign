@@ -1165,10 +1165,18 @@ const assetToOtherAddress = async ({
       changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
   } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
+    // USDT/USDC ERC-20 have 6 decimals; ETH has 18 — truncate accordingly
+    const isERC20Token = currency === "USDT-ERC20" || currency === "USDC-ERC20";
+    const decimals = isERC20Token ? 6 : 8;
+    const factor = Math.pow(10, decimals);
+    const safeAmount = (Math.floor(Number(amount) * factor) / factor).toString();
+    if (isERC20Token) {
+      console.log(`[assetToOtherAddress] ${currency} amount: ${amount} → truncated to ${decimals} decimals: ${safeAmount}`);
+    }
     transaction = await tatumSdk.blockchain.eth.ethBlockchainTransfer({
       fromPrivateKey: privateKey,
       to: toAddress,
-      amount: Number(amount).toFixed(8).toString(),
+      amount: safeAmount,
       fee: {
         gasPrice: Math.ceil(fee?.gasPrice).toString(),
         gasLimit: fee?.gasLimit.toString(),
