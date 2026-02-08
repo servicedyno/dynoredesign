@@ -25,6 +25,7 @@ import cron from "node-cron";
 import { getTransactionFee, getBlockchainFee, paymentController } from "./controller";
 import sequelize from "./utils/dbInstance";
 import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron, setupRefereeCodeReminderCron, setupPaymentLinkReminderCron } from "./utils/cronJobs";
+import { getOptimizationDiagnostics } from "./services/tronEnergyService";
 
 // Load environment variables
 dotenv.config();
