@@ -343,7 +343,7 @@ const calculateTronFee = async (
   } else {
     // TRC20 transfer - uses energy
     const energy = TRON_COSTS.USDT_TRC20.energy;
-    const energyPrice = tronData.energyPrice || 420; // Sun per energy
+    const energyPrice = tronData.energyPrice || 100; // Sun per energy (post Proposal #104, was 420)
     feeInTRX = (energy * energyPrice) / 1e6; // Convert Sun to TRX
   }
 
