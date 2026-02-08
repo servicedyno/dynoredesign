@@ -77,9 +77,9 @@ def get_api_keys(token: str) -> Dict[str, Any]:
             break
     
     if not target_key:
-        raise TestFailedException(f"No API key found for company_id 38. Available keys: {[k.get('company_id') for k in api_keys]}")
+        raise TestFailedException(f"No API key found for company_id 38. Available keys: {[k.get('company_id') for k in all_keys]}")
     
-    encrypted_key = target_key.get("encrypted_key")
+    encrypted_key = target_key.get("apiKey")
     if not encrypted_key:
         raise TestFailedException(f"No encrypted_key in API key: {target_key}")
     
