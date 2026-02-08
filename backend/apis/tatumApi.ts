@@ -1222,6 +1222,24 @@ const assetToOtherAddress = async ({
     // USDT TRC-20 has 6 decimals — truncate (not round) to avoid "callback is not defined" Tatum error
     const truncatedAmount = (Math.floor(Number(amount) * 1e6) / 1e6).toString();
     console.log(`[assetToOtherAddress] USDT-TRC20 amount: ${amount} → truncated to 6 decimals: ${truncatedAmount}`);
+
+    // Dynamic feeLimit based on sender's Energy & current network price
+    let optimalFeeLimit = 15; // Default fallback (was hardcoded 50)
+    try {
+      const feeLimitResult = await calculateOptimalFeeLimit(
+        fromAddress,
+        toAddress,
+        process.env.TRX_CONTRACT
+      );
+      optimalFeeLimit = feeLimitResult.feeLimit;
+      logCostSavings("assetToOtherAddress", 50, optimalFeeLimit, {
+        energyDeficit: feeLimitResult.energyDeficit,
+        isNewRecipient: feeLimitResult.isNewRecipient,
+      });
+    } catch (feeLimitError) {
+      console.warn(`[assetToOtherAddress] ⚠️ Dynamic feeLimit failed, using fallback ${optimalFeeLimit} TRX`);
+    }
+
     transaction = await tatumSdk.blockchain.tron.tronTransferTrc20({
       amount: truncatedAmount,
       feeLimit: 50,
