@@ -105,6 +105,22 @@ current_test_task:
           8. ✅ Model documentation clearly states "Max 30" and "Payment Links only, NOT Direct API"
           
           CONCLUSION: Per-merchant grace period implementation is fully operational and production-ready. All code verification requirements from the review request have been successfully validated. The system now supports configurable grace periods (1-30 minutes) for Payment Link underpayments while maintaining immediate processing for Direct API payments.
+      - working: "NA"
+        agent: "main"
+        comment: |
+          FIX: Direct API now fully excluded from underpayment/overpayment SETTINGS.
+          
+          1. webhooks/index.ts: isMinorUnderpayment now checks !!linkIdForThreshold — only
+             Payment Links use the underpayment threshold. Direct API underpayments ALWAYS
+             enter the immediate processing path (no threshold comparison).
+          2. paymentController.ts cryptoVerification (line ~4003): overPayment flag now checks
+             !customerData?.pathType?.includes("cryptoPayment"). Direct API (cryptoPayment)
+             NEVER triggers overpayment handling — merchant gets paid the full received amount.
+          
+          Direct API behavior: Whatever crypto is received → process immediately, split fees, done.
+          No grace period. No underpayment threshold. No overpayment threshold.
+          
+          Payment Link behavior unchanged: Uses merchant's thresholds + grace period as before.
   - task: "FIX: Fallback safety nets for missed/incomplete merchant pool payments"
     implemented: true
     working: true
