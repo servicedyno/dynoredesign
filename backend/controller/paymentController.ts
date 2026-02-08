@@ -6403,20 +6403,47 @@ const removeUnwantedSubscriptions = async () => {
 
 const processIncompletePayments = async () => {
   try {
-    // Use centralized SQL interval for grace period
+    // Query all partial payments older than 5 minutes (minimum reasonable grace period)
+    // Then check per-company grace_period_minutes (max 30) in the loop
     const pendingTransactions = await sequelize.query<ITemporaryAddress>(
       `SELECT * FROM tbl_user_temp_address 
        WHERE status = 'partial' 
        AND "txId" IS NOT NULL
-       AND COALESCE(partial_payment_timestamp, "updatedAt") < NOW() - INTERVAL '${PAYMENT_TIMING.SQL_INTERVALS.GRACE_PERIOD}'`,
+       AND COALESCE(partial_payment_timestamp, "updatedAt") < NOW() - INTERVAL '5 minutes'`,
       { type: QueryTypes.SELECT }
     );
 
     if (pendingTransactions.length > 0) {
-      console.log(`Found ${pendingTransactions.length} incomplete payments to process after grace period.`);
+      console.log(`[processIncompletePayments] Found ${pendingTransactions.length} partial payments older than 5 min — checking per-company grace periods...`);
 
       for (const tempTx of pendingTransactions) {
         try {
+          // Fetch merchant's grace period from company settings (max 30 minutes)
+          let companyGracePeriodMinutes = 30; // Default and max
+          if (tempTx.company_id) {
+            try {
+              const companyRecord = await companyModel.findOne({
+                where: { company_id: tempTx.company_id },
+                attributes: ['grace_period_minutes'],
+              });
+              if (companyRecord?.dataValues?.grace_period_minutes !== undefined &&
+                  companyRecord?.dataValues?.grace_period_minutes !== null) {
+                companyGracePeriodMinutes = Math.min(parseInt(String(companyRecord.dataValues.grace_period_minutes)), 30);
+              }
+            } catch (e) {
+              console.log(`[processIncompletePayments] Could not fetch company ${tempTx.company_id} grace period, using default 30 min`);
+            }
+          }
+
+          // Check if this payment's grace period has actually expired
+          const partialTimestamp = new Date(tempTx.partial_payment_timestamp || tempTx.updatedAt);
+          const minutesSincePartial = (Date.now() - partialTimestamp.getTime()) / 60000;
+          if (minutesSincePartial < companyGracePeriodMinutes) {
+            // Still within this merchant's grace period — skip
+            continue;
+          }
+
+          console.log(`[processIncompletePayments] Company ${tempTx.company_id} grace: ${companyGracePeriodMinutes} min, elapsed: ${minutesSincePartial.toFixed(1)} min — processing...`);
           const balanceData = await tatumApi.getAddressBalance(
             tempTx.wallet_address,
             tempTx.wallet_type
