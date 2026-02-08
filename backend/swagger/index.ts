@@ -219,7 +219,7 @@ POST /api/pay/createPaymentLink
 \`\`\`
 
 ### Q: What's the difference between Payment Links and Direct API?
-**A: Two integration methods for different needs:**
+**A: Two integration methods with different payment handling:**
 
 **🔗 Payment Links (Hosted Checkout)**
 - **Best for:** Dashboard users, no-code integration, shareable payment pages
@@ -227,6 +227,7 @@ POST /api/pay/createPaymentLink
 - **Flow:** Create link → Share URL → Customer pays → Webhook sent
 - **Customer experience:** Redirected to Dynopay hosted payment page
 - **Endpoints:** \`/api/pay/createPaymentLink\`, \`/api/pay/getAllPaymentLinks\`
+- **Payment handling:** Uses company-level settings for underpayment threshold, overpayment threshold, and grace period
 
 **⚡ Direct API (Programmatic)**
 - **Best for:** Custom checkout, embedded payments, full control
@@ -234,6 +235,17 @@ POST /api/pay/createPaymentLink
 - **Flow:** Create customer → Create payment → Get crypto address → Customer pays → Webhook sent
 - **Customer experience:** Stay on your website/app (you build the UI)
 - **Endpoints:** \`/api/user/createUser\`, \`/api/user/cryptoPayment\`, \`/api/user/getBalance\`
+- **Payment handling:** Whatever crypto is received gets processed immediately — no grace period, no underpayment/overpayment thresholds
+
+**⚠️ Key Difference — Payment Settings:**
+
+| Setting | Payment Links | Direct API |
+|---------|:------------:|:----------:|
+| \`grace_period_minutes\` | ✅ Used (max 30 min) | ❌ Not used |
+| \`underpayment_threshold_usd\` | ✅ Used | ❌ Not used |
+| \`overpayment_threshold_usd\` | ✅ Used | ❌ Not used |
+| Underpayment behavior | Wait for remainder during grace period | Process immediately with received amount |
+| Overpayment behavior | Detect + notify customer of excess | Process full amount to merchant |
 
 ### Q: Can I use both Payment Links and Direct API in the same company?
 **A: Yes!** You can use both methods simultaneously:
