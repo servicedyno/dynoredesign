@@ -202,17 +202,17 @@
  *                     overpayment_threshold_usd:
  *                       type: number
  *                       nullable: true
- *                       description: "Minimum overpayment (USD) to trigger handling. null = default $5"
+ *                       description: "Minimum overpayment (USD) to trigger handling. Payment Links only. null = default $5"
  *                       example: 5.00
  *                     underpayment_threshold_usd:
  *                       type: number
  *                       nullable: true
- *                       description: "Maximum underpayment (USD) to accept as full. null = default $1"
+ *                       description: "Maximum underpayment (USD) to accept as full. Payment Links only. null = default $1"
  *                       example: 1.00
  *                     grace_period_minutes:
  *                       type: integer
  *                       nullable: true
- *                       description: "Time (minutes) for partial payment. null = default 30"
+ *                       description: "Time (minutes) for partial payment. Payment Links only. Max 30. null = default 30"
  *                       example: 30
  *       404:
  *         description: Company not found
