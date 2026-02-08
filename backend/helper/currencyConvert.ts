@@ -195,8 +195,13 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
       return rate;
     }
   } catch (error: unknown) {
-    const err = error as { message?: string };
-    console.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message}`);
+    const err = error as { response?: { status?: number }; message?: string };
+    // Cache the failure to avoid hammering and log spam
+    tatumFailureCache.set(failKey, Date.now());
+    // Log once per failure window (not every cron tick)
+    if (!lastFail) {
+      console.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message} (suppressing for 10 min)`);
+    }
   }
   return null;
 };
