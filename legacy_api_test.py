@@ -27,7 +27,7 @@ import os
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://setup-deps-6.preview.emergentagent.com"
+BACKEND_URL = "https://dep-installer-44.preview.emergentagent.com"
 TEST_USER_EMAIL = "richard@dyno.pt"
 TEST_USER_PASSWORD = "Katiekendra123@"
 COMPANY_ID = 38

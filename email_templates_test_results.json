@@ -136,7 +136,7 @@
     "overall_status": "\u2705 PASS"
   },
   "test_4_backend_health": {
-    "test_url": "https://setup-deps-6.preview.emergentagent.com/api/user/login",
+    "test_url": "https://dep-installer-44.preview.emergentagent.com/api/user/login",
     "status": "\u2705 PASS",
     "message": "Backend is healthy - API responding with proper validation",
     "response_data": {

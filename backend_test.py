@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timezone
 
 # Test configuration
-BASE_URL = "https://setup-deps-6.preview.emergentagent.com"
+BASE_URL = "https://dep-installer-44.preview.emergentagent.com"
 CREDENTIALS = {
     "email": "richard@dyno.pt",
     "password": "Katiekendra123@"

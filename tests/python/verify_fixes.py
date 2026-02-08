@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://setup-deps-6.preview.emergentagent.com/api"
+BASE_URL = "https://dep-installer-44.preview.emergentagent.com/api"
 
 print("=" * 80)
 print("VERIFYING FIXES")
