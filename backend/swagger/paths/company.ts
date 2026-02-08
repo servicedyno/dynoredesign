@@ -229,10 +229,10 @@
  *       
  *       **Required Fields:** company_name and email must always be provided
  *       
- *       **💰 Payment Settings:**
+ *       **💰 Payment Settings (apply to Payment Links only — Direct API ignores these):**
  *       - `overpayment_threshold_usd`: Min overpayment to trigger handling (default: $5)
  *       - `underpayment_threshold_usd`: Max underpayment to accept as full (default: $1)
- *       - `grace_period_minutes`: Time for customer to complete partial payment (default: 30 min)
+ *       - `grace_period_minutes`: Time for customer to complete partial payment (default: 30 min, max: 30 min)
  *       
  *       **💡 Swagger UI Usage:**
  *       1. Click "Try it out"
