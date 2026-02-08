@@ -527,7 +527,7 @@ export const sweepByThreshold = async (): Promise<number> => {
 /**
  * Sweep addresses after time threshold
  */
-export const sweepByTime = async (): Promise<void> => {
+export const sweepByTime = async (): Promise<number> => {
   const addressesWithFees = await merchantTempAddressModel.findAll({
     where: {
       status: "IN_USE",
@@ -536,7 +536,10 @@ export const sweepByTime = async (): Promise<void> => {
     },
   });
 
-  console.log(`[MerchantPool] Checking ${addressesWithFees.length} IN_USE addresses for time-based sweep...`);
+  // Skip logging entirely when nothing to check
+  if (addressesWithFees.length === 0) return 0;
+
+  console.log(`[MerchantPool] ⏰ Time sweep: checking ${addressesWithFees.length} IN_USE addresses...`);
 
   const eligibleAddresses = [];
 
@@ -558,13 +561,9 @@ export const sweepByTime = async (): Promise<void> => {
       
       const timeSincePayout = Math.floor((new Date().getTime() - lastPayout.getTime()) / 60000);
       
-      console.log(`[MerchantPool] ${address.dataValues.wallet_address} (${walletType}): ${cryptoAmount}, ${timeSincePayout} min since payout (threshold: ${timeThresholdMinutes} min)`);
-      
       if (lastPayout < timeThreshold) {
-        console.log(`[MerchantPool]    ✅ Eligible for time-based sweep`);
+        console.log(`[MerchantPool] ✅ ${address.dataValues.wallet_address} (${walletType}): ${cryptoAmount}, ${timeSincePayout} min since payout — sweeping`);
         eligibleAddresses.push(address);
-      } else {
-        console.log(`[MerchantPool]    ⏳ Not yet (${timeSincePayout} < ${timeThresholdMinutes} min)`);
       }
     } catch (error) {
       const message = getErrorMessage(error);
@@ -572,7 +571,9 @@ export const sweepByTime = async (): Promise<void> => {
     }
   }
 
-  console.log(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for time-based sweep`);
+  if (eligibleAddresses.length > 0) {
+    console.log(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for time-based sweep`);
+  }
 
   for (const address of eligibleAddresses) {
     try {
