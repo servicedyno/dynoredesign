@@ -434,6 +434,8 @@ export default {
   isRecipientActivatedForToken,
   calculateOptimalFeeLimit,
   calculateDynamicTRC20Fee,
+  calculateDynamicTRXNativeFee,
+  getOptimizationDiagnostics,
   logCostSavings,
   TRC20_ENERGY,
   TRC20_BANDWIDTH,
