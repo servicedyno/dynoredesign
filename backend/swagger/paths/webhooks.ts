@@ -172,7 +172,7 @@ Dynopay sends these webhook events for **both Payment Links and Direct API Payme
 |-------|-------------|---------------|
 | \`payment.pending\` | Payment detected on blockchain, awaiting confirmations | Payment Links ✅, Direct API ✅ |
 | \`payment.confirmed\` | Payment fully confirmed and processed | Payment Links ✅, Direct API ✅ |
-| \`payment.underpaid\` | Partial payment received, awaiting remainder | Payment Links ✅, Direct API ✅ |
+| \`payment.underpaid\` | Partial payment received | Payment Links ✅ (waits for remainder), Direct API ✅ (informational only — processed immediately) |
 
 ---
 
