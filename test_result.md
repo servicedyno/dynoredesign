@@ -7,6 +7,93 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "Multi-Chain Fee Optimization — TRON + EVM + TRX Native Dynamic Fees"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/tronEnergyService.ts"
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/services/blockchainFeeService.ts"
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+      - "/app/backend/server.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Multi-Chain Fee Optimization — Full implementation across all supported chains:
+          
+          TRON TRC20 (USDT-TRC20):
+          - Dynamic feeLimit using Energy-aware calculation (was hardcoded feeLimit:50)
+          - Dynamic fee estimation from TronGrid API (was hardcoded fast:20)
+          - SmartGas checks staked Energy before funding TRX (skip gas if Energy covers it)
+          - Fallback energy price updated: 420 → 100 SUN (post Proposal #104)
+          
+          TRX Native:
+          - Dynamic fee using bandwidth check (was hardcoded fast:10)
+          - FREE with available bandwidth, ~0.3 TRX otherwise
+          - Batch: was totalAddress*3.5, now dynamic per-address 
+          
+          EVM (ETH, USDT-ERC20, USDC-ERC20):
+          - Gas price buffer: percentage-based 15%+0.5 Gwei (was flat +2 Gwei which doubled fees at low base)
+          - MIN_GAS_PRICE: 1 Gwei (was 3, too high for post-Dencun ETH)
+          - Batch: percentage-based 10%+0.5 Gwei (was flat +1 Gwei)
+          
+          Diagnostics Endpoint:
+          - GET /diagnostics/fee-optimization — live status of all fee optimizations
+          - Optional ?address= parameter to check specific TRON account resources
+          
+          VERIFY THESE 9 TESTS:
+          
+          TEST 1: Backend Health
+          - GET /health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript Compilation
+          - Check logs: tail -30 /var/log/supervisor/backend.out.log — no TS compilation errors
+          
+          TEST 3: Code — No hardcoded feeLimit:50 remains
+          - Search /app/backend/apis/tatumApi.ts for "feeLimit: 50" — 0 matches
+          - Should find calculateOptimalFeeLimit and batchFeeLimit instead
+          
+          TEST 4: Code — tronEnergyService.ts exports
+          - File exists with exports: getTronNetworkParams, getAccountResources, calculateOptimalFeeLimit, calculateDynamicTRC20Fee, calculateDynamicTRXNativeFee, getOptimizationDiagnostics, logCostSavings, isRecipientActivatedForToken
+          
+          TEST 5: Code — TRX native fee is dynamic
+          - In /app/backend/apis/tatumApi.ts feeEstimation(): the TRX block calls calculateDynamicTRXNativeFee (NOT hardcoded fast:10)
+          - In batchFeeEstimation(): the TRX block calls calculateDynamicTRXNativeFee (NOT hardcoded totalAddress*3.5)
+          
+          TEST 6: Code — EVM gas buffer is percentage-based
+          - In /app/backend/apis/tatumApi.ts feeEstimation(): EVM block has "gasPrice * 1.15 + 0.5" (NOT gasPrice + 2)
+          - MIN_GAS_PRICE = 1 (NOT 3)
+          - In batchFeeEstimation(): EVM block has "gasPrice * 1.1 + 0.5" (NOT gasPrice + 1)
+          
+          TEST 7: Code — SmartGas Energy-aware
+          - /app/backend/services/merchantPool/merchantPoolSweep.ts: imports getAccountResources, TRC20_ENERGY from tronEnergyService
+          - Has hasSufficientEnergy check
+          - Returns early with "Staked Energy+Bandwidth covers transfer" if fully covered
+          
+          TEST 8: Environment Configuration
+          - /app/backend/.env has TRON_MIN_FEE_LIMIT_TRX=5
+          - /app/backend/.env has TRON_MAX_FEE_LIMIT_TRX=30
+          
+          TEST 9: Functional — Diagnostics Endpoint
+          - GET /diagnostics/fee-optimization returns 200 with JSON
+          - Response has success=true
+          - Response has service="TRON Energy Optimization Service"
+          - Response has networkParams.energyPriceSun = 100 (live from TronGrid)
+          - Response has trc20Transfer.costEstimate.oldHardcodedTRX = 20
+          - Response has trc20Transfer.costEstimate.savingsPercent > 0 (confirms savings)
+          - Response has trxNativeTransfer.costEstimate.withBandwidthTRX = 0 (free with bandwidth)
+          - Response has trxNativeTransfer.costEstimate.oldHardcodedTRX = 10
+          - Response has trc20Transfer.feeLimit.oldHardcodedTRX = 50
+          - Response has trc20Transfer.feeLimit.newDynamicMinTRX = 5
+          - Test with address param: GET /diagnostics/fee-optimization?address=TTXk9SbNj8tnRABdGDM3PZvT5bHqTNtANB
+          - Response should have accountResources with address field matching
+          
+          Base URL for curl: http://localhost:8001 (internal)
+          Or via ingress: https://code-analyzer-256.preview.emergentagent.com
   - task: "TRON TRC20 Fee Optimization — Dynamic Energy-Aware feeLimit & SmartGas"
     implemented: true
     working: true
