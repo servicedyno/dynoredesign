@@ -797,6 +797,8 @@ const tatumCryptoWebHook = async (
       // Calculate underpayment amount in USD for threshold comparison
       let underpaymentAmountUsd = 0;
       let underpaymentThresholdUsd = 1; // Default $1 threshold
+      // Merchant-specific grace period for Payment Link underpayments (max 30 minutes)
+      let merchantGracePeriodMinutes = 30; // Default and max
       
       if (isUnderpayment) {
         const shortfallCrypto = expectedAmount - totalReceivedAmount;
@@ -806,7 +808,7 @@ const tatumCryptoWebHook = async (
           underpaymentAmountUsd = (shortfallCrypto / expectedAmount) * baseAmountUsd;
         }
         
-        // Fetch merchant's underpayment threshold if set
+        // Fetch merchant's underpayment threshold + grace period from company settings
         if (customerData?.company_id) {
           try {
             const { companyModel } = await import("../models");
@@ -817,8 +819,13 @@ const tatumCryptoWebHook = async (
                 company?.dataValues?.underpayment_threshold_usd !== null) {
               underpaymentThresholdUsd = parseFloat(company.dataValues.underpayment_threshold_usd);
             }
+            // Grace period: merchant can set lower than 30, but never higher
+            if (company?.dataValues?.grace_period_minutes !== undefined && 
+                company?.dataValues?.grace_period_minutes !== null) {
+              merchantGracePeriodMinutes = Math.min(parseInt(String(company.dataValues.grace_period_minutes)), 30);
+            }
           } catch (e) {
-            console.log("[tatumCryptoWebHook] Could not fetch underpayment threshold:", e);
+            console.log("[tatumCryptoWebHook] Could not fetch merchant settings:", e);
           }
         }
       }
