@@ -1161,9 +1161,20 @@ const batchFeeEstimation = async ({
       slow: totalAddress * 1.5,
     };
   } else if (currency === "USDT-TRC20") {
-    fees = {
-      fast: 20,
-    };
+    // Dynamic batch TRC20 fee using live TRON Energy price
+    try {
+      const dynamicFee = await calculateDynamicTRC20Fee();
+      const batchFee = dynamicFee.fast * (totalAddress || 1);
+      logCostSavings("batchFeeEstimation", 20, batchFee, { totalAddress });
+      fees = {
+        fast: batchFee,
+      };
+    } catch (_batchFeeError) {
+      console.warn(`[batchFeeEstimation] ⚠️ Dynamic TRC20 fee failed, using fallback`);
+      fees = {
+        fast: 14 * (totalAddress || 1),
+      };
+    }
   }
   return fees;
 };
