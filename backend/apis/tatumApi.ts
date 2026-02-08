@@ -1136,6 +1136,8 @@ const batchFeeEstimation = async ({
       fast: 20,
     };
   }
+  return fees;
+};
 
 const assetToOtherAddress = async ({
   currency,
