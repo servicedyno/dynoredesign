@@ -584,22 +584,16 @@ export const sweepByTime = async (): Promise<void> => {
  * Master sweep function - runs both threshold and time-based sweeps
  */
 export const performScheduledSweeps = async (): Promise<void> => {
-  console.log(`[MerchantPool] ========================================`);
-  console.log(`[MerchantPool] Starting scheduled sweep (per-chain config)`);
-  console.log(`[MerchantPool] ========================================`);
-
   try {
-    console.log(`[MerchantPool] 💰 Running threshold-based sweep...`);
-    await sweepByThreshold();
-
-    console.log(`[MerchantPool] ⏰ Running time-based sweep...`);
-    await sweepByTime();
+    const thresholdCount = await sweepByThreshold();
+    const timeCount = await sweepByTime();
+    
+    // Only log banner when there was actual work
+    if (thresholdCount > 0 || timeCount > 0) {
+      console.log(`[MerchantPool] ✅ Sweep completed: ${thresholdCount} threshold + ${timeCount} time-based`);
+    }
   } catch (error) {
     const message = getErrorMessage(error);
     console.error(`[MerchantPool] ❌ Scheduled sweep failed:`, message);
   }
-
-  console.log(`[MerchantPool] ========================================`);
-  console.log(`[MerchantPool] Scheduled sweep completed`);
-  console.log(`[MerchantPool] ========================================`);
 };
