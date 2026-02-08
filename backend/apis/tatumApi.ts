@@ -1182,8 +1182,11 @@ const assetToOtherAddress = async ({
       amount: Number(amount).toFixed(8).toString(),
     });
   } else if (currency === "USDT-TRC20") {
+    // USDT TRC-20 has 6 decimals — truncate (not round) to avoid "callback is not defined" Tatum error
+    const truncatedAmount = (Math.floor(Number(amount) * 1e6) / 1e6).toString();
+    console.log(`[assetToOtherAddress] USDT-TRC20 amount: ${amount} → truncated to 6 decimals: ${truncatedAmount}`);
     transaction = await tatumSdk.blockchain.tron.tronTransferTrc20({
-      amount: Number(amount).toString(),
+      amount: truncatedAmount,
       feeLimit: 50,
       fromPrivateKey: privateKey,
       to: toAddress,
