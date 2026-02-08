@@ -7,16 +7,14 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
-  - task: "Per-merchant grace period for Payment Link underpayments (max 30 min cap)"
+  - task: "API Documentation (Swagger) Update for Direct API vs Payment Link Differences"
     implemented: true
     working: true
     files:
-      - "/app/backend/webhooks/index.ts"
-      - "/app/backend/controller/paymentController.ts"
-      - "/app/backend/controller/companyController.ts"
-      - "/app/backend/models/companyModels/companyModel.ts"
+      - "/api/docs (Swagger UI)"
+      - "/api/docs.json (OpenAPI specification)"
     stuck_count: 0
-    priority: "critical"
+    priority: "high"
     needs_retesting: false
     status_history:
       - working: "NA"
