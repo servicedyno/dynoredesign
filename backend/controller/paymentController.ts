@@ -4000,7 +4000,9 @@ const cryptoVerification = async (address, webhook = true) => {
             fixedDecimal: true,
           });
           // Flag overpayment if > 5 in base currency (USD/EUR/GBP/etc.)
-          if (newAmount[0].amount > 5) {
+          // NOTE: Only applies to Payment Links (createPayment). Direct API (cryptoPayment)
+          // does NOT use overpayment settings — merchant gets paid the full received amount.
+          if (newAmount[0].amount > 5 && !customerData?.pathType?.includes("cryptoPayment")) {
             overPayment = true;
           }
         }
