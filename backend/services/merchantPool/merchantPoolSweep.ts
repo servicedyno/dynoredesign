@@ -308,7 +308,8 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     const isToken = TOKEN_CHAINS.includes(walletType);
     
     if (isToken) {
-      const fundResult = await fundGasIfNeeded(poolAddress as unknown as { dataValues: { wallet_address: string }; update: (data: Record<string, unknown>) => Promise<void> }, walletType);
+      const adminWalletForGas = ADMIN_WALLETS[walletType];
+      const fundResult = await fundGasIfNeeded(poolAddress as unknown as { dataValues: { wallet_address: string }; update: (data: Record<string, unknown>) => Promise<void> }, walletType, actualBalance, adminWalletForGas);
       gasFunding = { ...fundResult, txId: fundResult.txId || null };
 
       // Wait for gas funding TX confirmation before attempting the sweep transfer
