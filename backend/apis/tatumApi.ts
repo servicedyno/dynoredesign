@@ -964,13 +964,17 @@ const feeEstimation = async (
 
     console.log(gasFees);
 
-    // Gas price bounds - follows DynoBackend approach for cost efficiency
-    // MIN: 3 Gwei (network minimum), MAX: 30 Gwei (cost control)
-    // Admin fee buffer (+2) is added separately and goes to admin, not blockchain
-    const MIN_GAS_PRICE = 3;
+    // Gas price bounds — optimized for post-Dencun ETH (base fee often 1-2 Gwei in 2025-2026)
+    // MIN: 1 Gwei (post-Dencun minimum), MAX: 30 Gwei (cost control)
+    // Priority buffer: 15% + 0.5 Gwei (percentage-based, was flat +2 Gwei which doubled fees at low base)
+    const MIN_GAS_PRICE = 1;
     const MAX_GAS_PRICE = 30;
-    let gasPrice = Math.max(MIN_GAS_PRICE, Math.min(MAX_GAS_PRICE, Math.ceil(gasFees?.gasPrice || MIN_GAS_PRICE)));
-    const gas_fee_for_amount = gasPrice + 2; // Add buffer for priority
+    const rawGasPrice = Math.ceil(gasFees?.gasPrice || MIN_GAS_PRICE);
+    let gasPrice = Math.max(MIN_GAS_PRICE, Math.min(MAX_GAS_PRICE, rawGasPrice));
+    // Percentage-based buffer: 15% + 0.5 Gwei priority tip (replaces old flat +2 Gwei)
+    const gas_fee_for_amount = Math.ceil(gasPrice * 1.15 + 0.5);
+    console.log(`[EVM Gas] ⛽ Price: raw=${rawGasPrice}, capped=${gasPrice}, with buffer=${gas_fee_for_amount} Gwei (was ${gasPrice + 2} with flat +2)`);
+    logCostSavings("EVM-GasBuffer", gasPrice + 2, gas_fee_for_amount, { currency, rawGasPrice });
     fees = {
       fast: Number(
         Number((gas_fee_for_amount * gasFees?.gasLimit) / 1000000000)
