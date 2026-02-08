@@ -1051,16 +1051,17 @@ const batchFeeEstimation = async ({
       })),
     });
     console.log("###BTC FEES--->", fees);
-  } else if (["ETH", "BSC", "USDT-ERC20"].indexOf(currency) !== -1) {
+  } else if (["ETH", "BSC", "USDT-ERC20", "USDC-ERC20"].indexOf(currency) !== -1) {
+    const isERC20 = currency === "USDT-ERC20" || currency === "USDC-ERC20";
     // Handle Multiple Transactions
     const gasFeesArray = await Promise.all(
       fromAddresses.map(async (fromAddress) => {
         const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
-          chain: currency === "USDT-ERC20" ? "ETH" : currency,
-          type: currency === "USDT-ERC20" ? "TRANSFER_ERC20" : "TRANSFER_NFT",
+          chain: isERC20 ? "ETH" : currency,
+          type: isERC20 ? "TRANSFER_ERC20" : "TRANSFER_NFT",
           sender: fromAddress.address,
-          ...(currency === "USDT-ERC20" && {
-            contractAddress: process.env.ETH_CONTRACT,
+          ...(isERC20 && {
+            contractAddress: currency === "USDC-ERC20" ? process.env.USDC_CONTRACT : process.env.ETH_CONTRACT,
           }),
           recipient: toAddresses[0].address,
           amount: amount.toString(),
@@ -1087,7 +1088,7 @@ const batchFeeEstimation = async ({
       fast: Number(
         Number(((gasPrice + 1) * gasFees?.gasLimit) / 1000000000) * totalAddress
       ).toFixed(8),
-      ...(currency !== "USDT-ERC20" && {
+      ...(!isERC20 && {
         medium: Number(
           Number(
             ((gasPrice + 1) * ((gasFees?.gasLimit * 50) / 100)) / 1000000000
@@ -1100,8 +1101,7 @@ const batchFeeEstimation = async ({
         ).toFixed(8),
       }),
       gasPrice,
-      gasLimit:
-        currency === "USDT-ERC20"
+      gasLimit: isERC20
           ? gasFees.gasLimit
           : Math.floor((gasFees?.gasLimit * 25) / 100),
     };
