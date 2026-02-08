@@ -365,7 +365,7 @@ class DynoPaySwaggerTester:
 
 def main():
     # Backend URL from environment
-    backend_url = "https://dependency-setup-11.preview.emergentagent.com"
+    backend_url = "https://init-install.preview.emergentagent.com"
     
     tester = DynoPaySwaggerTester(backend_url)
     success = tester.run_all_tests()

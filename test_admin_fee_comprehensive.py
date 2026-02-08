@@ -9,7 +9,7 @@ import json
 from typing import Dict, List, Tuple
 from datetime import datetime
 
-BASE_URL = "https://dependency-setup-11.preview.emergentagent.com"
+BASE_URL = "https://init-install.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials

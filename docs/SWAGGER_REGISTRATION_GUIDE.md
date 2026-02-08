@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://dependency-setup-11.preview.emergentagent.com/api/docs
+Go to: https://init-install.preview.emergentagent.com/api/docs
 
 ---
 

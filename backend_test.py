@@ -9,7 +9,7 @@ import json
 import sys
 from typing import Dict, Any
 
-BASE_URL = "https://dependency-setup-11.preview.emergentagent.com"
+BASE_URL = "https://init-install.preview.emergentagent.com"
 CREDENTIALS = {
     "email": "richard@dyno.pt",
     "password": "Katiekendra123@"
