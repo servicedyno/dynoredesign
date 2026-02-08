@@ -164,10 +164,10 @@
  *     description: |
  *       Retrieve a specific company by its ID.
  *       
- *       **Payment Settings in Response:**
+ *       **Payment Settings in Response (Payment Links only — Direct API ignores these):**
  *       - `overpayment_threshold_usd`: Min overpayment to trigger handling (null = default $5)
  *       - `underpayment_threshold_usd`: Max underpayment to accept as full (null = default $1)
- *       - `grace_period_minutes`: Time for partial payment completion (null = default 30 min)
+ *       - `grace_period_minutes`: Time for partial payment completion (null = default 30 min, max 30)
  *     security:
  *       - BearerAuth: []
  *     parameters:
