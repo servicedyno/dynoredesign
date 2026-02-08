@@ -154,6 +154,11 @@ const TATUM_RATE_IDS: Record<string, string> = {
   ADA: 'ADA', SOL: 'SOL',
 };
 
+// Negative cache for Tatum rate API failures — avoid hammering failing pairs
+// Key: "tatum_fail:{crypto}:{fiat}", Value: timestamp of last failure
+const tatumFailureCache = new Map<string, number>();
+const TATUM_FAILURE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 /**
  * Get crypto rate from Tatum in any fiat (already paid for, reliable, no extra cost)
  * Tatum supports basePair for any fiat: USD, EUR, GBP, CAD, AUD, JPY, CHF, etc.
@@ -161,6 +166,13 @@ const TATUM_RATE_IDS: Record<string, string> = {
 const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<number | null> => {
   const id = TATUM_RATE_IDS[crypto.toUpperCase()];
   if (!id) return null;
+
+  // Check negative cache — skip pairs that recently failed (avoids log spam)
+  const failKey = `tatum_fail:${crypto}:${fiat}`;
+  const lastFail = tatumFailureCache.get(failKey);
+  if (lastFail && (Date.now() - lastFail) < TATUM_FAILURE_CACHE_TTL_MS) {
+    return null; // Silently skip — already logged on first failure
+  }
 
   const apiKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
   if (!apiKey) {
