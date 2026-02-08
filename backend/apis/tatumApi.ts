@@ -1164,11 +1164,19 @@ const batchFeeEstimation = async ({
       fast: (bytes * result).toFixed(8),
     };
   } else if (currency === "TRX") {
-    fees = {
-      fast: totalAddress * 3.5,
-      medium: totalAddress * 2.5,
-      slow: totalAddress * 1.5,
-    };
+    // Dynamic TRX native batch fee: free with bandwidth, ~0.3 TRX/tx otherwise (was 3.5/tx)
+    try {
+      const trxFee = await calculateDynamicTRXNativeFee();
+      const perAddressFee = trxFee.fast || 0.5;
+      logCostSavings("batchFeeEstimation-TRX", totalAddress * 3.5, totalAddress * perAddressFee, { totalAddress });
+      fees = {
+        fast: totalAddress * perAddressFee,
+        medium: totalAddress * perAddressFee,
+        slow: totalAddress * perAddressFee,
+      };
+    } catch (_trxBatchError) {
+      fees = { fast: totalAddress * 0.5, medium: totalAddress * 0.5, slow: totalAddress * 0.5 };
+    }
   } else if (currency === "USDT-TRC20") {
     // Dynamic batch TRC20 fee using live TRON Energy price
     try {
