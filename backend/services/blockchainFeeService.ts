@@ -30,7 +30,8 @@ const GAS_LIMITS = {
   MATIC: 21000,
 };
 
-// TRON energy/bandwidth costs
+// TRON energy/bandwidth costs (updated post Proposal #104, Aug 2025)
+// These are fallback values — live data is fetched from tronEnergyService
 const TRON_COSTS = {
   TRX: { bandwidth: 300 },           // Simple TRX transfer
   USDT_TRC20: { energy: 65000 },     // TRC20 transfer uses energy
