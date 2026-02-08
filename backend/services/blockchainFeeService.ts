@@ -103,34 +103,46 @@ const fetchTatumFee = async (chain: string): Promise<unknown> => {
 
 /**
  * Fetch TRON network parameters for fee calculation
+ * Uses tronEnergyService for live data with fallback to Tatum API
  */
 const fetchTronFee = async (): Promise<unknown> => {
-  const tatumKey = getTatumKey();
-  
   try {
-    // Get TRON chain parameters
-    const response = await axios.get(
-      `${TATUM_API_URL}/tron/info`,
-      {
-        headers: {
-          'x-api-key': tatumKey,
-        },
-      }
-    );
+    // Use the tronEnergyService for live network params
+    const params = await getTronNetworkParams();
     return {
-      ...response.data,
       chain: 'TRON',
+      energyPrice: params.energyPriceSun,
+      bandwidthPrice: params.bandwidthPriceSun,
+      defaultBandwidthFree: 600,
     };
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.error('[BlockchainFeeService] Error fetching TRON fee:', err.message);
-    // Return default TRON fees if API fails
-    return {
-      chain: 'TRON',
-      energyPrice: 420,        // Sun per energy unit
-      bandwidthPrice: 1000,    // Sun per bandwidth unit
-      defaultBandwidthFree: 600,
-    };
+    console.warn('[BlockchainFeeService] tronEnergyService failed, trying Tatum API:', err.message);
+    
+    // Fallback to Tatum API
+    const tatumKey = getTatumKey();
+    try {
+      const response = await axios.get(
+        `${TATUM_API_URL}/tron/info`,
+        {
+          headers: { 'x-api-key': tatumKey },
+        }
+      );
+      return {
+        ...response.data,
+        chain: 'TRON',
+      };
+    } catch (tatumError: unknown) {
+      const tErr = tatumError as { message?: string };
+      console.error('[BlockchainFeeService] Error fetching TRON fee:', tErr.message);
+      // Post Proposal #104 fallback: 100 SUN/energy (was 420)
+      return {
+        chain: 'TRON',
+        energyPrice: 100,
+        bandwidthPrice: 1000,
+        defaultBandwidthFree: 600,
+      };
+    }
   }
 };
 
