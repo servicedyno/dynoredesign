@@ -363,19 +363,22 @@ export const checkMissedPayments = async (): Promise<{
 
         result.found++;
         console.log(`[MerchantPool] ⚠️ MISSED PAYMENT DETECTED: ${walletAddress}`);
-        console.log(`[MerchantPool]   - Balance: ${balance} ${walletType}`);
+        console.log(`[MerchantPool]   - On-chain balance: ${balance} ${walletType}`);
+        console.log(`[MerchantPool]   - Admin fee residual: ${adminFeeBalance} ${walletType}`);
+        console.log(`[MerchantPool]   - Effective new payment: ${effectiveBalance.toFixed(8)} ${walletType}`);
         console.log(`[MerchantPool]   - Expected: ${expectedAmount} ${walletType}`);
         console.log(`[MerchantPool]   - Payment ID: ${currentPaymentId || 'N/A'}`);
         console.log(`[MerchantPool]   - Reserved ${minutesSinceReserved.toFixed(1)} min ago`);
         
         const tolerance = expectedAmount * 0.01;
-        const isUnderpayment = balance < (expectedAmount - tolerance);
+        // Use effectiveBalance (after admin fee subtraction) for underpayment comparison
+        const isUnderpayment = effectiveBalance < (expectedAmount - tolerance);
         
         if (isUnderpayment && minutesSinceReserved < 25) {
           console.log(`[MerchantPool] ⏸️ UNDERPAYMENT detected - waiting for customer to send remaining`);
-          console.log(`[MerchantPool]    - Received: ${balance} ${walletType}`);
+          console.log(`[MerchantPool]    - Received (effective): ${effectiveBalance.toFixed(8)} ${walletType}`);
           console.log(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
-          console.log(`[MerchantPool]    - Shortfall: ${(expectedAmount - balance).toFixed(8)} ${walletType}`);
+          console.log(`[MerchantPool]    - Shortfall: ${(expectedAmount - effectiveBalance).toFixed(8)} ${walletType}`);
           console.log(`[MerchantPool]    - Reserved ${minutesSinceReserved.toFixed(1)} min ago (waiting until 25 min)`);
           result.skippedTooRecent++;
           continue;
@@ -383,7 +386,7 @@ export const checkMissedPayments = async (): Promise<{
         
         if (isUnderpayment) {
           console.log(`[MerchantPool] ⚠️ UNDERPAYMENT - processing as partial (reservation expired)`);
-          console.log(`[MerchantPool]    - Received: ${balance} ${walletType} (${((balance/expectedAmount)*100).toFixed(1)}% of expected)`);
+          console.log(`[MerchantPool]    - Received (effective): ${effectiveBalance.toFixed(8)} ${walletType} (${((effectiveBalance/expectedAmount)*100).toFixed(1)}% of expected)`);
         }
         
         console.log(`[MerchantPool] 🔄 Fetching transaction details from blockchain...`);
