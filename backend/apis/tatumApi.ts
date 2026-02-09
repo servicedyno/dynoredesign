@@ -1612,7 +1612,7 @@ const assetBatchAddressesToOtherAddress = async ({
               gasPrice: Math.ceil(fee?.gasPrice).toString(),
               gasLimit: fee?.gasLimit.toString(),
             },
-            currency: currency === "ETH" ? "ETH" : "USDT",
+            currency: currency === "ETH" ? "ETH" : (currency === "RLUSD-ERC20" ? "RLUSD" : "USDT"),
           });
           const result = await tatumSdk.blockchain.eth.ethBlockchainTransfer({
               fromPrivateKey: fromAddr.privateKey,
@@ -1622,7 +1622,7 @@ const assetBatchAddressesToOtherAddress = async ({
                 gasPrice: Math.ceil(fee?.gasPrice).toString(),
                 gasLimit: fee?.gasLimit.toString(),
               },
-              currency: currency === "ETH" ? "ETH" : "USDT",
+              currency: currency === "ETH" ? "ETH" : (currency === "RLUSD-ERC20" ? "RLUSD" : "USDT"),
             });
           const ethTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
           transactionResponse.push({
