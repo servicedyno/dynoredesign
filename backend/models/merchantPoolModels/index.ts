@@ -88,7 +88,7 @@ const merchantWalletModel = sequelize.define(
       type: DataTypes.STRING(20),
       allowNull: false,
       validate: {
-        isIn: [['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH']],
+        isIn: [['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'SOL', 'XRP', 'POLYGON']],
       },
       comment: "Base chain type (tokens use parent chain xpub)",
     },
