@@ -287,8 +287,8 @@ gasFees = await tatumSdk.fee.estimateFeeBlockchain({ chain: "ETH", type: "TRANSF
 | # | Issue | Chain | Severity | Impact | Fix Effort |
 |---|-------|-------|----------|--------|------------|
 | 1 | **XRP 10 XRP reserve not accounted in sweep** | XRP | 🔴 CRITICAL | Sweep always fails <10 XRP | Low |
-| 2 | **RLUSD XRP reserve for SmartGas (MIN_DEFICIT=1, need 11)** | RLUSD | 🔴 CRITICAL | All gas funding fails for new addresses | Low |
-| 3 | **RLUSD trust line setup verification** | RLUSD | 🔴 HIGH | Payments bounce if no trust line | Medium |
+| 2 | **RLUSD SmartGas: XRP reserve already funded (13 XRP at creation)** | RLUSD | ✅ COVERED | Trust line + reserve handled in wallet creation | N/A |
+| 3 | **RLUSD trust line setup** | RLUSD | ✅ COVERED | Set up during wallet creation (`merchantPoolWallet.ts:230`) | N/A |
 | 4 | **POLYGON native uses TRANSFER_ERC20 (3x gas overestimate)** | POLYGON | 🟡 MEDIUM | Customers overpay ~66% on native POL | Low |
 | 5 | **BCH `bchInputs` defaults to 1 (underestimates multi-UTXO)** | BCH | 🟡 MEDIUM | TX stuck in mempool | Medium |
 | 6 | **SOL no dynamic priority fees** | SOL | 🟡 MEDIUM | Delayed during congestion | Medium |
