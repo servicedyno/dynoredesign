@@ -101,6 +101,47 @@ export const refreshBackgroundRateCache = async (): Promise<void> => {
       }
     }
     await Promise.allSettled(tatumPromises);
+    
+    // Cross-rate recovery: fill gaps where direct Tatum pairs failed (e.g., TRX→BRL)
+    // Strategy: crypto→USD (usually works) × USD→fiat (via USDT proxy or existing cache)
+    for (const crypto of CACHE_CRYPTO_TARGETS) {
+      for (const fiat of CACHE_FIAT_TARGETS) {
+        const cacheKey = `rate_bg:${crypto}:${fiat}`;
+        if (backgroundRateCache.has(cacheKey)) continue; // Already have it
+        
+        // Try cross-rate: crypto→USD × USD→fiat
+        const cryptoUsdKey = `rate_bg:${crypto}:USD`;
+        const usdFiatKey = `rate_bg:USD:${fiat}`;
+        const cryptoUsd = backgroundRateCache.get(cryptoUsdKey);
+        
+        if (cryptoUsd && fiat === 'USD') {
+          // Already have it via USD key
+          continue;
+        }
+        
+        // Get USD→fiat rate from existing cache or USDT proxy
+        let usdToFiat = backgroundRateCache.get(usdFiatKey)?.rate;
+        if (!usdToFiat) {
+          // Try via any other crypto that HAS this fiat rate
+          for (const otherCrypto of CACHE_CRYPTO_TARGETS) {
+            const otherFiat = backgroundRateCache.get(`rate_bg:${otherCrypto}:${fiat}`)?.rate;
+            const otherUsd = backgroundRateCache.get(`rate_bg:${otherCrypto}:USD`)?.rate;
+            if (otherFiat && otherUsd && otherUsd > 0) {
+              usdToFiat = otherFiat / otherUsd;
+              break;
+            }
+          }
+        }
+        
+        if (cryptoUsd && usdToFiat && usdToFiat > 0) {
+          const crossRate = cryptoUsd.rate * usdToFiat;
+          backgroundRateCache.set(cacheKey, { rate: crossRate, timestamp: Date.now() });
+          backgroundRateCache.set(`rate_bg:${fiat}:${crypto}`, { rate: 1 / crossRate, timestamp: Date.now() });
+          ratesUpdated += 2;
+          console.log(`[BackgroundCache] 🔗 Cross-rate recovery: ${crypto}→${fiat} = ${crossRate.toFixed(6)} (via ${crypto}→USD × USD→${fiat})`);
+        }
+      }
+    }
   }
   
   const elapsed = Date.now() - startTime;
