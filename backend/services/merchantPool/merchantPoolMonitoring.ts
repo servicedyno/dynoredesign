@@ -266,15 +266,24 @@ export const checkMissedPayments = async (): Promise<{
         if (redisData?.txId) {
           // BUG FIX: If status is "failed", the webhook fired but settlement FAILED.
           // We must NOT skip — clear failed state and allow reprocessing.
+          // Preserve existing Redis data (ref, company_id, fee_payer, etc.) for proper settlement.
           if (redisData?.status === 'failed') {
             console.log(`[MerchantPool] ⚠️ ${walletAddress} - FAILED PAYMENT DETECTED (txId: ${redisData.txId})`);
             console.log(`[MerchantPool]   - Error: ${redisData.lastError || 'unknown'}`);
             console.log(`[MerchantPool]   - Failed at: ${redisData.failedAt || 'unknown'}`);
-            console.log(`[MerchantPool] 🔄 Clearing failed state to allow reprocessing...`);
+            console.log(`[MerchantPool] 🔄 Clearing failed state, preserving payment context for reprocessing...`);
             
-            // Clear the failed Redis data so the address can be reprocessed from scratch
-            await deleteRedisItem("crypto-" + walletAddress);
-            redisData = {};
+            // Keep the full payment context but clear failed state and txId
+            // so the normal flow can re-detect the incoming tx and reprocess
+            delete redisData.failedAt;
+            delete redisData.lastError;
+            delete redisData.txId;
+            redisData.status = 'pending';
+            redisData.retryFromFailed = 'true';
+            redisData.retriedAt = new Date().toISOString();
+            
+            await setRedisItem("crypto-" + walletAddress, redisData);
+            console.log(`[MerchantPool] 📝 Redis updated: status=pending, txId cleared, context preserved (ref: ${redisData.ref})`);
             // Fall through to reprocessing logic below
           } else {
             console.log(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
