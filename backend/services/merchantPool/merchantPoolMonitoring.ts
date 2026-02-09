@@ -813,6 +813,7 @@ export const detectOrphanPayments = async (): Promise<{
         const DUST_THRESHOLDS: Record<string, number> = {
           BTC: 0.00005, ETH: 0.002, TRX: 20, LTC: 0.05,
           DOGE: 25, BCH: 0.01, BSC: 0.008,
+          SOL: 0.01, XRP: 0.5, POLYGON: 0.05,
         };
         const dustThreshold = DUST_THRESHOLDS[walletType] || 0;
         if (!TOKEN_CHAINS.includes(walletType) && balance < dustThreshold) {
