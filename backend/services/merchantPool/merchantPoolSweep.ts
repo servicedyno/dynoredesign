@@ -435,15 +435,27 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     
     if (isAccountChain) {
       const gasFee = parseFloat(feeData?.slow || feeData?.fast || "0");
-      amountToSend = actualBalance - gasFee;
       
-      if (amountToSend <= 0) {
-        console.warn(`[MerchantPool] ⚠️ Balance too low for sweep after gas: ${actualBalance} - ${gasFee} = ${amountToSend}`);
-        await poolAddress.update({ status: "AVAILABLE" });
-        return { success: false, skipped: true, reason: "Balance too low after gas deduction" };
+      // XRP Ledger: accounts have a 10 XRP base reserve that cannot be withdrawn
+      // RLUSD addresses also have a 2 XRP trust line reserve on top
+      let accountReserve = 0;
+      if (walletType === 'XRP') {
+        accountReserve = 10; // 10 XRP base reserve
+      } else if (walletType === 'RLUSD') {
+        accountReserve = 12; // 10 XRP base reserve + 2 XRP trust line reserve
       }
       
-      console.log(`[MerchantPool] Account chain sweep: ${actualBalance} - ${gasFee} (gas) = ${amountToSend} ${walletType}`);
+      amountToSend = actualBalance - gasFee - accountReserve;
+      
+      if (amountToSend <= 0) {
+        const reserveNote = accountReserve > 0 ? ` + ${accountReserve} reserve` : '';
+        console.warn(`[MerchantPool] ⚠️ Balance too low for sweep after deductions: ${actualBalance} - ${gasFee} (gas)${reserveNote} = ${amountToSend}`);
+        await poolAddress.update({ status: "AVAILABLE" });
+        return { success: false, skipped: true, reason: `Balance too low after gas${reserveNote} deduction` };
+      }
+      
+      const reserveLog = accountReserve > 0 ? ` - ${accountReserve} (reserve)` : '';
+      console.log(`[MerchantPool] Account chain sweep: ${actualBalance} - ${gasFee} (gas)${reserveLog} = ${amountToSend} ${walletType}`);
     }
 
     const sweepResult = await withRetry(
