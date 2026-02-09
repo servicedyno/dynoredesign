@@ -2,7 +2,7 @@
 """
 Admin Fee Residual False Positive Fix - Backend Testing
 Testing 7 specific requirements as per review request
-Base URL: https://code-analyzer-256.preview.emergentagent.com
+Base URL: https://dep-init.preview.emergentagent.com
 """
 
 import os

@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://code-analyzer-256.preview.emergentagent.com"
+backend_url = "https://dep-init.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(
