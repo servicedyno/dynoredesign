@@ -74,11 +74,17 @@ export const ADMIN_WALLETS: Record<string, string> = {
   "USDT-POLYGON": process.env.USDT_POLYGON || process.env.POLYGON || "",
 };
 
-// Token contract addresses
 export const TOKEN_CONTRACTS: Record<string, string> = {
   "USDT-TRC20": process.env.TRX_CONTRACT || "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
   "USDT-ERC20": process.env.ETH_CONTRACT || "0xdac17f958d2ee523a2206206994597c13d831ec7",
   "USDC-ERC20": process.env.USDC_CONTRACT || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "USDT-POLYGON": process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+};
+
+// RLUSD on XRP Ledger configuration
+export const RLUSD_CONFIG = {
+  issuer: process.env.RLUSD_ISSUER || "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+  currencyHex: process.env.RLUSD_CURRENCY_HEX || "524C555344000000000000000000000000000000",
 };
 
 /**
