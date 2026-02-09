@@ -706,7 +706,7 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
     const headers = await getTatumHeaders();
 
     const chain =
-      currency === "USDT-ERC20" || currency === "USDC-ERC20"
+      currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20"
         ? "ETH"
         : currency === "USDT-TRC20"
         ? "TRON"
