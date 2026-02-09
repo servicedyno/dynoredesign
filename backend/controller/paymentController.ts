@@ -7366,7 +7366,7 @@ const calculateCheckoutFees = async (
     const fiatCurrency = currency.toUpperCase();
 
     // Validate cryptocurrency
-    const validCryptos = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'];
+    const validCryptos = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'];
     if (!validCryptos.includes(crypto)) {
       return errorResponseHelper(res, 400, `Invalid cryptocurrency. Valid options: ${validCryptos.join(', ')}`);
     }
