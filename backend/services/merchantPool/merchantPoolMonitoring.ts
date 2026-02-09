@@ -265,26 +265,61 @@ export const checkMissedPayments = async (): Promise<{
         
         if (redisData?.txId) {
           // BUG FIX: If status is "failed", the webhook fired but settlement FAILED.
-          // We must NOT skip — clear failed state and allow reprocessing.
-          // Preserve existing Redis data (ref, company_id, fee_payer, etc.) for proper settlement.
+          // We already have the txId, receivedAmount, and full payment context in Redis.
+          // Directly reprocess instead of waiting for Tatum tx discovery (which may fail for ERC20 tokens).
           if (redisData?.status === 'failed') {
-            console.log(`[MerchantPool] ⚠️ ${walletAddress} - FAILED PAYMENT DETECTED (txId: ${redisData.txId})`);
+            const savedTxId = redisData.txId;
+            const savedReceivedAmount = parseFloat(redisData.receivedAmount || '0');
+            console.log(`[MerchantPool] ⚠️ ${walletAddress} - FAILED PAYMENT RECOVERY (txId: ${savedTxId})`);
             console.log(`[MerchantPool]   - Error: ${redisData.lastError || 'unknown'}`);
             console.log(`[MerchantPool]   - Failed at: ${redisData.failedAt || 'unknown'}`);
-            console.log(`[MerchantPool] 🔄 Clearing failed state, preserving payment context for reprocessing...`);
+            console.log(`[MerchantPool]   - Received amount: ${savedReceivedAmount} ${walletType}`);
+            console.log(`[MerchantPool] 🔄 Directly reprocessing with preserved payment context...`);
             
-            // Keep the full payment context but clear failed state and txId
-            // so the normal flow can re-detect the incoming tx and reprocess
-            delete redisData.failedAt;
-            delete redisData.lastError;
-            delete redisData.txId;
-            redisData.status = 'pending';
-            redisData.retryFromFailed = 'true';
-            redisData.retriedAt = new Date().toISOString();
+            // Update Redis: set status to processing, remove error fields, keep all context
+            const recoveryData = { ...redisData };
+            delete recoveryData.failedAt;
+            delete recoveryData.lastError;
+            recoveryData.status = 'processing';
+            recoveryData.retryFromFailed = 'true';
+            recoveryData.retriedAt = new Date().toISOString();
+            // Keep txId and receivedAmount — they are correct from the original webhook
             
-            await setRedisItem("crypto-" + walletAddress, redisData);
-            console.log(`[MerchantPool] 📝 Redis updated: status=pending, txId cleared, context preserved (ref: ${redisData.ref})`);
-            // Fall through to reprocessing logic below
+            await setRedisItem("crypto-" + walletAddress, recoveryData);
+            console.log(`[MerchantPool] 📝 Redis restored: status=processing, txId=${savedTxId}, ref=${recoveryData.ref}`);
+            
+            // Mark the tx as NOT already processed so cryptoVerification won't skip it
+            const processedTxKey = `processed-tx-${savedTxId}`;
+            await deleteRedisItem(processedTxKey);
+            
+            // Directly call cryptoVerification — all data is in Redis
+            try {
+              const verificationResult = await paymentController.cryptoVerification(walletAddress, true) as { duplicate?: boolean; status?: number; paymentStatus?: string };
+              
+              if (verificationResult?.duplicate) {
+                console.log(`[MerchantPool] ⏭️ ${walletAddress} - Payment already processed (duplicate)`);
+                result.alreadyProcessed++;
+              } else if (verificationResult?.status === 200 || verificationResult?.paymentStatus === 'completed' || verificationResult?.paymentStatus === 'complete') {
+                console.log(`[MerchantPool] ✅ FAILED PAYMENT RECOVERED: ${walletAddress} — ${savedReceivedAmount} ${walletType} (txId: ${savedTxId})`);
+                result.processed++;
+              } else {
+                console.log(`[MerchantPool] ⚠️ Recovery returned:`, JSON.stringify(verificationResult));
+                result.errors.push(`Recovery returned unexpected result for ${walletAddress}: ${JSON.stringify(verificationResult)}`);
+              }
+            } catch (verifyError: unknown) {
+              const err = verifyError as { paymentStatus?: string; amount?: number; message?: string; status?: number };
+              if (err?.paymentStatus === 'incomplete') {
+                console.log(`[MerchantPool] 📋 Partial payment recovered for ${walletAddress}`);
+                result.processed++;
+              } else {
+                // Mark as failed again so next cron cycle can retry
+                const failedData = { ...recoveryData, status: 'failed', failedAt: new Date().toISOString(), lastError: err?.message || 'cryptoVerification failed on retry' };
+                await setRedisItem("crypto-" + walletAddress, failedData);
+                console.error(`[MerchantPool] ❌ Recovery failed for ${walletAddress}: ${err?.message || verifyError}`);
+                result.errors.push(`Recovery failed for ${walletAddress}: ${err?.message}`);
+              }
+            }
+            continue;
           } else {
             console.log(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
             result.alreadyProcessed++;
