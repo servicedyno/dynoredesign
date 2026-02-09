@@ -1365,7 +1365,7 @@ const assetToOtherAddress = async ({
       fee,
       changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
-  } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
+  } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20") {
     // USDT/USDC ERC-20 have 6 decimals; ETH has 18 — truncate accordingly
     const isERC20Token = currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20";
     const decimals = isERC20Token ? 6 : 8;
