@@ -456,6 +456,22 @@ const processSingleCurrency = async (
     };
   }
 
+  // Stablecoin shortcut: USD ↔ USDT/USDC is exactly 1:1
+  // Avoids exchange rate APIs returning 1.001 or 0.999 for pegged stablecoins
+  const isSourceUSD = source === 'USD';
+  const isTargetStable = ['USDT', 'USDC'].includes(currentCurrency);
+  const isSourceStable = ['USDT', 'USDC'].includes(source);
+  const isTargetUSD = currentCurrency === 'USD';
+  
+  if ((isSourceUSD && isTargetStable) || (isSourceStable && isTargetUSD)) {
+    console.log(`[currencyConvert] 💵 Stablecoin 1:1: ${source}→${currentCurrency} = ${amount} (exact peg)`);
+    return {
+      currency: defaultCurrency.toUpperCase(),
+      amount: amount,
+      transferRate: 1,
+    };
+  }
+
   let rate: number | null = null;
   let convertedAmount: number | null = null;
 
