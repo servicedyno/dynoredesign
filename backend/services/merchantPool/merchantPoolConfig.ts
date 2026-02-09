@@ -67,6 +67,11 @@ export const ADMIN_WALLETS: Record<string, string> = {
   "USDT-TRC20": process.env.USDT_TRC20_ADMIN_WALLET || process.env.USDT_TRC20 || "",
   "USDT-ERC20": process.env.USDT_ERC20_ADMIN_WALLET || process.env.USDT_ERC20 || "",
   "USDC-ERC20": process.env.USDC_ERC20 || "",
+  "SOL": process.env.SOL || "",
+  "XRP": process.env.XRP || "",
+  "RLUSD": process.env.RLUSD_ADMIN_WALLET || process.env.XRP || "",
+  "POLYGON": process.env.POLYGON || "",
+  "USDT-POLYGON": process.env.USDT_POLYGON || process.env.POLYGON || "",
 };
 
 // Token contract addresses
