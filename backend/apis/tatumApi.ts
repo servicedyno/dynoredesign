@@ -1628,9 +1628,25 @@ const assetBatchAddressesToOtherAddress = async ({
               gasPrice: Math.ceil(fee?.gasPrice).toString(),
               gasLimit: fee?.gasLimit.toString(),
             },
-            currency: currency === "ETH" ? "ETH" : (currency === "RLUSD-ERC20" ? "RLUSD" : "USDT"),
+            currency: currency,
           });
-          const result = await tatumSdk.blockchain.eth.ethBlockchainTransfer({
+          let result;
+          if (currency === "RLUSD-ERC20") {
+            // RLUSD is a custom ERC-20 — use generic erc20Transfer with contract address
+            result = await tatumSdk.fungibleToken.erc20Transfer({
+              chain: "ETH",
+              to: destinationAddress,
+              contractAddress: process.env.RLUSD_ERC20_CONTRACT || "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD",
+              amount: (Math.floor(Number(fromAddr.value) * 1e6) / 1e6).toString(),
+              digits: 6,
+              fromPrivateKey: fromAddr.privateKey,
+              fee: {
+                gasPrice: Math.ceil(fee?.gasPrice).toString(),
+                gasLimit: fee?.gasLimit.toString(),
+              },
+            });
+          } else {
+            result = await tatumSdk.blockchain.eth.ethBlockchainTransfer({
               fromPrivateKey: fromAddr.privateKey,
               to: destinationAddress,
               amount: Number(fromAddr.value).toFixed(8).toString(),
@@ -1638,8 +1654,9 @@ const assetBatchAddressesToOtherAddress = async ({
                 gasPrice: Math.ceil(fee?.gasPrice).toString(),
                 gasLimit: fee?.gasLimit.toString(),
               },
-              currency: currency === "ETH" ? "ETH" : (currency === "RLUSD-ERC20" ? "RLUSD" : "USDT"),
+              currency: currency === "ETH" ? "ETH" : "USDT",
             });
+          }
           const ethTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
           transactionResponse.push({
             txId: ethTxId,
