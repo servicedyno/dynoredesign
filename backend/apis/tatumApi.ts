@@ -2744,6 +2744,50 @@ const getTransactionConfirmations = async (
 };
 
 /**
+ * Find the correct UTXO output index for a given address in a transaction.
+ * UTXO transactions can have multiple outputs — we need the index where
+ * funds were sent TO our address, not the change output.
+ * Falls back to index 0 if lookup fails.
+ */
+const findUtxoOutputIndex = async (
+  txHash: string,
+  address: string,
+  currency: string
+): Promise<number> => {
+  try {
+    const tatumSdk = await getTatumSDK();
+    let txData: { vout?: Array<{ value?: string | number; scriptPubKey?: { addresses?: string[] }; n?: number }> } | null = null;
+
+    if (currency === 'BTC') {
+      txData = await tatumSdk.blockchain.bitcoin.btcGetRawTransaction(txHash) as typeof txData;
+    } else if (currency === 'LTC') {
+      txData = await tatumSdk.blockchain.ltc.ltcGetRawTransaction(txHash) as typeof txData;
+    } else if (currency === 'DOGE') {
+      txData = await tatumSdk.blockchain.doge.dogeGetRawTransaction(txHash) as typeof txData;
+    } else if (currency === 'BCH') {
+      txData = await tatumSdk.blockchain.bcash.bchGetRawTransaction(txHash) as typeof txData;
+    }
+
+    if (txData?.vout) {
+      for (const output of txData.vout) {
+        if (output.scriptPubKey?.addresses?.includes(address)) {
+          const idx = output.n ?? 0;
+          console.log(`[findUtxoOutputIndex] Found output index ${idx} for ${address} in tx ${txHash}`);
+          return idx;
+        }
+      }
+    }
+
+    console.log(`[findUtxoOutputIndex] Could not find output for ${address} in tx ${txHash}, defaulting to index 0`);
+    return 0;
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.warn(`[findUtxoOutputIndex] Failed to lookup UTXO index for ${txHash}: ${err.message}, defaulting to index 0`);
+    return 0;
+  }
+};
+
+/**
  * Fetch actual on-chain gas cost for a confirmed transaction.
  * Returns gas cost in the native token (ETH for ERC20, TRX for TRC20, etc.)
  */
