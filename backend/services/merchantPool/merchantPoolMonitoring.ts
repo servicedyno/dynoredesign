@@ -166,7 +166,8 @@ export const checkMissedPayments = async (): Promise<{
       attributes: [
         'temp_address_id', 'wallet_address', 'wallet_type', 'owner_user_id',
         'current_company_id', 'current_payment_id', 'reserved_until',
-        'expected_amount', 'received_amount'
+        'expected_amount', 'received_amount', 'admin_fee_balance',
+        'is_partial_payment', 'partial_payment_timestamp'
       ],
     });
 
