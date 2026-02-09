@@ -7,6 +7,49 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "Admin Fee Residual False Positive Fix in checkMissedPayments Cron"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          BUG: checkMissedPayments cron was incorrectly detecting admin fee residuals
+          sitting in pool addresses as "MISSED PAYMENT / UNDERPAYMENT" from new customers.
+          
+          ROOT CAUSE: 
+          - Pool addresses hold admin fee residuals from PRIOR transactions (e.g., 7.29 USDT-TRC20, 3.61 USDT-ERC20)
+          - When these addresses are re-reserved for NEW payments, the cron checks on-chain balance
+          - It finds the OLD admin fee balance and treats it as a new partial payment
+          - The code did NOT subtract admin_fee_balance (tracked in DB) from on-chain balance
+          
+          FIX in merchantPoolMonitoring.ts checkMissedPayments():
+          1. Added admin_fee_balance to query attributes (was missing)
+          2. After getting on-chain balance, calculates effectiveBalance = balance - admin_fee_balance
+          3. If effectiveBalance < dustThreshold → skip (it's admin fee residual, not a new payment)
+          4. Uses effectiveBalance for ALL downstream logic (underpayment detection, receivedAmount, context fallback)
+          5. Enhanced logging: shows on-chain, admin_fee, effective amounts for full visibility
+          
+          VERIFIED IN LOGS:
+          - Before fix (Feb 8): "Missed found: 2" every cycle — FALSE POSITIVES on both addresses
+          - After fix (Feb 9 10:45): 
+            TZJmLx... on-chain: 7.294225, admin_fee: 7.29422413, effective: 0.00000087 → "admin fee residual, skipping"
+            0x5045... on-chain: 3.609145, admin_fee: 3.60748588, effective: 0.00165912 → "admin fee residual, skipping"  
+            "Missed found: 0" — ZERO false positives!
+          
+          VERIFY:
+          1. Backend healthy, no errors
+          2. Code: merchantPoolMonitoring.ts checkMissedPayments query includes 'admin_fee_balance' in attributes
+          3. Code: effectiveBalance = balance - adminFeeBalance before dust check
+          4. Code: effectiveBalance used in underpayment comparison (not raw balance)
+          5. Code: receivedAmount = effectiveBalance (not raw balance)
+          6. Logs: grep "admin_fee_residual" shows correct subtraction
+          7. Logs: grep "Missed found" shows 0 false positives after fix
   - task: "Multi-Chain Fee Optimization — TRON + EVM + TRX Native Dynamic Fees"
     implemented: true
     working: true
