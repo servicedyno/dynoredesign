@@ -419,7 +419,7 @@ export const getBlockchainNetworkFee = async (
  * Get fees for all supported blockchains
  */
 export const getAllBlockchainFees = async (): Promise<Record<string, BlockchainFeeResult>> => {
-  const chains = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'USDT_ERC20', 'USDT_TRC20'];
+  const chains = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'USDT_ERC20', 'USDC_ERC20', 'RLUSD_ERC20', 'USDT_TRC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT_POLYGON', 'BCH'];
   const results: Record<string, BlockchainFeeResult> = {};
 
   await Promise.all(
