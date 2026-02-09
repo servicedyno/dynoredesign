@@ -206,7 +206,7 @@ const COINGECKO_IDS: Record<string, string> = {
 const TATUM_RATE_IDS: Record<string, string> = {
   BTC: 'BTC', ETH: 'ETH', TRX: 'TRX', LTC: 'LTC', DOGE: 'DOGE',
   BCH: 'BCH', BNB: 'BNB', USDT: 'USDT', USDC: 'USDC', XRP: 'XRP',
-  ADA: 'ADA', SOL: 'SOL',
+  ADA: 'ADA', SOL: 'SOL', MATIC: 'MATIC', POLYGON: 'MATIC', RLUSD: 'USDT',
 };
 
 // Negative cache for Tatum rate API failures — avoid hammering failing pairs
