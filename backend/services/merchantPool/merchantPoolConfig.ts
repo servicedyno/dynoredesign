@@ -49,10 +49,11 @@ export const NATIVE_CURRENCIES = ["TRX", "ETH", "SOL", "XRP", "POLYGON"];
 // Tokens that can only use threshold-based sweep
 export const TOKEN_CHAINS = MODEL_TOKEN_CHAINS || ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20"];
 
-// Fee wallet addresses (for gas funding)
 export const FEE_WALLETS = {
   TRX: process.env.TRX_FEE_WALLET || "",
   ETH: process.env.ETH_FEE_WALLET || "",
+  XRP: process.env.XRP_FEE_WALLET || "",
+  POLYGON: process.env.POLYGON_FEE_WALLET || "",
 };
 
 // Admin wallets for sweeping
