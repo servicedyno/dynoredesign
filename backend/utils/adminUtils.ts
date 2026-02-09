@@ -8,7 +8,12 @@ export const getAdminWalletAddress = (currency: string): string | null => {
         "USDT-TRC20": "USDT_TRC20",
         "USDT-ERC20": "USDT_ERC20",
         "USDC-ERC20": "USDC_ERC20",
-        BCH: "BCH"
+        BCH: "BCH",
+        SOL: "SOL",
+        XRP: "XRP",
+        RLUSD: "RLUSD_ADMIN_WALLET",
+        POLYGON: "POLYGON",
+        "USDT-POLYGON": "USDT_POLYGON",
     };
 
     const envKey = mapping[currency];
