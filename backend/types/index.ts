@@ -171,7 +171,7 @@ export interface PaymentLinkResponse {
 // CRYPTO TRANSACTION TYPES
 // ============================================================================
 
-export type CryptoCurrency = 'BTC' | 'ETH' | 'TRX' | 'LTC' | 'DOGE' | 'BCH' | 'USDT-TRC20' | 'USDT-ERC20' | 'USDC-ERC20';
+export type CryptoCurrency = 'BTC' | 'ETH' | 'TRX' | 'LTC' | 'DOGE' | 'BCH' | 'USDT-TRC20' | 'USDT-ERC20' | 'USDC-ERC20' | 'SOL' | 'XRP' | 'RLUSD' | 'RLUSD-ERC20' | 'POLYGON' | 'USDT-POLYGON';
 export type TransactionStatus = 'pending' | 'confirming' | 'confirmed' | 'failed';
 
 export interface CryptoTransaction {
