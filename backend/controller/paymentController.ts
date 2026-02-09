@@ -2140,10 +2140,10 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             paid_amount: data.amount.toFixed(2),
             paid_currency: data.currency,
             transaction_reference: data.flw_ref,
-            transaction_type: tempData?.pathType.includes("addFund")
+            transaction_type: tempData?.pathType?.includes("addFund")
               ? "CREDIT"
               : "PAYMENT",
-            ...(!tempData?.pathType.includes("addFund") && {
+            ...(!tempData?.pathType?.includes("addFund") && {
               transaction_details: product_name
                 ? "Made payment for " +
                 product_name +
@@ -2263,7 +2263,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             { ...userPayload },
             { transaction }
           );
-          if (tempData?.pathType.includes("addFund")) {
+          if (tempData?.pathType?.includes("addFund")) {
             await customerWalletModel.update(
               {
                 amount: Number(
@@ -3623,10 +3623,10 @@ const cryptoVerification = async (address, webhook = true) => {
         paid_amount: Number(receivedAmount).toFixed(6),
         paid_currency: tempCurrency,
         transaction_reference: transactionId,
-        transaction_type: customerData?.pathType.includes("addFund")
+        transaction_type: customerData?.pathType?.includes("addFund")
           ? "CREDIT"
           : "PAYMENT",
-        ...(!customerData?.pathType.includes("addFund") && {
+        ...(!customerData?.pathType?.includes("addFund") && {
           transaction_details: product_name
             ? "Made payment for " + product_name + " on " + company_data?.company_name
             : "Made payment for " + (company_data?.company_name || "Company") + " product",
@@ -4082,8 +4082,8 @@ const cryptoVerification = async (address, webhook = true) => {
           }
         }
 
-        if (customerData?.pathType.includes("addFund") || overPayment) {
-          if (customerData?.pathType.includes("createPayment") && overPayment) {
+        if (customerData?.pathType?.includes("addFund") || overPayment) {
+          if (customerData?.pathType?.includes("createPayment") && overPayment) {
             // FIX: Only delete subscription for legacy addresses, not merchant pool
             if (!isMerchantPoolAddress && tempAddressData.subscription_id) {
               await tatumApi.deleteSubscription(tempAddressData.subscription_id);
@@ -4108,7 +4108,7 @@ const cryptoVerification = async (address, webhook = true) => {
               message: `Overpayment detected! ${tempAmount} ${tempCurrency} (${newAmount[0].amount} ${customerData?.base_currency || "USD"})`,
               commit: false,
             };
-          } else if (customerData?.pathType.includes("cryptoPayment") && overPayment) {
+          } else if (customerData?.pathType?.includes("cryptoPayment") && overPayment) {
             if (customerData.customer_id) {
               await customerWalletModel.increment("amount", {
                 by: Number(newAmount[0].amount),
