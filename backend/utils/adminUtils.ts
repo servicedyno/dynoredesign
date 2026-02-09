@@ -7,6 +7,7 @@ export const getAdminWalletAddress = (currency: string): string | null => {
         TRX: "TRX",
         "USDT-TRC20": "USDT_TRC20",
         "USDT-ERC20": "USDT_ERC20",
+        "USDC-ERC20": "USDC_ERC20",
         BCH: "BCH"
     };
 
