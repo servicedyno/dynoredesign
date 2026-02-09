@@ -729,6 +729,61 @@ const sendAdminFeeReceivedEmail = async (
 };
 
 /**
+ * Send admin notification email when admin fees are swept from a pool address to admin wallet
+ * This is sent when the sweep (blockchain transfer) actually completes, not when the fee is calculated.
+ */
+const sendAdminFeeSweepEmail = async (
+  recipientEmail: string,
+  amountSwept: string,
+  currency: string,
+  fromAddress: string,
+  toAddress: string,
+  sweepTxId: string,
+  gasUsed: string,
+  sweepMode: string
+) => {
+  try {
+    const subject = `Admin Fee Swept — ${amountSwept} ${currency}`;
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const detailRows = `
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Amount Swept</td><td style="padding: 8px 0; color: #166534; font-size: 16px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${amountSwept} ${currency}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Status</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;"><span style="background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">Swept</span></td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Sweep Mode</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${sweepMode === 'threshold' ? 'USD Threshold' : 'Time-Based'}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Gas Used</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${gasUsed}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">From Address</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 12px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all; border-bottom: 1px solid #f3f4f6;">${fromAddress}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">To Admin Wallet</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 12px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all; border-bottom: 1px solid #f3f4f6;">${toAddress}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Date</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${dateStr} at ${timeStr}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Sweep TX ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 12px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${sweepTxId}</td></tr>`;
+
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Admin fees have been swept from a pool address to the admin wallet.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 24px 0;">
+        <tr><td style="padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${detailRows}
+          </table>
+        </td></tr>
+      </table>
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">The admin fees have been transferred to the admin ${currency} wallet. You can verify the transaction on the blockchain explorer.</p>`;
+
+    const htmlBody = dynoPayEmailTemplate("Dynopay Admin", htmlContent, "Admin Fee Sweep Completed");
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name: "Dynopay Admin",
+      subject,
+      body: htmlBody,
+    });
+    return info;
+  } catch (e) {
+    console.log("Admin fee sweep email error:", e);
+  }
+};
+
+
+/**
  * Send referee code reminder email
  * Encourages recipients to sign up before their discount expires
  */
