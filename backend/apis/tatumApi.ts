@@ -1147,8 +1147,47 @@ const feeEstimation = async (
       };
     }
   } else if (currency === "SOL") {
-    // Solana: fixed low fee (typically 0.000005 SOL per signature, ~5000 lamports)
-    fees = { fast: 0.00001, medium: 0.000005, slow: 0.000005 };
+    // Solana: base fee is 5000 lamports (0.000005 SOL) per signature
+    // During congestion, priority fees can spike — query network for current fees
+    try {
+      const headers = await getTatumHeaders();
+      const { data: feeResult } = await axios.post(
+        "https://api.tatum.io/v3/blockchain/node/SOL",
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getRecentPrioritizationFees",
+          params: [],
+        },
+        { headers }
+      );
+      // Get the median priority fee from recent slots (in micro-lamports per compute unit)
+      const recentFees: Array<{ prioritizationFee: number }> = feeResult?.result || [];
+      const nonZeroFees = recentFees.filter(f => f.prioritizationFee > 0).map(f => f.prioritizationFee);
+      
+      if (nonZeroFees.length > 0) {
+        nonZeroFees.sort((a, b) => a - b);
+        const medianPriorityFee = nonZeroFees[Math.floor(nonZeroFees.length / 2)];
+        // Convert: micro-lamports per CU × 200k CU (standard transfer) / 1e15 (to SOL)
+        const priorityFeeSol = (medianPriorityFee * 200000) / 1e15;
+        const baseFee = 0.000005; // 5000 lamports
+        const totalFast = baseFee + priorityFeeSol * 2; // 2x median for fast
+        const totalMedium = baseFee + priorityFeeSol;
+        
+        console.log(`[feeEstimation] SOL dynamic: base=0.000005, priorityMedian=${medianPriorityFee} µ-lamports/CU, fast=${totalFast.toFixed(9)}, medium=${totalMedium.toFixed(9)}`);
+        fees = {
+          fast: Math.max(totalFast, 0.00001),    // Floor at 10k lamports
+          medium: Math.max(totalMedium, 0.000005), // Floor at base fee
+          slow: 0.000005,                          // Base fee only
+        };
+      } else {
+        // No priority fees in recent slots — network is quiet
+        fees = { fast: 0.00001, medium: 0.000005, slow: 0.000005 };
+      }
+    } catch (_solFeeError) {
+      console.warn(`[feeEstimation] ⚠️ SOL dynamic fee query failed, using fallback`);
+      fees = { fast: 0.00001, medium: 0.000005, slow: 0.000005 };
+    }
   } else if (currency === "XRP") {
     // XRP: very low fees (~12 drops = 0.000012 XRP)
     fees = { fast: 0.00005, medium: 0.000012, slow: 0.000012 };
