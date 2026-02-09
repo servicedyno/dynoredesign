@@ -912,7 +912,7 @@ export const detectOrphanPayments = async (): Promise<{
           base_currency: baseCurrency,
           base_amount: baseAmount,
           txId: latestTx.txId,
-          receivedAmount: balance,
+          receivedAmount: Math.max(0, balance - existingAdminBalance),
           originalExpectedAmount: expectedAmount || balance,
           processedByOrphanDetect: 'true',
           recoveredAt: new Date().toISOString(),
