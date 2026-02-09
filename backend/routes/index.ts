@@ -26,7 +26,37 @@ import {
   tatumCryptoWebHook,
   tatumWebHook,
 } from "../webhooks";
+import crypto from "crypto";
 import adminRouter from "./adminRouter";
+
+/**
+ * Tatum webhook HMAC signature verification middleware.
+ * If TATUM_WEBHOOK_SECRET is configured, validates the x-payload-hash header.
+ * If not configured, logs a warning and allows the request (backward compatible).
+ */
+const verifyTatumWebhookSource = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const secret = process.env.TATUM_WEBHOOK_SECRET;
+  if (!secret) {
+    // No secret configured — skip verification (backward compatible)
+    return next();
+  }
+
+  const signature = req.headers["x-payload-hash"] as string;
+  if (!signature) {
+    console.warn(`[WebhookAuth] Missing x-payload-hash header from ${req.ip}`);
+    return res.status(401).json({ error: "Missing webhook signature" });
+  }
+
+  const rawBody = JSON.stringify(req.body);
+  const expectedSignature = crypto.createHmac("sha512", secret).update(rawBody).digest("hex");
+
+  if (signature !== expectedSignature) {
+    console.warn(`[WebhookAuth] Invalid webhook signature from ${req.ip}`);
+    return res.status(401).json({ error: "Invalid webhook signature" });
+  }
+
+  next();
+};
 
 const router = express.Router();
 
