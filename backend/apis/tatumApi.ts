@@ -2607,27 +2607,65 @@ const getIncomingTransactions = async (
         }
       }
     } else if (currency === "SOL") {
-      // Solana incoming transactions — use Tatum v3 REST API to get account transactions
+      // Solana incoming transactions — use Tatum RPC gateway (getSignaturesForAddress + getTransaction)
       try {
         const headers = await getTatumHeaders();
-        const { data: solTxs } = await axios.get(
-          `https://api.tatum.io/v3/solana/account/transaction/${address}`,
+        
+        // Step 1: Get recent transaction signatures for this address
+        const { data: sigsResult } = await axios.post(
+          'https://solana-mainnet.gateway.tatum.io',
+          {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'getSignaturesForAddress',
+            params: [address, { limit }]
+          },
           { headers }
         );
-        if (Array.isArray(solTxs)) {
-          for (const tx of solTxs.slice(0, limit)) {
-            // Parse SOL transfer amount from pre/post balances
-            const preBalance = tx.preBalances?.[0] || 0;
-            const postBalance = tx.postBalances?.[0] || 0;
-            const amountLamports = postBalance - preBalance;
-            const amount = amountLamports > 0 ? amountLamports / 1e9 : 0;
-            if (amount > 0 || tx.txId) {
-              transactions.push({
-                txId: tx.txId || tx.blockHash || '',
-                amount,
-                timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now()
-              });
+        
+        const signatures = sigsResult?.result || [];
+        
+        for (const sig of signatures) {
+          if (sig.err) continue; // Skip failed transactions
+          
+          // Step 2: Get transaction details for each signature
+          try {
+            const { data: txResult } = await axios.post(
+              'https://solana-mainnet.gateway.tatum.io',
+              {
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'getTransaction',
+                params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
+              },
+              { headers }
+            );
+            
+            const tx = txResult?.result;
+            if (!tx) continue;
+            
+            // Find the account index for our address
+            const accountKeys = tx.transaction?.message?.accountKeys || [];
+            const accountIndex = accountKeys.findIndex((k: any) => 
+              (typeof k === 'string' ? k : k?.pubkey) === address
+            );
+            
+            if (accountIndex >= 0) {
+              const preBalance = (tx.meta?.preBalances?.[accountIndex] || 0);
+              const postBalance = (tx.meta?.postBalances?.[accountIndex] || 0);
+              const diffLamports = postBalance - preBalance;
+              const amount = diffLamports > 0 ? diffLamports / 1e9 : 0;
+              
+              if (amount > 0) {
+                transactions.push({
+                  txId: sig.signature,
+                  amount,
+                  timestamp: sig.blockTime ? sig.blockTime * 1000 : Date.now()
+                });
+              }
             }
+          } catch (_txErr) {
+            // Skip individual tx errors
           }
         }
       } catch (solErr: any) {
