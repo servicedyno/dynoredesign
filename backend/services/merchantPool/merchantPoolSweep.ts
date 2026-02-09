@@ -12,6 +12,7 @@ import {
 } from "../../models";
 import tatumApi from "../../apis/tatumApi";
 import { getErrorMessage } from "../../helper";
+import { sendAdminFeeSweepEmail } from "../../helper";
 import { convertToUSD, convertToFiat } from "../../utils/currencyUtils";
 import {
   getAccountResources,
