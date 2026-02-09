@@ -204,7 +204,8 @@ def test_6_code_sendadminfeesweep_export():
         with open(file_path, 'r') as f:
             content = f.read()
         
-        has_export = 'export.*sendAdminFeeSweepEmail' in content
+        # Check for export in the export section
+        has_export = 'sendAdminFeeSweepEmail,' in content and 'export {' in content
         results.append(("sendEmail.ts export", has_export))
         
     except Exception as e:
@@ -217,7 +218,7 @@ def test_6_code_sendadminfeesweep_export():
             with open(file_path, 'r') as f:
                 content = f.read()
             
-            has_reexport = 'sendAdminFeeSweepEmail' in content
+            has_reexport = 'sendAdminFeeSweepEmail' in content and 'export {' in content
             results.append(("index.ts re-export", has_reexport))
         else:
             results.append(("index.ts re-export", False))
