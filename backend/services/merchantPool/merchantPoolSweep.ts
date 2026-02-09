@@ -453,6 +453,20 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
 
     console.log(`[MerchantPool] ✅ Blockchain sweep successful: ${sweepTxId}`);
 
+    // Fetch actual on-chain gas cost
+    let actualGasUsed = isAccountChain ? (actualBalance - amountToSend) : 0;
+    if (sweepTxId) {
+      try {
+        const gasCost = await tatumApi.getTransactionGasCost(sweepTxId, walletType);
+        if (gasCost.gasCostNative > 0) {
+          actualGasUsed = gasCost.gasCostNative;
+          console.log(`[MerchantPool]    On-chain gas: ${actualGasUsed} ${gasCost.gasToken}`);
+        }
+      } catch (gasErr: unknown) {
+        console.warn(`[MerchantPool]    Could not fetch on-chain gas cost, using estimate`);
+      }
+    }
+
     dbTransaction = await sequelize.transaction();
     
     try {
@@ -462,7 +476,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         wallet_type: walletType,
         amount_swept: amountToSend,
         gas_funded: gasFunding.amount || 0,
-        gas_used: isAccountChain ? (actualBalance - amountToSend) : 0,
+        gas_used: actualGasUsed,
         sweep_tx_id: sweepTxId,
         gas_funding_tx_id: gasFunding.txId || null,
         admin_wallet: adminWallet,
