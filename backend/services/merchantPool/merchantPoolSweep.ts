@@ -192,25 +192,25 @@ export const fundGasIfNeeded = async (
         gasToken,
         feeWalletAddress,
         tempAddress,
-        deficit
+        fundAmount
       );
     }
 
-    console.log(`[SmartGas] 🔥 Funding ${deficit.toFixed(6)} ${gasToken} to ${tempAddress}`);
+    console.log(`[SmartGas] 🔥 Funding ${fundAmount.toFixed(6)} ${gasToken} to ${tempAddress}`);
 
     const txResult = await tatumApi.assetToOtherAddress({
       currency: gasToken,
       fromAddress: feeWalletAddress,
       toAddress: tempAddress,
       privateKey: feeWalletPrivateKey,
-      amount: deficit,
+      amount: fundAmount,
       fee: transferFees,
     });
 
-    const newBalance = currentBalance + deficit;
+    const newBalance = currentBalance + fundAmount;
     await poolAddress.update({ gas_balance: newBalance });
 
-    console.log(`[SmartGas] ✅ Gas funded: ${deficit.toFixed(6)} ${gasToken} (TX: ${txResult?.txId})`);
+    console.log(`[SmartGas] ✅ Gas funded: ${fundAmount.toFixed(6)} ${gasToken} (TX: ${txResult?.txId})`);
     console.log(`[SmartGas]    Old balance: ${currentBalance.toFixed(6)} → New balance: ${newBalance.toFixed(6)} ${gasToken}`);
 
     return { funded: true, amount: deficit, txId: txResult?.txId, reason: 'Deficit funded' };
