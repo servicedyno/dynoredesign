@@ -2833,8 +2833,14 @@ const getTransactionConfirmations = async (
     'ETH': 12,
     'USDT-ERC20': 12,
     'USDC-ERC20': 12,
+    'RLUSD-ERC20': 12,
     'TRX': 19,
     'USDT-TRC20': 19,
+    'XRP': 1,
+    'RLUSD': 1,
+    'SOL': 1,
+    'POLYGON': 1,
+    'USDT-POLYGON': 1,
   };
   
   const required = REQUIRED_CONFIRMATIONS[currency] || 1;
