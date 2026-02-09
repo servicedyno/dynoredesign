@@ -259,7 +259,7 @@ export const checkMissedPayments = async (): Promise<{
           continue;
         }
 
-        console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${balance} ${walletType} (reserved ${minutesSinceReserved.toFixed(1)} min ago)`);
+        console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance}, reserved ${minutesSinceReserved.toFixed(1)} min ago)`);
 
         let redisData = await getRedisItem("crypto-" + walletAddress);
         
