@@ -7,6 +7,88 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "On-Chain Fee Optimization: XRP reserve, POLYGON fee type, BCH formula, SOL dynamic fees, USDT-POLYGON transfer, fee caching"
+    implemented: true
+    working: pending
+    files:
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+      - "/app/backend/apis/tatumApi.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          6 FEE OPTIMIZATION FIXES APPLIED (TypeScript compiles clean, backend healthy):
+          
+          FIX 1 (CRITICAL): XRP 10 XRP reserve in sweep — merchantPoolSweep.ts
+          - sweepPoolAddress now deducts 10 XRP base reserve for XRP, 12 XRP (10 base + 2 trust line) for RLUSD
+          - amountToSend = actualBalance - gasFee - accountReserve
+          
+          FIX 2 (MEDIUM): POLYGON native fee type — tatumApi.ts feeEstimation
+          - Native POL now uses type: "TRANSFER_NFT" (21k gas) instead of "TRANSFER_ERC20" (65k gas)
+          - ~66% gas cost reduction for native POLYGON payments
+          
+          FIX 3 (MEDIUM): BCH fee formula — tatumApi.ts feeEstimation
+          - Fixed operator precedence bug: was `(bchInputs + 1 * 148 + ...)`, now `(safeInputs * 148 + ...)`
+          - Added safety minimum of 2 inputs and 20% buffer on fast tier
+          
+          FIX 4 (MEDIUM): SOL dynamic priority fees — tatumApi.ts feeEstimation
+          - Now queries Solana getRecentPrioritizationFees RPC via Tatum node
+          - Uses median priority fee × 2 for fast tier, × 1 for medium, base-only for slow
+          - Fallback to hardcoded 0.00001 SOL if RPC fails
+          
+          FIX 5 (LOW): USDT-POLYGON transfer — tatumApi.ts assetToOtherAddress
+          - Replaced raw polygonBlockchainSmartContractInvocation with built-in polygonBlockchainTransfer (currency: "USDT_MATIC")
+          - More gas-efficient, simpler code, no manual ABI encoding
+          
+          FIX 6 (LOW): Fee estimation caching — tatumApi.ts
+          - Added Redis caching with chain-specific TTLs:
+            UTXO (BTC/LTC/DOGE/BCH): 60s
+            EVM (ETH/POLYGON/ERC20s): 15s
+            TRON: 30s
+            SOL: 10s
+            XRP/RLUSD: no cache (hardcoded)
+          - Cache key: fee-cache:{currency}
+          - Reduces Tatum API calls under high volume
+          
+          VERIFY THESE TESTS:
+          
+          TEST 1: Backend healthy
+          - GET /health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - Run: cd /app/backend && npx tsc --noEmit — should exit 0
+          
+          TEST 3: FIX 1 — XRP reserve in sweep
+          - grep 'accountReserve' /app/backend/services/merchantPool/merchantPoolSweep.ts should find reserve deduction logic
+          - grep 'walletType.*XRP.*10' /app/backend/services/merchantPool/merchantPoolSweep.ts should find 10 XRP reserve
+          - grep 'walletType.*RLUSD.*12' /app/backend/services/merchantPool/merchantPoolSweep.ts should find 12 XRP reserve for RLUSD
+          
+          TEST 4: FIX 2 — POLYGON native fee type
+          - grep 'TRANSFER_NFT' /app/backend/apis/tatumApi.ts should find it in the Polygon fee estimation block
+          - The condition should be: type: isToken ? "TRANSFER_ERC20" : "TRANSFER_NFT"
+          
+          TEST 5: FIX 3 — BCH fee formula fixed
+          - grep 'safeInputs \* 148' /app/backend/apis/tatumApi.ts should find the corrected formula
+          - grep 'Math.max(bchInputs, 2)' /app/backend/apis/tatumApi.ts should find the safety minimum
+          - grep '1.2' /app/backend/apis/tatumApi.ts should find the 20% buffer on fast tier near BCH block
+          
+          TEST 6: FIX 4 — SOL dynamic priority fees
+          - grep 'getRecentPrioritizationFees' /app/backend/apis/tatumApi.ts should find the Solana RPC call
+          - grep 'medianPriorityFee' /app/backend/apis/tatumApi.ts should find the median calculation
+          
+          TEST 7: FIX 5 — USDT-POLYGON uses built-in transfer
+          - grep 'USDT_MATIC' /app/backend/apis/tatumApi.ts should find currency: "USDT_MATIC" in the USDT-POLYGON block
+          - grep 'polygonBlockchainSmartContractInvocation' /app/backend/apis/tatumApi.ts should NOT find it in USDT-POLYGON section (only in batch)
+          
+          TEST 8: FIX 6 — Fee caching
+          - grep 'fee-cache' /app/backend/apis/tatumApi.ts should find cache key pattern
+          - grep 'FEE_CACHE_TTLS' /app/backend/apis/tatumApi.ts should find TTL configuration
+          - grep 'Cache hit' /app/backend/apis/tatumApi.ts should find the cache hit log
+          
+          Base URL for curl: http://localhost:8001 (internal)
   - task: "Edge Case Analysis: Fix 18 identified issues across RLUSD-ERC20 support, cron guards, UTXO index, webhook auth, lock safety, and more"
     implemented: true
     working: true
