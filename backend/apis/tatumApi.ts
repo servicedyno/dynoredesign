@@ -1459,6 +1459,59 @@ const assetToOtherAddress = async ({
         ? toAddress
         : "bitcoincash:" + toAddress,
     });
+  } else if (currency === "SOL") {
+    // Solana native transfer
+    transaction = await tatumSdk.blockchain.solana.solanaBlockchainTransfer({
+      from: fromAddress,
+      to: toAddress,
+      amount: Number(amount).toFixed(9).toString(),
+      fromPrivateKey: privateKey,
+    });
+  } else if (currency === "XRP") {
+    // XRP native transfer
+    transaction = await tatumSdk.blockchain.xrp.xrpTransferBlockchain({
+      fromAccount: fromAddress,
+      to: toAddress,
+      amount: Number(amount).toFixed(6).toString(),
+      fromSecret: privateKey,
+    });
+  } else if (currency === "RLUSD") {
+    // RLUSD token transfer on XRP Ledger
+    const rlusdIssuer = process.env.RLUSD_ISSUER || "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
+    const rlusdCurrencyHex = process.env.RLUSD_CURRENCY_HEX || "524C555344000000000000000000000000000000";
+    transaction = await tatumSdk.blockchain.xrp.xrpTransferBlockchain({
+      fromAccount: fromAddress,
+      to: toAddress,
+      amount: Number(amount).toFixed(6).toString(),
+      fromSecret: privateKey,
+      issuerAccount: rlusdIssuer,
+      token: rlusdCurrencyHex,
+    } as any);
+  } else if (currency === "POLYGON") {
+    // Polygon native transfer (POL)
+    transaction = await tatumSdk.blockchain.polygon.polygonBlockchainTransfer({
+      fromPrivateKey: privateKey,
+      to: toAddress,
+      amount: Number(amount).toFixed(8).toString(),
+      currency: "MATIC",
+      fee: fee ? {
+        gasPrice: Math.ceil(fee?.gasPrice).toString(),
+        gasLimit: fee?.gasLimit.toString(),
+      } : undefined,
+    });
+  } else if (currency === "USDT-POLYGON") {
+    // USDT on Polygon (ERC-20 compatible)
+    const truncatedAmount = (Math.floor(Number(amount) * 1e6) / 1e6).toString();
+    transaction = await tatumSdk.blockchain.polygon.polygonBlockchainTransfer({
+      fromPrivateKey: privateKey,
+      to: toAddress,
+      amount: truncatedAmount,
+      currency: "USDT",
+      fee: fee ? {
+        gasPrice: Math.ceil(fee?.gasPrice).toString(),
+        gasLimit: fee?.gasLimit.toString(),
+      } : undefined,
+    });
   }
   return transaction;
 };
