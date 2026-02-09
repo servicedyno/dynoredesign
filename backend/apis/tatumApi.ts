@@ -1945,6 +1945,13 @@ const getAddressBalance = async (address: string, currency: string) => {
       process.env.USDC_CONTRACT
     );
     res = { balance: Number(tempRes.balance) / 1000000 };
+  } else if (currency === "RLUSD-ERC20") {
+    const tempRes = await tatumSdk.fungibleToken.erc20GetBalance(
+      "ETH",
+      address,
+      process.env.RLUSD_ERC20_CONTRACT
+    );
+    res = { balance: Number(tempRes.balance) / 1000000 };
   } else if (currency === "TRX") {
     try {
       res = await tatumSdk.blockchain.tron.tronGetAccount(address);
