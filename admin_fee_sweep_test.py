@@ -181,9 +181,10 @@ def test_5_code_sendadminfeesweep_exists():
             if pattern in content:
                 found_patterns.append(pattern)
         
-        has_function_definition = 'export.*sendAdminFeeSweepEmail' in content or 'function sendAdminFeeSweepEmail' in content
+        # Check for function definition using const
+        has_function_definition = 'const sendAdminFeeSweepEmail' in content or 'function sendAdminFeeSweepEmail' in content
         
-        if has_function_definition and len(found_patterns) >= 8:
+        if has_function_definition and len(found_patterns) >= 9:
             return print_result(True, f"Found function with {len(found_patterns)}/11 expected patterns")
         else:
             return print_result(False, f"Missing function definition or parameters. Found: {found_patterns}")
