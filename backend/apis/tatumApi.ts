@@ -2358,4 +2358,5 @@ export default {
   encryptSymmetric,
   decryptSymmetric,
   waitForTransactionConfirmation,
+  getTransactionGasCost,
 };
