@@ -12,6 +12,7 @@ export const getAdminWalletAddress = (currency: string): string | null => {
         SOL: "SOL",
         XRP: "XRP",
         RLUSD: "RLUSD_ADMIN_WALLET",
+        "RLUSD-ERC20": "RLUSD_ERC20",
         POLYGON: "POLYGON",
         "USDT-POLYGON": "USDT_POLYGON",
     };
