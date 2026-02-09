@@ -510,6 +510,30 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         console.warn(`[MerchantPool]    ⚠️ Failed to renew subscription (will retry on next reserve)`);
       }
 
+      // Send admin email notification for completed sweep
+      try {
+        const adminEmail = process.env.ADMIN_EMAIL;
+        if (adminEmail) {
+          const sweepConfig = getSweepConfig(walletType);
+          const gasToken = GAS_TOKEN_MAPPING[walletType] || walletType;
+          const gasDisplay = actualGasUsed > 0 ? `${actualGasUsed.toFixed(8)} ${gasToken}` : 'N/A (token transfer)';
+          
+          await sendAdminFeeSweepEmail(
+            adminEmail,
+            amountToSend.toFixed(8),
+            walletType,
+            poolAddress.dataValues.wallet_address,
+            adminWallet,
+            sweepTxId || 'N/A',
+            gasDisplay,
+            sweepConfig.mode
+          );
+          console.log(`[MerchantPool] 📧 Admin sweep notification sent: ${amountToSend} ${walletType} to ${adminEmail}`);
+        }
+      } catch (emailError) {
+        console.error(`[MerchantPool] ⚠️ Admin sweep email failed (non-critical):`, emailError);
+      }
+
       return { success: true, amount: amountToSend, txId: sweepTxId };
       
     } catch (dbError) {
