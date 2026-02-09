@@ -7569,7 +7569,6 @@ export default {
   createPaymentLink,
   cryptoVerification,
   checkingUSDT,
-  sendingLeftover,
   sweepNativeAdminFees,
   checkFeeBalance,
   checkOnBlockchair,
