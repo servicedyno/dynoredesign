@@ -162,11 +162,6 @@ cron.schedule("*/15 * * * *", function () {
   paymentController.sweepNativeAdminFees();
 });
 
-cron.schedule("*/50 * * * *", function () {
-  log("Cron: sendingLeftover running", "info");
-  paymentController.sendingLeftover();
-});
-
 cron.schedule("*/10 * * * *", () => {
   log("Cron: processIncompletePayments running", "info");
   paymentController.processIncompletePayments();
