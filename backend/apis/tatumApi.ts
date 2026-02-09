@@ -2582,7 +2582,7 @@ const waitForTransactionConfirmation = async (
     try {
       let txData: Record<string, unknown> | null = null;
       
-      if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
+      if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20") {
         txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);
       } else if (currency === "BSC") {
         txData = await tatumSdk.blockchain.bsc.bscGetTransaction(txHash);
