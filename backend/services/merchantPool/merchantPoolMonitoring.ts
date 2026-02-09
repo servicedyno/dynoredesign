@@ -513,8 +513,8 @@ export const checkMissedPayments = async (): Promise<{
               continue;
             }
             
-            // No payment context or balance too low — truly dust, release
-            console.log(`[MerchantPool] ⚠️ ${walletAddress} - No incoming txs found after ${failCount} checks. Balance ${balance} ${walletType} is likely pre-existing dust. Releasing address.`);
+            // No payment context or effective balance too low — admin fee residual, release
+            console.log(`[MerchantPool] ⚠️ ${walletAddress} - No incoming txs found after ${failCount} checks. Effective balance ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance}) is likely pre-existing admin fee. Releasing address.`);
             await merchantTempAddressModel.update(
               { status: 'AVAILABLE', current_payment_id: null, expected_amount: null, reserved_until: null, current_company_id: null },
               { where: { wallet_address: walletAddress } }
