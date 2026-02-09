@@ -58,7 +58,6 @@ import {
   TOKEN_CHAINS,
   GAS_TOKEN_MAPPING,
   NON_HD_CHAINS,
-  NON_HD_CHAINS,
 } from "./merchantPoolModels";
 
 export {
