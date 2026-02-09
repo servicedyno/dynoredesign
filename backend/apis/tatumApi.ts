@@ -475,7 +475,7 @@ const generatePrivatekey = async (currency, index, mnemonic) => {
         index,
       }
     );
-  } else if (currency === "ETH" || currency === "USDT-ERC20") {
+  } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "RLUSD-ERC20") {
     privateKey = await tatumSdk.blockchain.eth.ethGenerateAddressPrivateKey({
       mnemonic,
       index,
