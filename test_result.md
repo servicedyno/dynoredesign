@@ -4211,3 +4211,77 @@ ports:
           
           Base URL: http://localhost:8001 (internal)
 
+  - task: "XRP Reserve & Gas Fee Optimization — Update to post-Dec 2024 XRPL reserves"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/merchantPool/merchantPoolConfig.ts"
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+      - "/app/backend/services/merchantPool/merchantPoolWallet.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          5 FIXES for XRP reserve/fee optimization (XRPL reserves reduced Dec 2, 2024):
+          
+          XRP Ledger validator vote on Dec 2, 2024 reduced:
+          - Base reserve: 10 XRP → 1 XRP
+          - Owner reserve (trust lines): 2 XRP → 0.2 XRP
+          Source: https://xrpl.org/blog/2024/lower-reserves-are-in-effect
+          
+          FIX 1: merchantPoolConfig.ts — XRP_GAS_FALLBACK: 15 → 0.001
+          - Was grossly over-estimated (15 XRP for a 0.000012 XRP fee)
+          - Now 0.001 XRP — still ~80x the actual fee, but reasonable fallback
+          
+          FIX 2: merchantPoolConfig.ts — XRP_MIN_DEFICIT: 1 → 0.001
+          - Was requiring 1 XRP minimum deficit before funding gas
+          - Now 0.001 XRP — matches realistic gas needs
+          
+          FIX 3: merchantPoolSweep.ts — XRP sweep reserve: 10 → 1
+          - Was withholding 10 XRP per sweep; new base reserve is 1 XRP
+          - Saves 9 XRP (~$23) per XRP address sweep
+          
+          FIX 4: merchantPoolSweep.ts — RLUSD sweep reserve: 12 → 1.2
+          - Was 10 base + 2 trust line; now 1 base + 0.2 trust line
+          - Saves 10.8 XRP (~$28) per RLUSD address sweep
+          
+          FIX 5: merchantPoolWallet.ts — RLUSD wallet funding: 13 → 2
+          - Was sending 13 XRP to activate RLUSD address; now sends 2 XRP
+          - 2 = 1 (base) + 0.2 (trust line) + 0.8 (buffer)
+          - Saves 11 XRP (~$28) per RLUSD wallet creation
+          
+          VERIFY THESE TESTS:
+          
+          TEST 1: Backend healthy
+          - GET /health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - Run: cd /app/backend && npx tsc --noEmit — should exit 0
+          
+          TEST 3: FIX 1 — XRP_GAS_FALLBACK
+          - grep 'XRP_GAS_FALLBACK: 0.001' /app/backend/services/merchantPool/merchantPoolConfig.ts
+          
+          TEST 4: FIX 2 — XRP_MIN_DEFICIT
+          - grep 'XRP_MIN_DEFICIT: 0.001' /app/backend/services/merchantPool/merchantPoolConfig.ts
+          
+          TEST 5: FIX 3 — XRP sweep reserve = 1
+          - grep 'accountReserve = 1;' /app/backend/services/merchantPool/merchantPoolSweep.ts (should match "1 XRP base reserve")
+          - The value must be 1, NOT 10
+          
+          TEST 6: FIX 4 — RLUSD sweep reserve = 1.2
+          - grep 'accountReserve = 1.2' /app/backend/services/merchantPool/merchantPoolSweep.ts (should match "1 XRP base + 0.2 trust line")
+          - The value must be 1.2, NOT 12
+          
+          TEST 7: FIX 5 — RLUSD wallet funding = 2 XRP
+          - grep 'amount: 2,' /app/backend/services/merchantPool/merchantPoolWallet.ts (in RLUSD trust line setup block)
+          - The amount must be 2, NOT 13
+          
+          TEST 8: Comments updated
+          - grep 'post Dec 2024' /app/backend/services/merchantPool/merchantPoolSweep.ts should find updated comments
+          - grep 'xrpl.org/blog/2024' /app/backend/services/merchantPool/merchantPoolSweep.ts should find source link
+          
+          Base URL for curl: http://localhost:8001 (internal)
+
