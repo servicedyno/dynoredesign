@@ -51,7 +51,7 @@ export const UTXO_CHAINS = MODEL_UTXO_CHAINS || ["BTC", "LTC", "DOGE", "BCH"];
 export const NATIVE_CURRENCIES = ["TRX", "ETH", "SOL", "XRP", "POLYGON"];
 
 // Tokens that can only use threshold-based sweep
-export const TOKEN_CHAINS = MODEL_TOKEN_CHAINS || ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20"];
+export const TOKEN_CHAINS = MODEL_TOKEN_CHAINS || ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20", "RLUSD", "USDT-POLYGON", "RLUSD-ERC20"];
 
 export const FEE_WALLETS = {
   TRX: process.env.TRX_FEE_WALLET || "",
