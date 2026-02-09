@@ -206,7 +206,7 @@ const { id } = await tatumApi.createSubscription(
 
 **Current SERVER_URL:**
 ```env
-SERVER_URL=https://rlusd-erc20-deploy.preview.emergentagent.com
+SERVER_URL=https://init-install-1.preview.emergentagent.com
 ```
 
 ---

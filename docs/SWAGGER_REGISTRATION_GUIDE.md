@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://rlusd-erc20-deploy.preview.emergentagent.com/api/docs
+Go to: https://init-install-1.preview.emergentagent.com/api/docs
 
 ---
 

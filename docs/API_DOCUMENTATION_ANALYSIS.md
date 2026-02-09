@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://rlusd-erc20-deploy.preview.emergentagent.com/api/docs/
+**URL:** https://init-install-1.preview.emergentagent.com/api/docs/
 
 ---
 

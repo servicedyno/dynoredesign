@@ -7,7 +7,7 @@ import requests
 import json
 
 # Test credentials
-backend_url = "https://rlusd-erc20-deploy.preview.emergentagent.com"
+backend_url = "https://init-install-1.preview.emergentagent.com"
 test_email = "richard@dyno.pt"
 test_password = "Katiekendra123@"
 company_id = 38

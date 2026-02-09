@@ -14,7 +14,7 @@ import subprocess
 
 class TargetedDeviceLoginTester:
     def __init__(self):
-        self.backend_url = "https://rlusd-erc20-deploy.preview.emergentagent.com"
+        self.backend_url = "https://init-install-1.preview.emergentagent.com"
         self.test_results = {}
         self.errors = []
         
