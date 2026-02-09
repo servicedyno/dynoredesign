@@ -37,7 +37,7 @@ export const CHAIN_XPUB_MAPPING: Record<string, string> = {
  */
 export const UTXO_CHAINS = ['BTC', 'LTC', 'DOGE', 'BCH'];
 export const ACCOUNT_CHAINS = ['ETH', 'TRX', 'SOL', 'XRP', 'POLYGON'];
-export const TOKEN_CHAINS = ['USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'RLUSD', 'USDT-POLYGON'];
+export const TOKEN_CHAINS = ['USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'RLUSD', 'USDT-POLYGON', 'RLUSD-ERC20'];
 
 /**
  * Non-HD chains that generate fresh keypair per address (no xpub derivation)
