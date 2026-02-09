@@ -527,6 +527,7 @@ export const checkMissedPayments = async (): Promise<{
                   webhook_url: reconstructedRedis.webhook_url,
                   callback_url: reconstructedRedis.callback_url,
                   link_id: reconstructedRedis.link_id,
+                  pathType: reconstructedRedis.pathType,
                   customer_name: paymentContext?.customer_name || null,
                   customer_email: paymentContext?.customer_email || null,
                 };
