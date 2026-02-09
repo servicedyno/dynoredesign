@@ -705,14 +705,18 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
     const headers = await getTatumHeaders();
 
     const chain =
-      currency === "USDT-ERC20"
-        ? "ETH"
-        : currency === "USDC-ERC20"
+      currency === "USDT-ERC20" || currency === "USDC-ERC20"
         ? "ETH"
         : currency === "USDT-TRC20"
         ? "TRON"
         : currency === "TRX"
         ? "TRON"
+        : currency === "RLUSD"
+        ? "XRP"
+        : currency === "POLYGON" || currency === "USDT-POLYGON"
+        ? "MATIC"
+        : currency === "SOL"
+        ? "SOLANA"
         : currency;
 
     // Construct webhook URL properly
