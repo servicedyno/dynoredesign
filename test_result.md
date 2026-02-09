@@ -3792,3 +3792,59 @@ ports:
           
           CONCLUSION: Admin fee sweep email notification fix is fully operational and production-ready. All 8 verification requirements from the review request have been successfully validated. Admin will now receive email notifications when sweeps complete for USDT-TRC20, USDT-ERC20, and USDC-ERC20 tokens, while the merchant email block for sweep transactions remains preserved.
 
+  - task: "Add support for BCH, Solana, XRP, RLUSD, Polygon, USDT-POLYGON chains"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/.env"
+      - "/app/backend/models/merchantPoolModels/index.ts"
+      - "/app/backend/models/index.ts"
+      - "/app/backend/services/merchantPool/merchantPoolConfig.ts"
+      - "/app/backend/utils/addressValidation.ts"
+      - "/app/backend/utils/adminUtils.ts"
+      - "/app/backend/helper/currencyConvert.ts"
+      - "/app/backend/routes/merchantApiRouter.ts"
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/controller/adminController.ts"
+      - "/app/backend/services/merchantPool/merchantPoolWallet.ts"
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Added 6 new blockchain chains. Here's the classification:
+          - BCH: UTXO chain (batch sweep, already partially supported, now end-to-end)
+          - SOL: Account-based native (time:3 sweep, non-HD keypair wallet)
+          - XRP: Account-based native (time:3 sweep, non-HD account/secret wallet)
+          - RLUSD: Token on XRP Ledger (threshold:3 sweep, needs XRP gas, trust lines)
+          - POLYGON: EVM-compatible native (time:3 sweep, HD mnemonic/xpub like ETH)
+          - USDT-POLYGON: Token on Polygon (threshold:3 sweep, needs POL gas)
+          
+          VERIFY:
+          1. GET /health returns 200 healthy - backend must be running
+          2. No TypeScript compilation errors in backend logs
+          3. Verify /app/backend/models/merchantPoolModels/index.ts has MERCHANT_POOL_CRYPTO_TYPES with all 14 currencies
+          4. Verify /app/backend/models/merchantPoolModels/index.ts has NON_HD_CHAINS = ['SOL', 'XRP']
+          5. Verify /app/backend/models/merchantPoolModels/index.ts has GAS_TOKEN_MAPPING with RLUSD→XRP and USDT-POLYGON→POLYGON
+          6. Verify /app/backend/services/merchantPool/merchantPoolConfig.ts has ADMIN_WALLETS for all new chains
+          7. Verify /app/backend/services/merchantPool/merchantPoolConfig.ts has FEE_WALLETS for XRP and POLYGON
+          8. Verify /app/backend/services/merchantPool/merchantPoolConfig.ts has RLUSD_CONFIG with issuer and currencyHex
+          9. Verify /app/backend/apis/tatumApi.ts generateWallet handles SOL, XRP, POLYGON
+          10. Verify /app/backend/apis/tatumApi.ts generateUserAddress handles SOL (fresh keypair), XRP/RLUSD (fresh account), POLYGON/USDT-POLYGON (HD)
+          11. Verify /app/backend/apis/tatumApi.ts createSubscription chain mapping includes SOLANA, XRP, MATIC
+          12. Verify /app/backend/apis/tatumApi.ts feeEstimation handles SOL, XRP, RLUSD, POLYGON, USDT-POLYGON
+          13. Verify /app/backend/apis/tatumApi.ts assetToOtherAddress handles SOL, XRP, RLUSD, POLYGON, USDT-POLYGON transfers
+          14. Verify /app/backend/apis/tatumApi.ts getAddressBalance handles SOL, XRP, RLUSD, POLYGON, USDT-POLYGON
+          15. Verify /app/backend/apis/tatumApi.ts setupXrpTrustLine function exists
+          16. Verify /app/backend/controller/paymentController.ts settleCryptoTransaction handles RLUSD and USDT-POLYGON as token transfers
+          17. Verify /app/backend/controller/adminController.ts createWallets includes SOL, XRP, POLYGON in cryptoData
+          18. Verify /app/backend/services/merchantPool/merchantPoolWallet.ts handles non-HD chains in getOrCreateMerchantWallet
+          19. Verify /app/backend/routes/merchantApiRouter.ts CRYPTO_TYPES includes all 14 currencies
+          20. Verify /app/backend/utils/addressValidation.ts has patterns for SOL, XRP, RLUSD, POLYGON, USDT-POLYGON
+          
+          Base URL: http://localhost:8001 (internal)
+
