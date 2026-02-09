@@ -636,6 +636,8 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
     const chain =
       currency === "USDT-ERC20"
         ? "ETH"
+        : currency === "USDC-ERC20"
+        ? "ETH"
         : currency === "USDT-TRC20"
         ? "TRON"
         : currency === "TRX"
