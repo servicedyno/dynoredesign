@@ -416,6 +416,43 @@ const generateWallet = async (currency) => {
         })
       ).key;
       console.log(`Derived Private Key [Index ${index}]:`, privateKey);
+    } else if (currency === "SOL") {
+      // Solana: Non-HD — each wallet is a unique keypair
+      const wallet = await tatumSdk.blockchain.solana.solanaGenerateWallet();
+      address = wallet.address;
+      privateKey = wallet.privateKey;
+      mnemonic = "NON_HD";
+      xpub = `NON_HD_SOL_${address.substring(0, 8)}`;
+      console.log("SOL Address:", address);
+    } else if (currency === "XRP") {
+      // XRP: Non-HD — each wallet is account + secret
+      const wallet = await tatumSdk.blockchain.xrp.xrpWallet();
+      address = wallet.address;
+      privateKey = wallet.secret;
+      mnemonic = "NON_HD";
+      xpub = `NON_HD_XRP_${address.substring(0, 8)}`;
+      console.log("XRP Address:", address);
+    } else if (currency === "POLYGON") {
+      // Polygon: EVM-compatible, HD derivation like ETH
+      const wallet = await tatumSdk.blockchain.polygon.polygonGenerateWallet();
+      mnemonic = wallet.mnemonic;
+      xpub = wallet.xpub;
+
+      console.log("Mnemonic:", mnemonic);
+      console.log("xPub:", xpub);
+
+      const index = 0;
+      address = (await tatumSdk.blockchain.polygon.polygonGenerateAddress(xpub, index))
+        .address;
+      console.log(`Derived Address [Index ${index}]:`, address);
+
+      privateKey = (
+        await tatumSdk.blockchain.polygon.polygonGenerateAddressPrivateKey({
+          mnemonic,
+          index: 0,
+        })
+      ).key;
+      console.log(`Derived Private Key [Index ${index}]:`, privateKey);
     }
     return {
       mnemonic,
