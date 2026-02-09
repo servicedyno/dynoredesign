@@ -1614,7 +1614,7 @@ const assetBatchAddressesToOtherAddress = async ({
       });
     });
     console.log("###transactions", transactions);
-  } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "RLUSD-ERC20") {
+  } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20") {
     let transactionResponse: Array<{ txId: string; status: string; reason: string | null; fromAddress: unknown; toAddress?: string; errorMessage?: string; error?: string; cause?: string }> = [];
     // Send assets from all addresses to one address
     await Promise.allSettled(
