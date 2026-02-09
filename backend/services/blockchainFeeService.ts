@@ -42,6 +42,7 @@ interface BlockchainFeeResult {
   chain: string;
   feeInNative: number;      // Fee in native currency (BTC, ETH, TRX, etc.)
   feeInUSD: number;         // Fee converted to USD
+  nativeSymbol?: string;    // Native gas token symbol (e.g., 'SOL', 'XRP')
   speed: 'fast' | 'medium' | 'slow';
   gasPrice?: number;        // For EVM chains (in gwei)
   satPerByte?: number;      // For UTXO chains
