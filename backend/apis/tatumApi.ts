@@ -2429,6 +2429,88 @@ const getIncomingTransactions = async (
           });
         }
       }
+    } else if (currency === "SOL") {
+      // Solana incoming transactions
+      const solTx = await tatumSdk.blockchain.solana.solanaGetTransaction(address);
+      if (solTx) {
+        transactions.push({
+          txId: typeof solTx === 'string' ? solTx : (solTx as any)?.txId || address,
+          amount: 0,
+          timestamp: Date.now()
+        });
+      }
+    } else if (currency === "XRP") {
+      // XRP account transactions
+      try {
+        const xrpTxData = await tatumSdk.blockchain.xrp.xrpGetAccountTx(address, undefined, undefined);
+        const xrpTxs = (xrpTxData as any)?.transactions || [];
+        for (const tx of xrpTxs) {
+          const meta = tx.meta || tx.metaData;
+          const delivered = meta?.delivered_amount;
+          if (delivered && typeof delivered === 'string') {
+            const amount = Number(delivered) / 1e6;
+            if (amount > 0) {
+              transactions.push({
+                txId: tx.tx?.hash || '',
+                amount,
+                timestamp: tx.tx?.date ? (tx.tx.date + 946684800) * 1000 : Date.now()
+              });
+            }
+          }
+        }
+      } catch (_xrpErr) {
+        console.warn(`[getIncomingTransactions] XRP tx fetch failed for ${address}`);
+      }
+    } else if (currency === "RLUSD") {
+      // RLUSD on XRP - same as XRP but filter for RLUSD token
+      try {
+        const xrpTxData = await tatumSdk.blockchain.xrp.xrpGetAccountTx(address, undefined, undefined);
+        const xrpTxs = (xrpTxData as any)?.transactions || [];
+        for (const tx of xrpTxs) {
+          const meta = tx.meta || tx.metaData;
+          const delivered = meta?.delivered_amount;
+          if (delivered && typeof delivered === 'object' && (delivered.currency === 'RLUSD' || (delivered.currency || '').startsWith('524C5553'))) {
+            const amount = Number(delivered.value || 0);
+            if (amount > 0) {
+              transactions.push({
+                txId: tx.tx?.hash || '',
+                amount,
+                timestamp: tx.tx?.date ? (tx.tx.date + 946684800) * 1000 : Date.now()
+              });
+            }
+          }
+        }
+      } catch (_rlusdErr) {
+        console.warn(`[getIncomingTransactions] RLUSD tx fetch failed for ${address}`);
+      }
+    } else if (currency === "POLYGON") {
+      // Polygon native transactions
+      const txData = await tatumSdk.blockchain.polygon.polygonGetTransactionByAddress(
+        address, limit, 0
+      );
+      for (const tx of (txData as ERC20Transaction[]) || []) {
+        if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(String(tx.value || '0')) > 0) {
+          transactions.push({
+            txId: tx.transactionHash || tx.txId || tx.hash || '',
+            amount: parseFloat(String(tx.value || '0')) / 1e18,
+            timestamp: tx.timestamp || tx.blockTimestamp || Date.now()
+          });
+        }
+      }
+    } else if (currency === "USDT-POLYGON") {
+      const contractAddress = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+      const txData = await tatumSdk.fungibleToken.erc20GetTransactionByAddress(
+        "MATIC", address, contractAddress, limit
+      );
+      for (const tx of (txData as ERC20Transaction[]) || []) {
+        if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
+          transactions.push({
+            txId: tx.transactionHash || tx.txId || tx.hash || '',
+            amount: parseFloat(tx.value || '0') / 1e6,
+            timestamp: tx.timestamp || tx.blockTimestamp || Date.now()
+          });
+        }
+      }
     }
   } catch (error) {
     console.error(`[getIncomingTransactions] Error fetching transactions for ${currency}:`, error.message);
