@@ -1,45 +1,64 @@
 # Dynopay - Crypto Payment Processing Platform
 
 ## Original Problem Statement
-1. Analyze the ETH payment creation process — fix slow API response and missing webhook_url.
-2. Architecture cleanup — unify routing between legacyApiRouter.ts and api-service.
-3. Analyze and fix payment link update flow for all fields.
+Crypto payment gateway supporting USDT (TRC20/ERC20), USDC (ERC20), ETH, and TRX. Merchants receive crypto payments via Payment Links or Direct API. Platform handles automated settlement, fee splitting, and gas management.
 
 ## Architecture
-- Python proxy (`server.py`) on port 8001 → Node.js backend on port 3300
-- All merchant API endpoints served by `merchantApiRouter.ts` (unified)
+- Python proxy (`server.py`) on port 8001 -> Node.js backend on port 3300
 - Redis for state management (keys: `customer-{ref}`, `crypto-{address}`)
 - PostgreSQL for persistent data
-- Tatum for crypto webhook notifications
+- Tatum API for blockchain interactions (balance checks, transaction broadcasting)
 - FastForex / CoinGecko for currency conversion rates
+- Cron jobs: `checkMissedPayments` (5min), `detectOrphanPayments` (10min), `processIncompletePayments`
 
 ## What's Been Implemented
 
-### Bug Fix: Webhook URL not registered (DONE - Dec 2025)
-- `webhook_url` now correctly propagated and stored in `crypto-{address}` Redis key
-- Files: `backend/routes/crypto.ts`, `backend/routes/paymentLinks.ts`, `backend/webhooks/tatum.ts`
+### ERC20 Payment Bug Fixes (DONE - Feb 2026)
+- Fixed SmartGas `fundGasIfNeeded`: zero-balance wallets now correctly receive gas funding
+- Fixed `checkMissedPayments`: failed transactions in Redis are now re-processed
+- Added USDC-ERC20 handler in `getIncomingTransactions`
+- Recovered 2 stuck payments (USDT-ERC20, USDC-ERC20)
+- Files: `merchantPoolMonitoring.ts`, `smartGas.ts`
 
-### Bug Fix: Slow payment creation (DONE - Dec 2025)
-- Cached exchange rate in merchantApiRouter, passed via Redis to skip redundant currencyConvert call
-- Verified: `hasCached=true`, "saved ~200ms" confirmed in logs
+### Multi-Chain Fee Optimization (DONE - Feb 2026)
+- TRON TRC20: Dynamic feeLimit (5-30 TRX) replaces hardcoded 50 TRX
+- TRX Native: Dynamic bandwidth-aware fees replace hardcoded 10 TRX
+- EVM: Percentage-based gas buffers (15%+0.5 Gwei) replace flat +2 Gwei
+- Energy-aware SmartGas: checks staked Energy before funding TRX
+- Diagnostics endpoint: GET /diagnostics/fee-optimization
+- Files: `tronEnergyService.ts`, `tatumApi.ts`, `blockchainFeeService.ts`, `merchantPoolSweep.ts`
 
-### Architecture: Unified Merchant API (DONE - Dec 2025)
-- Retired `api-service` (separate Node.js process on port 3301) — no longer started
-- Created `merchantApiRouter.ts` with all 10 merchant endpoints
-- Replaced HTTP self-calls with direct DB/controller calls
-- Zero breaking changes for existing merchants
+### Direct API vs Payment Link Separation (DONE - Feb 2026)
+- Direct API: immediate processing, no grace period, no thresholds
+- Payment Links: per-merchant grace period (1-30 min), configurable thresholds
+- Files: `webhooks/index.ts`, `paymentController.ts`, `companyController.ts`
 
-### Bug Fix: Stale base_currency from encrypted API key (DONE - Dec 2025)
-- Middleware now fetches `base_currency`, `webhook_url`, `webhook_secret` from `tbl_api` DB (source of truth)
+### Fallback Safety Nets (DONE - Feb 2026)
+- `checkMissedPayments`: reconstructs Redis from `last_payment_context` when Tatum fails 3x
+- `processIncompletePayments`: now scans merchant pool addresses too
+- Files: `merchantPoolMonitoring.ts`, `paymentController.ts`
 
-### Bug Fix: Payment Link Update — 4 Issues Fixed (DONE - Dec 2025)
-1. **`customer_name` not updatable**: Added `name` field handling in `updatePaymentLink`, stored as `customer_name` in both DB and Redis
-2. **Stale `amount` in Redis**: Now syncs `amount` alongside `base_amount` during update
-3. **Redis key expiry breaks link**: When Redis key is missing during update, reconstructs full payload from DB + wallet config, flagged with `reconstructed: true`
-4. **`crypto-{address}` stale data**: After updating `customer-{ref}`, also updates `webhook_url` and `callback_url` on active `crypto-{address}` key if payment is pending
+### Webhook URL Bug Fix (DONE - Dec 2025)
+- `webhook_url` now stored in `crypto-{address}` Redis key (not just `customer-{ref}`)
+- Merge fallback logic in webhook handler
+- Cached exchange rate performance fix
 
-Files modified: `backend/controller/paymentController.ts`
+### Architecture Cleanup (DONE - Feb 2026)
+- Deleted `api-service/` directory
+- Lightweight API versioning: `/api/v1/*` alongside `/api/*`
+- Configurable reservation timeout (120 min, env-driven)
+- Orphan payment detection on AVAILABLE addresses
+
+### Admin Fee Residual Fix (DONE - Feb 2026)
+- `checkMissedPayments` subtracts `admin_fee_balance` before dust check
+- Eliminates false positive "missed payment" alerts
+
+## Current Status
+- Backend: Healthy, all cron jobs running
+- CRITICAL: ETH Fee Wallet (`0x033d2bb052e3d85bfe96fbd86cf876a350ad6b1c`) is DEPLETED
+  - All future ERC20 settlements will fail until refilled
+  - TRC20 payments unaffected (separate TRX gas wallet)
 
 ## Prioritized Backlog
-- P2: Delete `backend/api-service/` directory entirely (currently kept for reference)
-- P2: API versioning (`/api/v2/user/*`) for future evolution
+- P0: Refill ETH Fee Wallet (manual user action required)
+- No other pending technical tasks
