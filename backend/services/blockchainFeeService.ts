@@ -384,13 +384,32 @@ export const getBlockchainNetworkFee = async (
   }
   
   // EVM chains
-  if (['ETH', 'USDT_ERC20'].includes(normalizedChain)) {
+  if (['ETH', 'USDT_ERC20', 'USDC_ERC20', 'RLUSD_ERC20', 'POLYGON', 'USDT_POLYGON'].includes(normalizedChain)) {
     return calculateEvmFee(normalizedChain, speed);
   }
   
   // TRON chains
   if (['TRX', 'USDT_TRC20'].includes(normalizedChain)) {
     return calculateTronFee(normalizedChain, speed);
+  }
+
+  // Account-based chains with fixed/minimal fees
+  if (['SOL', 'XRP', 'RLUSD'].includes(normalizedChain)) {
+    // SOL, XRP, RLUSD have very low fixed fees
+    const fixedFees: Record<string, { fee: number; symbol: string }> = {
+      'SOL': { fee: 0.000005, symbol: 'SOL' },
+      'XRP': { fee: 0.000012, symbol: 'XRP' },
+      'RLUSD': { fee: 0.000012, symbol: 'XRP' },
+    };
+    const feeInfo = fixedFees[normalizedChain] || { fee: 0, symbol: normalizedChain };
+    return {
+      chain: normalizedChain,
+      feeInNative: feeInfo.fee,
+      feeInUSD: 0, // Negligible, will be calculated if needed
+      nativeSymbol: feeInfo.symbol,
+      speed,
+      timestamp: Date.now(),
+    };
   }
 
   throw new Error(`Unsupported blockchain: ${chain}`);
