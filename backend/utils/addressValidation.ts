@@ -132,6 +132,7 @@ export const getBaseChain = (currency: string): string => {
     'USDC-ERC20': 'ETH',
     'BSC': 'ETH',
     'RLUSD': 'XRP',
+    'RLUSD-ERC20': 'ETH',
     'USDT-POLYGON': 'POLYGON',
   };
 
