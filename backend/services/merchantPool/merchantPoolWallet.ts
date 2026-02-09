@@ -192,6 +192,56 @@ export const addAddressToMerchantPool = async (
 
     console.log(`[MerchantPool] ✅ Added ${walletType} address to merchant ${userId}'s pool: ${addressData.address}`);
 
+    // For RLUSD: Set up XRP Trust Line so the address can receive RLUSD tokens
+    if (walletType === "RLUSD") {
+      try {
+        const rlusdIssuer = process.env.RLUSD_ISSUER || "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
+        const rlusdCurrencyHex = process.env.RLUSD_CURRENCY_HEX || "524C555344000000000000000000000000000000";
+        
+        // First, fund the XRP address with enough XRP for account reserve + trust line reserve + tx fees
+        // XRP account needs 10 XRP reserve + 2 XRP per trust line + ~0.00001 XRP tx fee
+        console.log(`[MerchantPool] 🔗 Setting up RLUSD trust line for ${addressData.address}...`);
+        
+        // Fund the address with XRP from the fee wallet
+        const xrpFeeWallet = process.env.XRP_FEE_WALLET || process.env.XRP;
+        if (xrpFeeWallet) {
+          const { adminFeeModel } = await import("../../models");
+          const xrpFeeWalletRecord = await adminFeeModel.findOne({ where: { wallet_type: "XRP" } });
+          if (xrpFeeWalletRecord) {
+            const xrpFeePrivateKey = await tatumApi.decryptSymmetric(
+              xrpFeeWalletRecord.dataValues.privateKey,
+              process.env.TEMP_KEY_ID
+            );
+            // Fund with 13 XRP (10 base reserve + 2 trust line reserve + 1 buffer)
+            await tatumApi.assetToOtherAddress({
+              currency: "XRP",
+              fromAddress: xrpFeeWallet,
+              toAddress: addressData.address,
+              privateKey: xrpFeePrivateKey,
+              amount: 13,
+              fee: null,
+            });
+            console.log(`[MerchantPool] ✅ Funded ${addressData.address} with 13 XRP for RLUSD trust line`);
+            
+            // Wait a moment for the funding to confirm
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Now set up the trust line
+            await tatumApi.setupXrpTrustLine(
+              addressData.address,
+              addressData.privateKey,
+              rlusdIssuer,
+              rlusdCurrencyHex,
+              "999999999"
+            );
+            console.log(`[MerchantPool] ✅ RLUSD trust line established for ${addressData.address}`);
+          }
+        }
+      } catch (trustLineError) {
+        console.error(`[MerchantPool] ⚠️ RLUSD trust line setup failed (non-critical, can retry):`, getErrorMessage(trustLineError));
+      }
+    }
+
     return poolAddress;
   } catch (error) {
     const message = getErrorMessage(error);
