@@ -1367,7 +1367,7 @@ const assetToOtherAddress = async ({
     });
   } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
     // USDT/USDC ERC-20 have 6 decimals; ETH has 18 — truncate accordingly
-    const isERC20Token = currency === "USDT-ERC20" || currency === "USDC-ERC20";
+    const isERC20Token = currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20";
     const decimals = isERC20Token ? 6 : 8;
     const factor = Math.pow(10, decimals);
     const safeAmount = (Math.floor(Number(amount) * factor) / factor).toString();
@@ -1382,7 +1382,7 @@ const assetToOtherAddress = async ({
         gasPrice: Math.ceil(fee?.gasPrice).toString(),
         gasLimit: fee?.gasLimit.toString(),
       },
-      currency: currency === "ETH" ? "ETH" : (currency === "USDC-ERC20" ? "USDC" : "USDT"),
+      currency: currency === "ETH" ? "ETH" : (currency === "USDC-ERC20" ? "USDC" : (currency === "RLUSD-ERC20" ? "RLUSD" : "USDT")),
     });
   } else if (currency === "TRX") {
     transaction = await tatumSdk.blockchain.tron.tronTransfer({
