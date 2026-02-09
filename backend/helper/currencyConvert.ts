@@ -228,7 +228,7 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
       {
         params: { basePair: fiat.toUpperCase() },
         headers: { 'x-api-key': apiKey },
-        timeout: 15000,
+        timeout: 8000,
       }
     );
     const rate = parseFloat(data?.value);
