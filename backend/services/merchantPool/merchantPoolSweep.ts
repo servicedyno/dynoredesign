@@ -213,7 +213,7 @@ export const fundGasIfNeeded = async (
     console.log(`[SmartGas] ✅ Gas funded: ${fundAmount.toFixed(6)} ${gasToken} (TX: ${txResult?.txId})`);
     console.log(`[SmartGas]    Old balance: ${currentBalance.toFixed(6)} → New balance: ${newBalance.toFixed(6)} ${gasToken}`);
 
-    return { funded: true, amount: deficit, txId: txResult?.txId, reason: 'Deficit funded' };
+    return { funded: true, amount: fundAmount, txId: txResult?.txId, reason: 'Deficit funded' };
     
   } catch (error) {
     const message = getErrorMessage(error);
