@@ -76,6 +76,7 @@ export const ADMIN_WALLETS: Record<string, string> = {
   "RLUSD": process.env.RLUSD_ADMIN_WALLET || process.env.XRP || "",
   "POLYGON": process.env.POLYGON || "",
   "USDT-POLYGON": process.env.USDT_POLYGON || process.env.POLYGON || "",
+  "RLUSD-ERC20": process.env.RLUSD_ERC20 || process.env.ETH || "",
 };
 
 export const TOKEN_CONTRACTS: Record<string, string> = {
