@@ -585,7 +585,8 @@ export const checkMissedPayments = async (): Promise<{
           redisData.ref = customerRef;
         }
 
-        const receivedAmount = balance;
+        // Use effectiveBalance (minus admin fees) as the actual received amount
+        const receivedAmount = effectiveBalance;
         const isPartialPayment = receivedAmount < (expectedAmount - tolerance);
         
         const updatedRedisData = {
