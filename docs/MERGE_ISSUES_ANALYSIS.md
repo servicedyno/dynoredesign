@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://dep-init.preview.emergentagent.com
+SERVER_URL=https://eth-gas-debug.preview.emergentagent.com
 ```
 
 **Impact:**

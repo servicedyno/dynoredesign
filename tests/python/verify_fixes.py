@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://dep-init.preview.emergentagent.com/api"
+BASE_URL = "https://eth-gas-debug.preview.emergentagent.com/api"
 
 print("=" * 80)
 print("VERIFYING FIXES")

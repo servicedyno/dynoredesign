@@ -11,7 +11,7 @@ Test Scope:
 5. Email Service Templates Verification
 6. Weekly Summary Cron Enabled
 
-Backend URL: https://dep-init.preview.emergentagent.com
+Backend URL: https://eth-gas-debug.preview.emergentagent.com
 """
 
 import requests
@@ -21,7 +21,7 @@ import sys
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://dep-init.preview.emergentagent.com"
+BACKEND_URL = "https://eth-gas-debug.preview.emergentagent.com"
 TEST_USER_EMAIL = "john@dyno.pt"
 TEST_USER_PASSWORD = "Katiekendra123@"
 

@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://dep-init.preview.emergentagent.com/api/docs
+Go to: https://eth-gas-debug.preview.emergentagent.com/api/docs
 
 ---
 

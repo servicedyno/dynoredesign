@@ -7,7 +7,7 @@ Tests: Enhanced error messages, auto-suggestion, and validation
 import requests
 import json
 
-BASE_URL = "https://dep-init.preview.emergentagent.com"
+BASE_URL = "https://eth-gas-debug.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 TEST_EMAIL = "richard@dyno.pt"
