@@ -8,7 +8,7 @@ import requests
 import json
 from datetime import datetime
 
-BASE_URL = "https://init-install-1.preview.emergentagent.com"
+BASE_URL = "https://blockchain-fee-check.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials

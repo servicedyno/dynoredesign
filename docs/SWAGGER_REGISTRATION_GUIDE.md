@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://init-install-1.preview.emergentagent.com/api/docs
+Go to: https://blockchain-fee-check.preview.emergentagent.com/api/docs
 
 ---
 

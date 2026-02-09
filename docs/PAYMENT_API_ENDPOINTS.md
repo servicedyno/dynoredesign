@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://init-install-1.preview.emergentagent.com/api
+Development: https://blockchain-fee-check.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://init-install-1.preview.emergentagent.com
+SERVER_URL=https://blockchain-fee-check.preview.emergentagent.com
 ```
 
 **Impact:**

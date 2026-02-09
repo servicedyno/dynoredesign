@@ -14,8 +14,8 @@
 - **Note**: MongoDB service in supervisor is a leftover from template but NOT used by DynoPay
 
 ### 2. **Backend URL Updated to Current Development URL**
-- **Previous URL**: https://init-install-1.preview.emergentagent.com
-- **Current Development URL**: `https://init-install-1.preview.emergentagent.com`
+- **Previous URL**: https://blockchain-fee-check.preview.emergentagent.com
+- **Current Development URL**: `https://blockchain-fee-check.preview.emergentagent.com`
 - Updated in both `/app/backend/.env` and `/app/frontend/.env`
 
 ### 3. **Backend Architecture Clarified**
@@ -49,7 +49,7 @@ DynoPay backend is a **Node.js/Express/TypeScript** application, NOT Python:
 ```bash
 PORT=8001                    # External port mapping
 API_SERVICE_PORT=3301        # API service port
-SERVER_URL=https://init-install-1.preview.emergentagent.com
+SERVER_URL=https://blockchain-fee-check.preview.emergentagent.com
 CHECKOUT_URL=https://checkout.dynopay.com
 ```
 
@@ -201,7 +201,7 @@ CUSTOMER_ID=6708cc37177ff63b812c0db9
 
 ### Frontend Environment (/app/frontend/.env)
 ```bash
-REACT_APP_BACKEND_URL=https://init-install-1.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://blockchain-fee-check.preview.emergentagent.com
 WDS_SOCKET_PORT=443
 ENABLE_HEALTH_CHECK=false
 ```
@@ -209,8 +209,8 @@ ENABLE_HEALTH_CHECK=false
 ## 🎯 API Endpoints Available
 
 ### Main Backend API (Port 3300)
-- **Swagger Documentation**: `https://init-install-1.preview.emergentagent.com/api/docs`
-- **Base API URL**: `https://init-install-1.preview.emergentagent.com/api`
+- **Swagger Documentation**: `https://blockchain-fee-check.preview.emergentagent.com/api/docs`
+- **Base API URL**: `https://blockchain-fee-check.preview.emergentagent.com/api`
 
 ### API Service (Port 3301)
 - Additional API service for specific operations

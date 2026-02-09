@@ -7,7 +7,7 @@ import requests
 import json
 
 def debug_api_key_response():
-    backend_url = "https://init-install-1.preview.emergentagent.com"
+    backend_url = "https://blockchain-fee-check.preview.emergentagent.com"
     
     # First authenticate
     auth_response = requests.post(
