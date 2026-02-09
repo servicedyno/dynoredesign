@@ -7593,6 +7593,12 @@ const getCompanyConfiguredCurrencies = async (
       { type: 'USDT-TRC20', name: 'USDT (TRC-20)', symbol: '₮' },
       { type: 'USDT-ERC20', name: 'USDT (ERC-20)', symbol: '₮' },
       { type: 'USDC-ERC20', name: 'USDC (ERC-20)', symbol: '$' },
+      { type: 'SOL', name: 'Solana', symbol: '◎' },
+      { type: 'XRP', name: 'XRP', symbol: '✕' },
+      { type: 'RLUSD', name: 'RLUSD (XRP Ledger)', symbol: '$' },
+      { type: 'RLUSD-ERC20', name: 'RLUSD (ERC-20)', symbol: '$' },
+      { type: 'POLYGON', name: 'Polygon', symbol: '⬡' },
+      { type: 'USDT-POLYGON', name: 'USDT (Polygon)', symbol: '₮' },
     ];
 
     // Get configured wallets for this company
