@@ -9,6 +9,7 @@ import {
   merchantWalletModel,
   merchantTempAddressModel,
   CHAIN_XPUB_MAPPING,
+  NON_HD_CHAINS,
 } from "../../models";
 import tatumApi from "../../apis/tatumApi";
 import sequelize from "../../utils/dbInstance";
