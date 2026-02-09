@@ -2816,6 +2816,25 @@ const getTransactionGasCost = async (
       return { gasCostNative: gasCostTrx, gasToken: "TRX" };
     }
 
+    if (currency === "POLYGON" || currency === "USDT-POLYGON") {
+      const txData = await tatumSdk.blockchain.polygon.polygonGetTransaction(txHash) as Record<string, unknown>;
+      const gasUsed = Number(txData?.gasUsed || 0);
+      const gasPriceWei = Number(txData?.gasPrice || 0);
+      const gasCostPol = (gasUsed * gasPriceWei) / 1e18;
+      console.log(`[getTransactionGasCost] POLYGON TX ${txHash}: gasUsed=${gasUsed}, gasPrice=${gasPriceWei} wei, cost=${gasCostPol} POL`);
+      return { gasCostNative: gasCostPol, gasToken: "POLYGON" };
+    }
+
+    if (currency === "XRP" || currency === "RLUSD") {
+      // XRP fees are typically 12 drops (0.000012 XRP) — fixed and minimal
+      return { gasCostNative: 0.000012, gasToken: "XRP" };
+    }
+
+    if (currency === "SOL") {
+      // Solana fees are typically 5000 lamports (0.000005 SOL) — fixed and minimal
+      return { gasCostNative: 0.000005, gasToken: "SOL" };
+    }
+
     console.log(`[getTransactionGasCost] Unsupported currency ${currency} for gas cost lookup`);
     return { gasCostNative: 0, gasToken: currency };
   } catch (error: unknown) {
