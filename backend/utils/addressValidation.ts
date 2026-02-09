@@ -33,6 +33,7 @@ const ADDRESS_PATTERNS: Record<string, RegExp> = {
   // XRP - starts with r, 25-35 chars
   XRP: /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/,
   'RLUSD': /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/,
+  'RLUSD-ERC20': /^0x[a-fA-F0-9]{40}$/,
 
   // Polygon - EVM compatible, same as ETH
   POLYGON: /^0x[a-fA-F0-9]{40}$/,
