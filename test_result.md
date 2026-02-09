@@ -4213,14 +4213,14 @@ ports:
 
   - task: "XRP Reserve & Gas Fee Optimization — Update to post-Dec 2024 XRPL reserves"
     implemented: true
-    working: "NA"
+    working: true
     files:
       - "/app/backend/services/merchantPool/merchantPoolConfig.ts"
       - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
       - "/app/backend/services/merchantPool/merchantPoolWallet.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
