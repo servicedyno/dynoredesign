@@ -10,7 +10,7 @@ async function checkAllAdminWallets() {
     // Get all crypto wallets
     const wallets = await adminWalletModel.findAll({
       where: {
-        wallet_type: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20']
+        wallet_type: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'RLUSD-ERC20', 'RLUSD', 'USDT-POLYGON', 'SOL', 'XRP', 'POLYGON', 'BCH']
       }
     });
 
