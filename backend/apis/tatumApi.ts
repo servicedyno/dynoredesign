@@ -2759,4 +2759,5 @@ export default {
   decryptSymmetric,
   waitForTransactionConfirmation,
   getTransactionGasCost,
+  setupXrpTrustLine,
 };
