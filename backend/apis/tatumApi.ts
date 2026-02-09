@@ -1225,7 +1225,8 @@ const feeEstimation = async (
     fees = { fast: 0.00005 };
   } else if (currency === "POLYGON" || currency === "USDT-POLYGON") {
     // Polygon: EVM-compatible fee estimation
-    // Native POL uses TRANSFER_NFT (21k gas), USDT-POLYGON uses TRANSFER_ERC20 (65k gas)
+    // Use TRANSFER_ERC20 type for gas price estimation (gas price is network-level, same for all tx types)
+    // The gas LIMIT differs: native POL = 21,000, ERC20 token = ~65,000
     const isToken = currency === "USDT-POLYGON";
     const localAmount: number = Number(amount);
     const decimals = isToken ? 6 : 8;
@@ -1234,7 +1235,7 @@ const feeEstimation = async (
     try {
       const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
         chain: "MATIC",
-        type: isToken ? "TRANSFER_ERC20" : "TRANSFER_NFT",
+        type: "TRANSFER_ERC20",
         sender: fromAddress,
         ...(isToken && {
           contractAddress: process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
