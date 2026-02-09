@@ -792,7 +792,7 @@ const createSubscriptionWithUrl = async (address: string, currency: string, cust
         : currency === "POLYGON" || currency === "USDT-POLYGON"
         ? "MATIC"
         : currency === "SOL"
-        ? "SOLANA"
+        ? "SOL"
         : currency;
 
     console.log(`[createSubscriptionWithUrl] Address: ${address}, Chain: ${chain}, URL: ${customUrl}`);
