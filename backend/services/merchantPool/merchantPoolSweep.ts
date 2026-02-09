@@ -154,7 +154,10 @@ export const fundGasIfNeeded = async (
         
       } catch (estimationError) {
         console.warn(`[SmartGas] Gas estimation failed, using fallback:`, getErrorMessage(estimationError));
-        estimatedGas = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_FALLBACK : POOL_CONFIG.ETH_GAS_FALLBACK;
+        estimatedGas = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_FALLBACK 
+          : gasToken === "XRP" ? POOL_CONFIG.XRP_GAS_FALLBACK
+          : gasToken === "POLYGON" ? POOL_CONFIG.POLYGON_GAS_FALLBACK
+          : POOL_CONFIG.ETH_GAS_FALLBACK;
       }
     }
 
