@@ -998,6 +998,7 @@ export {
   sendPaymentPartialExpiredEmail,
   sendTransactionConfirmedEmail,
   sendAdminFeeReceivedEmail,
+  sendAdminFeeSweepEmail,
   sendWeeklySummaryEmail,
   sendSecurityAlertEmail,
   sendRefereeCodeReminderEmail,
