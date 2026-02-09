@@ -1219,8 +1219,9 @@ const batchFeeEstimation = async ({
       })),
     });
     console.log("###BTC FEES--->", fees);
-  } else if (["ETH", "BSC", "USDT-ERC20", "USDC-ERC20"].indexOf(currency) !== -1) {
-    const isERC20 = currency === "USDT-ERC20" || currency === "USDC-ERC20";
+  } else if (["ETH", "BSC", "USDT-ERC20", "USDC-ERC20", "POLYGON", "USDT-POLYGON"].indexOf(currency) !== -1) {
+    const isERC20 = ["USDT-ERC20", "USDC-ERC20", "USDT-POLYGON"].includes(currency);
+    const chainId = ["POLYGON", "USDT-POLYGON"].includes(currency) ? "MATIC" : (isERC20 ? "ETH" : currency);
     // Handle Multiple Transactions
     const gasFeesArray = await Promise.all(
       fromAddresses.map(async (fromAddress) => {
@@ -1229,11 +1230,13 @@ const batchFeeEstimation = async ({
         const sweepFactor = Math.pow(10, sweepDecimals);
         const safeSweepAmount = (Math.floor(Number(amount) * sweepFactor) / sweepFactor).toString();
         const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
-          chain: isERC20 ? "ETH" : currency,
+          chain: chainId,
           type: isERC20 ? "TRANSFER_ERC20" : "TRANSFER_NFT",
           sender: fromAddress.address,
           ...(isERC20 && {
-            contractAddress: currency === "USDC-ERC20" ? process.env.USDC_CONTRACT : process.env.ETH_CONTRACT,
+            contractAddress: currency === "USDC-ERC20" ? process.env.USDC_CONTRACT 
+              : currency === "USDT-POLYGON" ? (process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F")
+              : process.env.ETH_CONTRACT,
           }),
           recipient: toAddresses[0].address,
           amount: safeSweepAmount,
