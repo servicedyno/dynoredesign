@@ -4973,7 +4973,7 @@ const createPaymentLink = async (
     // ========================================
     
     // Phase 11: Validate at least one crypto wallet is configured for this company
-    const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'];
+    const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'];
     
     const walletWhereClause: Record<string, unknown> = {
       user_id: userData.user_id,
@@ -5542,7 +5542,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
     const updateData: Record<string, unknown> = {};
     
     // For accepted_currencies validation, we need to fetch configured wallets
-    const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'];
+    const cryptoTypes = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'];
     let allConfiguredCurrencies: string[] = [];
     
     if (description !== undefined) {
