@@ -21,7 +21,7 @@ import re
 from typing import Dict, Any, Optional
 
 # Test Configuration
-BASE_URL = "https://eth-gas-debug.preview.emergentagent.com"
+BASE_URL = "https://dep-manager-3.preview.emergentagent.com"
 CREDENTIALS = {
     "email": "richard@dyno.pt",
     "password": "Katiekendra123@"
