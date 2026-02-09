@@ -176,7 +176,7 @@ const getBackgroundCachedRate = (from: string, to: string): number | null => {
 };
 
 // List of crypto currencies
-const CRYPTO_CURRENCIES = ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT', 'USDC', 'BNB', 'XRP', 'ADA', 'SOL'];
+const CRYPTO_CURRENCIES = ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT', 'USDC', 'BNB', 'XRP', 'ADA', 'SOL', 'MATIC', 'RLUSD'];
 
 // CoinGecko ID mapping
 const COINGECKO_IDS: Record<string, string> = {
