@@ -14,7 +14,7 @@ import json
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://code-analyzer-256.preview.emergentagent.com"
+BASE_URL = "http://localhost:8001"
 BACKEND_FILE_PATH = "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
 
 # Test Results Storage
