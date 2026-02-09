@@ -1222,13 +1222,13 @@ const batchFeeEstimation = async ({
       })),
     });
     console.log("###BTC FEES--->", fees);
-  } else if (["ETH", "BSC", "USDT-ERC20", "USDC-ERC20", "POLYGON", "USDT-POLYGON"].indexOf(currency) !== -1) {
-    const isERC20 = ["USDT-ERC20", "USDC-ERC20", "USDT-POLYGON"].includes(currency);
+  } else if (["ETH", "BSC", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20", "POLYGON", "USDT-POLYGON"].indexOf(currency) !== -1) {
+    const isERC20 = ["USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20", "USDT-POLYGON"].includes(currency);
     const chainId = ["POLYGON", "USDT-POLYGON"].includes(currency) ? "MATIC" : (isERC20 ? "ETH" : currency);
     // Handle Multiple Transactions
     const gasFeesArray = await Promise.all(
       fromAddresses.map(async (fromAddress) => {
-        // ERC-20 tokens (USDT/USDC) have 6 decimals — truncate to avoid BigNumber parse errors
+        // ERC-20 tokens (USDT/USDC/RLUSD) have 6 decimals — truncate to avoid BigNumber parse errors
         const sweepDecimals = isERC20 ? 6 : 8;
         const sweepFactor = Math.pow(10, sweepDecimals);
         const safeSweepAmount = (Math.floor(Number(amount) * sweepFactor) / sweepFactor).toString();
@@ -1238,6 +1238,7 @@ const batchFeeEstimation = async ({
           sender: fromAddress.address,
           ...(isERC20 && {
             contractAddress: currency === "USDC-ERC20" ? process.env.USDC_CONTRACT 
+              : currency === "RLUSD-ERC20" ? process.env.RLUSD_ERC20_CONTRACT
               : currency === "USDT-POLYGON" ? (process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F")
               : process.env.ETH_CONTRACT,
           }),
