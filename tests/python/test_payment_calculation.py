@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://dep-manager-4.preview.emergentagent.com/api"
+BASE_URL = "https://rlusd-erc20-deploy.preview.emergentagent.com/api"
 
 # First get payment data
 print("1. Getting payment data...")

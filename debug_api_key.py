@@ -7,7 +7,7 @@ import requests
 import json
 
 def debug_api_key_response():
-    backend_url = "https://dep-manager-4.preview.emergentagent.com"
+    backend_url = "https://rlusd-erc20-deploy.preview.emergentagent.com"
     
     # First authenticate
     auth_response = requests.post(

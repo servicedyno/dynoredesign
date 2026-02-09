@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://dep-manager-4.preview.emergentagent.com/api/docs
+Go to: https://rlusd-erc20-deploy.preview.emergentagent.com/api/docs
 
 ---
 

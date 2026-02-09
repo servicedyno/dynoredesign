@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://dep-manager-4.preview.emergentagent.com
+SERVER_URL=https://rlusd-erc20-deploy.preview.emergentagent.com
 ```
 
 **Impact:**

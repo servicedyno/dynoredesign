@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://dep-manager-4.preview.emergentagent.com/api
+Development: https://rlusd-erc20-deploy.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 
