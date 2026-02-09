@@ -2915,9 +2915,16 @@ const settleCryptoTransaction = async ({
     }
 
     // Calculate fees for merchant transfer
-    if (currency === "USDT-TRC20" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
+    if (currency === "USDT-TRC20" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD" || currency === "USDT-POLYGON") {
       // Token transfers (handled separately)
-      const wallet_type = (currency === "USDT-ERC20" || currency === "USDC-ERC20") ? "ETH" : "TRX";
+      const wallet_type_map: Record<string, string> = {
+        "USDT-TRC20": "TRX",
+        "USDT-ERC20": "ETH",
+        "USDC-ERC20": "ETH",
+        "RLUSD": "XRP",
+        "USDT-POLYGON": "POLYGON",
+      };
+      const wallet_type = wallet_type_map[currency] || "ETH";
       const adminFeeWallet = await adminFeeModel.findOne({
         where: { wallet_type },
       });
@@ -2931,6 +2938,10 @@ const settleCryptoTransaction = async ({
         contractAddress = process.env.ETH_CONTRACT;
       } else if (currency === "USDC-ERC20") {
         contractAddress = process.env.USDC_CONTRACT;
+      } else if (currency === "USDT-POLYGON") {
+        contractAddress = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+      } else if (currency === "RLUSD") {
+        contractAddress = null; // RLUSD uses XRP Ledger tokens, not contract
       } else {
         contractAddress = process.env.TRX_CONTRACT;
       }
