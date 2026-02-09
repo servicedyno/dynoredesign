@@ -868,6 +868,12 @@ const createSubscriptionBlockBeeStyle = async (
         ? "TRON"
         : currency === "TRX"
         ? "TRON"
+        : currency === "RLUSD"
+        ? "XRP"
+        : currency === "POLYGON" || currency === "USDT-POLYGON"
+        ? "MATIC"
+        : currency === "SOL"
+        ? "SOLANA"
         : currency;
 
     // BlockBee Style: Encode company info in webhook URL
