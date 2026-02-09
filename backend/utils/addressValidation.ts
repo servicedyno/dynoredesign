@@ -90,7 +90,7 @@ export const validateCryptoAddress = (
   }
 
   // Additional Ethereum checksum validation
-  if (['ETH', 'USDT-ERC20', 'BSC'].includes(normalizedCurrency)) {
+  if (['ETH', 'USDT-ERC20', 'USDC-ERC20', 'BSC', 'POLYGON', 'USDT-POLYGON'].includes(normalizedCurrency)) {
     if (!isValidEthereumChecksum(address)) {
       return { 
         isValid: false, 
