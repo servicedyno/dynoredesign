@@ -68,9 +68,16 @@ const fetchTatumFee = async (chain: string): Promise<unknown> => {
     'LTC': 'LTC',
     'DOGE': 'DOGE',
     'USDT_ERC20': 'ETH',
+    'USDC_ERC20': 'ETH',
+    'RLUSD_ERC20': 'ETH',
     'USDT_TRC20': 'TRON',
     'TRX': 'TRON',
     'BCH': 'BCH',
+    'SOL': 'SOL',
+    'XRP': 'XRP',
+    'RLUSD': 'XRP',
+    'POLYGON': 'MATIC',
+    'USDT_POLYGON': 'MATIC',
   };
 
   const tatumChain = chainMap[chain];
