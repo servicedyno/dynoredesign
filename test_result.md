@@ -3712,3 +3712,44 @@ ports:
           
           Credentials: richard@dyno.pt / Katiekendra123@
           Base URL: https://dep-manager-3.preview.emergentagent.com
+  - task: "FIX: Admin not getting email when admin fee sweep occurs for USDT-TRC20, USDT-ERC20, USDC-ERC20"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+      - "/app/backend/helper/sendEmail.ts"
+      - "/app/backend/helper/index.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          ROOT CAUSE: Recent fix (INTERNAL_WALLETS check in webhooks/index.ts line 492-499) correctly
+          blocks sweep transactions from being re-processed as payments (which was sending merchant emails).
+          However, sweepPoolAddress() in merchantPoolSweep.ts never had its own admin email notification.
+          Previously, admin was getting notified as a side-effect of the webhook processing the sweep
+          transaction through cryptoVerification → sendAdminFeeReceivedEmail. With the INTERNAL_WALLETS
+          fix blocking those webhooks, admin no longer gets notified when sweeps complete.
+          
+          FIX: Added direct admin email notification to sweepPoolAddress() function:
+          1. Created new sendAdminFeeSweepEmail() in helper/sendEmail.ts with sweep-specific template
+             (shows: amount swept, currency, sweep mode, gas used, from/to addresses, sweep TX ID)
+          2. Exported from helper/sendEmail.ts and helper/index.ts
+          3. Imported in merchantPoolSweep.ts and called after successful sweep DB commit
+          4. Email is sent to ADMIN_EMAIL env var, non-blocking (failure doesn't affect sweep)
+          5. Works for ALL chains since both sweepByThreshold and sweepByTime call sweepPoolAddress
+          
+          VERIFY:
+          1. GET /health returns 200 healthy
+          2. No TypeScript compilation errors in backend logs
+          3. Code: merchantPoolSweep.ts imports sendAdminFeeSweepEmail from ../../helper
+          4. Code: merchantPoolSweep.ts calls sendAdminFeeSweepEmail after successful sweep (after DB commit, before return)
+          5. Code: sendAdminFeeSweepEmail function exists in helper/sendEmail.ts with params (recipientEmail, amountSwept, currency, fromAddress, toAddress, sweepTxId, gasUsed, sweepMode)
+          6. Code: sendAdminFeeSweepEmail is exported from helper/sendEmail.ts and helper/index.ts
+          7. Code: The email is wrapped in try/catch so email failure does not affect sweep operation
+          8. Code: The INTERNAL_WALLETS check in webhooks/index.ts (line 492-499) still exists (merchant email fix preserved)
+          
+          Base URL: http://localhost:8001 (internal)
+
