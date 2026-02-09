@@ -221,6 +221,19 @@ export const checkMissedPayments = async (): Promise<{
           continue;
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // ADMIN FEE BASELINE SUBTRACTION
+        // Pool addresses may hold residual admin fees from previous transactions.
+        // The on-chain balance includes these old fees. We must subtract them
+        // to determine if a NEW payment has actually been received.
+        // ═══════════════════════════════════════════════════════════════════
+        const adminFeeBalance = parseFloat(addr.dataValues.admin_fee_balance || '0');
+        const effectiveBalance = Math.max(0, balance - adminFeeBalance);
+        
+        if (adminFeeBalance > 0) {
+          console.log(`[MerchantPool] 📊 ${walletAddress} — on-chain: ${balance} ${walletType}, admin_fee_residual: ${adminFeeBalance}, effective_new_payment: ${effectiveBalance.toFixed(8)}`);
+        }
+
         // Skip dust balances — leftover gas residue is not a real payment
         const DUST_THRESHOLDS: Record<string, number> = {
           ETH: 0.0005,      // ~$1
@@ -234,8 +247,9 @@ export const checkMissedPayments = async (): Promise<{
         };
         const dustThreshold = DUST_THRESHOLDS[walletType] || 0.001;
         
-        if (balance < dustThreshold) {
-          console.log(`[MerchantPool] ⏭️ ${walletAddress} - dust balance ${balance} ${walletType} (below ${dustThreshold} threshold), skipping`);
+        // Use effectiveBalance (after admin fee subtraction) for dust check
+        if (effectiveBalance < dustThreshold) {
+          console.log(`[MerchantPool] ⏭️ ${walletAddress} - effective balance ${effectiveBalance.toFixed(8)} ${walletType} is admin fee residual (on-chain: ${balance}, admin_fee: ${adminFeeBalance}), skipping`);
           continue;
         }
 
