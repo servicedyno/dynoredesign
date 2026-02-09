@@ -62,6 +62,12 @@ export async function validateMerchantPoolConfiguration(): Promise<void> {
   if (!FEE_WALLETS.ETH) {
     errors.push("Missing ETH fee wallet address (required for ERC20 tokens)");
   }
+  if (!FEE_WALLETS.XRP) {
+    errors.push("Missing XRP fee wallet address (required for RLUSD on XRP Ledger)");
+  }
+  if (!FEE_WALLETS.POLYGON) {
+    errors.push("Missing POLYGON fee wallet address (required for USDT-POLYGON)");
+  }
 
   // 3. Validate Sweep Configurations
   const sweepConfigs = [
@@ -70,6 +76,12 @@ export async function validateMerchantPoolConfiguration(): Promise<void> {
     { key: "USDT_TRC20_SWEEP", chain: "USDT-TRC20", required: false },
     { key: "USDT_ERC20_SWEEP", chain: "USDT-ERC20", required: false },
     { key: "USDC_ERC20_SWEEP", chain: "USDC-ERC20", required: false },
+    { key: "RLUSD_SWEEP", chain: "RLUSD", required: false },
+    { key: "RLUSD_ERC20_SWEEP", chain: "RLUSD-ERC20", required: false },
+    { key: "SOL_SWEEP", chain: "SOL", required: false },
+    { key: "XRP_SWEEP", chain: "XRP", required: false },
+    { key: "POLYGON_SWEEP", chain: "POLYGON", required: false },
+    { key: "USDT_POLYGON_SWEEP", chain: "USDT-POLYGON", required: false },
   ];
 
   for (const config of sweepConfigs) {
