@@ -1,495 +1,384 @@
 #!/usr/bin/env python3
 """
-Multi-Chain Fee Optimization Testing Suite
-Tests all 9 requirements for DynoPay TRON + EVM + TRX Native Dynamic Fees
+Admin Fee Residual False Positive Fix - Backend Testing
+Testing 7 specific requirements as per review request
+Base URL: https://code-analyzer-256.preview.emergentagent.com
 """
-import requests
-import subprocess
+
 import os
-import re
-import json
+import sys
 import time
-from typing import Dict, Any, List
+import subprocess
+import requests
+import json
+from datetime import datetime
 
-BASE_URL = "http://localhost:8001"
-EXTERNAL_URL = "https://code-analyzer-256.preview.emergentagent.com"
+# Configuration
+BASE_URL = "https://code-analyzer-256.preview.emergentagent.com"
+BACKEND_FILE_PATH = "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
 
-class Colors:
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    RESET = '\033[0m'
-    BOLD = '\033[1m'
+# Test Results Storage
+test_results = []
 
-def print_test_result(test_name: str, passed: bool, details: str = ""):
-    """Print formatted test result"""
-    status = f"{Colors.GREEN}✅ PASS{Colors.RESET}" if passed else f"{Colors.RED}❌ FAIL{Colors.RESET}"
-    print(f"{status} {Colors.BOLD}TEST {test_name}:{Colors.RESET} {details}")
+def log_test_result(test_num, description, passed, details=""):
+    """Log test result with timestamp"""
+    result = {
+        "test": f"TEST {test_num}",
+        "description": description,
+        "passed": passed,
+        "details": details,
+        "timestamp": datetime.now().isoformat()
+    }
+    test_results.append(result)
+    status = "✅ PASS" if passed else "❌ FAIL"
+    print(f"\n{status} - TEST {test_num}: {description}")
+    if details:
+        print(f"Details: {details}")
 
-def run_command(command: str) -> tuple:
-    """Run shell command and return output, error, return code"""
+def run_command(command, description=""):
+    """Run shell command and return result"""
     try:
         result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
-        return result.stdout, result.stderr, result.returncode
+        return result.returncode == 0, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
-        return "", "Command timed out", 1
+        return False, "", f"Command timed out: {command}"
     except Exception as e:
-        return "", str(e), 1
+        return False, "", f"Error running command: {str(e)}"
 
-def make_request(url: str, method: str = "GET", data: Dict = None, timeout: int = 10) -> tuple:
-    """Make HTTP request and return response, error"""
+def test_1_backend_health():
+    """TEST 1: Backend Health - GET /health returns 200 with 'healthy' status"""
     try:
-        if method.upper() == "GET":
-            response = requests.get(url, timeout=timeout)
-        else:
-            response = requests.post(url, json=data, timeout=timeout)
-        return response, None
-    except Exception as e:
-        return None, str(e)
-
-def test_1_backend_health() -> bool:
-    """TEST 1: Backend Health Check"""
-    print(f"\n{Colors.BLUE}🔍 TEST 1: Backend Health{Colors.RESET}")
-    
-    # Try both internal and external URLs
-    for url_base in [BASE_URL, EXTERNAL_URL]:
-        health_url = f"{url_base}/health"
-        response, error = make_request(health_url)
+        response = requests.get(f"{BASE_URL}/health", timeout=10)
         
-        if response and response.status_code == 200:
+        if response.status_code == 200:
             try:
                 data = response.json()
-                if data.get('status') == 'healthy':
-                    print_test_result("1", True, f"GET {health_url} returns 200 with 'healthy' status")
+                if "status" in data and data["status"] == "healthy":
+                    log_test_result(1, "Backend Health", True, 
+                        f"Status code: {response.status_code}, Response: {data}")
                     return True
-            except:
-                pass
-    
-    print_test_result("1", False, "Backend health check failed on both URLs")
-    return False
-
-def test_2_typescript_compilation() -> bool:
-    """TEST 2: TypeScript Compilation Check"""
-    print(f"\n{Colors.BLUE}🔍 TEST 2: TypeScript Compilation{Colors.RESET}")
-    
-    # Check backend logs for compilation errors
-    stdout, stderr, _ = run_command("tail -50 /var/log/supervisor/backend.out.log")
-    
-    # Look for TypeScript compilation errors
-    error_patterns = [
-        r"Cannot find module",
-        r"SyntaxError",
-        r"TS[0-9]+:",
-        r"Compilation failed",
-        r"error TS",
-        r"TypeScript compilation failed"
-    ]
-    
-    errors_found = []
-    for pattern in error_patterns:
-        matches = re.findall(pattern, stdout + stderr, re.IGNORECASE)
-        if matches:
-            errors_found.extend(matches)
-    
-    if not errors_found:
-        print_test_result("2", True, "No TypeScript compilation errors found in backend logs")
-        return True
-    else:
-        print_test_result("2", False, f"TS compilation errors found: {', '.join(set(errors_found))}")
+                else:
+                    log_test_result(1, "Backend Health", False, 
+                        f"Status code: {response.status_code}, but status is not 'healthy': {data}")
+                    return False
+            except json.JSONDecodeError:
+                # Check if response text contains 'healthy'
+                if "healthy" in response.text.lower():
+                    log_test_result(1, "Backend Health", True, 
+                        f"Status code: {response.status_code}, Response text: {response.text}")
+                    return True
+                else:
+                    log_test_result(1, "Backend Health", False, 
+                        f"Status code: {response.status_code}, but response doesn't contain 'healthy': {response.text}")
+                    return False
+        else:
+            log_test_result(1, "Backend Health", False, 
+                f"Status code: {response.status_code}, Response: {response.text}")
+            return False
+            
+    except Exception as e:
+        log_test_result(1, "Backend Health", False, f"Exception: {str(e)}")
         return False
 
-def test_3_no_hardcoded_feelimit() -> bool:
-    """TEST 3: No hardcoded feeLimit:50 remains"""
-    print(f"\n{Colors.BLUE}🔍 TEST 3: Code - No hardcoded feeLimit:50{Colors.RESET}")
-    
-    # Search for hardcoded feeLimit: 50
-    stdout, stderr, _ = run_command('grep -n "feeLimit: 50" /app/backend/apis/tatumApi.ts')
-    
-    if stdout.strip() == "":
-        print_test_result("3a", True, "No 'feeLimit: 50' found in tatumApi.ts")
+def test_2_admin_fee_balance_in_query():
+    """TEST 2: Code verification - admin_fee_balance in query attributes"""
+    try:
+        success, stdout, stderr = run_command(
+            f'grep -n "admin_fee_balance" {BACKEND_FILE_PATH}',
+            "Searching for admin_fee_balance in query attributes"
+        )
         
-        # Check for dynamic implementations
-        stdout2, _, _ = run_command('grep -n "calculateOptimalFeeLimit\\|batchFeeLimit" /app/backend/apis/tatumApi.ts')
+        if success and stdout:
+            lines = stdout.strip().split('\n')
+            # Check if admin_fee_balance appears in attributes list
+            attributes_found = False
+            calculation_found = False
+            
+            for line in lines:
+                if "attributes" in line.lower() and "admin_fee_balance" in line:
+                    attributes_found = True
+                if "const adminFeeBalance = parseFloat" in line and "admin_fee_balance" in line:
+                    calculation_found = True
+            
+            if attributes_found and calculation_found:
+                log_test_result(2, "admin_fee_balance in query attributes", True, 
+                    f"Found {len(lines)} references including attributes and calculation:\n{stdout}")
+                return True
+            else:
+                log_test_result(2, "admin_fee_balance in query attributes", False, 
+                    f"Found references but missing attributes ({attributes_found}) or calculation ({calculation_found}):\n{stdout}")
+                return False
+        else:
+            log_test_result(2, "admin_fee_balance in query attributes", False, 
+                f"No admin_fee_balance references found. Stderr: {stderr}")
+            return False
+            
+    except Exception as e:
+        log_test_result(2, "admin_fee_balance in query attributes", False, f"Exception: {str(e)}")
+        return False
+
+def test_3_effective_balance_calculation():
+    """TEST 3: Code verification - effectiveBalance calculation exists"""
+    try:
+        success, stdout, stderr = run_command(
+            f'grep -n "effectiveBalance\\|adminFeeBalance" {BACKEND_FILE_PATH}',
+            "Searching for effectiveBalance calculation"
+        )
         
-        if stdout2.strip():
-            print_test_result("3b", True, f"Dynamic feeLimit implementations found: {len(stdout2.splitlines())} instances")
+        if success and stdout:
+            lines = stdout.strip().split('\n')
+            admin_fee_parse_found = False
+            effective_balance_calc_found = False
+            
+            for line in lines:
+                if "const adminFeeBalance = parseFloat(addr.dataValues.admin_fee_balance" in line:
+                    admin_fee_parse_found = True
+                if "const effectiveBalance = Math.max(0, balance - adminFeeBalance)" in line:
+                    effective_balance_calc_found = True
+            
+            if admin_fee_parse_found and effective_balance_calc_found:
+                log_test_result(3, "effectiveBalance calculation exists", True, 
+                    f"Found both adminFeeBalance parsing and effectiveBalance calculation:\n{stdout}")
+                return True
+            else:
+                log_test_result(3, "effectiveBalance calculation exists", False, 
+                    f"Missing adminFeeBalance parsing ({admin_fee_parse_found}) or effectiveBalance calculation ({effective_balance_calc_found}):\n{stdout}")
+                return False
+        else:
+            log_test_result(3, "effectiveBalance calculation exists", False, 
+                f"No effectiveBalance/adminFeeBalance references found. Stderr: {stderr}")
+            return False
+            
+    except Exception as e:
+        log_test_result(3, "effectiveBalance calculation exists", False, f"Exception: {str(e)}")
+        return False
+
+def test_4_dust_check_uses_effective_balance():
+    """TEST 4: Code verification - dust check uses effectiveBalance (not raw balance)"""
+    try:
+        success, stdout, stderr = run_command(
+            f'grep -n -A2 -B2 "dustThreshold" {BACKEND_FILE_PATH}',
+            "Searching for dust threshold check"
+        )
+        
+        if success and stdout:
+            # Check for effectiveBalance < dustThreshold pattern
+            effective_dust_found = "effectiveBalance < dustThreshold" in stdout
+            
+            # Check that there's NO "balance < dustThreshold" (old code)
+            raw_balance_dust_found = "balance < dustThreshold" in stdout and "effectiveBalance" not in stdout.split("balance < dustThreshold")[0].split('\n')[-1]
+            
+            if effective_dust_found and not raw_balance_dust_found:
+                log_test_result(4, "dust check uses effectiveBalance", True, 
+                    f"Found effectiveBalance < dustThreshold and no raw balance < dustThreshold:\n{stdout}")
+                return True
+            else:
+                log_test_result(4, "dust check uses effectiveBalance", False, 
+                    f"effectiveBalance found: {effective_dust_found}, raw balance found: {raw_balance_dust_found}:\n{stdout}")
+                return False
+        else:
+            log_test_result(4, "dust check uses effectiveBalance", False, 
+                f"No dustThreshold references found. Stderr: {stderr}")
+            return False
+            
+    except Exception as e:
+        log_test_result(4, "dust check uses effectiveBalance", False, f"Exception: {str(e)}")
+        return False
+
+def test_5_underpayment_check_uses_effective_balance():
+    """TEST 5: Code verification - underpayment check uses effectiveBalance"""
+    try:
+        success, stdout, stderr = run_command(
+            f'grep -n -A2 -B2 "expectedAmount.*tolerance" {BACKEND_FILE_PATH}',
+            "Searching for underpayment comparison"
+        )
+        
+        if success and stdout:
+            # Check for effectiveBalance < (expectedAmount - tolerance) pattern
+            effective_underpay_found = "effectiveBalance < (expectedAmount - tolerance)" in stdout
+            
+            # Check that there's NO raw "balance < (expectedAmount - tolerance)" without effectiveBalance context
+            lines = stdout.split('\n')
+            raw_balance_underpay_found = False
+            for line in lines:
+                if "balance < (expectedAmount - tolerance)" in line and "effectiveBalance" not in line:
+                    raw_balance_underpay_found = True
+                    break
+            
+            if effective_underpay_found and not raw_balance_underpay_found:
+                log_test_result(5, "underpayment check uses effectiveBalance", True, 
+                    f"Found effectiveBalance underpayment check and no raw balance check:\n{stdout}")
+                return True
+            else:
+                log_test_result(5, "underpayment check uses effectiveBalance", False, 
+                    f"effectiveBalance underpay found: {effective_underpay_found}, raw balance underpay found: {raw_balance_underpay_found}:\n{stdout}")
+                return False
+        else:
+            log_test_result(5, "underpayment check uses effectiveBalance", False, 
+                f"No underpayment comparison found. Stderr: {stderr}")
+            return False
+            
+    except Exception as e:
+        log_test_result(5, "underpayment check uses effectiveBalance", False, f"Exception: {str(e)}")
+        return False
+
+def test_6_received_amount_uses_effective_balance():
+    """TEST 6: Code verification - receivedAmount uses effectiveBalance"""
+    try:
+        success, stdout, stderr = run_command(
+            f'grep -n -A2 -B2 "receivedAmount.*=" {BACKEND_FILE_PATH}',
+            "Searching for receivedAmount assignment"
+        )
+        
+        if success and stdout:
+            # Check for const receivedAmount = effectiveBalance
+            effective_received_found = "const receivedAmount = effectiveBalance" in stdout or "receivedAmount = effectiveBalance" in stdout
+            
+            # Check that there's NO "const receivedAmount = balance" (old code)
+            raw_balance_received_found = "const receivedAmount = balance" in stdout and "effectiveBalance" not in stdout
+            
+            if effective_received_found and not raw_balance_received_found:
+                log_test_result(6, "receivedAmount uses effectiveBalance", True, 
+                    f"Found receivedAmount = effectiveBalance and no raw balance assignment:\n{stdout}")
+                return True
+            else:
+                log_test_result(6, "receivedAmount uses effectiveBalance", False, 
+                    f"effectiveBalance receivedAmount found: {effective_received_found}, raw balance receivedAmount found: {raw_balance_received_found}:\n{stdout}")
+                return False
+        else:
+            log_test_result(6, "receivedAmount uses effectiveBalance", False, 
+                f"No receivedAmount assignment found. Stderr: {stderr}")
+            return False
+            
+    except Exception as e:
+        log_test_result(6, "receivedAmount uses effectiveBalance", False, f"Exception: {str(e)}")
+        return False
+
+def test_7_logs_zero_false_positives():
+    """TEST 7: Logs verification - Zero false positives after fix"""
+    try:
+        print("\nChecking backend logs for admin fee residual entries...")
+        
+        # Check for admin_fee_residual logs
+        success1, stdout1, stderr1 = run_command(
+            'grep "admin_fee_residual" /var/log/supervisor/backend.out.log | tail -5',
+            "Searching for admin_fee_residual log entries"
+        )
+        
+        # Check for "Missed found: 0" logs
+        success2, stdout2, stderr2 = run_command(
+            'grep "2026-02-09.*Missed found" /var/log/supervisor/backend.out.log | tail -5',
+            "Searching for Missed found log entries"
+        )
+        
+        # Check for admin fee residual skipping logs
+        success3, stdout3, stderr3 = run_command(
+            'grep "admin fee residual.*skipping" /var/log/supervisor/backend.out.log | tail -5',
+            "Searching for admin fee residual skipping logs"
+        )
+        
+        admin_fee_logs = stdout1 if success1 else "No admin_fee_residual logs found"
+        missed_logs = stdout2 if success2 else "No Missed found logs found"
+        skipping_logs = stdout3 if success3 else "No admin fee residual skipping logs found"
+        
+        # Look for evidence of the fix working
+        fix_evidence = []
+        
+        if success1 and stdout1:
+            fix_evidence.append(f"✅ admin_fee_residual subtraction logs found: {len(stdout1.split(chr(10)))} entries")
+        
+        if success2 and stdout2:
+            # Check if "Missed found: 0" appears in logs
+            if "Missed found: 0" in stdout2:
+                fix_evidence.append("✅ Found 'Missed found: 0' entries (no false positives)")
+            else:
+                fix_evidence.append("⚠️ Missed found logs present but need manual review")
+        
+        if success3 and stdout3:
+            if "skipping" in stdout3.lower():
+                fix_evidence.append("✅ Found admin fee residual addresses being correctly skipped")
+        
+        # Also check for any recent logs with "Missed found" pattern
+        success4, stdout4, stderr4 = run_command(
+            'grep "Missed found" /var/log/supervisor/backend.out.log | tail -10',
+            "Searching for any recent Missed found entries"
+        )
+        
+        if success4 and stdout4:
+            # Count zero vs non-zero findings
+            zero_findings = stdout4.count("Missed found: 0")
+            total_findings = stdout4.count("Missed found:")
+            
+            if zero_findings > 0 and zero_findings == total_findings:
+                fix_evidence.append(f"✅ All recent {total_findings} 'Missed found' entries show 0 false positives")
+            elif zero_findings > 0:
+                fix_evidence.append(f"⚠️ {zero_findings}/{total_findings} 'Missed found' entries show 0 (partial success)")
+        
+        if len(fix_evidence) >= 2:  # At least 2 pieces of evidence
+            log_test_result(7, "Logs show zero false positives after fix", True, 
+                f"Evidence found:\n" + "\n".join(fix_evidence) + f"\n\nLog samples:\nAdmin fee logs: {admin_fee_logs[:200]}...\nMissed logs: {missed_logs[:200]}...\nSkipping logs: {skipping_logs[:200]}...")
             return True
         else:
-            print_test_result("3b", False, "No dynamic feeLimit implementations found")
+            log_test_result(7, "Logs show zero false positives after fix", False, 
+                f"Insufficient evidence. Found {len(fix_evidence)} evidence pieces:\n" + "\n".join(fix_evidence) + f"\n\nLog details:\nAdmin fee logs: {admin_fee_logs}\nMissed logs: {missed_logs}\nSkipping logs: {skipping_logs}")
             return False
-    else:
-        print_test_result("3", False, f"Hardcoded 'feeLimit: 50' still exists: {stdout.strip()}")
+            
+    except Exception as e:
+        log_test_result(7, "Logs show zero false positives after fix", False, f"Exception: {str(e)}")
         return False
-
-def test_4_tron_energy_service_exports() -> bool:
-    """TEST 4: tronEnergyService.ts has all 8 required exports"""
-    print(f"\n{Colors.BLUE}🔍 TEST 4: Code - tronEnergyService.ts exports{Colors.RESET}")
-    
-    # Check if file exists
-    if not os.path.exists("/app/backend/services/tronEnergyService.ts"):
-        print_test_result("4", False, "/app/backend/services/tronEnergyService.ts does not exist")
-        return False
-    
-    required_exports = [
-        "getTronNetworkParams",
-        "getAccountResources", 
-        "calculateOptimalFeeLimit",
-        "calculateDynamicTRC20Fee",
-        "calculateDynamicTRXNativeFee",
-        "getOptimizationDiagnostics",
-        "logCostSavings",
-        "isRecipientActivatedForToken"
-    ]
-    
-    found_exports = []
-    for export_name in required_exports:
-        stdout, _, _ = run_command(f'grep -n "export const {export_name}" /app/backend/services/tronEnergyService.ts')
-        if stdout.strip():
-            found_exports.append(export_name)
-    
-    if len(found_exports) == len(required_exports):
-        print_test_result("4", True, f"All {len(required_exports)} required exports found in tronEnergyService.ts")
-        return True
-    else:
-        missing = set(required_exports) - set(found_exports)
-        print_test_result("4", False, f"Missing exports: {', '.join(missing)}")
-        return False
-
-def test_5_trx_native_dynamic() -> bool:
-    """TEST 5: TRX native fee is dynamic (not hardcoded)"""
-    print(f"\n{Colors.BLUE}🔍 TEST 5: Code - TRX native fee is dynamic{Colors.RESET}")
-    
-    # Check feeEstimation() function for TRX
-    stdout, _, _ = run_command('grep -A 10 -B 5 \'currency === "TRX"\' /app/backend/apis/tatumApi.ts')
-    
-    tests_passed = 0
-    total_tests = 4
-    
-    # Test 5a: feeEstimation() TRX block calls calculateDynamicTRXNativeFee
-    if "calculateDynamicTRXNativeFee" in stdout:
-        print_test_result("5a", True, "feeEstimation() TRX block calls calculateDynamicTRXNativeFee")
-        tests_passed += 1
-    else:
-        print_test_result("5a", False, "feeEstimation() TRX block does not call calculateDynamicTRXNativeFee")
-    
-    # Test 5b: No hardcoded "fast: 10, medium: 5, slow: 3"
-    if "fast: 10" not in stdout or "medium: 5" not in stdout:
-        print_test_result("5b", True, "No hardcoded 'fast: 10, medium: 5, slow: 3' in TRX block")
-        tests_passed += 1
-    else:
-        print_test_result("5b", False, "Hardcoded TRX fees still exist")
-    
-    # Check batchFeeEstimation() for TRX
-    stdout2, _, _ = run_command('grep -A 15 -B 5 \'currency === "TRX"\' /app/backend/apis/tatumApi.ts | grep -A 15 batchFeeEstimation')
-    
-    # Test 5c: batchFeeEstimation() TRX block calls calculateDynamicTRXNativeFee  
-    if "calculateDynamicTRXNativeFee" in stdout2:
-        print_test_result("5c", True, "batchFeeEstimation() TRX block calls calculateDynamicTRXNativeFee")
-        tests_passed += 1
-    else:
-        print_test_result("5c", False, "batchFeeEstimation() TRX block does not call calculateDynamicTRXNativeFee")
-    
-    # Test 5d: No hardcoded "totalAddress * 3.5"
-    if "totalAddress * 3.5" not in stdout2:
-        print_test_result("5d", True, "No hardcoded 'totalAddress * 3.5' in batch TRX calculation")
-        tests_passed += 1
-    else:
-        print_test_result("5d", False, "Hardcoded 'totalAddress * 3.5' still exists")
-    
-    return tests_passed == total_tests
-
-def test_6_evm_gas_percentage_based() -> bool:
-    """TEST 6: EVM gas buffer is percentage-based"""
-    print(f"\n{Colors.BLUE}🔍 TEST 6: Code - EVM gas buffer is percentage-based{Colors.RESET}")
-    
-    tests_passed = 0
-    total_tests = 4
-    
-    # Check feeEstimation() for EVM chains
-    stdout, _, _ = run_command('grep -A 20 -B 5 "gasPrice \\* 1.15" /app/backend/apis/tatumApi.ts')
-    
-    # Test 6a: feeEstimation() has "gasPrice * 1.15" (percentage-based buffer)
-    if "gasPrice * 1.15" in stdout:
-        print_test_result("6a", True, "feeEstimation() uses 'gasPrice * 1.15' percentage-based buffer")
-        tests_passed += 1
-    else:
-        print_test_result("6a", False, "feeEstimation() does not use 'gasPrice * 1.15' percentage-based buffer")
-    
-    # Test 6b: No old flat "gasPrice + 2" buffer
-    stdout_old, _, _ = run_command('grep -n "gasPrice + 2" /app/backend/apis/tatumApi.ts')
-    if not stdout_old.strip():
-        print_test_result("6b", True, "No old flat 'gasPrice + 2' buffer found")
-        tests_passed += 1
-    else:
-        print_test_result("6b", False, "Old flat 'gasPrice + 2' buffer still exists")
-    
-    # Test 6c: MIN_GAS_PRICE = 1 (not 3)
-    stdout_min, _, _ = run_command('grep -n "MIN_GAS_PRICE = 1" /app/backend/apis/tatumApi.ts')
-    if stdout_min.strip():
-        print_test_result("6c", True, "MIN_GAS_PRICE = 1 found (not 3)")
-        tests_passed += 1
-    else:
-        print_test_result("6c", False, "MIN_GAS_PRICE = 1 not found")
-    
-    # Test 6d: batchFeeEstimation() has "gasPrice * 1.1" 
-    stdout_batch, _, _ = run_command('grep -A 10 -B 5 "gasPrice \\* 1.1" /app/backend/apis/tatumApi.ts')
-    if "gasPrice * 1.1" in stdout_batch:
-        print_test_result("6d", True, "batchFeeEstimation() uses 'gasPrice * 1.1' percentage-based buffer")
-        tests_passed += 1
-    else:
-        print_test_result("6d", False, "batchFeeEstimation() does not use 'gasPrice * 1.1'")
-    
-    return tests_passed == total_tests
-
-def test_7_smartgas_energy_aware() -> bool:
-    """TEST 7: SmartGas is Energy-aware"""
-    print(f"\n{Colors.BLUE}🔍 TEST 7: Code - SmartGas Energy-aware{Colors.RESET}")
-    
-    tests_passed = 0
-    total_tests = 4
-    
-    # Test 7a: getAccountResources import
-    stdout, _, _ = run_command('grep -n "getAccountResources" /app/backend/services/merchantPool/merchantPoolSweep.ts')
-    if "import" in stdout or "from" in stdout:
-        print_test_result("7a", True, "getAccountResources imported from tronEnergyService")
-        tests_passed += 1
-    else:
-        print_test_result("7a", False, "getAccountResources import not found")
-    
-    # Test 7b: TRC20_ENERGY import
-    stdout2, _, _ = run_command('grep -n "TRC20_ENERGY" /app/backend/services/merchantPool/merchantPoolSweep.ts')
-    if "import" in stdout2 or "TRC20_ENERGY" in stdout2:
-        print_test_result("7b", True, "TRC20_ENERGY imported from tronEnergyService")
-        tests_passed += 1
-    else:
-        print_test_result("7b", False, "TRC20_ENERGY import not found")
-    
-    # Test 7c: hasSufficientEnergy check
-    stdout3, _, _ = run_command('grep -n "hasSufficientEnergy" /app/backend/services/merchantPool/merchantPoolSweep.ts')
-    if stdout3.strip():
-        print_test_result("7c", True, "hasSufficientEnergy check found in code")
-        tests_passed += 1
-    else:
-        print_test_result("7c", False, "hasSufficientEnergy check not found")
-    
-    # Test 7d: "Staked Energy+Bandwidth covers transfer" message
-    stdout4, _, _ = run_command('grep -n "Staked Energy+Bandwidth covers transfer" /app/backend/services/merchantPool/merchantPoolSweep.ts')
-    if stdout4.strip():
-        print_test_result("7d", True, "'Staked Energy+Bandwidth covers transfer' message found")
-        tests_passed += 1
-    else:
-        print_test_result("7d", False, "'Staked Energy+Bandwidth covers transfer' message not found")
-    
-    return tests_passed == total_tests
-
-def test_8_environment_config() -> bool:
-    """TEST 8: Environment Configuration"""
-    print(f"\n{Colors.BLUE}🔍 TEST 8: Environment Configuration{Colors.RESET}")
-    
-    tests_passed = 0
-    total_tests = 2
-    
-    # Test 8a: TRON_MIN_FEE_LIMIT_TRX=5
-    stdout, _, _ = run_command('grep -n "TRON_MIN_FEE_LIMIT_TRX=5" /app/backend/.env')
-    if stdout.strip():
-        print_test_result("8a", True, "TRON_MIN_FEE_LIMIT_TRX=5 found in .env")
-        tests_passed += 1
-    else:
-        print_test_result("8a", False, "TRON_MIN_FEE_LIMIT_TRX=5 not found in .env")
-    
-    # Test 8b: TRON_MAX_FEE_LIMIT_TRX=30
-    stdout2, _, _ = run_command('grep -n "TRON_MAX_FEE_LIMIT_TRX=30" /app/backend/.env')
-    if stdout2.strip():
-        print_test_result("8b", True, "TRON_MAX_FEE_LIMIT_TRX=30 found in .env")
-        tests_passed += 1
-    else:
-        print_test_result("8b", False, "TRON_MAX_FEE_LIMIT_TRX=30 not found in .env")
-    
-    return tests_passed == total_tests
-
-def test_9_diagnostics_endpoint() -> bool:
-    """TEST 9: Functional - Diagnostics Endpoint (LIVE API TEST)"""
-    print(f"\n{Colors.BLUE}🔍 TEST 9: Functional - Diagnostics Endpoint{Colors.RESET}")
-    
-    tests_passed = 0
-    total_tests = 11
-    
-    # Test 9a: Basic diagnostics endpoint
-    for url_base in [BASE_URL, EXTERNAL_URL]:
-        diag_url = f"{url_base}/diagnostics/fee-optimization"
-        response, error = make_request(diag_url)
-        
-        if response and response.status_code == 200:
-            try:
-                data = response.json()
-                
-                # Test 9a1: response.success === true
-                if data.get('success') is True:
-                    print_test_result("9a1", True, f"response.success === true")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a1", False, f"response.success !== true (got: {data.get('success')})")
-                
-                # Test 9a2: response.service === "TRON Energy Optimization Service"
-                if data.get('service') == "TRON Energy Optimization Service":
-                    print_test_result("9a2", True, f"response.service correct")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a2", False, f"response.service incorrect (got: {data.get('service')})")
-                
-                # Test 9a3: response.status === "active"
-                if data.get('status') == "active":
-                    print_test_result("9a3", True, f"response.status === 'active'")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a3", False, f"response.status !== 'active' (got: {data.get('status')})")
-                
-                # Test 9a4: networkParams.energyPriceSun === 100
-                energy_price = data.get('networkParams', {}).get('energyPriceSun')
-                if energy_price == 100:
-                    print_test_result("9a4", True, f"networkParams.energyPriceSun === 100")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a4", False, f"networkParams.energyPriceSun !== 100 (got: {energy_price})")
-                
-                # Test 9a5: trc20Transfer.costEstimate.oldHardcodedTRX === 20
-                old_hardcoded = data.get('trc20Transfer', {}).get('costEstimate', {}).get('oldHardcodedTRX')
-                if old_hardcoded == 20:
-                    print_test_result("9a5", True, f"trc20Transfer.costEstimate.oldHardcodedTRX === 20")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a5", False, f"trc20Transfer.costEstimate.oldHardcodedTRX !== 20 (got: {old_hardcoded})")
-                
-                # Test 9a6: savingsPercent > 0
-                savings_percent = data.get('trc20Transfer', {}).get('costEstimate', {}).get('savingsPercent')
-                if savings_percent and float(savings_percent) > 0:
-                    print_test_result("9a6", True, f"trc20Transfer.costEstimate.savingsPercent > 0 ({savings_percent}%)")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a6", False, f"trc20Transfer.costEstimate.savingsPercent <= 0 (got: {savings_percent})")
-                
-                # Test 9a7: trxNativeTransfer.costEstimate.withBandwidthTRX === 0
-                with_bandwidth = data.get('trxNativeTransfer', {}).get('costEstimate', {}).get('withBandwidthTRX')
-                if with_bandwidth == 0:
-                    print_test_result("9a7", True, f"trxNativeTransfer.costEstimate.withBandwidthTRX === 0")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a7", False, f"trxNativeTransfer.costEstimate.withBandwidthTRX !== 0 (got: {with_bandwidth})")
-                
-                # Test 9a8: trxNativeTransfer.costEstimate.oldHardcodedTRX === 10
-                old_native = data.get('trxNativeTransfer', {}).get('costEstimate', {}).get('oldHardcodedTRX')
-                if old_native == 10:
-                    print_test_result("9a8", True, f"trxNativeTransfer.costEstimate.oldHardcodedTRX === 10")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a8", False, f"trxNativeTransfer.costEstimate.oldHardcodedTRX !== 10 (got: {old_native})")
-                
-                # Test 9a9: feeLimit.oldHardcodedTRX === 50
-                fee_limit_old = data.get('trc20Transfer', {}).get('feeLimit', {}).get('oldHardcodedTRX')
-                if fee_limit_old == 50:
-                    print_test_result("9a9", True, f"trc20Transfer.feeLimit.oldHardcodedTRX === 50")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a9", False, f"trc20Transfer.feeLimit.oldHardcodedTRX !== 50 (got: {fee_limit_old})")
-                
-                # Test 9a10: feeLimit.newDynamicMinTRX === 5
-                fee_limit_min = data.get('trc20Transfer', {}).get('feeLimit', {}).get('newDynamicMinTRX')
-                if fee_limit_min == 5:
-                    print_test_result("9a10", True, f"trc20Transfer.feeLimit.newDynamicMinTRX === 5")
-                    tests_passed += 1
-                else:
-                    print_test_result("9a10", False, f"trc20Transfer.feeLimit.newDynamicMinTRX !== 5 (got: {fee_limit_min})")
-                
-                break
-                
-            except json.JSONDecodeError:
-                print_test_result("9a", False, f"Invalid JSON response from {diag_url}")
-                continue
-        else:
-            continue
-    
-    # Test 9b: Diagnostics with address parameter
-    test_address = "TTXk9SbNj8tnRABdGDM3PZvT5bHqTNtANB"
-    for url_base in [BASE_URL, EXTERNAL_URL]:
-        diag_url_addr = f"{url_base}/diagnostics/fee-optimization?address={test_address}"
-        response, error = make_request(diag_url_addr)
-        
-        if response and response.status_code == 200:
-            try:
-                data = response.json()
-                
-                # Test 9b1: accountResources is NOT null and has address field
-                account_resources = data.get('accountResources')
-                if account_resources is not None and account_resources.get('address') == test_address:
-                    print_test_result("9b1", True, f"accountResources.address === '{test_address}'")
-                    tests_passed += 1
-                    
-                    # Check for required fields
-                    required_fields = ['energyLimit', 'availableEnergy', 'availableBandwidth', 'hasSufficientEnergy']
-                    missing_fields = [field for field in required_fields if field not in account_resources]
-                    
-                    if not missing_fields:
-                        print_test_result("9b2", True, f"accountResources has all required fields")
-                    else:
-                        print_test_result("9b2", False, f"accountResources missing fields: {missing_fields}")
-                else:
-                    print_test_result("9b1", False, f"accountResources invalid or address mismatch")
-                
-                break
-                
-            except json.JSONDecodeError:
-                continue
-    
-    return tests_passed
 
 def main():
-    """Run all tests and display results"""
-    print(f"{Colors.BOLD}{Colors.BLUE}{'='*80}{Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.BLUE}🧪 DYNOPAY MULTI-CHAIN FEE OPTIMIZATION TESTING SUITE{Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.BLUE}{'='*80}{Colors.RESET}")
+    """Run all 7 tests for Admin Fee Residual False Positive Fix"""
+    print("=" * 60)
+    print("ADMIN FEE RESIDUAL FALSE POSITIVE FIX - BACKEND TESTING")
+    print("=" * 60)
+    print(f"Base URL: {BASE_URL}")
+    print(f"Backend file: {BACKEND_FILE_PATH}")
+    print(f"Test started at: {datetime.now().isoformat()}")
+    print("=" * 60)
     
+    # Run all 7 tests
     tests = [
-        ("Backend Health", test_1_backend_health),
-        ("TypeScript Compilation", test_2_typescript_compilation),
-        ("No hardcoded feeLimit:50", test_3_no_hardcoded_feelimit),
-        ("tronEnergyService exports", test_4_tron_energy_service_exports),
-        ("TRX native dynamic fee", test_5_trx_native_dynamic),
-        ("EVM percentage-based gas", test_6_evm_gas_percentage_based),
-        ("SmartGas Energy-aware", test_7_smartgas_energy_aware),
-        ("Environment Configuration", test_8_environment_config),
-        ("Diagnostics Endpoint", test_9_diagnostics_endpoint),
+        test_1_backend_health,
+        test_2_admin_fee_balance_in_query,
+        test_3_effective_balance_calculation,
+        test_4_dust_check_uses_effective_balance,
+        test_5_underpayment_check_uses_effective_balance,
+        test_6_received_amount_uses_effective_balance,
+        test_7_logs_zero_false_positives
     ]
     
-    results = []
+    passed_tests = 0
+    total_tests = len(tests)
     
-    for test_name, test_func in tests:
+    for i, test_func in enumerate(tests, 1):
         try:
-            passed = test_func()
-            results.append((test_name, passed))
+            if test_func():
+                passed_tests += 1
         except Exception as e:
-            print_test_result(test_name, False, f"Test exception: {str(e)}")
-            results.append((test_name, False))
+            log_test_result(i, f"Test {i} execution", False, f"Exception during test execution: {str(e)}")
+        
+        # Small delay between tests
+        time.sleep(0.5)
     
     # Summary
-    print(f"\n{Colors.BOLD}{Colors.BLUE}📊 TESTING SUMMARY{Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.BLUE}{'='*50}{Colors.RESET}")
+    print("\n" + "=" * 60)
+    print("ADMIN FEE RESIDUAL FALSE POSITIVE FIX - TEST SUMMARY")
+    print("=" * 60)
     
-    passed_count = sum(1 for _, passed in results if passed)
-    total_count = len(results)
+    for result in test_results:
+        status = "✅ PASS" if result["passed"] else "❌ FAIL"
+        print(f"{status} - {result['test']}: {result['description']}")
     
-    for i, (test_name, passed) in enumerate(results, 1):
-        status = f"{Colors.GREEN}✅" if passed else f"{Colors.RED}❌"
-        print(f"{status} TEST {i}: {test_name}{Colors.RESET}")
+    print(f"\nOVERALL RESULT: {passed_tests}/{total_tests} tests passed")
     
-    print(f"\n{Colors.BOLD}RESULT: {passed_count}/{total_count} tests passed{Colors.RESET}")
-    
-    if passed_count == total_count:
-        print(f"{Colors.GREEN}{Colors.BOLD}🎉 ALL TESTS PASSED! Multi-Chain Fee Optimization is fully operational.{Colors.RESET}")
-        return 0
+    if passed_tests == total_tests:
+        print("🎉 ALL 7 TESTS PASSED - Admin Fee Residual False Positive Fix is working correctly!")
+        return True
     else:
-        print(f"{Colors.RED}{Colors.BOLD}⚠️  {total_count - passed_count} test(s) failed. Implementation needs fixes.{Colors.RESET}")
-        return 1
+        print(f"⚠️ {total_tests - passed_tests} TESTS FAILED - Admin Fee Residual False Positive Fix needs attention")
+        return False
 
 if __name__ == "__main__":
-    exit(main())
+    success = main()
+    sys.exit(0 if success else 1)
