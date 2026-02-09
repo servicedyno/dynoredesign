@@ -1258,6 +1258,15 @@ const feeEstimation = async (
     }
   }
 
+  // Cache the result for subsequent calls
+  if (fees && cacheTTL) {
+    try {
+      await setRedisItemWithTTL(`fee-cache:${currency}`, JSON.stringify(fees), cacheTTL);
+    } catch (_cacheWriteErr) {
+      // Non-critical — proceed without caching
+    }
+  }
+
   return fees;
 };
 
