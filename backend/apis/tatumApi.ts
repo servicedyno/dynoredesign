@@ -1606,15 +1606,29 @@ const assetToOtherAddress = async ({
       } : undefined,
     });
   } else if (currency === "USDT-POLYGON") {
-    // USDT on Polygon — use Tatum's built-in USDT_MATIC support (more gas-efficient than raw contract invocation)
+    // USDT on Polygon — use contract-address-based smart contract invocation
+    // This is more reliable than currency-name-based transfer (no dependency on SDK naming)
+    const usdtPolygonContract = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
     const truncatedAmount = (Math.floor(Number(amount) * 1e6) / 1e6).toString();
+    // USDT on Polygon has 6 decimals
+    const amountInSmallestUnit = String(Math.floor(Number(truncatedAmount) * 1e6));
     
     try {
-      transaction = await tatumSdk.blockchain.polygon.polygonBlockchainTransfer({
+      transaction = await tatumSdk.blockchain.polygon.polygonBlockchainSmartContractInvocation({
         fromPrivateKey: privateKey,
-        to: toAddress,
-        amount: truncatedAmount,
-        currency: "USDT_MATIC",
+        contractAddress: usdtPolygonContract,
+        methodName: "transfer",
+        methodABI: {
+          inputs: [
+            { name: "recipient", type: "address" },
+            { name: "amount", type: "uint256" },
+          ],
+          name: "transfer",
+          outputs: [{ name: "", type: "bool" }],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        params: [toAddress, amountInSmallestUnit],
         fee: fee ? {
           gasPrice: Math.ceil(fee?.gasPrice).toString(),
           gasLimit: (fee?.gasLimit || 65000).toString(),
