@@ -2607,14 +2607,31 @@ const getIncomingTransactions = async (
         }
       }
     } else if (currency === "SOL") {
-      // Solana incoming transactions
-      const solTx = await tatumSdk.blockchain.solana.solanaGetTransaction(address);
-      if (solTx) {
-        transactions.push({
-          txId: typeof solTx === 'string' ? solTx : (solTx as any)?.txId || address,
-          amount: 0,
-          timestamp: Date.now()
-        });
+      // Solana incoming transactions — use Tatum v3 REST API to get account transactions
+      try {
+        const headers = await getTatumHeaders();
+        const { data: solTxs } = await axios.get(
+          `https://api.tatum.io/v3/solana/account/transaction/${address}`,
+          { headers }
+        );
+        if (Array.isArray(solTxs)) {
+          for (const tx of solTxs.slice(0, limit)) {
+            // Parse SOL transfer amount from pre/post balances
+            const preBalance = tx.preBalances?.[0] || 0;
+            const postBalance = tx.postBalances?.[0] || 0;
+            const amountLamports = postBalance - preBalance;
+            const amount = amountLamports > 0 ? amountLamports / 1e9 : 0;
+            if (amount > 0 || tx.txId) {
+              transactions.push({
+                txId: tx.txId || tx.blockHash || '',
+                amount,
+                timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now()
+              });
+            }
+          }
+        }
+      } catch (solErr: any) {
+        console.warn(`[getIncomingTransactions] SOL tx fetch failed for ${address}: ${solErr.response?.data?.message || solErr.message}`);
       }
     } else if (currency === "XRP") {
       // XRP account transactions
