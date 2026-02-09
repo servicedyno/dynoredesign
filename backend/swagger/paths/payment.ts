@@ -267,7 +267,7 @@ Modes must be provided in **UPPERCASE**. Valid modes:
                   type: 'array',
                   items: {
                     type: 'string',
-                    enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                    enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON']
                   },
                   description: `🪙 OPTIONAL: Specific cryptocurrencies to accept for this payment link.
 
@@ -2103,7 +2103,7 @@ BTC, ETH, LTC, DOGE, TRX, BCH, USDT-TRC20, USDT-ERC20, USDC-ERC20`,
                 },
                 cryptocurrency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
+                  enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'],
                   description: 'Selected cryptocurrency for payment',
                   example: 'ETH'
                 }

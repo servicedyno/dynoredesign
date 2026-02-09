@@ -247,7 +247,7 @@ export const directApiPaths = {
                 currency: {
                   type: 'string',
                   description: '✅ REQUIRED: Cryptocurrency the customer will pay with',
-                  enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
+                  enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'],
                   example: 'ETH'
                 },
                 redirect_uri: {
@@ -342,7 +342,7 @@ export const directApiPaths = {
                   type: 'array',
                   items: {
                     type: 'string',
-                    enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                    enum: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON']
                   },
                   description: `🪙 OPTIONAL: Limit which cryptocurrencies customer can choose.
                   
@@ -531,7 +531,7 @@ export const directApiPaths = {
                   value: {
                     success: false,
                     message: 'Currency is required',
-                    available_currencies: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                    available_currencies: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON']
                   }
                 },
                 'No Wallet Configured': {
@@ -731,7 +731,7 @@ export const directApiPaths = {
                     message: 'Supported currencies retrieved',
                     data: {
                       currencies: ['BTC', 'ETH', 'USDT-TRC20'],
-                      all_supported: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                      all_supported: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON']
                     }
                   }
                 },
@@ -741,8 +741,8 @@ export const directApiPaths = {
                     success: true,
                     message: 'Supported currencies retrieved',
                     data: {
-                      currencies: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
-                      all_supported: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20']
+                      currencies: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'],
+                      all_supported: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON']
                     }
                   }
                 }

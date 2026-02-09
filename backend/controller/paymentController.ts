@@ -2605,7 +2605,7 @@ const Crypto = async (
   const companyId = tokenData.company_id;
   
   // Supported merchant pool crypto types
-  const MERCHANT_POOL_CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
+  const MERCHANT_POOL_CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'];
   
   // Use merchant pool for supported currencies
   if (MERCHANT_POOL_CRYPTO_TYPES.includes(currency)) {
@@ -7191,7 +7191,7 @@ const getConfiguredCurrenciesForCheckout = async (
     const walletWhereClause: Record<string, unknown> = {
       user_id: userId,
       wallet_address: { [Op.not]: null },
-      wallet_type: { [Op.in]: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'] },
+      wallet_type: { [Op.in]: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'] },
     };
     
     // If company_id exists, filter by it
@@ -7363,7 +7363,7 @@ const calculateCheckoutFees = async (
     const fiatCurrency = currency.toUpperCase();
 
     // Validate cryptocurrency
-    const validCryptos = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'];
+    const validCryptos = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'];
     if (!validCryptos.includes(crypto)) {
       return errorResponseHelper(res, 400, `Invalid cryptocurrency. Valid options: ${validCryptos.join(', ')}`);
     }
