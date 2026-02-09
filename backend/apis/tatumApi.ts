@@ -2543,6 +2543,18 @@ const waitForTransactionConfirmation = async (
         txData = await tatumSdk.blockchain.bsc.bscGetTransaction(txHash);
       } else if (currency === "TRX" || currency === "USDT-TRC20") {
         txData = await tatumSdk.blockchain.tron.tronGetTransaction(txHash);
+      } else if (currency === "POLYGON" || currency === "USDT-POLYGON") {
+        txData = await tatumSdk.blockchain.polygon.polygonGetTransaction(txHash);
+      } else if (currency === "SOL") {
+        // Solana: transactions are confirmed nearly instantly
+        return { confirmed: true, blockNumber: 0 };
+      } else if (currency === "XRP" || currency === "RLUSD") {
+        // XRP: transactions are confirmed in ~4 seconds
+        const xrpTx = await tatumSdk.blockchain.xrp.xrpGetTransaction(txHash);
+        if (xrpTx && (xrpTx as any).validated) {
+          return { confirmed: true, blockNumber: (xrpTx as any).ledger_index || 0 };
+        }
+        txData = xrpTx as Record<string, unknown>;
       }
       
       if (txData && txData.blockNumber) {
