@@ -268,6 +268,22 @@ const createWallets = async (_req: express.Request, res: express.Response) => {
             { transaction }
           );
         }
+        // ETH wallet also hosts RLUSD-ERC20 token
+        if (cryptoData[i] === "ETH") {
+          await adminWalletModel.create(
+            {
+              wallet_type: "RLUSD-ERC20",
+              wallet_address: wallet.address,
+              wallet_account_id: null,
+              currency_type: "CRYPTO",
+              xpub: wallet.xpub,
+              mnemonic: wallet.mnemonic,
+              privateKey: wallet.privateKey,
+              customer_id: null,
+            },
+            { transaction }
+          );
+        }
       }
       transaction.commit();
     } else {
