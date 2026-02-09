@@ -2881,5 +2881,6 @@ export default {
   decryptSymmetric,
   waitForTransactionConfirmation,
   getTransactionGasCost,
+  findUtxoOutputIndex,
   setupXrpTrustLine,
 };
