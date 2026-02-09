@@ -2915,13 +2915,14 @@ const settleCryptoTransaction = async ({
     }
 
     // Calculate fees for merchant transfer
-    if (currency === "USDT-TRC20" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD" || currency === "USDT-POLYGON") {
+    if (currency === "USDT-TRC20" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD" || currency === "RLUSD-ERC20" || currency === "USDT-POLYGON") {
       // Token transfers (handled separately)
       const wallet_type_map: Record<string, string> = {
         "USDT-TRC20": "TRX",
         "USDT-ERC20": "ETH",
         "USDC-ERC20": "ETH",
         "RLUSD": "XRP",
+        "RLUSD-ERC20": "ETH",
         "USDT-POLYGON": "POLYGON",
       };
       const wallet_type = wallet_type_map[currency] || "ETH";
@@ -2938,6 +2939,8 @@ const settleCryptoTransaction = async ({
         contractAddress = process.env.ETH_CONTRACT;
       } else if (currency === "USDC-ERC20") {
         contractAddress = process.env.USDC_CONTRACT;
+      } else if (currency === "RLUSD-ERC20") {
+        contractAddress = process.env.RLUSD_ERC20_CONTRACT;
       } else if (currency === "USDT-POLYGON") {
         contractAddress = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
       } else if (currency === "RLUSD") {
