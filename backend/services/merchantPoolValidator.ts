@@ -12,8 +12,8 @@ export async function validateMerchantPoolConfiguration(): Promise<void> {
 
   // Import constants locally to avoid circular dependency
   const UTXO_CHAINS = ["BTC", "LTC", "DOGE", "BCH"];
-  const NATIVE_CURRENCIES = ["TRX", "ETH"];
-  const TOKEN_CHAINS = ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20"];
+  const NATIVE_CURRENCIES = ["TRX", "ETH", "SOL", "XRP", "POLYGON"];
+  const TOKEN_CHAINS = ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20", "RLUSD", "RLUSD-ERC20", "USDT-POLYGON"];
   
   const ADMIN_WALLETS: Record<string, string> = {
     BTC: process.env.BTC || "",
@@ -22,14 +22,22 @@ export async function validateMerchantPoolConfiguration(): Promise<void> {
     DOGE: process.env.DOGE || "",
     TRX: process.env.TRX || "",
     BCH: process.env.BCH || "",
+    SOL: process.env.SOL || "",
+    XRP: process.env.XRP || "",
+    POLYGON: process.env.POLYGON || "",
     "USDT-TRC20": process.env.USDT_TRC20 || "",
     "USDT-ERC20": process.env.USDT_ERC20 || "",
     "USDC-ERC20": process.env.USDC_ERC20 || "",
+    "RLUSD": process.env.RLUSD_ADMIN_WALLET || process.env.XRP || "",
+    "RLUSD-ERC20": process.env.RLUSD_ERC20 || process.env.ETH || "",
+    "USDT-POLYGON": process.env.USDT_POLYGON || process.env.POLYGON || "",
   };
   
   const FEE_WALLETS = {
     TRX: process.env.TRX_FEE_WALLET || "",
     ETH: process.env.ETH_FEE_WALLET || "",
+    XRP: process.env.XRP_FEE_WALLET || "",
+    POLYGON: process.env.POLYGON_FEE_WALLET || "",
   };
 
   // 1. Validate Admin Wallets
