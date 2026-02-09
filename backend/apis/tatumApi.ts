@@ -1139,6 +1139,47 @@ const feeEstimation = async (
         fast: 14,
       };
     }
+  } else if (currency === "SOL") {
+    // Solana: fixed low fee (typically 0.000005 SOL per signature, ~5000 lamports)
+    fees = { fast: 0.00001, medium: 0.000005, slow: 0.000005 };
+  } else if (currency === "XRP") {
+    // XRP: very low fees (~12 drops = 0.000012 XRP)
+    fees = { fast: 0.00005, medium: 0.000012, slow: 0.000012 };
+  } else if (currency === "RLUSD") {
+    // RLUSD on XRP Ledger: fee in XRP (~12 drops)
+    fees = { fast: 0.00005 };
+  } else if (currency === "POLYGON" || currency === "USDT-POLYGON") {
+    // Polygon: EVM-compatible, use same fee estimation as ETH
+    const isToken = currency === "USDT-POLYGON";
+    const localAmount: number = Number(amount);
+    const decimals = isToken ? 6 : 8;
+    const factor = Math.pow(10, decimals);
+    const safeEstimateAmount = (Math.floor(localAmount * factor) / factor).toString();
+    try {
+      const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
+        chain: "MATIC",
+        type: isToken ? "TRANSFER_ERC20" : "TRANSFER",
+        sender: fromAddress,
+        ...(isToken && {
+          contractAddress: process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+        }),
+        recipient: toAddress,
+        amount: safeEstimateAmount,
+      })) as FeeEvmBased;
+
+      let gasPrice = Math.max(1, Math.min(100, Math.ceil(gasFees?.gasPrice || 30)));
+      const gas_fee_for_amount = Math.ceil(gasPrice * 1.15 + 0.5);
+      fees = {
+        fast: Number(
+          Number((gas_fee_for_amount * gasFees?.gasLimit) / 1000000000)
+        ).toFixed(8),
+        gasPrice,
+        gasLimit: isToken ? gasFees.gasLimit : Math.floor((gasFees?.gasLimit * 25) / 100),
+      };
+    } catch (_polyFeeError) {
+      console.warn(`[feeEstimation] ⚠️ Polygon fee estimation failed, using fallback`);
+      fees = { fast: isToken ? 0.01 : 0.001, gasPrice: 30, gasLimit: isToken ? 65000 : 21000 };
+    }
   }
 
   return fees;
