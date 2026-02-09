@@ -3037,6 +3037,9 @@ const settleCryptoTransaction = async ({
         const adminAmount = Number(receivedAmount);
         merchantSendAmount = Number(userAmount) - Number(feeToDeduct);
 
+        // Lookup the correct UTXO output index for this address (instead of assuming index 0)
+        const utxoIndex = await tatumApi.findUtxoOutputIndex(transactionId, fromAddress, currency);
+
         // Retry merchant transfer for UTXO chains
         merchantTransactionDetails = await withRetry(
           () => tatumApi.assetToOtherAddress({
@@ -3049,7 +3052,7 @@ const settleCryptoTransaction = async ({
             fromUTXO: [
               {
                 txHash: transactionId,
-                index: 0,
+                index: utxoIndex,
               },
             ],
             toUTXO: [
