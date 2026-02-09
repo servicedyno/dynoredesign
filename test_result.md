@@ -4386,3 +4386,46 @@ ports:
           - Trust line setup is non-critical and retryable
           - RLUSD payment address is still assigned successfully
 
+  - task: "Live Payment Bugs Fix — XRP Destination Tag, SOL Subscription, Confirmation Checks"
+    implemented: true
+    working: true
+    files:
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/.env"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          5 BUGS FIXED DURING LIVE TESTING:
+          
+          BUG 1 ✅: XRP admin wallet requires destination tag (251101560)
+          - Added XRP_ADMIN_DESTINATION_TAG=251101560 to .env
+          - Auto-adds tag when sending XRP/RLUSD to admin wallet in assetToOtherAddress
+          
+          BUG 2 ✅: SOL subscription used wrong chain name ("SOLANA" instead of "SOL")
+          - Fixed createSubscription and createSubscriptionWithUrl
+          - Tatum v4 API now correctly accepts the subscription
+          
+          BUG 3 ✅: SOL getIncomingTransactions used broken v3 REST endpoint
+          - Switched to Tatum RPC gateway (getSignaturesForAddress + getTransaction)
+          
+          BUG 4 ✅: getTransactionConfirmations had no handlers for SOL, XRP, POLYGON
+          - Added confirmation checks for SOL (finalized RPC), XRP (validated ledger), POLYGON (block height)
+          - Added RLUSD, RLUSD-ERC20, POLYGON, USDT-POLYGON to REQUIRED_CONFIRMATIONS map
+          
+          BUG 5 ✅: pathType?.includes crash in paymentController.ts
+          - Fixed all 9 occurrences of pathType.includes to pathType?.includes
+          
+          BUG 6 ✅: Missing pathType in missed payment Redis reconstruction
+          - Added pathType to reconstructedRedis and custData objects
+          
+          LIVE TEST RESULTS:
+          - SOL:     ✅ 0.116 SOL received → merchant got 0.078 SOL → status=successful
+          - XRP:     ✅ 7.3 XRP received → merchant got ~5.0 XRP → status=successful
+          - POLYGON: ✅ 108.87 POL received → merchant got 73.83 POL → status=successful
+
