@@ -110,7 +110,7 @@ async function main() {
     );
 
     console.log("\n⚠️  IMPORTANT: You must fund these wallets before SmartGas can work:");
-    console.log("   - XRP fee wallet: Send ≥15 XRP (covers 10 XRP reserve + gas for RLUSD transfers)");
+    console.log("   - XRP fee wallet: Send ≥3 XRP (covers 1 XRP reserve + 0.2 trust line + gas for RLUSD transfers)");
     console.log("   - POLYGON fee wallet: Send ≥0.5 POL (covers gas for USDT-POLYGON transfers)");
     console.log("\n✅ Done!");
 
