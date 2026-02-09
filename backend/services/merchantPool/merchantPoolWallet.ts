@@ -33,6 +33,10 @@ export const getOrCreateMerchantWallet = async (
   });
 
   if (merchantWallet) {
+    // Non-HD chains: mnemonic field stores "NON_HD" marker
+    if (NON_HD_CHAINS.includes(baseChain)) {
+      return { xpub: merchantWallet.dataValues.xpub, mnemonic: "NON_HD" };
+    }
     const decryptedData = await tatumApi.decryptSymmetric(
       merchantWallet.dataValues.mnemonic,
       process.env.XPUB_KEY_ID
@@ -47,6 +51,29 @@ export const getOrCreateMerchantWallet = async (
   console.log(`[MerchantPool] Generating new ${baseChain} wallet for merchant ${userId}...`);
   
   const walletData = await tatumApi.generateWallet(baseChain);
+  
+  // Non-HD chains (SOL, XRP): no real xpub/mnemonic — store placeholders
+  if (NON_HD_CHAINS.includes(baseChain)) {
+    if (!walletData || !walletData.xpub) {
+      throw new Error(`Failed to generate ${baseChain} wallet for merchant ${userId}`);
+    }
+    
+    const encryptedMnemonic = await tatumApi.encryptSymmetric(
+      JSON.stringify({ xpub: walletData.xpub, mnemonic: "NON_HD" }),
+      process.env.XPUB_KEY_ID
+    );
+
+    merchantWallet = await merchantWalletModel.create({
+      user_id: userId,
+      wallet_type: baseChain,
+      xpub: walletData.xpub,
+      mnemonic: encryptedMnemonic,
+      last_derivation_index: 0,
+    });
+
+    console.log(`[MerchantPool] ✅ Created ${baseChain} (non-HD) wallet marker for merchant ${userId}`);
+    return { xpub: walletData.xpub, mnemonic: "NON_HD" };
+  }
   
   if (!walletData || !walletData.xpub || !walletData.mnemonic) {
     throw new Error(`Failed to generate ${baseChain} wallet for merchant ${userId}`);
