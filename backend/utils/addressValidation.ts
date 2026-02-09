@@ -143,7 +143,7 @@ export const getBaseChain = (currency: string): string => {
  */
 export const mightBeContract = (address: string, currency: string): boolean => {
   // Only applicable for EVM chains
-  const evmChains = ['ETH', 'USDT-ERC20', 'BSC'];
+  const evmChains = ['ETH', 'USDT-ERC20', 'USDC-ERC20', 'BSC', 'POLYGON', 'USDT-POLYGON'];
   if (!evmChains.includes(currency.toUpperCase())) {
     return false;
   }
