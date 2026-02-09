@@ -2959,7 +2959,7 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
     // Initialize merchant pool for this currency type (lazy initialization)
     // This creates the merchant's xpub if not exists and adds initial pool addresses
     try {
-      const MERCHANT_POOL_CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'];
+      const MERCHANT_POOL_CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'];
       if (MERCHANT_POOL_CRYPTO_TYPES.includes(currency)) {
         console.log(`[verifyOtp] Initializing merchant pool for user ${user_id}, currency ${currency}...`);
         await merchantPoolService.initializeMerchantPool(user_id, currency);
