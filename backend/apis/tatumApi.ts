@@ -1158,7 +1158,7 @@ const feeEstimation = async (
     try {
       const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
         chain: "MATIC",
-        type: isToken ? "TRANSFER_ERC20" : "TRANSFER",
+        type: "TRANSFER_ERC20",
         sender: fromAddress,
         ...(isToken && {
           contractAddress: process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
