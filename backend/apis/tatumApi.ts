@@ -1031,10 +1031,10 @@ const feeEstimation = async (
       fromAddress: [fromAddress],
       to: [{ address: toAddress, value: Number(amount) }],
     });
-  } else if (["ETH", "BSC", "USDT-ERC20", "USDC-ERC20"].indexOf(currency) !== -1) {
-    const isERC20 = currency === "USDT-ERC20" || currency === "USDC-ERC20";
+  } else if (["ETH", "BSC", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20"].indexOf(currency) !== -1) {
+    const isERC20 = currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20";
     const localAmount: number = Number(amount);
-    // ERC-20 tokens (USDT/USDC) have 6 decimals; ETH has 18 — truncate to avoid BigNumber parse errors
+    // ERC-20 tokens (USDT/USDC/RLUSD) have 6 decimals; ETH has 18 — truncate to avoid BigNumber parse errors
     const decimals = isERC20 ? 6 : 8;
     const factor = Math.pow(10, decimals);
     const safeEstimateAmount = (Math.floor(localAmount * factor) / factor).toString();
@@ -1046,7 +1046,9 @@ const feeEstimation = async (
       type: isERC20 ? "TRANSFER_ERC20" : "TRANSFER_NFT",
       sender: fromAddress,
       ...(isERC20 && {
-        contractAddress: currency === "USDC-ERC20" ? process.env.USDC_CONTRACT : process.env.ETH_CONTRACT,
+        contractAddress: currency === "USDC-ERC20" ? process.env.USDC_CONTRACT
+          : currency === "RLUSD-ERC20" ? process.env.RLUSD_ERC20_CONTRACT
+          : process.env.ETH_CONTRACT,
       }),
       recipient: toAddress,
       amount: safeEstimateAmount,
