@@ -505,6 +505,14 @@ const generatePrivatekey = async (currency, index, mnemonic) => {
       mnemonic,
       index,
     });
+  } else if (currency === "SOL" || currency === "RLUSD" || currency === "XRP") {
+    // Non-HD chains: mnemonic IS the private key (stored directly)
+    return mnemonic;
+  } else if (currency === "POLYGON" || currency === "USDT-POLYGON") {
+    privateKey = await tatumSdk.blockchain.polygon.polygonGenerateAddressPrivateKey({
+      mnemonic,
+      index,
+    });
   }
   return privateKey.key;
 };
