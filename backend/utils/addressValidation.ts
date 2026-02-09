@@ -128,7 +128,10 @@ export const getBaseChain = (currency: string): string => {
   const tokenToChain: Record<string, string> = {
     'USDT-ERC20': 'ETH',
     'USDT-TRC20': 'TRX',
+    'USDC-ERC20': 'ETH',
     'BSC': 'ETH',
+    'RLUSD': 'XRP',
+    'USDT-POLYGON': 'POLYGON',
   };
 
   return tokenToChain[normalizedCurrency] || normalizedCurrency;
