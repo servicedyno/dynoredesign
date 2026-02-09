@@ -230,11 +230,17 @@ cron.schedule("*/30 * * * *", function () {
 
 // Merchant Pool: Check for missed webhooks every 5 minutes
 // This is a fallback mechanism when Tatum webhooks fail to deliver
-cron.schedule("*/5 * * * *", function () {
-  log("Cron: checkMissedPayments running", "info");
-  merchantPoolService.checkMissedPayments().catch(err => {
+cron.schedule("*/5 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:checkMissedPayments", 240, 1);
+  if (!lockAcquired) { log("Cron: checkMissedPayments skipped (already running)", "info"); return; }
+  try {
+    log("Cron: checkMissedPayments running", "info");
+    await merchantPoolService.checkMissedPayments();
+  } catch (err) {
     log(`Cron: Missed payments check failed: ${err.message}`, "error");
-  });
+  } finally {
+    await releaseLock("cron:checkMissedPayments");
+  }
 });
 
 // Detect orphan payments on AVAILABLE addresses (every 10 minutes)
