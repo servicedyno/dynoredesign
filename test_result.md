@@ -7,26 +7,32 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
-  - task: "Admin Fee Residual False Positive Fix in checkMissedPayments Cron"
+  - task: "ERC20 Payment Recovery: SmartGas Bug Fix + Failed Payment Auto-Recovery"
     implemented: true
     working: true
     files:
       - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+      - "/app/backend/apis/tatumApi.ts"
     stuck_count: 0
     priority: "critical"
     needs_retesting: false
     status_history:
-      - working: "NA"
+      - working: "YES"
         agent: "main"
         comment: |
-          BUG: checkMissedPayments cron was incorrectly detecting admin fee residuals
-          sitting in pool addresses as "MISSED PAYMENT / UNDERPAYMENT" from new customers.
+          3 BUGS FIXED:
+          1. SmartGas fundGasIfNeeded: ETH_MIN_DEFICIT threshold (0.0002) caused false "sufficient gas" 
+             when balance was 0 but deficit (0.000121) was below threshold. Fixed comparison logic.
+          2. checkMissedPayments: Skipped addresses with status="failed" because they had txId in Redis.
+             Added failed-state recovery that directly calls cryptoVerification with preserved context.
+          3. getIncomingTransactions: Missing USDC-ERC20 handler added (was only handling USDT-ERC20).
           
-          ROOT CAUSE: 
-          - Pool addresses hold admin fee residuals from PRIOR transactions (e.g., 7.29 USDT-TRC20, 3.61 USDT-ERC20)
-          - When these addresses are re-reserved for NEW payments, the cron checks on-chain balance
-          - It finds the OLD admin fee balance and treats it as a new partial payment
-          - The code did NOT subtract admin_fee_balance (tracked in DB) from on-chain balance
+          RECOVERY RESULTS:
+          - USDT-ERC20 (0xbc5d...): SmartGas funded 0.0002 ETH, 17.564 USDT transferred to merchant ✅
+          - USDC-ERC20 (0x4806...): SmartGas funded 0.0002 ETH, 17.564 USDC transferred to merchant ✅
+          - USDT-TRC20: Was already successful ✅
+          - All 3 merchant webhooks delivered successfully
           
           FIX in merchantPoolMonitoring.ts checkMissedPayments():
           1. Added admin_fee_balance to query attributes (was missing)
