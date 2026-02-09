@@ -264,9 +264,23 @@ export const checkMissedPayments = async (): Promise<{
         let redisData = await getRedisItem("crypto-" + walletAddress);
         
         if (redisData?.txId) {
-          console.log(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
-          result.alreadyProcessed++;
-          continue;
+          // BUG FIX: If status is "failed", the webhook fired but settlement FAILED.
+          // We must NOT skip — clear failed state and allow reprocessing.
+          if (redisData?.status === 'failed') {
+            console.log(`[MerchantPool] ⚠️ ${walletAddress} - FAILED PAYMENT DETECTED (txId: ${redisData.txId})`);
+            console.log(`[MerchantPool]   - Error: ${redisData.lastError || 'unknown'}`);
+            console.log(`[MerchantPool]   - Failed at: ${redisData.failedAt || 'unknown'}`);
+            console.log(`[MerchantPool] 🔄 Clearing failed state to allow reprocessing...`);
+            
+            // Clear the failed Redis data so the address can be reprocessed from scratch
+            await deleteRedisItem("crypto-" + walletAddress);
+            redisData = {};
+            // Fall through to reprocessing logic below
+          } else {
+            console.log(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
+            result.alreadyProcessed++;
+            continue;
+          }
         }
         
         if (redisData?.status === 'processing' || redisData?.status === 'retrying') {
