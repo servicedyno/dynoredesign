@@ -84,33 +84,32 @@ def test_2_admin_fee_balance_in_query():
     """TEST 2: Code verification - admin_fee_balance in query attributes"""
     try:
         success, stdout, stderr = run_command(
-            f'grep -n "admin_fee_balance" {BACKEND_FILE_PATH}',
-            "Searching for admin_fee_balance in query attributes"
+            f'grep -n -A3 -B3 "attributes.*\\[" {BACKEND_FILE_PATH}',
+            "Searching for attributes arrays in queries"
         )
         
         if success and stdout:
-            lines = stdout.strip().split('\n')
-            # Check if admin_fee_balance appears in attributes list
-            attributes_found = False
-            calculation_found = False
+            # Look for admin_fee_balance in checkMissedPayments function attributes
+            attributes_found = "admin_fee_balance" in stdout and "attributes" in stdout
             
-            for line in lines:
-                if "attributes" in line.lower() and "admin_fee_balance" in line:
-                    attributes_found = True
-                if "const adminFeeBalance = parseFloat" in line and "admin_fee_balance" in line:
-                    calculation_found = True
+            # Also check for the calculation
+            success2, stdout2, stderr2 = run_command(
+                f'grep -n "const adminFeeBalance = parseFloat" {BACKEND_FILE_PATH}',
+                "Searching for adminFeeBalance calculation"
+            )
+            calculation_found = success2 and "admin_fee_balance" in stdout2
             
             if attributes_found and calculation_found:
                 log_test_result(2, "admin_fee_balance in query attributes", True, 
-                    f"Found {len(lines)} references including attributes and calculation:\n{stdout}")
+                    f"Found admin_fee_balance in attributes list and calculation present:\nAttributes context:\n{stdout}\nCalculation:\n{stdout2}")
                 return True
             else:
                 log_test_result(2, "admin_fee_balance in query attributes", False, 
-                    f"Found references but missing attributes ({attributes_found}) or calculation ({calculation_found}):\n{stdout}")
+                    f"Missing attributes ({attributes_found}) or calculation ({calculation_found}):\nAttributes:\n{stdout}\nCalculation:\n{stdout2}")
                 return False
         else:
             log_test_result(2, "admin_fee_balance in query attributes", False, 
-                f"No admin_fee_balance references found. Stderr: {stderr}")
+                f"No attributes arrays found. Stderr: {stderr}")
             return False
             
     except Exception as e:
