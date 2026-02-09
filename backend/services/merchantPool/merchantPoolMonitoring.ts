@@ -507,6 +507,7 @@ export const checkMissedPayments = async (): Promise<{
                 callback_url: paymentContext?.callback_url || null,
                 link_id: paymentContext?.link_id || null,
                 ref: paymentContext?.ref || `customer-${currentPaymentId}`,
+                pathType: paymentContext?.pathType || 'cryptoPayment',
                 processedByFallback: 'true',
                 txLookupFailed: 'true',
                 lastAttempt: new Date().toISOString(),
