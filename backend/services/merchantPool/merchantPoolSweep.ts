@@ -183,7 +183,10 @@ export const fundGasIfNeeded = async (
     console.log(`[SmartGas] 📊 Gas deficit: ${deficit.toFixed(6)} ${gasToken} (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)})`);
 
     // Ensure we fund at least a useful minimum amount to avoid immediate re-funding
-    const fundAmount = Math.max(deficit, requiredGas, gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT : POOL_CONFIG.ETH_MIN_DEFICIT);
+    const fundAmount = Math.max(deficit, requiredGas, gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT 
+      : gasToken === "XRP" ? POOL_CONFIG.XRP_MIN_DEFICIT
+      : gasToken === "POLYGON" ? POOL_CONFIG.POLYGON_MIN_DEFICIT
+      : POOL_CONFIG.ETH_MIN_DEFICIT);
     const { adminFeeModel } = await import("../../models");
     const feeWallet = await adminFeeModel.findOne({
       where: { wallet_type: gasToken },
