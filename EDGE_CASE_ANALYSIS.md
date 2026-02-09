@@ -1,230 +1,279 @@
-# DynoPay Edge Case Analysis Report
+# DynoPay Deep Edge Case Analysis Report v2
 **Generated: July 2025**
 
 ---
 
-## Summary
-
-| Category | Covered | Gaps Found |
-|----------|---------|------------|
-| Duplicate Transaction Processing | ✅ Fully | 0 |
-| Crash Recovery | ✅ Fully | 0 |
-| Redis Data Loss / Eviction | ✅ Mostly | 1 minor |
-| Underpayment Handling | ✅ Fully | 0 |
-| Overpayment Handling | ✅ Fully | 0 |
-| Race Conditions & Locking | ✅ Mostly | 2 minor |
-| Sweep & Gas Funding | ✅ Mostly | 1 minor |
-| Webhook Delivery | ✅ Mostly | 1 medium |
-| Payment Link Expiry | ✅ Fully | 0 |
-| Orphan / Missed Payment Recovery | ✅ Mostly | 1 minor |
-| Fee Calculation Boundaries | ✅ Mostly | 1 minor |
-| Multi-Tenant Security | ✅ Fully | 0 |
-| UTXO Chain Handling | ⚠️ Partial | 1 medium |
-| Cron Job Concurrency | ⚠️ Not Covered | 1 medium |
-| Webhook Source Authentication | ⚠️ Not Covered | 1 medium |
-
-**Overall: 16 edge case categories covered, 9 potential gaps identified (3 medium, 6 minor)**
+## METHODOLOGY
+Systematic cross-referencing of every currency/chain across ALL config maps, switch/if-else blocks, SQL queries, and handler functions in the codebase. Source of truth: model definitions in `models/merchantPoolModels/index.ts`.
 
 ---
 
-## ✅ EDGE CASES FULLY COVERED
+## MASTER CURRENCY CROSS-REFERENCE TABLE
 
-### 1. Duplicate Transaction Processing
-**Files:** `webhooks/index.ts` (lines 485-498), `controller/paymentController.ts`
-- `processed-tx-{txId}` Redis key with 48h TTL prevents same blockchain TX from being processed twice
-- `processing-lock-{txId}` Redis key with 5-min TTL prevents race conditions on simultaneous webhooks
-- `cryptoVerification` checks `customerTransactionModel` for existing successful/completed records
-- Admin fee email dedup via `admin-fee-email-{txId}` key
+### Source of Truth (from `models/merchantPoolModels/index.ts`):
+- **UTXO_CHAINS:** BTC, LTC, DOGE, BCH
+- **ACCOUNT_CHAINS:** ETH, TRX, SOL, XRP, POLYGON
+- **TOKEN_CHAINS:** USDT-TRC20, USDT-ERC20, USDC-ERC20, RLUSD, USDT-POLYGON, RLUSD-ERC20
+- **GAS_TOKEN_MAPPING:** USDT-TRC20→TRX, USDT-ERC20→ETH, USDC-ERC20→ETH, RLUSD→XRP, USDT-POLYGON→POLYGON, RLUSD-ERC20→ETH
+- **CHAIN_XPUB_MAPPING:** ✅ Complete (all 15 currencies mapped)
 
-### 2. Crash Recovery / Stale Processing
-**Files:** `webhooks/index.ts` (lines 540-620)
-- `isStaleProcessing` check: If payment stuck in "processing" for >1 minute with txId → auto-recovers
-- Recovery tries `cryptoVerification` first → if that fails (on-chain already settled) → sends direct webhook
-- Marks as "recovered" status to prevent infinite retry loops
-- Clears processing lock before retry
+### Cross-Reference Results:
 
-### 3. Redis Data Loss Recovery
-**Files:** `webhooks/index.ts` (lines 700+), `controller/paymentController.ts` (lines 6910-6968), `merchantPoolMonitoring.ts` (lines 900-935)
-- `crypto-{address}` key stores webhook_url, callback_url, webhook_secret directly (not just via customer ref)
-- Merge logic: if customerData from `customer-{ref}` is missing webhook fields, merges from `items`
-- DB-based reconstruction: `last_payment_context` column stores full payment context before address release
-- `processIncompletePayments` cron reconstructs Redis from DB context
-- `detectOrphanPayments` cron reconstructs Redis from `last_payment_context`
+| Config/Function | USDT-TRC20 | USDT-ERC20 | USDC-ERC20 | RLUSD | USDT-POLYGON | RLUSD-ERC20 |
+|---|---|---|---|---|---|---|
+| TOKEN_CHAINS (model) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| TOKEN_CHAINS (config fallback) | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| TOKEN_CONTRACTS | ✅ | ✅ | ✅ | N/A* | ✅ | **❌ MISSING** |
+| ADMIN_WALLETS | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| FEE_WALLETS (gas) | TRX ✅ | ETH ✅ | ETH ✅ | XRP ✅ | POLYGON ✅ | ETH ✅ |
+| GAS_TOKEN_MAPPING | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CHAIN_XPUB_MAPPING | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DUST_THRESHOLDS (checkMissed) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DUST_THRESHOLDS (orphan) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| getAddressBalance | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| assetToOtherAddress (single) | ✅ | ✅ | ✅ | ✅ | ✅ | **❌ UNREACHABLE** |
+| assetBatchToOtherAddress | ✅ | ✅ | ❌** | N/A | N/A | ✅ |
+| feeEstimation | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| createSubscription | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| createSubscriptionWithUrl | ✅ | ✅ | ✅ | ✅ | ✅ | **❌ MISSING** |
+| getIncomingTransactions | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| waitForTxConfirmation | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| getTransactionGasCost | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| normalizeCurrency | ✅ | ✅ | ✅ | ✅ | ✅ | **❌ WRONG** |
+| Sweep contractAddress lookup | ✅ | ✅ | ✅ | N/A | ✅ | **❌ MISSING** |
+| sendingLeftover (gas recovery) | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| MERCHANT_POOL_CRYPTO_TYPES | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| settleCryptoTransaction | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| blockchainFeeService chains | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| trustLine setup on creation | N/A | N/A | N/A | ✅ | N/A | ❌*** |
 
-### 4. Underpayment Handling
-**Files:** `webhooks/index.ts` (lines 850-960)
-- **Payment Links:** Waits for grace period (merchant-specific, 1-30 min), sets `is_partial_payment` flag
-- **Direct API:** Processes immediately with received amount (no waiting)
-- **Completion payments:** Tracks cumulative total (`previousAmount + newPayment`)
-- `processIncompletePayments` cron handles grace period expiry
-
-### 5. Overpayment Handling
-**Files:** `webhooks/index.ts`
-- Payment Links: Sets `overPayment` flag when overpayment >$5 in base currency
-- Direct API: Never triggers overpayment logic — merchant receives full amount
-- `isMinorUnderpayment` threshold accepts small shortfalls for payment links
-
-### 6. Admin Fee Residual / False Positives
-**Files:** `merchantPoolMonitoring.ts` (lines 560-580, 820-830)
-- `effectiveBalance = balance - adminFeeBalance` calculation prevents false detections
-- Dust threshold checks use effective balance, not raw on-chain balance
-- Admin fee balance tracked per address in DB
-- Token chain check: `balance <= existingAdminBalance * 1.01` → skip (not an orphan)
-
-### 7. Payment Link Expiry
-**Files:** `controller/paymentController.ts` (lines 486-516)
-- `expires_at` field validated on every `getData` call
-- Remaining seconds calculated for checkout UI countdown
-- Expired links return proper 410 error with merchant contact message
-- Separate crypto invoice expiry (15 min) vs payment link expiry
-
-### 8. Multi-Tenant / Company Isolation
-**Files:** `controller/paymentController.ts`, `merchantPoolReservation.ts`
-- Company_id required in wallet/address lookups — prevents cross-company routing
-- No fallback to remove company_id constraint (fails safely)
-- Merchant pool addresses scoped by `owner_user_id`
-
-### 9. Internal Transfer Filtering
-**Files:** `webhooks/index.ts`
-- `INTERNAL_WALLETS` set filters out sweep/gas funding/admin transactions
-- Prevents infinite webhook loops from admin wallet outgoing transactions
-
-### 10. Failed Payment Recovery
-**Files:** `merchantPoolMonitoring.ts`
-- `checkMissedPayments`: Detects `failed` status and retries with preserved context
-- Clears `processed-tx-{txId}` before retry to allow reprocessing
-- Logs detailed context for audit
+\* RLUSD on XRP uses XRP Ledger tokens, not ERC20 contracts
+\** USDC-ERC20 not in `assetBatchToOtherAddress` conditions (only ETH, USDT-ERC20, RLUSD-ERC20)
+\*** RLUSD-ERC20 doesn't need trust line (it's on Ethereum), but does it need ERC20 approval? (Probably not for receiving)
 
 ---
 
-## ⚠️ POTENTIAL GAPS IDENTIFIED
+## 🔴 CRITICAL BUGS
 
-### GAP 1: Webhook Source Authentication (Medium)
-**Location:** `routes/index.ts` lines 89-90
-**Issue:** The `/tatum-webhook` and `/tatum-crypto-webhook` endpoints are publicly accessible without any source verification. There's no:
-- IP allowlist for Tatum's webhook IPs
-- HMAC signature verification from Tatum
-- Secret token validation in headers
-
-**Risk:** An attacker could craft fake webhook payloads to trigger fraudulent settlements.
-**Mitigation in place:** Processing lock and `processed-tx` checks prevent duplicate processing, and `cryptoVerification` checks actual on-chain balance. But initial Redis writes and balance checks still consume resources.
-**Recommendation:** Add Tatum's `x-payload-hash` signature verification or IP allowlisting.
-
----
-
-### GAP 2: UTXO Output Index Hardcoded to 0 (Medium)
-**Location:** `controller/paymentController.ts` line 3052
+### BUG 1: `assetToOtherAddress` — RLUSD-ERC20 Transfer Silently Fails
+**File:** `apis/tatumApi.ts` line 1368
+**Severity:** 🔴 CRITICAL — Payments break
 ```typescript
-fromUTXO: [{ txHash: transactionId, index: 0, ... }]
-```
-**Issue:** Assumes the payment output is always at index 0 in the funding transaction. If the funding TX has multiple outputs (e.g., change output first), index 0 may reference the wrong output.
-**Risk:** Could cause "insufficient funds" errors for UTXO chains (BTC, LTC, DOGE, BCH).
-**Recommendation:** Query the UTXO set for the address to find the correct output index, or use Tatum's UTXO API to identify the correct index.
-
----
-
-### GAP 3: Cron Job Concurrency Guard Missing (Medium)
-**Location:** `server.ts` lines 155-256, `controller/paymentController.ts` line 6478
-**Issue:** `processIncompletePayments` runs every 15 minutes but has no mutex/guard against overlapping execution. If one run takes >15 minutes (e.g., many pool addresses to check), the next cron fires while previous is still running.
-**Same applies to:** `detectOrphanPayments`, `checkMissedPayments`, `sweepAllAddresses`
-**Risk:** Duplicate processing of the same payments, doubled settlements.
-**Recommendation:** Add a Redis-based `isRunning` flag at the start of each cron, checked before execution:
-```typescript
-const lockKey = 'cron:processIncomplete';
-const acquired = await acquireLock(lockKey, 900); // 15min TTL
-if (!acquired) return;
-try { /* cron body */ } finally { await releaseLock(lockKey); }
-```
-
----
-
-### GAP 4: Lock Release Without Owner Verification (Minor)
-**Location:** `utils/redisInstance.ts` lines 188-192
-**Issue:** `releaseLock()` deletes the key unconditionally without verifying the current process is the lock owner. If Process A's lock expires (TTL), Process B acquires the lock, then Process A completes and calls `releaseLock()` — it deletes Process B's lock.
-**Risk:** Very low under normal conditions (operations complete well within TTL).
-**Recommendation:** Store `lockValue` and use a Lua script for atomic compare-and-delete:
-```lua
-if redis.call("get", KEYS[1]) == ARGV[1] then
-  return redis.call("del", KEYS[1])
-end
-```
-
----
-
-### GAP 5: Orphan Detection Uses Raw Balance Instead of Effective Balance (Minor)
-**Location:** `merchantPoolMonitoring.ts` line 914
-```typescript
-receivedAmount: balance,  // Should be: balance - existingAdminBalance
-```
-**Issue:** When reconstructing Redis data for orphan payments, `receivedAmount` is set to the raw on-chain balance rather than `balance - adminFeeBalance`. The existing admin fee balance check at line 822 skips addresses where balance ≈ admin fee, but if there's a real orphan payment ON TOP of existing admin fees, the `receivedAmount` would be inflated.
-**Risk:** Could result in overpaying the merchant by the admin fee amount on recovered orphan payments.
-**Recommendation:** Use `balance - existingAdminBalance` as `receivedAmount` when admin fee balance is known.
-
----
-
-### GAP 6: Gas Funding Success → Token Transfer Failure (Minor)
-**Location:** `controller/paymentController.ts` (SmartGas flow)
-**Issue:** If gas (TRX/ETH) is sent to a temp address for token transfer, but the subsequent token transfer fails, the gas remains stranded. No automatic recovery sweeps gas-only residuals from pool addresses.
-**Risk:** Small gas amounts ($0.05-$0.50) lost per occurrence.
-**Recommendation:** Add a gas recovery step in `sweepPoolAddress` that detects native currency balance in token-only addresses and sweeps it back.
-
----
-
-### GAP 7: processIncompletePayments Grace Period Hardcoded (Minor)
-**Location:** `controller/paymentController.ts` line 6876
-```typescript
-if (minutesSinceReserved < 60) {
-  continue; // Hardcoded 60 min
+// Line 1368 — RLUSD-ERC20 is NOT in the outer condition:
+} else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
+    // Lines 1377-1390 handle RLUSD-ERC20 inside here, but this block is UNREACHABLE
+    if (currency === "RLUSD-ERC20") { ... }  // DEAD CODE
 }
 ```
-**Issue:** Per-company grace period (1-30 min) is respected in the webhook flow but the fallback cron uses a hardcoded 60-minute threshold.
-**Risk:** Payments could be delayed for up to 60 minutes even if merchant has a 5-minute grace period.
-**Recommendation:** Look up the company's `grace_period_minutes` setting and use `max(gracePeriod + 30, 60)` as the threshold.
+**Impact:** When a merchant settlement is triggered for RLUSD-ERC20, the `assetToOtherAddress` function falls through all if-else branches. `transaction` remains `undefined`. The function returns `undefined` instead of a txId. The settlement fails silently.
+**Fix:** Add `|| currency === "RLUSD-ERC20"` to the outer condition on line 1368.
 
 ---
 
-### GAP 8: Concurrent Payments to Same Pool Address (Minor)
-**Location:** `webhooks/index.ts`
-**Issue:** If two blockchain transactions arrive near-simultaneously for the same pool address:
-- First TX processes normally (sets `txId` in Redis)
-- Second TX: `processing-lock` prevents duplicate of same txId, but different txId → could start processing
-- If both are completion payments for an underpayment, only the first gets associated properly
-**Risk:** Second payment's funds could be stranded until orphan detection recovers them (10+ min delay).
-**Recommendation:** Already mitigated by orphan detection. No urgent fix needed.
+### BUG 2: `TOKEN_CONTRACTS` Missing RLUSD-ERC20 Contract Address
+**File:** `services/merchantPool/merchantPoolConfig.ts` lines 82-87
+```typescript
+export const TOKEN_CONTRACTS: Record<string, string> = {
+  "USDT-TRC20": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+  "USDT-ERC20": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+  "USDC-ERC20": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "USDT-POLYGON": "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+  // ❌ MISSING: "RLUSD-ERC20": process.env.RLUSD_ERC20_CONTRACT || "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD"
+};
+```
+**Impact:** Any code that looks up `TOKEN_CONTRACTS["RLUSD-ERC20"]` gets `undefined`. Currently `TOKEN_CONTRACTS` isn't directly used at runtime with bracket access (contract addresses are resolved via inline if-else), but this is a latent bug that will break if any code uses this map for RLUSD-ERC20.
 
 ---
 
-### GAP 9: No Circuit Breaker for Tatum API (Minor)
-**Location:** `apis/tatumApi.ts`
-**Issue:** No retry logic or circuit breaker for Tatum API calls (getBalance, createSubscription, etc.). If Tatum has an outage, every payment attempt will fail synchronously.
-**Risk:** Cascading failures during Tatum downtime.
-**Mitigation:** `processIncompletePayments` and `detectOrphanPayments` crons provide eventual recovery.
-**Recommendation:** Add exponential backoff retries for critical Tatum calls (balance checks, transfers).
+### BUG 3: Sweep Fee Estimation Missing RLUSD-ERC20 Contract Address
+**File:** `services/merchantPool/merchantPoolSweep.ts` lines 121-130
+```typescript
+if (walletType === 'USDT-ERC20') {
+  contractAddress = process.env.ETH_CONTRACT;
+} else if (walletType === 'USDC-ERC20') {
+  contractAddress = process.env.USDC_CONTRACT;
+} else if (walletType === 'USDT-TRC20') {
+  contractAddress = process.env.TRX_CONTRACT;
+} else if (walletType === 'USDT-POLYGON') {
+  contractAddress = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+}
+// ❌ MISSING: } else if (walletType === 'RLUSD-ERC20') {
+//     contractAddress = process.env.RLUSD_ERC20_CONTRACT || "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD";
+// }
+```
+**Impact:** When sweeping RLUSD-ERC20 admin fees, gas estimation is called without a contract address. This may cause incorrect gas estimation or failed fee estimation for ERC20 token transfers.
 
 ---
 
-## WELL-DESIGNED PATTERNS WORTH NOTING
+### BUG 4: `normalizeCurrency` Doesn't Handle RLUSD-ERC20
+**File:** `helper/currencyConvert.ts` line 432-441
+```typescript
+const normalizeCurrency = (currency: string): string => {
+  const upper = currency.toUpperCase();
+  if (upper.includes("USDT")) return "USDT";
+  if (upper.includes("USDC")) return "USDC";
+  if (upper === "RLUSD") return "RLUSD";  // ← Only matches exact "RLUSD"
+  // ❌ "RLUSD-ERC20" falls through to: return upper → returns "RLUSD-ERC20"
+  return upper;
+};
+```
+**Impact:** RLUSD-ERC20 doesn't get normalized to "RLUSD", so:
+1. It's NOT treated as a stablecoin (not in `['USDT', 'USDC', 'RLUSD']` check)
+2. No 1:1 USD shortcut applied
+3. CoinGecko lookup for "RLUSD-ERC20" will fail (not in `COINGECKO_IDS` map)
+4. Fee calculations involving USD conversion for RLUSD-ERC20 payments will error or use fallback rates
 
-1. **Three-layer payment recovery:** Webhook → checkMissedPayments → detectOrphanPayments
-2. **DB-backed Redis reconstruction:** `last_payment_context` column is a strong safety net
-3. **Distributed locking:** Redis SET NX with TTL for address reservation
-4. **Admin fee residual filtering:** Prevents false orphan detections from admin fee dust
-5. **Cascading webhook URL resolution:** payment data → payment link → company → API key
-6. **Profitability-gated sweep:** Won't sweep if costs exceed 50% of balance
-7. **Dual underpayment strategy:** Grace period for payment links, immediate processing for direct API
+**Fix:** Change `if (upper === "RLUSD")` to `if (upper === "RLUSD" || upper === "RLUSD-ERC20")`
 
 ---
 
-## PRIORITY RECOMMENDATIONS
+### BUG 5: `createSubscriptionWithUrl` Missing RLUSD-ERC20
+**File:** `apis/tatumApi.ts` line 783
+```typescript
+const chain =
+  currency === "USDT-ERC20" || currency === "USDC-ERC20"  // ❌ Missing RLUSD-ERC20
+    ? "ETH"
+    : currency === "USDT-TRC20" ? "TRON"
+    : ...
+```
+**Impact:** If `createSubscriptionWithUrl` is called for RLUSD-ERC20, the chain resolves to "RLUSD-ERC20" (not a valid Tatum chain). Tatum subscription creation fails → no webhook notifications for RLUSD-ERC20 payments on company-specific pools.
+**Note:** `createSubscription` (line 709) correctly includes RLUSD-ERC20.
 
-| Priority | Gap | Effort | Impact |
-|----------|-----|--------|--------|
-| 🔴 HIGH | #1 Webhook source auth | Medium | Security |
-| 🟡 MEDIUM | #3 Cron concurrency guard | Low | Data integrity |
-| 🟡 MEDIUM | #2 UTXO index hardcoding | Medium | UTXO chain reliability |
-| 🟢 LOW | #4 Lock owner verification | Low | Correctness |
-| 🟢 LOW | #5 Orphan effective balance | Low | Fee accuracy |
-| 🟢 LOW | #6 Gas recovery | Low | Cost savings |
-| 🟢 LOW | #7 Grace period per-merchant | Low | UX |
-| 🟢 LOW | #9 Tatum circuit breaker | Medium | Resilience |
-| ⚪ INFO | #8 Concurrent same-address | N/A | Already mitigated |
+---
+
+## 🟡 MEDIUM SEVERITY GAPS
+
+### GAP 6: `sendingLeftover` Only Handles USDT-ERC20 and USDT-TRC20
+**File:** `controller/paymentController.ts` line 6021
+```sql
+WHERE ut.wallet_type in ('USDT-ERC20','USDT-TRC20')
+```
+**Impact:** Leftover gas (ETH/TRX/POLYGON) from USDC-ERC20, RLUSD-ERC20, RLUSD, and USDT-POLYGON transfers is never swept back. Gas funds remain stranded in temp addresses indefinitely.
+**Fix:** Extend to `('USDT-ERC20','USDT-TRC20','USDC-ERC20','RLUSD-ERC20','USDT-POLYGON')`. Also fix the gas token mapping at line 6033 which only handles TRX vs ETH (needs POLYGON for USDT-POLYGON).
+
+---
+
+### GAP 7: `sendingLeftover` Gas Token Mapping Incomplete
+**File:** `controller/paymentController.ts` line 6032-6033
+```typescript
+const wallet_type = currentAddress?.wallet_type === "USDT-TRC20" ? "TRX" : "ETH";
+```
+**Impact:** If USDT-POLYGON is added to the SQL query, its gas token would be incorrectly resolved as "ETH" instead of "POLYGON". The function would check ETH balance instead of POL balance, and attempt to transfer ETH instead of POL.
+
+---
+
+### GAP 8: `blockchainFeeService` Missing Newer Chains
+**File:** `services/blockchainFeeService.ts` lines 65-74, 396
+```typescript
+const chainMap = { 'BTC', 'ETH', 'LTC', 'DOGE', 'USDT_ERC20', 'USDT_TRC20', 'TRX', 'BCH' };
+const chains = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'USDT_ERC20', 'USDT_TRC20'];
+```
+**Impact:** Missing SOL, XRP, POLYGON, USDT-POLYGON, RLUSD, RLUSD-ERC20, USDC-ERC20. The `/api/blockchain-fees` endpoint returns incomplete data. Any UI or logic that depends on this service for fee display won't have data for newer chains.
+
+---
+
+### GAP 9: Orphan Detection DUST_THRESHOLDS Missing Token Currencies
+**File:** `services/merchantPool/merchantPoolMonitoring.ts` lines 813-816
+```typescript
+const DUST_THRESHOLDS: Record<string, number> = {
+  BTC: 0.00005, ETH: 0.002, TRX: 20, LTC: 0.05,
+  DOGE: 25, BCH: 0.01, BSC: 0.008,
+  // ❌ Missing: SOL, XRP, POLYGON, USDT-TRC20, USDT-ERC20, USDC-ERC20, RLUSD, USDT-POLYGON, RLUSD-ERC20
+};
+```
+**Impact:** For token chains, the fallback `dustThreshold = 0` means the `!TOKEN_CHAINS.includes(walletType) && balance < dustThreshold` check is bypassed (correct behavior—tokens use admin fee balance check instead). But for SOL, XRP, POLYGON (native currencies NOT in TOKEN_CHAINS), dustThreshold = 0 means ANY balance (even 0.000001) triggers orphan detection. This creates noise in orphan detection for small native chain residuals.
+
+---
+
+### GAP 10: `getTransactionGasCost` Missing RLUSD, USDT-POLYGON, POLYGON, XRP, SOL
+**File:** `apis/tatumApi.ts` lines 2750-2782
+Only handles ETH-family (ETH, USDT-ERC20, USDC-ERC20, RLUSD-ERC20) and TRX-family (TRX, USDT-TRC20).
+**Impact:** Sweep operations for POLYGON, USDT-POLYGON, RLUSD, XRP, SOL will log "Unsupported currency" and use `gasCostNative: 0`. The sweep audit records will have inaccurate gas cost data.
+
+---
+
+### GAP 11: Webhook Source Authentication (unchanged from v1)
+**File:** `routes/index.ts` lines 89-90
+**Impact:** Public endpoints `/api/tatum-webhook` and `/api/tatum-crypto-webhook` have no Tatum signature verification.
+
+---
+
+### GAP 12: Cron Job Concurrency Guards Missing (unchanged from v1)
+**File:** `server.ts` lines 155-256
+**Impact:** Overlapping cron runs could double-process payments.
+
+---
+
+### GAP 13: UTXO Output Index Hardcoded to 0 (unchanged from v1)
+**File:** `controller/paymentController.ts` line 3052
+
+---
+
+### GAP 14: Orphan Detection `receivedAmount` Uses Raw Balance (unchanged from v1)
+**File:** `merchantPoolMonitoring.ts` line 914 — should use `balance - existingAdminBalance`.
+
+---
+
+### GAP 15: Lock Release Without Owner Verification (unchanged from v1)
+**File:** `utils/redisInstance.ts` lines 188-192
+
+---
+
+## 🟢 LOW SEVERITY GAPS
+
+### GAP 16: `TOKEN_CHAINS` Fallback in Config Is Incomplete
+**File:** `services/merchantPool/merchantPoolConfig.ts` line 54
+```typescript
+export const TOKEN_CHAINS = MODEL_TOKEN_CHAINS || ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20"];
+```
+**Impact:** If `MODEL_TOKEN_CHAINS` import fails (unlikely), the fallback misses RLUSD, USDT-POLYGON, RLUSD-ERC20. All sweep/gas logic for these tokens would be treated as native currencies.
+
+---
+
+### GAP 17: Energy Optimization Only for USDT-TRC20
+**File:** `services/merchantPool/merchantPoolSweep.ts` line 85
+```typescript
+if (gasToken === "TRX" && (walletType === 'USDT-TRC20')) {
+```
+**Impact:** RLUSD uses XRP (not TRX), so this is correct—but if any future TRC20 token is added, it won't get Energy optimization. Minor, since USDT-TRC20 is currently the only TRC20 token.
+
+---
+
+### GAP 18: `assetBatchAddressesToOtherAddress` Missing USDC-ERC20
+**File:** `apis/tatumApi.ts` line 1617
+```typescript
+} else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "RLUSD-ERC20") {
+// ❌ Missing USDC-ERC20
+```
+**Impact:** If batch sweep is ever triggered for USDC-ERC20 pool addresses, the transfer function won't match any branch. However, USDC-ERC20 batch sweeps may not currently be triggered (would need to trace full sweep orchestration to confirm).
+
+---
+
+### GAP 19: `debug/check_all_wallets.ts` Has Hardcoded Subset of Chains
+**File:** `scripts/debug/check_all_wallets.ts` line 13
+```typescript
+wallet_type: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'USDT-TRC20', 'USDT-ERC20']
+```
+**Impact:** Debug script won't check SOL, XRP, POLYGON, USDT-POLYGON, RLUSD, RLUSD-ERC20, USDC-ERC20, BCH. Minor (debug tool only).
+
+---
+
+## PRIORITY FIX ORDER
+
+| # | Bug/Gap | Severity | Fix Effort | Affected Currency |
+|---|---------|----------|------------|-------------------|
+| 1 | BUG 1: `assetToOtherAddress` unreachable RLUSD-ERC20 | 🔴 CRITICAL | 1 line | RLUSD-ERC20 |
+| 2 | BUG 4: `normalizeCurrency` wrong for RLUSD-ERC20 | 🔴 CRITICAL | 1 line | RLUSD-ERC20 |
+| 3 | BUG 3: Sweep fee estimation missing RLUSD-ERC20 | 🔴 HIGH | 3 lines | RLUSD-ERC20 |
+| 4 | BUG 2: TOKEN_CONTRACTS missing RLUSD-ERC20 | 🟡 MEDIUM | 1 line | RLUSD-ERC20 |
+| 5 | BUG 5: `createSubscriptionWithUrl` missing RLUSD-ERC20 | 🟡 MEDIUM | 1 line | RLUSD-ERC20 |
+| 6 | GAP 6: `sendingLeftover` incomplete SQL | 🟡 MEDIUM | 2 lines | USDC, RLUSD-ERC20, POLYGON |
+| 7 | GAP 7: `sendingLeftover` gas token mapping | 🟡 MEDIUM | 5 lines | USDT-POLYGON |
+| 8 | GAP 8: blockchainFeeService chains | 🟡 MEDIUM | 15 lines | SOL, XRP, POLYGON, etc. |
+| 9 | GAP 9: Orphan DUST_THRESHOLDS | 🟡 MEDIUM | 5 lines | SOL, XRP, POLYGON |
+| 10 | GAP 10: `getTransactionGasCost` incomplete | 🟢 LOW | 10 lines | POLYGON, XRP, SOL, RLUSD |
+| 11 | GAP 11: Webhook auth | 🟡 MEDIUM | ~30 lines | All chains |
+| 12 | GAP 12: Cron concurrency | 🟡 MEDIUM | ~20 lines | All chains |
+| 13 | GAP 13: UTXO index hardcoded | 🟡 MEDIUM | ~10 lines | BTC, LTC, DOGE, BCH |
+| 14 | GAP 14: Orphan receivedAmount | 🟢 LOW | 1 line | Token chains |
+| 15 | GAP 18: Batch USDC-ERC20 | 🟢 LOW | 1 line | USDC-ERC20 |
