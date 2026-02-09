@@ -718,7 +718,7 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
         : currency === "POLYGON" || currency === "USDT-POLYGON"
         ? "MATIC"
         : currency === "SOL"
-        ? "SOLANA"
+        ? "SOL"
         : currency;
 
     // Construct webhook URL properly
