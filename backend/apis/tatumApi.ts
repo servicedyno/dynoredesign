@@ -1246,12 +1246,15 @@ const feeEstimation = async (
 
       let gasPrice = Math.max(1, Math.min(100, Math.ceil(gasFees?.gasPrice || 30)));
       const gas_fee_for_amount = Math.ceil(gasPrice * 1.15 + 0.5);
+      // Native POL transfer: 21,000 gas (simple value transfer)
+      // ERC20 token transfer: use Tatum's estimated gasLimit (~65,000)
+      const effectiveGasLimit = isToken ? gasFees.gasLimit : 21000;
       fees = {
         fast: Number(
-          Number((gas_fee_for_amount * gasFees?.gasLimit) / 1000000000)
+          Number((gas_fee_for_amount * effectiveGasLimit) / 1000000000)
         ).toFixed(8),
         gasPrice,
-        gasLimit: isToken ? gasFees.gasLimit : Math.floor((gasFees?.gasLimit * 25) / 100),
+        gasLimit: effectiveGasLimit,
       };
     } catch (_polyFeeError) {
       console.warn(`[feeEstimation] ⚠️ Polygon fee estimation failed, using fallback`);
