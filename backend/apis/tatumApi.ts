@@ -651,6 +651,32 @@ const generateUserAddress = async ({
             index,
           });
         break;
+      case "SOL": {
+        // Non-HD: generate fresh keypair for each address
+        const solWallet = await tatumSdk.blockchain.solana.solanaGenerateWallet();
+        return { address: solWallet.address, privateKey: solWallet.privateKey };
+      }
+      case "XRP":
+      case "RLUSD": {
+        // Non-HD: generate fresh XRP account for each address
+        const xrpWallet = await tatumSdk.blockchain.xrp.xrpWallet();
+        return { address: xrpWallet.address, privateKey: xrpWallet.secret };
+      }
+      case "POLYGON":
+      case "USDT-POLYGON":
+        // Generate private key first for Polygon (same derivation pattern as ETH)
+        privateKey = await tatumSdk.blockchain.polygon.polygonGenerateAddressPrivateKey(
+          { mnemonic, index }
+        );
+        
+        if (isTestnet()) {
+          const wallet = new ethers.Wallet(privateKey.key);
+          address = { address: wallet.address };
+          console.log(`[generateUserAddress] Testnet POLYGON: Derived address ${wallet.address} from private key`);
+        } else {
+          address = await tatumSdk.blockchain.polygon.polygonGenerateAddress(xpub, index);
+        }
+        break;
       default:
         throw new Error("Unsupported currency");
     }
