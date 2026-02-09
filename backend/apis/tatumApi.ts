@@ -2703,6 +2703,34 @@ const getTransactionGasCost = async (
   }
 };
 
+/**
+ * Set up XRP Trust Line for RLUSD token on a new XRP address
+ * Required before the address can receive RLUSD tokens
+ */
+const setupXrpTrustLine = async (
+  fromAccount: string,
+  fromSecret: string,
+  issuerAccount: string,
+  token: string,
+  limit: string = "999999999"
+) => {
+  const tatumSdk = await getTatumSDK();
+  try {
+    const result = await tatumSdk.blockchain.xrp.xrpTrustLineBlockchain({
+      fromAccount,
+      fromSecret,
+      issuerAccount,
+      token,
+      limit,
+    });
+    console.log(`[setupXrpTrustLine] Trust line set for ${fromAccount} → ${issuerAccount} (${token})`);
+    return result;
+  } catch (error) {
+    console.error(`[setupXrpTrustLine] Failed:`, error?.message || error);
+    throw error;
+  }
+};
+
 export default {
   generateWallet,
   createVirtualAccount,
