@@ -125,6 +125,8 @@ export const fundGasIfNeeded = async (
           contractAddress = process.env.USDC_CONTRACT;
         } else if (walletType === 'USDT-TRC20') {
           contractAddress = process.env.TRX_CONTRACT;
+        } else if (walletType === 'USDT-POLYGON') {
+          contractAddress = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
         }
         
         const estimationRecipient = recipientAddress || feeWalletAddress;
