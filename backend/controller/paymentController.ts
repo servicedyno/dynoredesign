@@ -7194,7 +7194,7 @@ const getConfiguredCurrenciesForCheckout = async (
     const walletWhereClause: Record<string, unknown> = {
       user_id: userId,
       wallet_address: { [Op.not]: null },
-      wallet_type: { [Op.in]: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'] },
+      wallet_type: { [Op.in]: ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'] },
     };
     
     // If company_id exists, filter by it
