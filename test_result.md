@@ -24,7 +24,7 @@ current_test_task:
       - "/app/backend/scripts/debug/check_all_wallets.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
