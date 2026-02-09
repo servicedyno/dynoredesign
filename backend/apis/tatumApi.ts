@@ -1152,7 +1152,8 @@ const feeEstimation = async (
     // RLUSD on XRP Ledger: fee in XRP (~12 drops)
     fees = { fast: 0.00005 };
   } else if (currency === "POLYGON" || currency === "USDT-POLYGON") {
-    // Polygon: EVM-compatible, use same fee estimation as ETH
+    // Polygon: EVM-compatible fee estimation
+    // Native POL uses TRANSFER_NFT (21k gas), USDT-POLYGON uses TRANSFER_ERC20 (65k gas)
     const isToken = currency === "USDT-POLYGON";
     const localAmount: number = Number(amount);
     const decimals = isToken ? 6 : 8;
@@ -1161,7 +1162,7 @@ const feeEstimation = async (
     try {
       const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
         chain: "MATIC",
-        type: "TRANSFER_ERC20",
+        type: isToken ? "TRANSFER_ERC20" : "TRANSFER_NFT",
         sender: fromAddress,
         ...(isToken && {
           contractAddress: process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
