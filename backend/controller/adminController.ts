@@ -178,7 +178,7 @@ const createWallets = async (_req: express.Request, res: express.Response) => {
     const count = (await adminWalletModel.findAndCountAll()).count;
     if (count === 0) {
       const fiatData = ["EUR", "GBP", "NGN", "KES", "UGX", "GHS", "RWF", "USD"];
-      const cryptoData = ["BTC", "ETH", "TRX", "BSC", "LTC", "DOGE", "BCH"];
+      const cryptoData = ["BTC", "ETH", "TRX", "BSC", "LTC", "DOGE", "BCH", "SOL", "XRP", "POLYGON"];
 
       for (let i = 0; i < fiatData.length; i++) {
         await adminWalletModel.create(
