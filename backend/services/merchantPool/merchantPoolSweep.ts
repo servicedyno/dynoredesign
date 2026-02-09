@@ -166,7 +166,10 @@ export const fundGasIfNeeded = async (
     console.log(`[SmartGas] Required gas with ${((POOL_CONFIG.GAS_SAFETY_BUFFER - 1) * 100).toFixed(0)}% buffer: ${requiredGas.toFixed(6)} ${gasToken}`);
 
     const deficit = requiredGas - currentBalance;
-    const minDeficit = gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT : POOL_CONFIG.ETH_MIN_DEFICIT;
+    const minDeficit = gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT 
+      : gasToken === "XRP" ? POOL_CONFIG.XRP_MIN_DEFICIT
+      : gasToken === "POLYGON" ? POOL_CONFIG.POLYGON_MIN_DEFICIT
+      : POOL_CONFIG.ETH_MIN_DEFICIT;
 
     // Primary check: does the address actually have enough gas?
     // Only skip funding when currentBalance genuinely covers the required gas.
