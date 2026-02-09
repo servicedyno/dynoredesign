@@ -11,6 +11,7 @@ const ADDRESS_PATTERNS: Record<string, RegExp> = {
   // Ethereum and ERC-20 tokens - 0x followed by 40 hex chars
   ETH: /^0x[a-fA-F0-9]{40}$/,
   'USDT-ERC20': /^0x[a-fA-F0-9]{40}$/,
+  'USDC-ERC20': /^0x[a-fA-F0-9]{40}$/,
   BSC: /^0x[a-fA-F0-9]{40}$/,
   
   // Tron - starts with T, 34 chars
@@ -25,6 +26,17 @@ const ADDRESS_PATTERNS: Record<string, RegExp> = {
   
   // Bitcoin Cash - starts with q or p (CashAddr) or legacy 1/3
   BCH: /^(q|p)[a-z0-9]{41}$|^(1|3)[a-km-zA-HJ-NP-Z1-9]{25,34}$/,
+
+  // Solana - Base58, 32-44 chars
+  SOL: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+
+  // XRP - starts with r, 25-35 chars
+  XRP: /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/,
+  'RLUSD': /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/,
+
+  // Polygon - EVM compatible, same as ETH
+  POLYGON: /^0x[a-fA-F0-9]{40}$/,
+  'USDT-POLYGON': /^0x[a-fA-F0-9]{40}$/,
 };
 
 // Checksum validation for Ethereum addresses
