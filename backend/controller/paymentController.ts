@@ -2605,7 +2605,7 @@ const Crypto = async (
   const companyId = tokenData.company_id;
   
   // Supported merchant pool crypto types
-  const MERCHANT_POOL_CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'];
+  const MERCHANT_POOL_CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'];
   
   // Use merchant pool for supported currencies
   if (MERCHANT_POOL_CRYPTO_TYPES.includes(currency)) {
