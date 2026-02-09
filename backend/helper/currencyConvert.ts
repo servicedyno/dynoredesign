@@ -263,11 +263,37 @@ const getCryptoRateViaTatum = async (from: string, to: string): Promise<number |
     if (isStable(from)) return 1;
     const priceInFiat = await getTatumRate(from, to);
     if (priceInFiat) return priceInFiat;  // This is "1 BTC = X EUR"
+    
+    // Cross-rate fallback: crypto→USD × USD→fiat (handles TRX→BRL/GBP 403s)
+    if (to.toUpperCase() !== 'USD') {
+      const priceInUSD = await getTatumRate(from, 'USD');
+      if (priceInUSD) {
+        const usdtInFiat = await getTatumRate('USDT', to);
+        if (usdtInFiat) {
+          const crossRate = priceInUSD * usdtInFiat;
+          console.log(`[currencyConvert] 🔗 Cross-rate: ${from}→${to} = ${crossRate.toFixed(6)} (via ${from}→USD × USDT→${to})`);
+          return crossRate;
+        }
+      }
+    }
   } else if (!fromIsCrypto && toIsCrypto) {
     // Fiat → crypto (e.g., EUR → BTC) — invert: 1/price
     if (isStable(to)) return 1;
     const priceInFiat = await getTatumRate(to, from);
     if (priceInFiat) return 1 / priceInFiat;  // "1 EUR = 1/X BTC"
+    
+    // Cross-rate fallback: fiat→USD → USD→crypto
+    if (from.toUpperCase() !== 'USD') {
+      const priceInUSD = await getTatumRate(to, 'USD');
+      if (priceInUSD) {
+        const usdtInFrom = await getTatumRate('USDT', from);
+        if (usdtInFrom) {
+          const crossRate = 1 / (priceInUSD * usdtInFrom);
+          console.log(`[currencyConvert] 🔗 Cross-rate: ${from}→${to} = ${crossRate.toFixed(8)} (via USDT→${from} / ${to}→USD)`);
+          return crossRate;
+        }
+      }
+    }
   } else if (fromIsCrypto && toIsCrypto) {
     // Crypto → crypto (e.g., ETH → BTC) — convert via USD
     const fromUSD = isStable(from) ? 1 : await getTatumRate(from, 'USD');
