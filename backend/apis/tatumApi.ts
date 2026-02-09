@@ -1023,6 +1023,34 @@ const feeEstimation = async (
   _contractAddress = "",
   bchInputs = 1
 ) => {
+  // Chain-specific cache TTLs (seconds):
+  // UTXO (BTC, LTC, DOGE, BCH): 60s (block times 1-10 min)
+  // EVM (ETH, POLYGON): 15s (block time ~2-12s)
+  // TRON: 30s (block time 3s, but energy prices change slowly)
+  // SOL: 10s (block time 0.4s but priority fees change fast)
+  // XRP/RLUSD: no caching (hardcoded, instant)
+  const FEE_CACHE_TTLS: Record<string, number> = {
+    BTC: 60, LTC: 60, DOGE: 60, BCH: 60,
+    ETH: 15, 'USDT-ERC20': 15, 'USDC-ERC20': 15, 'RLUSD-ERC20': 15,
+    POLYGON: 15, 'USDT-POLYGON': 15,
+    TRX: 30, 'USDT-TRC20': 30,
+    SOL: 10,
+  };
+  
+  const cacheTTL = FEE_CACHE_TTLS[currency];
+  if (cacheTTL) {
+    const cacheKey = `fee-cache:${currency}`;
+    try {
+      const cached = await getRedisItem(cacheKey);
+      if (cached) {
+        console.log(`[feeEstimation] ⚡ Cache hit for ${currency}`);
+        return JSON.parse(cached);
+      }
+    } catch (_cacheErr) {
+      // Cache miss or error — proceed with live estimation
+    }
+  }
+
   let fees;
   const tatumSdk = await getTatumSDK();
   if (["BTC", "LTC", "DOGE"].indexOf(currency) !== -1) {
