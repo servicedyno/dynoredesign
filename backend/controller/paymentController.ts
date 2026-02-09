@@ -2406,7 +2406,7 @@ const cardPayment = async (
           }),
       },
     }),
-    redirect_url: process.env.CHECKOUT_URL + "/pay/verify",
+    redirect_url: (process.env.CHECKOUT_URL || '').trim() + "/pay/verify",
   };
 
   console.log("payload==========>", payload);
@@ -2536,7 +2536,7 @@ const MobileMoney = async (data: IFundData, tokenData: IUserType) => {
     fullname: tokenData?.customer_name,
     tx_ref: uniqueRef,
     ...(data.currency !== "KES" && {
-      redirect_url: process.env.CHECKOUT_URL + "/pay/verify",
+      redirect_url: (process.env.CHECKOUT_URL || '').trim() + "/pay/verify",
     }),
   };
 
