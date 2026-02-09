@@ -1102,11 +1102,15 @@ const feeEstimation = async (
       },
       { headers }
     );
-    const bytes = (bchInputs + 1 * 148 + 2 * 34 + 10) / 1000;
+    // UTXO byte formula: (inputs × 148) + (outputs × 34) + 10 overhead
+    // Settlement uses 2 outputs (merchant + admin fee), bchInputs defaults to 1
+    // Safety: use at least 2 inputs to avoid underestimation for multi-UTXO scenarios
+    const safeInputs = Math.max(bchInputs, 2);
+    const bytes = (safeInputs * 148 + 2 * 34 + 10) / 1000;
     fees = {
       slow: (bytes * result).toFixed(8),
       medium: (bytes * result).toFixed(8),
-      fast: (bytes * result).toFixed(8),
+      fast: (bytes * result * 1.2).toFixed(8), // 20% buffer on fast tier
     };
   } else if (currency === "TRX") {
     // Dynamic TRX native fee: free with bandwidth, ~0.3 TRX otherwise (was hardcoded 10)
