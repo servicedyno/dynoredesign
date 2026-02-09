@@ -199,7 +199,8 @@ export const addAddressToMerchantPool = async (
         const rlusdCurrencyHex = process.env.RLUSD_CURRENCY_HEX || "524C555344000000000000000000000000000000";
         
         // First, fund the XRP address with enough XRP for account reserve + trust line reserve + tx fees
-        // XRP account needs 10 XRP reserve + 2 XRP per trust line + ~0.00001 XRP tx fee
+        // XRP Ledger reserves (updated Dec 2, 2024): 1 XRP base + 0.2 XRP per trust line + ~0.00001 tx fee
+        // Funding 2 XRP provides comfortable buffer (1 + 0.2 + 0.8 buffer)
         console.log(`[MerchantPool] 🔗 Setting up RLUSD trust line for ${addressData.address}...`);
         
         // Fund the address with XRP from the fee wallet
@@ -212,16 +213,16 @@ export const addAddressToMerchantPool = async (
               xrpFeeWalletRecord.dataValues.privateKey,
               process.env.TEMP_KEY_ID
             );
-            // Fund with 13 XRP (10 base reserve + 2 trust line reserve + 1 buffer)
+            // Fund with 2 XRP (1 base reserve + 0.2 trust line reserve + 0.8 buffer)
             await tatumApi.assetToOtherAddress({
               currency: "XRP",
               fromAddress: xrpFeeWallet,
               toAddress: addressData.address,
               privateKey: xrpFeePrivateKey,
-              amount: 13,
+              amount: 2,
               fee: null,
             });
-            console.log(`[MerchantPool] ✅ Funded ${addressData.address} with 13 XRP for RLUSD trust line`);
+            console.log(`[MerchantPool] ✅ Funded ${addressData.address} with 2 XRP for RLUSD trust line (1 reserve + 0.2 trust line + 0.8 buffer)`);
             
             // Wait a moment for the funding to confirm
             await new Promise(resolve => setTimeout(resolve, 5000));
