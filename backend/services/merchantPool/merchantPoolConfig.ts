@@ -29,13 +29,13 @@ export const POOL_CONFIG = {
   // Minimum gas to maintain (fallback if estimation fails)
   TRX_GAS_FALLBACK: 15,
   ETH_GAS_FALLBACK: 0.001,
-  XRP_GAS_FALLBACK: 15,       // XRP drops for gas (also covers account reserve)
+  XRP_GAS_FALLBACK: 0.001,    // XRP for gas only (tx fee ~12 drops / 0.000012 XRP). Reserve handled separately in sweep.
   POLYGON_GAS_FALLBACK: 0.01, // POL for gas
   
   // Minimum deficit to trigger funding (avoid micro-transactions)
   TRX_MIN_DEFICIT: 2,
   ETH_MIN_DEFICIT: 0.0002,
-  XRP_MIN_DEFICIT: 1,
+  XRP_MIN_DEFICIT: 0.001,     // XRP tx fees are ~0.000012 XRP; 0.001 avoids micro-funding while staying realistic
   POLYGON_MIN_DEFICIT: 0.005,
   
   // Retry settings
