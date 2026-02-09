@@ -9,13 +9,13 @@ user_problem_statement: "Auto-generate friendly names for API keys and wallets w
 current_test_task:
   - task: "On-Chain Fee Optimization: XRP reserve, POLYGON fee type, BCH formula, SOL dynamic fees, USDT-POLYGON transfer, fee caching"
     implemented: true
-    working: pending
+    working: true
     files:
       - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
       - "/app/backend/apis/tatumApi.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
