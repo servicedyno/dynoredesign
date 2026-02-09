@@ -436,13 +436,15 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     if (isAccountChain) {
       const gasFee = parseFloat(feeData?.slow || feeData?.fast || "0");
       
-      // XRP Ledger: accounts have a 10 XRP base reserve that cannot be withdrawn
-      // RLUSD addresses also have a 2 XRP trust line reserve on top
+      // XRP Ledger reserves (updated Dec 2, 2024 — validator vote reduced reserves 10x):
+      //   Base reserve: 1 XRP per account (was 10 XRP)
+      //   Owner reserve: 0.2 XRP per trust line (was 2 XRP)
+      // See: https://xrpl.org/blog/2024/lower-reserves-are-in-effect
       let accountReserve = 0;
       if (walletType === 'XRP') {
-        accountReserve = 10; // 10 XRP base reserve
+        accountReserve = 1; // 1 XRP base reserve (post Dec 2024)
       } else if (walletType === 'RLUSD') {
-        accountReserve = 12; // 10 XRP base reserve + 2 XRP trust line reserve
+        accountReserve = 1.2; // 1 XRP base reserve + 0.2 XRP trust line reserve (post Dec 2024)
       }
       
       amountToSend = actualBalance - gasFee - accountReserve;
