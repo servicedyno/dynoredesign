@@ -9,6 +9,14 @@ import { paymentController } from "../controller";
 import { sendPendingPaymentNotification } from "../services/pendingPaymentService";
 import { QueryTypes } from "sequelize";
 import { getCompanyBaseCurrency, convertToFiat } from "../utils/currencyUtils";
+import { ADMIN_WALLETS, FEE_WALLETS } from "../services/merchantPool/merchantPoolConfig";
+
+// Build a set of all admin/fee wallet addresses for fast lookup (lowercase for case-insensitive match)
+const INTERNAL_WALLETS = new Set(
+  [...Object.values(ADMIN_WALLETS), ...Object.values(FEE_WALLETS)]
+    .filter(Boolean)
+    .map(addr => addr.toLowerCase())
+);
 
 /**
  * Generate HMAC-SHA256 signature for webhook payload
