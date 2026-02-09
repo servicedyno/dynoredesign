@@ -24,6 +24,11 @@ export const CHAIN_XPUB_MAPPING: Record<string, string> = {
   'USDT-TRC20': 'TRX',   // Uses TRX xpub
   'USDT-ERC20': 'ETH',   // Uses ETH xpub
   'USDC-ERC20': 'ETH',   // Uses ETH xpub
+  'SOL': 'SOL',           // Non-HD: fresh keypair per address
+  'XRP': 'XRP',           // Non-HD: fresh account per address
+  'RLUSD': 'XRP',         // Token on XRP Ledger, uses XRP accounts
+  'POLYGON': 'POLYGON',   // EVM-compatible, HD derivation
+  'USDT-POLYGON': 'POLYGON', // Uses POLYGON xpub
 };
 
 /**
