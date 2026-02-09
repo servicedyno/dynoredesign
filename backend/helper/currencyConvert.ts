@@ -78,29 +78,39 @@ export const refreshBackgroundRateCache = async (): Promise<void> => {
       console.warn(`[BackgroundCache] CoinGecko failed: ${err.message}, falling back to Tatum`);
     }
     
-    // Fallback: Tatum — parallelize all rate fetches (already paid for, no extra cost)
+    // Fallback: Tatum — batch requests in groups of 4 to avoid rate-limiting/timeouts
     // Note: Some pairs may 403 (e.g., TRX→GBP) — getTatumRate handles negative caching silently
     provider = 'Tatum';
-    const tatumPromises: Promise<void>[] = [];
+    const tatumPairs: Array<{ crypto: string; fiat: string }> = [];
     for (const crypto of CACHE_CRYPTO_TARGETS) {
       for (const fiat of CACHE_FIAT_TARGETS) {
-        tatumPromises.push(
-          (async () => {
-            try {
-              const priceInFiat = await getTatumRate(crypto, fiat);
-              if (priceInFiat && priceInFiat > 0) {
-                backgroundRateCache.set(`rate_bg:${crypto}:${fiat}`, { rate: priceInFiat, timestamp: Date.now() });
-                backgroundRateCache.set(`rate_bg:${fiat}:${crypto}`, { rate: 1 / priceInFiat, timestamp: Date.now() });
-                ratesUpdated += 2;
-              }
-            } catch {
-              // Skip this pair silently
-            }
-          })()
-        );
+        tatumPairs.push({ crypto, fiat });
       }
     }
-    await Promise.allSettled(tatumPromises);
+    
+    // Process in batches of 4 with 150ms delay between batches
+    const BATCH_SIZE = 4;
+    for (let i = 0; i < tatumPairs.length; i += BATCH_SIZE) {
+      const batch = tatumPairs.slice(i, i + BATCH_SIZE);
+      const batchPromises = batch.map(({ crypto, fiat }) =>
+        (async () => {
+          try {
+            const priceInFiat = await getTatumRate(crypto, fiat);
+            if (priceInFiat && priceInFiat > 0) {
+              backgroundRateCache.set(`rate_bg:${crypto}:${fiat}`, { rate: priceInFiat, timestamp: Date.now() });
+              backgroundRateCache.set(`rate_bg:${fiat}:${crypto}`, { rate: 1 / priceInFiat, timestamp: Date.now() });
+              ratesUpdated += 2;
+            }
+          } catch {
+            // Skip silently
+          }
+        })()
+      );
+      await Promise.allSettled(batchPromises);
+      if (i + BATCH_SIZE < tatumPairs.length) {
+        await new Promise(r => setTimeout(r, 150));
+      }
+    }
     
     // Cross-rate recovery: fill gaps where direct Tatum pairs failed (e.g., TRX→BRL)
     // Strategy: crypto→USD (usually works) × USD→fiat (via USDT proxy or existing cache)
