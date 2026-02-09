@@ -7,7 +7,7 @@ import router from "./routes";
 import { setupSwagger } from "./swagger";
 
 // Redis imports - only used ones
-import { connectRedis } from "./utils/redisInstance";
+import { connectRedis, acquireLock, releaseLock } from "./utils/redisInstance";
 // Unused Redis imports removed: deleteRedisItem, getRedisItem, setRedisItem
 import {
   adminFeeModel,
