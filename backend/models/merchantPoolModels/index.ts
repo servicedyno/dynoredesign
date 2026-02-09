@@ -29,6 +29,7 @@ export const CHAIN_XPUB_MAPPING: Record<string, string> = {
   'RLUSD': 'XRP',         // Token on XRP Ledger, uses XRP accounts
   'POLYGON': 'POLYGON',   // EVM-compatible, HD derivation
   'USDT-POLYGON': 'POLYGON', // Uses POLYGON xpub
+  'RLUSD-ERC20': 'ETH',     // ERC-20 token on Ethereum, uses ETH xpub
 };
 
 /**
