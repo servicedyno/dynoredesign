@@ -2331,6 +2331,44 @@ const getTransactionConfirmations = async (
   }
 };
 
+/**
+ * Fetch actual on-chain gas cost for a confirmed transaction.
+ * Returns gas cost in the native token (ETH for ERC20, TRX for TRC20, etc.)
+ */
+const getTransactionGasCost = async (
+  txHash: string,
+  currency: string
+): Promise<{ gasCostNative: number; gasToken: string }> => {
+  const tatumSdk = await getTatumSDK();
+
+  try {
+    if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
+      const txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash) as Record<string, unknown>;
+      const gasUsed = Number(txData?.gasUsed || 0);
+      const gasPriceWei = Number(txData?.gasPrice || 0);
+      const gasCostEth = (gasUsed * gasPriceWei) / 1e18;
+      console.log(`[getTransactionGasCost] ETH TX ${txHash}: gasUsed=${gasUsed}, gasPrice=${gasPriceWei} wei, cost=${gasCostEth} ETH`);
+      return { gasCostNative: gasCostEth, gasToken: "ETH" };
+    }
+
+    if (currency === "TRX" || currency === "USDT-TRC20") {
+      const txData = await tatumSdk.blockchain.tron.tronGetTransaction(txHash) as Record<string, unknown>;
+      const ret = (txData?.ret as Array<Record<string, unknown>>) || [];
+      const feeSun = Number(ret[0]?.fee || 0);
+      const gasCostTrx = feeSun / 1_000_000;
+      console.log(`[getTransactionGasCost] TRX TX ${txHash}: fee=${feeSun} SUN, cost=${gasCostTrx} TRX`);
+      return { gasCostNative: gasCostTrx, gasToken: "TRX" };
+    }
+
+    console.log(`[getTransactionGasCost] Unsupported currency ${currency} for gas cost lookup`);
+    return { gasCostNative: 0, gasToken: currency };
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.warn(`[getTransactionGasCost] Failed to fetch gas cost for ${txHash}: ${err.message}`);
+    return { gasCostNative: 0, gasToken: currency };
+  }
+};
+
 export default {
   generateWallet,
   createVirtualAccount,
