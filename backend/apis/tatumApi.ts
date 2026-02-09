@@ -1575,14 +1575,25 @@ const assetToOtherAddress = async ({
     });
   } else if (currency === "XRP") {
     // XRP native transfer
+    // Auto-add destination tag when sending to admin XRP wallet (exchange wallets require it)
+    const adminXrpWallet = process.env.XRP || "";
+    const adminDestTag = process.env.XRP_ADMIN_DESTINATION_TAG ? Number(process.env.XRP_ADMIN_DESTINATION_TAG) : undefined;
+    const destinationTag = (toAddress === adminXrpWallet && adminDestTag) ? adminDestTag : undefined;
+    
     transaction = await tatumSdk.blockchain.xrp.xrpTransferBlockchain({
       fromAccount: fromAddress,
       to: toAddress,
       amount: Number(amount).toFixed(6).toString(),
       fromSecret: privateKey,
-    });
+      ...(destinationTag !== undefined && { destinationTag }),
+    } as any);
   } else if (currency === "RLUSD") {
     // RLUSD token transfer on XRP Ledger
+    // Auto-add destination tag when sending to admin XRP wallet
+    const adminXrpWallet = process.env.XRP || "";
+    const adminDestTag = process.env.XRP_ADMIN_DESTINATION_TAG ? Number(process.env.XRP_ADMIN_DESTINATION_TAG) : undefined;
+    const destinationTag = (toAddress === adminXrpWallet && adminDestTag) ? adminDestTag : undefined;
+    
     const rlusdIssuer = process.env.RLUSD_ISSUER || "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
     const rlusdCurrencyHex = process.env.RLUSD_CURRENCY_HEX || "524C555344000000000000000000000000000000";
     transaction = await tatumSdk.blockchain.xrp.xrpTransferBlockchain({
@@ -1592,6 +1603,7 @@ const assetToOtherAddress = async ({
       fromSecret: privateKey,
       issuerAccount: rlusdIssuer,
       token: rlusdCurrencyHex,
+      ...(destinationTag !== undefined && { destinationTag }),
     } as any);
   } else if (currency === "POLYGON") {
     // Polygon native transfer (POL)
