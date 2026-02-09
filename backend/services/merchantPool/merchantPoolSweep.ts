@@ -144,6 +144,10 @@ export const fundGasIfNeeded = async (
           estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? feeEstimate?.slow ?? 0);
         } else if (gasToken === "TRX") {
           estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 5);
+        } else if (gasToken === "XRP") {
+          estimatedGas = Number(feeEstimate?.fast ?? 0.00005);
+        } else if (gasToken === "POLYGON") {
+          estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 0.01);
         }
         
         console.log(`[SmartGas] Estimated gas for ${walletType} transfer: ${estimatedGas} ${gasToken}`);
