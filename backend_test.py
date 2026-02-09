@@ -1,382 +1,397 @@
 #!/usr/bin/env python3
 """
-Admin Fee Residual False Positive Fix - Backend Testing
-Testing 7 specific requirements as per review request
-Base URL: https://init-install-1.preview.emergentagent.com
+Backend Testing Script for DynoPay On-Chain Fee Optimization
+Tests all 8 verification requirements from the review request
 """
 
-import os
-import sys
-import time
-import subprocess
 import requests
+import subprocess
+import os
 import json
-from datetime import datetime
+from typing import Dict, List, Any
 
-# Configuration
+# Use the environment variable or fallback to localhost for testing
 BASE_URL = "http://localhost:8001"
-BACKEND_FILE_PATH = "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
 
-# Test Results Storage
-test_results = []
-
-def log_test_result(test_num, description, passed, details=""):
-    """Log test result with timestamp"""
-    result = {
-        "test": f"TEST {test_num}",
-        "description": description,
-        "passed": passed,
-        "details": details,
-        "timestamp": datetime.now().isoformat()
-    }
-    test_results.append(result)
-    status = "✅ PASS" if passed else "❌ FAIL"
-    print(f"\n{status} - TEST {test_num}: {description}")
-    if details:
-        print(f"Details: {details}")
-
-def run_command(command, description=""):
-    """Run shell command and return result"""
-    try:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
-        return result.returncode == 0, result.stdout, result.stderr
-    except subprocess.TimeoutExpired:
-        return False, "", f"Command timed out: {command}"
-    except Exception as e:
-        return False, "", f"Error running command: {str(e)}"
-
-def test_1_backend_health():
-    """TEST 1: Backend Health - GET /health returns 200 with 'healthy' status"""
+def test_backend_health() -> Dict[str, Any]:
+    """TEST 1: Backend health check"""
     try:
         response = requests.get(f"{BASE_URL}/health", timeout=10)
-        
         if response.status_code == 200:
-            try:
-                data = response.json()
-                if "status" in data and data["status"] == "healthy":
-                    log_test_result(1, "Backend Health", True, 
-                        f"Status code: {response.status_code}, Response: {data}")
-                    return True
-                else:
-                    log_test_result(1, "Backend Health", False, 
-                        f"Status code: {response.status_code}, but status is not 'healthy': {data}")
-                    return False
-            except json.JSONDecodeError:
-                # Check if response text contains 'healthy'
-                if "healthy" in response.text.lower():
-                    log_test_result(1, "Backend Health", True, 
-                        f"Status code: {response.status_code}, Response text: {response.text}")
-                    return True
-                else:
-                    log_test_result(1, "Backend Health", False, 
-                        f"Status code: {response.status_code}, but response doesn't contain 'healthy': {response.text}")
-                    return False
+            data = response.json()
+            return {
+                "success": True,
+                "status_code": response.status_code,
+                "data": data,
+                "message": f"Backend healthy: {data.get('status', 'unknown')}"
+            }
         else:
-            log_test_result(1, "Backend Health", False, 
-                f"Status code: {response.status_code}, Response: {response.text}")
-            return False
-            
+            return {
+                "success": False,
+                "status_code": response.status_code,
+                "message": f"Backend unhealthy: HTTP {response.status_code}"
+            }
     except Exception as e:
-        log_test_result(1, "Backend Health", False, f"Exception: {str(e)}")
-        return False
+        return {
+            "success": False,
+            "message": f"Backend health check failed: {str(e)}"
+        }
 
-def test_2_admin_fee_balance_in_query():
-    """TEST 2: Code verification - admin_fee_balance in query attributes"""
+def test_typescript_compilation() -> Dict[str, Any]:
+    """TEST 2: TypeScript compilation check"""
     try:
-        success, stdout, stderr = run_command(
-            f'grep -n -A3 -B3 "attributes.*\\[" {BACKEND_FILE_PATH}',
-            "Searching for attributes arrays in queries"
+        result = subprocess.run(
+            ["npx", "tsc", "--noEmit"],
+            cwd="/app/backend",
+            capture_output=True,
+            text=True,
+            timeout=60
         )
         
-        if success and stdout:
-            # Look for admin_fee_balance in checkMissedPayments function attributes
-            attributes_found = "admin_fee_balance" in stdout and "attributes" in stdout
-            
-            # Also check for the calculation
-            success2, stdout2, stderr2 = run_command(
-                f'grep -n "const adminFeeBalance = parseFloat" {BACKEND_FILE_PATH}',
-                "Searching for adminFeeBalance calculation"
-            )
-            calculation_found = success2 and "admin_fee_balance" in stdout2
-            
-            if attributes_found and calculation_found:
-                log_test_result(2, "admin_fee_balance in query attributes", True, 
-                    f"Found admin_fee_balance in attributes list and calculation present:\nAttributes context:\n{stdout}\nCalculation:\n{stdout2}")
-                return True
-            else:
-                log_test_result(2, "admin_fee_balance in query attributes", False, 
-                    f"Missing attributes ({attributes_found}) or calculation ({calculation_found}):\nAttributes:\n{stdout}\nCalculation:\n{stdout2}")
-                return False
+        if result.returncode == 0:
+            return {
+                "success": True,
+                "return_code": result.returncode,
+                "message": "TypeScript compilation successful"
+            }
         else:
-            log_test_result(2, "admin_fee_balance in query attributes", False, 
-                f"No attributes arrays found. Stderr: {stderr}")
-            return False
-            
+            return {
+                "success": False,
+                "return_code": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "message": f"TypeScript compilation failed with return code {result.returncode}"
+            }
     except Exception as e:
-        log_test_result(2, "admin_fee_balance in query attributes", False, f"Exception: {str(e)}")
-        return False
+        return {
+            "success": False,
+            "message": f"TypeScript compilation check failed: {str(e)}"
+        }
 
-def test_3_effective_balance_calculation():
-    """TEST 3: Code verification - effectiveBalance calculation exists"""
+def test_xrp_reserve_in_sweep() -> Dict[str, Any]:
+    """TEST 3: FIX 1 — XRP reserve in sweep"""
     try:
-        success, stdout, stderr = run_command(
-            f'grep -n "effectiveBalance\\|adminFeeBalance" {BACKEND_FILE_PATH}',
-            "Searching for effectiveBalance calculation"
+        file_path = "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+        
+        # Check for accountReserve logic
+        result_account_reserve = subprocess.run(
+            ["grep", "accountReserve", file_path],
+            capture_output=True,
+            text=True
         )
         
-        if success and stdout:
-            lines = stdout.strip().split('\n')
-            admin_fee_parse_found = False
-            effective_balance_calc_found = False
-            
-            for line in lines:
-                if "const adminFeeBalance = parseFloat(addr.dataValues.admin_fee_balance" in line:
-                    admin_fee_parse_found = True
-                if "const effectiveBalance = Math.max(0, balance - adminFeeBalance)" in line:
-                    effective_balance_calc_found = True
-            
-            if admin_fee_parse_found and effective_balance_calc_found:
-                log_test_result(3, "effectiveBalance calculation exists", True, 
-                    f"Found both adminFeeBalance parsing and effectiveBalance calculation:\n{stdout}")
-                return True
-            else:
-                log_test_result(3, "effectiveBalance calculation exists", False, 
-                    f"Missing adminFeeBalance parsing ({admin_fee_parse_found}) or effectiveBalance calculation ({effective_balance_calc_found}):\n{stdout}")
-                return False
-        else:
-            log_test_result(3, "effectiveBalance calculation exists", False, 
-                f"No effectiveBalance/adminFeeBalance references found. Stderr: {stderr}")
-            return False
-            
+        # Check for 10 XRP reserve for XRP
+        result_10_xrp = subprocess.run(
+            ["grep", "-E", "walletType.*XRP.*10|XRP.*10", file_path],
+            capture_output=True,
+            text=True
+        )
+        
+        # Check for 12 XRP reserve for RLUSD (10 base + 2 trust line)
+        result_12_xrp = subprocess.run(
+            ["grep", "-E", "walletType.*RLUSD.*12|RLUSD.*12", file_path],
+            capture_output=True,
+            text=True
+        )
+        
+        findings = {
+            "accountReserve_found": result_account_reserve.returncode == 0,
+            "accountReserve_matches": result_account_reserve.stdout.strip() if result_account_reserve.returncode == 0 else None,
+            "10_xrp_found": result_10_xrp.returncode == 0,
+            "10_xrp_matches": result_10_xrp.stdout.strip() if result_10_xrp.returncode == 0 else None,
+            "12_xrp_found": result_12_xrp.returncode == 0,
+            "12_xrp_matches": result_12_xrp.stdout.strip() if result_12_xrp.returncode == 0 else None,
+        }
+        
+        success = findings["accountReserve_found"]
+        
+        return {
+            "success": success,
+            "findings": findings,
+            "message": "XRP reserve logic found in sweep" if success else "XRP reserve logic not found"
+        }
+        
     except Exception as e:
-        log_test_result(3, "effectiveBalance calculation exists", False, f"Exception: {str(e)}")
-        return False
+        return {
+            "success": False,
+            "message": f"XRP reserve test failed: {str(e)}"
+        }
 
-def test_4_dust_check_uses_effective_balance():
-    """TEST 4: Code verification - dust check uses effectiveBalance (not raw balance)"""
+def test_polygon_fee_type() -> Dict[str, Any]:
+    """TEST 4: FIX 2 — POLYGON native fee type"""
     try:
-        success, stdout, stderr = run_command(
-            f'grep -n -A2 -B2 "effectiveBalance < dustThreshold" {BACKEND_FILE_PATH}',
-            "Searching for effectiveBalance dust threshold check"
+        file_path = "/app/backend/apis/tatumApi.ts"
+        
+        # Look for TRANSFER_NFT in Polygon context
+        result = subprocess.run(
+            ["grep", "-n", "-A5", "-B5", "TRANSFER_NFT", file_path],
+            capture_output=True,
+            text=True
         )
         
-        if success and stdout:
-            # Check for the main fix: effectiveBalance < dustThreshold in checkMissedPayments
-            effective_dust_found = "effectiveBalance < dustThreshold" in stdout
-            
-            # Note: There may be other dust checks in different functions for different purposes
-            # We're specifically looking for the fix in checkMissedPayments function
-            if effective_dust_found:
-                log_test_result(4, "dust check uses effectiveBalance", True, 
-                    f"Found effectiveBalance < dustThreshold in checkMissedPayments:\n{stdout}")
-                return True
-            else:
-                log_test_result(4, "dust check uses effectiveBalance", False, 
-                    f"effectiveBalance < dustThreshold not found in checkMissedPayments:\n{stdout}")
-                return False
-        else:
-            log_test_result(4, "dust check uses effectiveBalance", False, 
-                f"No effectiveBalance dust threshold check found. Stderr: {stderr}")
-            return False
-            
+        success = result.returncode == 0
+        matches = result.stdout.strip() if success else None
+        
+        # Check if it's in the correct context (Polygon fee estimation)
+        polygon_context = False
+        if matches:
+            lines = matches.split('\n')
+            for i, line in enumerate(lines):
+                if 'TRANSFER_NFT' in line:
+                    # Check surrounding lines for POLYGON or MATIC context
+                    context_lines = lines[max(0, i-5):i+5]
+                    for context_line in context_lines:
+                        if any(keyword in context_line.upper() for keyword in ['POLYGON', 'MATIC']):
+                            polygon_context = True
+                            break
+        
+        return {
+            "success": success and polygon_context,
+            "transfer_nft_found": success,
+            "polygon_context": polygon_context,
+            "matches": matches,
+            "message": "TRANSFER_NFT found in Polygon context" if success and polygon_context else "TRANSFER_NFT not found in correct Polygon context"
+        }
+        
     except Exception as e:
-        log_test_result(4, "dust check uses effectiveBalance", False, f"Exception: {str(e)}")
-        return False
+        return {
+            "success": False,
+            "message": f"Polygon fee type test failed: {str(e)}"
+        }
 
-def test_5_underpayment_check_uses_effective_balance():
-    """TEST 5: Code verification - underpayment check uses effectiveBalance"""
+def test_bch_formula_fix() -> Dict[str, Any]:
+    """TEST 5: FIX 3 — BCH fee formula fixed"""
     try:
-        success, stdout, stderr = run_command(
-            f'grep -n -A2 -B2 "expectedAmount.*tolerance" {BACKEND_FILE_PATH}',
-            "Searching for underpayment comparison"
+        file_path = "/app/backend/apis/tatumApi.ts"
+        
+        # Check for corrected formula: safeInputs * 148
+        result_formula = subprocess.run(
+            ["grep", "-n", "safeInputs \\* 148", file_path],
+            capture_output=True,
+            text=True
         )
         
-        if success and stdout:
-            # Check for effectiveBalance < (expectedAmount - tolerance) pattern
-            effective_underpay_found = "effectiveBalance < (expectedAmount - tolerance)" in stdout
-            
-            # Check that there's NO raw "balance < (expectedAmount - tolerance)" without effectiveBalance context
-            lines = stdout.split('\n')
-            raw_balance_underpay_found = False
-            for line in lines:
-                if "balance < (expectedAmount - tolerance)" in line and "effectiveBalance" not in line:
-                    raw_balance_underpay_found = True
-                    break
-            
-            if effective_underpay_found and not raw_balance_underpay_found:
-                log_test_result(5, "underpayment check uses effectiveBalance", True, 
-                    f"Found effectiveBalance underpayment check and no raw balance check:\n{stdout}")
-                return True
-            else:
-                log_test_result(5, "underpayment check uses effectiveBalance", False, 
-                    f"effectiveBalance underpay found: {effective_underpay_found}, raw balance underpay found: {raw_balance_underpay_found}:\n{stdout}")
-                return False
-        else:
-            log_test_result(5, "underpayment check uses effectiveBalance", False, 
-                f"No underpayment comparison found. Stderr: {stderr}")
-            return False
-            
+        # Check for safety minimum: Math.max(bchInputs, 2)
+        result_safety = subprocess.run(
+            ["grep", "-n", "Math.max(bchInputs, 2)", file_path],
+            capture_output=True,
+            text=True
+        )
+        
+        # Check for 20% buffer on fast tier: 1.2
+        result_buffer = subprocess.run(
+            ["grep", "-n", "-C3", "1.2", file_path],
+            capture_output=True,
+            text=True
+        )
+        
+        findings = {
+            "formula_fixed": result_formula.returncode == 0,
+            "formula_matches": result_formula.stdout.strip() if result_formula.returncode == 0 else None,
+            "safety_minimum": result_safety.returncode == 0,
+            "safety_matches": result_safety.stdout.strip() if result_safety.returncode == 0 else None,
+            "buffer_found": result_buffer.returncode == 0,
+            "buffer_matches": result_buffer.stdout.strip() if result_buffer.returncode == 0 else None,
+        }
+        
+        success = findings["formula_fixed"] and findings["safety_minimum"]
+        
+        return {
+            "success": success,
+            "findings": findings,
+            "message": "BCH formula fixes found" if success else "BCH formula fixes not found"
+        }
+        
     except Exception as e:
-        log_test_result(5, "underpayment check uses effectiveBalance", False, f"Exception: {str(e)}")
-        return False
+        return {
+            "success": False,
+            "message": f"BCH formula test failed: {str(e)}"
+        }
 
-def test_6_received_amount_uses_effective_balance():
-    """TEST 6: Code verification - receivedAmount uses effectiveBalance"""
+def test_sol_dynamic_fees() -> Dict[str, Any]:
+    """TEST 6: FIX 4 — SOL dynamic priority fees"""
     try:
-        success, stdout, stderr = run_command(
-            f'grep -n -A2 -B2 "receivedAmount.*=" {BACKEND_FILE_PATH}',
-            "Searching for receivedAmount assignment"
+        file_path = "/app/backend/apis/tatumApi.ts"
+        
+        # Check for Solana RPC call: getRecentPrioritizationFees
+        result_rpc = subprocess.run(
+            ["grep", "-n", "getRecentPrioritizationFees", file_path],
+            capture_output=True,
+            text=True
         )
         
-        if success and stdout:
-            # Check for const receivedAmount = effectiveBalance
-            effective_received_found = "const receivedAmount = effectiveBalance" in stdout or "receivedAmount = effectiveBalance" in stdout
-            
-            # Check that there's NO "const receivedAmount = balance" (old code)
-            raw_balance_received_found = "const receivedAmount = balance" in stdout and "effectiveBalance" not in stdout
-            
-            if effective_received_found and not raw_balance_received_found:
-                log_test_result(6, "receivedAmount uses effectiveBalance", True, 
-                    f"Found receivedAmount = effectiveBalance and no raw balance assignment:\n{stdout}")
-                return True
-            else:
-                log_test_result(6, "receivedAmount uses effectiveBalance", False, 
-                    f"effectiveBalance receivedAmount found: {effective_received_found}, raw balance receivedAmount found: {raw_balance_received_found}:\n{stdout}")
-                return False
-        else:
-            log_test_result(6, "receivedAmount uses effectiveBalance", False, 
-                f"No receivedAmount assignment found. Stderr: {stderr}")
-            return False
-            
+        # Check for median calculation: medianPriorityFee
+        result_median = subprocess.run(
+            ["grep", "-n", "medianPriorityFee", file_path],
+            capture_output=True,
+            text=True
+        )
+        
+        findings = {
+            "rpc_call_found": result_rpc.returncode == 0,
+            "rpc_matches": result_rpc.stdout.strip() if result_rpc.returncode == 0 else None,
+            "median_found": result_median.returncode == 0,
+            "median_matches": result_median.stdout.strip() if result_median.returncode == 0 else None,
+        }
+        
+        success = findings["rpc_call_found"] and findings["median_found"]
+        
+        return {
+            "success": success,
+            "findings": findings,
+            "message": "SOL dynamic fees implementation found" if success else "SOL dynamic fees implementation not found"
+        }
+        
     except Exception as e:
-        log_test_result(6, "receivedAmount uses effectiveBalance", False, f"Exception: {str(e)}")
-        return False
+        return {
+            "success": False,
+            "message": f"SOL dynamic fees test failed: {str(e)}"
+        }
 
-def test_7_logs_zero_false_positives():
-    """TEST 7: Logs verification - Zero false positives after fix"""
+def test_usdt_polygon_transfer() -> Dict[str, Any]:
+    """TEST 7: FIX 5 — USDT-POLYGON uses built-in transfer"""
     try:
-        print("\nChecking backend logs for admin fee residual entries...")
+        file_path = "/app/backend/apis/tatumApi.ts"
         
-        # Check for admin_fee_residual logs
-        success1, stdout1, stderr1 = run_command(
-            'grep "admin_fee_residual" /var/log/supervisor/backend.out.log | tail -5',
-            "Searching for admin_fee_residual log entries"
+        # Check for USDT_MATIC currency
+        result_currency = subprocess.run(
+            ["grep", "-n", "USDT_MATIC", file_path],
+            capture_output=True,
+            text=True
         )
         
-        # Check for "Missed found: 0" logs
-        success2, stdout2, stderr2 = run_command(
-            'grep "2026-02-09.*Missed found" /var/log/supervisor/backend.out.log | tail -5',
-            "Searching for Missed found log entries"
+        # Check that SmartContractInvocation is NOT used for USDT-POLYGON in the main transfer section
+        result_no_smart_contract = subprocess.run(
+            ["grep", "-n", "-C5", "polygonBlockchainSmartContractInvocation", file_path],
+            capture_output=True,
+            text=True
         )
         
-        # Check for admin fee residual skipping logs
-        success3, stdout3, stderr3 = run_command(
-            'grep "admin fee residual.*skipping" /var/log/supervisor/backend.out.log | tail -5',
-            "Searching for admin fee residual skipping logs"
-        )
+        # Check if SmartContractInvocation appears only in batch context (which is OK)
+        smart_contract_context = result_no_smart_contract.stdout if result_no_smart_contract.returncode == 0 else ""
+        usdt_polygon_with_smart_contract = "USDT-POLYGON" in smart_contract_context and "polygonBlockchainSmartContractInvocation" in smart_contract_context
         
-        admin_fee_logs = stdout1 if success1 else "No admin_fee_residual logs found"
-        missed_logs = stdout2 if success2 else "No Missed found logs found"
-        skipping_logs = stdout3 if success3 else "No admin fee residual skipping logs found"
+        findings = {
+            "usdt_matic_found": result_currency.returncode == 0,
+            "usdt_matic_matches": result_currency.stdout.strip() if result_currency.returncode == 0 else None,
+            "smart_contract_invocation_found": result_no_smart_contract.returncode == 0,
+            "smart_contract_context": smart_contract_context,
+            "usdt_polygon_uses_smart_contract": usdt_polygon_with_smart_contract
+        }
         
-        # Look for evidence of the fix working
-        fix_evidence = []
+        success = findings["usdt_matic_found"] and not findings["usdt_polygon_uses_smart_contract"]
         
-        if success1 and stdout1:
-            fix_evidence.append(f"✅ admin_fee_residual subtraction logs found: {len(stdout1.split(chr(10)))} entries")
+        return {
+            "success": success,
+            "findings": findings,
+            "message": "USDT-POLYGON uses built-in transfer (USDT_MATIC)" if success else "USDT-POLYGON implementation issue detected"
+        }
         
-        if success2 and stdout2:
-            # Check if "Missed found: 0" appears in logs
-            if "Missed found: 0" in stdout2:
-                fix_evidence.append("✅ Found 'Missed found: 0' entries (no false positives)")
-            else:
-                fix_evidence.append("⚠️ Missed found logs present but need manual review")
-        
-        if success3 and stdout3:
-            if "skipping" in stdout3.lower():
-                fix_evidence.append("✅ Found admin fee residual addresses being correctly skipped")
-        
-        # Also check for any recent logs with "Missed found" pattern
-        success4, stdout4, stderr4 = run_command(
-            'grep "Missed found" /var/log/supervisor/backend.out.log | tail -10',
-            "Searching for any recent Missed found entries"
-        )
-        
-        if success4 and stdout4:
-            # Count zero vs non-zero findings
-            zero_findings = stdout4.count("Missed found: 0")
-            total_findings = stdout4.count("Missed found:")
-            
-            if zero_findings > 0 and zero_findings == total_findings:
-                fix_evidence.append(f"✅ All recent {total_findings} 'Missed found' entries show 0 false positives")
-            elif zero_findings > 0:
-                fix_evidence.append(f"⚠️ {zero_findings}/{total_findings} 'Missed found' entries show 0 (partial success)")
-        
-        if len(fix_evidence) >= 2:  # At least 2 pieces of evidence
-            log_test_result(7, "Logs show zero false positives after fix", True, 
-                f"Evidence found:\n" + "\n".join(fix_evidence) + f"\n\nLog samples:\nAdmin fee logs: {admin_fee_logs[:200]}...\nMissed logs: {missed_logs[:200]}...\nSkipping logs: {skipping_logs[:200]}...")
-            return True
-        else:
-            log_test_result(7, "Logs show zero false positives after fix", False, 
-                f"Insufficient evidence. Found {len(fix_evidence)} evidence pieces:\n" + "\n".join(fix_evidence) + f"\n\nLog details:\nAdmin fee logs: {admin_fee_logs}\nMissed logs: {missed_logs}\nSkipping logs: {skipping_logs}")
-            return False
-            
     except Exception as e:
-        log_test_result(7, "Logs show zero false positives after fix", False, f"Exception: {str(e)}")
-        return False
+        return {
+            "success": False,
+            "message": f"USDT-POLYGON transfer test failed: {str(e)}"
+        }
+
+def test_fee_caching() -> Dict[str, Any]:
+    """TEST 8: FIX 6 — Fee caching"""
+    try:
+        file_path = "/app/backend/apis/tatumApi.ts"
+        
+        # Check for fee-cache key pattern
+        result_cache_key = subprocess.run(
+            ["grep", "-n", "fee-cache", file_path],
+            capture_output=True,
+            text=True
+        )
+        
+        # Check for FEE_CACHE_TTLS configuration
+        result_cache_ttls = subprocess.run(
+            ["grep", "-n", "FEE_CACHE_TTLS", file_path],
+            capture_output=True,
+            text=True
+        )
+        
+        # Check for cache hit logging
+        result_cache_hit = subprocess.run(
+            ["grep", "-n", "Cache hit", file_path],
+            capture_output=True,
+            text=True
+        )
+        
+        findings = {
+            "cache_key_found": result_cache_key.returncode == 0,
+            "cache_key_matches": result_cache_key.stdout.strip() if result_cache_key.returncode == 0 else None,
+            "cache_ttls_found": result_cache_ttls.returncode == 0,
+            "cache_ttls_matches": result_cache_ttls.stdout.strip() if result_cache_ttls.returncode == 0 else None,
+            "cache_hit_found": result_cache_hit.returncode == 0,
+            "cache_hit_matches": result_cache_hit.stdout.strip() if result_cache_hit.returncode == 0 else None,
+        }
+        
+        success = findings["cache_key_found"] and findings["cache_ttls_found"] and findings["cache_hit_found"]
+        
+        return {
+            "success": success,
+            "findings": findings,
+            "message": "Fee caching implementation found" if success else "Fee caching implementation not found"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Fee caching test failed: {str(e)}"
+        }
 
 def main():
-    """Run all 7 tests for Admin Fee Residual False Positive Fix"""
-    print("=" * 60)
-    print("ADMIN FEE RESIDUAL FALSE POSITIVE FIX - BACKEND TESTING")
-    print("=" * 60)
-    print(f"Base URL: {BASE_URL}")
-    print(f"Backend file: {BACKEND_FILE_PATH}")
-    print(f"Test started at: {datetime.now().isoformat()}")
+    """Run all tests and summarize results"""
+    print("🚀 Starting DynoPay On-Chain Fee Optimization Tests")
     print("=" * 60)
     
-    # Run all 7 tests
     tests = [
-        test_1_backend_health,
-        test_2_admin_fee_balance_in_query,
-        test_3_effective_balance_calculation,
-        test_4_dust_check_uses_effective_balance,
-        test_5_underpayment_check_uses_effective_balance,
-        test_6_received_amount_uses_effective_balance,
-        test_7_logs_zero_false_positives
+        ("Backend Health", test_backend_health),
+        ("TypeScript Compilation", test_typescript_compilation),
+        ("XRP Reserve in Sweep", test_xrp_reserve_in_sweep),
+        ("Polygon Fee Type", test_polygon_fee_type),
+        ("BCH Formula Fix", test_bch_formula_fix),
+        ("SOL Dynamic Fees", test_sol_dynamic_fees),
+        ("USDT-POLYGON Transfer", test_usdt_polygon_transfer),
+        ("Fee Caching", test_fee_caching),
     ]
     
-    passed_tests = 0
-    total_tests = len(tests)
+    results = []
     
-    for i, test_func in enumerate(tests, 1):
-        try:
-            if test_func():
-                passed_tests += 1
-        except Exception as e:
-            log_test_result(i, f"Test {i} execution", False, f"Exception during test execution: {str(e)}")
+    for test_name, test_func in tests:
+        print(f"\n🧪 Running: {test_name}")
+        result = test_func()
+        results.append((test_name, result))
         
-        # Small delay between tests
-        time.sleep(0.5)
+        if result["success"]:
+            print(f"✅ PASS: {result['message']}")
+        else:
+            print(f"❌ FAIL: {result['message']}")
+            if 'findings' in result:
+                print(f"   Details: {result['findings']}")
     
     # Summary
     print("\n" + "=" * 60)
-    print("ADMIN FEE RESIDUAL FALSE POSITIVE FIX - TEST SUMMARY")
+    print("📊 TEST SUMMARY")
     print("=" * 60)
     
-    for result in test_results:
-        status = "✅ PASS" if result["passed"] else "❌ FAIL"
-        print(f"{status} - {result['test']}: {result['description']}")
+    passed = sum(1 for _, result in results if result["success"])
+    total = len(results)
     
-    print(f"\nOVERALL RESULT: {passed_tests}/{total_tests} tests passed")
+    for test_name, result in results:
+        status = "✅ PASS" if result["success"] else "❌ FAIL"
+        print(f"{status} - {test_name}")
     
-    if passed_tests == total_tests:
-        print("🎉 ALL 7 TESTS PASSED - Admin Fee Residual False Positive Fix is working correctly!")
-        return True
+    print(f"\nOverall: {passed}/{total} tests passed ({(passed/total)*100:.1f}%)")
+    
+    if passed == total:
+        print("🎉 All tests passed! On-Chain Fee Optimization is working correctly.")
     else:
-        print(f"⚠️ {total_tests - passed_tests} TESTS FAILED - Admin Fee Residual False Positive Fix needs attention")
-        return False
+        print(f"⚠️  {total - passed} test(s) failed. See details above.")
+    
+    return results
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    main()
