@@ -244,6 +244,9 @@ export const checkMissedPayments = async (): Promise<{
           'USDT-ERC20': 0.5,
           'USDT-TRC20': 0.5,
           'USDC-ERC20': 0.5,
+          'RLUSD': 0.5,
+          'RLUSD-ERC20': 0.5,
+          'USDT-POLYGON': 0.5,
         };
         const dustThreshold = DUST_THRESHOLDS[walletType] || 0.001;
         
