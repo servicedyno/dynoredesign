@@ -1958,6 +1958,62 @@ const getAddressBalance = async (address: string, currency: string) => {
     res = await tatumSdk.blockchain.bsc.bscGetBalance(address);
   } else if (currency === "BCH") {
     res = await tatumSdk.blockchain.bcash.bchGetTxByAddress(address);
+  } else if (currency === "SOL") {
+    const solRes = await tatumSdk.blockchain.solana.solanaGetBalance(address);
+    res = { balance: solRes?.balance || '0' };
+  } else if (currency === "XRP") {
+    try {
+      const xrpRes = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
+      // XRP balance is in drops, convert to XRP
+      const xrpBalance = xrpRes?.balance ? (Number(xrpRes.balance) / 1000000).toString() : '0';
+      res = { balance: xrpBalance };
+    } catch (e: unknown) {
+      const err = e as { message?: string; body?: any };
+      if ((err.message || '').includes('not.found') || (err.body?.error_message || '').includes('not found')) {
+        res = { balance: '0' };
+      } else { throw e; }
+    }
+  } else if (currency === "RLUSD") {
+    try {
+      const xrpRes = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
+      // Find RLUSD trust line balance from obligations
+      const rlusdIssuer = (process.env.RLUSD_ISSUER || "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De").toLowerCase();
+      let rlusdBalance = '0';
+      if (xrpRes?.obligations) {
+        for (const obligation of xrpRes.obligations) {
+          if ((obligation.currency || '').toUpperCase() === 'RLUSD' || 
+              (obligation.currency || '').toUpperCase().startsWith('524C5553')) {
+            rlusdBalance = obligation.value || '0';
+            break;
+          }
+        }
+      }
+      // Also check assets (some versions return balance in assets)
+      if (rlusdBalance === '0' && xrpRes?.assets) {
+        for (const asset of xrpRes.assets) {
+          if ((asset.currency || '').toUpperCase() === 'RLUSD' || 
+              (asset.currency || '').toUpperCase().startsWith('524C5553')) {
+            rlusdBalance = asset.value || '0';
+            break;
+          }
+        }
+      }
+      res = { balance: rlusdBalance };
+    } catch (e: unknown) {
+      const err = e as { message?: string; body?: any };
+      if ((err.message || '').includes('not.found') || (err.body?.error_message || '').includes('not found')) {
+        res = { balance: '0' };
+      } else { throw e; }
+    }
+  } else if (currency === "POLYGON") {
+    res = await tatumSdk.blockchain.polygon.polygonGetBalance(address);
+  } else if (currency === "USDT-POLYGON") {
+    const tempRes = await tatumSdk.fungibleToken.erc20GetBalance(
+      "MATIC",
+      address,
+      process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"
+    );
+    res = { balance: Number(tempRes.balance) / 1000000 };
   }
   return res;
 };
