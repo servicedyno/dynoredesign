@@ -167,6 +167,8 @@ const acquireLock = async (
     });
     
     if (result === 'OK') {
+      // Store lockValue so releaseLock can verify ownership
+      lockOwners.set(fullKey, lockValue);
       console.log(`[Lock] Acquired: ${lockKey}`);
       return true;
     }
@@ -181,14 +183,49 @@ const acquireLock = async (
   return false;
 };
 
+// Track lock ownership per key for safe release
+const lockOwners = new Map<string, string>();
+
+// Lua script for atomic compare-and-delete (only delete if we own the lock)
+const RELEASE_LOCK_SCRIPT = `
+  if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+  else
+    return 0
+  end
+`;
+
 /**
- * Release a distributed lock
+ * Release a distributed lock (only if current process owns it)
+ * Uses atomic Lua script to prevent releasing another process's lock
  * @param lockKey - Unique key for the lock
  */
 const releaseLock = async (lockKey: string): Promise<void> => {
   const fullKey = `lock:${lockKey}`;
-  await redisClient.del(fullKey);
-  console.log(`[Lock] Released: ${lockKey}`);
+  const lockValue = lockOwners.get(fullKey);
+  
+  if (lockValue) {
+    try {
+      const result = await redisClient.eval(RELEASE_LOCK_SCRIPT, {
+        keys: [fullKey],
+        arguments: [lockValue],
+      });
+      if (result === 1) {
+        console.log(`[Lock] Released: ${lockKey}`);
+      } else {
+        console.warn(`[Lock] Lock expired or owned by another process: ${lockKey}`);
+      }
+    } catch (err) {
+      // Fallback: delete directly if Lua eval fails (e.g., older Redis)
+      await redisClient.del(fullKey);
+      console.log(`[Lock] Released (fallback): ${lockKey}`);
+    }
+    lockOwners.delete(fullKey);
+  } else {
+    // No ownership info — legacy fallback
+    await redisClient.del(fullKey);
+    console.log(`[Lock] Released (no owner): ${lockKey}`);
+  }
 };
 
 /**
