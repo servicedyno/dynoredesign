@@ -7,6 +7,118 @@
 user_problem_statement: "Auto-generate friendly names for API keys and wallets when not provided by user"
 
 current_test_task:
+  - task: "Edge Case Analysis: Fix 18 identified issues across RLUSD-ERC20 support, cron guards, UTXO index, webhook auth, lock safety, and more"
+    implemented: true
+    working: pending
+    files:
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/helper/currencyConvert.ts"
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+      - "/app/backend/services/merchantPool/merchantPoolConfig.ts"
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/services/blockchainFeeService.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/utils/redisInstance.ts"
+      - "/app/backend/routes/index.ts"
+      - "/app/backend/server.ts"
+      - "/app/backend/scripts/debug/check_all_wallets.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          18 EDGE CASE FIXES APPLIED (TypeScript compiles clean, backend healthy):
+          
+          CRITICAL (3 fixes):
+          FIX 1: tatumApi.ts assetToOtherAddress — Added RLUSD-ERC20 to outer if condition (was dead code)
+          FIX 2: currencyConvert.ts normalizeCurrency — RLUSD-ERC20 now maps to RLUSD (was falling through)
+          FIX 3: merchantPoolSweep.ts — Added RLUSD-ERC20 contract address in sweep fee estimation
+          
+          MEDIUM (10 fixes):
+          FIX 4: merchantPoolConfig.ts TOKEN_CONTRACTS — Added RLUSD-ERC20 entry
+          FIX 5: tatumApi.ts createSubscriptionWithUrl — Added RLUSD-ERC20 to ETH chain mapping (2 locations)
+          FIX 6+7: REMOVED sendingLeftover function (unused) from paymentController + server.ts cron
+          FIX 8: blockchainFeeService.ts — Added SOL, XRP, POLYGON, USDC-ERC20, RLUSD-ERC20, USDT-POLYGON, RLUSD, BCH
+          FIX 9: merchantPoolMonitoring.ts orphan DUST_THRESHOLDS — Added SOL:0.01, XRP:0.5, POLYGON:0.05
+          FIX 10: paymentController.ts UTXO index — Now queries correct output index via findUtxoOutputIndex helper
+          FIX 11: server.ts cron guards — processIncomplete, sweeps, missedPayments, orphanDetect all wrapped in acquireLock
+          FIX 12: routes/index.ts webhook auth — Added verifyTatumWebhookSource middleware (HMAC SHA-512, opt-in via TATUM_WEBHOOK_SECRET)
+          
+          LOW (5 fixes):
+          FIX 13: tatumApi.ts getTransactionGasCost — Added POLYGON, XRP, SOL branches
+          FIX 14: merchantPoolMonitoring.ts orphan receivedAmount — Now subtracts existingAdminBalance
+          FIX 15: redisInstance.ts lock — Owner verification via Lua compare-and-delete script
+          FIX 16: tatumApi.ts batch transfer — Added USDC-ERC20 to condition
+          FIX 17: merchantPoolConfig.ts TOKEN_CHAINS fallback — Added RLUSD, USDT-POLYGON, RLUSD-ERC20
+          FIX 18: debug/check_all_wallets.ts — Updated to all 15 chains
+          
+          VERIFY THESE 18 TESTS:
+          
+          TEST 1: Backend healthy
+          - GET /health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - Run: cd /app/backend && npx tsc --noEmit — should exit 0 with no errors
+          
+          TEST 3: FIX 1 — assetToOtherAddress includes RLUSD-ERC20
+          - grep 'currency === "RLUSD-ERC20"' /app/backend/apis/tatumApi.ts should find the outer if-else condition at line ~1368
+          - The condition should be: currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20"
+          
+          TEST 4: FIX 2 — normalizeCurrency handles RLUSD-ERC20
+          - grep 'RLUSD-ERC20' /app/backend/helper/currencyConvert.ts should show: if (upper === "RLUSD" || upper === "RLUSD-ERC20") return "RLUSD";
+          
+          TEST 5: FIX 3 — Sweep has RLUSD-ERC20 contract
+          - grep 'RLUSD-ERC20' /app/backend/services/merchantPool/merchantPoolSweep.ts should show contractAddress branch
+          
+          TEST 6: FIX 4 — TOKEN_CONTRACTS has RLUSD-ERC20
+          - grep 'RLUSD-ERC20' /app/backend/services/merchantPool/merchantPoolConfig.ts should show entry in TOKEN_CONTRACTS
+          
+          TEST 7: FIX 5 — createSubscriptionWithUrl has RLUSD-ERC20
+          - grep 'RLUSD-ERC20' /app/backend/apis/tatumApi.ts | grep -c 'USDC-ERC20.*RLUSD-ERC20' should be >= 2
+          
+          TEST 8: FIX 6+7 — sendingLeftover removed
+          - grep 'sendingLeftover' /app/backend/controller/paymentController.ts should return 0 matches
+          - grep 'sendingLeftover' /app/backend/server.ts should return 0 matches
+          
+          TEST 9: FIX 8 — blockchainFeeService has all chains
+          - grep 'SOL' /app/backend/services/blockchainFeeService.ts should find SOL in chainMap and chains array
+          - grep 'XRP' /app/backend/services/blockchainFeeService.ts should find XRP
+          - grep 'POLYGON' /app/backend/services/blockchainFeeService.ts should find POLYGON
+          
+          TEST 10: FIX 9 — DUST_THRESHOLDS has SOL/XRP/POLYGON
+          - grep 'SOL.*0.01' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find the entry
+          
+          TEST 11: FIX 10 — UTXO index uses findUtxoOutputIndex
+          - grep 'findUtxoOutputIndex' /app/backend/controller/paymentController.ts should find the call
+          - grep 'findUtxoOutputIndex' /app/backend/apis/tatumApi.ts should find function definition and export
+          
+          TEST 12: FIX 11 — Cron guards with acquireLock
+          - grep 'acquireLock.*cron:' /app/backend/server.ts should find 4 locks (processIncomplete, performScheduledSweeps, checkMissedPayments, detectOrphanPayments)
+          
+          TEST 13: FIX 12 — Webhook auth middleware
+          - grep 'verifyTatumWebhookSource' /app/backend/routes/index.ts should find middleware on tatum-webhook and tatum-crypto-webhook routes
+          - grep 'x-payload-hash' /app/backend/routes/index.ts should find HMAC verification
+          
+          TEST 14: FIX 13 — getTransactionGasCost has POLYGON/XRP/SOL
+          - grep 'POLYGON.*USDT-POLYGON' /app/backend/apis/tatumApi.ts | grep -i 'gasCost' should find the branch
+          
+          TEST 15: FIX 14 — Orphan receivedAmount subtracts admin fee
+          - grep 'balance - existingAdminBalance' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find the fix near receivedAmount
+          
+          TEST 16: FIX 15 — Lock uses Lua compare-and-delete
+          - grep 'redis.call.*del.*KEYS' /app/backend/utils/redisInstance.ts should find the Lua script
+          - grep 'lockOwners' /app/backend/utils/redisInstance.ts should find the owner tracking map
+          
+          TEST 17: FIX 16 — Batch transfer includes USDC-ERC20
+          - The batch transfer condition should have: currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20"
+          
+          TEST 18: FIX 17+18 — TOKEN_CHAINS fallback and debug script
+          - grep 'RLUSD.*USDT-POLYGON.*RLUSD-ERC20' /app/backend/services/merchantPool/merchantPoolConfig.ts should find the fallback
+          - grep 'BCH' /app/backend/scripts/debug/check_all_wallets.ts should find all 15 chains
+          
+          Base URL for curl: http://localhost:8001 (internal)
   - task: "ERC20 Payment Recovery: SmartGas Bug Fix + Failed Payment Auto-Recovery"
     implemented: true
     working: true
