@@ -2721,7 +2721,7 @@ const getTransactionGasCost = async (
   const tatumSdk = await getTatumSDK();
 
   try {
-    if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20") {
+    if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20") {
       const txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash) as Record<string, unknown>;
       const gasUsed = Number(txData?.gasUsed || 0);
       const gasPriceWei = Number(txData?.gasPrice || 0);
