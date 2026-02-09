@@ -1998,8 +1998,9 @@ const getAddressBalance = async (address: string, currency: string) => {
       // Find RLUSD trust line balance from obligations
       const rlusdIssuer = (process.env.RLUSD_ISSUER || "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De").toLowerCase();
       let rlusdBalance = '0';
-      if (xrpRes?.obligations) {
-        for (const obligation of xrpRes.obligations) {
+      const xrpResAny = xrpRes as any;
+      if (xrpResAny?.obligations) {
+        for (const obligation of xrpResAny.obligations) {
           if ((obligation.currency || '').toUpperCase() === 'RLUSD' || 
               (obligation.currency || '').toUpperCase().startsWith('524C5553')) {
             rlusdBalance = obligation.value || '0';
@@ -2008,11 +2009,11 @@ const getAddressBalance = async (address: string, currency: string) => {
         }
       }
       // Also check assets (some versions return balance in assets)
-      if (rlusdBalance === '0' && xrpRes?.assets) {
-        for (const asset of xrpRes.assets) {
+      if (rlusdBalance === '0' && xrpResAny?.assets) {
+        for (const asset of xrpResAny.assets) {
           if ((asset.currency || '').toUpperCase() === 'RLUSD' || 
               (asset.currency || '').toUpperCase().startsWith('524C5553')) {
-            rlusdBalance = asset.value || '0';
+            rlusdBalance = (asset as any).value || '0';
             break;
           }
         }
