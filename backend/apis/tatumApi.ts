@@ -2118,6 +2118,20 @@ const getIncomingTransactions = async (
           });
         }
       }
+    } else if (currency === "USDC-ERC20") {
+      const contractAddress = process.env.USDC_CONTRACT;
+      const txData = await tatumSdk.fungibleToken.erc20GetTransactionByAddress(
+        "ETH", address, contractAddress, limit
+      );
+      for (const tx of (txData as ERC20Transaction[]) || []) {
+        if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
+          transactions.push({
+            txId: tx.transactionHash || tx.txId || tx.hash || '',
+            amount: parseFloat(tx.value || '0') / 1e6, // USDC has 6 decimals
+            timestamp: tx.timestamp || tx.blockTimestamp || Date.now()
+          });
+        }
+      }
     } else if (currency === "LTC") {
       const txData = await tatumSdk.blockchain.ltc.ltcGetTxByAddress(
         address, limit, 0
