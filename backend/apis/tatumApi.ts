@@ -1564,35 +1564,22 @@ const assetToOtherAddress = async ({
       } : undefined,
     });
   } else if (currency === "USDT-POLYGON") {
-    // USDT on Polygon (ERC-20 token) — use smart contract invocation
-    const usdtPolygonContract = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+    // USDT on Polygon — use Tatum's built-in USDT_MATIC support (more gas-efficient than raw contract invocation)
     const truncatedAmount = (Math.floor(Number(amount) * 1e6) / 1e6).toString();
-    // USDT on Polygon has 6 decimals
-    const amountInSmallestUnit = String(Math.floor(Number(truncatedAmount) * 1e6));
     
     try {
-      transaction = await tatumSdk.blockchain.polygon.polygonBlockchainSmartContractInvocation({
+      transaction = await tatumSdk.blockchain.polygon.polygonBlockchainTransfer({
         fromPrivateKey: privateKey,
-        contractAddress: usdtPolygonContract,
-        methodName: "transfer",
-        methodABI: {
-          inputs: [
-            { name: "recipient", type: "address" },
-            { name: "amount", type: "uint256" },
-          ],
-          name: "transfer",
-          outputs: [{ name: "", type: "bool" }],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        params: [toAddress, amountInSmallestUnit],
+        to: toAddress,
+        amount: truncatedAmount,
+        currency: "USDT_MATIC",
         fee: fee ? {
           gasPrice: Math.ceil(fee?.gasPrice).toString(),
           gasLimit: (fee?.gasLimit || 65000).toString(),
         } : undefined,
       });
     } catch (polyTokenErr) {
-      console.error(`[assetToOtherAddress] USDT-POLYGON smart contract transfer failed:`, polyTokenErr?.message);
+      console.error(`[assetToOtherAddress] USDT-POLYGON transfer failed:`, polyTokenErr?.message);
       throw polyTokenErr;
     }
   }
