@@ -202,7 +202,7 @@ export const fundGasIfNeeded = async (
     );
 
     let transferFees = null;
-    if (gasToken === "ETH") {
+    if (gasToken === "ETH" || gasToken === "POLYGON") {
       transferFees = await tatumApi.feeEstimation(
         gasToken,
         feeWalletAddress,
