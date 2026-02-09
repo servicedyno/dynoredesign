@@ -192,6 +192,9 @@ const COINGECKO_IDS: Record<string, string> = {
   XRP: 'ripple',
   ADA: 'cardano',
   SOL: 'solana',
+  MATIC: 'matic-network',
+  POLYGON: 'matic-network',
+  RLUSD: 'ripple-usd',
 };
 
 // No per-request cache — FastForex is always called fresh for real-time payments
