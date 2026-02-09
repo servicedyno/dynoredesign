@@ -3110,7 +3110,7 @@ const settleCryptoTransaction = async ({
 
     // FIX: Verify merchant transaction was actually mined for account-based chains
     // This prevents marking payment complete when TX is stuck due to low gas
-    if (["ETH", "BSC", "TRX", "USDT-ERC20", "USDC-ERC20", "USDT-TRC20"].includes(currency)) {
+    if (["ETH", "BSC", "TRX", "USDT-ERC20", "USDC-ERC20", "USDT-TRC20", "SOL", "XRP", "RLUSD", "POLYGON", "USDT-POLYGON"].includes(currency)) {
       const txHash = merchantTransactionDetails?.txId;
       if (txHash) {
         console.log(`[settleCryptoTransaction] Waiting for TX confirmation: ${txHash}`);
