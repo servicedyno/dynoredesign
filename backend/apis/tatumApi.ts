@@ -2881,6 +2881,78 @@ const getTransactionConfirmations = async (
         const currentBlockNumber = blockInfo?.block_header?.raw_data?.number || blockInfo?.blockNumber || 0;
         confirmations = currentBlockNumber - txData.blockNumber + 1;
       }
+    } else if (currency === 'XRP' || currency === 'RLUSD') {
+      // XRP: If transaction is in a validated ledger, it's confirmed
+      try {
+        const headers = await getTatumHeaders();
+        const { data: txData } = await axios.get(
+          `https://api.tatum.io/v3/xrp/transaction/${txHash}`,
+          { headers }
+        );
+        // XRP transactions are final once validated - if we can fetch it, it's confirmed
+        if (txData && (txData.validated === true || txData.meta?.TransactionResult === 'tesSUCCESS')) {
+          confirmations = 1;
+        }
+      } catch (_xrpErr) {
+        // Try XRPL RPC as fallback
+        try {
+          const headers = await getTatumHeaders();
+          const { data: rpcResult } = await axios.post(
+            'https://xrp.tatum.io',
+            {
+              method: 'tx',
+              params: [{ transaction: txHash, binary: false }]
+            },
+            { headers }
+          );
+          if (rpcResult?.result?.validated) {
+            confirmations = 1;
+          }
+        } catch (_rpcErr) {
+          // If we can't check, leave at 0
+        }
+      }
+    } else if (currency === 'SOL') {
+      // Solana: Finalized transactions are confirmed
+      try {
+        const headers = await getTatumHeaders();
+        const { data: rpcResult } = await axios.post(
+          'https://solana-mainnet.gateway.tatum.io',
+          {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'getTransaction',
+            params: [txHash, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0, commitment: 'finalized' }]
+          },
+          { headers }
+        );
+        if (rpcResult?.result && !rpcResult?.result?.meta?.err) {
+          confirmations = 1; // Finalized = confirmed on Solana
+        }
+      } catch (_solErr) {
+        // If we can't check, leave at 0
+      }
+    } else if (currency === 'POLYGON' || currency === 'USDT-POLYGON') {
+      // Polygon: Same as ETH but using polygon endpoint
+      try {
+        const headers = await getTatumHeaders();
+        const { data: txData } = await axios.get(
+          `https://api.tatum.io/v3/polygon/transaction/${txHash}`,
+          { headers }
+        );
+        if (txData && txData.blockNumber) {
+          const { data: currentBlockData } = await axios.get(
+            'https://api.tatum.io/v3/polygon/block/current',
+            { headers }
+          );
+          const currentBlock = Number(currentBlockData);
+          if (currentBlock) {
+            confirmations = currentBlock - txData.blockNumber + 1;
+          }
+        }
+      } catch (_polErr) {
+        // If we can't check, leave at 0
+      }
     }
     
     console.log(`[getTransactionConfirmations] ${currency} TX ${txHash}: ${confirmations}/${required} confirmations`);
