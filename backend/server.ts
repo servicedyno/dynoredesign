@@ -191,11 +191,17 @@ import * as merchantPoolService from "./services/merchantPoolService";
 // Merchant Pool: Sweep accumulated admin fees every 1 minute
 // Handles both threshold-based ($30 USD) and time-based (3 min for ETH/TRX) sweeps
 // Running every 1 min ensures sweeps happen promptly after time threshold is met
-cron.schedule("* * * * *", function () {
-  log("Cron: performMerchantPoolScheduledSweeps running", "info");
-  merchantPoolService.performScheduledSweeps().catch(err => {
+cron.schedule("* * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:performScheduledSweeps", 50, 1);
+  if (!lockAcquired) { log("Cron: performScheduledSweeps skipped (already running)", "info"); return; }
+  try {
+    log("Cron: performMerchantPoolScheduledSweeps running", "info");
+    await merchantPoolService.performScheduledSweeps();
+  } catch (err) {
     log(`Cron: Sweep failed, will retry next cycle: ${err.message}`, "error");
-  });
+  } finally {
+    await releaseLock("cron:performScheduledSweeps");
+  }
 });
 
 // Merchant Pool: Release expired reservations every 2 minutes
