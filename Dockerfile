@@ -48,8 +48,6 @@ COPY --from=builder /app/package.json ./package.json
 # Copy static assets & runtime resources
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/swagger ./swagger
-COPY --from=builder /app/views ./views
-COPY --from=builder /app/templates ./templates
 
 # Create logs directory
 RUN mkdir -p logs
