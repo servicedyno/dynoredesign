@@ -1587,8 +1587,17 @@ const createCryptoPayment = async (
         const hasCachedRate = cachedRate > 0 && cachedCurrency === requestedCurrency && taxAmount === 0;
         console.log(`[createCryptoPayment] Cache debug: rate=${items?.cached_transfer_rate}, currency=${items?.cached_crypto_currency}, parsed=${cachedRate}, requested=${requestedCurrency}, tax=${taxAmount}, hasCached=${hasCachedRate}`);
         
+        // Stablecoin shortcut: USD ↔ USDT/USDC is exactly 1:1 (no exchange rate variance)
+        const normalizedCrypto = requestedCurrency.replace(/-.*$/, '').toUpperCase(); // USDT-TRC20 → USDT
+        const isStablecoinPayment = ['USDT', 'USDC'].includes(normalizedCrypto) && baseCurrency === 'USD';
+        
         let total_crypto_amount: number;
-        if (hasCachedRate) {
+        if (isStablecoinPayment) {
+          // Stablecoins are pegged 1:1 to USD — no rate conversion needed
+          total_crypto_amount = totalAmountWithTax;
+          exchange_rate = 1;
+          console.log(`[createCryptoPayment] 💵 Stablecoin 1:1 peg: $${totalAmountWithTax} USD = ${total_crypto_amount} ${requestedCurrency} (exact)`);
+        } else if (hasCachedRate) {
           // Use cached rate — same currency, no tax adjustment needed
           total_crypto_amount = totalAmountWithTax * cachedRate;
           exchange_rate = cachedRate;
