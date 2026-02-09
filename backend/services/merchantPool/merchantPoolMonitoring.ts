@@ -402,11 +402,11 @@ export const checkMissedPayments = async (): Promise<{
           
           if (failCount >= 3) {
             // Before giving up, check if this is a REAL payment with significant balance
-            // If address has current_payment_id and balance is above dust, try to process using last_payment_context
-            const hasPaymentContext = !!currentPaymentId && balance > (dustThreshold * 5); // Well above dust
+            // If address has current_payment_id and effectiveBalance is above dust, try to process using last_payment_context
+            const hasPaymentContext = !!currentPaymentId && effectiveBalance > (dustThreshold * 5); // Well above dust
             
             if (hasPaymentContext) {
-              console.log(`[MerchantPool] ⚠️ ${walletAddress} - Tatum tx lookup failed ${failCount} times BUT address has payment context and significant balance ${balance} ${walletType}`);
+              console.log(`[MerchantPool] ⚠️ ${walletAddress} - Tatum tx lookup failed ${failCount} times BUT address has payment context and significant effective balance ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance})`);
               console.log(`[MerchantPool] 🔄 Attempting to process using payment context (bypassing tx lookup)...`);
               
               // Try to get last_payment_context from DB
@@ -424,6 +424,7 @@ export const checkMissedPayments = async (): Promise<{
               }
               
               // Reconstruct Redis data from payment context or DB fields
+              // Use effectiveBalance (not raw balance) to exclude admin fee residuals
               const reconstructedRedis = {
                 mode: 'CRYPTO',
                 amount: String(expectedAmount),
@@ -435,7 +436,7 @@ export const checkMissedPayments = async (): Promise<{
                 temp_id: String(addr.dataValues.temp_address_id),
                 adm_id: String(paymentContext?.adm_id || ownerId),
                 company_id: String(paymentContext?.company_id || companyId),
-                receivedAmount: String(balance),
+                receivedAmount: String(effectiveBalance),
                 originalExpectedAmount: String(expectedAmount),
                 fee_payer: paymentContext?.fee_payer || 'company',
                 merchant_amount: paymentContext?.merchant_amount || null,
