@@ -236,6 +236,38 @@ const createWallets = async (_req: express.Request, res: express.Response) => {
             { transaction }
           );
         }
+        // XRP wallet also hosts RLUSD token
+        if (cryptoData[i] === "XRP") {
+          await adminWalletModel.create(
+            {
+              wallet_type: "RLUSD",
+              wallet_address: wallet.address,
+              wallet_account_id: null,
+              currency_type: "CRYPTO",
+              xpub: wallet.xpub,
+              mnemonic: wallet.mnemonic,
+              privateKey: wallet.privateKey,
+              customer_id: null,
+            },
+            { transaction }
+          );
+        }
+        // Polygon wallet also hosts USDT-POLYGON token
+        if (cryptoData[i] === "POLYGON") {
+          await adminWalletModel.create(
+            {
+              wallet_type: "USDT-POLYGON",
+              wallet_address: wallet.address,
+              wallet_account_id: null,
+              currency_type: "CRYPTO",
+              xpub: wallet.xpub,
+              mnemonic: wallet.mnemonic,
+              privateKey: wallet.privateKey,
+              customer_id: null,
+            },
+            { transaction }
+          );
+        }
       }
       transaction.commit();
     } else {
