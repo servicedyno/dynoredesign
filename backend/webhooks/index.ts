@@ -489,6 +489,15 @@ const tatumCryptoWebHook = async (
     await setRedisTTL(processingLockKey, 300); // 5 minute TTL
     console.log("[tatumCryptoWebHook] Acquired processing lock for tx:", payload.txId);
 
+    // Skip outgoing transactions to admin/fee wallets (e.g. sweep or gas funding)
+    const counterAddr = (payload.counterAddress || "").toLowerCase();
+    if (counterAddr && INTERNAL_WALLETS.has(counterAddr)) {
+      console.log(`[tatumCryptoWebHook] Ignoring internal transfer (sweep/gas) to admin wallet: ${payload.counterAddress}`);
+      await setRedisItem(processedTxKey, { processed: true, type: "internal_sweep", timestamp: new Date().toISOString() });
+      await setRedisTTL(processedTxKey, 86400);
+      return res.status(200).end();
+    }
+
     let address = payload.address;
     let items = await getRedisItem("crypto-" + address);
 
