@@ -116,8 +116,8 @@ router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, inv
 
 router.post("/webhook", flutterwaveWebHook);
 router.post("/failed_webhook", flutterwaveWebHook);
-router.post("/tatum-webhook", tatumWebHook);
-router.post("/tatum-crypto-webhook", tatumCryptoWebHook);
+router.post("/tatum-webhook", verifyTatumWebhookSource, tatumWebHook);
+router.post("/tatum-crypto-webhook", verifyTatumWebhookSource, tatumCryptoWebHook);
 router.post("/test-webhook", (req: express.Request, res: express.Response) => {
   console.log(req.body, JSON.stringify(req.body));
   const tempData = req.body;
