@@ -159,7 +159,10 @@ export const fundGasIfNeeded = async (
     const deficit = requiredGas - currentBalance;
     const minDeficit = gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT : POOL_CONFIG.ETH_MIN_DEFICIT;
 
-    if (deficit <= minDeficit) {
+    // Primary check: does the address actually have enough gas?
+    // Only skip funding when currentBalance genuinely covers the required gas.
+    // The minDeficit threshold prevents micro-fundings ONLY when the balance is already close to sufficient.
+    if (currentBalance >= requiredGas || (deficit <= minDeficit && currentBalance > 0)) {
       console.log(`[SmartGas] ✅ Sufficient gas (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)}) - No funding needed`);
       await poolAddress.update({ gas_balance: currentBalance });
       return { funded: false, amount: 0, reason: 'Sufficient balance' };
