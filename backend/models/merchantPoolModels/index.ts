@@ -7,7 +7,7 @@ import sequelize from "../../utils/dbInstance";
 export const MERCHANT_POOL_CRYPTO_TYPES = [
   'BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH',
   'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20',
-  'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON'
+  'SOL', 'XRP', 'RLUSD', 'POLYGON', 'USDT-POLYGON', 'RLUSD-ERC20'
 ];
 
 /**
