@@ -9,7 +9,7 @@ import json
 from typing import Dict, List, Tuple
 from datetime import datetime
 
-BASE_URL = "https://dep-manager-3.preview.emergentagent.com"
+BASE_URL = "https://dep-manager-4.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials
