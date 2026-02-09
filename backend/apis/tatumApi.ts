@@ -1374,16 +1374,32 @@ const assetToOtherAddress = async ({
     if (isERC20Token) {
       console.log(`[assetToOtherAddress] ${currency} amount: ${amount} → truncated to ${decimals} decimals: ${safeAmount}`);
     }
-    transaction = await tatumSdk.blockchain.eth.ethBlockchainTransfer({
-      fromPrivateKey: privateKey,
-      to: toAddress,
-      amount: safeAmount,
-      fee: {
-        gasPrice: Math.ceil(fee?.gasPrice).toString(),
-        gasLimit: fee?.gasLimit.toString(),
-      },
-      currency: currency === "ETH" ? "ETH" : (currency === "USDC-ERC20" ? "USDC" : (currency === "RLUSD-ERC20" ? "RLUSD" : "USDT")),
-    });
+    if (currency === "RLUSD-ERC20") {
+      // RLUSD is a custom ERC-20 not in Tatum's predefined list — use generic erc20Transfer
+      transaction = await tatumSdk.fungibleToken.erc20Transfer({
+        chain: "ETH",
+        to: toAddress,
+        contractAddress: process.env.RLUSD_ERC20_CONTRACT || "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD",
+        amount: safeAmount,
+        digits: 6,
+        fromPrivateKey: privateKey,
+        fee: {
+          gasPrice: Math.ceil(fee?.gasPrice).toString(),
+          gasLimit: fee?.gasLimit.toString(),
+        },
+      });
+    } else {
+      transaction = await tatumSdk.blockchain.eth.ethBlockchainTransfer({
+        fromPrivateKey: privateKey,
+        to: toAddress,
+        amount: safeAmount,
+        fee: {
+          gasPrice: Math.ceil(fee?.gasPrice).toString(),
+          gasLimit: fee?.gasLimit.toString(),
+        },
+        currency: currency === "ETH" ? "ETH" : (currency === "USDC-ERC20" ? "USDC" : "USDT"),
+      });
+    }
   } else if (currency === "TRX") {
     transaction = await tatumSdk.blockchain.tron.tronTransfer({
       fromPrivateKey: privateKey,
