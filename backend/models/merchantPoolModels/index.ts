@@ -60,6 +60,7 @@ export const GAS_TOKEN_MAPPING: Record<string, string> = {
   'USDC-ERC20': 'ETH',
   'RLUSD': 'XRP',           // RLUSD needs XRP for gas on XRP Ledger
   'USDT-POLYGON': 'POLYGON', // USDT on Polygon needs POL for gas
+  'RLUSD-ERC20': 'ETH',     // RLUSD ERC-20 needs ETH for gas on Ethereum
 };
 
 /**
