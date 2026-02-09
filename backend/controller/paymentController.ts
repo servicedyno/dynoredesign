@@ -3068,7 +3068,7 @@ const settleCryptoTransaction = async ({
         console.log(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${merchantSendAmount} + admin ${adminAmount}`);
 
       } else {
-        // Account-based chains (ETH, TRX, BSC): Single transfer to merchant only
+        // Account-based chains (ETH, TRX, BSC, SOL, XRP, POLYGON): Single transfer to merchant only
         // Gas comes from fee portion (tier-based: 2% + fixed + buffer)
         // Admin fee stays in temp address for batch sweep later
         fees = await tatumApi.feeEstimation(
@@ -3078,7 +3078,7 @@ const settleCryptoTransaction = async ({
           Number(userAmount)
         );
 
-        const gasFee = Number(fees?.slow ?? 0);
+        const gasFee = Number(fees?.slow ?? fees?.fast ?? 0);
         // Merchant gets FULL amount - gas is paid from admin's portion (remaining balance)
         merchantSendAmount = Number(Number(userAmount).toFixed(8));
 
@@ -3091,7 +3091,7 @@ const settleCryptoTransaction = async ({
         console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets FULL ${merchantSendAmount} ${currency}`);
         console.log(`[settleCryptoTransaction] Gas (${gasFee} ${currency}) paid from admin's ${adminPortion} ${currency}`);
 
-        // Retry merchant transfer for account chains (ETH, TRX)
+        // Retry merchant transfer for account chains (ETH, TRX, SOL, XRP, POLYGON)
         merchantTransactionDetails = await withRetry(
           () => tatumApi.assetToOtherAddress({
             currency,
