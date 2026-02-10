@@ -634,6 +634,7 @@ Wallet address is saved and ready to receive payments!`,
                       wallet_type: { type: 'string', example: 'BTC' },
                       wallet_address: { type: 'string', example: '1NewBTCAddress...' },
                       wallet_name: { type: 'string', example: 'Updated BTC Wallet' },
+                      destination_tag: { type: 'integer', example: 12345678, nullable: true },
                       company_id: { type: 'integer', example: 38 }
                     }
                   }
