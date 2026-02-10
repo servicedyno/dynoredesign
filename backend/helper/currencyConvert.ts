@@ -482,11 +482,15 @@ const processSingleCurrency = async (
 
   const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
 
-  // Strategy 1: FastForex — ALWAYS called fresh for real-time payments (150-300ms)
-  const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
-  if (fastForexResult) {
-    rate = fastForexResult.rate;
-    convertedAmount = fastForexResult.converted;
+  // Strategy 1: FastForex — only for fiat↔fiat conversions (150-300ms)
+  // FIX: FastForex is a forex API and doesn't support crypto symbols (MATIC, BTC, etc.)
+  // Calling it with crypto wastes an API call and generates noisy error logs
+  if (!isCryptoConversion) {
+    const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
+    if (fastForexResult) {
+      rate = fastForexResult.rate;
+      convertedAmount = fastForexResult.converted;
+    }
   }
 
   // Strategy 2: Background cache — CoinGecko rates refreshed every 60s (instant, 0 API calls)
