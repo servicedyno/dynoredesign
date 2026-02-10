@@ -1386,10 +1386,12 @@ const createCryptoPayment = async (
         
         // Only return existing address if it's still pending (not completed/expired)
         if (existingRedisData && existingRedisData.status === 'pending') {
-          console.log(`[Phase 12.1] ✓ Returning existing address for same payment link + currency: ${existingAddress}`);
+          console.log(`[Phase 12.1] ✓ Returning existing address for same payment link + currency: ${existingAddress}${existingDestTag ? ` (tag: ${existingDestTag})` : ''}`);
           return successResponseHelper(res, 200, "Using existing payment address", {
             qr_code: items.active_crypto_address.qr_code,
             address: existingAddress,
+            // XRP/RLUSD: Include destination tag for tag-based chains
+            ...(existingDestTag && { destination_tag: existingDestTag }),
             transaction_id: existingRedisData.payment_id || existingRedisData.unique_tx_id,
             amount: existingRedisData.amount,
             currency: requestedCurrency,
