@@ -66,7 +66,7 @@ def test_destination_tag_count():
     """TEST 4: Count destination_tag patterns in verifyCryptoPayment"""
     try:
         result = subprocess.run(
-            ["grep", "-c", "tempData?.destination_tag.*destination_tag.*Number", "/app/backend/controller/paymentController.ts"],
+            ["grep", "-c", "tempData.*destination_tag.*destination_tag.*Number", "/app/backend/controller/paymentController.ts"],
             capture_output=True,
             text=True
         )
