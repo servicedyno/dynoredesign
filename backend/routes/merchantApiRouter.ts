@@ -127,7 +127,7 @@ router.post("/createUser", apiKeyOnlyMiddleware, async (req, res) => {
         customer_id: existingCustomer[0].customer_id,
         email,
         company_id: data.company_id
-      }, tokenSecret, { expiresIn: '365d' });
+      }, tokenSecret);
       
       return res.status(200).json({
         success: true,
