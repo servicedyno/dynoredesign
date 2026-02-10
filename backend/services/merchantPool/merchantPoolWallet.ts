@@ -185,7 +185,7 @@ export const addAddressToMerchantPool = async (
     // ──────────────────────────────────────────────────────────────
     if (isTagBasedChain(walletType)) {
       if (!XRP_MASTER_ADDRESS) {
-        throw new Error(`XRP_FEE_WALLET (master address) not configured. Cannot create ${walletType} pool address.`);
+        throw new Error(`XRP_MASTER_WALLET (master address) not configured. Cannot create ${walletType} pool address.`);
       }
 
       const destinationTag = await generateUniqueDestinationTag(userId, walletType, transaction);
