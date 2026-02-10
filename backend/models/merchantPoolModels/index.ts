@@ -160,7 +160,7 @@ const merchantTempAddressModel = sequelize.define(
       allowNull: false,
     },
     destination_tag: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
       allowNull: true,
       comment: "XRP destination tag for tag-based chains (XRP, RLUSD). Null for other chains.",
     },
