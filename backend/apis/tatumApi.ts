@@ -1627,24 +1627,36 @@ const assetToOtherAddress = async ({
     });
   } else if (currency === "XRP") {
     // XRP native transfer
-    // Auto-add destination tag when sending to admin XRP wallet (exchange wallets require it)
+    // Destination tag priority: 1) explicit parameter (merchant tag), 2) admin tag if sending to admin wallet
     const adminXrpWallet = process.env.XRP || "";
     const adminDestTag = process.env.XRP_ADMIN_DESTINATION_TAG ? Number(process.env.XRP_ADMIN_DESTINATION_TAG) : undefined;
-    const destinationTag = (toAddress === adminXrpWallet && adminDestTag) ? adminDestTag : undefined;
+    const resolvedDestTag = destinationTag 
+      ? Number(destinationTag) 
+      : (toAddress === adminXrpWallet && adminDestTag) ? adminDestTag : undefined;
+    
+    if (resolvedDestTag) {
+      console.log(`[assetToOtherAddress] XRP transfer with destination tag: ${resolvedDestTag}`);
+    }
     
     transaction = await tatumSdk.blockchain.xrp.xrpTransferBlockchain({
       fromAccount: fromAddress,
       to: toAddress,
       amount: Number(amount).toFixed(6).toString(),
       fromSecret: privateKey,
-      ...(destinationTag !== undefined && { destinationTag }),
+      ...(resolvedDestTag !== undefined && { destinationTag: resolvedDestTag }),
     } as any);
   } else if (currency === "RLUSD") {
     // RLUSD token transfer on XRP Ledger
-    // Auto-add destination tag when sending to admin XRP wallet
+    // Destination tag priority: 1) explicit parameter (merchant tag), 2) admin tag if sending to admin wallet
     const adminXrpWallet = process.env.XRP || "";
     const adminDestTag = process.env.XRP_ADMIN_DESTINATION_TAG ? Number(process.env.XRP_ADMIN_DESTINATION_TAG) : undefined;
-    const destinationTag = (toAddress === adminXrpWallet && adminDestTag) ? adminDestTag : undefined;
+    const resolvedDestTag = destinationTag 
+      ? Number(destinationTag) 
+      : (toAddress === adminXrpWallet && adminDestTag) ? adminDestTag : undefined;
+    
+    if (resolvedDestTag) {
+      console.log(`[assetToOtherAddress] RLUSD transfer with destination tag: ${resolvedDestTag}`);
+    }
     
     const rlusdIssuer = process.env.RLUSD_ISSUER || "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
     const rlusdCurrencyHex = process.env.RLUSD_CURRENCY_HEX || "524C555344000000000000000000000000000000";
@@ -1655,7 +1667,7 @@ const assetToOtherAddress = async ({
       fromSecret: privateKey,
       issuerAccount: rlusdIssuer,
       token: rlusdCurrencyHex,
-      ...(destinationTag !== undefined && { destinationTag }),
+      ...(resolvedDestTag !== undefined && { destinationTag: resolvedDestTag }),
     } as any);
   } else if (currency === "POLYGON") {
     // Polygon native transfer (POL)
