@@ -194,13 +194,11 @@ export const addAddressToMerchantPool = async (
 
     // For RLUSD: Set up XRP Trust Line so the address can receive RLUSD tokens
     if (walletType === "RLUSD") {
+      let trustLineEstablished = false;
       try {
-        const rlusdIssuer = process.env.RLUSD_ISSUER || "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
-        const rlusdCurrencyHex = process.env.RLUSD_CURRENCY_HEX || "524C555344000000000000000000000000000000";
+        const rlusdIssuer = RLUSD_CONFIG.issuer;
+        const rlusdCurrencyHex = RLUSD_CONFIG.currencyHex;
         
-        // First, fund the XRP address with enough XRP for account reserve + trust line reserve + tx fees
-        // XRP Ledger reserves (updated Dec 2, 2024): 1 XRP base + 0.2 XRP per trust line + ~0.00001 tx fee
-        // Funding 2 XRP provides comfortable buffer (1 + 0.2 + 0.8 buffer)
         console.log(`[MerchantPool] 🔗 Setting up RLUSD trust line for ${addressData.address}...`);
         
         // Fund the address with XRP from the fee wallet
@@ -222,24 +220,69 @@ export const addAddressToMerchantPool = async (
               amount: 2,
               fee: null,
             });
-            console.log(`[MerchantPool] ✅ Funded ${addressData.address} with 2 XRP for RLUSD trust line (1 reserve + 0.2 trust line + 0.8 buffer)`);
+            console.log(`[MerchantPool] ✅ Funded ${addressData.address} with 2 XRP for RLUSD trust line`);
             
-            // Wait a moment for the funding to confirm
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            // Poll for account activation instead of fixed wait
+            // XRP Ledger closes every 3-5 seconds; Tatum API adds propagation delay
+            let accountActivated = false;
+            for (let attempt = 0; attempt < 8; attempt++) {
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              try {
+                accountActivated = await tatumApi.verifyXrpAccountActivated(addressData.address);
+                if (accountActivated) {
+                  console.log(`[MerchantPool] ✅ Account ${addressData.address} activated on-ledger (attempt ${attempt + 1})`);
+                  break;
+                }
+              } catch {
+                // Ignore check errors, keep polling
+              }
+            }
             
-            // Now set up the trust line
-            await tatumApi.setupXrpTrustLine(
-              addressData.address,
-              addressData.privateKey,
-              rlusdIssuer,
-              rlusdCurrencyHex,
-              "999999999"
-            );
-            console.log(`[MerchantPool] ✅ RLUSD trust line established for ${addressData.address}`);
+            if (!accountActivated) {
+              console.warn(`[MerchantPool] ⚠️ Account ${addressData.address} not yet activated after polling, attempting trust line anyway...`);
+            }
+            
+            // Attempt trust line creation with retry
+            let lastError: unknown = null;
+            for (let retry = 0; retry < 3; retry++) {
+              try {
+                await tatumApi.setupXrpTrustLine(
+                  addressData.address,
+                  addressData.privateKey,
+                  rlusdIssuer,
+                  rlusdCurrencyHex,
+                  "999999999"
+                );
+                console.log(`[MerchantPool] ✅ RLUSD trust line established for ${addressData.address}`);
+                trustLineEstablished = true;
+                break;
+              } catch (retryError) {
+                lastError = retryError;
+                console.warn(`[MerchantPool] ⚠️ Trust line attempt ${retry + 1}/3 failed: ${getErrorMessage(retryError)}`);
+                if (retry < 2) {
+                  await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+              }
+            }
+            
+            if (!trustLineEstablished && lastError) {
+              console.error(`[MerchantPool] ❌ RLUSD trust line failed after 3 retries for ${addressData.address}`);
+            }
+          } else {
+            console.error(`[MerchantPool] ❌ XRP fee wallet record not found in DB, cannot fund RLUSD address`);
           }
+        } else {
+          console.error(`[MerchantPool] ❌ XRP_FEE_WALLET not configured, cannot fund RLUSD address`);
         }
       } catch (trustLineError) {
-        console.error(`[MerchantPool] ⚠️ RLUSD trust line setup failed (non-critical, can retry):`, getErrorMessage(trustLineError));
+        console.error(`[MerchantPool] ❌ RLUSD trust line setup failed:`, getErrorMessage(trustLineError));
+      }
+      
+      // If trust line was NOT established, mark address as PENDING_TRUSTLINE
+      // so it won't be picked up by reserveAddress
+      if (!trustLineEstablished) {
+        console.warn(`[MerchantPool] ⚠️ Marking ${addressData.address} as PENDING_TRUSTLINE (trust line not confirmed)`);
+        await poolAddress.update({ status: "PENDING_TRUSTLINE" }, { transaction });
       }
     }
 
