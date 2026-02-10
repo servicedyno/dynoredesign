@@ -690,7 +690,7 @@ export const checkMissedPayments = async (): Promise<{
         console.log(`[MerchantPool] 🚀 Processing missed payment via cryptoVerification...`);
         
         try {
-          const verificationResult = await paymentController.cryptoVerification(walletAddress, true) as { duplicate?: boolean; status?: number; paymentStatus?: string };
+          const verificationResult = await paymentController.cryptoVerification(walletAddress, true, cryptoRedisKey) as { duplicate?: boolean; status?: number; paymentStatus?: string };
           
           if (verificationResult?.duplicate) {
             console.log(`[MerchantPool] ⏭️ Payment was already processed (duplicate detected)`);
