@@ -368,9 +368,9 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     }
     
     const paymentData = (capturedData as Record<string, unknown>).data as Record<string, unknown>;
-    const { qr_code, address, transaction_id } = paymentData;
+    const { qr_code, address, transaction_id, destination_tag } = paymentData;
     
-    console.log(`[MerchantAPI] Payment created - TX: ${transaction_id}, Address: ${address}`);
+    console.log(`[MerchantAPI] Payment created - TX: ${transaction_id}, Address: ${address}${destination_tag ? `, Tag: ${destination_tag}` : ''}`);
     
     return res.status(200).json({
       success: true,
@@ -383,7 +383,9 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
         currency: normalizedCurrency,
         base_amount: amount,
         base_currency: data.base_currency || 'USD',
-        redirect_uri
+        redirect_uri,
+        // XRP/RLUSD: Include destination tag so merchant can display it to customer
+        ...(destination_tag && { destination_tag: Number(destination_tag) }),
       }
     });
     
