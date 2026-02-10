@@ -6246,10 +6246,25 @@ const checkFeeBalance = async () => {
       // XRP gas wallet checks XRP balance, POLYGON gas wallet checks POLYGON balance
       const balanceCheckCurrency = wallet_type;
       
-      const currentBalance = await tatumApi.getAddressBalance(
-        adminFeesWallets[i]?.dataValues.wallet_address,
-        balanceCheckCurrency
-      );
+      let currentBalance;
+      try {
+        currentBalance = await tatumApi.getAddressBalance(
+          adminFeesWallets[i]?.dataValues.wallet_address,
+          balanceCheckCurrency
+        );
+      } catch (balErr: unknown) {
+        const balError = balErr as { message?: string; body?: { errorCode?: string } };
+        const errMsg = balError?.message || '';
+        const errCode = balError?.body?.errorCode || '';
+        // XRP/RLUSD accounts that haven't been activated yet (need 10 XRP reserve)
+        // return 403 "Account not found" — skip gracefully instead of crashing
+        if (errMsg.includes('account.not.found') || errMsg.includes('Account not found') ||
+            errCode.includes('account.failed') || errMsg.includes('not.found')) {
+          console.log(`[checkFeeBalance] ⏭️ Skipping ${wallet_type} — account not activated yet (${adminFeesWallets[i]?.dataValues.wallet_address?.substring(0, 12)}...)`);
+          continue;
+        }
+        throw balErr;
+      }
       let amount = adminFeesWallets[i]?.dataValues.amount;
       let newBalance =
         wallet_type === "TRX"
