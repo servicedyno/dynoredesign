@@ -1744,13 +1744,14 @@ const createCryptoPayment = async (
 
       // Clear any existing data for this address before setting new payment data
       // This is important when an address is reused for a new payment
-      await deleteRedisItem("crypto-" + paymentRes.address);
+      const directCryptoRedisKey = getCryptoRedisKey(paymentRes.address, paymentRes.destination_tag);
+      await deleteRedisItem(directCryptoRedisKey);
       
       // FIX: Store crypto invoice expiry timestamp (15 minutes from now)
       // This is separate from payment link expiry - crypto invoice has shorter window
       const cryptoInvoiceExpiresAt = new Date(Date.now() + CRYPTO_INVOICE_MINUTES * 60 * 1000).toISOString();
       
-      await setRedisItem("crypto-" + paymentRes.address, {
+      await setRedisItem(directCryptoRedisKey, {
         mode: paymentTypes.CRYPTO,
         amount: crypto_amount,                  // Crypto amount customer should pay (includes tax)
         merchant_amount: merchant_amount_crypto, // Amount merchant should receive (includes tax)
