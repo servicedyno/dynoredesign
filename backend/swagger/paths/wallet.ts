@@ -597,7 +597,7 @@ Wallet address is saved and ready to receive payments!`,
                 },
                 currency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'SOL', 'POLYGON', 'USDT-POLYGON'],
                   description: 'New currency type (optional)',
                   example: 'BTC'
                 },
@@ -605,6 +605,12 @@ Wallet address is saved and ready to receive payments!`,
                   type: 'integer',
                   description: 'Company ID for multi-tenant security (optional)',
                   example: 38
+                },
+                destination_tag: {
+                  type: 'integer',
+                  description: 'XRP/RLUSD destination tag (optional, set to null to remove)',
+                  example: 12345678,
+                  nullable: true
                 }
               }
             }
