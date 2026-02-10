@@ -80,7 +80,7 @@ Wallets are grouped by company for easy organization:
                               wallet_id: { type: 'integer', example: 431, description: '⚠️ REQUIRED for update/delete operations' },
                               user_id: { type: 'integer', example: 28 },
                               company_id: { type: 'integer', example: 38 },
-                              wallet_type: { type: 'string', example: 'ETH', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'] },
+                              wallet_type: { type: 'string', example: 'ETH', enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'] },
                               wallet_address: { type: 'string', example: '0x9a7221b5e32d5f99e8da95585835442e29afb38f' },
                               wallet_name: { type: 'string', example: 'ETH Main Wallet', nullable: true },
                               amount: { type: 'number', example: 0 },
