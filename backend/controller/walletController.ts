@@ -3218,7 +3218,7 @@ const updateWalletWithOTP = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { wallet_id, company_id, otp, wallet_address, wallet_name, currency } = req.body;
+    const { wallet_id, company_id, otp, wallet_address, wallet_name, currency, destination_tag } = req.body;
 
     if (!wallet_id || !otp) {
       return errorResponseHelper(res, 400, "wallet_id and otp are required!");
