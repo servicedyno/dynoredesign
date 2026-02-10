@@ -3312,8 +3312,9 @@ const verifyCryptoPayment = async (
     
     // Get base currency info for USD conversion
     // FIX: Also check customerData for base_amount since tempData may not have it stored
+    // FIX: The crypto-{address} Redis key stores as 'base_amount_usd', not 'base_amount'
     const baseCurrency = tempData?.base_currency || customerData?.base_currency || "USD";
-    const baseAmount = parseFloat(tempData?.base_amount || customerData?.base_amount || "0");
+    const baseAmount = parseFloat(tempData?.base_amount || tempData?.base_amount_usd || customerData?.base_amount || "0");
     
     // IMPORTANT: Check for SUCCESSFUL status FIRST before checking underpaid
     // This prevents returning stale underpaid data after payment completes
