@@ -1,293 +1,179 @@
 #!/usr/bin/env python3
 """
-Backend Test Suite for Token Expiry Task
-Tests the 5 specified tests for JWT token extension to 365 days
+Backend Test Suite for Checkout Payment Status, Webhook payment_id, USD Amounts, and Duplicate Processing Fix
+Test Date: 2026-02-10
 """
 
 import requests
+import subprocess
 import json
 import sys
-from datetime import datetime, timezone
-import jwt
 
-# Configuration
-BASE_URL = "https://install-manager-5.preview.emergentagent.com"
-VALID_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyOCwibmFtZSI6IkR5bm90ZWNoIExEQSIsImVtYWlsIjoicmljaGFyZEBkeW5vLnB0IiwidXNlcm5hbWUiOiJkeW5vdGVjaCIsIm1vYmlsZSI6IjM1MTkxMjM0NTY3OSIsInBob3RvIjoiaHR0cHM6Ly9mNTAwNmZjNC01Y2FkLTQ4MGUtODU1Mi05MGZkMTcxZjg3NjAucHJldmlldy5lbWVyZ2VudGFnZW50LmNvbWltYWdlcy91c2VyXzNvN3MzeWZ1eW9mLnBuZyIsImxvZ2luX3R5cGUiOiJFTUFJTCIsImN1c3RvbWVyX2lkIjpudWxsLCJleHRlcm5hbF9pZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwiY3JlYXRlZEF0IjoiMjAyNi0wMS0yNVQxODoxNzo0Ny4wMDhaIiwidXBkYXRlZEF0IjoiMjAyNi0wMi0xMFQwNDoxMzozOS4zODZaIiwidmVyaWZpZWRfb3RwIjoiOTg4NTczIiwib3RwX2V4cGlyZWQiOiIyMDI2LTAyLTA2VDEyOjMzOjMyLjIzMVoiLCJvdHBfY3VycmVuY3kiOiJMVEMiLCJyZXNldF90b2tlbiI6ImE1NzZiY2QyOTFjYzM3MDFkZWY4NDdlNTYwNGU2MjA0YWFhZTE5MGI5MTE2NDJjNWZiNGYzYmI3YTNhNGU2OWEiLCJyZXNldF90b2tlbl9leHBpcnkiOiIyMDI2LTAxLTMxVDAyOjQ2OjQzLjU3NFoiLCJnb29nbGVfaWQiOm51bGwsIndhbGxldF9yZW1pbmRlcl9zZW50IjpmYWxzZSwicmVmZXJyYWxfY29kZSI6bnVsbCwicmVmZXJyYWxfY291bnQiOjAsInJlZmVycmFsX2JvbnVzX2Vhcm5lZCI6IjAuMDAiLCJyZWZlcnJlZF9ieV9jb2RlIjpudWxsLCJyZWZlcnJlZF9ieV9yZWZlcmVlX2NvZGUiOm51bGwsImZlZV9kaXNjb3VudF9wZXJjZW50IjoiMC4wMCIsImZlZV9kaXNjb3VudF9leHBpcmVzX2F0IjpudWxsLCJmZWVfZGlzY291bnRfcmVhc29uIjpudWxsLCJsYXN0X2xvZ2luX2lwIjoiOjpmZmZmOjEyNy4wLjAuMSIsImlhdCI6MTc3MDcyNzk0NSwiZXhwIjoxODAyMjYzOTQ1fQ.TKWaZgBrcamGK51o3M5IQBlTmrz55ZsoAktH6X27Fk0"
-EXPIRED_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyOCwiZXhwIjoxNjAwMDAwMDAwfQ.invalid"
-
-def print_separator(text):
-    """Print a separator with text"""
-    print(f"\n{'='*60}")
-    print(f" {text}")
-    print('='*60)
-
-def test_health_check():
-    """TEST 1: Backend health check"""
-    print_separator("TEST 1: Backend Health Check")
-    
+def test_backend_health():
+    """TEST 1: Backend Health Check"""
+    print("🧪 TEST 1: Backend Health Check")
     try:
-        response = requests.get(f"{BASE_URL}/api/status/health", timeout=10)
-        print(f"URL: {BASE_URL}/api/status/health")
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            print("✅ TEST 1 PASSED: Backend is healthy")
-            return True
-        else:
-            print("❌ TEST 1 FAILED: Backend health check failed")
-            return False
-            
+        response = requests.get("http://localhost:8001/api/status/health", timeout=10)
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        data = response.json()
+        assert data.get("status") == "healthy", f"Expected healthy status, got {data.get('status')}"
+        print("✅ PASSED: Backend health check successful")
+        return True
     except Exception as e:
-        print(f"❌ TEST 1 FAILED: Exception occurred - {str(e)}")
+        print(f"❌ FAILED: Backend health check failed - {e}")
         return False
 
-def test_payment_link_bozzmail():
-    """TEST 2: Payment link creation for Bozzmail (company_id: 38)"""
-    print_separator("TEST 2: Payment Link Creation - Bozzmail (ID: 38)")
-    
-    headers = {
-        'Authorization': f'Bearer {VALID_TOKEN}',
-        'Content-Type': 'application/json'
-    }
-    
-    payload = {
-        "amount": 10,
-        "company_id": 38
-    }
-    
+def test_typescript_compilation():
+    """TEST 2: TypeScript Compilation"""
+    print("\n🧪 TEST 2: TypeScript Compilation")
     try:
-        response = requests.post(
-            f"{BASE_URL}/api/pay/createPaymentLink", 
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-        
-        print(f"URL: {BASE_URL}/api/pay/createPaymentLink")
-        print(f"Headers: {headers}")
-        print(f"Payload: {json.dumps(payload, indent=2)}")
-        print(f"Status Code: {response.status_code}")
-        print(f"Response Headers: {dict(response.headers)}")
-        print(f"Response: {response.text[:500]}...")  # First 500 chars
-        
-        if response.status_code == 200:
-            response_data = response.json()
-            if "Payment link created successfully" in response.text or response_data.get('success'):
-                print("✅ TEST 2 PASSED: Payment link created successfully for Bozzmail")
-                
-                # Check for token expiry header
-                expires_header = response.headers.get('X-Token-Expires-In-Days')
-                if expires_header:
-                    print(f"📅 Token expires in: {expires_header} days")
-                    return True, expires_header
-                else:
-                    print("⚠️ No X-Token-Expires-In-Days header found")
-                    return True, None
-            else:
-                print("❌ TEST 2 FAILED: Unexpected response content")
-                return False, None
-        else:
-            print("❌ TEST 2 FAILED: Payment link creation failed")
-            return False, None
-            
+        result = subprocess.run(["npx", "tsc", "--noEmit"], 
+                              cwd="/app/backend", 
+                              capture_output=True, 
+                              text=True, 
+                              timeout=30)
+        assert result.returncode == 0, f"TypeScript compilation failed with exit code {result.returncode}"
+        print("✅ PASSED: TypeScript compilation successful")
+        return True
     except Exception as e:
-        print(f"❌ TEST 2 FAILED: Exception occurred - {str(e)}")
-        return False, None
-
-def test_payment_link_nameword():
-    """TEST 3: Payment link creation for Nameword (company_id: 39)"""
-    print_separator("TEST 3: Payment Link Creation - Nameword (ID: 39)")
-    
-    headers = {
-        'Authorization': f'Bearer {VALID_TOKEN}',
-        'Content-Type': 'application/json'
-    }
-    
-    payload = {
-        "amount": 25,
-        "company_id": 39
-    }
-    
-    try:
-        response = requests.post(
-            f"{BASE_URL}/api/pay/createPaymentLink", 
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-        
-        print(f"URL: {BASE_URL}/api/pay/createPaymentLink")
-        print(f"Headers: {headers}")
-        print(f"Payload: {json.dumps(payload, indent=2)}")
-        print(f"Status Code: {response.status_code}")
-        print(f"Response Headers: {dict(response.headers)}")
-        print(f"Response: {response.text[:500]}...")  # First 500 chars
-        
-        if response.status_code == 200:
-            response_data = response.json()
-            if "Payment link created successfully" in response.text or response_data.get('success'):
-                print("✅ TEST 3 PASSED: Payment link created successfully for Nameword")
-                
-                # Check for token expiry header
-                expires_header = response.headers.get('X-Token-Expires-In-Days')
-                if expires_header:
-                    print(f"📅 Token expires in: {expires_header} days")
-                    return True, expires_header
-                else:
-                    print("⚠️ No X-Token-Expires-In-Days header found")
-                    return True, None
-            else:
-                print("❌ TEST 3 FAILED: Unexpected response content")
-                return False, None
-        else:
-            print("❌ TEST 3 FAILED: Payment link creation failed")
-            return False, None
-            
-    except Exception as e:
-        print(f"❌ TEST 3 FAILED: Exception occurred - {str(e)}")
-        return False, None
-
-def test_token_expiry_header(expires_header):
-    """TEST 4: Check X-Token-Expires-In-Days header is >= 364"""
-    print_separator("TEST 4: Token Expiry Header Verification")
-    
-    if expires_header is None:
-        print("❌ TEST 4 FAILED: No X-Token-Expires-In-Days header found in previous tests")
-        return False
-    
-    try:
-        expires_days = int(expires_header)
-        print(f"Token expires in: {expires_days} days")
-        
-        if expires_days >= 364:
-            print(f"✅ TEST 4 PASSED: Token expiry is {expires_days} days (>= 364 required)")
-            return True
-        else:
-            print(f"❌ TEST 4 FAILED: Token expiry is {expires_days} days (< 364 required)")
-            return False
-            
-    except ValueError:
-        print(f"❌ TEST 4 FAILED: Invalid expiry header value: {expires_header}")
+        print(f"❌ FAILED: TypeScript compilation failed - {e}")
         return False
 
-def test_expired_token():
-    """TEST 5: Expired token should return 401"""
-    print_separator("TEST 5: Expired Token Verification")
-    
-    headers = {
-        'Authorization': f'Bearer {EXPIRED_TOKEN}',
-        'Content-Type': 'application/json'
-    }
-    
-    payload = {
-        "amount": 10,
-        "company_id": 38
-    }
-    
+def test_isSignificantOverpayment_pattern():
+    """TEST 3: BUG 1 FIX - verifyCryptoPayment overpayment threshold check"""
+    print("\n🧪 TEST 3: isSignificantOverpayment pattern check")
     try:
-        response = requests.post(
-            f"{BASE_URL}/api/pay/createPaymentLink", 
-            headers=headers,
-            json=payload,
-            timeout=10
-        )
+        result = subprocess.run(["grep", "isSignificantOverpayment", "/app/backend/controller/paymentController.ts"], 
+                              capture_output=True, text=True)
+        assert result.returncode == 0, "isSignificantOverpayment pattern not found"
+        lines = result.stdout.strip().split('\n')
+        assert len(lines) >= 1, "Expected at least 1 occurrence of isSignificantOverpayment"
         
-        print(f"URL: {BASE_URL}/api/pay/createPaymentLink")
-        print(f"Headers: {headers}")
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
+        # Check for threshold logic
+        found_threshold_logic = any("overpaymentUsd > merchantOverpaymentThreshold" in line for line in lines)
+        assert found_threshold_logic, "Threshold comparison logic not found"
         
-        if response.status_code == 401:
-            print("✅ TEST 5 PASSED: Expired token correctly returns 401")
-            return True
-        else:
-            print(f"❌ TEST 5 FAILED: Expected 401, got {response.status_code}")
-            return False
-            
+        print(f"✅ PASSED: Found {len(lines)} isSignificantOverpayment patterns with threshold logic")
+        return True
     except Exception as e:
-        print(f"❌ TEST 5 FAILED: Exception occurred - {str(e)}")
+        print(f"❌ FAILED: isSignificantOverpayment pattern check failed - {e}")
         return False
 
-def decode_token_info():
-    """Decode token information for debugging"""
-    print_separator("TOKEN INFORMATION")
-    
+def test_base_amount_usd_fallback():
+    """TEST 4: BUG 2 FIX - base_amount_usd fallback in verifyCryptoPayment"""
+    print("\n🧪 TEST 4: base_amount_usd fallback pattern check")
     try:
-        # Decode without verification to see content
-        decoded = jwt.decode(VALID_TOKEN, options={"verify_signature": False})
+        result = subprocess.run(["grep", "base_amount_usd", "/app/backend/controller/paymentController.ts"], 
+                              capture_output=True, text=True)
+        assert result.returncode == 0, "base_amount_usd pattern not found"
+        lines = result.stdout.strip().split('\n')
+        assert len(lines) >= 1, "Expected at least 1 occurrence of base_amount_usd"
         
-        print("Token Payload:")
-        for key, value in decoded.items():
-            if key in ['iat', 'exp']:
-                # Convert timestamps to readable dates
-                dt = datetime.fromtimestamp(value, tz=timezone.utc)
-                print(f"  {key}: {value} ({dt.strftime('%Y-%m-%d %H:%M:%S UTC')})")
-            else:
-                print(f"  {key}: {value}")
+        # Check for the specific fallback pattern
+        found_fallback = any("tempData?.base_amount_usd" in line for line in lines)
+        assert found_fallback, "base_amount_usd fallback pattern not found"
         
-        # Calculate days until expiry
-        if 'exp' in decoded and 'iat' in decoded:
-            exp_time = decoded['exp']
-            iat_time = decoded['iat']
-            duration_seconds = exp_time - iat_time
-            duration_days = duration_seconds / (24 * 60 * 60)
-            print(f"\nToken Duration: {duration_days:.1f} days")
-            
-            # Check if still valid
-            now = datetime.now(tz=timezone.utc).timestamp()
-            if exp_time > now:
-                remaining_days = (exp_time - now) / (24 * 60 * 60)
-                print(f"Remaining Time: {remaining_days:.1f} days")
-            else:
-                print("Token Status: EXPIRED")
-                
+        print(f"✅ PASSED: Found {len(lines)} base_amount_usd patterns with fallback logic")
+        return True
     except Exception as e:
-        print(f"Error decoding token: {str(e)}")
+        print(f"❌ FAILED: base_amount_usd fallback check failed - {e}")
+        return False
 
-def main():
-    """Run all tests"""
-    print("🧪 BACKEND TOKEN EXPIRY TESTING SUITE")
-    print(f"Base URL: {BASE_URL}")
-    print(f"Testing Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+def test_webhook_payment_id():
+    """TEST 5: BUG 3 FIX - payment.confirmed webhook uses correct payment_id"""
+    print("\n🧪 TEST 5: webhookPaymentId variable check")
+    try:
+        result = subprocess.run(["grep", "webhookPaymentId", "/app/backend/controller/paymentController.ts"], 
+                              capture_output=True, text=True)
+        assert result.returncode == 0, "webhookPaymentId pattern not found"
+        lines = result.stdout.strip().split('\n')
+        assert len(lines) >= 2, "Expected at least 2 occurrences of webhookPaymentId"
+        
+        # Check for the fallback chain pattern
+        found_fallback_chain = any("tempData?.payment_id || tempData?.unique_tx_id" in line for line in lines)
+        assert found_fallback_chain, "Payment ID fallback chain not found"
+        
+        print(f"✅ PASSED: Found {len(lines)} webhookPaymentId patterns with fallback chain")
+        return True
+    except Exception as e:
+        print(f"❌ FAILED: webhookPaymentId check failed - {e}")
+        return False
+
+def test_atomic_lock():
+    """TEST 6: BUG 4 FIX - Atomic lock for Tatum webhook deduplication"""
+    print("\n🧪 TEST 6: Atomic lock for Tatum webhook check")
+    try:
+        # Check for new atomic lock pattern
+        result = subprocess.run(["grep", "acquireLock.*tatum-webhook", "/app/backend/webhooks/index.ts"], 
+                              capture_output=True, text=True)
+        assert result.returncode == 0, "acquireLock tatum-webhook pattern not found"
+        
+        # Check that old processing-lock- pattern is NOT present
+        old_pattern = subprocess.run(["grep", "processing-lock-", "/app/backend/webhooks/index.ts"], 
+                                   capture_output=True, text=True)
+        assert old_pattern.returncode == 1, "Old processing-lock- pattern still found (should be removed)"
+        
+        print("✅ PASSED: Found atomic acquireLock pattern, old processing-lock- pattern removed")
+        return True
+    except Exception as e:
+        print(f"❌ FAILED: Atomic lock check failed - {e}")
+        return False
+
+def test_getdata_currencies():
+    """TEST 7: getData returns all 15 currencies for payment link"""
+    print("\n🧪 TEST 7: getData endpoint currency count check")
+    try:
+        payload = {"data": "5b061d44b6c57b90bd5d8bd8ae23ac8246b3984aae0c5e9f"}
+        response = requests.post("http://localhost:8001/api/pay/getData", 
+                               json=payload, 
+                               timeout=10)
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
+        data = response.json()
+        available_currencies = data.get("data", {}).get("available_currencies", [])
+        assert len(available_currencies) == 15, f"Expected 15 currencies, got {len(available_currencies)}"
+        
+        print(f"✅ PASSED: getData returned {len(available_currencies)} currencies")
+        print(f"   Currencies: {', '.join(available_currencies)}")
+        return True
+    except Exception as e:
+        print(f"❌ FAILED: getData currency count check failed - {e}")
+        return False
+
+def run_all_tests():
+    """Run all tests and return summary"""
+    print("🚀 Starting Checkout Payment Status Fix Testing")
+    print("=" * 60)
     
-    # Decode token info first
-    decode_token_info()
+    tests = [
+        test_backend_health,
+        test_typescript_compilation,
+        test_isSignificantOverpayment_pattern,
+        test_base_amount_usd_fallback,
+        test_webhook_payment_id,
+        test_atomic_lock,
+        test_getdata_currencies
+    ]
     
-    # Track results
-    results = []
-    expires_header = None
+    passed = 0
+    failed = 0
     
-    # Run all tests
-    results.append(test_health_check())
+    for test in tests:
+        if test():
+            passed += 1
+        else:
+            failed += 1
     
-    success2, header2 = test_payment_link_bozzmail()
-    results.append(success2)
-    if header2:
-        expires_header = header2
+    print("\n" + "=" * 60)
+    print(f"📊 TEST SUMMARY: {passed} PASSED, {failed} FAILED")
     
-    success3, header3 = test_payment_link_nameword()
-    results.append(success3)
-    if header3 and not expires_header:
-        expires_header = header3
-    
-    results.append(test_token_expiry_header(expires_header))
-    results.append(test_expired_token())
-    
-    # Summary
-    print_separator("TEST SUMMARY")
-    passed = sum(results)
-    total = len(results)
-    
-    print(f"Tests Passed: {passed}/{total}")
-    print(f"Success Rate: {(passed/total)*100:.1f}%")
-    
-    if passed == total:
-        print("🎉 ALL TESTS PASSED!")
-        return 0
+    if failed == 0:
+        print("🎉 ALL TESTS PASSED! Checkout Payment Status Fix is working correctly.")
+        return True
     else:
-        print("❌ SOME TESTS FAILED!")
-        return 1
+        print("❌ Some tests failed. Please check the implementation.")
+        return False
 
 if __name__ == "__main__":
-    sys.exit(main())
+    success = run_all_tests()
+    sys.exit(0 if success else 1)
