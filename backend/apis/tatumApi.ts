@@ -768,7 +768,16 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
     }
     return resData;
   } catch (e) {
-    console.log("[createSubscription] Tatum subscription error:", JSON.stringify(e.response?.data || e.message, null, 2));
+    const errorData = e?.response?.data;
+    // Handle "subscription already exists" — extract existing subscription ID
+    if (errorData?.errorCode === 'subscription.exists.on.address-and-currency') {
+      const match = errorData.message?.match(/already exists \(([a-f0-9]+)\)/);
+      if (match && match[1]) {
+        console.log(`[createSubscription] Subscription already exists (${match[1]}), returning existing`);
+        return { id: match[1] };
+      }
+    }
+    console.log("[createSubscription] Tatum subscription error:", JSON.stringify(errorData || e.message, null, 2));
     throw e;
   }
 };
