@@ -292,7 +292,7 @@ export const checkMissedPayments = async (): Promise<{
             recoveryData.retriedAt = new Date().toISOString();
             // Keep txId and receivedAmount — they are correct from the original webhook
             
-            await setRedisItem("crypto-" + walletAddress, recoveryData);
+            await setRedisItem(cryptoRedisKey, recoveryData);
             console.log(`[MerchantPool] 📝 Redis restored: status=processing, txId=${savedTxId}, ref=${recoveryData.ref}`);
             
             // Mark the tx as NOT already processed so cryptoVerification won't skip it
