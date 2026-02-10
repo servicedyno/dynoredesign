@@ -31,6 +31,7 @@ export {
   addAddressToMerchantPool,
   initializeMerchantPool,
   prewarmPoolAddresses,
+  retryPendingTrustLines,
 } from "./merchantPool/merchantPoolWallet";
 
 // Reservation & address lifecycle
