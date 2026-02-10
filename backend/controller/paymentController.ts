@@ -367,6 +367,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       pending_amount: number | string;
       timestamp: string | Date;
       qr_code?: string;
+      destination_tag?: number | null; // XRP/RLUSD destination tag for tag-based chains
     }
 
     // Define interface for Redis payment item
