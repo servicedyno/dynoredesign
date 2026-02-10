@@ -15,6 +15,7 @@ import {
   UTXO_CHAINS,
   TOKEN_CHAINS,
   getSweepConfig,
+  getCryptoRedisKey,
 } from "./merchantPoolConfig";
 import { addAddressToMerchantPool } from "./merchantPoolWallet";
 import { recordPoolTransaction } from "./merchantPoolTransaction";
