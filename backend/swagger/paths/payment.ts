@@ -929,6 +929,37 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
                   currency: 'ETH',
                   customer_email: 'customer@example.com'
                 }
+              },
+              'XRP Payment': {
+                summary: 'Pay with XRP (tag-based)',
+                description: 'XRP uses a shared master address with a unique destination tag per payment. The destination_tag MUST be included when sending the transaction.',
+                value: {
+                  uniqueRef: 'a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                  currency: 'XRP',
+                  customer_email: 'customer@example.com'
+                }
+              },
+              'RLUSD Payment': {
+                summary: 'Pay with RLUSD (XRP Ledger)',
+                description: 'RLUSD on XRP Ledger — uses destination tag addressing like XRP.',
+                value: {
+                  uniqueRef: 'a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                  currency: 'RLUSD'
+                }
+              },
+              'Solana Payment': {
+                summary: 'Pay with SOL',
+                value: {
+                  uniqueRef: 'a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                  currency: 'SOL'
+                }
+              },
+              'Polygon Payment': {
+                summary: 'Pay with POL (Polygon)',
+                value: {
+                  uniqueRef: 'a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                  currency: 'POLYGON'
+                }
               }
             }
           }
