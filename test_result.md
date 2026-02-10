@@ -5490,12 +5490,12 @@ ports:
 
   - task: "Ensure destination_tag passed to checkout for XRP/RLUSD in all responses"
     implemented: true
-    working: "NA"
+    working: true
     files:
       - "/app/backend/controller/paymentController.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -5509,6 +5509,37 @@ ports:
           (underpaid and incomplete_payment responses already had destination_tag)
           
           TESTS:
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ XRP/RLUSD DESTINATION_TAG CHECKOUT TESTING COMPLETED: 100% SUCCESS (6/6 tests passed)
+          
+          🎉 ALL VERIFICATION REQUIREMENTS SUCCESSFULLY VALIDATED:
+          
+          ✅ TEST 1 - BACKEND HEALTH: GET http://localhost:8001/api/status/health returns 200 with "healthy" status ✅
+          ✅ TEST 2 - TYPESCRIPT COMPILATION: npx tsc --noEmit exits with code 0, no compilation errors ✅
+          ✅ TEST 3 - WAITING RESPONSE destination_tag: grep -A5 'status: "waiting"' found destination_tag line after status ✅
+            - Found in verifyCryptoPayment "waiting" response at line 3372:
+            - ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) })
+          ✅ TEST 4 - destination_tag COUNT: Found 6 occurrences (>= 6 required) ✅
+            - Pattern: tempData.*destination_tag.*destination_tag.*Number
+            - Locations: Lines 3372, 3444, 3463, 3481, 3499, 3842
+            - Covers all payment response statuses: waiting, underpaid, processing, confirmed, and Redis updates
+          ✅ TEST 5 - PHASE 12.1 EXISTING ADDRESS: existingDestTag.*destination_tag pattern found ✅
+            - Line: const existingDestTag = items.active_crypto_address.destination_tag ? Number(items.active_crypto_address.destination_tag) : null;
+            - Return: ...(existingDestTag && { destination_tag: existingDestTag }),
+          ✅ TEST 6 - CRYPTO FUNCTION RETURN: destination_tag: destinationTag pattern found ✅
+            - Found in Crypto() function return object at line 2712
+            
+          🔧 IMPLEMENTATION VERIFICATION RESULTS:
+          1. ✅ verifyCryptoPayment responses include destination_tag across all statuses (waiting, underpaid, processing, confirmed)
+          2. ✅ createCryptoPayment Phase 12.1 existing address return includes destination_tag extraction and return
+          3. ✅ Crypto function properly returns destination_tag in payment response object
+          4. ✅ All tempData destination_tag conditionals use Number() conversion for type safety
+          5. ✅ XRP/RLUSD tag-based chain support is comprehensive across checkout flow
+          6. ✅ Backend health and TypeScript compilation both passing
+          
+          CONCLUSION: XRP/RLUSD destination_tag implementation is fully operational across all checkout responses. The destination_tag field is properly included in verifyCryptoPayment waiting/underpaid/processing/confirmed responses, createCryptoPayment existing address returns, and Crypto function return objects. All 6 verification requirements from the review request have been successfully validated.
           TEST 1: Backend health - GET http://localhost:8001/api/status/health → 200 "healthy"
           
           TEST 2: TypeScript compilation - cd /app/backend && npx tsc --noEmit → exit code 0
