@@ -957,6 +957,15 @@ export const detectOrphanPayments = async (): Promise<{
           continue;
         }
 
+        // FIX: Skip addresses where the last orphan scan already confirmed tx was processed
+        // Prevents noisy re-detection of residual balances (XRP reserves, admin fee remnants)
+        const orphanSkipKey = `orphan-skip:${walletAddress}`;
+        const orphanSkipped = await getRedisItem(orphanSkipKey);
+        if (orphanSkipped && Object.keys(orphanSkipped).length > 0) {
+          result.alreadyProcessed++;
+          continue;
+        }
+
         const recentPoolTx = await merchantPoolTransactionModel.findOne({
           where: {
             temp_address_id: tempAddressId,
