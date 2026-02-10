@@ -8,7 +8,7 @@ import json
 from urllib.parse import urlparse, parse_qs
 
 def test_both_formats():
-    backend_url = "https://dependency-hub-7.preview.emergentagent.com"
+    backend_url = "https://install-manager-5.preview.emergentagent.com"
     
     # First authenticate
     response = requests.post(

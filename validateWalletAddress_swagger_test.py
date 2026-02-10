@@ -15,7 +15,7 @@ from typing import Dict, List, Any
 class DynoPayValidateWalletSwaggerTester:
     def __init__(self):
         # Base URL from review request
-        self.base_url = "https://dependency-hub-7.preview.emergentagent.com"
+        self.base_url = "https://install-manager-5.preview.emergentagent.com"
         self.test_results = {}
         self.errors = []
         self.jwt_token = None

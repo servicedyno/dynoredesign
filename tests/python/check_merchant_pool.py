@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://dependency-hub-7.preview.emergentagent.com/api"
+BASE_URL = "https://install-manager-5.preview.emergentagent.com/api"
 
 # Login credentials
 email = "john@dyno.pt"
