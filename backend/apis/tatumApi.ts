@@ -1380,11 +1380,28 @@ const batchFeeEstimation = async ({
 
     // Chain-specific gas cap — Polygon needs higher cap than ETH
     const isPolygonBatch = ["POLYGON", "USDT-POLYGON"].includes(currency);
-    const maxBatchGas = isPolygonBatch ? 1000 : 50;
-    let gasPrice = Math.max(isPolygonBatch ? 25 : 1, Math.min(maxBatchGas, gasFees?.gasPrice || 1));
+    
+    // For Polygon: also check RPC gas price since SDK can be stale
+    let rpcGasPrice = 0;
+    if (isPolygonBatch) {
+      try {
+        const rpcResp = await axios.post(
+          `https://api.tatum.io/v3/polygon/web3/${process.env.TATUM_KEY}`,
+          { jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 },
+          { headers: { "x-api-key": process.env.TATUM_KEY }, timeout: 5000 }
+        );
+        if (rpcResp.data?.result) {
+          rpcGasPrice = Math.ceil(parseInt(rpcResp.data.result, 16) / 1e9);
+        }
+      } catch (_rpcErr) { /* use SDK value */ }
+    }
+    
+    const maxBatchGas = isPolygonBatch ? 1500 : 50;
+    const rawBatchGas = Math.max(gasFees?.gasPrice || 1, rpcGasPrice);
+    let gasPrice = Math.max(isPolygonBatch ? 25 : 1, Math.min(maxBatchGas, rawBatchGas));
     // Percentage-based buffer: 10% + 0.5 Gwei priority tip (was flat +1 Gwei)
     const batchGasBuffer = Math.ceil(gasPrice * 1.1 + 0.5);
-    console.log(`[EVM Gas] ⛽ Batch price: ${gasPrice} Gwei, buffered=${batchGasBuffer} Gwei (chain=${currency}, max=${maxBatchGas})`);
+    console.log(`[EVM Gas] ⛽ Batch price: SDK=${gasFees?.gasPrice}, RPC=${rpcGasPrice}, used=${gasPrice}, buffered=${batchGasBuffer} Gwei (chain=${currency}, max=${maxBatchGas})`);
 
     fees = {
       fast: Number(
