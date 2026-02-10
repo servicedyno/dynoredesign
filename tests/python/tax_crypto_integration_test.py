@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 load_dotenv('/app/backend/.env')
 
 # Get backend URL from frontend .env
-BACKEND_URL = "https://rlusd-xrpl-fix.preview.emergentagent.com"
+BACKEND_URL = "https://trustline-install.preview.emergentagent.com"
 try:
     with open('/app/frontend/.env', 'r') as f:
         for line in f:

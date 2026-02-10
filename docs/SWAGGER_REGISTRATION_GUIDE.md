@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://rlusd-xrpl-fix.preview.emergentagent.com/api/docs
+Go to: https://trustline-install.preview.emergentagent.com/api/docs
 
 ---
 

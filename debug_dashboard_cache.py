@@ -8,7 +8,7 @@ import json
 import time
 
 # Test credentials
-backend_url = "https://rlusd-xrpl-fix.preview.emergentagent.com"
+backend_url = "https://trustline-install.preview.emergentagent.com"
 test_email = "richard@dyno.pt"
 test_password = "Katiekendra123@"
 company_id = 38

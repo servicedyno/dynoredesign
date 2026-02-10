@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://rlusd-xrpl-fix.preview.emergentagent.com/api/docs/
+**URL:** https://trustline-install.preview.emergentagent.com/api/docs/
 
 ---
 
