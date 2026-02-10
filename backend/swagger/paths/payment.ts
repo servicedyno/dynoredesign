@@ -902,7 +902,7 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
               required: ['uniqueRef', 'currency'],
               properties: {
                 uniqueRef: { type: 'string', description: 'Payment reference from getData response (the "d" URL parameter)' },
-                currency: { type: 'string', enum: ['BTC', 'ETH', 'USDT-TRC20', 'USDT-ERC20', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDC-ERC20'], description: 'Cryptocurrency to pay with' },
+                currency: { type: 'string', enum: ['BTC', 'ETH', 'USDT-TRC20', 'USDT-ERC20', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'], description: 'Cryptocurrency to pay with' },
                 customer_email: { type: 'string', format: 'email', description: 'Optional: for payment receipt' }
               }
             },
