@@ -1392,6 +1392,7 @@ const createCryptoPayment = async (
             address: existingAddress,
             // XRP/RLUSD: Include destination tag for tag-based chains
             ...(existingDestTag && { destination_tag: existingDestTag }),
+            ...(existingDestTag && { memo: String(existingDestTag) }),
             transaction_id: existingRedisData.payment_id || existingRedisData.unique_tx_id,
             amount: existingRedisData.amount,
             currency: requestedCurrency,
