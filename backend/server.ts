@@ -267,6 +267,10 @@ cron.schedule("*/3 * * * *", function () {
   merchantPoolService.prewarmPoolAddresses().catch(err => {
     log(`Cron: Pool pre-warming failed: ${err.message}`, "error");
   });
+  // Also retry any RLUSD addresses with pending trust lines
+  merchantPoolService.retryPendingTrustLines().catch(err => {
+    log(`Cron: Trust line retry failed: ${err.message}`, "error");
+  });
 });
 
 // Background rate cache: Refresh crypto rates every 60 seconds via CoinGecko (free)
