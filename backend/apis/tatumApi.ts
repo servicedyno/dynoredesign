@@ -3223,107 +3223,60 @@ const getTransactionGasCost = async (
   }
 };
 
-// ============================================================
-// Direct XRPL Library — Replaces Tatum SDK for XRP trust line
-// operations. Tatum's xrpTrustLineBlockchain() fails with
-// "xrp.sign.failed: Unable to communicate with blockchain".
-// Using the official xrpl.js library connects directly to the
-// XRP Ledger via WebSocket, bypassing Tatum's unreliable relay.
-// ============================================================
-import { Client as XrplClient, Wallet as XrplWallet, TrustSet, AccountLinesRequest } from "xrpl";
-
-const XRPL_MAINNET_WS = process.env.XRPL_WS_URL || "wss://xrplcluster.com";
-const XRPL_TESTNET_WS = "wss://s.altnet.rippletest.net:51233";
-
-/**
- * Get a connected XRPL WebSocket client (mainnet or testnet)
- * Caller MUST disconnect after use via client.disconnect()
- */
-const getXrplClient = async (): Promise<XrplClient> => {
-  const wsUrl = isTestnet() ? XRPL_TESTNET_WS : XRPL_MAINNET_WS;
-  const client = new XrplClient(wsUrl);
-  await client.connect();
-  return client;
-};
-
 /**
  * Check if an XRP account is activated on the ledger (has been funded with base reserve)
- * Uses direct XRPL WebSocket instead of Tatum SDK for reliability.
  */
 const verifyXrpAccountActivated = async (address: string): Promise<boolean> => {
-  let client: XrplClient | null = null;
+  const tatumSdk = await getTatumSDK();
   try {
-    client = await getXrplClient();
-    const response = await client.request({
-      command: "account_info",
-      account: address,
-      ledger_index: "validated",
-    });
-    const balance = Number(response.result.account_data.Balance || 0);
-    // Balance is in drops (1 XRP = 1,000,000 drops). If > 0, account is activated.
-    return balance > 0;
+    const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
+    return res && Number(res.balance || 0) > 0;
   } catch (e: unknown) {
-    const err = e as { data?: { error?: string }; message?: string };
-    // actNotFound = account does not exist on ledger
-    if (err.data?.error === "actNotFound" || (err.message || "").includes("actNotFound")) {
+    const err = e as { message?: string; body?: any };
+    if ((err.message || '').includes('not.found') || (err.message || '').includes('account.not.found') ||
+        (err.body?.error_message || '').includes('not found')) {
       return false;
     }
-    // Any other RPC error — log and return false rather than crashing
-    console.warn(`[verifyXrpAccountActivated] Error checking ${address}:`, err.message || err);
-    return false;
-  } finally {
-    if (client?.isConnected()) await client.disconnect();
+    throw e;
   }
 };
 
 /**
- * Verify that an XRP trust line exists for a given token/issuer.
- * Uses direct XRPL account_lines command instead of Tatum SDK.
+ * Verify that an XRP trust line exists for a given token/issuer
  */
 const verifyXrpTrustLine = async (address: string, issuerAccount: string, currencyHex: string): Promise<boolean> => {
-  let client: XrplClient | null = null;
+  const tatumSdk = await getTatumSDK();
   try {
-    client = await getXrplClient();
-    const response = await client.request({
-      command: "account_lines",
-      account: address,
-      ledger_index: "validated",
-    } as AccountLinesRequest);
-
-    const lines = response.result.lines || [];
-    for (const line of lines) {
-      // Match by currency hex (e.g. "524C555344...") or plain "RLUSD"
-      const currMatch =
-        (line.currency || "").toUpperCase() === currencyHex.toUpperCase() ||
-        (line.currency || "").toUpperCase() === "RLUSD" ||
-        (line.currency || "").toUpperCase().startsWith("524C5553");
-      const issuerMatch = (line.account || "").toLowerCase() === issuerAccount.toLowerCase();
-      if (currMatch && issuerMatch) {
-        return true;
+    const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
+    const resAny = res as any;
+    const issuerLower = issuerAccount.toLowerCase();
+    // Check obligations array (trust lines the account has set)
+    if (resAny?.obligations) {
+      for (const obligation of resAny.obligations) {
+        if ((obligation.currency || '').toUpperCase().startsWith('524C5553') ||
+            (obligation.currency || '').toUpperCase() === 'RLUSD') {
+          return true;
+        }
       }
-      // Also match if just the currency matches (trust line for RLUSD from any issuer is rare)
-      if (currMatch) {
-        return true;
+    }
+    // Also check assets
+    if (resAny?.assets) {
+      for (const asset of resAny.assets) {
+        if ((asset.currency || '').toUpperCase().startsWith('524C5553') ||
+            (asset.currency || '').toUpperCase() === 'RLUSD') {
+          return true;
+        }
       }
     }
     return false;
-  } catch (e: unknown) {
-    const err = e as { data?: { error?: string }; message?: string };
-    if (err.data?.error === "actNotFound") return false;
-    console.warn(`[verifyXrpTrustLine] Error checking ${address}:`, err.message || err);
+  } catch {
     return false;
-  } finally {
-    if (client?.isConnected()) await client.disconnect();
   }
 };
 
 /**
- * Set up XRP Trust Line for RLUSD token on a new XRP address.
- * Uses direct XRPL library (TrustSet transaction) instead of Tatum SDK.
- * 
- * Previously used tatumSdk.blockchain.xrp.xrpTrustLineBlockchain() which
- * failed with "xrp.sign.failed: Unable to communicate with blockchain".
- * Now submits TrustSet directly to XRP Ledger via WebSocket.
+ * Set up XRP Trust Line for RLUSD token on a new XRP address
+ * Required before the address can receive RLUSD tokens
  */
 const setupXrpTrustLine = async (
   fromAccount: string,
@@ -3332,49 +3285,20 @@ const setupXrpTrustLine = async (
   token: string,
   limit: string = "999999999"
 ) => {
-  let client: XrplClient | null = null;
+  const tatumSdk = await getTatumSDK();
   try {
-    client = await getXrplClient();
-    const wallet = XrplWallet.fromSecret(fromSecret);
-
-    // Verify wallet address matches fromAccount
-    if (wallet.address !== fromAccount) {
-      console.warn(`[setupXrpTrustLine] Wallet derived address ${wallet.address} differs from fromAccount ${fromAccount}, using derived address`);
-    }
-
-    const trustSetTx: TrustSet = {
-      TransactionType: "TrustSet",
-      Account: wallet.address,
-      LimitAmount: {
-        currency: token,
-        issuer: issuerAccount,
-        value: limit,
-      },
-    };
-
-    console.log(`[setupXrpTrustLine] Submitting TrustSet: ${wallet.address} → ${issuerAccount} (${token}), limit=${limit}`);
-
-    // autofill adds Fee, Sequence, LastLedgerSequence automatically
-    const prepared = await client.autofill(trustSetTx);
-    const signed = wallet.sign(prepared);
-    const result = await client.submitAndWait(signed.tx_blob);
-
-    const meta = result.result.meta as any;
-    const txResult = meta?.TransactionResult || (result.result as any).engine_result || "unknown";
-
-    if (txResult === "tesSUCCESS") {
-      console.log(`[setupXrpTrustLine] ✅ Trust line set for ${wallet.address} → ${issuerAccount} (${token}), tx: ${result.result.hash}`);
-      return { txId: result.result.hash, status: "SUCCESS" };
-    } else {
-      console.error(`[setupXrpTrustLine] ❌ TrustSet returned ${txResult}, tx: ${result.result.hash}`);
-      throw new Error(`TrustSet failed with result: ${txResult}`);
-    }
-  } catch (error: unknown) {
-    const err = error as { message?: string };
-    console.error(`[setupXrpTrustLine] Failed:`, err?.message || error);
+    const result = await tatumSdk.blockchain.xrp.xrpTrustLineBlockchain({
+      fromAccount,
+      fromSecret,
+      issuerAccount,
+      token,
+      limit,
+    });
+    console.log(`[setupXrpTrustLine] Trust line set for ${fromAccount} → ${issuerAccount} (${token})`);
+    return result;
+  } catch (error) {
+    console.error(`[setupXrpTrustLine] Failed:`, error?.message || error);
     throw error;
-  } finally {
-    if (client?.isConnected()) await client.disconnect();
   }
 };
 
