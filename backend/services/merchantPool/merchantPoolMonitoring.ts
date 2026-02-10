@@ -301,7 +301,7 @@ export const checkMissedPayments = async (): Promise<{
             
             // Directly call cryptoVerification — all data is in Redis
             try {
-              const verificationResult = await paymentController.cryptoVerification(walletAddress, true) as { duplicate?: boolean; status?: number; paymentStatus?: string };
+              const verificationResult = await paymentController.cryptoVerification(walletAddress, true, cryptoRedisKey) as { duplicate?: boolean; status?: number; paymentStatus?: string };
               
               if (verificationResult?.duplicate) {
                 console.log(`[MerchantPool] ⏭️ ${walletAddress} - Payment already processed (duplicate)`);
