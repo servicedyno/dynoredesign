@@ -436,6 +436,15 @@ export const retryPendingTrustLines = async (): Promise<{
 
     if (pendingAddresses.length === 0) return result;
 
+    // FIX: Backoff for unactivated XRP fee wallet — avoid retrying every 3 min when wallet has 0 XRP
+    const xrpFeeWallet = process.env.XRP_FEE_WALLET || process.env.XRP;
+    const backoffKey = `trustline-backoff:fee-wallet-not-activated`;
+    const backoffEntry = await getRedisItem(backoffKey);
+    if (backoffEntry && Object.keys(backoffEntry).length > 0) {
+      // Silently skip — backoff is active (fee wallet was recently confirmed not activated)
+      return result;
+    }
+
     console.log(`[TrustLineRetry] Found ${pendingAddresses.length} RLUSD addresses with pending trust lines`);
 
     const rlusdIssuer = RLUSD_CONFIG.issuer;
