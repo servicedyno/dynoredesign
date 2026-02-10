@@ -2735,14 +2735,54 @@ const getIncomingTransactions = async (
       }
     } else if (currency === "USDT-POLYGON") {
       const contractAddress = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
-      const txData = await tatumSdk.fungibleToken.erc20GetTransactionByAddress(
-        "MATIC", address, contractAddress, limit
-      );
-      for (const tx of (txData as ERC20Transaction[]) || []) {
-        if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
-          transactions.push({
-            txId: tx.transactionHash || tx.txId || tx.hash || '',
-            amount: parseFloat(tx.value || '0') / 1e6,
+      try {
+        const txData = await tatumSdk.fungibleToken.erc20GetTransactionByAddress(
+          "MATIC", address, contractAddress, limit
+        );
+        for (const tx of (txData as ERC20Transaction[]) || []) {
+          if (tx.to?.toLowerCase() === address.toLowerCase() && parseFloat(tx.value || '0') > 0) {
+            transactions.push({
+              txId: tx.transactionHash || tx.txId || tx.hash || '',
+              amount: parseFloat(tx.value || '0') / 1e6,
+              timestamp: tx.timestamp || tx.blockTimestamp || Date.now()
+            });
+          }
+        }
+      } catch (_sdkErr) {
+        // Fallback: use RPC eth_getLogs to find ERC20 Transfer events
+        console.warn(`[getIncomingTransactions] USDT-POLYGON SDK failed, trying RPC fallback for ${address}`);
+        try {
+          const headers = await getTatumHeaders();
+          const blockR = await axios.post('https://polygon-mainnet.gateway.tatum.io',
+            { jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] },
+            { headers });
+          const currentBlock = parseInt(blockR.data.result, 16);
+          const fromBlock = '0x' + Math.max(0, currentBlock - 50000).toString(16);
+          const topic0 = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+          const paddedAddr = '0x000000000000000000000000' + address.slice(2).toLowerCase();
+          
+          const logsR = await axios.post('https://polygon-mainnet.gateway.tatum.io',
+            { jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{
+              fromBlock, toBlock: 'latest',
+              address: contractAddress,
+              topics: [topic0, null, paddedAddr]
+            }]},
+            { headers });
+          
+          for (const log of (logsR.data.result || []).slice(0, limit)) {
+            const value = parseInt(log.data, 16);
+            if (value > 0) {
+              transactions.push({
+                txId: log.transactionHash || '',
+                amount: value / 1e6,
+                timestamp: log.blockNumber ? parseInt(log.blockNumber, 16) * 1000 : Date.now()
+              });
+            }
+          }
+        } catch (rpcErr: any) {
+          console.warn(`[getIncomingTransactions] USDT-POLYGON RPC fallback failed: ${rpcErr.message}`);
+        }
+      }
             timestamp: tx.timestamp || tx.blockTimestamp || Date.now()
           });
         }
