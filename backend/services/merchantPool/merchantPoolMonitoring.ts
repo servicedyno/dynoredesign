@@ -321,7 +321,7 @@ export const checkMissedPayments = async (): Promise<{
               } else {
                 // Mark as failed again so next cron cycle can retry
                 const failedData = { ...recoveryData, status: 'failed', failedAt: new Date().toISOString(), lastError: err?.message || 'cryptoVerification failed on retry' };
-                await setRedisItem("crypto-" + walletAddress, failedData);
+                await setRedisItem(cryptoRedisKey, failedData);
                 console.error(`[MerchantPool] ❌ Recovery failed for ${walletAddress}: ${err?.message || verifyError}`);
                 result.errors.push(`Recovery failed for ${walletAddress}: ${err?.message}`);
               }
