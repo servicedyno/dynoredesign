@@ -3368,6 +3368,8 @@ const verifyCryptoPayment = async (
         paidAmount: parseFloat(totalReceived.toFixed(6)),
         expectedAmount: parseFloat(originalExpected.toFixed(6)),
         currency: currency,
+        // XRP/RLUSD: Include destination tag for tag-based chains
+        ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
         // USD amounts
         paidAmountUsd: parseFloat(paidAmountUsd.toFixed(2)),
         expectedAmountUsd: parseFloat(expectedAmountUsd.toFixed(2)),
