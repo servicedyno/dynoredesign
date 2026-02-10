@@ -247,7 +247,8 @@ cron.schedule("*/5 * * * *", async function () {
 // Safety net: catches payments sent AFTER reservation expired and address was released
 // Uses saved last_payment_context for proper merchant/admin fee split
 cron.schedule("*/10 * * * *", async function () {
-  const lockAcquired = await acquireLock("cron:detectOrphanPayments", 540, 1);
+  // FIX: Increased lock TTL from 540s to 900s — scanning 158+ addresses can take >9 min with API latency
+  const lockAcquired = await acquireLock("cron:detectOrphanPayments", 900, 1);
   if (!lockAcquired) { log("Cron: detectOrphanPayments skipped (already running)", "info"); return; }
   try {
     log("Cron: detectOrphanPayments running", "info");
