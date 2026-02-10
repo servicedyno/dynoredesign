@@ -470,7 +470,6 @@ const tatumCryptoWebHook = async (
 
     // Check for duplicate txId (prevent processing same blockchain tx twice)
     const processedTxKey = `processed-tx-${payload.txId}`;
-    const processingLockKey = `processing-lock-${payload.txId}`;
     
     const alreadyProcessed = await getRedisItem(processedTxKey);
     if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
