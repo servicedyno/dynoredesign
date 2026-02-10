@@ -827,18 +827,30 @@ export const detectOrphanPayments = async (): Promise<{
       const orphanCryptoKey = getCryptoRedisKey(walletAddress, orphanDestTag);
 
       try {
+        let balance: number;
         let balanceResult;
-        try {
-          balanceResult = await tatumApi.getAddressBalance(walletAddress, walletType);
-        } catch (balanceError: unknown) {
-          const balErr = balanceError as { message?: string };
-          const errMsg = balErr.message || '';
-          if (errMsg.includes('account.not.found') || errMsg.includes('not.found')) {
-            continue;
+
+        // FIX: For tag-based chains (XRP/RLUSD), use incoming txs filtered by tag
+        if (isTagBasedChain(walletType) && orphanDestTag) {
+          try {
+            const taggedTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 20, orphanDestTag);
+            balance = taggedTxs.reduce((sum, tx) => sum + tx.amount, 0);
+          } catch {
+            continue; // Can't determine tag-specific balance, skip
           }
-          throw balanceError;
+        } else {
+          try {
+            balanceResult = await tatumApi.getAddressBalance(walletAddress, walletType);
+          } catch (balanceError: unknown) {
+            const balErr = balanceError as { message?: string };
+            const errMsg = balErr.message || '';
+            if (errMsg.includes('account.not.found') || errMsg.includes('not.found')) {
+              continue;
+            }
+            throw balanceError;
+          }
+          balance = parseFloat(balanceResult?.balance || '0');
         }
-        const balance = parseFloat(balanceResult?.balance || '0');
 
         if (balance <= 0) {
           continue;
