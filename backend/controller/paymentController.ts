@@ -3457,6 +3457,8 @@ const verifyCryptoPayment = async (
         message: "Payment address generated, waiting for transaction",
         expected_amount: expectedAmount.toFixed(6),
         currency: currency,
+        // XRP/RLUSD: Include destination tag for tag-based chains
+        ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
         // NEW: Timer and settings
         remaining_seconds: remainingSeconds,
         grace_period_minutes: gracePeriodMinutes,
@@ -3473,6 +3475,8 @@ const verifyCryptoPayment = async (
         amount: tempData.receivedAmount || tempData.amount,
         expected_amount: expectedAmount.toFixed(6),
         currency: currency,
+        // XRP/RLUSD: Include destination tag for tag-based chains
+        ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
         // Timer and settings
         remaining_seconds: remainingSeconds,
         grace_period_minutes: gracePeriodMinutes,
@@ -3489,6 +3493,8 @@ const verifyCryptoPayment = async (
         amount: tempData.receivedAmount || tempData.amount,
         expected_amount: expectedAmount.toFixed(6),
         currency: currency,
+        // XRP/RLUSD: Include destination tag for tag-based chains
+        ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
         // Timer and settings
         remaining_seconds: remainingSeconds,
         grace_period_minutes: gracePeriodMinutes,
