@@ -1195,11 +1195,13 @@ const feeEstimation = async (
       fees = { fast: 0.00001, medium: 0.000005, slow: 0.000005 };
     }
   } else if (currency === "XRP") {
-    // XRP: very low fees (~12 drops = 0.000012 XRP)
-    fees = { fast: 0.00005, medium: 0.000012, slow: 0.000012 };
+    // XRP: very low fees — use XRP chain strategy constants
+    const { XRP_FEE_CONSTANTS } = require('../services/chains/xrpChain');
+    fees = { fast: XRP_FEE_CONSTANTS.FAST_FEE_XRP, medium: XRP_FEE_CONSTANTS.BASE_FEE_XRP, slow: XRP_FEE_CONSTANTS.BASE_FEE_XRP };
   } else if (currency === "RLUSD") {
-    // RLUSD on XRP Ledger: fee in XRP (~12 drops)
-    fees = { fast: 0.00005 };
+    // RLUSD on XRP Ledger: fee in XRP
+    const { XRP_FEE_CONSTANTS: xrpConst } = require('../services/chains/xrpChain');
+    fees = { fast: xrpConst.FAST_FEE_XRP };
   } else if (currency === "POLYGON" || currency === "USDT-POLYGON") {
     // Polygon: EVM-compatible fee estimation
     // Use TRANSFER_ERC20 type for gas price estimation (gas price is network-level, same for all tx types)
