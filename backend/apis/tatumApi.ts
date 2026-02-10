@@ -2783,10 +2783,6 @@ const getIncomingTransactions = async (
           console.warn(`[getIncomingTransactions] USDT-POLYGON RPC fallback failed: ${rpcErr.message}`);
         }
       }
-            timestamp: tx.timestamp || tx.blockTimestamp || Date.now()
-          });
-        }
-      }
     }
   } catch (error) {
     console.error(`[getIncomingTransactions] Error fetching transactions for ${currency}:`, error.message);
