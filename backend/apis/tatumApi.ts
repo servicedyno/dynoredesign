@@ -2749,8 +2749,13 @@ const getIncomingTransactions = async (
           }
         }
       } catch (_sdkErr) {
-        // Fallback: use RPC eth_getLogs to find ERC20 Transfer events
-        console.warn(`[getIncomingTransactions] USDT-POLYGON SDK failed, trying RPC fallback for ${address}`);
+        // SDK failed — will use RPC fallback below
+        console.warn(`[getIncomingTransactions] USDT-POLYGON SDK failed for ${address}, will try RPC fallback`);
+      }
+      
+      // RPC fallback: if SDK returned empty or failed, use eth_getLogs to find ERC20 Transfer events
+      if (transactions.length === 0) {
+        console.log(`[getIncomingTransactions] USDT-POLYGON: Using RPC fallback (eth_getLogs) for ${address}`);
         try {
           const headers = await getTatumHeaders();
           const blockR = await axios.post('https://polygon-mainnet.gateway.tatum.io',
@@ -2779,6 +2784,7 @@ const getIncomingTransactions = async (
               });
             }
           }
+          console.log(`[getIncomingTransactions] USDT-POLYGON RPC found ${transactions.length} transactions`);
         } catch (rpcErr: any) {
           console.warn(`[getIncomingTransactions] USDT-POLYGON RPC fallback failed: ${rpcErr.message}`);
         }
