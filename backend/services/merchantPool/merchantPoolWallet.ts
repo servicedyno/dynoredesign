@@ -482,8 +482,10 @@ export const retryPendingTrustLines = async (): Promise<{
             feeWalletActivated = false;
           }
           if (!feeWalletActivated) {
-            console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — XRP fee wallet (${xrpFeeWallet.substring(0, 10)}...) is not activated yet`);
+            console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — XRP fee wallet (${xrpFeeWallet.substring(0, 10)}...) is not activated yet. Backing off for 1 hour.`);
             result.errors.push(`${walletAddress}: XRP fee wallet not activated`);
+            // FIX: Set backoff for 1 hour to avoid noisy retries every 3 min
+            await setRedisItemWithTTL(backoffKey, { reason: 'XRP fee wallet not activated', wallet: xrpFeeWallet, checkedAt: new Date().toISOString() }, 3600);
             continue;
           }
 
