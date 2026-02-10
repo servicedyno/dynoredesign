@@ -71,7 +71,21 @@ export const ensurePoolSubscriptions = async (): Promise<{
       const walletAddressLower = walletAddressOriginal.toLowerCase();
       const dbSubId = addr.dataValues.subscription_id;
       const walletType = addr.dataValues.wallet_type;
-      const activeSub = activeSubsMap.get(walletAddressLower);
+      
+      // FIX: BCH CashAddr format includes "bitcoincash:" prefix in DB,
+      // but Tatum stores just the hash part. Try both formats for lookup.
+      let activeSub = activeSubsMap.get(walletAddressLower);
+      if (!activeSub && walletAddressLower.startsWith('bitcoincash:')) {
+        const bchHash = walletAddressLower.replace('bitcoincash:', '');
+        activeSub = activeSubsMap.get(bchHash);
+      }
+      // Also handle ecash: prefix (BCH fork) and other prefixed formats
+      if (!activeSub && walletAddressLower.includes(':')) {
+        const hashOnly = walletAddressLower.split(':')[1];
+        if (hashOnly) {
+          activeSub = activeSubsMap.get(hashOnly);
+        }
+      }
 
       if (activeSub && dbSubId === activeSub.id) {
         result.valid++;
