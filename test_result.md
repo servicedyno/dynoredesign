@@ -4429,3 +4429,83 @@ ports:
           - XRP:     ✅ 7.3 XRP received → merchant got ~5.0 XRP → status=successful
           - POLYGON: ✅ 108.87 POL received → merchant got 73.83 POL → status=successful
 
+
+  - task: "FIX: RLUSD Trust Line Setup — Tatum SDK fallback to Tatum RPC + local signing"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/package.json"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          FIX: RLUSD trust line setup now has Tatum RPC + local signing fallback.
+          
+          PROBLEM: Tatum SDK's POST /v3/xrp/trust consistently fails with:
+          "xrp.sign.failed: Unable to communicate with blockchain"
+          This is a Tatum server-side issue where their internal XRP node for
+          transaction signing is unreachable. All RLUSD addresses were stuck in
+          PENDING_TRUSTLINE status because the only way to set up trust lines was broken.
+          
+          FIX (3 functions updated in tatumApi.ts):
+          
+          1. setupXrpTrustLine — Primary: Tatum SDK + Fallback: Tatum RPC gateway
+             - Still tries Tatum SDK xrpTrustLineBlockchain first
+             - On failure, falls back to:
+               a) Get account sequence via Tatum RPC (ripple-mainnet)
+               b) Get current fee via Tatum RPC
+               c) Build TrustSet transaction JSON locally
+               d) Sign locally with xrpl Wallet.fromSecret()
+               e) Submit signed tx_blob via Tatum RPC gateway "submit" method
+             - Both paths use Tatum infrastructure (SDK or RPC)
+          
+          2. verifyXrpAccountActivated — Added Tatum RPC fallback
+             - Primary: Tatum SDK xrpGetAccountBalance
+             - Fallback: Tatum RPC account_info (ripple-mainnet)
+          
+          3. verifyXrpTrustLine — Added Tatum RPC fallback
+             - Primary: Tatum SDK xrpGetAccountBalance (obligations/assets)
+             - Fallback: Tatum RPC account_lines (ripple-mainnet)
+          
+          4. New helper: tatumXrpRpc() — Calls Tatum RPC gateway
+             - POST /v3/blockchain/node/ripple-mainnet
+             - Supports all XRPL JSON-RPC methods
+          
+          5. Added dependency: xrpl v4.5.0 (for local TrustSet signing only)
+          
+          VERIFY THESE TESTS:
+          
+          TEST 1: Backend healthy
+          - GET /health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - cd /app/backend && npx tsc --noEmit should exit 0
+          
+          TEST 3: Code — setupXrpTrustLine has dual strategy
+          - grep 'xrpTrustLineBlockchain' /app/backend/apis/tatumApi.ts should find it (Tatum SDK attempt)
+          - grep 'Tatum RPC.*local signing' /app/backend/apis/tatumApi.ts should find fallback comment
+          - grep 'tatumXrpRpc.*submit' /app/backend/apis/tatumApi.ts should find RPC submit call
+          - grep 'XrplWallet.fromSecret' /app/backend/apis/tatumApi.ts should find local signing
+          
+          TEST 4: Code — tatumXrpRpc helper exists
+          - grep 'const tatumXrpRpc' /app/backend/apis/tatumApi.ts should find the function
+          - grep 'ripple-mainnet' /app/backend/apis/tatumApi.ts should find the RPC chain name
+          
+          TEST 5: Code — verifyXrpAccountActivated has fallback
+          - grep 'verifyXrpAccountActivated' /app/backend/apis/tatumApi.ts should find the function
+          - grep 'Tatum RPC gateway' /app/backend/apis/tatumApi.ts should find fallback comments (at least 2)
+          
+          TEST 6: Code — verifyXrpTrustLine has fallback
+          - grep 'account_lines' /app/backend/apis/tatumApi.ts should find RPC fallback
+          
+          TEST 7: Code — xrpl import
+          - grep 'import.*XrplWallet.*from.*xrpl' /app/backend/apis/tatumApi.ts should find the import
+          
+          TEST 8: Functional — Tatum RPC gateway working
+          - curl -s -X POST 'https://api.tatum.io/v3/blockchain/node/ripple-mainnet' -H 'x-api-key: TATUM_KEY' -H 'Content-Type: application/json' -d '{"method":"server_info","params":[{}]}' should return server_state
+          
+          Base URL for curl: http://localhost:8001 (internal)
