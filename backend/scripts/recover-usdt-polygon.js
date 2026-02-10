@@ -99,8 +99,15 @@ async function main() {
     console.log(`✅ Sufficient gas: ${currentPol} POL (need ~${requiredGas})`);
   }
 
-  // Step 6: Submit the USDT transfer
-  console.log(`\nStep 6: Submitting USDT transfer: ${MERCHANT_AMOUNT} USDT → ${ADMIN_WALLET}`);
+  // Step 6: Submit the USDT transfer with HIGHER gas price to replace stuck tx
+  // The stuck tx used gasPrice=100 Gwei. We need at least 10% more to replace it.
+  const replacementFee = {
+    ...feeEstimate,
+    gasPrice: Math.max(Number(feeEstimate?.gasPrice || 100) * 1.5, 150), // At least 150 Gwei
+    gasLimit: feeEstimate?.gasLimit || 65000,
+  };
+  console.log(`\nStep 6: Submitting REPLACEMENT USDT transfer with gasPrice=${replacementFee.gasPrice} Gwei`);
+  console.log(`${MERCHANT_AMOUNT} USDT → ${ADMIN_WALLET}`);
 
   const transferResult = await tatumApi.assetToOtherAddress({
     currency: "USDT-POLYGON",
@@ -108,7 +115,7 @@ async function main() {
     toAddress: ADMIN_WALLET,
     privateKey: privateKey,
     amount: Number(MERCHANT_AMOUNT),
-    fee: feeEstimate,
+    fee: replacementFee,
   });
 
   console.log(`\n✅ Transfer TX: ${transferResult?.txId}`);
