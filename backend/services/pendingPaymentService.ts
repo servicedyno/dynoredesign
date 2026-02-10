@@ -313,14 +313,18 @@ export const sendPartialPaymentNotification = async (
       return false;
     }
 
-    // Get user and company details
+    // Get user and company details — filter by company_id for multi-company users
+    const partialCompanyFilter = customerData.company_id
+      ? `AND c.company_id = :companyId`
+      : '';
     const userResult = await sequelize.query(
       `SELECT u.user_id, u.name, u.email, c.company_name, c.company_id
        FROM tbl_user u
        JOIN tbl_company c ON c.user_id = u.user_id
-       WHERE u.user_id = :userId`,
+       WHERE u.user_id = :userId ${partialCompanyFilter}
+       LIMIT 1`,
       {
-        replacements: { userId: customerData.adm_id },
+        replacements: { userId: customerData.adm_id, companyId: customerData.company_id },
         type: QueryTypes.SELECT,
       }
     ) as Array<Record<string, unknown>>;
