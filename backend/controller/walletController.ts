@@ -3369,6 +3369,7 @@ const updateWalletWithOTP = async (
       wallet_address: updatedWallet.dataValues.wallet_address,
       wallet_name: updatedWallet.dataValues.wallet_name,
       company_id: updatedWallet.dataValues.company_id,
+      destination_tag: updatedWallet.dataValues.destination_tag || null,
     });
   } catch (e) {
     const message = getErrorMessage(e);
