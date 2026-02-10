@@ -82,6 +82,7 @@ export default {
   addAddressToMerchantPool,
   initializeMerchantPool,
   prewarmPoolAddresses,
+  retryPendingTrustLines,
   reserveAddress,
   getAvailableAddress,
   markPaymentReceived,
