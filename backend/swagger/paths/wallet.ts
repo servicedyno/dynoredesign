@@ -420,7 +420,7 @@ Wallet address is saved and ready to receive payments!`,
                 },
                 currency: {
                   type: 'string',
-                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20'],
+                  enum: ['BTC', 'ETH', 'TRX', 'LTC', 'DOGE', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'SOL', 'POLYGON', 'USDT-POLYGON'],
                   description: '✅ REQUIRED: Same currency from Step 1',
                   example: 'BTC'
                 },
@@ -433,6 +433,12 @@ Wallet address is saved and ready to receive payments!`,
                   type: 'string',
                   description: '📝 OPTIONAL: Same wallet_name from Step 1',
                   example: 'Main BTC Payment Address'
+                },
+                destination_tag: {
+                  type: 'integer',
+                  description: '📝 OPTIONAL: XRP/RLUSD destination tag (same as Step 1)',
+                  example: 12345678,
+                  nullable: true
                 }
               }
             }
