@@ -82,6 +82,7 @@ import {
 } from "../services/blockchainFeeService";
 import * as merchantPoolService from "../services/merchantPoolService";
 import { callMerchantWebhook } from "../webhooks";
+import { isTagBasedChain, getCryptoRedisKey } from "../services/merchantPool/merchantPoolConfig";
 
 // ============================================
 // CENTRALIZED TIMING CONFIGURATION
