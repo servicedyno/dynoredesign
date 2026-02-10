@@ -1044,6 +1044,78 @@ If the payment link has \`apply_tax: true\`, the crypto amount will include the 
                       network: 'Tron (TRC20)'
                     }
                   }
+                },
+                'XRP Response (Tag-Based)': {
+                  summary: '⚠️ XRP with destination tag — MUST include tag when sending',
+                  description: 'XRP/RLUSD payments use a shared master address with a unique destination_tag per payment. The destination_tag MUST be included in the XRP transaction memo/tag field, otherwise the payment cannot be attributed.',
+                  value: {
+                    message: 'Payment created successfully',
+                    data: {
+                      hash: 'customer-a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                      address: 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe',
+                      destination_tag: 847291,
+                      amount: 42.5,
+                      base_amount: 100.00,
+                      base_currency: 'USD',
+                      rate: 2.35,
+                      merchant_amount: 41.5,
+                      fees: 1.0,
+                      fee_payer: 'company',
+                      qr_code: 'data:image/png;base64,iVBORw0KGgo...',
+                      transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                      temp_id: 4,
+                      is_merchant_pool: true,
+                      remaining_minutes: 15,
+                      network: 'XRP Ledger',
+                      tag_warning: '⚠️ You MUST include destination tag 847291 when sending XRP'
+                    }
+                  }
+                },
+                'SOL Response': {
+                  summary: 'Solana deposit address',
+                  value: {
+                    message: 'Payment created successfully',
+                    data: {
+                      hash: 'customer-a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                      address: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+                      amount: 0.667,
+                      base_amount: 100.00,
+                      base_currency: 'USD',
+                      rate: 0.00667,
+                      merchant_amount: 0.647,
+                      fees: 0.02,
+                      fee_payer: 'company',
+                      qr_code: 'data:image/png;base64,iVBORw0KGgo...',
+                      transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                      temp_id: 5,
+                      is_merchant_pool: true,
+                      remaining_minutes: 15,
+                      network: 'Solana'
+                    }
+                  }
+                },
+                'POLYGON Response': {
+                  summary: 'Polygon deposit address',
+                  value: {
+                    message: 'Payment created successfully',
+                    data: {
+                      hash: 'customer-a1b2c3d4e5f67890abcdef1234567890abcdef12',
+                      address: '0x8Ba1f109551bD432803012645Ac136ddd64DBA72',
+                      amount: 250.5,
+                      base_amount: 100.00,
+                      base_currency: 'USD',
+                      rate: 2.505,
+                      merchant_amount: 245.5,
+                      fees: 5.0,
+                      fee_payer: 'company',
+                      qr_code: 'data:image/png;base64,iVBORw0KGgo...',
+                      transaction_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                      temp_id: 6,
+                      is_merchant_pool: true,
+                      remaining_minutes: 15,
+                      network: 'Polygon'
+                    }
+                  }
                 }
               }
             }
