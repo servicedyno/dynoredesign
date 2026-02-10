@@ -1234,32 +1234,62 @@ const feeEstimation = async (
     const factor = Math.pow(10, decimals);
     const safeEstimateAmount = (Math.floor(localAmount * factor) / factor).toString();
     try {
-      const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
-        chain: "MATIC",
-        type: "TRANSFER_ERC20",
-        sender: fromAddress,
-        ...(isToken && {
-          contractAddress: process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
-        }),
-        recipient: toAddress,
-        amount: safeEstimateAmount,
-      })) as FeeEvmBased;
+      // Get gas price from both Tatum SDK and RPC, use the higher one
+      let sdkGasPrice = 30;
+      let sdkGasLimit = isToken ? 65000 : 21000;
+      try {
+        const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
+          chain: "MATIC",
+          type: "TRANSFER_ERC20",
+          sender: fromAddress,
+          ...(isToken && {
+            contractAddress: process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+          }),
+          recipient: toAddress,
+          amount: safeEstimateAmount,
+        })) as FeeEvmBased;
+        sdkGasPrice = Math.ceil(gasFees?.gasPrice || 30);
+        sdkGasLimit = isToken ? (gasFees?.gasLimit || 65000) : 21000;
+      } catch (_sdkErr) {
+        console.warn(`[feeEstimation] ⚠️ Polygon SDK fee estimation failed, using RPC fallback`);
+      }
 
-      let gasPrice = Math.max(1, Math.min(100, Math.ceil(gasFees?.gasPrice || 30)));
+      // RPC fallback: Polygon gas prices are volatile (30-800+ Gwei), SDK often returns stale data
+      let rpcGasPrice = sdkGasPrice;
+      try {
+        const rpcResp = await axios.post(
+          `https://api.tatum.io/v3/polygon/web3/${process.env.TATUM_KEY}`,
+          { jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 },
+          { headers: { "x-api-key": process.env.TATUM_KEY }, timeout: 5000 }
+        );
+        if (rpcResp.data?.result) {
+          rpcGasPrice = Math.ceil(parseInt(rpcResp.data.result, 16) / 1e9);
+        }
+      } catch (_rpcErr) {
+        console.warn(`[feeEstimation] ⚠️ Polygon RPC gas price failed, using SDK value`);
+      }
+
+      // Use the HIGHER of SDK and RPC prices — Polygon spikes are real
+      const POLYGON_MIN_GAS = 25;
+      const POLYGON_MAX_GAS = 1500; // Polygon can spike to 800+ Gwei
+      const rawGasPrice = Math.max(sdkGasPrice, rpcGasPrice);
+      let gasPrice = Math.max(POLYGON_MIN_GAS, Math.min(POLYGON_MAX_GAS, rawGasPrice));
       const gas_fee_for_amount = Math.ceil(gasPrice * 1.15 + 0.5);
+      console.log(`[Polygon Gas] ⛽ SDK=${sdkGasPrice}, RPC=${rpcGasPrice}, used=${gasPrice}, buffered=${gas_fee_for_amount} Gwei`);
+      
       // Native POL transfer: 21,000 gas (simple value transfer)
       // ERC20 token transfer: use Tatum's estimated gasLimit (~65,000)
-      const effectiveGasLimit = isToken ? gasFees.gasLimit : 21000;
+      const effectiveGasLimit = sdkGasLimit;
       fees = {
         fast: Number(
           Number((gas_fee_for_amount * effectiveGasLimit) / 1000000000)
         ).toFixed(8),
-        gasPrice,
+        gasPrice: gas_fee_for_amount,
         gasLimit: effectiveGasLimit,
       };
     } catch (_polyFeeError) {
-      console.warn(`[feeEstimation] ⚠️ Polygon fee estimation failed, using fallback`);
-      fees = { fast: isToken ? 0.01 : 0.001, gasPrice: 30, gasLimit: isToken ? 65000 : 21000 };
+      console.warn(`[feeEstimation] ⚠️ Polygon fee estimation failed entirely, using fallback`);
+      fees = { fast: isToken ? 0.05 : 0.005, gasPrice: 100, gasLimit: isToken ? 65000 : 21000 };
     }
   }
 
