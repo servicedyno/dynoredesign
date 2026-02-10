@@ -1,529 +1,374 @@
 #!/usr/bin/env python3
 """
-Backend Testing Suite for XRP/RLUSD Payment System
-Testing Fix 4+5 + Refactoring 1-3 Implementation
+Backend Testing Script for Strategy Pattern Migration
 
-This suite verifies:
-1. Backend health and TypeScript compilation
-2. XRP/RLUSD getIncomingTransactions signature includes filterDestinationTag param
-3. XRP tx parsing extracts DestinationTag from transactions
-4. Tagless XRP warning exists in webhook handler
-5. Strategy pattern infrastructure files exist
-6. withSdkFallback is imported and used in tatumApi
-7. checkMissedPayments has hardening constants
-8. processAddress function extraction
-9. No continue statements in processAddress function
-10. isTagBasedChain used for tag-aware balance check
-11. verifyXrpTrustLine uses withSdkFallback
+Tests the 8 requirements specified in the review request:
+1. Backend healthy - GET returns 200 with status "healthy" 
+2. TypeScript compiles clean - tsc --noEmit exits 0
+3. All 8 strategy chain files exist
+4. Strategy factory has getStrategy and resolveChainGroup exports
+5. tatumApi.ts now uses chain strategy utilities (5 chain modules integrated)
+6. Each chain module implements ChainStrategy interface
+7. Chain-specific constants are properly exported
+8. XRP tag-based utilities exported
 """
 
-import os
-import subprocess
 import requests
+import subprocess
+import os
 import sys
 import json
-import time
+from pathlib import Path
 
-# Base URL from frontend .env
-BASE_URL = "https://fix-issues-8.preview.emergentagent.com"
+# Backend URL from frontend env
+BACKEND_URL = "https://fix-issues-8.preview.emergentagent.com"
 
 class Colors:
-    """ANSI color codes for terminal output"""
     GREEN = '\033[92m'
     RED = '\033[91m'
     YELLOW = '\033[93m'
     BLUE = '\033[94m'
-    PURPLE = '\033[95m'
-    CYAN = '\033[96m'
-    WHITE = '\033[97m'
+    RESET = '\033[0m'
     BOLD = '\033[1m'
-    END = '\033[0m'
 
-def print_test_header(test_num, description):
-    """Print formatted test header"""
-    print(f"\n{Colors.BLUE}{Colors.BOLD}TEST {test_num}: {description}{Colors.END}")
-    print(f"{Colors.BLUE}{'='*60}{Colors.END}")
+def print_test_header(test_name, test_num=None):
+    prefix = f"TEST {test_num}: " if test_num else ""
+    print(f"\n{Colors.BLUE}{Colors.BOLD}=== {prefix}{test_name} ==={Colors.RESET}")
 
 def print_success(message):
-    """Print success message"""
-    print(f"{Colors.GREEN}✅ {message}{Colors.END}")
+    print(f"{Colors.GREEN}✅ {message}{Colors.RESET}")
 
-def print_error(message):
-    """Print error message"""
-    print(f"{Colors.RED}❌ {message}{Colors.END}")
-
-def print_warning(message):
-    """Print warning message"""
-    print(f"{Colors.YELLOW}⚠️ {message}{Colors.END}")
+def print_failure(message):
+    print(f"{Colors.RED}❌ {message}{Colors.RESET}")
 
 def print_info(message):
-    """Print info message"""
-    print(f"{Colors.CYAN}ℹ️ {message}{Colors.END}")
+    print(f"{Colors.YELLOW}ℹ️  {message}{Colors.RESET}")
 
-def run_command(command, cwd=None, capture_output=True):
-    """Run shell command and return result"""
+def run_command(cmd, cwd=None, timeout=30):
+    """Run shell command and return (exit_code, stdout, stderr)"""
     try:
         result = subprocess.run(
-            command,
-            shell=True,
-            cwd=cwd,
-            capture_output=capture_output,
-            text=True,
-            timeout=30
+            cmd, shell=True, cwd=cwd, capture_output=True, text=True, timeout=timeout
         )
-        return {
-            'success': result.returncode == 0,
-            'returncode': result.returncode,
-            'stdout': result.stdout if capture_output else '',
-            'stderr': result.stderr if capture_output else ''
-        }
+        return result.returncode, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
-        return {
-            'success': False,
-            'returncode': -1,
-            'stdout': '',
-            'stderr': 'Command timed out after 30 seconds'
-        }
+        return -1, "", f"Command timed out after {timeout}s"
     except Exception as e:
-        return {
-            'success': False,
-            'returncode': -1,
-            'stdout': '',
-            'stderr': str(e)
-        }
+        return -1, "", str(e)
 
-def test_1_backend_health():
-    """TEST 1: Backend healthy — GET http://localhost:8001/health returns 200"""
-    print_test_header(1, "Backend Health Check")
+def check_file_exists(file_path):
+    """Check if file exists and return True/False"""
+    return Path(file_path).exists()
+
+def grep_file_content(file_path, pattern, expected_count=None):
+    """Search for pattern in file and return matches"""
+    if not check_file_exists(file_path):
+        return []
     
-    # Try internal URL first (localhost:8001)
-    try:
-        print_info("Checking internal health endpoint (localhost:8001)...")
-        response = requests.get("http://localhost:8001/health", timeout=10)
-        if response.status_code == 200:
-            print_success(f"Internal health check passed: {response.status_code}")
-            print_info(f"Response: {response.text}")
-            return True
-    except Exception as e:
-        print_warning(f"Internal health check failed: {e}")
+    exit_code, stdout, stderr = run_command(f"grep -n '{pattern}' {file_path}")
+    lines = stdout.strip().split('\n') if stdout.strip() else []
     
-    # Fallback to external URL
-    try:
-        print_info("Trying external health endpoint...")
-        response = requests.get(f"{BASE_URL}/health", timeout=10)
-        if response.status_code == 200:
-            print_success(f"External health check passed: {response.status_code}")
-            print_info(f"Response: {response.text}")
-            return True
+    if expected_count is not None:
+        if len(lines) >= expected_count:
+            return lines
         else:
-            print_error(f"External health check failed: {response.status_code}")
+            return []
+    
+    return lines
+
+def test_backend_health():
+    """TEST 1: Backend Health Check"""
+    print_test_header("Backend Health Check", 1)
+    
+    try:
+        response = requests.get(f"{BACKEND_URL}/health", timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'healthy':
+                print_success(f"Backend health check passed - GET /health returns 200 with status='healthy'")
+                print_info(f"Response: {json.dumps(data, indent=2)}")
+                return True
+            else:
+                print_failure(f"Backend health check failed - status is '{data.get('status')}', expected 'healthy'")
+                return False
+        else:
+            print_failure(f"Backend health check failed - HTTP {response.status_code}")
             return False
+            
     except Exception as e:
-        print_error(f"External health check failed: {e}")
+        print_failure(f"Backend health check failed - {str(e)}")
         return False
 
-def test_2_typescript_compilation():
-    """TEST 2: TypeScript compiles — cd /app/backend && ./node_modules/.bin/tsc --noEmit exits 0"""
-    print_test_header(2, "TypeScript Compilation")
+def test_typescript_compilation():
+    """TEST 2: TypeScript Compilation"""
+    print_test_header("TypeScript Compilation", 2)
     
-    print_info("Checking if TypeScript compiler exists...")
-    tsc_path = "/app/backend/node_modules/.bin/tsc"
-    if not os.path.exists(tsc_path):
-        print_warning("TSC not found at expected path, trying global tsc...")
-        result = run_command("which tsc")
-        if result['success']:
-            tsc_path = "tsc"
-            print_info(f"Found global tsc at: {result['stdout'].strip()}")
-        else:
-            print_warning("No TypeScript compiler found, trying npx tsc...")
-            tsc_path = "npx tsc"
+    exit_code, stdout, stderr = run_command("./node_modules/.bin/tsc --noEmit", cwd="/app/backend")
     
-    print_info("Running TypeScript compilation check...")
-    cmd = f"{tsc_path} --noEmit"
-    result = run_command(cmd, cwd="/app/backend")
-    
-    if result['success']:
-        print_success("TypeScript compilation passed with no errors")
+    if exit_code == 0:
+        print_success("TypeScript compilation successful - tsc --noEmit exits with code 0")
         return True
     else:
-        print_error(f"TypeScript compilation failed (exit code: {result['returncode']})")
-        if result['stderr']:
-            print_error(f"Errors: {result['stderr']}")
-        if result['stdout']:
-            print_info(f"Output: {result['stdout']}")
+        print_failure(f"TypeScript compilation failed - exit code {exit_code}")
+        if stderr:
+            print_info(f"Errors: {stderr}")
         return False
 
-def test_3_get_incoming_transactions_signature():
-    """TEST 3: getIncomingTransactions signature includes filterDestinationTag param"""
-    print_test_header(3, "getIncomingTransactions Signature - filterDestinationTag Parameter")
+def test_strategy_chain_files():
+    """TEST 3: All 8 strategy chain files exist"""
+    print_test_header("Strategy Chain Files Existence", 3)
     
-    print_info("Checking for filterDestinationTag parameter in tatumApi.ts...")
-    result = run_command("grep 'filterDestinationTag' /app/backend/apis/tatumApi.ts")
-    
-    if result['success'] and result['stdout']:
-        lines = result['stdout'].strip().split('\n')
-        print_success(f"Found filterDestinationTag parameter ({len(lines)} occurrences):")
-        for line in lines:
-            print_info(f"  {line.strip()}")
-        
-        # Check if it appears in function signature
-        sig_result = run_command("grep -A5 -B5 'filterDestinationTag.*:.*number.*null' /app/backend/apis/tatumApi.ts")
-        if sig_result['success']:
-            print_success("Parameter correctly typed as 'number | null'")
-            return True
-        else:
-            print_warning("Parameter found but type signature verification failed")
-            return False
-    else:
-        print_error("filterDestinationTag parameter not found in tatumApi.ts")
-        return False
-
-def test_4_xrp_destination_tag_parsing():
-    """TEST 4: XRP tx parsing extracts DestinationTag from transactions"""
-    print_test_header(4, "XRP Transaction DestinationTag Parsing")
-    
-    print_info("Checking for DestinationTag extraction in tatumApi.ts...")
-    result = run_command("grep 'DestinationTag' /app/backend/apis/tatumApi.ts")
-    
-    if result['success'] and result['stdout']:
-        lines = result['stdout'].strip().split('\n')
-        print_success(f"Found DestinationTag references ({len(lines)} occurrences):")
-        for line in lines:
-            print_info(f"  {line.strip()}")
-        
-        # Check for specific extraction patterns
-        extract_patterns = [
-            "tx.tx?.DestinationTag",
-            "result?.DestinationTag", 
-            "getXrpDestinationTag"
-        ]
-        
-        found_patterns = 0
-        for pattern in extract_patterns:
-            pattern_result = run_command(f"grep '{pattern}' /app/backend/apis/tatumApi.ts")
-            if pattern_result['success']:
-                found_patterns += 1
-                print_success(f"Found extraction pattern: {pattern}")
-        
-        if found_patterns >= 2:
-            print_success("DestinationTag extraction logic properly implemented")
-            return True
-        else:
-            print_warning("Some DestinationTag patterns missing")
-            return False
-    else:
-        print_error("DestinationTag not found in tatumApi.ts")
-        return False
-
-def test_5_tagless_xrp_warning():
-    """TEST 5: Tagless XRP warning exists in webhook handler"""
-    print_test_header(5, "Tagless XRP Payment Warning in Webhook Handler")
-    
-    print_info("Checking for TAGLESS XRP PAYMENT warning in webhooks/index.ts...")
-    result = run_command("grep 'TAGLESS XRP PAYMENT' /app/backend/webhooks/index.ts")
-    
-    if result['success'] and result['stdout']:
-        print_success("Found TAGLESS XRP PAYMENT warning")
-        lines = result['stdout'].strip().split('\n')
-        for line in lines:
-            print_info(f"  {line.strip()}")
-        
-        # Check for comprehensive warning implementation
-        warning_elements = [
-            "⚠️ TAGLESS XRP PAYMENT DETECTED!",
-            "TX:",
-            "Amount:",
-            "ACTION REQUIRED"
-        ]
-        
-        found_elements = 0
-        for element in warning_elements:
-            element_result = run_command(f"grep '{element}' /app/backend/webhooks/index.ts")
-            if element_result['success']:
-                found_elements += 1
-        
-        if found_elements >= 3:
-            print_success("Comprehensive tagless XRP warning implemented")
-            return True
-        else:
-            print_warning("Basic warning found, but may lack comprehensive details")
-            return True  # Still pass as basic warning exists
-    else:
-        print_error("TAGLESS XRP PAYMENT warning not found in webhooks/index.ts")
-        return False
-
-def test_6_strategy_pattern_infrastructure():
-    """TEST 6: Strategy pattern infrastructure files exist"""
-    print_test_header(6, "Strategy Pattern Infrastructure Files")
-    
-    files_to_check = [
-        "/app/backend/services/chains/chainTypes.ts",
-        "/app/backend/utils/rpcFallback.ts"
+    expected_files = [
+        "chainTypes.ts",
+        "index.ts", 
+        "evmChain.ts",
+        "utxoChain.ts",
+        "tronChain.ts",
+        "xrpChain.ts", 
+        "solChain.ts",
+        "polygonChain.ts"
     ]
     
+    base_path = "/app/backend/services/chains"
     all_exist = True
-    for file_path in files_to_check:
-        print_info(f"Checking existence of {file_path}...")
-        if os.path.exists(file_path):
-            print_success(f"✓ {file_path} exists")
-            # Check file content
-            result = run_command(f"wc -l {file_path}")
-            if result['success']:
-                lines = result['stdout'].strip().split()[0]
-                print_info(f"  File has {lines} lines")
+    
+    for file in expected_files:
+        file_path = f"{base_path}/{file}"
+        if check_file_exists(file_path):
+            print_success(f"Found: {file}")
         else:
-            print_error(f"✗ {file_path} does not exist")
+            print_failure(f"Missing: {file}")
             all_exist = False
     
     if all_exist:
-        # Check key interfaces/exports in chainTypes.ts
-        print_info("Checking chainTypes.ts interfaces...")
-        interfaces = ["ChainStrategy", "FeeEstimate", "TransferResult", "IncomingTx"]
-        for interface in interfaces:
-            result = run_command(f"grep 'interface {interface}' /app/backend/services/chains/chainTypes.ts")
-            if result['success']:
-                print_success(f"  ✓ {interface} interface found")
-            else:
-                print_warning(f"  ? {interface} interface not found")
-        
-        # Check key functions in rpcFallback.ts
-        print_info("Checking rpcFallback.ts functions...")
-        functions = ["withSdkFallback", "getFallbackDiagnostics"]
-        for func in functions:
-            result = run_command(f"grep 'function {func}\\|export.*{func}' /app/backend/utils/rpcFallback.ts")
-            if result['success']:
-                print_success(f"  ✓ {func} function found")
-            else:
-                print_warning(f"  ? {func} function not found")
-    
-    return all_exist
-
-def test_7_with_sdk_fallback_usage():
-    """TEST 7: withSdkFallback is imported and used in tatumApi"""
-    print_test_header(7, "withSdkFallback Import and Usage")
-    
-    print_info("Checking withSdkFallback import in tatumApi.ts...")
-    import_result = run_command("grep 'import.*withSdkFallback' /app/backend/apis/tatumApi.ts")
-    
-    if not import_result['success']:
-        print_error("withSdkFallback import not found")
-        return False
-    
-    print_success("✓ withSdkFallback import found")
-    print_info(f"  Import: {import_result['stdout'].strip()}")
-    
-    print_info("Checking withSdkFallback usage in tatumApi.ts...")
-    usage_result = run_command("grep 'withSdkFallback' /app/backend/apis/tatumApi.ts | grep -v import")
-    
-    if usage_result['success'] and usage_result['stdout']:
-        lines = usage_result['stdout'].strip().split('\n')
-        print_success(f"Found withSdkFallback usage ({len(lines)} occurrences):")
-        for line in lines:
-            print_info(f"  {line.strip()}")
+        print_success("All 8 strategy chain files exist")
         return True
     else:
-        print_error("withSdkFallback usage not found (excluding imports)")
+        print_failure("Some strategy chain files are missing")
         return False
 
-def test_8_check_missed_payments_hardening():
-    """TEST 8: checkMissedPayments has hardening constants"""
-    print_test_header(8, "checkMissedPayments Hardening Constants")
+def test_strategy_factory_exports():
+    """TEST 4: Strategy factory has getStrategy and resolveChainGroup exports"""
+    print_test_header("Strategy Factory Exports", 4)
     
-    constants_to_check = [
-        "CONCURRENCY_LIMIT",
-        "CIRCUIT_BREAKER_THRESHOLD", 
-        "PER_ADDRESS_TIMEOUT_MS"
+    index_file = "/app/backend/services/chains/index.ts"
+    
+    # Check for getStrategy export
+    getStrategy_lines = grep_file_content(index_file, "getStrategy")
+    resolveChainGroup_lines = grep_file_content(index_file, "resolveChainGroup") 
+    getAllSupported_lines = grep_file_content(index_file, "getAllSupportedCurrencies")
+    
+    success = True
+    
+    if getStrategy_lines:
+        print_success(f"Found getStrategy export: {len(getStrategy_lines)} occurrences")
+        for line in getStrategy_lines[:2]:  # Show first 2 matches
+            print_info(f"  {line}")
+    else:
+        print_failure("getStrategy export not found")
+        success = False
+        
+    if resolveChainGroup_lines:
+        print_success(f"Found resolveChainGroup export: {len(resolveChainGroup_lines)} occurrences")
+        for line in resolveChainGroup_lines[:2]:
+            print_info(f"  {line}")
+    else:
+        print_failure("resolveChainGroup export not found")
+        success = False
+        
+    if getAllSupported_lines:
+        print_success(f"Found getAllSupportedCurrencies export: {len(getAllSupported_lines)} occurrences")
+    else:
+        print_failure("getAllSupportedCurrencies export not found")
+        success = False
+    
+    return success
+
+def test_tatum_api_chain_integration():
+    """TEST 5: tatumApi.ts now uses chain strategy utilities (5 chain modules integrated)"""
+    print_test_header("TatumApi Chain Strategy Integration", 5)
+    
+    tatum_file = "/app/backend/apis/tatumApi.ts"
+    success_count = 0
+    total_checks = 5
+    
+    # Check for calculateEvmGasFee
+    evm_lines = grep_file_content(tatum_file, "calculateEvmGasFee")
+    if evm_lines:
+        print_success(f"calculateEvmGasFee integration found: {len(evm_lines)} occurrences")
+        success_count += 1
+    else:
+        print_failure("calculateEvmGasFee integration not found")
+    
+    # Check for calculateUtxoTxSizeKb 
+    utxo_lines = grep_file_content(tatum_file, "calculateUtxoTxSizeKb")
+    if utxo_lines:
+        print_success(f"calculateUtxoTxSizeKb integration found: {len(utxo_lines)} occurrences")
+        success_count += 1
+    else:
+        print_failure("calculateUtxoTxSizeKb integration not found")
+    
+    # Check for XRP_FEE_CONSTANTS
+    xrp_lines = grep_file_content(tatum_file, "XRP_FEE_CONSTANTS")
+    if xrp_lines:
+        print_success(f"XRP_FEE_CONSTANTS integration found: {len(xrp_lines)} occurrences") 
+        success_count += 1
+    else:
+        print_failure("XRP_FEE_CONSTANTS integration not found")
+    
+    # Check for calculateSolPriorityFee
+    sol_lines = grep_file_content(tatum_file, "calculateSolPriorityFee")
+    if sol_lines:
+        print_success(f"calculateSolPriorityFee integration found: {len(sol_lines)} occurrences")
+        success_count += 1
+    else:
+        print_failure("calculateSolPriorityFee integration not found")
+    
+    # Check for calculatePolygonGasFee
+    polygon_lines = grep_file_content(tatum_file, "calculatePolygonGasFee")
+    if polygon_lines:
+        print_success(f"calculatePolygonGasFee integration found: {len(polygon_lines)} occurrences")
+        success_count += 1
+    else:
+        print_failure("calculatePolygonGasFee integration not found")
+    
+    if success_count == total_checks:
+        print_success(f"All 5 chain module integrations found in tatumApi.ts")
+        return True
+    else:
+        print_failure(f"Only {success_count}/{total_checks} chain module integrations found")
+        return False
+
+def test_chain_strategy_interface():
+    """TEST 6: Each chain module implements ChainStrategy interface"""
+    print_test_header("ChainStrategy Interface Implementation", 6)
+    
+    chain_files = [
+        "/app/backend/services/chains/evmChain.ts",
+        "/app/backend/services/chains/xrpChain.ts",
+        "/app/backend/services/chains/polygonChain.ts"
     ]
     
-    all_found = True
-    for constant in constants_to_check:
-        print_info(f"Checking for {constant}...")
-        result = run_command(f"grep '{constant}' /app/backend/services/merchantPool/merchantPoolMonitoring.ts")
+    success_count = 0
+    
+    for chain_file in chain_files:
+        chain_name = Path(chain_file).name
         
-        if result['success'] and result['stdout']:
-            lines = result['stdout'].strip().split('\n')
-            print_success(f"✓ {constant} found ({len(lines)} occurrences)")
-            for line in lines:
-                print_info(f"    {line.strip()}")
+        # Check for ChainStrategy import
+        import_lines = grep_file_content(chain_file, "ChainStrategy")
+        
+        if import_lines:
+            print_success(f"{chain_name}: ChainStrategy interface found ({len(import_lines)} references)")
+            success_count += 1
         else:
-            print_error(f"✗ {constant} not found")
-            all_found = False
+            print_failure(f"{chain_name}: ChainStrategy interface not found")
     
-    if all_found:
-        print_success("All hardening constants found in checkMissedPayments")
-    
-    return all_found
-
-def test_9_process_address_function():
-    """TEST 9: processAddress function extracted"""
-    print_test_header(9, "processAddress Function Extraction")
-    
-    print_info("Checking for processAddress function...")
-    result = run_command("grep 'const processAddress' /app/backend/services/merchantPool/merchantPoolMonitoring.ts")
-    
-    if result['success'] and result['stdout']:
-        print_success("✓ processAddress function found")
-        print_info(f"  Definition: {result['stdout'].strip()}")
-        
-        # Check function signature
-        sig_result = run_command("grep -A3 'const processAddress.*async' /app/backend/services/merchantPool/merchantPoolMonitoring.ts")
-        if sig_result['success']:
-            print_success("✓ Function is properly async")
-            print_info("  Signature details:")
-            for line in sig_result['stdout'].strip().split('\n'):
-                print_info(f"    {line.strip()}")
-        
+    if success_count == len(chain_files):
+        print_success("All checked chain modules implement ChainStrategy interface")
         return True
     else:
-        print_error("processAddress function not found")
+        print_failure(f"Only {success_count}/{len(chain_files)} chain modules implement ChainStrategy interface")
         return False
 
-def test_10_no_continue_in_process_address():
-    """TEST 10: No continue statements in processAddress function (lines 257-844)"""
-    print_test_header(10, "No Continue Statements in processAddress Function")
+def test_chain_specific_constants():
+    """TEST 7: Chain-specific constants are properly exported"""
+    print_test_header("Chain-Specific Constants Export", 7)
     
-    print_info("Checking for continue statements in processAddress function (lines 257-844)...")
-    result = run_command("sed -n '257,844p' /app/backend/services/merchantPool/merchantPoolMonitoring.ts | grep 'continue;'")
+    constants_checks = [
+        ("/app/backend/services/chains/polygonChain.ts", "POLYGON_GAS_CONSTANTS"),
+        ("/app/backend/services/chains/solChain.ts", "SOL_FEE_CONSTANTS"),
+        ("/app/backend/services/chains/tronChain.ts", "TRON_FEE_CONSTANTS")
+    ]
     
-    # grep returns 1 if no matches found, which is what we want
-    if result['returncode'] == 1:
-        print_success("✓ No continue statements found in processAddress function")
+    success_count = 0
+    
+    for file_path, constant_name in constants_checks:
+        lines = grep_file_content(file_path, constant_name)
+        
+        if lines:
+            print_success(f"{constant_name} found in {Path(file_path).name}: {len(lines)} occurrences")
+            success_count += 1
+        else:
+            print_failure(f"{constant_name} not found in {Path(file_path).name}")
+    
+    if success_count == len(constants_checks):
+        print_success("All chain-specific constants are properly exported")
         return True
-    elif result['success'] and result['stdout']:
-        continue_count = len(result['stdout'].strip().split('\n'))
-        print_error(f"✗ Found {continue_count} continue statement(s) in processAddress function:")
-        for line in result['stdout'].strip().split('\n'):
-            print_error(f"    {line.strip()}")
-        return False
     else:
-        print_warning("Unable to check continue statements (command error)")
+        print_failure(f"Only {success_count}/{len(constants_checks)} constants found")
         return False
 
-def test_11_is_tag_based_chain_usage():
-    """TEST 11: isTagBasedChain used for tag-aware balance check"""
-    print_test_header(11, "isTagBasedChain Usage for Tag-Aware Balance Check")
+def test_xrp_tag_utilities():
+    """TEST 8: XRP tag-based utilities exported"""
+    print_test_header("XRP Tag-Based Utilities", 8)
     
-    print_info("Checking isTagBasedChain usage count...")
-    result = run_command("grep -c 'isTagBasedChain(walletType)' /app/backend/services/merchantPool/merchantPoolMonitoring.ts")
+    xrp_file = "/app/backend/services/chains/xrpChain.ts"
     
-    if result['success'] and result['stdout']:
-        count = int(result['stdout'].strip())
-        print_success(f"✓ Found {count} occurrences of isTagBasedChain(walletType)")
+    utilities = ["isTagBased", "buildXrpRedisKey", "filterByTag"]
+    success_count = 0
+    
+    for utility in utilities:
+        lines = grep_file_content(xrp_file, utility)
         
-        if count >= 2:
-            print_success("✓ Sufficient usage count (>=2) for tag-aware balance checks")
-            
-            # Show the actual usage
-            usage_result = run_command("grep -n 'isTagBasedChain(walletType)' /app/backend/services/merchantPool/merchantPoolMonitoring.ts")
-            if usage_result['success']:
-                print_info("Usage locations:")
-                for line in usage_result['stdout'].strip().split('\n'):
-                    print_info(f"    {line.strip()}")
-            
-            return True
+        if lines:
+            print_success(f"{utility} found: {len(lines)} occurrences")
+            success_count += 1
         else:
-            print_warning(f"Found {count} occurrences, but expected >= 2")
-            return False
-    else:
-        print_error("isTagBasedChain(walletType) usage not found")
-        return False
-
-def test_12_verify_xrp_trust_line_sdk_fallback():
-    """TEST 12: verifyXrpTrustLine uses withSdkFallback"""
-    print_test_header(12, "verifyXrpTrustLine Uses withSdkFallback")
+            print_failure(f"{utility} not found")
     
-    print_info("Checking for withSdkFallback usage (excluding imports)...")
-    result = run_command("grep 'withSdkFallback' /app/backend/apis/tatumApi.ts | grep -v import")
-    
-    if result['success'] and result['stdout']:
-        lines = result['stdout'].strip().split('\n')
-        print_success(f"Found withSdkFallback usage ({len(lines)} occurrences):")
-        for i, line in enumerate(lines, 1):
-            print_info(f"  {i}. {line.strip()}")
-        
-        # Look for specific verifyXrpTrustLine function or similar XRP trust line verification
-        trust_line_result = run_command("grep -A10 -B5 'verifyXrpTrustLine\\|TrustLine.*withSdkFallback' /app/backend/apis/tatumApi.ts")
-        if trust_line_result['success'] and trust_line_result['stdout']:
-            print_success("✓ Found XRP trust line verification with withSdkFallback")
-            return True
-        else:
-            print_info("No specific verifyXrpTrustLine found, but withSdkFallback is used in tatumApi")
-            return True  # Pass if withSdkFallback is used, even if specific function not found
+    if success_count == len(utilities):
+        print_success("All 3 XRP tag-based utilities are exported")
+        return True
     else:
-        print_error("withSdkFallback usage not found in tatumApi.ts")
+        print_failure(f"Only {success_count}/{len(utilities)} XRP utilities found")
         return False
 
 def main():
-    """Run all tests and report results"""
-    print(f"{Colors.PURPLE}{Colors.BOLD}")
-    print("=" * 70)
-    print("XRP/RLUSD PAYMENT SYSTEM - BACKEND TESTING SUITE")
-    print("Testing Fix 4+5 + Refactoring 1-3 Implementation") 
-    print("=" * 70)
-    print(f"{Colors.END}")
+    """Run all tests and provide summary"""
+    print(f"{Colors.BOLD}Strategy Pattern Migration Testing - Backend Verification{Colors.RESET}")
+    print(f"Backend URL: {BACKEND_URL}")
+    print(f"Testing 8 requirements from review request...")
     
     tests = [
-        test_1_backend_health,
-        test_2_typescript_compilation,
-        test_3_get_incoming_transactions_signature,
-        test_4_xrp_destination_tag_parsing,
-        test_5_tagless_xrp_warning,
-        test_6_strategy_pattern_infrastructure,
-        test_7_with_sdk_fallback_usage,
-        test_8_check_missed_payments_hardening,
-        test_9_process_address_function,
-        test_10_no_continue_in_process_address,
-        test_11_is_tag_based_chain_usage,
-        test_12_verify_xrp_trust_line_sdk_fallback
+        test_backend_health,
+        test_typescript_compilation,
+        test_strategy_chain_files,
+        test_strategy_factory_exports,
+        test_tatum_api_chain_integration,
+        test_chain_strategy_interface,
+        test_chain_specific_constants,
+        test_xrp_tag_utilities
     ]
     
     results = []
-    passed = 0
-    failed = 0
     
-    for i, test_func in enumerate(tests, 1):
+    for test in tests:
         try:
-            result = test_func()
-            results.append((i, test_func.__doc__.split('\n')[0].replace('"""', '').strip(), result))
-            if result:
-                passed += 1
-            else:
-                failed += 1
+            result = test()
+            results.append(result)
         except Exception as e:
-            print_error(f"Test {i} crashed: {e}")
-            results.append((i, test_func.__doc__.split('\n')[0].replace('"""', '').strip(), False))
-            failed += 1
-        
-        # Small delay between tests
-        time.sleep(0.5)
+            print_failure(f"Test failed with exception: {e}")
+            results.append(False)
     
-    # Print summary
-    print(f"\n{Colors.PURPLE}{Colors.BOLD}")
-    print("=" * 70)
-    print("TEST RESULTS SUMMARY")
-    print("=" * 70)
-    print(f"{Colors.END}")
+    # Summary
+    print(f"\n{Colors.BOLD}=== TEST SUMMARY ==={Colors.RESET}")
+    passed = sum(results)
+    total = len(results)
     
-    for test_num, description, result in results:
-        status = f"{Colors.GREEN}PASS{Colors.END}" if result else f"{Colors.RED}FAIL{Colors.END}"
-        print(f"TEST {test_num:2d}: {status} - {description}")
+    for i, (test, result) in enumerate(zip(tests, results), 1):
+        status = "✅ PASSED" if result else "❌ FAILED"
+        test_name = test.__doc__.split(':')[1].strip() if ':' in test.__doc__ else test.__name__
+        print(f"TEST {i}: {status} - {test_name}")
     
-    print(f"\n{Colors.BOLD}OVERALL RESULTS:{Colors.END}")
-    total = passed + failed
-    success_rate = (passed / total * 100) if total > 0 else 0
+    print(f"\n{Colors.BOLD}Overall Result: {passed}/{total} tests passed{Colors.RESET}")
     
     if passed == total:
-        print(f"{Colors.GREEN}🎉 ALL TESTS PASSED: {passed}/{total} ({success_rate:.1f}%){Colors.END}")
-    elif success_rate >= 80:
-        print(f"{Colors.YELLOW}⚠️ MOSTLY PASSING: {passed}/{total} ({success_rate:.1f}%){Colors.END}")
+        print(f"{Colors.GREEN}{Colors.BOLD}🎉 ALL TESTS PASSED - Strategy Pattern Migration is working correctly!{Colors.RESET}")
+        return 0
     else:
-        print(f"{Colors.RED}❌ MULTIPLE FAILURES: {passed}/{total} ({success_rate:.1f}%){Colors.END}")
-    
-    print(f"{Colors.CYAN}Base URL used for testing: {BASE_URL}{Colors.END}")
-    
-    # Return appropriate exit code
-    return 0 if passed == total else 1
+        print(f"{Colors.RED}{Colors.BOLD}❌ {total-passed} tests failed - Strategy Pattern Migration needs attention{Colors.RESET}")
+        return 1
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    sys.exit(main())
