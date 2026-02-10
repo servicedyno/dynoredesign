@@ -94,6 +94,44 @@ export const RLUSD_CONFIG = {
 };
 
 /**
+ * Tag-based chains: use a single master address + unique destination tags
+ * instead of creating individual funded addresses per payment.
+ * 
+ * Benefits:
+ * - No per-address XRP funding (saves ~2 XRP / $5+ per address)
+ * - No per-address trust line setup (RLUSD)
+ * - Instant address generation (no blockchain interaction)
+ * - One master subscription covers all payments
+ */
+export const TAG_BASED_CHAINS = ["XRP", "RLUSD"];
+
+/**
+ * Master address for tag-based XRP/RLUSD payments.
+ * This is the Tatum-generated fee wallet that we control (have private key).
+ * It has been funded with XRP and has RLUSD trust line established.
+ */
+export const XRP_MASTER_ADDRESS = process.env.XRP_FEE_WALLET || "";
+
+/**
+ * Check if a wallet type uses destination-tag-based addressing
+ */
+export const isTagBasedChain = (walletType: string): boolean => {
+  return TAG_BASED_CHAINS.includes(walletType);
+};
+
+/**
+ * Construct the Redis key for a crypto payment address.
+ * For tag-based chains (XRP/RLUSD): includes destination tag.
+ * For other chains: just the address.
+ */
+export const getCryptoRedisKey = (address: string, destinationTag?: number | null): string => {
+  if (destinationTag !== undefined && destinationTag !== null) {
+    return `crypto-${address}-tag-${destinationTag}`;
+  }
+  return `crypto-${address}`;
+};
+
+/**
  * Sweep configuration per chain
  */
 export interface SweepConfig {
