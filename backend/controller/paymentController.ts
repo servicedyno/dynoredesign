@@ -3323,9 +3323,18 @@ const verifyCryptoPayment = async (
       const isOverpayment = totalReceived > originalExpected && originalExpected > 0;
       const overpaymentAmount = isOverpayment ? (totalReceived - originalExpected) : 0;
       
+      // Calculate overpayment in USD to compare against threshold
+      // Only flag as "overpaid" if excess exceeds merchant's overpayment_threshold_usd
+      let overpaymentUsd = 0;
+      if (isOverpayment && originalExpected > 0 && baseAmount > 0) {
+        overpaymentUsd = (overpaymentAmount / originalExpected) * baseAmount;
+      }
+      const isSignificantOverpayment = isOverpayment && overpaymentUsd > merchantOverpaymentThreshold;
+      
       // FIXED: Don't re-call cryptoVerification if already processed - just return the status
       // The payment was already distributed when status became "successful"
       console.log("[verifyCryptoPayment] Payment already successful, returning confirmed status");
+      console.log(`[verifyCryptoPayment] Overpayment check: excess=${overpaymentAmount.toFixed(8)} ${currency}, excessUsd=$${overpaymentUsd.toFixed(2)}, threshold=$${merchantOverpaymentThreshold}, significant=${isSignificantOverpayment}`);
       
       // Get redirect URL from customerData if available
       let redirectUrl = null;
@@ -3334,20 +3343,22 @@ const verifyCryptoPayment = async (
           `?transaction_id=${tempData.payment_id || tempData.unique_tx_id}&status=successful&payment_type=CRYPTO`;
       }
       
-      // Calculate USD amounts
+      // Calculate USD amounts — use base_amount from customer data if available
+      const actualBaseAmount = baseAmount > 0 ? baseAmount : parseFloat(customerData?.base_amount || tempData?.base_amount || '0');
       let paidAmountUsd = 0;
-      let expectedAmountUsd = baseAmount;
+      let expectedAmountUsd = actualBaseAmount;
       
-      if (totalReceived > 0 && originalExpected > 0 && baseAmount > 0) {
-        paidAmountUsd = baseAmount * (totalReceived / originalExpected);
-        expectedAmountUsd = baseAmount;
+      if (totalReceived > 0 && originalExpected > 0 && actualBaseAmount > 0) {
+        paidAmountUsd = actualBaseAmount * (totalReceived / originalExpected);
+        expectedAmountUsd = actualBaseAmount;
       }
       
       // Build response matching checkout page expected format
-      // Checkout expects: status, redirect (for redirect URL), paidAmount, expectedAmount, excessAmount
+      // Checkout expects: status "confirmed" for success, "overpaid" only for significant overpayments
+      // Minor overpayments (below merchant threshold) are treated as normal "confirmed"
       const responseData: Record<string, unknown> = {
-        status: isOverpayment ? "overpaid" : "confirmed",
-        message: isOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
+        status: isSignificantOverpayment ? "overpaid" : "confirmed",
+        message: isSignificantOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
         redirect: redirectUrl,
         txId: tempData.txId,
         paidAmount: parseFloat(totalReceived.toFixed(6)),
@@ -3364,8 +3375,9 @@ const verifyCryptoPayment = async (
         merchant_settings: merchantSettings,
       };
 
-      if (isOverpayment) {
+      if (isSignificantOverpayment) {
         responseData.excessAmount = parseFloat(overpaymentAmount.toFixed(6));
+        responseData.excessAmountUsd = parseFloat(overpaymentUsd.toFixed(2));
       }
 
       // DEBUG: Log the exact response being sent
