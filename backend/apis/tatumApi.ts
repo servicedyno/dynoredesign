@@ -3431,6 +3431,28 @@ const setupXrpTrustLine = async (
   }
 };
 
+/**
+ * Get the destination tag from an XRP Ledger transaction.
+ * Uses Tatum RPC gateway to fetch full transaction details.
+ * 
+ * The Tatum ADDRESS_EVENT webhook does NOT include the destination tag,
+ * so we must fetch the full transaction to extract it.
+ */
+const getXrpDestinationTag = async (txId: string): Promise<number | null> => {
+  try {
+    const result = await tatumXrpRpc("tx", [{ transaction: txId, binary: false }]);
+    const tag = result?.DestinationTag;
+    if (tag !== undefined && tag !== null) {
+      return Number(tag);
+    }
+    return null;
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.warn(`[getXrpDestinationTag] Failed to fetch tx ${txId}:`, err?.message || error);
+    return null;
+  }
+};
+
 export default {
   generateWallet,
   createVirtualAccount,
