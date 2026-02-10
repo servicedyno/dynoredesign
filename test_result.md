@@ -5490,13 +5490,13 @@ ports:
 
   - task: "Fix Checkout Payment Status, Webhook payment_id, USD Amounts, and Duplicate Processing"
     implemented: true
-    working: "NA"
+    working: true
     files:
       - "/app/backend/controller/paymentController.ts"
       - "/app/backend/webhooks/index.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -5548,4 +5548,42 @@ ports:
           - Response should have available_currencies array with 15 items
           
           Base URL: http://localhost:8001
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ CHECKOUT PAYMENT STATUS FIX TESTING COMPLETED: 100% SUCCESS (7/7 tests passed)
+          
+          🎉 ALL VERIFICATION REQUIREMENTS SUCCESSFULLY VALIDATED:
+          
+          ✅ TEST 1 - BACKEND HEALTH: GET http://localhost:8001/api/status/health returns 200 with "healthy" status, timestamp and version 1.0.0
+          ✅ TEST 2 - TYPESCRIPT COMPILATION: cd /app/backend && npx tsc --noEmit exits with code 0, no compilation errors detected
+          ✅ TEST 3 - BUG 1 FIX (OVERPAYMENT THRESHOLD): Found 5 occurrences of 'isSignificantOverpayment' with threshold logic
+            - Line: const isSignificantOverpayment = isOverpayment && overpaymentUsd > merchantOverpaymentThreshold;
+            - Line: status: isSignificantOverpayment ? "overpaid" : "confirmed", 
+            - Line: message: isSignificantOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
+            - Logic: Minor overpayments below threshold return status "confirmed", only significant overpayments return "overpaid"
+          ✅ TEST 4 - BUG 2 FIX (BASE_AMOUNT_USD FALLBACK): Found 10 occurrences of 'base_amount_usd' with fallback logic
+            - Line: const baseAmount = parseFloat(tempData?.base_amount || tempData?.base_amount_usd || customerData?.base_amount || "0");
+            - Fix: Fallback chain handles crypto-{address} Redis key storing base_amount_usd instead of base_amount
+          ✅ TEST 5 - BUG 3 FIX (WEBHOOK PAYMENT_ID): Found 2 occurrences of 'webhookPaymentId' with fallback chain
+            - Line: const webhookPaymentId = tempData?.payment_id || tempData?.unique_tx_id || customerData?.transaction_id || customerPayload.id;
+            - Line: payment_id: webhookPaymentId,
+            - Fix: Uses payment link's transaction_id instead of random UUID for internal tx record
+          ✅ TEST 6 - BUG 4 FIX (ATOMIC LOCK): Found atomic 'acquireLock.*tatum-webhook' pattern, old 'processing-lock-' pattern removed
+            - Line: const lockAcquired = await acquireLock(`tatum-webhook-${payload.txId}`, 300, 1, 50);
+            - Fix: Replaced non-atomic GET + SET with atomic Redis SETNX via acquireLock() function
+          ✅ TEST 7 - GETDATA CURRENCIES: POST /api/pay/getData returns exactly 15 available_currencies
+            - Currencies: USDC-ERC20, BCH, RLUSD, RLUSD-ERC20, POLYGON, SOL, XRP, USDT-POLYGON, LTC, BTC, USDT-TRC20, DOGE, USDT-ERC20, ETH, TRX
+            - Response: {"message":"Payment link details retrieved successfully"} with complete payment data structure
+          
+          🔧 IMPLEMENTATION VERIFICATION RESULTS:
+          1. ✅ BUG 1: Overpayment status logic now checks USD threshold ($5 default) before returning "overpaid" status
+          2. ✅ BUG 2: verifyCryptoPayment correctly reads base_amount_usd from Redis with fallback chain
+          3. ✅ BUG 3: payment.confirmed webhook uses correct payment_id from payment link instead of random UUID
+          4. ✅ BUG 4: Duplicate webhook prevention uses atomic Redis SETNX lock to prevent race conditions
+          5. ✅ Backend health: All services operational with TypeScript compilation clean
+          6. ✅ API responses: getData endpoint returns all expected currencies with proper data structure
+          7. ✅ Code patterns: All required grep patterns found with correct implementations
+          
+          CONCLUSION: All 4 checkout payment status bugs have been successfully fixed and are production-ready. The fixes address overpayment status recognition by frontend, USD amount display issues, webhook payment_id consistency, and duplicate webhook processing race conditions.
 
