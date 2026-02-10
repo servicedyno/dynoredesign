@@ -1276,24 +1276,12 @@ const feeEstimation = async (
         console.warn(`[feeEstimation] ⚠️ Polygon RPC gas price failed, using SDK value`);
       }
 
-      // Use the HIGHER of SDK and RPC prices — Polygon spikes are real
-      const POLYGON_MIN_GAS = 25;
-      const POLYGON_MAX_GAS = 1500; // Polygon can spike to 800+ Gwei
+      // Use Polygon chain strategy utility for fee calculation
+      const { calculatePolygonGasFee } = require('../services/chains/polygonChain');
       const rawGasPrice = Math.max(sdkGasPrice, rpcGasPrice);
-      let gasPrice = Math.max(POLYGON_MIN_GAS, Math.min(POLYGON_MAX_GAS, rawGasPrice));
-      const gas_fee_for_amount = Math.ceil(gasPrice * 1.15 + 0.5);
-      console.log(`[Polygon Gas] ⛽ SDK=${sdkGasPrice}, RPC=${rpcGasPrice}, used=${gasPrice}, buffered=${gas_fee_for_amount} Gwei`);
+      console.log(`[Polygon Gas] ⛽ SDK=${sdkGasPrice}, RPC=${rpcGasPrice}, used=${rawGasPrice} Gwei`);
       
-      // Native POL transfer: 21,000 gas (simple value transfer)
-      // ERC20 token transfer: use Tatum's estimated gasLimit (~65,000)
-      const effectiveGasLimit = sdkGasLimit;
-      fees = {
-        fast: Number(
-          Number((gas_fee_for_amount * effectiveGasLimit) / 1000000000)
-        ).toFixed(8),
-        gasPrice: gas_fee_for_amount,
-        gasLimit: effectiveGasLimit,
-      };
+      fees = calculatePolygonGasFee(rawGasPrice, isToken, sdkGasLimit);
     } catch (_polyFeeError) {
       console.warn(`[feeEstimation] ⚠️ Polygon fee estimation failed entirely, using fallback`);
       fees = { fast: isToken ? 0.05 : 0.005, gasPrice: 100, gasLimit: isToken ? 65000 : 21000 };
