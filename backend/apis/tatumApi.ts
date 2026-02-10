@@ -1133,11 +1133,9 @@ const feeEstimation = async (
       },
       { headers }
     );
-    // UTXO byte formula: (inputs × 148) + (outputs × 34) + 10 overhead
-    // Settlement uses 2 outputs (merchant + admin fee), bchInputs defaults to 1
-    // Safety: use at least 2 inputs to avoid underestimation for multi-UTXO scenarios
-    const safeInputs = Math.max(bchInputs, 2);
-    const bytes = (safeInputs * 148 + 2 * 34 + 10) / 1000;
+    // Use UTXO chain strategy utility for byte calculation
+    const { calculateUtxoTxSizeKb } = require('../services/chains/utxoChain');
+    const bytes = calculateUtxoTxSizeKb(bchInputs, 2);
     fees = {
       slow: (bytes * result).toFixed(8),
       medium: (bytes * result).toFixed(8),
