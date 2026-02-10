@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "https://sweep-nonce-fix.preview.emergentagent.com/api"
+BASE_URL = "https://rlusd-xrpl-fix.preview.emergentagent.com/api"
 
 print("=" * 80)
 print("VERIFYING FIXES")

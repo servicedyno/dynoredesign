@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://sweep-nonce-fix.preview.emergentagent.com/api
+Development: https://rlusd-xrpl-fix.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

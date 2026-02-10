@@ -8,7 +8,7 @@ import requests
 import json
 from datetime import datetime
 
-BASE_URL = "https://sweep-nonce-fix.preview.emergentagent.com"
+BASE_URL = "https://rlusd-xrpl-fix.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials

@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://sweep-nonce-fix.preview.emergentagent.com/api"
+BASE_URL = "https://rlusd-xrpl-fix.preview.emergentagent.com/api"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 

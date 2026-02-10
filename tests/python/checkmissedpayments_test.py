@@ -12,8 +12,8 @@ Test Credentials:
 - Company ID: 38
 
 Backend URLs:
-- Backend: https://sweep-nonce-fix.preview.emergentagent.com
-- Health: https://sweep-nonce-fix.preview.emergentagent.com/health
+- Backend: https://rlusd-xrpl-fix.preview.emergentagent.com
+- Health: https://rlusd-xrpl-fix.preview.emergentagent.com/health
 """
 
 import requests
@@ -23,7 +23,7 @@ import sys
 from datetime import datetime, timedelta
 
 # Configuration
-BACKEND_URL = "https://sweep-nonce-fix.preview.emergentagent.com"
+BACKEND_URL = "https://rlusd-xrpl-fix.preview.emergentagent.com"
 TEST_EMAIL = "john@dyno.pt"
 TEST_PASSWORD = "Katiekendra123@"
 TEST_COMPANY_ID = 38

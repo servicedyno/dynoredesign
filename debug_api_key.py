@@ -7,7 +7,7 @@ import requests
 import json
 
 def debug_api_key_response():
-    backend_url = "https://sweep-nonce-fix.preview.emergentagent.com"
+    backend_url = "https://rlusd-xrpl-fix.preview.emergentagent.com"
     
     # First authenticate
     auth_response = requests.post(
