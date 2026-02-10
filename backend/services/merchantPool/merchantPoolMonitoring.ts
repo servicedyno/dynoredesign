@@ -474,8 +474,9 @@ export const checkMissedPayments = async (): Promise<{
               console.log(`[MerchantPool] ⚠️ ${walletAddress} - Tatum tx lookup failed ${failCount} times BUT address has payment context and significant effective balance ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance})`);
               console.log(`[MerchantPool] 🔄 Attempting to process using payment context (bypassing tx lookup)...`);
               
-              // Try to get last_payment_context from DB
-              const addrRecord = await merchantTempAddressModel.findOne({ where: { wallet_address: walletAddress } });
+              // Try to get last_payment_context from DB — use temp_address_id (unique) instead of wallet_address
+              // because XRP/RLUSD share the same master address with different destination tags
+              const addrRecord = await merchantTempAddressModel.findOne({ where: { temp_address_id: addr.dataValues.temp_address_id } });
               const lastContextRaw = addrRecord?.dataValues?.last_payment_context;
               let paymentContext = null;
               
