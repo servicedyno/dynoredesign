@@ -571,6 +571,17 @@ These fields provide complete transaction visibility for accounting and reconcil
 
 ## Conditional Fields
 
+### destination_tag (number | null) — XRP/RLUSD Only
+Present for XRP and RLUSD payments. **Critical for payment identification.**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| \`destination_tag\` | number | Unique tag identifying this specific payment on the shared XRP master address |
+| \`address\` | string | Shared master XRP address |
+| \`network\` | string | "XRP Ledger" |
+
+⚠️ **Important:** XRP and RLUSD use a shared master address with unique destination tags per payment. Always match payments by \`destination_tag\`, not just \`address\`.
+
 ### tax_info (object | null)
 Present when tax was applied to the payment:
 
