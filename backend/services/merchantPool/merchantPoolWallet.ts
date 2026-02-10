@@ -217,7 +217,7 @@ export const addAddressToMerchantPool = async (
           wallet_address: XRP_MASTER_ADDRESS,
           destination_tag: destinationTag,
           private_key: encryptedMasterKey,
-          derivation_index: destinationTag,  // Use tag as derivation index for uniqueness
+          derivation_index: 0,  // Tag-based chains don't use HD derivation
           subscription_id: subscriptionId,
           status: "AVAILABLE",
           admin_fee_balance: 0,
