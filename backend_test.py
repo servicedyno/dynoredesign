@@ -21,7 +21,7 @@ import json
 from pathlib import Path
 
 # Backend URL from frontend env
-BACKEND_URL = "https://fix-issues-8.preview.emergentagent.com"
+BACKEND_URL = "https://dependency-hub-7.preview.emergentagent.com"
 
 class Colors:
     GREEN = '\033[92m'

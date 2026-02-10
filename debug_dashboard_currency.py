@@ -7,7 +7,7 @@ import requests
 import json
 
 # Test credentials
-backend_url = "https://fix-issues-8.preview.emergentagent.com"
+backend_url = "https://dependency-hub-7.preview.emergentagent.com"
 test_email = "richard@dyno.pt"
 test_password = "Katiekendra123@"
 company_id = 38

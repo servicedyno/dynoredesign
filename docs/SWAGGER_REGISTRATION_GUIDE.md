@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://fix-issues-8.preview.emergentagent.com/api/docs
+Go to: https://dependency-hub-7.preview.emergentagent.com/api/docs
 
 ---
 

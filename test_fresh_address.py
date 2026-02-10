@@ -7,7 +7,7 @@ import requests
 import json
 
 # Test with a fresh BTC address that likely doesn't exist in the system
-base_url = "https://fix-issues-8.preview.emergentagent.com"
+base_url = "https://dependency-hub-7.preview.emergentagent.com"
 test_email = "richard@dyno.pt"
 test_password = "Katiekendra123@"
 company_id = 38
