@@ -2710,6 +2710,8 @@ const Crypto = async (
       qr_code,
       address: address,
       destination_tag: destinationTag,
+      // XRP/RLUSD: Return memo field (string form of destination_tag) for checkout display
+      ...(destinationTag && { memo: String(destinationTag) }),
       transaction_id: paymentId,
       temp_id: poolAddress.dataValues.temp_address_id,
       is_merchant_pool: true,  // Flag to identify merchant pool address
