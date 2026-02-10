@@ -268,7 +268,7 @@ export const checkMissedPayments = async (): Promise<{
 
         console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance}, reserved ${minutesSinceReserved.toFixed(1)} min ago)`);
 
-        let redisData = await getRedisItem("crypto-" + walletAddress);
+        let redisData = await getRedisItem(cryptoRedisKey);
         
         if (redisData?.txId) {
           // BUG FIX: If status is "failed", the webhook fired but settlement FAILED.
