@@ -175,7 +175,7 @@ router.post("/createUser", apiKeyOnlyMiddleware, async (req, res) => {
       customer_id: newCustomer[0].customer_id,
       email,
       company_id: data.company_id
-    }, tokenSecret, { expiresIn: '365d' });
+    }, tokenSecret);
     
     console.log(`[MerchantAPI] Created customer ${customerId} for company ${data.company_id}`);
     
