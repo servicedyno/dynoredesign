@@ -4774,3 +4774,91 @@ ports:
           - curl -s -X POST 'https://api.tatum.io/v3/blockchain/node/ripple-mainnet' -H 'x-api-key: TATUM_KEY' -H 'Content-Type: application/json' -d '{"method":"server_info","params":[{}]}' should return server_state
           
           Base URL for curl: http://localhost:8001 (internal)
+  - task: "CRITICAL FIX: XRP/RLUSD Redis Key Mismatch — Tag-Based Chain Gap Fix"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/services/merchantPool/merchantPoolReservation.ts"
+      - "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          CRITICAL FIX: XRP/RLUSD Redis Key Mismatch (Systemic Issue)
+          
+          PROBLEM: For XRP/RLUSD, Redis keys are crypto-{masterAddress}-tag-{destinationTag}.
+          But 13 locations across 3 files hardcoded "crypto-" + walletAddress which constructs
+          the WRONG key for XRP/RLUSD (missing the -tag-{tag} suffix). This means they would
+          NEVER find the correct Redis data for XRP/RLUSD payments.
+          
+          FIXES APPLIED (13 Redis key locations + 4 cryptoVerification calls + 1 findOne + 2 query attributes):
+          
+          FILE 1: merchantPoolMonitoring.ts (7 Redis key + 4 cryptoVerification + 2 query attr + 1 findOne)
+          - Added getCryptoRedisKey and isTagBasedChain imports from merchantPoolConfig
+          - Added destination_tag to checkMissedPayments query attributes
+          - Added destination_tag to detectOrphanPayments query attributes
+          - Extracted destinationTag + cryptoRedisKey variable after loop vars in checkMissedPayments
+          - Extracted orphanDestTag + orphanCryptoKey variable after loop vars in detectOrphanPayments
+          - Line 271: getRedisItem("crypto-" + walletAddress) → getRedisItem(cryptoRedisKey)
+          - Line 295: setRedisItem("crypto-" + walletAddress, ...) → setRedisItem(cryptoRedisKey, ...)
+          - Line 324: setRedisItem("crypto-" + walletAddress, ...) → setRedisItem(cryptoRedisKey, ...)
+          - Line 542: setRedisItem("crypto-" + walletAddress, ...) → setRedisItem(cryptoRedisKey, ...)
+          - Line 675: setRedisItem("crypto-" + walletAddress, ...) → setRedisItem(cryptoRedisKey, ...)
+          - Line 839: getRedisItem("crypto-" + walletAddress) → getRedisItem(orphanCryptoKey)
+          - Line 943: setRedisItem("crypto-" + walletAddress, ...) → setRedisItem(orphanCryptoKey, ...)
+          - Line 304: cryptoVerification(walletAddress, true) → cryptoVerification(walletAddress, true, cryptoRedisKey)
+          - Line 546: Same override
+          - Line 693: Same override
+          - Line 957: cryptoVerification(walletAddress, true) → cryptoVerification(walletAddress, true, orphanCryptoKey)
+          - Line 478: findOne({ where: { wallet_address: walletAddress } }) → findOne({ where: { temp_address_id: addr.dataValues.temp_address_id } })
+          
+          FILE 2: merchantPoolReservation.ts (2 Redis key locations)
+          - Added getCryptoRedisKey import from merchantPoolConfig
+          - Line 318: getRedisItem("crypto-" + walletAddr) → getRedisItem(getCryptoRedisKey(walletAddr, addrDestTag))
+          - Line 532: getRedisItem("crypto-" + addrStr) → getRedisItem(getCryptoRedisKey(addrStr, staleDestTag))
+          
+          FILE 3: paymentController.ts (4 Redis key locations)
+          - Line 1384: getRedisItem("crypto-" + existingAddress) → getRedisItem(getCryptoRedisKey(existingAddress, existingDestTag))
+          - Lines 5863-5881: updatePaymentLink now uses getCryptoRedisKey with activeAddress.destination_tag
+          - Line 6376: checkOnBlockchair now uses getCryptoRedisKey(tempData[i].wallet_address)
+          
+          VERIFY THESE TESTS:
+          
+          TEST 1: Backend healthy
+          - GET /health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - cd /app/backend && ./node_modules/.bin/tsc --noEmit — should exit 0
+          
+          TEST 3: No old "crypto-" + walletAddress pattern in monitoring
+          - grep -c '"crypto-" +' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should be 0
+          
+          TEST 4: No old "crypto-" + pattern in reservation
+          - grep -c '"crypto-" +' /app/backend/services/merchantPool/merchantPoolReservation.ts should be 0
+          
+          TEST 5: getCryptoRedisKey used in monitoring (should find 10+ occurrences)
+          - grep -c 'getCryptoRedisKey\|cryptoRedisKey\|orphanCryptoKey' /app/backend/services/merchantPool/merchantPoolMonitoring.ts >= 10
+          
+          TEST 6: getCryptoRedisKey used in reservation (should find 3+ occurrences)
+          - grep -c 'getCryptoRedisKey' /app/backend/services/merchantPool/merchantPoolReservation.ts >= 3
+          
+          TEST 7: destination_tag in checkMissedPayments attributes
+          - grep "'destination_tag'" /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find 2 occurrences (both query attribute arrays)
+          
+          TEST 8: cryptoVerification calls pass overrideRedisKey (4 calls)
+          - grep -c 'cryptoVerification(walletAddress, true,' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should be 4
+          
+          TEST 9: findOne uses temp_address_id (not wallet_address)
+          - grep 'findOne.*temp_address_id' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find the fix
+          - grep 'findOne.*wallet_address.*walletAddress' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should return 0 matches
+          
+          TEST 10: paymentController uses getCryptoRedisKey for active address check
+          - grep 'getCryptoRedisKey(existingAddress' /app/backend/controller/paymentController.ts should find 1 occurrence
+          - grep 'activeCryptoKey' /app/backend/controller/paymentController.ts should find 3+ occurrences
+          - grep 'getCryptoRedisKey(tempData' /app/backend/controller/paymentController.ts should find 1 occurrence
+          
+          Base URL for curl: http://localhost:8001 (internal)
