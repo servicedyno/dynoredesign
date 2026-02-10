@@ -2843,6 +2843,7 @@ const Crypto = async (
     const paymentRes = {
       qr_code,
       address: address,
+      destination_tag: null as number | null,
       transaction_id: userPayload.id,
       temp_id: tempData.dataValues.temp_id,
       is_merchant_pool: false,  // Legacy admin wallet system
