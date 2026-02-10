@@ -1808,10 +1808,12 @@ const createCryptoPayment = async (
             qr_code: paymentRes.qr_code,
             payment_id: paymentRes.transaction_id,
             created_at: new Date().toISOString(),
+            // XRP/RLUSD: Store destination tag for tag-based chains
+            ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
           }
         };
         await setRedisItem(uniqueRef, updatedCustomerData);
-        console.log(`[Phase 12.1] Stored active_crypto_address for ${uniqueRef}: ${paymentRes.address}`);
+        console.log(`[Phase 12.1] Stored active_crypto_address for ${uniqueRef}: ${paymentRes.address}${paymentRes.destination_tag ? `:${paymentRes.destination_tag}` : ''}`);
       }
 
       // Also update the temp address record in database for partial payment handling
