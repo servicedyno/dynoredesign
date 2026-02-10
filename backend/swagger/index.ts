@@ -351,7 +351,7 @@ Authorization: Bearer jwt_token_here
 ⚠️ **Important:** Use the **encrypted string** (not the numeric ID) in \`x-api-key\` header.
 
 ### Q: What cryptocurrencies are supported?
-**A: 9 cryptocurrencies across 3 networks:**
+**A: 15 cryptocurrencies across 7 networks:**
 
 | Cryptocurrency | Symbol | Network | Min Amount |
 |----------------|--------|---------|------------|
@@ -364,6 +364,14 @@ Authorization: Bearer jwt_token_here
 | Tether (Tron) | USDT-TRC20 | Tron | 1 USDT |
 | Tether (Ethereum) | USDT-ERC20 | Ethereum | 1 USDT |
 | USD Coin | USDC-ERC20 | Ethereum | 1 USDC |
+| Solana | SOL | Solana | 0.01 SOL |
+| Ripple (XRP) | XRP | XRP Ledger | 1 XRP |
+| Ripple USD | RLUSD | XRP Ledger | 1 RLUSD |
+| Ripple USD (Ethereum) | RLUSD-ERC20 | Ethereum | 1 RLUSD |
+| Polygon (POL) | POLYGON | Polygon | 1 POL |
+| Tether (Polygon) | USDT-POLYGON | Polygon | 1 USDT |
+
+**⚠️ XRP/RLUSD Note:** These use tag-based addressing (shared master address + destination tag). The \`destination_tag\` field is included in webhook payloads for XRP/RLUSD payments.
 
 **Check your configured wallets:**
 \`\`\`bash
