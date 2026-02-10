@@ -1,364 +1,226 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Testing Suite
-Testing XRP Gas Wallet Separation + Destination Tag Support + Fee Alert Expansion
+Backend testing for XRP/RLUSD Destination Tag Gap Fixes
+Testing Agent for DynoPay Crypto Payment System
 """
 
 import requests
 import subprocess
+import sys
 import os
 import json
-import sys
 
-# Base configuration
-BACKEND_URL = "http://localhost:8001"  # Internal backend URL as specified
-TEST_RESULTS = []
+# Base URL from frontend/.env REACT_APP_BACKEND_URL
+BASE_URL = "https://gas-fee-alerts.preview.emergentagent.com"
 
-def log_test(test_name, passed, details=""):
-    """Log test result"""
-    status = "✅ PASS" if passed else "❌ FAIL"
-    result = {
-        'test': test_name,
-        'status': status,
-        'passed': passed,
-        'details': details
-    }
-    TEST_RESULTS.append(result)
-    print(f"{status}: {test_name}")
-    if details:
-        print(f"   Details: {details}")
-
-def test_1_backend_health():
-    """TEST 1: Backend healthy - GET /api/status/health returns 200 with 'healthy'"""
+def test_backend_health():
+    """TEST 1: Backend health check"""
+    print("=== TEST 1: Backend Health Check ===")
     try:
-        response = requests.get(f"{BACKEND_URL}/api/status/health", timeout=10)
+        response = requests.get(f"{BASE_URL}/api/status/health", timeout=10)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
         if response.status_code == 200:
-            data = response.json()
-            if data.get('status') == 'healthy':
-                log_test("TEST 1: Backend Health Check", True, f"Status: {data}")
-                return True
-            else:
-                log_test("TEST 1: Backend Health Check", False, f"Expected 'healthy' status, got: {data}")
-                return False
+            print("✅ TEST 1 PASSED: Backend health check successful")
+            return True
         else:
-            log_test("TEST 1: Backend Health Check", False, f"HTTP {response.status_code}: {response.text}")
+            print(f"❌ TEST 1 FAILED: Expected 200, got {response.status_code}")
             return False
     except Exception as e:
-        log_test("TEST 1: Backend Health Check", False, f"Connection error: {str(e)}")
+        print(f"❌ TEST 1 FAILED: Exception occurred - {str(e)}")
         return False
 
-def test_2_typescript_compilation():
-    """TEST 2: TypeScript compiles clean - npx tsc --noEmit should exit with code 0"""
+def test_typescript_compilation():
+    """TEST 2: TypeScript compilation"""
+    print("\n=== TEST 2: TypeScript Compilation ===")
     try:
-        os.chdir('/app/backend')
-        result = subprocess.run(['npx', 'tsc', '--noEmit'], 
-                              capture_output=True, text=True, timeout=60)
+        # Change to backend directory and run tsc --noEmit
+        result = subprocess.run(
+            ["npx", "tsc", "--noEmit"], 
+            cwd="/app/backend",
+            capture_output=True, 
+            text=True,
+            timeout=60
+        )
         
+        print(f"Exit code: {result.returncode}")
+        if result.stdout:
+            print(f"Stdout: {result.stdout}")
+        if result.stderr:
+            print(f"Stderr: {result.stderr}")
+            
         if result.returncode == 0:
-            log_test("TEST 2: TypeScript Compilation", True, "No compilation errors")
+            print("✅ TEST 2 PASSED: TypeScript compilation successful")
             return True
         else:
-            log_test("TEST 2: TypeScript Compilation", False, 
-                   f"Exit code {result.returncode}. Stderr: {result.stderr}")
+            print(f"❌ TEST 2 FAILED: TypeScript compilation failed with exit code {result.returncode}")
             return False
     except Exception as e:
-        log_test("TEST 2: TypeScript Compilation", False, f"Error: {str(e)}")
+        print(f"❌ TEST 2 FAILED: Exception occurred - {str(e)}")
         return False
 
-def test_3_env_configuration():
-    """TEST 3: ENV Configuration - Check XRP wallet addresses are different"""
+def test_merchant_api_destination_tag():
+    """TEST 3: Merchant API has destination_tag"""
+    print("\n=== TEST 3: Merchant API destination_tag References ===")
     try:
-        os.chdir('/app/backend')
+        result = subprocess.run(
+            ["grep", "-c", "destination_tag", "/app/backend/routes/merchantApiRouter.ts"],
+            capture_output=True, text=True, timeout=10
+        )
         
-        # Check XRP_MASTER_WALLET
-        result1 = subprocess.run(['grep', 'XRP_MASTER_WALLET', '.env'], 
-                               capture_output=True, text=True)
-        if result1.returncode != 0:
-            log_test("TEST 3: ENV Configuration", False, "XRP_MASTER_WALLET not found in .env")
-            return False
-            
-        # Check XRP_FEE_WALLET  
-        result2 = subprocess.run(['grep', 'XRP_FEE_WALLET', '.env'], 
-                               capture_output=True, text=True)
-        if result2.returncode != 0:
-            log_test("TEST 3: ENV Configuration", False, "XRP_FEE_WALLET not found in .env")
-            return False
+        count = int(result.stdout.strip()) if result.stdout.strip().isdigit() else 0
+        print(f"destination_tag occurrences found: {count}")
         
-        # Extract addresses
-        master_line = result1.stdout.strip()
-        fee_line = result2.stdout.strip()
-        
-        master_addr = master_line.split('=')[1] if '=' in master_line else ""
-        fee_addr = fee_line.split('=')[1] if '=' in fee_line else ""
-        
-        # Check expected addresses
-        expected_master = "rPgBeVA8mLJq5Q6ztsJbN829YKhedWFn85"
-        expected_fee = "rNTAMbxNiMVeXVidBK2Xe5Bcza7gKcpvpL"
-        
-        if master_addr == expected_master and fee_addr == expected_fee and master_addr != fee_addr:
-            log_test("TEST 3: ENV Configuration", True, 
-                   f"XRP_MASTER_WALLET={master_addr}, XRP_FEE_WALLET={fee_addr} (Different addresses)")
+        if count >= 2:
+            print("✅ TEST 3 PASSED: Merchant API has sufficient destination_tag references")
             return True
         else:
-            log_test("TEST 3: ENV Configuration", False, 
-                   f"Master={master_addr}, Fee={fee_addr}. Expected different addresses")
+            print(f"❌ TEST 3 FAILED: Expected >= 2, found {count}")
             return False
-            
     except Exception as e:
-        log_test("TEST 3: ENV Configuration", False, f"Error: {str(e)}")
+        print(f"❌ TEST 3 FAILED: Exception occurred - {str(e)}")
         return False
 
-def test_4_fee_wallet_db_records():
-    """TEST 4: Fee Wallet DB Records - Check 5 records with correct settings"""
+def test_payment_controller_destination_tag():
+    """TEST 4: Payment controller has many destination_tag references"""
+    print("\n=== TEST 4: Payment Controller destination_tag References ===")
     try:
-        os.chdir('/app/backend')
+        result = subprocess.run(
+            ["grep", "-c", "destination_tag", "/app/backend/controller/paymentController.ts"],
+            capture_output=True, text=True, timeout=10
+        )
         
-        # Run the database query
-        query = '''require('dotenv').config(); 
-const s = require('./utils/dbInstance').default; 
-s.query('SELECT wallet_type, wallet_address, "feeLimit", alert_duration FROM tbl_admin_fee_wallet ORDER BY fee_wallet_id')
-.then(([r]) => { 
-    console.log(JSON.stringify(r, null, 2)); 
-    process.exit(0); 
-});'''
+        count = int(result.stdout.strip()) if result.stdout.strip().isdigit() else 0
+        print(f"destination_tag occurrences found: {count}")
         
-        result = subprocess.run(['npx', 'ts-node', '--transpile-only', '-e', query],
-                              capture_output=True, text=True, timeout=30)
-        
-        if result.returncode != 0:
-            log_test("TEST 4: Fee Wallet DB Records", False, 
-                   f"Query failed. Exit code: {result.returncode}, Error: {result.stderr}")
-            return False
-        
-        try:
-            records = json.loads(result.stdout.strip())
-        except json.JSONDecodeError as e:
-            log_test("TEST 4: Fee Wallet DB Records", False, f"Invalid JSON response: {result.stdout}")
-            return False
-        
-        # Expected: 5 records (ETH, TRX, XRP, POLYGON, XRP_MASTER)
-        if len(records) != 5:
-            log_test("TEST 4: Fee Wallet DB Records", False, 
-                   f"Expected 5 records, got {len(records)}: {records}")
-            return False
-        
-        # Check wallet types
-        wallet_types = [r['wallet_type'] for r in records]
-        expected_types = {'ETH', 'TRX', 'XRP', 'POLYGON', 'XRP_MASTER'}
-        actual_types = set(wallet_types)
-        
-        if actual_types != expected_types:
-            log_test("TEST 4: Fee Wallet DB Records", False,
-                   f"Expected types {expected_types}, got {actual_types}")
-            return False
-        
-        # Check feeLimit values
-        fee_limits_30 = ['ETH', 'TRX', 'XRP', 'POLYGON']
-        fee_limit_0 = ['XRP_MASTER']
-        
-        for record in records:
-            wallet_type = record['wallet_type']
-            fee_limit = record['feeLimit']
-            
-            if wallet_type in fee_limits_30 and fee_limit != 30:
-                log_test("TEST 4: Fee Wallet DB Records", False,
-                       f"{wallet_type} should have feeLimit=30, got {fee_limit}")
-                return False
-            elif wallet_type in fee_limit_0 and fee_limit != 0:
-                log_test("TEST 4: Fee Wallet DB Records", False,
-                       f"{wallet_type} should have feeLimit=0, got {fee_limit}")
-                return False
-        
-        log_test("TEST 4: Fee Wallet DB Records", True, 
-               f"Found 5 records with correct feeLimit values: {records}")
-        return True
-        
-    except Exception as e:
-        log_test("TEST 4: Fee Wallet DB Records", False, f"Error: {str(e)}")
-        return False
-
-def test_5_user_wallet_destination_tag():
-    """TEST 5: User Wallet destination_tag column exists"""
-    try:
-        os.chdir('/app/backend')
-        
-        query = '''require('dotenv').config(); 
-const s = require('./utils/dbInstance').default; 
-s.query("SELECT column_name FROM information_schema.columns WHERE table_name='tbl_user_wallet' AND column_name='destination_tag'")
-.then(([r]) => { 
-    console.log(JSON.stringify(r)); 
-    process.exit(0); 
-});'''
-        
-        result = subprocess.run(['npx', 'ts-node', '--transpile-only', '-e', query],
-                              capture_output=True, text=True, timeout=30)
-        
-        if result.returncode != 0:
-            log_test("TEST 5: User Wallet destination_tag Column", False, 
-                   f"Query failed. Exit code: {result.returncode}, Error: {result.stderr}")
-            return False
-        
-        try:
-            columns = json.loads(result.stdout.strip())
-        except json.JSONDecodeError as e:
-            log_test("TEST 5: User Wallet destination_tag Column", False, 
-                   f"Invalid JSON response: {result.stdout}")
-            return False
-        
-        if len(columns) == 1 and columns[0]['column_name'] == 'destination_tag':
-            log_test("TEST 5: User Wallet destination_tag Column", True, 
-                   "destination_tag column exists in tbl_user_wallet")
+        if count >= 20:
+            print("✅ TEST 4 PASSED: Payment controller has sufficient destination_tag references")
             return True
         else:
-            log_test("TEST 5: User Wallet destination_tag Column", False, 
-                   f"destination_tag column not found. Result: {columns}")
+            print(f"❌ TEST 4 FAILED: Expected >= 20, found {count}")
             return False
-            
     except Exception as e:
-        log_test("TEST 5: User Wallet destination_tag Column", False, f"Error: {str(e)}")
+        print(f"❌ TEST 4 FAILED: Exception occurred - {str(e)}")
         return False
 
-def test_6_code_references_updated():
-    """TEST 6: Code references updated correctly"""
+def test_redis_payment_payloads():
+    """TEST 5: destination_tag in Redis payment payloads"""
+    print("\n=== TEST 5: Redis Payment Payloads with destination_tag ===")
     try:
-        os.chdir('/app/backend')
+        result = subprocess.run(
+            ["grep", "destination_tag.*paymentRes", "/app/backend/controller/paymentController.ts"],
+            capture_output=True, text=True, timeout=10
+        )
         
-        tests = []
+        matches = result.stdout.strip()
+        print(f"Matches found:\n{matches}")
         
-        # Test 6a: XRP_MASTER_WALLET in merchantPoolConfig.ts
-        result1 = subprocess.run(['grep', '-c', 'XRP_MASTER_WALLET', 
-                                'services/merchantPool/merchantPoolConfig.ts'], 
-                               capture_output=True, text=True)
-        count1 = int(result1.stdout.strip()) if result1.returncode == 0 else 0
-        tests.append(("XRP_MASTER_WALLET in merchantPoolConfig.ts", count1 >= 1, f"Count: {count1}"))
-        
-        # Test 6b: wallet_type.*XRP_MASTER in merchantPoolWallet.ts  
-        result2 = subprocess.run(['grep', '-c', 'wallet_type.*XRP_MASTER', 
-                                'services/merchantPool/merchantPoolWallet.ts'], 
-                               capture_output=True, text=True)
-        count2 = int(result2.stdout.strip()) if result2.returncode == 0 else 0
-        tests.append(("wallet_type.*XRP_MASTER in merchantPoolWallet.ts", count2 >= 1, f"Count: {count2}"))
-        
-        # Test 6c: merchantDestinationTag in paymentController.ts
-        result3 = subprocess.run(['grep', '-c', 'merchantDestinationTag', 
-                                'controller/paymentController.ts'], 
-                               capture_output=True, text=True)
-        count3 = int(result3.stdout.strip()) if result3.returncode == 0 else 0
-        tests.append(("merchantDestinationTag in paymentController.ts", count3 >= 4, f"Count: {count3}"))
-        
-        # Test 6d: resolvedDestTag in tatumApi.ts
-        result4 = subprocess.run(['grep', '-c', 'resolvedDestTag', 
-                                'apis/tatumApi.ts'], 
-                               capture_output=True, text=True)
-        count4 = int(result4.stdout.strip()) if result4.returncode == 0 else 0
-        tests.append(("resolvedDestTag in tatumApi.ts", count4 >= 2, f"Count: {count4}"))
-        
-        # Test 6e: destinationTag.*null in tatumApi.ts
-        result5 = subprocess.run(['grep', '-c', 'destinationTag.*null', 
-                                'apis/tatumApi.ts'], 
-                               capture_output=True, text=True)
-        count5 = int(result5.stdout.strip()) if result5.returncode == 0 else 0
-        tests.append(("destinationTag.*null in tatumApi.ts", count5 >= 1, f"Count: {count5}"))
-        
-        # Evaluate results
-        all_passed = True
-        details = []
-        for test_name, passed, detail in tests:
-            if not passed:
-                all_passed = False
-            details.append(f"{test_name}: {detail}")
-        
-        log_test("TEST 6: Code References Updated", all_passed, "; ".join(details))
-        return all_passed
-        
-    except Exception as e:
-        log_test("TEST 6: Code References Updated", False, f"Error: {str(e)}")
-        return False
-
-def test_7_checkfeebalance_skips_xrp_master():
-    """TEST 7: checkFeeBalance skips XRP_MASTER"""
-    try:
-        os.chdir('/app/backend')
-        
-        # Look for XRP_MASTER skip logic in paymentController.ts
-        result = subprocess.run(['grep', '-B2', '-A2', 'XRP_MASTER', 
-                               'controller/paymentController.ts'], 
-                              capture_output=True, text=True)
-        
-        if result.returncode != 0:
-            log_test("TEST 7: checkFeeBalance skips XRP_MASTER", False, 
-                   "XRP_MASTER not found in paymentController.ts")
-            return False
-        
-        skip_logic_found = False
-        lines = result.stdout.lower()
-        
-        # Look for skip patterns
-        skip_patterns = ['skip', 'continue', 'return', 'feeLimit.*0', 'feelimit.*0']
-        for pattern in skip_patterns:
-            if pattern in lines and 'xrp_master' in lines:
-                skip_logic_found = True
-                break
-        
-        if skip_logic_found:
-            log_test("TEST 7: checkFeeBalance skips XRP_MASTER", True, 
-                   f"Skip logic found in checkFeeBalance function")
+        if matches:
+            print("✅ TEST 5 PASSED: destination_tag found in Redis payment payloads")
             return True
         else:
-            log_test("TEST 7: checkFeeBalance skips XRP_MASTER", False, 
-                   f"No skip logic found. Context: {result.stdout[:200]}...")
+            print("❌ TEST 5 FAILED: No destination_tag.*paymentRes patterns found")
             return False
-            
     except Exception as e:
-        log_test("TEST 7: checkFeeBalance skips XRP_MASTER", False, f"Error: {str(e)}")
+        print(f"❌ TEST 5 FAILED: Exception occurred - {str(e)}")
+        return False
+
+def test_qr_code_dt_param():
+    """TEST 6: QR code for incomplete payments includes tag"""
+    print("\n=== TEST 6: QR Code with dt= Parameter ===")
+    try:
+        result = subprocess.run(
+            ["grep", "dt=", "/app/backend/controller/paymentController.ts"],
+            capture_output=True, text=True, timeout=10
+        )
+        
+        matches = result.stdout.strip()
+        print(f"Matches found:\n{matches}")
+        
+        if matches:
+            print("✅ TEST 6 PASSED: QR code includes dt= parameter for destination tag")
+            return True
+        else:
+            print("❌ TEST 6 FAILED: No dt= patterns found in QR payload")
+            return False
+    except Exception as e:
+        print(f"❌ TEST 6 FAILED: Exception occurred - {str(e)}")
+        return False
+
+def test_incomplete_payment_data_interface():
+    """TEST 7: IncompletePaymentData interface has destination_tag"""
+    print("\n=== TEST 7: IncompletePaymentData Interface ===")
+    try:
+        result = subprocess.run(
+            ["grep", "-A8", "interface IncompletePaymentData", "/app/backend/controller/paymentController.ts"],
+            capture_output=True, text=True, timeout=10
+        )
+        
+        interface_definition = result.stdout.strip()
+        print(f"Interface definition:\n{interface_definition}")
+        
+        if "destination_tag" in interface_definition:
+            print("✅ TEST 7 PASSED: IncompletePaymentData interface includes destination_tag field")
+            return True
+        else:
+            print("❌ TEST 7 FAILED: destination_tag field not found in interface")
+            return False
+    except Exception as e:
+        print(f"❌ TEST 7 FAILED: Exception occurred - {str(e)}")
         return False
 
 def main():
-    """Run all tests"""
-    print("=" * 60)
-    print("DynoPay Backend Testing Suite")
-    print("Testing: XRP Gas Wallet Separation + Destination Tag + Fee Alert Expansion")
+    """Run all tests and provide summary"""
+    print("🚀 STARTING XRP/RLUSD DESTINATION TAG GAP FIXES TESTING")
     print("=" * 60)
     
-    # Run all tests
     tests = [
-        test_1_backend_health,
-        test_2_typescript_compilation, 
-        test_3_env_configuration,
-        test_4_fee_wallet_db_records,
-        test_5_user_wallet_destination_tag,
-        test_6_code_references_updated,
-        test_7_checkfeebalance_skips_xrp_master
+        ("Backend Health", test_backend_health),
+        ("TypeScript Compilation", test_typescript_compilation),
+        ("Merchant API destination_tag", test_merchant_api_destination_tag),
+        ("Payment Controller destination_tag", test_payment_controller_destination_tag),
+        ("Redis Payment Payloads", test_redis_payment_payloads),
+        ("QR Code dt= Parameter", test_qr_code_dt_param),
+        ("IncompletePaymentData Interface", test_incomplete_payment_data_interface),
     ]
     
-    passed_count = 0
-    for test_func in tests:
+    results = []
+    passed = 0
+    failed = 0
+    
+    for test_name, test_func in tests:
         try:
-            if test_func():
-                passed_count += 1
+            result = test_func()
+            results.append((test_name, result))
+            if result:
+                passed += 1
+            else:
+                failed += 1
         except Exception as e:
-            print(f"ERROR in {test_func.__name__}: {e}")
-        print()  # Space between tests
+            print(f"❌ {test_name} FAILED with exception: {str(e)}")
+            results.append((test_name, False))
+            failed += 1
     
     # Summary
-    print("=" * 60)
-    print("TEST SUMMARY")
-    print("=" * 60)
-    print(f"PASSED: {passed_count}/{len(tests)}")
-    print(f"SUCCESS RATE: {(passed_count/len(tests)*100):.1f}%")
-    print()
-    
-    # Detailed results
-    for result in TEST_RESULTS:
-        print(f"{result['status']}: {result['test']}")
-        if result['details']:
-            print(f"   {result['details']}")
-    
+    print("\n" + "=" * 60)
+    print("📊 TESTING SUMMARY")
     print("=" * 60)
     
-    # Return exit code
-    return 0 if passed_count == len(tests) else 1
+    for test_name, result in results:
+        status = "✅ PASSED" if result else "❌ FAILED"
+        print(f"{test_name}: {status}")
+    
+    print(f"\nTOTAL: {passed} passed, {failed} failed ({passed}/{len(tests)})")
+    success_rate = (passed / len(tests)) * 100
+    print(f"SUCCESS RATE: {success_rate:.1f}%")
+    
+    if failed == 0:
+        print("\n🎉 ALL TESTS PASSED! XRP/RLUSD Destination Tag Gap Fixes are working correctly.")
+        return 0
+    else:
+        print(f"\n⚠️  {failed} TEST(S) FAILED - Issues need to be addressed.")
+        return 1
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    sys.exit(main())
