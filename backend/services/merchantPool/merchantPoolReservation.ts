@@ -315,7 +315,8 @@ export const releaseExpiredReservations = async (
       // ORPHAN RECOVERY: Save payment context BEFORE wiping
       if (address.dataValues.current_payment_id) {
         try {
-          const redisData = await getRedisItem("crypto-" + walletAddr);
+          const addrDestTag = address.dataValues.destination_tag ? Number(address.dataValues.destination_tag) : null;
+          const redisData = await getRedisItem(getCryptoRedisKey(walletAddr, addrDestTag));
           let customerData: Record<string, unknown> = {};
           if (redisData?.ref) {
             customerData = await getRedisItem(redisData.ref) || {};
