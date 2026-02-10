@@ -837,7 +837,7 @@ const getLinkAccessToken = async (email, ref, pathType, id) => {
   const tokenSecret = process.env.ACCESS_TOKEN_SECRET;
 
   if (tokenSecret) {
-    const token = jwt.sign({ email, ref, pathType, transaction_id: id }, tokenSecret, { expiresIn: '365d' });
+    const token = jwt.sign({ email, ref, pathType, transaction_id: id }, tokenSecret);
     return token;
   }
 };
