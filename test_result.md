@@ -5242,3 +5242,104 @@ ports:
             - curl /api/docs.json and check currency enums contain all 15
 
           Base URL for curl: http://localhost:8001 (internal)
+  - task: "Fix 7 Backend Log Issues: BCH pageSize, TrustLine backoff, FastForex crypto skip, Stale orphan caching, CoinGecko rate-limit, Lock contention, Tatum 403 noise"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/helper/currencyConvert.ts"
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/services/merchantPool/merchantPoolWallet.ts"
+      - "/app/backend/server.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          7 ISSUES FIXED FROM BACKEND LOG ANALYSIS:
+          
+          FIX 1 (CRITICAL): BCH pageSize validation error — Tatum SDK bug
+          - bchGetTxByAddress(address, skip) doesn't send pageSize param (BTC/LTC/DOGE have it)
+          - Fixed BOTH locations: getAddressBalance (line ~2168) and getIncomingTransactions (line ~2701)
+          - Now uses direct HTTP call: GET /v3/bcash/transaction/address/{address}?pageSize={limit}&skip=0
+          - File: tatumApi.ts
+          
+          FIX 2 (MEDIUM): TrustLineRetry backoff for unactivated XRP fee wallet
+          - XRP fee wallet rNTAMbxNiMVeXVidBK2Xe5Bcza7gKcpvpL has 0 XRP (not activated)
+          - Was retrying every 3 minutes with noisy logs — now backs off for 1 hour via Redis key
+          - Redis key: trustline-backoff:fee-wallet-not-activated (TTL: 3600s)
+          - File: merchantPoolWallet.ts
+          
+          FIX 3 (MEDIUM): FastForex skipped for crypto→fiat conversions
+          - FastForex is a forex API — doesn't support crypto (MATIC, BTC, etc.)
+          - Was calling FastForex for ALL conversions, wasting API calls + noisy error logs
+          - Now checks isCryptoConversion and skips FastForex if either side is crypto
+          - File: currencyConvert.ts
+          
+          FIX 4 (MEDIUM): Stale orphan re-detection cached for 24h
+          - POLYGON (108.87 POL) and XRP (1.000003 XRP) addresses had residual balances
+          - Were flagged as orphans every 10min cycle, checked, found "already processed", repeat
+          - Now stores orphan-skip:{address} in Redis with 24h TTL after confirming tx processed
+          - Next cycle skips these addresses entirely until Redis TTL expires
+          - File: merchantPoolMonitoring.ts
+          
+          FIX 5 (LOW): CoinGecko background cache interval reduced
+          - Changed from every 60s to every 120s to reduce CoinGecko rate-limiting (free tier)
+          - Background cache TTL increased from 90s to 180s to match
+          - File: server.ts + currencyConvert.ts
+          
+          FIX 6 (LOW): OrphanDetect lock TTL increased
+          - Increased from 540s to 900s — scanning 158 addresses can exceed 9min with API latency
+          - File: server.ts
+          
+          FIX 7 (LOW): Tatum 403 error message improved
+          - Now distinguishes 403 errors with clearer message about cross-rate recovery
+          - "Tatum 403 — pair may not be supported directly; cross-rate recovery will fill the gap"
+          - File: currencyConvert.ts
+          
+          VERIFY THESE TESTS:
+          
+          TEST 1: Backend healthy
+          - GET /health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - cd /app/backend && npx tsc --noEmit — exit code 0
+          
+          TEST 3: FIX 1 — BCH uses direct HTTP (no SDK bchGetTxByAddress)
+          - grep 'bchGetTxByAddress' /app/backend/apis/tatumApi.ts should return 0 matches (excluding comments)
+          - grep 'bcash/transaction/address' /app/backend/apis/tatumApi.ts should return 2 matches (getAddressBalance + getIncomingTransactions)
+          - grep 'pageSize.*skip' /app/backend/apis/tatumApi.ts should find the BCH direct HTTP calls
+          
+          TEST 4: FIX 2 — TrustLineRetry has Redis backoff
+          - grep 'trustline-backoff' /app/backend/services/merchantPool/merchantPoolWallet.ts should find the backoff key
+          - grep 'Backing off for 1 hour' /app/backend/services/merchantPool/merchantPoolWallet.ts should find the log message
+          - grep 'setRedisItemWithTTL.*backoffKey' /app/backend/services/merchantPool/merchantPoolWallet.ts should find the Redis set
+          
+          TEST 5: FIX 3 — FastForex skipped for crypto
+          - grep 'isCryptoConversion' /app/backend/helper/currencyConvert.ts should find the check before FastForex call
+          - grep 'if (!isCryptoConversion)' /app/backend/helper/currencyConvert.ts should find the guard
+          
+          TEST 6: FIX 4 — Orphan skip caching
+          - grep 'orphan-skip' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find the Redis key
+          - grep 'cached for 24h' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find the log
+          - grep '86400' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find the 24h TTL
+          
+          TEST 7: FIX 5 — CoinGecko interval reduced
+          - grep '*/2 \* \* \* \*' /app/backend/server.ts should find the 2-min interval for background cache
+          - grep '180_000' /app/backend/helper/currencyConvert.ts should find the updated TTL
+          
+          TEST 8: FIX 6 — Lock TTL increased
+          - grep 'acquireLock.*detectOrphanPayments.*900' /app/backend/server.ts should find the 900s lock TTL
+          
+          TEST 9: FIX 7 — Tatum 403 message improved
+          - grep 'cross-rate recovery will fill the gap' /app/backend/helper/currencyConvert.ts should find the message
+          
+          TEST 10: LOGS — No more BCH pageSize errors (wait for next orphan cycle)
+          - After next detectOrphanPayments cycle, check logs: grep 'pageSize' backend.out.log should show 0 new errors
+          - grep 'MATIC.*FastForex\|FastForex.*MATIC' backend.out.log should show 0 matches (no more wasted calls)
+          - grep 'TrustLineRetry.*Backing off' backend.out.log should show 1 entry then silence for 1 hour
+          
+          Base URL for curl: http://localhost:8001 (internal)
+
