@@ -954,7 +954,7 @@ export const detectOrphanPayments = async (): Promise<{
         console.log(`[OrphanDetect] 📝 Redis reconstructed. Calling cryptoVerification...`);
 
         try {
-          const verificationResult = await paymentController.cryptoVerification(walletAddress, true) as { 
+          const verificationResult = await paymentController.cryptoVerification(walletAddress, true, orphanCryptoKey) as { 
             duplicate?: boolean; 
             status?: number; 
             paymentStatus?: string 
