@@ -3264,9 +3264,14 @@ const verifyXrpAccountActivated = async (address: string): Promise<boolean> => {
     const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
     return res && Number(res.balance || 0) > 0;
   } catch (e: unknown) {
-    const err = e as { message?: string; body?: any };
-    if ((err.message || '').includes('not.found') || (err.message || '').includes('account.not.found') ||
-        (err.body?.error_message || '').includes('not found')) {
+    const err = e as { message?: string; body?: { errorCode?: string; message?: string }; status?: number };
+    const errMsg = (err.message || '').toLowerCase();
+    const bodyMsg = (err.body?.message || '').toLowerCase();
+    const errorCode = (err.body?.errorCode || '').toLowerCase();
+    // Account not found / not activated — definitively not activated
+    if (errMsg.includes('not.found') || errMsg.includes('account.not.found') ||
+        errMsg.includes('account not found') || bodyMsg.includes('account not found') ||
+        errorCode.includes('account.failed') || err.status === 403) {
       return false;
     }
     // SDK failed for non-obvious reason — try RPC fallback
@@ -3279,8 +3284,12 @@ const verifyXrpAccountActivated = async (address: string): Promise<boolean> => {
     return balance > 0;
   } catch (e: unknown) {
     const err = e as { message?: string };
-    if ((err.message || '').includes('actNotFound')) return false;
-    console.warn(`[verifyXrpAccountActivated] Both SDK and RPC failed for ${address}:`, err.message);
+    const errMsg = (err.message || '').toLowerCase();
+    if (errMsg.includes('actnotfound') || errMsg.includes('account not found') || errMsg.includes('not found')) {
+      return false;
+    }
+    // Both failed, but don't log loudly — caller should handle gracefully
+    console.log(`[verifyXrpAccountActivated] SDK+RPC both failed for ${address.substring(0, 12)}... — treating as not activated`);
     return false;
   }
 };
