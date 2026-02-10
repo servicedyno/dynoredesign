@@ -1001,8 +1001,15 @@ export const detectOrphanPayments = async (): Promise<{
         const processedTxKey = `processed-tx-${latestTx.txId}`;
         const alreadyProcessedTx = await getRedisItem(processedTxKey);
         if (alreadyProcessedTx && Object.keys(alreadyProcessedTx).length > 0) {
-          console.log(`[OrphanDetect] ⏭️ Transaction ${latestTx.txId} already processed. Skipping.`);
+          console.log(`[OrphanDetect] ⏭️ Transaction ${latestTx.txId} already processed. Skipping (cached for 24h).`);
           result.alreadyProcessed++;
+          // FIX: Cache this skip for 24h to prevent re-detection of residual balances every cycle
+          await setRedisItemWithTTL(`orphan-skip:${walletAddress}`, {
+            txId: latestTx.txId,
+            balance,
+            reason: 'tx_already_processed',
+            skippedAt: new Date().toISOString(),
+          }, 86400); // 24 hours
           continue;
         }
 
