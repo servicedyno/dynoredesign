@@ -451,6 +451,7 @@ export const retryPendingTrustLines = async (): Promise<{
           // Try to fund the account
           const xrpFeeWallet = process.env.XRP_FEE_WALLET || process.env.XRP;
           if (!xrpFeeWallet) {
+            console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — no XRP fee wallet configured`);
             result.errors.push(`${walletAddress}: No XRP fee wallet configured`);
             continue;
           }
@@ -458,24 +459,51 @@ export const retryPendingTrustLines = async (): Promise<{
           const { adminFeeModel } = await import("../../models");
           const xrpFeeWalletRecord = await adminFeeModel.findOne({ where: { wallet_type: "XRP" } });
           if (!xrpFeeWalletRecord) {
+            console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — XRP fee wallet not found in DB`);
             result.errors.push(`${walletAddress}: XRP fee wallet not found in DB`);
             continue;
           }
 
-          const xrpFeePrivateKey = await tatumApi.decryptSymmetric(
-            xrpFeeWalletRecord.dataValues.privateKey,
-            process.env.TEMP_KEY_ID
-          );
+          // Check if fee wallet itself is activated and has enough balance
+          let feeWalletActivated = false;
+          try {
+            feeWalletActivated = await tatumApi.verifyXrpAccountActivated(xrpFeeWallet);
+          } catch {
+            feeWalletActivated = false;
+          }
+          if (!feeWalletActivated) {
+            console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — XRP fee wallet (${xrpFeeWallet.substring(0, 10)}...) is not activated yet`);
+            result.errors.push(`${walletAddress}: XRP fee wallet not activated`);
+            continue;
+          }
 
-          await tatumApi.assetToOtherAddress({
-            currency: "XRP",
-            fromAddress: xrpFeeWallet,
-            toAddress: walletAddress,
-            privateKey: xrpFeePrivateKey,
-            amount: 2,
-            fee: null,
-          });
-          console.log(`[TrustLineRetry] Funded ${walletAddress} with 2 XRP`);
+          try {
+            const xrpFeePrivateKey = await tatumApi.decryptSymmetric(
+              xrpFeeWalletRecord.dataValues.privateKey,
+              process.env.TEMP_KEY_ID
+            );
+
+            await tatumApi.assetToOtherAddress({
+              currency: "XRP",
+              fromAddress: xrpFeeWallet,
+              toAddress: walletAddress,
+              privateKey: xrpFeePrivateKey,
+              amount: 2,
+              fee: null,
+            });
+            console.log(`[TrustLineRetry] Funded ${walletAddress} with 2 XRP`);
+          } catch (fundErr: unknown) {
+            const fundMsg = (fundErr as { message?: string })?.message || '';
+            // If funding fails (fee wallet not activated, insufficient balance, etc.), skip this address
+            if (fundMsg.includes('account.failed') || fundMsg.includes('Account not found') ||
+                fundMsg.includes('not.found') || fundMsg.includes('Unable to sign') ||
+                fundMsg.includes('insufficient') || fundMsg.includes('tecUNFUNDED')) {
+              console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — funding failed: ${fundMsg.substring(0, 100)}`);
+              result.errors.push(`${walletAddress}: Funding failed — ${fundMsg.substring(0, 80)}`);
+              continue;
+            }
+            throw fundErr;
+          }
           
           // Wait for activation
           await new Promise(resolve => setTimeout(resolve, 8000));
