@@ -1085,16 +1085,17 @@ const feeEstimation = async (
 
     console.log(gasFees);
 
-    // Gas price bounds — optimized for post-Dencun ETH (base fee often 1-2 Gwei in 2025-2026)
-    // MIN: 1 Gwei (post-Dencun minimum), MAX: 30 Gwei (cost control)
-    // Priority buffer: 15% + 0.5 Gwei (percentage-based, was flat +2 Gwei which doubled fees at low base)
-    const MIN_GAS_PRICE = 1;
-    const MAX_GAS_PRICE = 30;
+    // Gas price bounds — chain-specific caps
+    // ETH: post-Dencun base fee is 1-2 Gwei, cap at 50 Gwei
+    // POLYGON: gas can be 100-500+ Gwei, cap at 1000 Gwei
+    const isPolygon = ["POLYGON", "USDT-POLYGON"].includes(currency);
+    const MIN_GAS_PRICE = isPolygon ? 25 : 1;
+    const MAX_GAS_PRICE = isPolygon ? 1000 : 50;
     const rawGasPrice = Math.ceil(gasFees?.gasPrice || MIN_GAS_PRICE);
     let gasPrice = Math.max(MIN_GAS_PRICE, Math.min(MAX_GAS_PRICE, rawGasPrice));
     // Percentage-based buffer: 15% + 0.5 Gwei priority tip (replaces old flat +2 Gwei)
     const gas_fee_for_amount = Math.ceil(gasPrice * 1.15 + 0.5);
-    console.log(`[EVM Gas] ⛽ Price: raw=${rawGasPrice}, capped=${gasPrice}, with buffer=${gas_fee_for_amount} Gwei (was ${gasPrice + 2} with flat +2)`);
+    console.log(`[EVM Gas] ⛽ Price: raw=${rawGasPrice}, capped=${gasPrice}, with buffer=${gas_fee_for_amount} Gwei (chain=${currency}, max=${MAX_GAS_PRICE})`);
     logCostSavings("EVM-GasBuffer", gasPrice + 2, gas_fee_for_amount, { currency, rawGasPrice });
     fees = {
       fast: Number(
