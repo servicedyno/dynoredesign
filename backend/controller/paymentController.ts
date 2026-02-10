@@ -3792,10 +3792,11 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         if (customerRef) {
           const customerData = await getRedisItem("customer-" + customerRef);
           if (customerData) {
-            // Generate QR code for the address
+            // Generate QR code for the address — include destination tag for XRP/RLUSD
             let qrCode;
             try {
-              qrCode = await QR_Code.toDataURL(address, { width: 300 });
+              const qrPayload = tempData.destination_tag ? `${address}?dt=${tempData.destination_tag}` : address;
+              qrCode = await QR_Code.toDataURL(qrPayload, { width: 300 });
             } catch (e) {
               console.log('[Phase 12] QR code generation failed:', e);
             }
@@ -3809,10 +3810,12 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
                 previous_amount: receivedAmount,
                 timestamp: new Date().toISOString(),
                 qr_code: qrCode,
+                // XRP/RLUSD: Persist destination tag for tag-based chains
+                ...(tempData.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
               }
             };
             await setRedisItem("customer-" + customerRef, updatedCustomerData);
-            console.log(`[Phase 12] Updated customer-${customerRef} with incomplete payment info: ${pendingAmount} ${tempCurrency}`);
+            console.log(`[Phase 12] Updated customer-${customerRef} with incomplete payment info: ${pendingAmount} ${tempCurrency}${tempData.destination_tag ? ` (tag: ${tempData.destination_tag})` : ''}`);
           }
         }
 
