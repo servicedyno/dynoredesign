@@ -1236,8 +1236,6 @@ const feeEstimation = async (
     const safeEstimateAmount = (Math.floor(localAmount * factor) / factor).toString();
     try {
       // Get gas price from both Tatum SDK and RPC, use the higher one
-      let sdkGasPrice = 30;
-      let sdkGasLimit = isToken ? 65000 : 21000;
       // Use withSdkFallback for Polygon gas estimation (SDK + RPC)
       const sdkGasCall = async (): Promise<{ gasPrice: number; gasLimit: number }> => {
         const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
