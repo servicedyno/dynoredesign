@@ -841,25 +841,6 @@ const processAddress = async (addr: any, result: {
         console.error(`[MerchantPool] ❌ Error processing ${walletAddress}:`, err.message);
         result.errors.push(`Processing failed for ${walletAddress}: ${err.message}`);
       }
-    }
-
-    console.log(`[MerchantPool] ✅ Missed payment check complete:`);
-    console.log(`[MerchantPool]   - Checked: ${result.checked}`);
-    console.log(`[MerchantPool]   - Skipped (too recent): ${result.skippedTooRecent}`);
-    console.log(`[MerchantPool]   - Already processed: ${result.alreadyProcessed}`);
-    console.log(`[MerchantPool]   - Missed found: ${result.found}`);
-    console.log(`[MerchantPool]   - Successfully processed: ${result.processed}`);
-    if (result.errors.length > 0) {
-      console.log(`[MerchantPool]   - Errors: ${result.errors.length}`);
-    }
-    
-  } catch (error: unknown) {
-    const err = error as { message?: string };
-    console.error("[MerchantPool] ❌ Missed payment check failed:", err.message);
-    result.errors.push(`Global error: ${err.message}`);
-  }
-
-  return result;
 };
 
 /**
