@@ -2507,10 +2507,11 @@ const getPaymentStatusFallback = async (address: string, currency: string, expec
 const getIncomingTransactions = async (
   address: string, 
   currency: string,
-  limit: number = 10
-): Promise<{ txId: string; amount: number; timestamp: number }[]> => {
+  limit: number = 10,
+  filterDestinationTag?: number | null
+): Promise<{ txId: string; amount: number; timestamp: number; destinationTag?: number | null }[]> => {
   const tatumSdk = await getTatumSDK();
-  const transactions: { txId: string; amount: number; timestamp: number }[] = [];
+  const transactions: { txId: string; amount: number; timestamp: number; destinationTag?: number | null }[] = [];
 
   // Define interfaces for transaction data
   interface BTCTransaction {
