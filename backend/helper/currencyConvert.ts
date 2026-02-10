@@ -255,7 +255,11 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
     tatumFailureCache.set(failKey, Date.now());
     // Log once per failure window (not every cron tick)
     if (!lastFail) {
-      console.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message} (suppressing for 10 min)`);
+      const is403 = err.response?.status === 403;
+      const suffix = is403
+        ? `(Tatum 403 — pair may not be supported directly; cross-rate recovery will fill the gap)`
+        : `(suppressing for 10 min)`;
+      console.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message} ${suffix}`);
     }
   }
   return null;
