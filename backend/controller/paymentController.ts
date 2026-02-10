@@ -6209,13 +6209,23 @@ const checkFeeBalance = async () => {
 
     for (let i = 0; i < adminFeesWallets.length; i++) {
       const { feeLimit, wallet_type } = adminFeesWallets[i].dataValues;
+      
+      // Skip non-gas wallets (XRP_MASTER is for receiving payments, not gas funding)
+      if (wallet_type === "XRP_MASTER" || feeLimit === 0) {
+        continue;
+      }
+      
+      // Map wallet_type to the correct currency for balance checking
+      // XRP gas wallet checks XRP balance, POLYGON gas wallet checks POLYGON balance
+      const balanceCheckCurrency = wallet_type;
+      
       const currentBalance = await tatumApi.getAddressBalance(
         adminFeesWallets[i]?.dataValues.wallet_address,
-        adminFeesWallets[i]?.dataValues.wallet_type
+        balanceCheckCurrency
       );
       let amount = adminFeesWallets[i]?.dataValues.amount;
       let newBalance =
-        adminFeesWallets[i]?.dataValues.wallet_type === "TRX"
+        wallet_type === "TRX"
           ? currentBalance?.balance / 1000000
           : currentBalance?.balance;
       
