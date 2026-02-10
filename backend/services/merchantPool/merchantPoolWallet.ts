@@ -16,6 +16,7 @@ import sequelize from "../../utils/dbInstance";
 import { getErrorMessage } from "../../helper";
 import { POOL_CONFIG, RLUSD_CONFIG, isTagBasedChain, XRP_MASTER_ADDRESS, getCryptoRedisKey } from "./merchantPoolConfig";
 import { adminFeeModel } from "../../models";
+import { getRedisItem, setRedisItemWithTTL } from "../../utils/redisInstance";
 
 /**
  * Generate a unique destination tag for XRP-based payments.
