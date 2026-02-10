@@ -34,7 +34,7 @@ export const apiKeyPaths = {
                 },
                 base_currency: {
                   type: 'string',
-                  enum: ['USD', 'EUR', 'NGN', 'GBP', 'BTC'],
+                  enum: ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'NGN', 'BRL', 'ZAR', 'KES', 'GHS', 'JPY', 'CHF', 'SGD', 'HKD', 'NZD', 'MXN', 'BTC'],
                   description: '✅ REQUIRED: Default currency for transactions',
                   example: 'USD'
                 },
