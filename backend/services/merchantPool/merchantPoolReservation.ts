@@ -529,7 +529,8 @@ export const cleanupStaleAddresses = async (
       
       if (address.dataValues.current_payment_id) {
         try {
-          const staleRedisData = await getRedisItem("crypto-" + addrStr);
+          const staleDestTag = address.dataValues.destination_tag ? Number(address.dataValues.destination_tag) : null;
+          const staleRedisData = await getRedisItem(getCryptoRedisKey(addrStr, staleDestTag));
           let staleCustomerData: Record<string, unknown> = {};
           if (staleRedisData?.ref) {
             staleCustomerData = await getRedisItem(staleRedisData.ref) || {};
