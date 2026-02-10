@@ -63,7 +63,12 @@ export async function validateMerchantPoolConfiguration(): Promise<void> {
     errors.push("Missing ETH fee wallet address (required for ERC20 tokens)");
   }
   if (!FEE_WALLETS.XRP) {
-    errors.push("Missing XRP fee wallet address (required for RLUSD on XRP Ledger)");
+    errors.push("Missing XRP fee wallet address (required for XRP gas funding)");
+  }
+  
+  // Validate XRP master wallet (required for tag-based XRP/RLUSD payments)
+  if (!process.env.XRP_MASTER_WALLET) {
+    errors.push("Missing XRP_MASTER_WALLET address (required for XRP/RLUSD tag-based payments)");
   }
   if (!FEE_WALLETS.POLYGON) {
     errors.push("Missing POLYGON fee wallet address (required for USDT-POLYGON)");
