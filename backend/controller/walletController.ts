@@ -2751,7 +2751,7 @@ const validateWallet = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { wallet_address, currency, wallet_name, company_id } = req.body;
+    const { wallet_address, currency, wallet_name, company_id, destination_tag } = req.body;
     
     // Validate required fields
     if (!company_id) {
