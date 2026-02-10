@@ -188,10 +188,77 @@ export const checkMissedPayments = async (): Promise<{
       ],
     });
 
-    console.log(`[MerchantPool] 📋 Found ${reservedAddresses.length} reserved addresses to check`);
+    console.log(`[MerchantPool] 📋 Found ${reservedAddresses.length} reserved addresses to check (concurrency: ${CONCURRENCY_LIMIT}, timeout: ${PER_ADDRESS_TIMEOUT_MS}ms)`);
 
-    for (const addr of reservedAddresses) {
-      result.checked++;
+    // Process addresses in batches with concurrency limit
+    let consecutiveErrors = 0;
+    const totalAddresses = reservedAddresses.length;
+
+    for (let batchStart = 0; batchStart < totalAddresses; batchStart += CONCURRENCY_LIMIT) {
+      // Circuit breaker: if too many errors, API might be down
+      if (result.checked > 0 && result.errors.length / result.checked > CIRCUIT_BREAKER_THRESHOLD && result.errors.length > 3) {
+        console.error(`[MerchantPool] 🛑 Circuit breaker triggered: ${result.errors.length}/${result.checked} addresses failed (>${CIRCUIT_BREAKER_THRESHOLD * 100}%). Stopping.`);
+        result.errors.push(`Circuit breaker: stopped after ${result.checked} addresses, ${result.errors.length} failures`);
+        break;
+      }
+
+      const batch = reservedAddresses.slice(batchStart, batchStart + CONCURRENCY_LIMIT);
+      
+      // Process batch concurrently with per-address timeout
+      await Promise.allSettled(batch.map(async (addr) => {
+        const addrStartTime = Date.now();
+        return Promise.race([
+          processAddress(addr, result),
+          new Promise<void>((_, reject) =>
+            setTimeout(() => reject(new Error(`Timeout after ${PER_ADDRESS_TIMEOUT_MS}ms`)), PER_ADDRESS_TIMEOUT_MS)
+          ),
+        ]).catch((timeoutErr: Error) => {
+          const wa = addr.dataValues.wallet_address;
+          console.error(`[MerchantPool] ⏰ ${wa} — address processing timed out after ${Date.now() - addrStartTime}ms`);
+          result.errors.push(`Timeout for ${wa}: ${timeoutErr.message}`);
+        });
+      }));
+
+      // Rate limiting between batches
+      if (batchStart + CONCURRENCY_LIMIT < totalAddresses) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      }
+    }
+
+    // Timing metrics
+    result.timing = {
+      totalMs: Date.now() - startTime,
+      avgPerAddressMs: result.checked > 0 ? Math.round((Date.now() - startTime) / result.checked) : 0,
+    };
+
+    console.log(`[MerchantPool] ✅ Missed payment check complete:`);
+    console.log(`[MerchantPool]   - Checked: ${result.checked}/${totalAddresses}`);
+    console.log(`[MerchantPool]   - Found: ${result.found}, Processed: ${result.processed}, Already: ${result.alreadyProcessed}`);
+    console.log(`[MerchantPool]   - Skipped (recent): ${result.skippedTooRecent}`);
+    console.log(`[MerchantPool]   - Timing: ${result.timing.totalMs}ms total, ${result.timing.avgPerAddressMs}ms avg/addr`);
+    if (result.errors.length > 0) {
+      console.log(`[MerchantPool]   - Errors: ${result.errors.length}`);
+    }
+    
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error("[MerchantPool] ❌ Missed payment check failed:", err.message);
+    result.errors.push(`Global error: ${err.message}`);
+    result.timing = { totalMs: Date.now() - startTime, avgPerAddressMs: 0 };
+  }
+
+  return result;
+};
+
+/**
+ * Process a single address for missed payment detection.
+ * Extracted from the main loop for timeout/concurrency wrapping.
+ */
+const processAddress = async (addr: any, result: {
+  checked: number; found: number; processed: number; alreadyProcessed: number;
+  skippedTooRecent: number; errors: string[];
+}): Promise<void> => {
+    result.checked++;
       
       const walletAddress = addr.dataValues.wallet_address;
       const walletType = addr.dataValues.wallet_type;
