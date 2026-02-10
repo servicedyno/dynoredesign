@@ -751,10 +751,10 @@ testRouter.post("/rlusd-trustline", authMiddleware, async (_req, res) => {
     }
 
     console.log(`[TestTrustLine] Triggering RLUSD address creation for user ${userId}...`);
-    const result = await addAddressToMerchantPool(userId, "RLUSD");
+    const result = await addAddressToMerchantPool(userId, "RLUSD") as any;
 
-    const address = result?.dataValues?.wallet_address || "unknown";
-    const status = result?.dataValues?.status || "unknown";
+    const address = result?.dataValues?.wallet_address || result?.wallet_address || "unknown";
+    const status = result?.dataValues?.status || result?.status || "unknown";
 
     console.log(`[TestTrustLine] Result: address=${address}, status=${status}`);
     successResponseHelper(res, 200, "RLUSD trust line test complete", {
