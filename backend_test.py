@@ -1,179 +1,168 @@
 #!/usr/bin/env python3
 """
-Backend Test Suite for Checkout Payment Status, Webhook payment_id, USD Amounts, and Duplicate Processing Fix
-Test Date: 2026-02-10
+Test script for XRP/RLUSD destination_tag verification
+Testing all 6 requirements from review request
 """
 
 import requests
 import subprocess
-import json
 import sys
 
 def test_backend_health():
-    """TEST 1: Backend Health Check"""
-    print("🧪 TEST 1: Backend Health Check")
+    """TEST 1: Backend health check"""
     try:
-        response = requests.get("http://localhost:8001/api/status/health", timeout=10)
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-        data = response.json()
-        assert data.get("status") == "healthy", f"Expected healthy status, got {data.get('status')}"
-        print("✅ PASSED: Backend health check successful")
-        return True
+        response = requests.get("http://localhost:8001/api/status/health")
+        if response.status_code == 200 and "healthy" in response.text:
+            print("✅ TEST 1 - Backend Health: PASSED (200 with 'healthy')")
+            return True
+        else:
+            print(f"❌ TEST 1 - Backend Health: FAILED ({response.status_code})")
+            return False
     except Exception as e:
-        print(f"❌ FAILED: Backend health check failed - {e}")
+        print(f"❌ TEST 1 - Backend Health: FAILED ({str(e)})")
         return False
 
 def test_typescript_compilation():
-    """TEST 2: TypeScript Compilation"""
-    print("\n🧪 TEST 2: TypeScript Compilation")
+    """TEST 2: TypeScript compilation"""
     try:
-        result = subprocess.run(["npx", "tsc", "--noEmit"], 
-                              cwd="/app/backend", 
-                              capture_output=True, 
-                              text=True, 
-                              timeout=30)
-        assert result.returncode == 0, f"TypeScript compilation failed with exit code {result.returncode}"
-        print("✅ PASSED: TypeScript compilation successful")
-        return True
+        result = subprocess.run(
+            ["npx", "tsc", "--noEmit"], 
+            cwd="/app/backend", 
+            capture_output=True, 
+            text=True
+        )
+        if result.returncode == 0:
+            print("✅ TEST 2 - TypeScript Compilation: PASSED (exit code 0)")
+            return True
+        else:
+            print(f"❌ TEST 2 - TypeScript Compilation: FAILED (exit code {result.returncode})")
+            print(f"STDERR: {result.stderr}")
+            return False
     except Exception as e:
-        print(f"❌ FAILED: TypeScript compilation failed - {e}")
+        print(f"❌ TEST 2 - TypeScript Compilation: FAILED ({str(e)})")
         return False
 
-def test_isSignificantOverpayment_pattern():
-    """TEST 3: BUG 1 FIX - verifyCryptoPayment overpayment threshold check"""
-    print("\n🧪 TEST 3: isSignificantOverpayment pattern check")
+def test_waiting_response_destination_tag():
+    """TEST 3: destination_tag in verifyCryptoPayment 'waiting' response"""
     try:
-        result = subprocess.run(["grep", "isSignificantOverpayment", "/app/backend/controller/paymentController.ts"], 
-                              capture_output=True, text=True)
-        assert result.returncode == 0, "isSignificantOverpayment pattern not found"
-        lines = result.stdout.strip().split('\n')
-        assert len(lines) >= 1, "Expected at least 1 occurrence of isSignificantOverpayment"
-        
-        # Check for threshold logic
-        found_threshold_logic = any("overpaymentUsd > merchantOverpaymentThreshold" in line for line in lines)
-        assert found_threshold_logic, "Threshold comparison logic not found"
-        
-        print(f"✅ PASSED: Found {len(lines)} isSignificantOverpayment patterns with threshold logic")
-        return True
+        result = subprocess.run(
+            ["grep", "-A5", 'status: "waiting"', "/app/backend/controller/paymentController.ts"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0 and "destination_tag" in result.stdout:
+            print("✅ TEST 3 - Waiting Response destination_tag: PASSED")
+            print("  Found destination_tag line after status: 'waiting'")
+            return True
+        else:
+            print("❌ TEST 3 - Waiting Response destination_tag: FAILED")
+            print(f"  Output: {result.stdout}")
+            return False
     except Exception as e:
-        print(f"❌ FAILED: isSignificantOverpayment pattern check failed - {e}")
+        print(f"❌ TEST 3 - Waiting Response destination_tag: FAILED ({str(e)})")
         return False
 
-def test_base_amount_usd_fallback():
-    """TEST 4: BUG 2 FIX - base_amount_usd fallback in verifyCryptoPayment"""
-    print("\n🧪 TEST 4: base_amount_usd fallback pattern check")
+def test_destination_tag_count():
+    """TEST 4: Count destination_tag patterns in verifyCryptoPayment"""
     try:
-        result = subprocess.run(["grep", "base_amount_usd", "/app/backend/controller/paymentController.ts"], 
-                              capture_output=True, text=True)
-        assert result.returncode == 0, "base_amount_usd pattern not found"
-        lines = result.stdout.strip().split('\n')
-        assert len(lines) >= 1, "Expected at least 1 occurrence of base_amount_usd"
-        
-        # Check for the specific fallback pattern
-        found_fallback = any("tempData?.base_amount_usd" in line for line in lines)
-        assert found_fallback, "base_amount_usd fallback pattern not found"
-        
-        print(f"✅ PASSED: Found {len(lines)} base_amount_usd patterns with fallback logic")
-        return True
+        result = subprocess.run(
+            ["grep", "-c", "tempData?.destination_tag.*destination_tag.*Number", "/app/backend/controller/paymentController.ts"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            count = int(result.stdout.strip())
+            if count >= 6:
+                print(f"✅ TEST 4 - destination_tag Count: PASSED ({count} occurrences >= 6 required)")
+                return True
+            else:
+                print(f"❌ TEST 4 - destination_tag Count: FAILED ({count} occurrences < 6 required)")
+                return False
+        else:
+            print("❌ TEST 4 - destination_tag Count: FAILED (grep returned error)")
+            return False
     except Exception as e:
-        print(f"❌ FAILED: base_amount_usd fallback check failed - {e}")
+        print(f"❌ TEST 4 - destination_tag Count: FAILED ({str(e)})")
         return False
 
-def test_webhook_payment_id():
-    """TEST 5: BUG 3 FIX - payment.confirmed webhook uses correct payment_id"""
-    print("\n🧪 TEST 5: webhookPaymentId variable check")
+def test_phase12_existing_address():
+    """TEST 5: destination_tag in Phase 12.1 existing address return"""
     try:
-        result = subprocess.run(["grep", "webhookPaymentId", "/app/backend/controller/paymentController.ts"], 
-                              capture_output=True, text=True)
-        assert result.returncode == 0, "webhookPaymentId pattern not found"
-        lines = result.stdout.strip().split('\n')
-        assert len(lines) >= 2, "Expected at least 2 occurrences of webhookPaymentId"
-        
-        # Check for the fallback chain pattern
-        found_fallback_chain = any("tempData?.payment_id || tempData?.unique_tx_id" in line for line in lines)
-        assert found_fallback_chain, "Payment ID fallback chain not found"
-        
-        print(f"✅ PASSED: Found {len(lines)} webhookPaymentId patterns with fallback chain")
-        return True
+        result = subprocess.run(
+            ["grep", "existingDestTag.*destination_tag", "/app/backend/controller/paymentController.ts"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            print("✅ TEST 5 - Phase 12.1 Existing Address: PASSED")
+            print(f"  Found: {result.stdout.strip()}")
+            return True
+        else:
+            print("❌ TEST 5 - Phase 12.1 Existing Address: FAILED")
+            return False
     except Exception as e:
-        print(f"❌ FAILED: webhookPaymentId check failed - {e}")
+        print(f"❌ TEST 5 - Phase 12.1 Existing Address: FAILED ({str(e)})")
         return False
 
-def test_atomic_lock():
-    """TEST 6: BUG 4 FIX - Atomic lock for Tatum webhook deduplication"""
-    print("\n🧪 TEST 6: Atomic lock for Tatum webhook check")
+def test_crypto_function_destination_tag():
+    """TEST 6: Crypto function returns destination_tag"""
     try:
-        # Check for new atomic lock pattern
-        result = subprocess.run(["grep", "acquireLock.*tatum-webhook", "/app/backend/webhooks/index.ts"], 
-                              capture_output=True, text=True)
-        assert result.returncode == 0, "acquireLock tatum-webhook pattern not found"
-        
-        # Check that old processing-lock- pattern is NOT present
-        old_pattern = subprocess.run(["grep", "processing-lock-", "/app/backend/webhooks/index.ts"], 
-                                   capture_output=True, text=True)
-        assert old_pattern.returncode == 1, "Old processing-lock- pattern still found (should be removed)"
-        
-        print("✅ PASSED: Found atomic acquireLock pattern, old processing-lock- pattern removed")
-        return True
+        result = subprocess.run(
+            ["grep", "destination_tag: destinationTag", "/app/backend/controller/paymentController.ts"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            print("✅ TEST 6 - Crypto Function Return: PASSED")
+            print(f"  Found: {result.stdout.strip()}")
+            return True
+        else:
+            print("❌ TEST 6 - Crypto Function Return: FAILED")
+            return False
     except Exception as e:
-        print(f"❌ FAILED: Atomic lock check failed - {e}")
+        print(f"❌ TEST 6 - Crypto Function Return: FAILED ({str(e)})")
         return False
 
-def test_getdata_currencies():
-    """TEST 7: getData returns all 15 currencies for payment link"""
-    print("\n🧪 TEST 7: getData endpoint currency count check")
-    try:
-        payload = {"data": "5b061d44b6c57b90bd5d8bd8ae23ac8246b3984aae0c5e9f"}
-        response = requests.post("http://localhost:8001/api/pay/getData", 
-                               json=payload, 
-                               timeout=10)
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-        
-        data = response.json()
-        available_currencies = data.get("data", {}).get("available_currencies", [])
-        assert len(available_currencies) == 15, f"Expected 15 currencies, got {len(available_currencies)}"
-        
-        print(f"✅ PASSED: getData returned {len(available_currencies)} currencies")
-        print(f"   Currencies: {', '.join(available_currencies)}")
-        return True
-    except Exception as e:
-        print(f"❌ FAILED: getData currency count check failed - {e}")
-        return False
-
-def run_all_tests():
-    """Run all tests and return summary"""
-    print("🚀 Starting Checkout Payment Status Fix Testing")
+def main():
+    """Run all 6 tests and provide summary"""
+    print("=" * 60)
+    print("XRP/RLUSD DESTINATION_TAG VERIFICATION TESTS")
     print("=" * 60)
     
     tests = [
         test_backend_health,
         test_typescript_compilation,
-        test_isSignificantOverpayment_pattern,
-        test_base_amount_usd_fallback,
-        test_webhook_payment_id,
-        test_atomic_lock,
-        test_getdata_currencies
+        test_waiting_response_destination_tag,
+        test_destination_tag_count,
+        test_phase12_existing_address,
+        test_crypto_function_destination_tag
     ]
     
-    passed = 0
-    failed = 0
-    
-    for test in tests:
-        if test():
-            passed += 1
-        else:
-            failed += 1
+    results = []
+    for i, test_func in enumerate(tests, 1):
+        print(f"\nRunning Test {i}:")
+        results.append(test_func())
     
     print("\n" + "=" * 60)
-    print(f"📊 TEST SUMMARY: {passed} PASSED, {failed} FAILED")
+    print("TEST SUMMARY")
+    print("=" * 60)
     
-    if failed == 0:
-        print("🎉 ALL TESTS PASSED! Checkout Payment Status Fix is working correctly.")
+    passed = sum(results)
+    total = len(results)
+    
+    for i, result in enumerate(results, 1):
+        status = "PASS" if result else "FAIL"
+        print(f"Test {i}: {status}")
+    
+    print(f"\nOverall Result: {passed}/{total} tests passed")
+    
+    if passed == total:
+        print("🎉 ALL TESTS PASSED - XRP/RLUSD destination_tag implementation is working correctly!")
         return True
     else:
-        print("❌ Some tests failed. Please check the implementation.")
+        print(f"⚠️  {total - passed} test(s) failed - implementation needs attention")
         return False
 
 if __name__ == "__main__":
-    success = run_all_tests()
+    success = main()
     sys.exit(0 if success else 1)
