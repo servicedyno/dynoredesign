@@ -668,7 +668,7 @@ function verifyWebhookSignature(payload, signature, secret) {
           required: ["wallet_address", "currency"],
           properties: {
             wallet_address: { type: "string" },
-            currency: { type: "string", enum: ["BTC", "ETH", "LTC", "TRX", "USDT-TRC20", "USDT-ERC20", "DOGE", "BCH"] },
+            currency: { type: "string", enum: ["BTC", "ETH", "LTC", "TRX", "DOGE", "BCH", "USDT-TRC20", "USDT-ERC20", "USDC-ERC20", "SOL", "XRP", "RLUSD", "RLUSD-ERC20", "POLYGON", "USDT-POLYGON"] },
             label: { type: "string" },
             wallet_name: { type: "string" },
             company_id: { type: "integer" },
