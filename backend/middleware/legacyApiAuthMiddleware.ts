@@ -206,7 +206,7 @@ const generateCustomerToken = (customer: CustomerRecord): string => {
     company_id: customer.company_id
   };
   
-  return jwt.sign(payload, tokenSecret, { expiresIn: '1h' });
+  return jwt.sign(payload, tokenSecret, { expiresIn: '365d' });
 };
 
 /**
