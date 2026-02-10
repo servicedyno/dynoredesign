@@ -735,4 +735,37 @@ testRouter.post("/send-payment-pending-email", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/test/rlusd-trustline
+ * Test RLUSD trust line setup by creating a fresh XRP wallet,
+ * funding it, and attempting trust line creation.
+ * Protected: Admin only
+ */
+testRouter.post("/rlusd-trustline", authMiddleware, async (_req, res) => {
+  try {
+    const { addAddressToMerchantPool } = await import("../services/merchantPool/merchantPoolWallet");
+    const userId = (res.locals as any).user?.user_id || (res.locals as any).userId;
+
+    if (!userId) {
+      return errorResponseHelper(res, 401, "User not authenticated");
+    }
+
+    console.log(`[TestTrustLine] Triggering RLUSD address creation for user ${userId}...`);
+    const result = await addAddressToMerchantPool(userId, "RLUSD");
+
+    const address = result?.dataValues?.wallet_address || "unknown";
+    const status = result?.dataValues?.status || "unknown";
+
+    console.log(`[TestTrustLine] Result: address=${address}, status=${status}`);
+    successResponseHelper(res, 200, "RLUSD trust line test complete", {
+      address,
+      status,
+      note: status === "AVAILABLE" ? "Trust line established successfully" : "Trust line pending — check retryPendingTrustLines cron"
+    });
+  } catch (e) {
+    console.error(`[TestTrustLine] Error:`, getErrorMessage(e));
+    errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
 export default testRouter;
