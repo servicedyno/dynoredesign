@@ -3223,12 +3223,45 @@ const getTransactionGasCost = async (
   }
 };
 
+// ============================================================
+// XRPL Trust Line Helpers
+// Primary: Tatum SDK xrpTrustLineBlockchain
+// Fallback: Local signing (xrpl lib) + Tatum RPC gateway submit
+// The Tatum SDK endpoint POST /v3/xrp/trust intermittently fails
+// with "xrp.sign.failed: Unable to communicate with blockchain"
+// when their internal XRP node is unreachable. The fallback signs
+// locally and submits via Tatum's RPC gateway (ripple-mainnet),
+// keeping everything within the Tatum infrastructure.
+// ============================================================
+import { Wallet as XrplWallet, encode, decode } from "xrpl";
+import * as rippleKeypairs from "ripple-keypairs";
+
+const TATUM_XRP_RPC_CHAIN = isTestnet() ? "ripple-testnet" : "ripple-mainnet";
+
 /**
- * Check if an XRP account is activated on the ledger (has been funded with base reserve)
+ * Call Tatum RPC gateway for XRP Ledger JSON-RPC methods
+ */
+const tatumXrpRpc = async (method: string, params: any[] = [{}]): Promise<any> => {
+  const tatumKey = await getTatumKey();
+  const res = await axios.post(
+    `https://api.tatum.io/v3/blockchain/node/${TATUM_XRP_RPC_CHAIN}`,
+    { method, params },
+    { headers: { "x-api-key": tatumKey, "Content-Type": "application/json" }, timeout: 15000 }
+  );
+  if (res.data?.result?.error) {
+    throw new Error(`XRP RPC ${method}: ${res.data.result.error_message || res.data.result.error}`);
+  }
+  return res.data?.result;
+};
+
+/**
+ * Check if an XRP account is activated on the ledger (has been funded with base reserve).
+ * Uses Tatum SDK as primary, Tatum RPC as fallback.
  */
 const verifyXrpAccountActivated = async (address: string): Promise<boolean> => {
-  const tatumSdk = await getTatumSDK();
+  // Try Tatum SDK first
   try {
+    const tatumSdk = await getTatumSDK();
     const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
     return res && Number(res.balance || 0) > 0;
   } catch (e: unknown) {
@@ -3237,46 +3270,80 @@ const verifyXrpAccountActivated = async (address: string): Promise<boolean> => {
         (err.body?.error_message || '').includes('not found')) {
       return false;
     }
-    throw e;
+    // SDK failed for non-obvious reason — try RPC fallback
+  }
+
+  // Fallback: Tatum RPC gateway
+  try {
+    const result = await tatumXrpRpc("account_info", [{ account: address, ledger_index: "validated" }]);
+    const balance = Number(result?.account_data?.Balance || 0);
+    return balance > 0;
+  } catch (e: unknown) {
+    const err = e as { message?: string };
+    if ((err.message || '').includes('actNotFound')) return false;
+    console.warn(`[verifyXrpAccountActivated] Both SDK and RPC failed for ${address}:`, err.message);
+    return false;
   }
 };
 
 /**
- * Verify that an XRP trust line exists for a given token/issuer
+ * Verify that an XRP trust line exists for a given token/issuer.
+ * Uses Tatum SDK as primary, Tatum RPC account_lines as fallback.
  */
 const verifyXrpTrustLine = async (address: string, issuerAccount: string, currencyHex: string): Promise<boolean> => {
-  const tatumSdk = await getTatumSDK();
-  try {
-    const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
-    const resAny = res as any;
-    const issuerLower = issuerAccount.toLowerCase();
-    // Check obligations array (trust lines the account has set)
-    if (resAny?.obligations) {
-      for (const obligation of resAny.obligations) {
-        if ((obligation.currency || '').toUpperCase().startsWith('524C5553') ||
-            (obligation.currency || '').toUpperCase() === 'RLUSD') {
-          return true;
-        }
-      }
-    }
-    // Also check assets
-    if (resAny?.assets) {
-      for (const asset of resAny.assets) {
-        if ((asset.currency || '').toUpperCase().startsWith('524C5553') ||
-            (asset.currency || '').toUpperCase() === 'RLUSD') {
-          return true;
-        }
+  // Helper to check trust line in an array of line objects
+  const matchesTrustLine = (lines: any[]): boolean => {
+    for (const line of lines) {
+      const curr = (line.currency || '').toUpperCase();
+      if (curr.startsWith('524C5553') || curr === 'RLUSD') {
+        return true;
       }
     }
     return false;
+  };
+
+  // Try Tatum SDK first
+  try {
+    const tatumSdk = await getTatumSDK();
+    const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
+    const resAny = res as any;
+    if (resAny?.obligations && matchesTrustLine(resAny.obligations)) return true;
+    if (resAny?.assets && matchesTrustLine(resAny.assets)) return true;
+    // SDK returned but no trust line found — definitive answer
+    return false;
   } catch {
+    // SDK failed — try RPC fallback
+  }
+
+  // Fallback: Tatum RPC gateway account_lines
+  try {
+    const result = await tatumXrpRpc("account_lines", [{ account: address, ledger_index: "validated" }]);
+    const lines = result?.lines || [];
+    for (const line of lines) {
+      const curr = (line.currency || '').toUpperCase();
+      if (curr.startsWith('524C5553') || curr === 'RLUSD') {
+        return true;
+      }
+    }
+    return false;
+  } catch (e: unknown) {
+    const err = e as { message?: string };
+    if ((err.message || '').includes('actNotFound')) return false;
+    console.warn(`[verifyXrpTrustLine] Both SDK and RPC failed for ${address}:`, err.message);
     return false;
   }
 };
 
 /**
- * Set up XRP Trust Line for RLUSD token on a new XRP address
- * Required before the address can receive RLUSD tokens
+ * Set up XRP Trust Line for RLUSD token on a new XRP address.
+ * Required before the address can receive RLUSD tokens.
+ *
+ * Strategy:
+ *   1) Try Tatum SDK xrpTrustLineBlockchain (POST /v3/xrp/trust)
+ *   2) If Tatum fails (xrp.sign.failed), fall back to:
+ *      - Build TrustSet transaction JSON
+ *      - Sign locally using xrpl Wallet
+ *      - Submit via Tatum RPC gateway (ripple-mainnet)
  */
 const setupXrpTrustLine = async (
   fromAccount: string,
@@ -3285,8 +3352,9 @@ const setupXrpTrustLine = async (
   token: string,
   limit: string = "999999999"
 ) => {
-  const tatumSdk = await getTatumSDK();
+  // ---- Attempt 1: Tatum SDK ----
   try {
+    const tatumSdk = await getTatumSDK();
     const result = await tatumSdk.blockchain.xrp.xrpTrustLineBlockchain({
       fromAccount,
       fromSecret,
@@ -3294,11 +3362,74 @@ const setupXrpTrustLine = async (
       token,
       limit,
     });
-    console.log(`[setupXrpTrustLine] Trust line set for ${fromAccount} → ${issuerAccount} (${token})`);
+    console.log(`[setupXrpTrustLine] ✅ Trust line set via Tatum SDK for ${fromAccount} → ${issuerAccount} (${token})`);
     return result;
-  } catch (error) {
-    console.error(`[setupXrpTrustLine] Failed:`, error?.message || error);
-    throw error;
+  } catch (sdkError: unknown) {
+    const sdkErr = sdkError as { message?: string; body?: any };
+    const errMsg = sdkErr?.message || JSON.stringify(sdkErr?.body) || String(sdkError);
+    console.warn(`[setupXrpTrustLine] Tatum SDK failed: ${errMsg}. Falling back to Tatum RPC + local signing...`);
+  }
+
+  // ---- Attempt 2: Local sign + Tatum RPC gateway ----
+  try {
+    // 2a. Get account info from Tatum RPC (sequence number)
+    const accountInfo = await tatumXrpRpc("account_info", [{ account: fromAccount, ledger_index: "current" }]);
+    const sequence = accountInfo?.account_data?.Sequence;
+    if (!sequence) {
+      throw new Error(`Could not get sequence for ${fromAccount} — account may not be activated`);
+    }
+
+    // 2b. Get current fee from Tatum RPC
+    const feeResult = await tatumXrpRpc("fee", [{}]);
+    const baseFee = feeResult?.drops?.open_ledger_fee || feeResult?.drops?.minimum_fee || "12";
+
+    // 2c. Get current validated ledger for LastLedgerSequence
+    const serverInfo = await tatumXrpRpc("server_info", [{}]);
+    const currentLedger = serverInfo?.info?.validated_ledger?.seq || 0;
+
+    // 2d. Build the TrustSet transaction
+    const trustSetTx: Record<string, any> = {
+      TransactionType: "TrustSet",
+      Account: fromAccount,
+      LimitAmount: {
+        currency: token,
+        issuer: issuerAccount,
+        value: limit,
+      },
+      Fee: String(Math.max(Number(baseFee), 12)),
+      Sequence: sequence,
+      LastLedgerSequence: currentLedger + 20,  // ~60-100 seconds to confirm
+    };
+
+    console.log(`[setupXrpTrustLine] Built TrustSet tx: Seq=${sequence}, Fee=${trustSetTx.Fee}, LastLedger=${trustSetTx.LastLedgerSequence}`);
+
+    // 2e. Sign locally with xrpl Wallet
+    const wallet = XrplWallet.fromSecret(fromSecret);
+    if (wallet.address !== fromAccount) {
+      console.warn(`[setupXrpTrustLine] Derived address ${wallet.address} differs from ${fromAccount}, using derived`);
+      trustSetTx.Account = wallet.address;
+    }
+
+    // Encode, sign, and serialize
+    const encodedTx = encode(trustSetTx);
+    const txBlob = wallet.sign(trustSetTx as any);
+
+    // 2f. Submit via Tatum RPC gateway
+    const submitResult = await tatumXrpRpc("submit", [{ tx_blob: txBlob.tx_blob }]);
+    const engineResult = submitResult?.engine_result || "unknown";
+    const txHash = submitResult?.tx_json?.hash || "unknown";
+
+    if (engineResult === "tesSUCCESS" || engineResult === "terQUEUED") {
+      console.log(`[setupXrpTrustLine] ✅ Trust line set via Tatum RPC for ${fromAccount} → ${issuerAccount} (${token}), engine=${engineResult}, hash=${txHash}`);
+      return { txId: txHash, status: engineResult };
+    } else {
+      console.error(`[setupXrpTrustLine] ❌ TrustSet submit returned ${engineResult}: ${submitResult?.engine_result_message || ''}`);
+      throw new Error(`TrustSet submit failed: ${engineResult} — ${submitResult?.engine_result_message || 'no message'}`);
+    }
+  } catch (rpcError: unknown) {
+    const rpcErr = rpcError as { message?: string };
+    console.error(`[setupXrpTrustLine] ❌ Tatum RPC fallback also failed:`, rpcErr?.message || rpcError);
+    throw rpcError;
   }
 };
 
