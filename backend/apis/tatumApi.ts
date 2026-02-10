@@ -1348,10 +1348,13 @@ const batchFeeEstimation = async ({
 
     console.log({ gasFees });
 
-    let gasPrice = Math.max(1, Math.min(30, gasFees?.gasPrice || 1));
+    // Chain-specific gas cap — Polygon needs higher cap than ETH
+    const isPolygonBatch = ["POLYGON", "USDT-POLYGON"].includes(currency);
+    const maxBatchGas = isPolygonBatch ? 1000 : 50;
+    let gasPrice = Math.max(isPolygonBatch ? 25 : 1, Math.min(maxBatchGas, gasFees?.gasPrice || 1));
     // Percentage-based buffer: 10% + 0.5 Gwei priority tip (was flat +1 Gwei)
     const batchGasBuffer = Math.ceil(gasPrice * 1.1 + 0.5);
-    console.log(`[EVM Gas] ⛽ Batch price: ${gasPrice} Gwei, buffered=${batchGasBuffer} Gwei (was ${gasPrice + 1})`);
+    console.log(`[EVM Gas] ⛽ Batch price: ${gasPrice} Gwei, buffered=${batchGasBuffer} Gwei (chain=${currency}, max=${maxBatchGas})`);
 
     fees = {
       fast: Number(
