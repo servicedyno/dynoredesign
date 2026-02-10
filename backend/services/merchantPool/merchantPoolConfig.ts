@@ -30,7 +30,7 @@ export const POOL_CONFIG = {
   TRX_GAS_FALLBACK: 15,
   ETH_GAS_FALLBACK: 0.001,
   XRP_GAS_FALLBACK: 0.001,    // XRP for gas only (tx fee ~12 drops / 0.000012 XRP). Reserve handled separately in sweep.
-  POLYGON_GAS_FALLBACK: 0.01, // POL for gas
+  POLYGON_GAS_FALLBACK: 0.05, // POL for gas (Polygon gas can spike to 500+ Gwei)
   
   // Minimum deficit to trigger funding (avoid micro-transactions)
   TRX_MIN_DEFICIT: 2,
