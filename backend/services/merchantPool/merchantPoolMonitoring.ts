@@ -206,19 +206,44 @@ export const checkMissedPayments = async (): Promise<{
       }
 
       try {
+        let balance: number;
         let balanceResult;
-        try {
-          balanceResult = await tatumApi.getAddressBalance(walletAddress, walletType);
-        } catch (balanceError: unknown) {
-          const balErr = balanceError as { message?: string };
-          const errMsg = balErr.message || '';
-          if (errMsg.includes('account.not.found') || errMsg.includes('not.found')) {
-            console.log(`[MerchantPool] ⏭️ ${walletAddress} - account not yet activated on-chain (${walletType}), skipping`);
-            continue;
+
+        // FIX: For tag-based chains (XRP/RLUSD), the on-chain balance is for the
+        // master address (shared across all destination tags). Instead, use
+        // getIncomingTransactions filtered by destination tag to determine actual payments.
+        if (isTagBasedChain(walletType) && destinationTag) {
+          try {
+            const taggedTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 20, destinationTag);
+            const taggedTotal = taggedTxs.reduce((sum, tx) => sum + tx.amount, 0);
+            balance = taggedTotal;
+            console.log(`[MerchantPool] 🏷️ ${walletAddress} tag:${destinationTag} — incoming txs for this tag: ${taggedTxs.length}, total: ${taggedTotal} ${walletType}`);
+          } catch (tagErr: unknown) {
+            const err = tagErr as { message?: string };
+            // If tag-filtered lookup fails, fallback to received_amount from DB
+            const dbReceivedAmount = parseFloat(addr.dataValues.received_amount || '0');
+            if (dbReceivedAmount > 0) {
+              balance = dbReceivedAmount;
+              console.log(`[MerchantPool] 🏷️ ${walletAddress} tag:${destinationTag} — tx lookup failed (${err?.message}), using DB received_amount: ${dbReceivedAmount}`);
+            } else {
+              console.warn(`[MerchantPool] ⚠️ ${walletAddress} tag:${destinationTag} — tx lookup failed and no DB received_amount, skipping`);
+              continue;
+            }
           }
-          throw balanceError;
+        } else {
+          try {
+            balanceResult = await tatumApi.getAddressBalance(walletAddress, walletType);
+          } catch (balanceError: unknown) {
+            const balErr = balanceError as { message?: string };
+            const errMsg = balErr.message || '';
+            if (errMsg.includes('account.not.found') || errMsg.includes('not.found')) {
+              console.log(`[MerchantPool] ⏭️ ${walletAddress} - account not yet activated on-chain (${walletType}), skipping`);
+              continue;
+            }
+            throw balanceError;
+          }
+          balance = parseFloat(balanceResult?.balance || '0');
         }
-        const balance = parseFloat(balanceResult?.balance || '0');
 
         if (balance <= 0) {
           console.log(`[MerchantPool] ⏭️ ${walletAddress} - no balance (customer hasn't paid)`);
