@@ -1086,39 +1086,15 @@ const feeEstimation = async (
 
     console.log(gasFees);
 
-    // Gas price bounds — chain-specific caps
-    // ETH: post-Dencun base fee is 1-2 Gwei, cap at 50 Gwei
-    // POLYGON: gas can be 100-500+ Gwei, cap at 1000 Gwei
+    // Use EVM chain strategy utility for gas fee calculation
+    const { calculateEvmGasFee } = require('../services/chains/evmChain');
     const isPolygon = ["POLYGON", "USDT-POLYGON"].includes(currency);
-    const MIN_GAS_PRICE = isPolygon ? 25 : 1;
-    const MAX_GAS_PRICE = isPolygon ? 1000 : 50;
-    const rawGasPrice = Math.ceil(gasFees?.gasPrice || MIN_GAS_PRICE);
-    let gasPrice = Math.max(MIN_GAS_PRICE, Math.min(MAX_GAS_PRICE, rawGasPrice));
-    // Percentage-based buffer: 15% + 0.5 Gwei priority tip (replaces old flat +2 Gwei)
-    const gas_fee_for_amount = Math.ceil(gasPrice * 1.15 + 0.5);
-    console.log(`[EVM Gas] ⛽ Price: raw=${rawGasPrice}, capped=${gasPrice}, with buffer=${gas_fee_for_amount} Gwei (chain=${currency}, max=${MAX_GAS_PRICE})`);
-    logCostSavings("EVM-GasBuffer", gasPrice + 2, gas_fee_for_amount, { currency, rawGasPrice });
-    fees = {
-      fast: Number(
-        Number((gas_fee_for_amount * gasFees?.gasLimit) / 1000000000)
-      ).toFixed(8),
-      ...(!isERC20 && {
-        medium: Number(
-          Number(
-            (gas_fee_for_amount * ((gasFees?.gasLimit * 50) / 100)) / 1000000000
-          )
-        ).toFixed(8),
-        slow: Number(
-          Number(
-            (gas_fee_for_amount * ((gasFees?.gasLimit * 25) / 100)) / 1000000000
-          )
-        ).toFixed(8),
-      }),
-      gasPrice,
-      gasLimit: isERC20
-          ? gasFees.gasLimit
-          : Math.floor((gasFees?.gasLimit * 25) / 100),
-    };
+    fees = calculateEvmGasFee(gasFees?.gasPrice || 1, gasFees?.gasLimit || 21000, isERC20, {
+      minGas: isPolygon ? 25 : 1,
+      maxGas: isPolygon ? 1000 : 50,
+    });
+    const usedGasPrice = fees.gasPrice;
+    console.log(`[EVM Gas] ⛽ Price: raw=${Math.ceil(gasFees?.gasPrice || 1)}, capped=${usedGasPrice}, chain=${currency}`);
   } else if (currency === "BCH") {
     const headers = await getTatumHeaders();
     const {
