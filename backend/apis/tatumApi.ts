@@ -3233,8 +3233,7 @@ const getTransactionGasCost = async (
 // locally and submits via Tatum's RPC gateway (ripple-mainnet),
 // keeping everything within the Tatum infrastructure.
 // ============================================================
-import { Wallet as XrplWallet, encode, decode } from "xrpl";
-import * as rippleKeypairs from "ripple-keypairs";
+import { Wallet as XrplWallet } from "xrpl";
 
 const TATUM_XRP_RPC_CHAIN = isTestnet() ? "ripple-testnet" : "ripple-mainnet";
 
