@@ -2698,10 +2698,19 @@ const getIncomingTransactions = async (
         }
       }
     } else if (currency === "BCH") {
-      const txData = await tatumSdk.blockchain.bcash.bchGetTxByAddress(
-        address, limit
+      // FIX: Tatum SDK bug — bchGetTxByAddress(address, skip) doesn't send pageSize param.
+      // BTC/LTC/DOGE SDKs have (address, pageSize, offset) but BCH only has (address, skip).
+      // The API endpoint requires pageSize, so we use a direct HTTP call instead.
+      const bchHeaders = await getTatumHeaders();
+      const { data: bchTxData } = await axios.get(
+        `https://api.tatum.io/v3/bcash/transaction/address/${address}`,
+        {
+          headers: bchHeaders,
+          params: { pageSize: Math.min(limit, 50), skip: 0 },
+          timeout: 15000,
+        }
       );
-      for (const tx of (txData as UTXOTransaction[]) || []) {
+      for (const tx of (bchTxData as UTXOTransaction[]) || []) {
         let receivedAmount = 0;
         for (const output of tx.outputs || []) {
           if (output.address === address) {
