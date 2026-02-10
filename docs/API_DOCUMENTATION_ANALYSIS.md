@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://trustline-install.preview.emergentagent.com/api/docs/
+**URL:** https://gas-fee-alerts.preview.emergentagent.com/api/docs/
 
 ---
 

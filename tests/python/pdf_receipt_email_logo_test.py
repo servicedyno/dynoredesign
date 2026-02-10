@@ -23,7 +23,7 @@ import base64
 import re
 
 # Configuration
-BACKEND_URL = "https://trustline-install.preview.emergentagent.com"
+BACKEND_URL = "https://gas-fee-alerts.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Test credentials

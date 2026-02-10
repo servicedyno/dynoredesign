@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://trustline-install.preview.emergentagent.com/api
+Development: https://gas-fee-alerts.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

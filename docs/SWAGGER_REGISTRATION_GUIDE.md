@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://trustline-install.preview.emergentagent.com/api/docs
+Go to: https://gas-fee-alerts.preview.emergentagent.com/api/docs
 
 ---
 

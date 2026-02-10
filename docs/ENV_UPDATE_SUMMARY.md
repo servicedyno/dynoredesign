@@ -6,7 +6,7 @@
 
 #### 1. **SERVER_URL** ✅
 - **Status**: Maintained current development URL
-- **Value**: `https://trustline-install.preview.emergentagent.com`
+- **Value**: `https://gas-fee-alerts.preview.emergentagent.com`
 - **Reason**: Kept existing development environment URL as instructed
 
 #### 2. **PROFILE_ID** ✅

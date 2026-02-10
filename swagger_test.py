@@ -365,7 +365,7 @@ class DynoPaySwaggerTester:
 
 def main():
     # Backend URL from environment
-    backend_url = "https://trustline-install.preview.emergentagent.com"
+    backend_url = "https://gas-fee-alerts.preview.emergentagent.com"
     
     tester = DynoPaySwaggerTester(backend_url)
     success = tester.run_all_tests()

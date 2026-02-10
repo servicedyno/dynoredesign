@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://trustline-install.preview.emergentagent.com"
+backend_url = "https://gas-fee-alerts.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(

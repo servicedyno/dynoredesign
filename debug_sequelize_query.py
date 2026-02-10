@@ -7,7 +7,7 @@ import requests
 import json
 
 # Test credentials
-backend_url = "https://trustline-install.preview.emergentagent.com"
+backend_url = "https://gas-fee-alerts.preview.emergentagent.com"
 test_email = "richard@dyno.pt"
 test_password = "Katiekendra123@"
 company_id = 38

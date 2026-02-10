@@ -14,7 +14,7 @@ import subprocess
 
 class TargetedDeviceLoginTester:
     def __init__(self):
-        self.backend_url = "https://trustline-install.preview.emergentagent.com"
+        self.backend_url = "https://gas-fee-alerts.preview.emergentagent.com"
         self.test_results = {}
         self.errors = []
         
