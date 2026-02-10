@@ -3170,12 +3170,13 @@ const verifyCryptoPayment = async (
   res: express.Response
 ) => {
   try {
-    const { address } = req.body;
+    const { address, destination_tag } = req.body;
     
-    console.log("[verifyCryptoPayment] Checking address:", address);
+    console.log("[verifyCryptoPayment] Checking address:", address, destination_tag ? `tag: ${destination_tag}` : '');
     
     // First check Redis for current payment status
-    const tempData = await getRedisItem("crypto-" + address);
+    const verifyRedisKey = destination_tag ? getCryptoRedisKey(address, Number(destination_tag)) : `crypto-${address}`;
+    const tempData = await getRedisItem(verifyRedisKey);
     
     console.log("[verifyCryptoPayment] Redis data:", tempData?.status, tempData?.txId ? "has txId" : "no txId");
     
