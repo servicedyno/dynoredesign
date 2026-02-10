@@ -510,7 +510,7 @@ function verifyWebhookSignature(payload, signature, secret) {
 
 **Payment Creation:** Payment Link, Create Payment, Crypto Payment, Direct API, Hosted Checkout, Checkout URL
 
-**Cryptocurrencies:** Bitcoin (BTC), Ethereum (ETH), Litecoin (LTC), Dogecoin (DOGE), Tron (TRX), Bitcoin Cash (BCH), Tether (USDT-TRC20, USDT-ERC20), USD Coin (USDC-ERC20)
+**Cryptocurrencies:** Bitcoin (BTC), Ethereum (ETH), Litecoin (LTC), Dogecoin (DOGE), Tron (TRX), Bitcoin Cash (BCH), Tether (USDT-TRC20, USDT-ERC20, USDT-POLYGON), USD Coin (USDC-ERC20), Solana (SOL), Ripple (XRP), Ripple USD (RLUSD, RLUSD-ERC20), Polygon (POL/POLYGON), Destination Tag, Tag-Based Chain
 
 **Webhooks:** Webhook URL, Payment Notification, Callback URL, Webhook Signature, HMAC, Event Types, payment.confirmed, payment.pending, payment.underpaid
 
