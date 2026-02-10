@@ -107,10 +107,11 @@ export const TAG_BASED_CHAINS = ["XRP", "RLUSD"];
 
 /**
  * Master address for tag-based XRP/RLUSD payments.
- * This is the Tatum-generated fee wallet that we control (have private key).
+ * This is a dedicated wallet for receiving XRP/RLUSD payments via destination tags.
  * It has been funded with XRP and has RLUSD trust line established.
+ * SEPARATE from the XRP gas/fee wallet (XRP_FEE_WALLET) which handles gas funding.
  */
-export const XRP_MASTER_ADDRESS = process.env.XRP_FEE_WALLET || "";
+export const XRP_MASTER_ADDRESS = process.env.XRP_MASTER_WALLET || "";
 
 /**
  * Check if a wallet type uses destination-tag-based addressing
