@@ -3301,6 +3301,10 @@ const updateWalletWithOTP = async (
     if (wallet_address) updateData.wallet_address = wallet_address;
     if (wallet_name) updateData.wallet_name = wallet_name;
     if (currency) updateData.wallet_type = currency;
+    // Allow setting destination_tag (can be set to null to remove it)
+    if (destination_tag !== undefined) {
+      updateData.destination_tag = destination_tag ? Number(destination_tag) : null;
+    }
 
     // Update wallet
     await userWalletModel.update(updateData, {
