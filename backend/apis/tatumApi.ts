@@ -2383,10 +2383,17 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
     }
   }
 
+  // For chains not explicitly handled above (SOL, XRP, POLYGON, USDT-POLYGON, etc.),
+  // use fallback balance-based detection instead of returning "not_found"
+  if (res.paymentStatus === "not_found") {
+    const fallbackResult = await getPaymentStatusFallback(address, currency, 0);
+    if (fallbackResult.paymentStatus !== "not_found") {
+      return fallbackResult;
+    }
+  }
+
   return res;
 };
-
-// For chains not handled by getCurrentPaymentStatus, provide a simple balance-based check
 // This prevents "We did not received the payment!" for pool-based newer chains
 const getPaymentStatusFallback = async (address: string, currency: string, expectedAmount: number): Promise<typeof res> => {
   const result = {
