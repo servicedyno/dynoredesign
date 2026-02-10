@@ -6825,7 +6825,9 @@ const processIncompletePayments = async () => {
             console.log(`[processIncompletePayments] Pool ${walletAddress} has ${actualBalance} ${walletType} (expected ${expectedAmount}) — grace period expired, processing...`);
             
             // Get or reconstruct Redis data
-            let redisData = await getRedisItem("crypto-" + walletAddress);
+            const poolDestTag = poolAddr.dataValues.destination_tag || null;
+            const poolRedisKey = poolDestTag ? getCryptoRedisKey(walletAddress, poolDestTag) : `crypto-${walletAddress}`;
+            let redisData = await getRedisItem(poolRedisKey);
             
             if (!redisData || Object.keys(redisData).length === 0) {
               // Reconstruct from last_payment_context or DB fields
