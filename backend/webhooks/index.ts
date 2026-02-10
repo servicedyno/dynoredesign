@@ -618,7 +618,7 @@ const tatumCryptoWebHook = async (
         console.log("[tatumCryptoWebHook] ✅ Recovery: cryptoVerification completed successfully");
         
         // Mark as successful
-        await setRedisItem("crypto-" + address, {
+        await setRedisItem(redisKey, {
           ...items,
           status: "successful",
           txId: payload.txId,
@@ -626,7 +626,7 @@ const tatumCryptoWebHook = async (
           completedAt: new Date().toISOString(),
           recoveredAt: new Date().toISOString(),
         });
-        await setRedisTTL("crypto-" + address, 1800);
+        await setRedisTTL(redisKey, 1800);
         
         // Store processed txId
         await setRedisItem(`processed-tx-${payload.txId}`, {
@@ -706,13 +706,13 @@ const tatumCryptoWebHook = async (
         }
         
         // Mark as recovered to prevent infinite recovery loops
-        await setRedisItem("crypto-" + address, {
+        await setRedisItem(redisKey, {
           ...items,
           status: "recovered",
           recoveredAt: new Date().toISOString(),
           recoveryNote: "Settlement completed on-chain, direct webhook sent as fallback",
         });
-        await setRedisTTL("crypto-" + address, 1800);
+        await setRedisTTL(redisKey, 1800);
         
         // Store processed txId to prevent future duplicate processing
         await setRedisItem(`processed-tx-${payload.txId}`, {
@@ -923,7 +923,7 @@ const tatumCryptoWebHook = async (
           console.log(`[tatumCryptoWebHook]   Expected: ${expectedAmount}, Received: ${totalReceivedAmount}, Shortfall: ${(expectedAmount - totalReceivedAmount).toFixed(8)}`);
           
           // Update Redis with actual received amount so cryptoVerification uses it
-          await setRedisItem("crypto-" + address, {
+          await setRedisItem(redisKey, {
             ...items,
             status: "processing",
             txId: payload.txId,
@@ -976,7 +976,7 @@ const tatumCryptoWebHook = async (
           const remainingAmount = expectedAmount - totalReceivedAmount;
           
           // Set Redis state for underpayment - this allows verifyCryptoPayment to return underpaid status
-          await setRedisItem("crypto-" + address, {
+          await setRedisItem(redisKey, {
             ...items,
             status: "underpaid",
             incomplete: "true",
@@ -993,7 +993,7 @@ const tatumCryptoWebHook = async (
           // Set TTL for underpayment grace period (merchant-specific, max 30 minutes)
           const graceTtlSeconds = merchantGracePeriodMinutes * 60;
           console.log(`[tatumCryptoWebHook] Setting grace period TTL: ${merchantGracePeriodMinutes} minutes (${graceTtlSeconds}s) for company ${customerData?.company_id}`);
-          await setRedisTTL("crypto-" + address, graceTtlSeconds);
+          await setRedisTTL(redisKey, graceTtlSeconds);
           
           // Send underpayment webhook to merchant
           if (customerData && customerData.company_id) {
@@ -1063,7 +1063,7 @@ const tatumCryptoWebHook = async (
         // PERSISTENCE: Store complete payment state BEFORE processing
         // This ensures payment isn't lost if server crashes during processing
         // For completion payments, clear the incomplete flag
-        await setRedisItem("crypto-" + address, {
+        await setRedisItem(redisKey, {
           ...items,
           status: "processing",
           receivedAmount: finalReceivedAmount,  // Use cumulative amount for completion payments
@@ -1105,7 +1105,7 @@ const tatumCryptoWebHook = async (
               console.warn(`[tatumCryptoWebHook] Retrying in ${waitTime}ms...`);
               
               // Update retry state in Redis (persistence)
-              await setRedisItem("crypto-" + address, {
+              await setRedisItem(redisKey, {
                 ...items,
                 status: "retrying",
                 receivedAmount: incomingAmount,
@@ -1125,7 +1125,7 @@ const tatumCryptoWebHook = async (
         }
 
         // SUCCESS: Mark as processed (txId already set above)
-        await setRedisItem("crypto-" + address, {
+        await setRedisItem(redisKey, {
           ...items,
           status: "successful",
           txId: payload.txId,
@@ -1136,7 +1136,7 @@ const tatumCryptoWebHook = async (
         });
         
         // FIXED: Set TTL on crypto address key for checkout polling (30 minutes)
-        await setRedisTTL("crypto-" + address, 1800);
+        await setRedisTTL(redisKey, 1800);
         
         // Also update customer ref key with successful status if it exists
         if (items?.ref) {
@@ -1173,7 +1173,7 @@ const tatumCryptoWebHook = async (
         console.error("[tatumCryptoWebHook] Error in cryptoVerification after retries:", verifyError);
         
         // PERSISTENCE: Store failed state for manual recovery or cron retry
-        await setRedisItem("crypto-" + address, {
+        await setRedisItem(redisKey, {
           ...items,
           status: "failed",
           receivedAmount: incomingAmount,
