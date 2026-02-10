@@ -406,14 +406,18 @@ export const sendPartialPaymentExpiredNotification = async (
   status: "completed_partial" | "incomplete_expired"
 ): Promise<boolean> => {
   try {
-    // Get user and company details
+    // Get user and company details — filter by companyId for multi-company users
+    const expiredCompanyFilter = companyId
+      ? `AND c.company_id = :companyId`
+      : '';
     const userResult = await sequelize.query(
       `SELECT u.user_id, u.name, u.email, c.company_name
        FROM tbl_user u
        JOIN tbl_company c ON c.user_id = u.user_id
-       WHERE u.user_id = :userId`,
+       WHERE u.user_id = :userId ${expiredCompanyFilter}
+       LIMIT 1`,
       {
-        replacements: { userId },
+        replacements: { userId, companyId },
         type: QueryTypes.SELECT,
       }
     ) as Array<Record<string, unknown>>;
