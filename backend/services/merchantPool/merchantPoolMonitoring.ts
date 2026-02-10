@@ -539,8 +539,8 @@ export const checkMissedPayments = async (): Promise<{
                 console.log(`[MerchantPool] 📝 Reconstructed customer data: ${custRef}`);
               }
               
-              await setRedisItem("crypto-" + walletAddress, reconstructedRedis);
-              console.log(`[MerchantPool] 📝 Reconstructed Redis data for ${walletAddress} — processing via cryptoVerification`);
+              await setRedisItem(cryptoRedisKey, reconstructedRedis);
+              console.log(`[MerchantPool] 📝 Reconstructed Redis data for ${walletAddress} (key: ${cryptoRedisKey}) — processing via cryptoVerification`);
               
               try {
                 const verificationResult = await paymentController.cryptoVerification(walletAddress, true) as { duplicate?: boolean; status?: number; paymentStatus?: string };
