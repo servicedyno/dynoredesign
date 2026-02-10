@@ -3311,8 +3311,9 @@ const verifyCryptoPayment = async (
     }
     
     // Get base currency info for USD conversion
-    const baseCurrency = tempData?.base_currency || "USD";
-    const baseAmount = parseFloat(tempData?.base_amount || "0");
+    // FIX: Also check customerData for base_amount since tempData may not have it stored
+    const baseCurrency = tempData?.base_currency || customerData?.base_currency || "USD";
+    const baseAmount = parseFloat(tempData?.base_amount || customerData?.base_amount || "0");
     
     // IMPORTANT: Check for SUCCESSFUL status FIRST before checking underpaid
     // This prevents returning stale underpaid data after payment completes
