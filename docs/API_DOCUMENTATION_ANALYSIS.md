@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://gas-fee-alerts.preview.emergentagent.com/api/docs/
+**URL:** https://fix-issues-8.preview.emergentagent.com/api/docs/
 
 ---
 

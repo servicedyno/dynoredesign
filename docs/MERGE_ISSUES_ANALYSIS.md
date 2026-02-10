@@ -79,7 +79,7 @@ await axios.post(
 
 **Current Value:**
 ```env
-SERVER_URL=https://gas-fee-alerts.preview.emergentagent.com
+SERVER_URL=https://fix-issues-8.preview.emergentagent.com
 ```
 
 **Impact:**

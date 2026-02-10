@@ -11,7 +11,7 @@ import os
 import json
 
 # Base URL from frontend/.env REACT_APP_BACKEND_URL
-BASE_URL = "https://gas-fee-alerts.preview.emergentagent.com"
+BASE_URL = "https://fix-issues-8.preview.emergentagent.com"
 
 def test_backend_health():
     """TEST 1: Backend health check"""

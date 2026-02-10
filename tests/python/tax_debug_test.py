@@ -8,7 +8,7 @@ import json
 import os
 
 # Get backend URL
-BACKEND_URL = "https://gas-fee-alerts.preview.emergentagent.com"
+BACKEND_URL = "https://fix-issues-8.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 def authenticate():

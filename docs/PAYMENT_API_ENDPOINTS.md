@@ -3,7 +3,7 @@
 ## Base URL Structure
 
 ```
-Development: https://gas-fee-alerts.preview.emergentagent.com/api
+Development: https://fix-issues-8.preview.emergentagent.com/api
 Production: [Your production URL]/api
 ```
 

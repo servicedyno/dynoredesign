@@ -8,7 +8,7 @@ import json
 from urllib.parse import urlparse, parse_qs
 
 def manual_test():
-    backend_url = "https://gas-fee-alerts.preview.emergentagent.com"
+    backend_url = "https://fix-issues-8.preview.emergentagent.com"
     
     # First authenticate
     response = requests.post(
