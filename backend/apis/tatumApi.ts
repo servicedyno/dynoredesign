@@ -1488,6 +1488,7 @@ const assetToOtherAddress = async ({
   fromMaster = false,
   fromUTXO = [],
   toUTXO = [],
+  destinationTag = null,
 }) => {
   let transaction;
   const tatumSdk = await getTatumSDK();
