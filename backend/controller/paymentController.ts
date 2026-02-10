@@ -3116,6 +3116,7 @@ const settleCryptoTransaction = async ({
             privateKey: privateKey,
             amount: merchantSendAmount,
             fee: fees,
+            destinationTag: merchantDestinationTag,
           }),
           `Account chain merchant transfer (${currency})`
         );
