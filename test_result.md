@@ -4069,6 +4069,25 @@ agent_communication:
     -agent: "testing"
     -message: "✅ CUSTOMER NAME & FEE CALCULATOR FEATURES TESTING COMPLETED: 100% success rate (9/9 tests passed). Both new features are fully operational and production-ready. ✅ FEATURE 1 - CUSTOMER NAME: All 3 scenarios working perfectly - payment links accept optional customer name, store it correctly, and return it via getData API. ✅ FEATURE 2 - FEE CALCULATOR: All 5 scenarios working perfectly - calculateFees endpoint returns proper 1% platform fee, blockchain fees, total fees, net to merchant, with correct validation for missing/invalid parameters. Mathematical consistency verified across all fee calculations. Both features meet all requirements specified in the review request."
     -agent: "testing"
+    -message: |
+      ✅ TOKEN EXPIRY TESTING COMPLETED: 100% SUCCESS (5/5 tests passed)
+      
+      🎉 TOKEN EXTENSION TO 365 DAYS FULLY VERIFIED:
+      ✅ Backend Health - Service operational with status="healthy"
+      ✅ Payment Link Bozzmail (ID: 38) - Created successfully with X-Token-Expires-In-Days: 364
+      ✅ Payment Link Nameword (ID: 39) - Created successfully with X-Token-Expires-In-Days: 364
+      ✅ Token Expiry Header - 364 days remaining (>= 364 required) ✓
+      ✅ Expired Token Validation - Returns 401 "Invalid token. Please login again."
+      
+      🔍 COMPREHENSIVE TOKEN VERIFICATION:
+      - Fresh 365-day token for user_id 28 (Dynotech LDA / richard@dyno.pt) working correctly
+      - Token duration: Exactly 365.0 days (iat: 1770727945 → exp: 1802263945)
+      - Token expires: 2027-02-10 12:52:25 UTC
+      - Both companies (Bozzmail ID 38, Nameword ID 39) accessible with this token
+      - User login tokens successfully extended from 7d → 365d
+      
+      💡 RECOMMENDATION: Token Expiry implementation is production-ready. All specified tests pass and the 365-day extension is working correctly across payment link creation and token validation scenarios.
+    -agent: "testing"
     -message: "Device login email fixes testing completed. ✅ EMAIL TEMPLATE: Location prominently displayed as first item. ✅ REDIS CACHE: Cache keys working correctly. ✅ AUTHENTICATION: Login sequence successful. ❌ ALERT TRIGGERING: Device alert messages not appearing in logs despite proper conditions. Previous tests showed this working. May need investigation of current deployment state or recent changes affecting the device alert trigger logic in userController.ts lines 391-427."
     -agent: "testing"
     -message: "COMPREHENSIVE TESTING COMPLETED: All recent DynoPay implementations are working correctly. Enhanced webhook payloads include all 13 required fields (payment_type, merchant_amount, total_fee, etc.). KYC enforcement properly configured with $10,000 threshold and 90-day grace period. Onboarding status endpoint returns complete structure. API documentation includes comprehensive webhook section. All success criteria met (7/7). System is production-ready. Minor note: kyc_warning field correctly shows null for users under threshold (expected behavior)."
