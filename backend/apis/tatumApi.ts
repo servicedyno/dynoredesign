@@ -2166,7 +2166,27 @@ const getAddressBalance = async (address: string, currency: string) => {
   } else if (currency === "BSC") {
     res = await tatumSdk.blockchain.bsc.bscGetBalance(address);
   } else if (currency === "BCH") {
-    res = await tatumSdk.blockchain.bcash.bchGetTxByAddress(address);
+    // FIX: Tatum SDK bug — bchGetTxByAddress(address, skip) doesn't send pageSize param.
+    // No dedicated bchGetBalance in SDK, so use direct HTTP with pageSize to get tx list.
+    const bchHeaders = await getTatumHeaders();
+    const { data: bchTxList } = await axios.get(
+      `https://api.tatum.io/v3/bcash/transaction/address/${address}`,
+      {
+        headers: bchHeaders,
+        params: { pageSize: 10, skip: 0 },
+        timeout: 15000,
+      }
+    );
+    // Calculate balance from UTXO transactions (same approach as SDK, now with pageSize)
+    let bchBalance = 0;
+    for (const tx of (bchTxList as Array<{ outputs?: Array<{ address?: string; value?: string }> }>) || []) {
+      for (const output of tx.outputs || []) {
+        if (output.address === address) {
+          bchBalance += parseFloat(output.value || '0');
+        }
+      }
+    }
+    res = { balance: bchBalance.toString() };
   } else if (currency === "SOL") {
     const solRes = await tatumSdk.blockchain.solana.solanaGetBalance(address);
     res = { balance: solRes?.balance || '0' };
