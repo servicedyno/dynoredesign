@@ -168,6 +168,11 @@ const getNextDerivationIndex = async (
 
 /**
  * Add a new address to merchant's pool
+ * 
+ * For TAG_BASED_CHAINS (XRP, RLUSD): Uses a single master address with unique
+ * destination tags. No per-address funding or trust line setup needed.
+ * 
+ * For all other chains: Generates a new HD-derived or non-HD address as before.
  */
 export const addAddressToMerchantPool = async (
   userId: number,
@@ -175,6 +180,60 @@ export const addAddressToMerchantPool = async (
   transaction?: Transaction
 ): Promise<unknown> => {
   try {
+    // ──────────────────────────────────────────────────────────────
+    // TAG-BASED CHAINS (XRP, RLUSD): Master address + destination tag
+    // ──────────────────────────────────────────────────────────────
+    if (isTagBasedChain(walletType)) {
+      if (!XRP_MASTER_ADDRESS) {
+        throw new Error(`XRP_FEE_WALLET (master address) not configured. Cannot create ${walletType} pool address.`);
+      }
+
+      const destinationTag = await generateUniqueDestinationTag(userId, walletType, transaction);
+
+      // Get the master address's encrypted private key from admin fee wallet
+      const xrpFeeWalletRecord = await adminFeeModel.findOne({ where: { wallet_type: "XRP" } });
+      if (!xrpFeeWalletRecord) {
+        throw new Error("XRP admin fee wallet record not found in DB. Cannot create tag-based address.");
+      }
+      const encryptedMasterKey = xrpFeeWalletRecord.dataValues.privateKey;
+
+      // Create a subscription on the master address (idempotent — Tatum deduplicates by address)
+      let subscriptionId = null;
+      try {
+        const subResult = await tatumApi.createSubscription(
+          XRP_MASTER_ADDRESS,
+          walletType === "RLUSD" ? "XRP" : walletType,  // Subscription is on the XRP address
+          true
+        );
+        subscriptionId = subResult?.id;
+      } catch (subError) {
+        console.warn(`[MerchantPool] Warning: Subscription for master address:`, getErrorMessage(subError));
+      }
+
+      const poolAddress = await merchantTempAddressModel.create(
+        {
+          owner_user_id: userId,
+          wallet_type: walletType,
+          wallet_address: XRP_MASTER_ADDRESS,
+          destination_tag: destinationTag,
+          private_key: encryptedMasterKey,
+          derivation_index: destinationTag,  // Use tag as derivation index for uniqueness
+          subscription_id: subscriptionId,
+          status: "AVAILABLE",
+          admin_fee_balance: 0,
+          gas_balance: 0,
+          total_transactions: 0,
+        },
+        { transaction }
+      );
+
+      console.log(`[MerchantPool] ✅ Added tag-based ${walletType} address for merchant ${userId}: ${XRP_MASTER_ADDRESS}:${destinationTag}`);
+      return poolAddress;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // STANDARD CHAINS: Generate individual address (existing logic)
+    // ──────────────────────────────────────────────────────────────
     const { xpub, mnemonic } = await getOrCreateMerchantWallet(userId, walletType);
     
     const derivationIndex = await getNextDerivationIndex(userId, walletType, transaction);
