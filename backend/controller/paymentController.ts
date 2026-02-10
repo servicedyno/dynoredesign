@@ -854,7 +854,7 @@ const getAccessToken = async (id, ref) => {
   const { customer_id, company_id, ...userData } = user.dataValues;
   console.log(userData);
   if (tokenSecret) {
-    const token = jwt.sign({ ...userData, ref, pathType: "" }, tokenSecret);
+    const token = jwt.sign({ ...userData, ref, pathType: "" }, tokenSecret, { expiresIn: '365d' });
     return token;
   }
 };
