@@ -415,3 +415,113 @@ export const prewarmPoolAddresses = async (): Promise<{
 
   return result;
 };
+
+/**
+ * Retry trust line creation for RLUSD addresses stuck in PENDING_TRUSTLINE status.
+ * Called periodically by the prewarm cron or a dedicated cron job.
+ */
+export const retryPendingTrustLines = async (): Promise<{
+  retried: number;
+  succeeded: number;
+  errors: string[];
+}> => {
+  const result = { retried: 0, succeeded: 0, errors: [] as string[] };
+  
+  try {
+    const pendingAddresses = await merchantTempAddressModel.findAll({
+      where: {
+        wallet_type: "RLUSD",
+        status: "PENDING_TRUSTLINE",
+      },
+    });
+
+    if (pendingAddresses.length === 0) return result;
+
+    console.log(`[TrustLineRetry] Found ${pendingAddresses.length} RLUSD addresses with pending trust lines`);
+
+    const rlusdIssuer = RLUSD_CONFIG.issuer;
+    const rlusdCurrencyHex = RLUSD_CONFIG.currencyHex;
+
+    for (const addr of pendingAddresses) {
+      result.retried++;
+      const walletAddress = addr.dataValues.wallet_address;
+      
+      try {
+        // First check if account is activated
+        const isActivated = await tatumApi.verifyXrpAccountActivated(walletAddress);
+        if (!isActivated) {
+          // Try to fund the account
+          const xrpFeeWallet = process.env.XRP_FEE_WALLET || process.env.XRP;
+          if (!xrpFeeWallet) {
+            result.errors.push(`${walletAddress}: No XRP fee wallet configured`);
+            continue;
+          }
+
+          const { adminFeeModel } = await import("../../models");
+          const xrpFeeWalletRecord = await adminFeeModel.findOne({ where: { wallet_type: "XRP" } });
+          if (!xrpFeeWalletRecord) {
+            result.errors.push(`${walletAddress}: XRP fee wallet not found in DB`);
+            continue;
+          }
+
+          const xrpFeePrivateKey = await tatumApi.decryptSymmetric(
+            xrpFeeWalletRecord.dataValues.privateKey,
+            process.env.TEMP_KEY_ID
+          );
+
+          await tatumApi.assetToOtherAddress({
+            currency: "XRP",
+            fromAddress: xrpFeeWallet,
+            toAddress: walletAddress,
+            privateKey: xrpFeePrivateKey,
+            amount: 2,
+            fee: null,
+          });
+          console.log(`[TrustLineRetry] Funded ${walletAddress} with 2 XRP`);
+          
+          // Wait for activation
+          await new Promise(resolve => setTimeout(resolve, 8000));
+        }
+
+        // Check if trust line already exists
+        const hasTrustLine = await tatumApi.verifyXrpTrustLine(walletAddress, rlusdIssuer, rlusdCurrencyHex);
+        if (hasTrustLine) {
+          console.log(`[TrustLineRetry] ✅ Trust line already exists for ${walletAddress}, marking AVAILABLE`);
+          await addr.update({ status: "AVAILABLE" });
+          result.succeeded++;
+          continue;
+        }
+
+        // Decrypt the private key for trust line creation
+        const privateKey = await tatumApi.decryptSymmetric(
+          addr.dataValues.private_key,
+          process.env.TEMP_KEY_ID
+        );
+
+        await tatumApi.setupXrpTrustLine(
+          walletAddress,
+          privateKey,
+          rlusdIssuer,
+          rlusdCurrencyHex,
+          "999999999"
+        );
+        
+        console.log(`[TrustLineRetry] ✅ Trust line established for ${walletAddress}`);
+        await addr.update({ status: "AVAILABLE" });
+        result.succeeded++;
+      } catch (error) {
+        const msg = getErrorMessage(error);
+        console.error(`[TrustLineRetry] ❌ Failed for ${walletAddress}: ${msg}`);
+        result.errors.push(`${walletAddress}: ${msg}`);
+      }
+    }
+
+    console.log(`[TrustLineRetry] Complete: retried=${result.retried}, succeeded=${result.succeeded}, errors=${result.errors.length}`);
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    console.error(`[TrustLineRetry] ❌ Retry job failed:`, msg);
+    result.errors.push(msg);
+  }
+
+  return result;
+};
