@@ -521,7 +521,43 @@ const tatumCryptoWebHook = async (
           console.log(`[tatumCryptoWebHook] Destination tag: ${resolvedDestinationTag}, Redis key: ${tagRedisKey}`);
           items = await getRedisItem(tagRedisKey);
         } else {
-          console.log(`[tatumCryptoWebHook] No destination tag found in tx ${payload.txId}`);
+          // ═══════════════════════════════════════════════════════════════════
+          // TAGLESS XRP PAYMENT — CRITICAL WARNING
+          // A payment was sent to the master XRP address WITHOUT a destination tag.
+          // We can't attribute this to any specific customer payment.
+          // Log prominently + alert admin for manual reconciliation.
+          // ═══════════════════════════════════════════════════════════════════
+          console.error(`[tatumCryptoWebHook] ⚠️ TAGLESS XRP PAYMENT DETECTED!`);
+          console.error(`[tatumCryptoWebHook]   TX: ${payload.txId}`);
+          console.error(`[tatumCryptoWebHook]   Amount: ${payload.amount}`);
+          console.error(`[tatumCryptoWebHook]   From: ${payload.counterAddress || 'unknown'}`);
+          console.error(`[tatumCryptoWebHook]   Master Address: ${address}`);
+          console.error(`[tatumCryptoWebHook]   ACTION REQUIRED: Manual reconciliation needed — payment cannot be attributed without destination tag`);
+          
+          // Try to match by looking for pending payments with expected amount
+          try {
+            const { merchantTempAddressModel } = require('../models');
+            const Op = require('sequelize').Op;
+            const possibleMatches = await merchantTempAddressModel.findAll({
+              where: {
+                wallet_address: address,
+                status: 'RESERVED',
+                wallet_type: { [Op.in]: ['XRP', 'RLUSD'] },
+              },
+              attributes: ['temp_address_id', 'destination_tag', 'expected_amount', 'current_payment_id'],
+              limit: 5,
+            });
+            if (possibleMatches.length > 0) {
+              console.error(`[tatumCryptoWebHook] 📋 Possible matches (${possibleMatches.length} active reservations):`);
+              for (const m of possibleMatches) {
+                console.error(`[tatumCryptoWebHook]   - tag:${m.dataValues.destination_tag} expected:${m.dataValues.expected_amount} payment:${m.dataValues.current_payment_id}`);
+              }
+            } else {
+              console.error(`[tatumCryptoWebHook] 📋 No active reservations found for master address — truly orphaned tagless payment`);
+            }
+          } catch (matchErr) {
+            console.error(`[tatumCryptoWebHook] Failed to look up possible matches:`, matchErr);
+          }
         }
       }
     }
