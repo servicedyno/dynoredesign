@@ -5171,3 +5171,74 @@ ports:
             - grep 'isTagBased\|buildXrpRedisKey\|filterByTag' /app/backend/services/chains/xrpChain.ts
 
           Base URL for curl: http://localhost:8001 (internal)
+  - task: "Update Swagger and API docs for all 15 cryptocurrencies + XRP/RLUSD tag-based docs"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/swagger/index.ts"
+      - "/app/backend/swagger/paths/payment.ts"
+      - "/app/backend/swagger/paths/wallet.ts"
+      - "/app/backend/swagger/paths/webhooks.ts"
+      - "/app/backend/swagger/paths/apiKeys.ts"
+      - "/app/backend/docs/WEBHOOK_INTEGRATION.md"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Updated all Swagger/API docs for consistency with current codebase.
+          
+          CHANGES MADE:
+          
+          1. swagger/index.ts:
+             - Updated crypto table from 9 to 15 currencies (added SOL, XRP, RLUSD, RLUSD-ERC20, POLYGON, USDT-POLYGON)
+             - Updated networks from 3 to 7
+             - Added XRP/RLUSD destination_tag warning
+             - Updated searchable keywords
+             - Updated AddWalletAddressRequest.currency enum (15 currencies)
+             - Updated CreateApiKeyRequest.base_currency enum (16 fiat currencies)
+          
+          2. swagger/paths/payment.ts:
+             - Updated cryptoPayment currency enum to 15 currencies
+             - Updated network-fees currency enum to 15 currencies
+             - Updated calculate-payment chain enum to 15 currencies
+             - Updated createCryptoPayment enum to 15 currencies
+             - Added XRP Payment, RLUSD Payment, SOL Payment, Polygon Payment request examples
+             - Added XRP Response (with destination_tag), SOL Response, Polygon Response examples
+          
+          3. swagger/paths/wallet.ts:
+             - Updated wallet_type enum to 15 currencies
+          
+          4. swagger/paths/webhooks.ts:
+             - Added xrp_payment_confirmed webhook example with destination_tag
+             - Added rlusd_payment_confirmed webhook example
+             - Added sol_payment_confirmed webhook example
+             - Added polygon_payment_confirmed webhook example
+             - Added destination_tag field documentation section
+          
+          5. swagger/paths/apiKeys.ts:
+             - Updated base_currency enum to 16 fiat currencies
+          
+          6. docs/WEBHOOK_INTEGRATION.md:
+             - Added XRP/RLUSD Tag-Based Payments section
+             - Added webhook payload example with destination_tag
+             - Added tagless payment warning
+             - Added full 15-currency support table
+          
+          VERIFY TESTS:
+          
+          TEST 1: Backend healthy — GET /health returns 200
+          TEST 2: TypeScript compiles — tsc --noEmit exits 0
+          TEST 3: Swagger UI accessible — GET /api/docs/ returns HTML
+          TEST 4: Swagger JSON accessible — GET /api/docs.json returns valid JSON with 178 paths
+          TEST 5: XRP mentioned in swagger spec (>50 occurrences)
+          TEST 6: RLUSD mentioned in swagger spec (>50 occurrences)
+          TEST 7: destination_tag mentioned in swagger spec (>15 occurrences)
+          TEST 8: SOL mentioned in swagger spec (>25 occurrences)
+          TEST 9: POLYGON mentioned in swagger spec (>35 occurrences)
+          TEST 10: All 15 currencies in cryptoPayment enum
+            - curl /api/docs.json and check currency enums contain all 15
+
+          Base URL for curl: http://localhost:8001 (internal)
