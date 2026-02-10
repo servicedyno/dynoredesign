@@ -672,8 +672,8 @@ export const checkMissedPayments = async (): Promise<{
           }),
         };
         
-        await setRedisItem("crypto-" + walletAddress, updatedRedisData);
-        console.log(`[MerchantPool] 📝 Updated Redis with txId: ${latestTx.txId}`);
+        await setRedisItem(cryptoRedisKey, updatedRedisData);
+        console.log(`[MerchantPool] 📝 Updated Redis with txId: ${latestTx.txId} (key: ${cryptoRedisKey})`);
         if (isPartialPayment) {
           console.log(`[MerchantPool] 📝 Marked as partial payment - received ${receivedAmount}, expected ${expectedAmount}`);
         }
