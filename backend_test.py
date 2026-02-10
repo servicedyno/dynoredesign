@@ -1,295 +1,364 @@
 #!/usr/bin/env python3
 """
-RLUSD Trust Line Setup Fix Backend Test Suite
-Tests the fallback implementation for Tatum SDK xrpTrustLineBlockchain failures
+DynoPay Backend Testing Suite
+Testing XRP Gas Wallet Separation + Destination Tag Support + Fee Alert Expansion
 """
 
 import requests
 import subprocess
-import sys
 import os
 import json
+import sys
 
-# Base URL configuration
-BASE_URL = "http://localhost:8001"
+# Base configuration
+BACKEND_URL = "http://localhost:8001"  # Internal backend URL as specified
+TEST_RESULTS = []
 
-def run_test(test_name, test_func):
-    """Run a single test and return result"""
-    print(f"\n{'='*60}")
-    print(f"TEST {test_name}")
-    print('='*60)
+def log_test(test_name, passed, details=""):
+    """Log test result"""
+    status = "✅ PASS" if passed else "❌ FAIL"
+    result = {
+        'test': test_name,
+        'status': status,
+        'passed': passed,
+        'details': details
+    }
+    TEST_RESULTS.append(result)
+    print(f"{status}: {test_name}")
+    if details:
+        print(f"   Details: {details}")
+
+def test_1_backend_health():
+    """TEST 1: Backend healthy - GET /api/status/health returns 200 with 'healthy'"""
     try:
-        result = test_func()
-        if result:
-            print(f"✅ PASS: {test_name}")
-            return True
-        else:
-            print(f"❌ FAIL: {test_name}")
-            return False
-    except Exception as e:
-        print(f"❌ ERROR: {test_name} - {str(e)}")
-        return False
-
-def test_1_backend_healthy():
-    """TEST 1: Backend healthy - GET /health returns 200 with status "healthy" """
-    try:
-        response = requests.get(f"{BASE_URL}/health", timeout=10)
+        response = requests.get(f"{BACKEND_URL}/api/status/health", timeout=10)
         if response.status_code == 200:
             data = response.json()
-            if data.get("status") == "healthy":
-                print(f"Backend health check passed: {data}")
+            if data.get('status') == 'healthy':
+                log_test("TEST 1: Backend Health Check", True, f"Status: {data}")
                 return True
             else:
-                print(f"Backend status not healthy: {data}")
+                log_test("TEST 1: Backend Health Check", False, f"Expected 'healthy' status, got: {data}")
                 return False
         else:
-            print(f"Health check failed: HTTP {response.status_code}")
+            log_test("TEST 1: Backend Health Check", False, f"HTTP {response.status_code}: {response.text}")
             return False
-    except requests.RequestException as e:
-        print(f"Health check request failed: {e}")
-        return False
-
-def test_2_typescript_compiles():
-    """TEST 2: TypeScript compiles clean - npx tsc --noEmit should exit 0"""
-    try:
-        os.chdir("/app/backend")
-        result = subprocess.run(
-            ["npx", "tsc", "--noEmit"], 
-            capture_output=True, 
-            text=True, 
-            timeout=60
-        )
-        
-        if result.returncode == 0:
-            print("TypeScript compilation successful - no errors detected")
-            return True
-        else:
-            print(f"TypeScript compilation failed with exit code {result.returncode}")
-            print(f"STDOUT: {result.stdout}")
-            print(f"STDERR: {result.stderr}")
-            return False
-    except subprocess.TimeoutExpired:
-        print("TypeScript compilation timed out")
-        return False
     except Exception as e:
-        print(f"TypeScript compilation error: {e}")
+        log_test("TEST 1: Backend Health Check", False, f"Connection error: {str(e)}")
         return False
 
-def test_3_dual_strategy_code():
-    """TEST 3: Code - setupXrpTrustLine has dual strategy"""
-    file_path = "/app/backend/apis/tatumApi.ts"
-    
-    tests = [
-        ("xrpTrustLineBlockchain", "Tatum SDK attempt"),
-        ("Tatum RPC.*local signing", "Fallback comment"),
-        ("tatumXrpRpc.*submit", "RPC submit call"),
-        ("XrplWallet.fromSecret", "Local signing")
-    ]
-    
-    all_passed = True
-    for pattern, description in tests:
-        result = subprocess.run(
-            ["grep", pattern, file_path],
-            capture_output=True,
-            text=True
-        )
-        
-        if result.returncode == 0:
-            print(f"✅ Found {description}: {result.stdout.strip()}")
-        else:
-            print(f"❌ Missing {description} (pattern: {pattern})")
-            all_passed = False
-    
-    return all_passed
-
-def test_4_tatumXrpRpc_helper():
-    """TEST 4: Code - tatumXrpRpc helper exists"""
-    file_path = "/app/backend/apis/tatumApi.ts"
-    
-    tests = [
-        ("const tatumXrpRpc", "tatumXrpRpc function"),
-        ("ripple-mainnet", "RPC chain name")
-    ]
-    
-    all_passed = True
-    for pattern, description in tests:
-        result = subprocess.run(
-            ["grep", pattern, file_path],
-            capture_output=True,
-            text=True
-        )
-        
-        if result.returncode == 0:
-            print(f"✅ Found {description}: {result.stdout.strip()}")
-        else:
-            print(f"❌ Missing {description} (pattern: {pattern})")
-            all_passed = False
-    
-    return all_passed
-
-def test_5_verify_account_fallback():
-    """TEST 5: Code - verifyXrpAccountActivated has fallback"""
-    file_path = "/app/backend/apis/tatumApi.ts"
-    
-    # Check for the function and both SDK and RPC paths
-    result = subprocess.run(
-        ["grep", "-A20", "verifyXrpAccountActivated", file_path],
-        capture_output=True,
-        text=True
-    )
-    
-    if result.returncode == 0:
-        output = result.stdout
-        if "account_info" in output and "xrpGetAccountBalance" in output:
-            print("✅ Found verifyXrpAccountActivated with both SDK and RPC fallback paths")
-            print("Found SDK call: xrpGetAccountBalance")
-            print("Found RPC fallback: account_info")
-            return True
-        elif "account_info" in output:
-            print("✅ Found verifyXrpAccountActivated with account_info RPC fallback")
-            return True
-        else:
-            print("❌ verifyXrpAccountActivated found but missing account_info RPC fallback")
-            print("Function content preview:")
-            for line in output.split('\n')[:15]:
-                if line.strip():
-                    print(f"  {line}")
-            return False
-    else:
-        print("❌ verifyXrpAccountActivated function not found")
-        return False
-
-def test_6_verify_trustline_fallback():
-    """TEST 6: Code - verifyXrpTrustLine has fallback"""
-    file_path = "/app/backend/apis/tatumApi.ts"
-    
-    result = subprocess.run(
-        ["grep", "account_lines", file_path],
-        capture_output=True,
-        text=True
-    )
-    
-    if result.returncode == 0:
-        print("✅ Found account_lines RPC fallback for trust line verification")
-        print(f"Found: {result.stdout.strip()}")
-        return True
-    else:
-        print("❌ Missing account_lines RPC fallback")
-        return False
-
-def test_7_xrpl_import():
-    """TEST 7: Code - xrpl import"""
-    file_path = "/app/backend/apis/tatumApi.ts"
-    
-    result = subprocess.run(
-        ["grep", "import.*XrplWallet.*from.*xrpl", file_path],
-        capture_output=True,
-        text=True
-    )
-    
-    if result.returncode == 0:
-        print("✅ Found xrpl import")
-        print(f"Import statement: {result.stdout.strip()}")
-        return True
-    else:
-        print("❌ Missing xrpl import")
-        return False
-
-def test_8_tatum_rpc_gateway():
-    """TEST 8: Functional - Tatum RPC gateway working"""
+def test_2_typescript_compilation():
+    """TEST 2: TypeScript compiles clean - npx tsc --noEmit should exit with code 0"""
     try:
-        os.chdir("/app/backend")
-        
-        # Node.js test script to verify RPC connectivity
-        test_script = '''
-require('dotenv').config();
-const axios = require('axios');
-axios.post('https://api.tatum.io/v3/blockchain/node/ripple-mainnet', {
-  method: 'server_info',
-  params: [{}]
-}, {
-  headers: {
-    'x-api-key': process.env.TATUM_KEY,
-    'Content-Type': 'application/json'
-  }
-}).then(r => {
-  console.log('RPC status:', r.status);
-  console.log('server_state:', r.data?.result?.info?.server_state);
-  process.exit(0);
-}).catch(e => {
-  console.log('RPC error:', e.response?.status || e.message);
-  process.exit(1);
-});
-        '''
-        
-        result = subprocess.run(
-            ["node", "-e", test_script],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
+        os.chdir('/app/backend')
+        result = subprocess.run(['npx', 'tsc', '--noEmit'], 
+                              capture_output=True, text=True, timeout=60)
         
         if result.returncode == 0:
-            print("✅ Tatum RPC gateway connectivity test passed")
-            print(f"Output: {result.stdout.strip()}")
+            log_test("TEST 2: TypeScript Compilation", True, "No compilation errors")
             return True
         else:
-            print("❌ Tatum RPC gateway test failed")
-            print(f"STDOUT: {result.stdout}")
-            print(f"STDERR: {result.stderr}")
+            log_test("TEST 2: TypeScript Compilation", False, 
+                   f"Exit code {result.returncode}. Stderr: {result.stderr}")
+            return False
+    except Exception as e:
+        log_test("TEST 2: TypeScript Compilation", False, f"Error: {str(e)}")
+        return False
+
+def test_3_env_configuration():
+    """TEST 3: ENV Configuration - Check XRP wallet addresses are different"""
+    try:
+        os.chdir('/app/backend')
+        
+        # Check XRP_MASTER_WALLET
+        result1 = subprocess.run(['grep', 'XRP_MASTER_WALLET', '.env'], 
+                               capture_output=True, text=True)
+        if result1.returncode != 0:
+            log_test("TEST 3: ENV Configuration", False, "XRP_MASTER_WALLET not found in .env")
             return False
             
-    except subprocess.TimeoutExpired:
-        print("❌ Tatum RPC gateway test timed out")
-        return False
+        # Check XRP_FEE_WALLET  
+        result2 = subprocess.run(['grep', 'XRP_FEE_WALLET', '.env'], 
+                               capture_output=True, text=True)
+        if result2.returncode != 0:
+            log_test("TEST 3: ENV Configuration", False, "XRP_FEE_WALLET not found in .env")
+            return False
+        
+        # Extract addresses
+        master_line = result1.stdout.strip()
+        fee_line = result2.stdout.strip()
+        
+        master_addr = master_line.split('=')[1] if '=' in master_line else ""
+        fee_addr = fee_line.split('=')[1] if '=' in fee_line else ""
+        
+        # Check expected addresses
+        expected_master = "rPgBeVA8mLJq5Q6ztsJbN829YKhedWFn85"
+        expected_fee = "rNTAMbxNiMVeXVidBK2Xe5Bcza7gKcpvpL"
+        
+        if master_addr == expected_master and fee_addr == expected_fee and master_addr != fee_addr:
+            log_test("TEST 3: ENV Configuration", True, 
+                   f"XRP_MASTER_WALLET={master_addr}, XRP_FEE_WALLET={fee_addr} (Different addresses)")
+            return True
+        else:
+            log_test("TEST 3: ENV Configuration", False, 
+                   f"Master={master_addr}, Fee={fee_addr}. Expected different addresses")
+            return False
+            
     except Exception as e:
-        print(f"❌ Tatum RPC gateway test error: {e}")
+        log_test("TEST 3: ENV Configuration", False, f"Error: {str(e)}")
+        return False
+
+def test_4_fee_wallet_db_records():
+    """TEST 4: Fee Wallet DB Records - Check 5 records with correct settings"""
+    try:
+        os.chdir('/app/backend')
+        
+        # Run the database query
+        query = '''require('dotenv').config(); 
+const s = require('./utils/dbInstance').default; 
+s.query('SELECT wallet_type, wallet_address, "feeLimit", alert_duration FROM tbl_admin_fee_wallet ORDER BY fee_wallet_id')
+.then(([r]) => { 
+    console.log(JSON.stringify(r, null, 2)); 
+    process.exit(0); 
+});'''
+        
+        result = subprocess.run(['npx', 'ts-node', '--transpile-only', '-e', query],
+                              capture_output=True, text=True, timeout=30)
+        
+        if result.returncode != 0:
+            log_test("TEST 4: Fee Wallet DB Records", False, 
+                   f"Query failed. Exit code: {result.returncode}, Error: {result.stderr}")
+            return False
+        
+        try:
+            records = json.loads(result.stdout.strip())
+        except json.JSONDecodeError as e:
+            log_test("TEST 4: Fee Wallet DB Records", False, f"Invalid JSON response: {result.stdout}")
+            return False
+        
+        # Expected: 5 records (ETH, TRX, XRP, POLYGON, XRP_MASTER)
+        if len(records) != 5:
+            log_test("TEST 4: Fee Wallet DB Records", False, 
+                   f"Expected 5 records, got {len(records)}: {records}")
+            return False
+        
+        # Check wallet types
+        wallet_types = [r['wallet_type'] for r in records]
+        expected_types = {'ETH', 'TRX', 'XRP', 'POLYGON', 'XRP_MASTER'}
+        actual_types = set(wallet_types)
+        
+        if actual_types != expected_types:
+            log_test("TEST 4: Fee Wallet DB Records", False,
+                   f"Expected types {expected_types}, got {actual_types}")
+            return False
+        
+        # Check feeLimit values
+        fee_limits_30 = ['ETH', 'TRX', 'XRP', 'POLYGON']
+        fee_limit_0 = ['XRP_MASTER']
+        
+        for record in records:
+            wallet_type = record['wallet_type']
+            fee_limit = record['feeLimit']
+            
+            if wallet_type in fee_limits_30 and fee_limit != 30:
+                log_test("TEST 4: Fee Wallet DB Records", False,
+                       f"{wallet_type} should have feeLimit=30, got {fee_limit}")
+                return False
+            elif wallet_type in fee_limit_0 and fee_limit != 0:
+                log_test("TEST 4: Fee Wallet DB Records", False,
+                       f"{wallet_type} should have feeLimit=0, got {fee_limit}")
+                return False
+        
+        log_test("TEST 4: Fee Wallet DB Records", True, 
+               f"Found 5 records with correct feeLimit values: {records}")
+        return True
+        
+    except Exception as e:
+        log_test("TEST 4: Fee Wallet DB Records", False, f"Error: {str(e)}")
+        return False
+
+def test_5_user_wallet_destination_tag():
+    """TEST 5: User Wallet destination_tag column exists"""
+    try:
+        os.chdir('/app/backend')
+        
+        query = '''require('dotenv').config(); 
+const s = require('./utils/dbInstance').default; 
+s.query("SELECT column_name FROM information_schema.columns WHERE table_name='tbl_user_wallet' AND column_name='destination_tag'")
+.then(([r]) => { 
+    console.log(JSON.stringify(r)); 
+    process.exit(0); 
+});'''
+        
+        result = subprocess.run(['npx', 'ts-node', '--transpile-only', '-e', query],
+                              capture_output=True, text=True, timeout=30)
+        
+        if result.returncode != 0:
+            log_test("TEST 5: User Wallet destination_tag Column", False, 
+                   f"Query failed. Exit code: {result.returncode}, Error: {result.stderr}")
+            return False
+        
+        try:
+            columns = json.loads(result.stdout.strip())
+        except json.JSONDecodeError as e:
+            log_test("TEST 5: User Wallet destination_tag Column", False, 
+                   f"Invalid JSON response: {result.stdout}")
+            return False
+        
+        if len(columns) == 1 and columns[0]['column_name'] == 'destination_tag':
+            log_test("TEST 5: User Wallet destination_tag Column", True, 
+                   "destination_tag column exists in tbl_user_wallet")
+            return True
+        else:
+            log_test("TEST 5: User Wallet destination_tag Column", False, 
+                   f"destination_tag column not found. Result: {columns}")
+            return False
+            
+    except Exception as e:
+        log_test("TEST 5: User Wallet destination_tag Column", False, f"Error: {str(e)}")
+        return False
+
+def test_6_code_references_updated():
+    """TEST 6: Code references updated correctly"""
+    try:
+        os.chdir('/app/backend')
+        
+        tests = []
+        
+        # Test 6a: XRP_MASTER_WALLET in merchantPoolConfig.ts
+        result1 = subprocess.run(['grep', '-c', 'XRP_MASTER_WALLET', 
+                                'services/merchantPool/merchantPoolConfig.ts'], 
+                               capture_output=True, text=True)
+        count1 = int(result1.stdout.strip()) if result1.returncode == 0 else 0
+        tests.append(("XRP_MASTER_WALLET in merchantPoolConfig.ts", count1 >= 1, f"Count: {count1}"))
+        
+        # Test 6b: wallet_type.*XRP_MASTER in merchantPoolWallet.ts  
+        result2 = subprocess.run(['grep', '-c', 'wallet_type.*XRP_MASTER', 
+                                'services/merchantPool/merchantPoolWallet.ts'], 
+                               capture_output=True, text=True)
+        count2 = int(result2.stdout.strip()) if result2.returncode == 0 else 0
+        tests.append(("wallet_type.*XRP_MASTER in merchantPoolWallet.ts", count2 >= 1, f"Count: {count2}"))
+        
+        # Test 6c: merchantDestinationTag in paymentController.ts
+        result3 = subprocess.run(['grep', '-c', 'merchantDestinationTag', 
+                                'controller/paymentController.ts'], 
+                               capture_output=True, text=True)
+        count3 = int(result3.stdout.strip()) if result3.returncode == 0 else 0
+        tests.append(("merchantDestinationTag in paymentController.ts", count3 >= 4, f"Count: {count3}"))
+        
+        # Test 6d: resolvedDestTag in tatumApi.ts
+        result4 = subprocess.run(['grep', '-c', 'resolvedDestTag', 
+                                'apis/tatumApi.ts'], 
+                               capture_output=True, text=True)
+        count4 = int(result4.stdout.strip()) if result4.returncode == 0 else 0
+        tests.append(("resolvedDestTag in tatumApi.ts", count4 >= 2, f"Count: {count4}"))
+        
+        # Test 6e: destinationTag.*null in tatumApi.ts
+        result5 = subprocess.run(['grep', '-c', 'destinationTag.*null', 
+                                'apis/tatumApi.ts'], 
+                               capture_output=True, text=True)
+        count5 = int(result5.stdout.strip()) if result5.returncode == 0 else 0
+        tests.append(("destinationTag.*null in tatumApi.ts", count5 >= 1, f"Count: {count5}"))
+        
+        # Evaluate results
+        all_passed = True
+        details = []
+        for test_name, passed, detail in tests:
+            if not passed:
+                all_passed = False
+            details.append(f"{test_name}: {detail}")
+        
+        log_test("TEST 6: Code References Updated", all_passed, "; ".join(details))
+        return all_passed
+        
+    except Exception as e:
+        log_test("TEST 6: Code References Updated", False, f"Error: {str(e)}")
+        return False
+
+def test_7_checkfeebalance_skips_xrp_master():
+    """TEST 7: checkFeeBalance skips XRP_MASTER"""
+    try:
+        os.chdir('/app/backend')
+        
+        # Look for XRP_MASTER skip logic in paymentController.ts
+        result = subprocess.run(['grep', '-B2', '-A2', 'XRP_MASTER', 
+                               'controller/paymentController.ts'], 
+                              capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            log_test("TEST 7: checkFeeBalance skips XRP_MASTER", False, 
+                   "XRP_MASTER not found in paymentController.ts")
+            return False
+        
+        skip_logic_found = False
+        lines = result.stdout.lower()
+        
+        # Look for skip patterns
+        skip_patterns = ['skip', 'continue', 'return', 'feeLimit.*0', 'feelimit.*0']
+        for pattern in skip_patterns:
+            if pattern in lines and 'xrp_master' in lines:
+                skip_logic_found = True
+                break
+        
+        if skip_logic_found:
+            log_test("TEST 7: checkFeeBalance skips XRP_MASTER", True, 
+                   f"Skip logic found in checkFeeBalance function")
+            return True
+        else:
+            log_test("TEST 7: checkFeeBalance skips XRP_MASTER", False, 
+                   f"No skip logic found. Context: {result.stdout[:200]}...")
+            return False
+            
+    except Exception as e:
+        log_test("TEST 7: checkFeeBalance skips XRP_MASTER", False, f"Error: {str(e)}")
         return False
 
 def main():
-    """Run all RLUSD Trust Line Setup tests"""
-    print("🔧 RLUSD Trust Line Setup Fix - Backend Test Suite")
-    print("Testing Tatum SDK fallback with RPC gateway + local signing")
-    print("="*80)
-    
-    # List of all tests
-    tests = [
-        ("1", test_1_backend_healthy),
-        ("2", test_2_typescript_compiles),
-        ("3", test_3_dual_strategy_code),
-        ("4", test_4_tatumXrpRpc_helper),
-        ("5", test_5_verify_account_fallback),
-        ("6", test_6_verify_trustline_fallback),
-        ("7", test_7_xrpl_import),
-        ("8", test_8_tatum_rpc_gateway)
-    ]
+    """Run all tests"""
+    print("=" * 60)
+    print("DynoPay Backend Testing Suite")
+    print("Testing: XRP Gas Wallet Separation + Destination Tag + Fee Alert Expansion")
+    print("=" * 60)
     
     # Run all tests
-    results = []
-    for test_num, test_func in tests:
-        passed = run_test(test_num, test_func)
-        results.append((test_num, passed))
-    
-    # Summary
-    print(f"\n{'='*80}")
-    print("TEST SUMMARY")
-    print('='*80)
+    tests = [
+        test_1_backend_health,
+        test_2_typescript_compilation, 
+        test_3_env_configuration,
+        test_4_fee_wallet_db_records,
+        test_5_user_wallet_destination_tag,
+        test_6_code_references_updated,
+        test_7_checkfeebalance_skips_xrp_master
+    ]
     
     passed_count = 0
-    for test_num, passed in results:
-        status = "PASS" if passed else "FAIL"
-        print(f"TEST {test_num}: {status}")
-        if passed:
-            passed_count += 1
+    for test_func in tests:
+        try:
+            if test_func():
+                passed_count += 1
+        except Exception as e:
+            print(f"ERROR in {test_func.__name__}: {e}")
+        print()  # Space between tests
     
-    print(f"\nOVERALL RESULT: {passed_count}/{len(tests)} tests passed")
+    # Summary
+    print("=" * 60)
+    print("TEST SUMMARY")
+    print("=" * 60)
+    print(f"PASSED: {passed_count}/{len(tests)}")
+    print(f"SUCCESS RATE: {(passed_count/len(tests)*100):.1f}%")
+    print()
     
-    if passed_count == len(tests):
-        print("🎉 All RLUSD Trust Line Setup tests PASSED!")
-        return 0
-    else:
-        print(f"⚠️  {len(tests) - passed_count} test(s) FAILED")
-        return 1
+    # Detailed results
+    for result in TEST_RESULTS:
+        print(f"{result['status']}: {result['test']}")
+        if result['details']:
+            print(f"   {result['details']}")
+    
+    print("=" * 60)
+    
+    # Return exit code
+    return 0 if passed_count == len(tests) else 1
 
 if __name__ == "__main__":
-    sys.exit(main())
+    exit_code = main()
+    sys.exit(exit_code)
