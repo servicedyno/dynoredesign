@@ -10,7 +10,7 @@ import {
   merchantPoolTransactionModel,
   customerTransactionModel,
 } from "../../models";
-import { getRedisItem, setRedisItem, deleteRedisItem } from "../../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisItemWithTTL, deleteRedisItem } from "../../utils/redisInstance";
 import tatumApi from "../../apis/tatumApi";
 import { getErrorMessage } from "../../helper";
 import { cronLogger } from "../../utils/loggers";
