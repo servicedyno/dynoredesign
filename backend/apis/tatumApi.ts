@@ -2205,8 +2205,12 @@ const getAddressBalance = async (address: string, currency: string) => {
       }
       res = { balance: rlusdBalance };
     } catch (e: unknown) {
-      const err = e as { message?: string; body?: any };
-      if ((err.message || '').includes('not.found') || (err.body?.error_message || '').includes('not found')) {
+      const err = e as { message?: string; body?: { errorCode?: string; message?: string }; status?: number };
+      const errMsg = (err.message || '').toLowerCase();
+      const bodyMsg = (err.body?.message || '').toLowerCase();
+      const errorCode = (err.body?.errorCode || '').toLowerCase();
+      if (errMsg.includes('not.found') || errMsg.includes('account not found') ||
+          bodyMsg.includes('not found') || errorCode.includes('account.failed') || err.status === 403) {
         res = { balance: '0' };
       } else { throw e; }
     }
