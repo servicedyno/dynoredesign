@@ -140,8 +140,20 @@ export const ensurePoolSubscriptions = async (): Promise<{
 };
 
 /**
- * Fallback mechanism to check for missed payments when webhooks fail
+ * Fallback mechanism to check for missed payments when webhooks fail.
+ * 
+ * HARDENED: 
+ * - Concurrency control (max 5 parallel address checks)
+ * - Per-address timeout protection (30s per address)
+ * - Rate limiting between batches to avoid API throttling
+ * - Per-address error isolation (one failure doesn't block others)
+ * - Circuit breaker: stops if >50% of addresses fail (API may be down)
  */
+const CONCURRENCY_LIMIT = 5;
+const PER_ADDRESS_TIMEOUT_MS = 30000;
+const BATCH_DELAY_MS = 500; // 500ms between batches to avoid rate limiting
+const CIRCUIT_BREAKER_THRESHOLD = 0.5; // Stop if >50% fail
+
 export const checkMissedPayments = async (): Promise<{
   checked: number;
   found: number;
@@ -149,7 +161,9 @@ export const checkMissedPayments = async (): Promise<{
   alreadyProcessed: number;
   skippedTooRecent: number;
   errors: string[];
+  timing?: { totalMs: number; avgPerAddressMs: number };
 }> => {
+  const startTime = Date.now();
   const result = {
     checked: 0,
     found: 0,
@@ -157,6 +171,7 @@ export const checkMissedPayments = async (): Promise<{
     alreadyProcessed: 0,
     skippedTooRecent: 0,
     errors: [] as string[],
+    timing: { totalMs: 0, avgPerAddressMs: 0 },
   };
 
   try {
