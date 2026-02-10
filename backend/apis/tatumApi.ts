@@ -2395,7 +2395,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
   return res;
 };
 // This prevents "We did not received the payment!" for pool-based newer chains
-const getPaymentStatusFallback = async (address: string, currency: string, expectedAmount: number): Promise<typeof res> => {
+const getPaymentStatusFallback = async (address: string, currency: string, expectedAmount: number): Promise<{ paymentStatus: string; status: number; message: string }> => {
   const result = {
     paymentStatus: "not_found",
     status: 500,
