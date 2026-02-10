@@ -2862,6 +2862,7 @@ const settleCryptoTransaction = async ({
   transactionId,
   userAmount,
   userAddress,
+  merchantDestinationTag,
   isMerchantPool,
 }: {
   tempAddressData: {
@@ -2878,6 +2879,7 @@ const settleCryptoTransaction = async ({
   transactionId: string;
   userAmount?: number;     // This is the merchant amount
   userAddress?: string;    // Merchant wallet address
+  merchantDestinationTag?: number | null; // XRP/RLUSD destination tag for merchant's exchange address
   isMerchantPool?: boolean; // Whether this is a merchant pool address
 }) => {
   // Get the address - use wallet_address if available, otherwise use address
