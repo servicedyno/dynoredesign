@@ -71,13 +71,18 @@ export const sendPendingPaymentNotification = async (
     });
 
     // Get user and company details
+    // FIX: Filter by company_id to avoid picking wrong company when user owns multiple
+    const companyFilter = customerData.company_id
+      ? `AND c.company_id = :companyId`
+      : '';
     const userResult = await sequelize.query(
       `SELECT u.user_id, u.name, u.email, c.company_name, c.company_id
        FROM tbl_user u
        JOIN tbl_company c ON c.user_id = u.user_id
-       WHERE u.user_id = :userId`,
+       WHERE u.user_id = :userId ${companyFilter}
+       LIMIT 1`,
       {
-        replacements: { userId: customerData.adm_id },
+        replacements: { userId: customerData.adm_id, companyId: customerData.company_id },
         type: QueryTypes.SELECT,
       }
     ) as Array<Record<string, unknown>>;
