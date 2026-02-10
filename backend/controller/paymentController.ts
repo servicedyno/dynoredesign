@@ -2641,15 +2641,18 @@ const Crypto = async (
       parsedCompanyId || 0,  // Pass 0 if no company_id (will be treated as null in DB)
       Number(data.amount) || 0
     );
-    const poolAddress = poolAddressResult as { dataValues: { wallet_address: string; temp_address_id: number } };
+    const poolAddress = poolAddressResult as { dataValues: { wallet_address: string; temp_address_id: number; destination_tag?: number } };
     
     const address = poolAddress.dataValues.wallet_address;
-    console.log(`[Crypto] ✅ Reserved merchant pool address: ${address}`);
+    const destinationTag = poolAddress.dataValues.destination_tag || null;
+    console.log(`[Crypto] ✅ Reserved merchant pool address: ${address}${destinationTag ? ` (tag: ${destinationTag})` : ''}`);
     
-    // Generate QR code
+    // Generate QR code — for tag-based chains, include the destination tag in the QR
     let qr_code;
     if (address) {
-      const url = await QR_Code.toDataURL(address, { width: 300 });
+      // For XRP/RLUSD: Include destination tag in QR payload for wallet compatibility
+      const qrPayload = destinationTag ? `${address}?dt=${destinationTag}` : address;
+      const url = await QR_Code.toDataURL(qrPayload, { width: 300 });
       qr_code = url;
     }
     
@@ -2686,6 +2689,7 @@ const Crypto = async (
     const paymentRes = {
       qr_code,
       address: address,
+      destination_tag: destinationTag,
       transaction_id: paymentId,
       temp_id: poolAddress.dataValues.temp_address_id,
       is_merchant_pool: true,  // Flag to identify merchant pool address
