@@ -5488,6 +5488,46 @@ ports:
 
           CONCLUSION: All 7 backend log issues have been successfully fixed and verified through comprehensive code analysis. The fixes address critical Tatum SDK bugs, reduce unnecessary API calls, eliminate noisy error logs, and improve system reliability. All verification requirements from the review request have been satisfied with 100% success rate.
 
+  - task: "Ensure destination_tag passed to checkout for XRP/RLUSD in all responses"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          FIXES:
+          1. verifyCryptoPayment "waiting" response now includes destination_tag
+          2. verifyCryptoPayment "pending" response now includes destination_tag
+          3. verifyCryptoPayment "processing" response now includes destination_tag
+          4. verifyCryptoPayment "confirmed" response now includes destination_tag
+          5. createCryptoPayment Phase 12.1 existing address return now includes destination_tag
+          (underpaid and incomplete_payment responses already had destination_tag)
+          
+          TESTS:
+          TEST 1: Backend health - GET http://localhost:8001/api/status/health → 200 "healthy"
+          
+          TEST 2: TypeScript compilation - cd /app/backend && npx tsc --noEmit → exit code 0
+          
+          TEST 3: destination_tag in verifyCryptoPayment "waiting" response
+          - grep -A3 'status: "waiting"' /app/backend/controller/paymentController.ts — should show destination_tag nearby
+          
+          TEST 4: destination_tag in verifyCryptoPayment "pending" responses  
+          - grep -B2 -A2 'destination_tag.*tempData.*destination_tag' /app/backend/controller/paymentController.ts
+          - Should find at least 6 occurrences (waiting, pending, processing, confirmed, underpaid, incomplete)
+          
+          TEST 5: destination_tag in Phase 12.1 existing address return
+          - grep 'existingDestTag.*destination_tag' /app/backend/controller/paymentController.ts — should find the fix
+          
+          TEST 6: Crypto function returns destination_tag for merchant pool addresses
+          - grep 'destination_tag: destinationTag' /app/backend/controller/paymentController.ts — should find it in Crypto function return
+          
+          Base URL: http://localhost:8001
+
   - task: "Fix Checkout Payment Status, Webhook payment_id, USD Amounts, and Duplicate Processing"
     implemented: true
     working: true
