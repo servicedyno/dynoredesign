@@ -3332,4 +3332,6 @@ export default {
   getTransactionGasCost,
   findUtxoOutputIndex,
   setupXrpTrustLine,
+  verifyXrpAccountActivated,
+  verifyXrpTrustLine,
 };
