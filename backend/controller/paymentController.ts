@@ -3915,6 +3915,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             userAmount: Number(userAmountToSend),
             userAddress: walletData.dataValues.wallet_address,
           }),
+          merchantDestinationTag: walletData.dataValues.destination_tag || null,
           isMerchantPool: String(tempData.is_merchant_pool) === "true",  // Pass merchant pool flag as boolean
         });
         
