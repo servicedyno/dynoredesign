@@ -4906,3 +4906,83 @@ ports:
           - grep 'getCryptoRedisKey(tempData' /app/backend/controller/paymentController.ts should find 1 occurrence
           
           Base URL for curl: http://localhost:8001 (internal)
+  - task: "Fix 4+5 + Refactoring 1-3: Balance check, tagless XRP, strategy pattern, SDK fallback, harden checkMissedPayments"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/webhooks/index.ts"
+      - "/app/backend/services/chains/chainTypes.ts"
+      - "/app/backend/services/chains/index.ts"
+      - "/app/backend/utils/rpcFallback.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          IMPLEMENTED 5 ITEMS:
+
+          FIX 4: XRP/RLUSD Balance Check — Use received_amount/tagged txs from DB
+          - merchantPoolMonitoring.ts: checkMissedPayments now uses getIncomingTransactions filtered by destination_tag for XRP/RLUSD instead of getAddressBalance (which returns the misleading master address total)
+          - detectOrphanPayments: Same fix applied
+          - Falls back to DB received_amount if tx lookup fails
+          
+          FIX 5: Tagless XRP Payment Handling
+          - webhooks/index.ts: When master XRP address receives a payment without destination tag:
+            - Logs prominent CRITICAL warning with tx details, amount, and sender
+            - Queries active reservations for possible matches and logs them
+            - Alerts admin for manual reconciliation
+          
+          REFACTORING 1: Strategy Pattern Infrastructure (chains/)
+          - Created /app/backend/services/chains/chainTypes.ts with ChainStrategy interface
+          - Created /app/backend/services/chains/index.ts as re-export entry point
+          - Defines FeeEstimate, TransferResult, IncomingTx, BalanceResult types
+          - CHAIN_GROUP_MAP maps currencies to chain groups (evm, utxo, tron, xrp, solana, polygon)
+          
+          REFACTORING 2: SDK-to-RPC Fallback Abstraction
+          - Created /app/backend/utils/rpcFallback.ts with withSdkFallback() utility
+          - Features: timeout protection for both SDK and RPC, automatic logging, fallback metrics tracking
+          - Applied to: Polygon gas estimation (tatumApi.ts feeEstimation), XRP trust line verification
+          - Provides getFallbackDiagnostics() for monitoring
+          
+          REFACTORING 3: Harden checkMissedPayments
+          - Added concurrency control (CONCURRENCY_LIMIT=5, addresses processed in batches)
+          - Added per-address timeout protection (PER_ADDRESS_TIMEOUT_MS=30s)
+          - Added rate limiting between batches (BATCH_DELAY_MS=500ms)
+          - Added circuit breaker (stops if >50% of addresses fail)
+          - Extracted processAddress as a separate function for timeout wrapping
+          - Added timing metrics (totalMs, avgPerAddressMs)
+          - Replaced all continue statements with return for function extraction
+          
+          VERIFY TESTS:
+
+          TEST 1: Backend healthy — GET /health returns 200
+          TEST 2: TypeScript compiles — cd /app/backend && ./node_modules/.bin/tsc --noEmit exits 0
+          TEST 3: getIncomingTransactions signature includes filterDestinationTag
+            - grep 'filterDestinationTag' /app/backend/apis/tatumApi.ts should find the parameter
+          TEST 4: XRP tx parsing includes DestinationTag
+            - grep 'DestinationTag' /app/backend/apis/tatumApi.ts should find it
+          TEST 5: Tagless XRP warning in webhooks
+            - grep 'TAGLESS XRP PAYMENT' /app/backend/webhooks/index.ts should find it
+          TEST 6: Strategy pattern files exist
+            - ls /app/backend/services/chains/chainTypes.ts should exist
+            - ls /app/backend/utils/rpcFallback.ts should exist
+          TEST 7: withSdkFallback imported in tatumApi
+            - grep 'withSdkFallback' /app/backend/apis/tatumApi.ts should find imports and usage
+          TEST 8: checkMissedPayments has concurrency control
+            - grep 'CONCURRENCY_LIMIT' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find it
+            - grep 'CIRCUIT_BREAKER_THRESHOLD' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find it
+            - grep 'PER_ADDRESS_TIMEOUT_MS' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find it
+          TEST 9: processAddress function extracted
+            - grep 'const processAddress' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find it
+          TEST 10: No continue statements in processAddress function (lines 257-844)
+            - sed -n '257,844p' /app/backend/services/merchantPool/merchantPoolMonitoring.ts | grep -c 'continue;' should be 0
+          TEST 11: isTagBasedChain check in balance logic
+            - grep 'isTagBasedChain(walletType)' /app/backend/services/merchantPool/merchantPoolMonitoring.ts should find 2+ occurrences
+          TEST 12: verifyXrpTrustLine uses withSdkFallback
+            - grep -A2 'verifyXrpTrustLine' /app/backend/apis/tatumApi.ts should show withSdkFallback usage
+          
+          Base URL for curl: http://localhost:8001 (internal)
