@@ -4277,11 +4277,15 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           const linkId = customerData?.link_id || tempData?.link_id || null;
           const paymentType = linkId ? 'payment_link' : 'direct_api';
           
+          // FIX: Use the original payment link's transaction_id as payment_id (consistent with pending webhook)
+          // customerPayload.id is a new UUID for the internal transaction record — NOT the payment link reference
+          const webhookPaymentId = tempData?.payment_id || tempData?.unique_tx_id || customerData?.transaction_id || customerPayload.id;
+          
           const enhancedWebhookPayload: Record<string, unknown> = {
             // Core payment info
             event: "payment.confirmed",
             payment_type: paymentType,
-            payment_id: customerPayload.id,
+            payment_id: webhookPaymentId,
             transaction_reference: transactionId,
             status: customerPayload.status,
             
