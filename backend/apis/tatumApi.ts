@@ -2386,10 +2386,57 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
   return res;
 };
 
-/**
- * Get incoming transactions for an address to detect missed payments
- * Returns the most recent incoming transaction with txId and amount
- */
+// For chains not handled by getCurrentPaymentStatus, provide a simple balance-based check
+// This prevents "We did not received the payment!" for pool-based newer chains
+const getPaymentStatusFallback = async (address: string, currency: string, expectedAmount: number): Promise<typeof res> => {
+  const result = {
+    paymentStatus: "not_found",
+    status: 500,
+    message: "We did not received the payment!",
+  };
+  
+  try {
+    const tatumSdk = await getTatumSDK();
+    let balance = 0;
+    
+    if (currency === "SOL") {
+      const balData = await tatumSdk.blockchain.solana.solanaGetBalance(address) as any;
+      balance = (balData?.balance || 0) / 1e9;
+    } else if (currency === "XRP" || currency === "RLUSD") {
+      const balData = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address) as any;
+      balance = (balData?.balance || 0) / 1e6;
+    } else if (currency === "POLYGON") {
+      const balData = await tatumSdk.blockchain.polygon.polygonGetBalance(address) as any;
+      balance = parseFloat(balData?.balance || '0');
+    } else if (currency === "USDT-POLYGON") {
+      const headers = await getTatumHeaders();
+      const contractAddress = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+      const paddedAddr = '000000000000000000000000' + address.slice(2).toLowerCase();
+      const data = '0x70a08231' + paddedAddr;
+      const r = await axios.post('https://polygon-mainnet.gateway.tatum.io',
+        { jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: contractAddress, data }, 'latest'] },
+        { headers });
+      balance = parseInt(r.data.result, 16) / 1e6;
+    } else if (currency === "USDC-ERC20" || currency === "RLUSD-ERC20") {
+      // Handled by existing USDT-ERC20 path or similar ERC20 check
+      return result;
+    } else if (currency === "BCH") {
+      return result; // BCH uses UTXO model, handled differently
+    }
+    
+    if (balance > 0 && balance >= expectedAmount * 0.5) {
+      return {
+        paymentStatus: "detected",
+        status: 200,
+        message: `Payment detected: ${balance} ${currency} at ${address}`,
+      };
+    }
+  } catch (e: any) {
+    console.warn(`[getPaymentStatusFallback] ${currency} balance check failed: ${e.message}`);
+  }
+  
+  return result;
+};
 const getIncomingTransactions = async (
   address: string, 
   currency: string,
