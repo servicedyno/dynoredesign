@@ -6525,6 +6525,7 @@ const processIncompletePayments = async () => {
                 userAmount: Number(userAmountToSend),
                 userAddress: merchantWallet.dataValues.wallet_address,
               }),
+              merchantDestinationTag: merchantWallet.dataValues.destination_tag || null,
             });
 
             await adminWalletModel.increment("fee", {
