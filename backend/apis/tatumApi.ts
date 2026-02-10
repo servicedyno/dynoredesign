@@ -3410,7 +3410,6 @@ const setupXrpTrustLine = async (
     }
 
     // Encode, sign, and serialize
-    const encodedTx = encode(trustSetTx);
     const txBlob = wallet.sign(trustSetTx as any);
 
     // 2f. Submit via Tatum RPC gateway
