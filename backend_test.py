@@ -133,22 +133,27 @@ def test_5_verify_account_fallback():
     
     # Check for the function and both SDK and RPC paths
     result = subprocess.run(
-        ["grep", "-A5", "verifyXrpAccountActivated", file_path],
+        ["grep", "-A20", "verifyXrpAccountActivated", file_path],
         capture_output=True,
         text=True
     )
     
     if result.returncode == 0:
         output = result.stdout
-        if "account_info" in output:
-            print("✅ Found verifyXrpAccountActivated with SDK and RPC fallback paths")
-            print("Key lines found:")
-            for line in output.split('\n')[:10]:  # Show first 10 lines
-                if line.strip():
-                    print(f"  {line}")
+        if "account_info" in output and "xrpGetAccountBalance" in output:
+            print("✅ Found verifyXrpAccountActivated with both SDK and RPC fallback paths")
+            print("Found SDK call: xrpGetAccountBalance")
+            print("Found RPC fallback: account_info")
+            return True
+        elif "account_info" in output:
+            print("✅ Found verifyXrpAccountActivated with account_info RPC fallback")
             return True
         else:
             print("❌ verifyXrpAccountActivated found but missing account_info RPC fallback")
+            print("Function content preview:")
+            for line in output.split('\n')[:15]:
+                if line.strip():
+                    print(f"  {line}")
             return False
     else:
         print("❌ verifyXrpAccountActivated function not found")
