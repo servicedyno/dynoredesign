@@ -2791,20 +2791,26 @@ const getIncomingTransactions = async (
         console.warn(`[getIncomingTransactions] SOL tx fetch failed for ${address}: ${solErr.response?.data?.message || solErr.message}`);
       }
     } else if (currency === "XRP") {
-      // XRP account transactions
+      // XRP account transactions — include DestinationTag for tag-based filtering
       try {
         const xrpTxData = await tatumSdk.blockchain.xrp.xrpGetAccountTx(address, undefined, undefined);
         const xrpTxs = (xrpTxData as any)?.transactions || [];
         for (const tx of xrpTxs) {
           const meta = tx.meta || tx.metaData;
           const delivered = meta?.delivered_amount;
+          const txDestTag = tx.tx?.DestinationTag ?? null;
           if (delivered && typeof delivered === 'string') {
             const amount = Number(delivered) / 1e6;
             if (amount > 0) {
+              // If filterDestinationTag specified, only include matching txs
+              if (filterDestinationTag !== undefined && filterDestinationTag !== null) {
+                if (txDestTag !== filterDestinationTag) continue;
+              }
               transactions.push({
                 txId: tx.tx?.hash || '',
                 amount,
-                timestamp: tx.tx?.date ? (tx.tx.date + 946684800) * 1000 : Date.now()
+                timestamp: tx.tx?.date ? (tx.tx.date + 946684800) * 1000 : Date.now(),
+                destinationTag: txDestTag,
               });
             }
           }
@@ -2813,20 +2819,26 @@ const getIncomingTransactions = async (
         console.warn(`[getIncomingTransactions] XRP tx fetch failed for ${address}`);
       }
     } else if (currency === "RLUSD") {
-      // RLUSD on XRP - same as XRP but filter for RLUSD token
+      // RLUSD on XRP — include DestinationTag for tag-based filtering
       try {
         const xrpTxData = await tatumSdk.blockchain.xrp.xrpGetAccountTx(address, undefined, undefined);
         const xrpTxs = (xrpTxData as any)?.transactions || [];
         for (const tx of xrpTxs) {
           const meta = tx.meta || tx.metaData;
           const delivered = meta?.delivered_amount;
+          const txDestTag = tx.tx?.DestinationTag ?? null;
           if (delivered && typeof delivered === 'object' && (delivered.currency === 'RLUSD' || (delivered.currency || '').startsWith('524C5553'))) {
             const amount = Number(delivered.value || 0);
             if (amount > 0) {
+              // If filterDestinationTag specified, only include matching txs
+              if (filterDestinationTag !== undefined && filterDestinationTag !== null) {
+                if (txDestTag !== filterDestinationTag) continue;
+              }
               transactions.push({
                 txId: tx.tx?.hash || '',
                 amount,
-                timestamp: tx.tx?.date ? (tx.tx.date + 946684800) * 1000 : Date.now()
+                timestamp: tx.tx?.date ? (tx.tx.date + 946684800) * 1000 : Date.now(),
+                destinationTag: txDestTag,
               });
             }
           }
