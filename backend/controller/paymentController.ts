@@ -1781,6 +1781,8 @@ const createCryptoPayment = async (
         walletType: "customer",
         temp_id: paymentRes.temp_id,
         is_merchant_pool: paymentRes.is_merchant_pool ? "true" : "false",  // CRITICAL: Include merchant pool flag
+        // XRP/RLUSD: Store destination tag for tag-based chains (needed for incomplete payment UI)
+        ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
         // FIX: Store crypto invoice expiry for polling countdown
         crypto_invoice_expires_at: cryptoInvoiceExpiresAt,
         // BUGFIX: Store merchant webhook info directly in crypto-{address}
