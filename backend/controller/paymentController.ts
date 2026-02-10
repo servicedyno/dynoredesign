@@ -1355,6 +1355,8 @@ const createCryptoPayment = async (
             qr_code: incompletePayment.qr_code,
             remaining_minutes: remainingMinutes,
             is_continuation: true,
+            // XRP/RLUSD: Include destination tag for tag-based chains
+            ...(incompletePayment.destination_tag && { destination_tag: Number(incompletePayment.destination_tag) }),
             message: `You have ${remainingMinutes} minutes to complete your payment of ${incompletePayment.pending_amount} ${incompletePayment.currency}`
           });
         } else {
