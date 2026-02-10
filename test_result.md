@@ -7,6 +7,37 @@
 user_problem_statement: "XRP/RLUSD tag implementation, gas wallet separation, and fee alert expansion"
 
 current_test_task:
+  - task: "XRP/RLUSD Destination Tag Gaps Fixed + Gas Wallet + Fee Alerts"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/routes/merchantApiRouter.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          5 TAG GAPS FIXED in payment flow:
+          GAP1: Merchant API cryptoPayment response now includes destination_tag
+          GAP2: Incomplete payment continuation response now includes destination_tag
+          GAP3: active_crypto_address Redis storage now includes destination_tag
+          GAP4: getData incomplete_payment response now includes destination_tag (3 blocks)
+          GAP5: verifyCryptoPayment underpaid response now includes destination_tag
+          BONUS: destination_tag stored in Redis payment VALUES (not just keys)
+          BONUS: Incomplete payment QR code includes ?dt={tag} for XRP/RLUSD
+          BONUS: IncompletePaymentData interface updated
+          
+          TESTS:
+          TEST 1: GET http://localhost:8001/api/status/health returns 200
+          TEST 2: cd /app/backend && npx tsc --noEmit — exit code 0
+          TEST 3: grep -c 'destination_tag' /app/backend/routes/merchantApiRouter.ts >= 2
+          TEST 4: grep -c 'destination_tag' /app/backend/controller/paymentController.ts >= 20
+          TEST 5: grep 'destination_tag.*paymentRes' /app/backend/controller/paymentController.ts finds Redis payload entries
+          TEST 6: grep 'dt=' /app/backend/controller/paymentController.ts finds QR payload with tag
+          Base URL: http://localhost:8001
   - task: "XRP Gas Wallet Separation + Destination Tag Support + Fee Alert Expansion"
     implemented: true
     working: true
