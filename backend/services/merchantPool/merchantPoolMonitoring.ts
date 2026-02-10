@@ -185,6 +185,8 @@ export const checkMissedPayments = async (): Promise<{
       const ownerId = addr.dataValues.owner_user_id;
       const companyId = addr.dataValues.current_company_id;
       const reservedUntil = addr.dataValues.reserved_until ? new Date(addr.dataValues.reserved_until) : null;
+      const destinationTag = addr.dataValues.destination_tag ? Number(addr.dataValues.destination_tag) : null;
+      const cryptoRedisKey = getCryptoRedisKey(walletAddress, destinationTag);
       const now = new Date();
       
       if (!reservedUntil) {
