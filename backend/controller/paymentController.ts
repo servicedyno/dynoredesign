@@ -4162,7 +4162,7 @@ const cryptoVerification = async (address, webhook = true) => {
               transaction_reference: transactionId,
             },
             {
-              where: { transaction_id: customerPayload.id },
+              where: { id: customerPayload.id },
               transaction,
             }
           );
