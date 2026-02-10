@@ -2940,7 +2940,8 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       {
         wallet_address,
         company_id,
-        wallet_name: wallet_name || generateWalletName()
+        wallet_name: wallet_name || generateWalletName(),
+        destination_tag: destination_tag ? Number(destination_tag) : null,
       },
       {
         where: {
