@@ -783,7 +783,7 @@ export const detectOrphanPayments = async (): Promise<{
       attributes: [
         'temp_address_id', 'wallet_address', 'wallet_type',
         'owner_user_id', 'admin_fee_balance', 'last_payment_context',
-        'subscription_id',
+        'subscription_id', 'destination_tag',
       ],
     });
 
