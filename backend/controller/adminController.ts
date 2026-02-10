@@ -537,7 +537,7 @@ const updateEmail = async (req: express.Request, res: express.Response) => {
 
         if (tokenSecret) {
           const accessToken = jwt.sign(userData, tokenSecret, {
-            expiresIn: "30d",
+            expiresIn: "365d",
           });
           await deleteRedisItem(email + "-update-otp");
           successResponseHelper(res, 200, "Email updated successfully!", {
