@@ -708,6 +708,8 @@ const getData = async (req: express.Request, res: express.Response) => {
             timestamp: item.incomplete_payment.timestamp,
             remaining_minutes: Math.max(0, Math.ceil((new Date(item.incomplete_payment.timestamp).getTime() + paymentSettings.grace_period_minutes * 60 * 1000 - Date.now()) / 60000)),
             qr_code: item.incomplete_payment.qr_code,
+            // XRP/RLUSD: Include destination tag for tag-based chains
+            ...(item.incomplete_payment.destination_tag && { destination_tag: Number(item.incomplete_payment.destination_tag) }),
           }
         }),
       };
