@@ -836,7 +836,7 @@ export const detectOrphanPayments = async (): Promise<{
           continue;
         }
 
-        const existingRedis = await getRedisItem("crypto-" + walletAddress);
+        const existingRedis = await getRedisItem(orphanCryptoKey);
         if (existingRedis?.txId || existingRedis?.status === 'processing') {
           result.alreadyProcessed++;
           continue;
