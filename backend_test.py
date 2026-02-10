@@ -1,259 +1,290 @@
 #!/usr/bin/env python3
 """
-XRP Reserve & Gas Fee Optimization Testing
-Testing for post-Dec 2024 XRPL reserve updates
+RLUSD Trust Line Setup Fix Backend Test Suite
+Tests the fallback implementation for Tatum SDK xrpTrustLineBlockchain failures
 """
 
 import requests
 import subprocess
-import json
 import sys
+import os
+import json
 
-def test_backend_health():
-    """TEST 1: Backend health check"""
-    try:
-        response = requests.get('http://localhost:8001/health', timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get('status') == 'healthy':
-                print("✅ TEST 1: Backend health check PASSED")
-                return True
-            else:
-                print(f"❌ TEST 1: Backend health check FAILED - status: {data.get('status')}")
-                return False
-        else:
-            print(f"❌ TEST 1: Backend health check FAILED - status code: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ TEST 1: Backend health check FAILED - error: {e}")
-        return False
+# Base URL configuration
+BASE_URL = "http://localhost:8001"
 
-def test_typescript_compilation():
-    """TEST 2: TypeScript compilation"""
+def run_test(test_name, test_func):
+    """Run a single test and return result"""
+    print(f"\n{'='*60}")
+    print(f"TEST {test_name}")
+    print('='*60)
     try:
-        result = subprocess.run(
-            ['npx', 'tsc', '--noEmit'],
-            cwd='/app/backend',
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
-        if result.returncode == 0:
-            print("✅ TEST 2: TypeScript compilation PASSED")
+        result = test_func()
+        if result:
+            print(f"✅ PASS: {test_name}")
             return True
         else:
-            print(f"❌ TEST 2: TypeScript compilation FAILED")
+            print(f"❌ FAIL: {test_name}")
+            return False
+    except Exception as e:
+        print(f"❌ ERROR: {test_name} - {str(e)}")
+        return False
+
+def test_1_backend_healthy():
+    """TEST 1: Backend healthy - GET /health returns 200 with status "healthy" """
+    try:
+        response = requests.get(f"{BASE_URL}/health", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy":
+                print(f"Backend health check passed: {data}")
+                return True
+            else:
+                print(f"Backend status not healthy: {data}")
+                return False
+        else:
+            print(f"Health check failed: HTTP {response.status_code}")
+            return False
+    except requests.RequestException as e:
+        print(f"Health check request failed: {e}")
+        return False
+
+def test_2_typescript_compiles():
+    """TEST 2: TypeScript compiles clean - npx tsc --noEmit should exit 0"""
+    try:
+        os.chdir("/app/backend")
+        result = subprocess.run(
+            ["npx", "tsc", "--noEmit"], 
+            capture_output=True, 
+            text=True, 
+            timeout=60
+        )
+        
+        if result.returncode == 0:
+            print("TypeScript compilation successful - no errors detected")
+            return True
+        else:
+            print(f"TypeScript compilation failed with exit code {result.returncode}")
             print(f"STDOUT: {result.stdout}")
             print(f"STDERR: {result.stderr}")
             return False
+    except subprocess.TimeoutExpired:
+        print("TypeScript compilation timed out")
+        return False
     except Exception as e:
-        print(f"❌ TEST 2: TypeScript compilation FAILED - error: {e}")
+        print(f"TypeScript compilation error: {e}")
         return False
 
-def read_file_content(file_path):
-    """Helper to read file content"""
-    try:
-        with open(file_path, 'r') as f:
-            return f.read()
-    except Exception as e:
-        print(f"❌ ERROR: Could not read {file_path}: {e}")
-        return None
-
-def test_xrp_gas_fallback():
-    """TEST 3: XRP_GAS_FALLBACK should be 0.001 (NOT 15)"""
-    content = read_file_content('/app/backend/services/merchantPool/merchantPoolConfig.ts')
-    if content is None:
-        return False
+def test_3_dual_strategy_code():
+    """TEST 3: Code - setupXrpTrustLine has dual strategy"""
+    file_path = "/app/backend/apis/tatumApi.ts"
     
-    # Check for XRP_GAS_FALLBACK value
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if 'XRP_GAS_FALLBACK:' in line:
-            if '0.001' in line:
-                print("✅ TEST 3: XRP_GAS_FALLBACK correctly set to 0.001")
-                return True
-            elif '15' in line:
-                print(f"❌ TEST 3: XRP_GAS_FALLBACK incorrectly set to 15 at line {i+1}")
-                print(f"   Line: {line.strip()}")
-                return False
-            else:
-                print(f"❌ TEST 3: XRP_GAS_FALLBACK has unexpected value at line {i+1}")
-                print(f"   Line: {line.strip()}")
-                return False
-    
-    print("❌ TEST 3: XRP_GAS_FALLBACK not found in config")
-    return False
-
-def test_xrp_min_deficit():
-    """TEST 4: XRP_MIN_DEFICIT should be 0.001 (NOT 1)"""
-    content = read_file_content('/app/backend/services/merchantPool/merchantPoolConfig.ts')
-    if content is None:
-        return False
-    
-    # Check for XRP_MIN_DEFICIT value
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if 'XRP_MIN_DEFICIT:' in line:
-            if '0.001' in line:
-                print("✅ TEST 4: XRP_MIN_DEFICIT correctly set to 0.001")
-                return True
-            elif line.strip().endswith('1,') and '0.001' not in line:
-                print(f"❌ TEST 4: XRP_MIN_DEFICIT incorrectly set to 1 at line {i+1}")
-                print(f"   Line: {line.strip()}")
-                return False
-            else:
-                print(f"❌ TEST 4: XRP_MIN_DEFICIT has unexpected value at line {i+1}")
-                print(f"   Line: {line.strip()}")
-                return False
-    
-    print("❌ TEST 4: XRP_MIN_DEFICIT not found in config")
-    return False
-
-def test_xrp_sweep_reserve():
-    """TEST 5: XRP sweep reserve should be 1 (NOT 10)"""
-    content = read_file_content('/app/backend/services/merchantPool/merchantPoolSweep.ts')
-    if content is None:
-        return False
-    
-    # Check for XRP reserve in sweep
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if "walletType === 'XRP'" in line and 'accountReserve' in line:
-            if 'accountReserve = 1' in line and 'post Dec 2024' in lines[i-1]:
-                print("✅ TEST 5: XRP sweep reserve correctly set to 1 with post-Dec 2024 comment")
-                return True
-            elif 'accountReserve = 10' in line:
-                print(f"❌ TEST 5: XRP sweep reserve incorrectly set to 10 at line {i+1}")
-                print(f"   Line: {line.strip()}")
-                return False
-    
-    # Alternative check - look for the pattern more broadly
-    if 'accountReserve = 1; // 1 XRP base reserve (post Dec 2024)' in content:
-        print("✅ TEST 5: XRP sweep reserve correctly set to 1 with post-Dec 2024 comment")
-        return True
-    elif 'accountReserve = 10' in content:
-        print("❌ TEST 5: XRP sweep reserve incorrectly set to 10")
-        return False
-    
-    print("❌ TEST 5: XRP sweep reserve configuration not found")
-    return False
-
-def test_rlusd_sweep_reserve():
-    """TEST 6: RLUSD sweep reserve should be 1.2 (NOT 12)"""
-    content = read_file_content('/app/backend/services/merchantPool/merchantPoolSweep.ts')
-    if content is None:
-        return False
-    
-    # Check for RLUSD reserve in sweep
-    if 'accountReserve = 1.2; // 1 XRP base reserve + 0.2 XRP trust line reserve (post Dec 2024)' in content:
-        print("✅ TEST 6: RLUSD sweep reserve correctly set to 1.2 with post-Dec 2024 comment")
-        return True
-    elif 'accountReserve = 12' in content:
-        print("❌ TEST 6: RLUSD sweep reserve incorrectly set to 12")
-        return False
-    
-    print("❌ TEST 6: RLUSD sweep reserve configuration not found")
-    return False
-
-def test_rlusd_wallet_funding():
-    """TEST 7: RLUSD wallet funding amount should be 2 (NOT 13)"""
-    content = read_file_content('/app/backend/services/merchantPool/merchantPoolWallet.ts')
-    if content is None:
-        return False
-    
-    # Check for RLUSD wallet funding amount
-    if 'amount: 2,' in content and 'Fund with 2 XRP' in content:
-        print("✅ TEST 7: RLUSD wallet funding correctly set to 2 XRP")
-        return True
-    elif 'amount: 13' in content:
-        print("❌ TEST 7: RLUSD wallet funding incorrectly set to 13")
-        return False
-    
-    print("❌ TEST 7: RLUSD wallet funding configuration not found")
-    return False
-
-def test_comments_and_references():
-    """TEST 8: Comments should reference "post Dec 2024" and xrpl.org blog link"""
-    files_to_check = [
-        '/app/backend/services/merchantPool/merchantPoolSweep.ts',
-        '/app/backend/services/merchantPool/merchantPoolWallet.ts'
+    tests = [
+        ("xrpTrustLineBlockchain", "Tatum SDK attempt"),
+        ("Tatum RPC.*local signing", "Fallback comment"),
+        ("tatumXrpRpc.*submit", "RPC submit call"),
+        ("XrplWallet.fromSecret", "Local signing")
     ]
     
-    found_post_dec_2024 = False
-    found_xrpl_blog = False
-    
-    for file_path in files_to_check:
-        content = read_file_content(file_path)
-        if content is None:
-            continue
+    all_passed = True
+    for pattern, description in tests:
+        result = subprocess.run(
+            ["grep", pattern, file_path],
+            capture_output=True,
+            text=True
+        )
         
-        if 'post Dec 2024' in content or 'post-Dec 2024' in content:
-            found_post_dec_2024 = True
-        
-        if 'xrpl.org/blog' in content:
-            found_xrpl_blog = True
+        if result.returncode == 0:
+            print(f"✅ Found {description}: {result.stdout.strip()}")
+        else:
+            print(f"❌ Missing {description} (pattern: {pattern})")
+            all_passed = False
     
-    if found_post_dec_2024 and found_xrpl_blog:
-        print("✅ TEST 8: Comments correctly reference 'post Dec 2024' and xrpl.org blog link")
+    return all_passed
+
+def test_4_tatumXrpRpc_helper():
+    """TEST 4: Code - tatumXrpRpc helper exists"""
+    file_path = "/app/backend/apis/tatumApi.ts"
+    
+    tests = [
+        ("const tatumXrpRpc", "tatumXrpRpc function"),
+        ("ripple-mainnet", "RPC chain name")
+    ]
+    
+    all_passed = True
+    for pattern, description in tests:
+        result = subprocess.run(
+            ["grep", pattern, file_path],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            print(f"✅ Found {description}: {result.stdout.strip()}")
+        else:
+            print(f"❌ Missing {description} (pattern: {pattern})")
+            all_passed = False
+    
+    return all_passed
+
+def test_5_verify_account_fallback():
+    """TEST 5: Code - verifyXrpAccountActivated has fallback"""
+    file_path = "/app/backend/apis/tatumApi.ts"
+    
+    # Check for the function and both SDK and RPC paths
+    result = subprocess.run(
+        ["grep", "-A5", "verifyXrpAccountActivated", file_path],
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode == 0:
+        output = result.stdout
+        if "account_info" in output:
+            print("✅ Found verifyXrpAccountActivated with SDK and RPC fallback paths")
+            print("Key lines found:")
+            for line in output.split('\n')[:10]:  # Show first 10 lines
+                if line.strip():
+                    print(f"  {line}")
+            return True
+        else:
+            print("❌ verifyXrpAccountActivated found but missing account_info RPC fallback")
+            return False
+    else:
+        print("❌ verifyXrpAccountActivated function not found")
+        return False
+
+def test_6_verify_trustline_fallback():
+    """TEST 6: Code - verifyXrpTrustLine has fallback"""
+    file_path = "/app/backend/apis/tatumApi.ts"
+    
+    result = subprocess.run(
+        ["grep", "account_lines", file_path],
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode == 0:
+        print("✅ Found account_lines RPC fallback for trust line verification")
+        print(f"Found: {result.stdout.strip()}")
         return True
     else:
-        missing = []
-        if not found_post_dec_2024:
-            missing.append("'post Dec 2024' reference")
-        if not found_xrpl_blog:
-            missing.append("xrpl.org blog link")
-        print(f"❌ TEST 8: Missing {', '.join(missing)}")
+        print("❌ Missing account_lines RPC fallback")
+        return False
+
+def test_7_xrpl_import():
+    """TEST 7: Code - xrpl import"""
+    file_path = "/app/backend/apis/tatumApi.ts"
+    
+    result = subprocess.run(
+        ["grep", "import.*XrplWallet.*from.*xrpl", file_path],
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode == 0:
+        print("✅ Found xrpl import")
+        print(f"Import statement: {result.stdout.strip()}")
+        return True
+    else:
+        print("❌ Missing xrpl import")
+        return False
+
+def test_8_tatum_rpc_gateway():
+    """TEST 8: Functional - Tatum RPC gateway working"""
+    try:
+        os.chdir("/app/backend")
+        
+        # Node.js test script to verify RPC connectivity
+        test_script = '''
+require('dotenv').config();
+const axios = require('axios');
+axios.post('https://api.tatum.io/v3/blockchain/node/ripple-mainnet', {
+  method: 'server_info',
+  params: [{}]
+}, {
+  headers: {
+    'x-api-key': process.env.TATUM_KEY,
+    'Content-Type': 'application/json'
+  }
+}).then(r => {
+  console.log('RPC status:', r.status);
+  console.log('server_state:', r.data?.result?.info?.server_state);
+  process.exit(0);
+}).catch(e => {
+  console.log('RPC error:', e.response?.status || e.message);
+  process.exit(1);
+});
+        '''
+        
+        result = subprocess.run(
+            ["node", "-e", test_script],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0:
+            print("✅ Tatum RPC gateway connectivity test passed")
+            print(f"Output: {result.stdout.strip()}")
+            return True
+        else:
+            print("❌ Tatum RPC gateway test failed")
+            print(f"STDOUT: {result.stdout}")
+            print(f"STDERR: {result.stderr}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print("❌ Tatum RPC gateway test timed out")
+        return False
+    except Exception as e:
+        print(f"❌ Tatum RPC gateway test error: {e}")
         return False
 
 def main():
-    """Run all tests"""
-    print("=" * 80)
-    print("XRP Reserve & Gas Fee Optimization Testing")
-    print("Testing post-Dec 2024 XRPL reserve updates")
-    print("=" * 80)
+    """Run all RLUSD Trust Line Setup tests"""
+    print("🔧 RLUSD Trust Line Setup Fix - Backend Test Suite")
+    print("Testing Tatum SDK fallback with RPC gateway + local signing")
+    print("="*80)
     
+    # List of all tests
     tests = [
-        test_backend_health,
-        test_typescript_compilation,
-        test_xrp_gas_fallback,
-        test_xrp_min_deficit,
-        test_xrp_sweep_reserve,
-        test_rlusd_sweep_reserve,
-        test_rlusd_wallet_funding,
-        test_comments_and_references
+        ("1", test_1_backend_healthy),
+        ("2", test_2_typescript_compiles),
+        ("3", test_3_dual_strategy_code),
+        ("4", test_4_tatumXrpRpc_helper),
+        ("5", test_5_verify_account_fallback),
+        ("6", test_6_verify_trustline_fallback),
+        ("7", test_7_xrpl_import),
+        ("8", test_8_tatum_rpc_gateway)
     ]
     
+    # Run all tests
     results = []
-    
-    for test in tests:
-        print(f"\nRunning {test.__doc__}...")
-        try:
-            result = test()
-            results.append(result)
-        except Exception as e:
-            print(f"❌ {test.__doc__} FAILED with exception: {e}")
-            results.append(False)
+    for test_num, test_func in tests:
+        passed = run_test(test_num, test_func)
+        results.append((test_num, passed))
     
     # Summary
-    print("\n" + "=" * 80)
+    print(f"\n{'='*80}")
     print("TEST SUMMARY")
-    print("=" * 80)
+    print('='*80)
     
-    passed = sum(results)
-    total = len(results)
+    passed_count = 0
+    for test_num, passed in results:
+        status = "PASS" if passed else "FAIL"
+        print(f"TEST {test_num}: {status}")
+        if passed:
+            passed_count += 1
     
-    for i, (test, result) in enumerate(zip(tests, results), 1):
-        status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status} - TEST {i}: {test.__doc__.split(':')[1].strip()}")
+    print(f"\nOVERALL RESULT: {passed_count}/{len(tests)} tests passed")
     
-    print(f"\nOverall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
-    
-    if passed == total:
-        print("🎉 ALL TESTS PASSED! XRP Reserve & Gas Fee Optimization is working correctly.")
-        sys.exit(0)
+    if passed_count == len(tests):
+        print("🎉 All RLUSD Trust Line Setup tests PASSED!")
+        return 0
     else:
-        print("⚠️  SOME TESTS FAILED! Review the failed tests above.")
-        sys.exit(1)
+        print(f"⚠️  {len(tests) - passed_count} test(s) FAILED")
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
