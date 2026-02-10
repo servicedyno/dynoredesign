@@ -5488,3 +5488,64 @@ ports:
 
           CONCLUSION: All 7 backend log issues have been successfully fixed and verified through comprehensive code analysis. The fixes address critical Tatum SDK bugs, reduce unnecessary API calls, eliminate noisy error logs, and improve system reliability. All verification requirements from the review request have been satisfied with 100% success rate.
 
+  - task: "Fix Checkout Payment Status, Webhook payment_id, USD Amounts, and Duplicate Processing"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/webhooks/index.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          4 BUGS FIXED:
+          
+          BUG 1: verifyCryptoPayment returned status "overpaid" for minor overpayments
+          - Root cause: Any overpayment (even $0.46) triggered "overpaid" status, but checkout frontend only recognizes "confirmed"
+          - Fix: Now checks overpayment USD amount against merchant's overpayment_threshold_usd ($5 default)
+          - Minor overpayments below threshold return status: "confirmed" (recognized by checkout)
+          - Only significant overpayments above threshold return status: "overpaid"
+          
+          BUG 2: verifyCryptoPayment returned paidAmountUsd: 0, expectedAmountUsd: 0
+          - Root cause: Code read tempData.base_amount but crypto-{address} Redis stores base_amount_usd
+          - Fix: Now reads tempData.base_amount_usd as fallback, also checks customerData.base_amount
+          
+          BUG 3: payment.confirmed webhook sent wrong payment_id
+          - Root cause: Used customerPayload.id (NEW random UUID for internal tx record) instead of payment link's transaction_id
+          - Fix: Now uses tempData.payment_id || tempData.unique_tx_id (consistent with payment.pending webhook)
+          
+          BUG 4: Duplicate Tatum webhook processing causing double emails and webhooks
+          - Root cause: Non-atomic lock (GET + SET) allowed race condition when 2 Tatum webhooks arrived simultaneously
+          - Fix: Replaced with atomic Redis SETNX via acquireLock() function (SET NX EX pattern)
+          
+          TESTS:
+          TEST 1: Backend Health
+          - GET http://localhost:8001/api/status/health returns 200 with "healthy"
+          
+          TEST 2: TypeScript Compilation  
+          - cd /app/backend && npx tsc --noEmit — exit code 0
+          
+          TEST 3: BUG 1 FIX — verifyCryptoPayment overpayment threshold check
+          - grep 'isSignificantOverpayment' /app/backend/controller/paymentController.ts — should find threshold comparison
+          - grep 'overpaymentUsd.*merchantOverpaymentThreshold' /app/backend/controller/paymentController.ts — should find the check
+          
+          TEST 4: BUG 2 FIX — base_amount_usd fallback in verifyCryptoPayment
+          - grep 'base_amount_usd' /app/backend/controller/paymentController.ts — should find the fallback read
+          
+          TEST 5: BUG 3 FIX — payment.confirmed webhook uses correct payment_id
+          - grep 'webhookPaymentId' /app/backend/controller/paymentController.ts — should find the variable
+          - grep 'tempData.*payment_id.*unique_tx_id.*transaction_id' /app/backend/controller/paymentController.ts — should find fallback chain
+          
+          TEST 6: BUG 4 FIX — Atomic lock for Tatum webhook dedup
+          - grep 'acquireLock.*tatum-webhook' /app/backend/webhooks/index.ts — should find atomic SETNX lock
+          - Old pattern 'processing-lock-' should NOT be in the code anymore
+          
+          TEST 7: getData returns all 15 currencies for Bozzmail (company_id 38)
+          - POST http://localhost:8001/api/pay/getData with fresh payment link ref
+          - Response should have available_currencies array with 15 items
+          
+          Base URL: http://localhost:8001
+
