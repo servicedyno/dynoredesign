@@ -273,7 +273,12 @@ const merchantTempAddressModel = sequelize.define(
       },
       {
         unique: true,
-        fields: ["wallet_address"],
+        fields: ["wallet_address", "destination_tag"],
+        name: "uq_address_tag",
+      },
+      {
+        fields: ["destination_tag"],
+        name: "idx_destination_tag",
       },
     ],
   }
