@@ -797,6 +797,8 @@ export const detectOrphanPayments = async (): Promise<{
       const tempAddressId = addr.dataValues.temp_address_id;
       const existingAdminBalance = parseFloat(addr.dataValues.admin_fee_balance || '0');
       const lastContextRaw = addr.dataValues.last_payment_context;
+      const orphanDestTag = addr.dataValues.destination_tag ? Number(addr.dataValues.destination_tag) : null;
+      const orphanCryptoKey = getCryptoRedisKey(walletAddress, orphanDestTag);
 
       try {
         let balanceResult;
