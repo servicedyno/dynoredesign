@@ -190,12 +190,12 @@ export const addAddressToMerchantPool = async (
 
       const destinationTag = await generateUniqueDestinationTag(userId, walletType, transaction);
 
-      // Get the master address's encrypted private key from admin fee wallet
-      const xrpFeeWalletRecord = await adminFeeModel.findOne({ where: { wallet_type: "XRP" } });
-      if (!xrpFeeWalletRecord) {
-        throw new Error("XRP admin fee wallet record not found in DB. Cannot create tag-based address.");
+      // Get the master address's encrypted private key from admin fee wallet (stored as XRP_MASTER)
+      const xrpMasterWalletRecord = await adminFeeModel.findOne({ where: { wallet_type: "XRP_MASTER" } });
+      if (!xrpMasterWalletRecord) {
+        throw new Error("XRP_MASTER wallet record not found in DB. Cannot create tag-based address.");
       }
-      const encryptedMasterKey = xrpFeeWalletRecord.dataValues.privateKey;
+      const encryptedMasterKey = xrpMasterWalletRecord.dataValues.privateKey;
 
       // Create a subscription on the master address (idempotent — Tatum deduplicates by address)
       let subscriptionId = null;
