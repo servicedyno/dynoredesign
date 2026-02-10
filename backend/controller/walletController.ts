@@ -2812,6 +2812,7 @@ const validateWallet = async (
           wallet_type: currency,
           company_id,
           wallet_name: wallet_name || null,
+          destination_tag: destination_tag || null,
           email: userData.email.replace(/(.{2})(.*)(@.*)/, "$1***$3"),
         }
       );
