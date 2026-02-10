@@ -5244,14 +5244,14 @@ ports:
           Base URL for curl: http://localhost:8001 (internal)
   - task: "Token Expiry — Extend all timed tokens to 365 days + generate fresh token for user_id 28"
     implemented: true
-    working: "NA"
+    working: true
     files:
       - "/app/backend/controller/userController.ts"
       - "/app/backend/controller/adminController.ts"
       - "/app/backend/middleware/legacyApiAuthMiddleware.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
