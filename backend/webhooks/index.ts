@@ -503,10 +503,44 @@ const tatumCryptoWebHook = async (
     let address = payload.address;
     let items = await getRedisItem("crypto-" + address);
 
+    // ── TAG-BASED CHAIN HANDLING (XRP, RLUSD) ──
+    // The Tatum webhook doesn't include destination tags.
+    // For tag-based master addresses, fetch the full tx to get the tag,
+    // then look up Redis by address + tag.
+    let resolvedDestinationTag: number | null = null;
+    const isMasterAddress = address?.toLowerCase() === XRP_MASTER_ADDRESS?.toLowerCase();
+
+    if (isMasterAddress || (!items || Object.keys(items).length === 0)) {
+      // Check if this is a payment to the XRP/RLUSD master address
+      if (isMasterAddress && payload.txId) {
+        console.log(`[tatumCryptoWebHook] Master address detected, fetching destination tag from tx ${payload.txId}...`);
+        resolvedDestinationTag = await tatumApi.getXrpDestinationTag(payload.txId);
+        
+        if (resolvedDestinationTag !== null) {
+          const tagRedisKey = getCryptoRedisKey(address, resolvedDestinationTag);
+          console.log(`[tatumCryptoWebHook] Destination tag: ${resolvedDestinationTag}, Redis key: ${tagRedisKey}`);
+          items = await getRedisItem(tagRedisKey);
+        } else {
+          console.log(`[tatumCryptoWebHook] No destination tag found in tx ${payload.txId}`);
+        }
+      }
+    }
+
     if (!items || Object.keys(items).length === 0) {
       console.log("[tatumCryptoWebHook] No Redis data for primary address, checking counterAddress");
       address = payload.counterAddress;
       items = await getRedisItem("crypto-" + address);
+      
+      // Also check if counterAddress is the master address
+      if ((!items || Object.keys(items).length === 0) && address?.toLowerCase() === XRP_MASTER_ADDRESS?.toLowerCase() && payload.txId) {
+        if (resolvedDestinationTag === null) {
+          resolvedDestinationTag = await tatumApi.getXrpDestinationTag(payload.txId);
+        }
+        if (resolvedDestinationTag !== null) {
+          const tagRedisKey = getCryptoRedisKey(address, resolvedDestinationTag);
+          items = await getRedisItem(tagRedisKey);
+        }
+      }
     }
 
     if (!items || Object.keys(items).length === 0) {
