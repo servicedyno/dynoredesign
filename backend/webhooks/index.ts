@@ -478,18 +478,15 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
-    // RACE CONDITION FIX: Acquire processing lock BEFORE doing any work
+    // RACE CONDITION FIX: Use atomic Redis SETNX lock to prevent duplicate processing
     // This prevents multiple simultaneous webhooks from all processing the same transaction
-    const existingLock = await getRedisItem(processingLockKey);
-    if (existingLock && existingLock.locked) {
-      console.log("[tatumCryptoWebHook] Transaction already being processed by another request, ignoring:", payload.txId);
+    const { acquireLock, releaseLock } = await import("../utils/redisInstance");
+    const lockAcquired = await acquireLock(`tatum-webhook-${payload.txId}`, 300, 1, 50);
+    if (!lockAcquired) {
+      console.log("[tatumCryptoWebHook] Transaction already being processed by another request (atomic lock), ignoring:", payload.txId);
       return res.status(200).end();
     }
-    
-    // Set processing lock immediately (expires in 5 minutes as safety)
-    await setRedisItem(processingLockKey, { locked: true, startedAt: new Date().toISOString() });
-    await setRedisTTL(processingLockKey, 300); // 5 minute TTL
-    console.log("[tatumCryptoWebHook] Acquired processing lock for tx:", payload.txId);
+    console.log("[tatumCryptoWebHook] Acquired atomic processing lock for tx:", payload.txId);
 
     // Skip outgoing transactions to admin/fee wallets (e.g. sweep or gas funding)
     const counterAddr = (payload.counterAddress || "").toLowerCase();
