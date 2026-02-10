@@ -3490,12 +3490,13 @@ const verifyCryptoPayment = async (
   }
 };
 
-const cryptoVerification = async (address, webhook = true) => {
+const cryptoVerification = async (address, webhook = true, overrideRedisKey?: string) => {
   const transaction = await sequelize.transaction();
 
   try {
     let customerData;
-    const tempData = await getRedisItem("crypto-" + address);
+    const cryptoKey = overrideRedisKey || `crypto-${address}`;
+    const tempData = await getRedisItem(cryptoKey);
 
     if (tempData && Object.keys(tempData).length > 0) {
       customerData = await getRedisItem(tempData?.ref);
