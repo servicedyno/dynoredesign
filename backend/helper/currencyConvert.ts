@@ -12,7 +12,7 @@ interface CurrencyRateList {
 
 // Background cache: populated by CoinGecko every 60s, used ONLY as fallback
 const backgroundRateCache = new Map<string, { rate: number; timestamp: number }>();
-const BACKGROUND_CACHE_TTL_MS = 90_000; // 90s — slightly longer than refresh interval for overlap
+const BACKGROUND_CACHE_TTL_MS = 180_000; // 180s — slightly longer than 120s refresh interval for overlap
 
 // FastForex API key (primary real-time provider — 150-300ms)
 const FASTFOREX_API_KEY = process.env.FASTFOREX_API_KEY || '';
