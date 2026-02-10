@@ -548,6 +548,11 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
     
+    // Construct the Redis key that matched — use it consistently throughout
+    const redisKey = resolvedDestinationTag !== null 
+      ? getCryptoRedisKey(address, resolvedDestinationTag) 
+      : `crypto-${address}`;
+    
     // BLOCKBEE STYLE: Enrich items with company info from URL if not present
     if (queryCompanyId && !items.company_id) {
       items.company_id = queryCompanyId;
