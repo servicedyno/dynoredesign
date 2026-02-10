@@ -4486,7 +4486,7 @@ ports:
 
   - task: "FIX: RLUSD Trust Line Setup — Tatum SDK fallback to Tatum RPC + local signing"
     implemented: true
-    working: "NA"
+    working: true
     files:
       - "/app/backend/apis/tatumApi.ts"
       - "/app/backend/package.json"
