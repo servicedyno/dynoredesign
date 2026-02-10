@@ -3336,36 +3336,28 @@ const verifyXrpTrustLine = async (address: string, issuerAccount: string, curren
     return false;
   };
 
-  // Try Tatum SDK first
-  try {
-    const tatumSdk = await getTatumSDK();
-    const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
-    const resAny = res as any;
-    if (resAny?.obligations && matchesTrustLine(resAny.obligations)) return true;
-    if (resAny?.assets && matchesTrustLine(resAny.assets)) return true;
-    // SDK returned but no trust line found — definitive answer
-    return false;
-  } catch {
-    // SDK failed — try RPC fallback
-  }
-
-  // Fallback: Tatum RPC gateway account_lines
-  try {
-    const result = await tatumXrpRpc("account_lines", [{ account: address, ledger_index: "validated" }]);
-    const lines = result?.lines || [];
-    for (const line of lines) {
-      const curr = (line.currency || '').toUpperCase();
-      if (curr.startsWith('524C5553') || curr === 'RLUSD') {
-        return true;
-      }
-    }
-    return false;
-  } catch (e: unknown) {
+  // Use unified SDK-to-RPC fallback pattern
+  return withSdkFallback(
+    async () => {
+      const tatumSdk = await getTatumSDK();
+      const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
+      const resAny = res as any;
+      if (resAny?.obligations && matchesTrustLine(resAny.obligations)) return true;
+      if (resAny?.assets && matchesTrustLine(resAny.assets)) return true;
+      return false;
+    },
+    async () => {
+      const result = await tatumXrpRpc("account_lines", [{ account: address, ledger_index: "validated" }]);
+      const lines = result?.lines || [];
+      return matchesTrustLine(lines);
+    },
+    { operation: 'verifyTrustLine', chain: 'XRP', address }
+  ).catch((e: unknown) => {
     const err = e as { message?: string };
     if ((err.message || '').includes('actNotFound')) return false;
     console.warn(`[verifyXrpTrustLine] Both SDK and RPC failed for ${address}:`, err.message);
     return false;
-  }
+  });
 };
 
 /**
