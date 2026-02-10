@@ -425,6 +425,61 @@ app.listen(8000, () => {
 });
 ```
 
+
+## 🏷️ XRP/RLUSD Tag-Based Payments
+
+XRP and RLUSD use **tag-based addressing** — a shared master address with a unique `destination_tag` per payment.
+
+### How It Works
+
+1. When a customer selects XRP or RLUSD, the system assigns a unique `destination_tag`
+2. The customer sends funds to the **shared master address** with this tag
+3. The `destination_tag` is included in the webhook payload for payment identification
+
+### Webhook Payload (XRP/RLUSD)
+
+```json
+{
+  "event": "payment.confirmed",
+  "currency": "XRP",
+  "address": "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe",
+  "destination_tag": 847291,
+  "amount": 42.5,
+  "base_amount": 100,
+  "base_currency": "USD",
+  "network": "XRP Ledger",
+  ...
+}
+```
+
+### ⚠️ Important Notes
+
+- **Always match by `destination_tag`**, not just `address` (the address is shared)
+- **Tagless payments** (sent without a destination tag) cannot be automatically attributed and require manual reconciliation
+- RLUSD is a trust-line token on XRP Ledger — same addressing model as XRP
+- Redis keys for XRP/RLUSD use the format: `crypto-{masterAddress}-tag-{destinationTag}`
+
+### Supported Cryptocurrencies (15 total)
+
+| Symbol | Network | Type |
+|--------|---------|------|
+| BTC | Bitcoin | UTXO |
+| ETH | Ethereum | EVM |
+| LTC | Litecoin | UTXO |
+| DOGE | Dogecoin | UTXO |
+| TRX | Tron | Tron |
+| BCH | Bitcoin Cash | UTXO |
+| USDT-TRC20 | Tron | Token |
+| USDT-ERC20 | Ethereum | Token |
+| USDC-ERC20 | Ethereum | Token |
+| SOL | Solana | Solana |
+| XRP | XRP Ledger | Tag-Based |
+| RLUSD | XRP Ledger | Tag-Based Token |
+| RLUSD-ERC20 | Ethereum | EVM Token |
+| POLYGON | Polygon | EVM |
+| USDT-POLYGON | Polygon | EVM Token |
+
+
 ---
 
 ## Need Help?
