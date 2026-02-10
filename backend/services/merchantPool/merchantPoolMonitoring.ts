@@ -940,7 +940,7 @@ export const detectOrphanPayments = async (): Promise<{
           link_id: paymentContext?.link_id || null,
         };
 
-        await setRedisItem("crypto-" + walletAddress, reconstructedRedis);
+        await setRedisItem(orphanCryptoKey, reconstructedRedis);
         await setRedisItem(customerRef as string, customerData);
 
         await setRedisItem(processedTxKey, {
