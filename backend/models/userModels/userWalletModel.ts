@@ -46,6 +46,12 @@ const userWalletModel = sequelize.define(
     wallet_address: {
       type: DataTypes.STRING,
     },
+    // XRP/RLUSD destination tag for forwarded payments (exchanges require this)
+    destination_tag: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      defaultValue: null,
+    },
     currency_type: {
       type: DataTypes.ENUM("FIAT", "CRYPTO"),
       defaultValue: "FIAT",
