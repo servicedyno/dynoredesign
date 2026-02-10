@@ -1238,7 +1238,8 @@ const feeEstimation = async (
       // Get gas price from both Tatum SDK and RPC, use the higher one
       let sdkGasPrice = 30;
       let sdkGasLimit = isToken ? 65000 : 21000;
-      try {
+      // Use withSdkFallback for Polygon gas estimation (SDK + RPC)
+      const sdkGasCall = async (): Promise<{ gasPrice: number; gasLimit: number }> => {
         const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
           chain: "MATIC",
           type: "TRANSFER_ERC20",
@@ -1249,11 +1250,20 @@ const feeEstimation = async (
           recipient: toAddress,
           amount: safeEstimateAmount,
         })) as FeeEvmBased;
-        sdkGasPrice = Math.ceil(gasFees?.gasPrice || 30);
-        sdkGasLimit = isToken ? (gasFees?.gasLimit || 65000) : 21000;
-      } catch (_sdkErr) {
-        console.warn(`[feeEstimation] ⚠️ Polygon SDK fee estimation failed, using RPC fallback`);
-      }
+        return {
+          gasPrice: Math.ceil(gasFees?.gasPrice || 30),
+          gasLimit: isToken ? (gasFees?.gasLimit || 65000) : 21000,
+        };
+      };
+
+      const { gasPrice: sdkGasPriceResult, gasLimit: sdkGasLimitResult } = await withSdkFallback(
+        sdkGasCall,
+        null,
+        { operation: 'estimateFee', chain: 'POLYGON', address: fromAddress }
+      ).catch(() => ({ gasPrice: 30, gasLimit: isToken ? 65000 : 21000 }));
+      
+      let sdkGasPrice = sdkGasPriceResult;
+      const sdkGasLimit = sdkGasLimitResult;
 
       // RPC fallback: Polygon gas prices are volatile (30-800+ Gwei), SDK often returns stale data
       let rpcGasPrice = sdkGasPrice;
