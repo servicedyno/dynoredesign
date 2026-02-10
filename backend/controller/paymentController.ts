@@ -6884,7 +6884,7 @@ const processIncompletePayments = async () => {
                 await setRedisItem(custRef, custData);
               }
               
-              await setRedisItem("crypto-" + walletAddress, redisData);
+              await setRedisItem(poolRedisKey, redisData);
               console.log(`[processIncompletePayments] Reconstructed Redis data for pool ${walletAddress}`);
             } else {
               // Update existing Redis data with current balance
@@ -6892,12 +6892,12 @@ const processIncompletePayments = async () => {
               redisData.receivedAmount = String(actualBalance);
               redisData.lastAttempt = new Date().toISOString();
               redisData.processedByFallback = 'true';
-              await setRedisItem("crypto-" + walletAddress, redisData);
+              await setRedisItem(poolRedisKey, redisData);
             }
             
             // Process via cryptoVerification
             console.log(`[processIncompletePayments] 🚀 Processing pool ${walletAddress} via cryptoVerification...`);
-            const verificationResult = await cryptoVerification(walletAddress, true);
+            const verificationResult = await cryptoVerification(walletAddress, true, poolRedisKey);
             console.log(`[processIncompletePayments] ✅ Pool ${walletAddress} processed successfully`);
             
           } catch (poolError) {
