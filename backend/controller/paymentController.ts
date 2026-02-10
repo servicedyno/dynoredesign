@@ -3765,8 +3765,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           partialPaymentTimestamp: new Date().toISOString(),
         };
 
-        await deleteRedisItem("crypto-" + address);
-        await setRedisItem("crypto-" + address, redisPayload);
+        await deleteRedisItem(cryptoKey);
+        await setRedisItem(cryptoKey, redisPayload);
 
         // PHASE 12: Also update customer Redis key with incomplete payment info
         // This enables blocking currency switching until payment is complete or expired
@@ -4099,12 +4099,12 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             }
             await transaction.commit();
             // FIXED: Use soft delete with TTL for checkout status polling
-            await setRedisItem("crypto-" + address, {
+            await setRedisItem(cryptoKey, {
               ...tempData,
               status: "overpayment",
               completedAt: new Date().toISOString(),
             });
-            await softDeleteRedisItem("crypto-" + address, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS);
+            await softDeleteRedisItem(cryptoKey, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS);
             throw {
               status: 200,
               paymentStatus: "overpayment",
@@ -4207,13 +4207,13 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           status: "successful",
           completedAt: new Date().toISOString(),
         });
-        await setRedisItem("crypto-" + address, {
+        await setRedisItem(cryptoKey, {
           ...tempData,
           status: "successful",
           completedAt: new Date().toISOString(),
         });
         await softDeleteRedisItem(tempData.ref, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
-        await softDeleteRedisItem("crypto-" + address, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
+        await softDeleteRedisItem(cryptoKey, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
 
         if (webhook) {
           // FIXED: Use callMerchantWebhook instead of legacy callWebHook
