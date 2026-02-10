@@ -5859,9 +5859,11 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
         // FIX: If an active crypto address exists, update crypto-{address} Redis key too
         // This handles the edge case where merchant updates webhook_url/amount AFTER
         // a customer has initiated payment but BEFORE it's confirmed
-        const activeAddress = updatedRedisPayload.active_crypto_address as { address?: string } | undefined;
+        const activeAddress = updatedRedisPayload.active_crypto_address as { address?: string; destination_tag?: number | null } | undefined;
         if (activeAddress?.address) {
-          const cryptoRedisData = await getRedisItem("crypto-" + activeAddress.address);
+          const activeDestTag = activeAddress.destination_tag ? Number(activeAddress.destination_tag) : null;
+          const activeCryptoKey = getCryptoRedisKey(activeAddress.address, activeDestTag);
+          const cryptoRedisData = await getRedisItem(activeCryptoKey);
           if (cryptoRedisData && cryptoRedisData.status === 'pending') {
             const cryptoUpdates: Record<string, unknown> = {};
             
@@ -5873,11 +5875,11 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
             }
             
             if (Object.keys(cryptoUpdates).length > 0) {
-              await setRedisItem("crypto-" + activeAddress.address, {
+              await setRedisItem(activeCryptoKey, {
                 ...cryptoRedisData,
                 ...cryptoUpdates,
               });
-              console.log(`[updatePaymentLink] Also updated crypto-${activeAddress.address} with: ${Object.keys(cryptoUpdates).join(', ')}`);
+              console.log(`[updatePaymentLink] Also updated ${activeCryptoKey} with: ${Object.keys(cryptoUpdates).join(', ')}`);
             }
           }
         }
