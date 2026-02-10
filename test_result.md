@@ -5039,3 +5039,65 @@ ports:
             - grep -A2 'verifyXrpTrustLine' /app/backend/apis/tatumApi.ts should show withSdkFallback usage
           
           Base URL for curl: http://localhost:8001 (internal)
+  - task: "Strategy Pattern Migration — Chain-specific modules and utility integration into tatumApi.ts"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/chains/index.ts"
+      - "/app/backend/services/chains/chainTypes.ts"
+      - "/app/backend/services/chains/evmChain.ts"
+      - "/app/backend/services/chains/utxoChain.ts"
+      - "/app/backend/services/chains/tronChain.ts"
+      - "/app/backend/services/chains/xrpChain.ts"
+      - "/app/backend/services/chains/solChain.ts"
+      - "/app/backend/services/chains/polygonChain.ts"
+      - "/app/backend/apis/tatumApi.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Strategy Pattern Migration for tatumApi.ts
+          
+          CREATED 8 CHAIN STRATEGY FILES:
+          - chainTypes.ts: ChainStrategy interface, FeeEstimate, IncomingTx, BalanceResult types, CHAIN_GROUP_MAP
+          - index.ts: Strategy factory with getStrategy(), resolveChainGroup(), registry
+          - evmChain.ts: EVM strategy + calculateEvmGasFee utility
+          - utxoChain.ts: UTXO strategy + calculateUtxoTxSizeKb utility
+          - tronChain.ts: TRON strategy + TRON_FEE_CONSTANTS
+          - xrpChain.ts: XRP strategy + XRP_FEE_CONSTANTS, isTagBased, buildXrpRedisKey, filterByTag
+          - solChain.ts: SOL strategy + SOL_FEE_CONSTANTS, calculateSolPriorityFee
+          - polygonChain.ts: Polygon strategy + POLYGON_GAS_CONSTANTS, calculatePolygonGasFee
+          
+          MIGRATED UTILITIES INTO tatumApi.ts feeEstimation:
+          - ETH/ERC20: Now uses calculateEvmGasFee() from evmChain.ts
+          - BCH: Now uses calculateUtxoTxSizeKb() from utxoChain.ts
+          - XRP/RLUSD: Now uses XRP_FEE_CONSTANTS from xrpChain.ts
+          - SOL: Now uses calculateSolPriorityFee() and SOL_FEE_CONSTANTS from solChain.ts
+          - Polygon: Now uses calculatePolygonGasFee() from polygonChain.ts
+          
+          VERIFY TESTS:
+          
+          TEST 1: Backend healthy — GET /health returns 200
+          TEST 2: TypeScript compiles — tsc --noEmit exits 0
+          TEST 3: Strategy chain files exist (8 files)
+            - ls /app/backend/services/chains/ should show 8 .ts files
+          TEST 4: Strategy factory exports
+            - grep 'getStrategy\|resolveChainGroup' /app/backend/services/chains/index.ts
+          TEST 5: tatumApi uses chain strategy utilities
+            - grep 'calculateEvmGasFee' /app/backend/apis/tatumApi.ts
+            - grep 'calculateUtxoTxSizeKb' /app/backend/apis/tatumApi.ts
+            - grep 'XRP_FEE_CONSTANTS' /app/backend/apis/tatumApi.ts
+            - grep 'calculateSolPriorityFee' /app/backend/apis/tatumApi.ts
+            - grep 'calculatePolygonGasFee' /app/backend/apis/tatumApi.ts
+          TEST 6: Each chain module exports ChainStrategy implementation
+            - grep 'ChainStrategy' /app/backend/services/chains/evmChain.ts
+            - grep 'ChainStrategy' /app/backend/services/chains/xrpChain.ts
+          TEST 7: Polygon gas constants are extracted
+            - grep 'POLYGON_GAS_CONSTANTS' /app/backend/services/chains/polygonChain.ts
+          TEST 8: XRP tag utilities exported
+            - grep 'isTagBased\|buildXrpRedisKey\|filterByTag' /app/backend/services/chains/xrpChain.ts
+
+          Base URL for curl: http://localhost:8001 (internal)
