@@ -691,7 +691,7 @@ function verifyWebhookSignature(payload, signature, secret) {
           required: ["company_id", "base_currency"],
           properties: {
             company_id: { type: "integer" },
-            base_currency: { type: "string", enum: ["USD", "EUR", "NGN"] },
+            base_currency: { type: "string", enum: ["USD", "EUR", "GBP", "AUD", "CAD", "NGN", "BRL", "ZAR", "KES", "GHS", "JPY", "CHF", "SGD", "HKD", "NZD", "MXN"] },
             api_name: { type: "string" },
             withdrawal_whitelist: { type: "array", items: { type: "string" } },
           },
