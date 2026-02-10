@@ -2837,7 +2837,7 @@ const validateWallet = async (
 const verifyOtp = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
-    const { otp, wallet_address, currency, currency_type, wallet_name, company_id } = req.body;
+    const { otp, wallet_address, currency, currency_type, wallet_name, company_id, destination_tag } = req.body;
 
     if (!otp) {
       return errorResponseHelper(res, 400, "OTP is required!");
