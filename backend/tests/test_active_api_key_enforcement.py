@@ -15,7 +15,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://blockchain-fee-check.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://sweep-nonce-fix.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 TEST_EMAIL = "richard@dyno.pt"

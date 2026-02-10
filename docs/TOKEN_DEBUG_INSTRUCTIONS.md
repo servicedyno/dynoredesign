@@ -4,7 +4,7 @@
 
 I've added debugging to see what's in your token. Please:
 
-1. **Go to Swagger UI**: https://blockchain-fee-check.preview.emergentagent.com/api/docs
+1. **Go to Swagger UI**: https://sweep-nonce-fix.preview.emergentagent.com/api/docs
 
 2. **Make sure you're authorized**:
    - Click the "Authorize" button (🔓)

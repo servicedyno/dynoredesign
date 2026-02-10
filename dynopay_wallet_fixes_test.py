@@ -6,7 +6,7 @@ Test the 2 specific fixes requested in the review:
 1. POST /api/wallet/validateWalletAddress response consistency fix
 2. Removal of Withdrawal/Exchange endpoints from Swagger API documentation
 
-Base URL: https://blockchain-fee-check.preview.emergentagent.com
+Base URL: https://sweep-nonce-fix.preview.emergentagent.com
 Credentials: richard@dyno.pt / Katiekendra123@
 Company ID: 38
 """
@@ -19,7 +19,7 @@ from typing import Dict, Any, Optional
 
 class DynoPayTester:
     def __init__(self):
-        self.base_url = "https://blockchain-fee-check.preview.emergentagent.com"
+        self.base_url = "https://sweep-nonce-fix.preview.emergentagent.com"
         self.email = "richard@dyno.pt"
         self.password = "Katiekendra123@"
         self.company_id = 38

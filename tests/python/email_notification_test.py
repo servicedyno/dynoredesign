@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://blockchain-fee-check.preview.emergentagent.com"
+BACKEND_URL = "https://sweep-nonce-fix.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "john@dyno.pt",
     "password": "Katiekendra123@"
