@@ -1197,9 +1197,10 @@ const feeEstimation = async (
       if (nonZeroFees.length > 0) {
         nonZeroFees.sort((a, b) => a - b);
         const medianPriorityFee = nonZeroFees[Math.floor(nonZeroFees.length / 2)];
-        // Convert: micro-lamports per CU × 200k CU (standard transfer) / 1e15 (to SOL)
-        const priorityFeeSol = (medianPriorityFee * 200000) / 1e15;
-        const baseFee = 0.000005; // 5000 lamports
+        // Use SOL chain strategy utility for priority fee calculation
+        const { calculateSolPriorityFee, SOL_FEE_CONSTANTS } = require('../services/chains/solChain');
+        const priorityFeeSol = calculateSolPriorityFee(medianPriorityFee);
+        const baseFee = SOL_FEE_CONSTANTS.BASE_FEE_SOL;
         const totalFast = baseFee + priorityFeeSol * 2; // 2x median for fast
         const totalMedium = baseFee + priorityFeeSol;
         
