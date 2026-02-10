@@ -5242,6 +5242,55 @@ ports:
             - curl /api/docs.json and check currency enums contain all 15
 
           Base URL for curl: http://localhost:8001 (internal)
+  - task: "Token Expiry — Extend all timed tokens to 365 days + generate fresh token for user_id 28"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/userController.ts"
+      - "/app/backend/controller/adminController.ts"
+      - "/app/backend/middleware/legacyApiAuthMiddleware.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          CHANGES:
+          - User login token: 7d → 365d (userController.ts)
+          - Admin login token: 30d → 365d (adminController.ts, 2 locations)
+          - Legacy API token: 1h → 365d (legacyApiAuthMiddleware.ts)
+          - API admin token: already 365d (unchanged)
+          - Tokens with NO expiry: kept as-is (apiController, paymentController, merchantApiRouter)
+          - Generated fresh 365d token for user_id 28 (Dynotech LDA / richard@dyno.pt) — owner of Bozzmail (38) + Nameword (39)
+          
+          VERIFIED:
+          - createPaymentLink for Bozzmail (company_id: 38) → 200 ✅
+          - createPaymentLink for Nameword (company_id: 39) → 200 ✅
+          
+          VERIFY TESTS:
+          
+          TEST 1: Backend healthy — GET /api/status/health → 200
+          
+          TEST 2: Token works for Bozzmail payment link creation
+          - POST /api/pay/createPaymentLink with Bearer token, body: {"amount": 10, "company_id": 38}
+          - Expected: 200 with payment link
+          
+          TEST 3: Token works for Nameword payment link creation
+          - POST /api/pay/createPaymentLink with Bearer token, body: {"amount": 25, "company_id": 39}
+          - Expected: 200 with payment link
+          
+          TEST 4: Token expiry headers
+          - Check response headers for X-Token-Expires-In-Days >= 364
+          
+          TEST 5: Expired token returns 401
+          - Use a clearly expired token and confirm 401 response
+          
+          TOKEN for testing (user_id 28, 365d):
+          eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyOCwibmFtZSI6IkR5bm90ZWNoIExEQSIsImVtYWlsIjoicmljaGFyZEBkeW5vLnB0IiwidXNlcm5hbWUiOiJkeW5vdGVjaCIsIm1vYmlsZSI6IjM1MTkxMjM0NTY3OSIsInBob3RvIjoiaHR0cHM6Ly9mNTAwNmZjNC01Y2FkLTQ4MGUtODU1Mi05MGZkMTcxZjg3NjAucHJldmlldy5lbWVyZ2VudGFnZW50LmNvbWltYWdlcy91c2VyXzNvN3MzeWZ1eW9mLnBuZyIsImxvZ2luX3R5cGUiOiJFTUFJTCIsImN1c3RvbWVyX2lkIjpudWxsLCJleHRlcm5hbF9pZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwiY3JlYXRlZEF0IjoiMjAyNi0wMS0yNVQxODoxNzo0Ny4wMDhaIiwidXBkYXRlZEF0IjoiMjAyNi0wMi0xMFQwNDoxMzozOS4zODZaIiwidmVyaWZpZWRfb3RwIjoiOTg4NTczIiwib3RwX2V4cGlyZWQiOiIyMDI2LTAyLTA2VDEyOjMzOjMyLjIzMVoiLCJvdHBfY3VycmVuY3kiOiJMVEMiLCJyZXNldF90b2tlbiI6ImE1NzZiY2QyOTFjYzM3MDFkZWY4NDdlNTYwNGU2MjA0YWFhZTE5MGI5MTE2NDJjNWZiNGYzYmI3YTNhNGU2OWEiLCJyZXNldF90b2tlbl9leHBpcnkiOiIyMDI2LTAxLTMxVDAyOjQ2OjQzLjU3NFoiLCJnb29nbGVfaWQiOm51bGwsIndhbGxldF9yZW1pbmRlcl9zZW50IjpmYWxzZSwicmVmZXJyYWxfY29kZSI6bnVsbCwicmVmZXJyYWxfY291bnQiOjAsInJlZmVycmFsX2JvbnVzX2Vhcm5lZCI6IjAuMDAiLCJyZWZlcnJlZF9ieV9jb2RlIjpudWxsLCJyZWZlcnJlZF9ieV9yZWZlcmVlX2NvZGUiOm51bGwsImZlZV9kaXNjb3VudF9wZXJjZW50IjoiMC4wMCIsImZlZV9kaXNjb3VudF9leHBpcmVzX2F0IjpudWxsLCJmZWVfZGlzY291bnRfcmVhc29uIjpudWxsLCJsYXN0X2xvZ2luX2lwIjoiOjpmZmZmOjEyNy4wLjAuMSIsImlhdCI6MTc3MDcyNzk0NSwiZXhwIjoxODAyMjYzOTQ1fQ.TKWaZgBrcamGK51o3M5IQBlTmrz55ZsoAktH6X27Fk0
+          
+          Base URL for curl: http://localhost:8001 (internal)
+
   - task: "Fix 7 Backend Log Issues: BCH pageSize, TrustLine backoff, FastForex crypto skip, Stale orphan caching, CoinGecko rate-limit, Lock contention, Tatum 403 noise"
     implemented: true
     working: true
