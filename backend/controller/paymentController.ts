@@ -3373,6 +3373,7 @@ const verifyCryptoPayment = async (
         currency: currency,
         // XRP/RLUSD: Include destination tag for tag-based chains
         ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
+        ...(tempData?.destination_tag && { memo: String(tempData.destination_tag) }),
         // USD amounts
         paidAmountUsd: parseFloat(paidAmountUsd.toFixed(2)),
         expectedAmountUsd: parseFloat(expectedAmountUsd.toFixed(2)),
@@ -3445,6 +3446,7 @@ const verifyCryptoPayment = async (
         address: address, // Include address so user can send remaining payment
         // XRP/RLUSD: Include destination tag for tag-based chains
         ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
+        ...(tempData?.destination_tag && { memo: String(tempData.destination_tag) }),
         // NEW: Timer and settings
         remaining_seconds: remainingSeconds,
         grace_period_minutes: gracePeriodMinutes,
@@ -3464,6 +3466,7 @@ const verifyCryptoPayment = async (
         currency: currency,
         // XRP/RLUSD: Include destination tag for tag-based chains
         ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
+        ...(tempData?.destination_tag && { memo: String(tempData.destination_tag) }),
         // NEW: Timer and settings
         remaining_seconds: remainingSeconds,
         grace_period_minutes: gracePeriodMinutes,
@@ -3482,6 +3485,7 @@ const verifyCryptoPayment = async (
         currency: currency,
         // XRP/RLUSD: Include destination tag for tag-based chains
         ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
+        ...(tempData?.destination_tag && { memo: String(tempData.destination_tag) }),
         // Timer and settings
         remaining_seconds: remainingSeconds,
         grace_period_minutes: gracePeriodMinutes,
@@ -3500,6 +3504,7 @@ const verifyCryptoPayment = async (
         currency: currency,
         // XRP/RLUSD: Include destination tag for tag-based chains
         ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
+        ...(tempData?.destination_tag && { memo: String(tempData.destination_tag) }),
         // Timer and settings
         remaining_seconds: remainingSeconds,
         grace_period_minutes: gracePeriodMinutes,
