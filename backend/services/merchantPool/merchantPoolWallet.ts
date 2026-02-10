@@ -14,7 +14,40 @@ import {
 import tatumApi from "../../apis/tatumApi";
 import sequelize from "../../utils/dbInstance";
 import { getErrorMessage } from "../../helper";
-import { POOL_CONFIG, RLUSD_CONFIG } from "./merchantPoolConfig";
+import { POOL_CONFIG, RLUSD_CONFIG, isTagBasedChain, XRP_MASTER_ADDRESS, getCryptoRedisKey } from "./merchantPoolConfig";
+import { adminFeeModel } from "../../models";
+
+/**
+ * Generate a unique destination tag for XRP-based payments.
+ * Uses a random 32-bit unsigned integer (1 to 4,294,967,295).
+ * Tag 0 is avoided as some wallets treat it as "no tag".
+ */
+const generateUniqueDestinationTag = async (
+  userId: number,
+  walletType: string,
+  transaction?: Transaction
+): Promise<number> => {
+  const maxAttempts = 10;
+  for (let i = 0; i < maxAttempts; i++) {
+    // Random tag between 1 and 4,294,967,295
+    const tag = Math.floor(Math.random() * 4294967294) + 1;
+    
+    // Check uniqueness in the pool
+    const existing = await merchantTempAddressModel.findOne({
+      where: {
+        wallet_address: XRP_MASTER_ADDRESS,
+        destination_tag: tag,
+      },
+      transaction,
+    });
+    
+    if (!existing) {
+      return tag;
+    }
+  }
+  // Fallback: use timestamp-based tag
+  return (Date.now() % 4294967294) + 1;
+};
 
 /**
  * Get or create merchant's xpub/mnemonic for a chain
