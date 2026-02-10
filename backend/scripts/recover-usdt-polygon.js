@@ -10,7 +10,7 @@ const USDT_CONTRACT = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87
 const MERCHANT_AMOUNT = "7.6021";
 
 async function main() {
-  const tatumApi = require("../dist/apis/tatumApi");
+  const tatumApi = require("../dist/apis/tatumApi").default;
   const { Sequelize } = require("sequelize");
 
   const sequelize = new Sequelize(
