@@ -1381,7 +1381,8 @@ const createCryptoPayment = async (
       // This prevents generating multiple addresses for the same payment link when customer refreshes page
       if (items.active_crypto_address && items.active_crypto_address.currency === requestedCurrency) {
         const existingAddress = items.active_crypto_address.address;
-        const existingRedisData = await getRedisItem("crypto-" + existingAddress);
+        const existingDestTag = items.active_crypto_address.destination_tag ? Number(items.active_crypto_address.destination_tag) : null;
+        const existingRedisData = await getRedisItem(getCryptoRedisKey(existingAddress, existingDestTag));
         
         // Only return existing address if it's still pending (not completed/expired)
         if (existingRedisData && existingRedisData.status === 'pending') {
