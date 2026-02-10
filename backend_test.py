@@ -1,226 +1,381 @@
 #!/usr/bin/env python3
+
 """
-Backend testing for XRP/RLUSD Destination Tag Gap Fixes
-Testing Agent for DynoPay Crypto Payment System
+Backend Test Suite for XRP/RLUSD Redis Key Mismatch Fix
+Testing Agent - Verifies 10 specific tests for the CRITICAL FIX
 """
 
-import requests
-import subprocess
-import sys
 import os
-import json
+import subprocess
+import requests
+import sys
+import time
+from typing import Dict, Any, List, Tuple, Optional
 
-# Base URL from frontend/.env REACT_APP_BACKEND_URL
-BASE_URL = "https://fix-issues-8.preview.emergentagent.com"
+# Configuration
+BASE_URL = "http://localhost:8001"
+TEST_RESULTS = []
+
+def log_test_result(test_name: str, passed: bool, details: str = "", expected: str = "", actual: str = ""):
+    """Log test result for summary reporting"""
+    result = {
+        "test": test_name,
+        "passed": passed,
+        "details": details,
+        "expected": expected,
+        "actual": actual
+    }
+    TEST_RESULTS.append(result)
+    status = "✅ PASS" if passed else "❌ FAIL"
+    print(f"{status} - {test_name}")
+    if not passed:
+        print(f"    Expected: {expected}")
+        print(f"    Actual: {actual}")
+        print(f"    Details: {details}")
+    print()
+
+def run_grep_command(pattern: str, file_path: str, count_only: bool = False) -> Tuple[int, str, bool]:
+    """Run grep command and return count, output, and success status"""
+    try:
+        if count_only:
+            cmd = ["grep", "-c", pattern, file_path]
+        else:
+            cmd = ["grep", pattern, file_path]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd="/app")
+        
+        if result.returncode == 0:
+            output = result.stdout.strip()
+            count = int(output) if count_only else len(output.split('\n')) if output else 0
+            return count, output, True
+        elif result.returncode == 1:
+            # No matches found (normal for grep)
+            return 0, "", True
+        else:
+            # Error occurred
+            return 0, result.stderr, False
+            
+    except Exception as e:
+        return 0, str(e), False
 
 def test_backend_health():
-    """TEST 1: Backend health check"""
-    print("=== TEST 1: Backend Health Check ===")
+    """TEST 1: Backend healthy - GET http://localhost:8001/health returns 200 with status "healthy" """
     try:
-        response = requests.get(f"{BASE_URL}/api/status/health", timeout=10)
-        print(f"Status: {response.status_code}")
-        print(f"Response: {response.text}")
+        response = requests.get(f"{BASE_URL}/health", timeout=10)
+        expected_status = 200
+        expected_content = "healthy"
         
-        if response.status_code == 200:
-            print("✅ TEST 1 PASSED: Backend health check successful")
-            return True
+        if response.status_code == expected_status:
+            response_data = response.json() if response.headers.get('content-type', '').startswith('application/json') else {}
+            status_field = response_data.get('status', '')
+            
+            if expected_content in status_field:
+                log_test_result("TEST 1: Backend Health Check", True, 
+                    f"Backend is healthy. Status: {response.status_code}, Response: {status_field}")
+                return True
+            else:
+                log_test_result("TEST 1: Backend Health Check", False, 
+                    f"Status field does not contain 'healthy'", expected_content, status_field)
+                return False
         else:
-            print(f"❌ TEST 1 FAILED: Expected 200, got {response.status_code}")
+            log_test_result("TEST 1: Backend Health Check", False, 
+                f"Wrong status code", str(expected_status), str(response.status_code))
             return False
+            
     except Exception as e:
-        print(f"❌ TEST 1 FAILED: Exception occurred - {str(e)}")
+        log_test_result("TEST 1: Backend Health Check", False, str(e))
         return False
 
 def test_typescript_compilation():
-    """TEST 2: TypeScript compilation"""
-    print("\n=== TEST 2: TypeScript Compilation ===")
+    """TEST 2: TypeScript compiles clean - cd /app/backend && ./node_modules/.bin/tsc --noEmit should exit 0"""
     try:
-        # Change to backend directory and run tsc --noEmit
-        result = subprocess.run(
-            ["npx", "tsc", "--noEmit"], 
-            cwd="/app/backend",
-            capture_output=True, 
-            text=True,
-            timeout=60
-        )
+        # Check if tsc exists
+        tsc_path = "/app/backend/node_modules/.bin/tsc"
+        if not os.path.exists(tsc_path):
+            log_test_result("TEST 2: TypeScript Compilation", False, 
+                f"TypeScript compiler not found at {tsc_path}")
+            return False
         
-        print(f"Exit code: {result.returncode}")
-        if result.stdout:
-            print(f"Stdout: {result.stdout}")
-        if result.stderr:
-            print(f"Stderr: {result.stderr}")
-            
+        # Run tsc --noEmit
+        result = subprocess.run([tsc_path, "--noEmit"], 
+                               cwd="/app/backend", 
+                               capture_output=True, 
+                               text=True,
+                               timeout=60)
+        
         if result.returncode == 0:
-            print("✅ TEST 2 PASSED: TypeScript compilation successful")
+            log_test_result("TEST 2: TypeScript Compilation", True, 
+                "TypeScript compilation successful with no errors")
             return True
         else:
-            print(f"❌ TEST 2 FAILED: TypeScript compilation failed with exit code {result.returncode}")
+            log_test_result("TEST 2: TypeScript Compilation", False, 
+                f"TypeScript compilation failed. Error: {result.stderr}")
             return False
+            
+    except subprocess.TimeoutExpired:
+        log_test_result("TEST 2: TypeScript Compilation", False, "TypeScript compilation timed out")
+        return False
     except Exception as e:
-        print(f"❌ TEST 2 FAILED: Exception occurred - {str(e)}")
+        log_test_result("TEST 2: TypeScript Compilation", False, str(e))
         return False
 
-def test_merchant_api_destination_tag():
-    """TEST 3: Merchant API has destination_tag"""
-    print("\n=== TEST 3: Merchant API destination_tag References ===")
-    try:
-        result = subprocess.run(
-            ["grep", "-c", "destination_tag", "/app/backend/routes/merchantApiRouter.ts"],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        count = int(result.stdout.strip()) if result.stdout.strip().isdigit() else 0
-        print(f"destination_tag occurrences found: {count}")
-        
-        if count >= 2:
-            print("✅ TEST 3 PASSED: Merchant API has sufficient destination_tag references")
-            return True
-        else:
-            print(f"❌ TEST 3 FAILED: Expected >= 2, found {count}")
-            return False
-    except Exception as e:
-        print(f"❌ TEST 3 FAILED: Exception occurred - {str(e)}")
-        return False
-
-def test_payment_controller_destination_tag():
-    """TEST 4: Payment controller has many destination_tag references"""
-    print("\n=== TEST 4: Payment Controller destination_tag References ===")
-    try:
-        result = subprocess.run(
-            ["grep", "-c", "destination_tag", "/app/backend/controller/paymentController.ts"],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        count = int(result.stdout.strip()) if result.stdout.strip().isdigit() else 0
-        print(f"destination_tag occurrences found: {count}")
-        
-        if count >= 20:
-            print("✅ TEST 4 PASSED: Payment controller has sufficient destination_tag references")
-            return True
-        else:
-            print(f"❌ TEST 4 FAILED: Expected >= 20, found {count}")
-            return False
-    except Exception as e:
-        print(f"❌ TEST 4 FAILED: Exception occurred - {str(e)}")
-        return False
-
-def test_redis_payment_payloads():
-    """TEST 5: destination_tag in Redis payment payloads"""
-    print("\n=== TEST 5: Redis Payment Payloads with destination_tag ===")
-    try:
-        result = subprocess.run(
-            ["grep", "destination_tag.*paymentRes", "/app/backend/controller/paymentController.ts"],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        matches = result.stdout.strip()
-        print(f"Matches found:\n{matches}")
-        
-        if matches:
-            print("✅ TEST 5 PASSED: destination_tag found in Redis payment payloads")
-            return True
-        else:
-            print("❌ TEST 5 FAILED: No destination_tag.*paymentRes patterns found")
-            return False
-    except Exception as e:
-        print(f"❌ TEST 5 FAILED: Exception occurred - {str(e)}")
-        return False
-
-def test_qr_code_dt_param():
-    """TEST 6: QR code for incomplete payments includes tag"""
-    print("\n=== TEST 6: QR Code with dt= Parameter ===")
-    try:
-        result = subprocess.run(
-            ["grep", "dt=", "/app/backend/controller/paymentController.ts"],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        matches = result.stdout.strip()
-        print(f"Matches found:\n{matches}")
-        
-        if matches:
-            print("✅ TEST 6 PASSED: QR code includes dt= parameter for destination tag")
-            return True
-        else:
-            print("❌ TEST 6 FAILED: No dt= patterns found in QR payload")
-            return False
-    except Exception as e:
-        print(f"❌ TEST 6 FAILED: Exception occurred - {str(e)}")
-        return False
-
-def test_incomplete_payment_data_interface():
-    """TEST 7: IncompletePaymentData interface has destination_tag"""
-    print("\n=== TEST 7: IncompletePaymentData Interface ===")
-    try:
-        result = subprocess.run(
-            ["grep", "-A8", "interface IncompletePaymentData", "/app/backend/controller/paymentController.ts"],
-            capture_output=True, text=True, timeout=10
-        )
-        
-        interface_definition = result.stdout.strip()
-        print(f"Interface definition:\n{interface_definition}")
-        
-        if "destination_tag" in interface_definition:
-            print("✅ TEST 7 PASSED: IncompletePaymentData interface includes destination_tag field")
-            return True
-        else:
-            print("❌ TEST 7 FAILED: destination_tag field not found in interface")
-            return False
-    except Exception as e:
-        print(f"❌ TEST 7 FAILED: Exception occurred - {str(e)}")
-        return False
-
-def main():
-    """Run all tests and provide summary"""
-    print("🚀 STARTING XRP/RLUSD DESTINATION TAG GAP FIXES TESTING")
-    print("=" * 60)
+def test_no_old_crypto_pattern_monitoring():
+    """TEST 3: No old "crypto-" + walletAddress pattern in monitoring file"""
+    file_path = "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+    pattern = '"crypto-" +'
+    count, output, success = run_grep_command(pattern, file_path, count_only=True)
     
-    tests = [
-        ("Backend Health", test_backend_health),
-        ("TypeScript Compilation", test_typescript_compilation),
-        ("Merchant API destination_tag", test_merchant_api_destination_tag),
-        ("Payment Controller destination_tag", test_payment_controller_destination_tag),
-        ("Redis Payment Payloads", test_redis_payment_payloads),
-        ("QR Code dt= Parameter", test_qr_code_dt_param),
-        ("IncompletePaymentData Interface", test_incomplete_payment_data_interface),
+    if not success:
+        log_test_result("TEST 3: No Old crypto- Pattern (Monitoring)", False, 
+            f"Error running grep: {output}")
+        return False
+    
+    expected_count = 0
+    if count == expected_count:
+        log_test_result("TEST 3: No Old crypto- Pattern (Monitoring)", True, 
+            f"No old crypto- pattern found in monitoring file")
+        return True
+    else:
+        log_test_result("TEST 3: No Old crypto- Pattern (Monitoring)", False, 
+            f"Found old crypto- pattern occurrences", str(expected_count), str(count))
+        return False
+
+def test_no_old_crypto_pattern_reservation():
+    """TEST 4: No old "crypto-" + pattern in reservation file"""
+    file_path = "/app/backend/services/merchantPool/merchantPoolReservation.ts"
+    pattern = '"crypto-" +'
+    count, output, success = run_grep_command(pattern, file_path, count_only=True)
+    
+    if not success:
+        log_test_result("TEST 4: No Old crypto- Pattern (Reservation)", False, 
+            f"Error running grep: {output}")
+        return False
+    
+    expected_count = 0
+    if count == expected_count:
+        log_test_result("TEST 4: No Old crypto- Pattern (Reservation)", True, 
+            f"No old crypto- pattern found in reservation file")
+        return True
+    else:
+        log_test_result("TEST 4: No Old crypto- Pattern (Reservation)", False, 
+            f"Found old crypto- pattern occurrences", str(expected_count), str(count))
+        return False
+
+def test_getCryptoRedisKey_usage_monitoring():
+    """TEST 5: getCryptoRedisKey used in monitoring (should find 10+ occurrences including variable names)"""
+    file_path = "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+    pattern = 'getCryptoRedisKey\\|cryptoRedisKey\\|orphanCryptoKey'
+    count, output, success = run_grep_command(pattern, file_path, count_only=True)
+    
+    if not success:
+        log_test_result("TEST 5: getCryptoRedisKey Usage (Monitoring)", False, 
+            f"Error running grep: {output}")
+        return False
+    
+    expected_min = 10
+    if count >= expected_min:
+        log_test_result("TEST 5: getCryptoRedisKey Usage (Monitoring)", True, 
+            f"Found {count} getCryptoRedisKey-related occurrences (>= {expected_min} required)")
+        return True
+    else:
+        log_test_result("TEST 5: getCryptoRedisKey Usage (Monitoring)", False, 
+            f"Insufficient getCryptoRedisKey usage", f">= {expected_min}", str(count))
+        return False
+
+def test_getCryptoRedisKey_usage_reservation():
+    """TEST 6: getCryptoRedisKey used in reservation (should find 3+ occurrences)"""
+    file_path = "/app/backend/services/merchantPool/merchantPoolReservation.ts"
+    pattern = 'getCryptoRedisKey'
+    count, output, success = run_grep_command(pattern, file_path, count_only=True)
+    
+    if not success:
+        log_test_result("TEST 6: getCryptoRedisKey Usage (Reservation)", False, 
+            f"Error running grep: {output}")
+        return False
+    
+    expected_min = 3
+    if count >= expected_min:
+        log_test_result("TEST 6: getCryptoRedisKey Usage (Reservation)", True, 
+            f"Found {count} getCryptoRedisKey occurrences (>= {expected_min} required)")
+        return True
+    else:
+        log_test_result("TEST 6: getCryptoRedisKey Usage (Reservation)", False, 
+            f"Insufficient getCryptoRedisKey usage", f">= {expected_min}", str(count))
+        return False
+
+def test_destination_tag_query_attributes():
+    """TEST 7: destination_tag in query attributes (2 locations)"""
+    file_path = "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+    pattern = "'destination_tag'"
+    count, output, success = run_grep_command(pattern, file_path, count_only=True)
+    
+    if not success:
+        log_test_result("TEST 7: destination_tag in Query Attributes", False, 
+            f"Error running grep: {output}")
+        return False
+    
+    expected_count = 2
+    if count == expected_count:
+        log_test_result("TEST 7: destination_tag in Query Attributes", True, 
+            f"Found {count} destination_tag in query attributes (checkMissedPayments + detectOrphanPayments)")
+        return True
+    else:
+        log_test_result("TEST 7: destination_tag in Query Attributes", False, 
+            f"Wrong number of destination_tag attributes", str(expected_count), str(count))
+        return False
+
+def test_cryptoVerification_calls():
+    """TEST 8: cryptoVerification calls pass overrideRedisKey (4 calls total)"""
+    file_path = "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+    pattern = 'cryptoVerification(walletAddress, true,'
+    count, output, success = run_grep_command(pattern, file_path, count_only=True)
+    
+    if not success:
+        log_test_result("TEST 8: cryptoVerification Calls with overrideRedisKey", False, 
+            f"Error running grep: {output}")
+        return False
+    
+    expected_count = 4
+    if count == expected_count:
+        log_test_result("TEST 8: cryptoVerification Calls with overrideRedisKey", True, 
+            f"Found {count} cryptoVerification calls with overrideRedisKey parameter")
+        return True
+    else:
+        log_test_result("TEST 8: cryptoVerification Calls with overrideRedisKey", False, 
+            f"Wrong number of cryptoVerification calls", str(expected_count), str(count))
+        return False
+
+def test_findOne_uses_temp_address_id():
+    """TEST 9: findOne uses temp_address_id (not wallet_address)"""
+    file_path = "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+    
+    # Check for the fix: findOne uses temp_address_id
+    pattern1 = 'findOne.*temp_address_id'
+    count1, output1, success1 = run_grep_command(pattern1, file_path, count_only=True)
+    
+    # Check that old pattern is not used: findOne with wallet_address + walletAddress
+    pattern2 = 'findOne.*wallet_address.*walletAddress'
+    count2, output2, success2 = run_grep_command(pattern2, file_path, count_only=True)
+    
+    if not success1 or not success2:
+        log_test_result("TEST 9: findOne uses temp_address_id", False, 
+            f"Error running grep: {output1 if not success1 else output2}")
+        return False
+    
+    if count1 > 0 and count2 == 0:
+        log_test_result("TEST 9: findOne uses temp_address_id", True, 
+            f"findOne correctly uses temp_address_id ({count1} occurrences), no old wallet_address pattern")
+        return True
+    else:
+        log_test_result("TEST 9: findOne uses temp_address_id", False, 
+            f"findOne pattern incorrect", "temp_address_id used, wallet_address not used", 
+            f"temp_address_id: {count1}, wallet_address: {count2}")
+        return False
+
+def test_paymentController_getCryptoRedisKey():
+    """TEST 10: paymentController.ts uses getCryptoRedisKey for all affected locations"""
+    file_path = "/app/backend/controller/paymentController.ts"
+    
+    # Test 1: getCryptoRedisKey(existingAddress
+    pattern1 = 'getCryptoRedisKey(existingAddress'
+    count1, output1, success1 = run_grep_command(pattern1, file_path, count_only=True)
+    
+    # Test 2: activeCryptoKey variable (3+ occurrences)
+    pattern2 = 'activeCryptoKey'
+    count2, output2, success2 = run_grep_command(pattern2, file_path, count_only=True)
+    
+    # Test 3: getCryptoRedisKey(tempData
+    pattern3 = 'getCryptoRedisKey(tempData'
+    count3, output3, success3 = run_grep_command(pattern3, file_path, count_only=True)
+    
+    if not all([success1, success2, success3]):
+        log_test_result("TEST 10: paymentController getCryptoRedisKey Usage", False, 
+            f"Error running grep commands")
+        return False
+    
+    # Expected counts
+    expected_count1 = 1  # getCryptoRedisKey(existingAddress should find 1
+    expected_min2 = 3    # activeCryptoKey should find 3+
+    expected_count3 = 1  # getCryptoRedisKey(tempData should find 1
+    
+    success_conditions = [
+        count1 == expected_count1,
+        count2 >= expected_min2,
+        count3 == expected_count3
     ]
     
-    results = []
-    passed = 0
-    failed = 0
-    
-    for test_name, test_func in tests:
-        try:
-            result = test_func()
-            results.append((test_name, result))
-            if result:
-                passed += 1
-            else:
-                failed += 1
-        except Exception as e:
-            print(f"❌ {test_name} FAILED with exception: {str(e)}")
-            results.append((test_name, False))
-            failed += 1
-    
-    # Summary
-    print("\n" + "=" * 60)
-    print("📊 TESTING SUMMARY")
-    print("=" * 60)
-    
-    for test_name, result in results:
-        status = "✅ PASSED" if result else "❌ FAILED"
-        print(f"{test_name}: {status}")
-    
-    print(f"\nTOTAL: {passed} passed, {failed} failed ({passed}/{len(tests)})")
-    success_rate = (passed / len(tests)) * 100
-    print(f"SUCCESS RATE: {success_rate:.1f}%")
-    
-    if failed == 0:
-        print("\n🎉 ALL TESTS PASSED! XRP/RLUSD Destination Tag Gap Fixes are working correctly.")
-        return 0
+    if all(success_conditions):
+        log_test_result("TEST 10: paymentController getCryptoRedisKey Usage", True, 
+            f"All patterns found: getCryptoRedisKey(existingAddress={count1}, activeCryptoKey={count2}, getCryptoRedisKey(tempData={count3}")
+        return True
     else:
-        print(f"\n⚠️  {failed} TEST(S) FAILED - Issues need to be addressed.")
-        return 1
+        details = f"Pattern results: getCryptoRedisKey(existingAddress={count1} (expected {expected_count1}), "
+        details += f"activeCryptoKey={count2} (expected >={expected_min2}), "
+        details += f"getCryptoRedisKey(tempData={count3} (expected {expected_count3})"
+        log_test_result("TEST 10: paymentController getCryptoRedisKey Usage", False, 
+            f"Some patterns not found", "All patterns to match expected counts", details)
+        return False
+
+def run_all_tests():
+    """Run all 10 tests for XRP/RLUSD Redis Key Mismatch fix"""
+    print("🔍 TESTING: XRP/RLUSD Redis Key Mismatch — Tag-Based Chain Gap Fix")
+    print("=" * 80)
+    
+    tests = [
+        test_backend_health,
+        test_typescript_compilation,
+        test_no_old_crypto_pattern_monitoring,
+        test_no_old_crypto_pattern_reservation,
+        test_getCryptoRedisKey_usage_monitoring,
+        test_getCryptoRedisKey_usage_reservation,
+        test_destination_tag_query_attributes,
+        test_cryptoVerification_calls,
+        test_findOne_uses_temp_address_id,
+        test_paymentController_getCryptoRedisKey,
+    ]
+    
+    passed_tests = 0
+    total_tests = len(tests)
+    
+    for test_func in tests:
+        try:
+            if test_func():
+                passed_tests += 1
+        except Exception as e:
+            print(f"❌ FAIL - {test_func.__name__}: Exception occurred: {e}")
+    
+    print("=" * 80)
+    print(f"📊 SUMMARY: {passed_tests}/{total_tests} tests passed")
+    
+    if passed_tests == total_tests:
+        print("🎉 ALL TESTS PASSED! XRP/RLUSD Redis Key Mismatch fix is working correctly.")
+        return True
+    else:
+        print("⚠️  SOME TESTS FAILED! Review the failures above.")
+        return False
+
+def print_detailed_results():
+    """Print detailed test results for reporting"""
+    print("\n" + "=" * 80)
+    print("DETAILED TEST RESULTS")
+    print("=" * 80)
+    
+    for i, result in enumerate(TEST_RESULTS, 1):
+        status = "PASS" if result["passed"] else "FAIL"
+        print(f"{i:2d}. [{status}] {result['test']}")
+        if result["details"]:
+            print(f"    Details: {result['details']}")
+        if not result["passed"] and result["expected"]:
+            print(f"    Expected: {result['expected']}")
+            print(f"    Actual: {result['actual']}")
+        print()
 
 if __name__ == "__main__":
-    sys.exit(main())
+    print("Backend Testing Agent - XRP/RLUSD Redis Key Mismatch Fix")
+    print("Starting test suite...\n")
+    
+    success = run_all_tests()
+    print_detailed_results()
+    
+    # Exit with proper code for CI/CD integration
+    sys.exit(0 if success else 1)
