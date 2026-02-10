@@ -3420,6 +3420,8 @@ const verifyCryptoPayment = async (
         baseCurrency: baseCurrency || customerData?.base_currency || "USD",
         txId: tempData?.previousTxId || tempData?.txId,
         address: address, // Include address so user can send remaining payment
+        // XRP/RLUSD: Include destination tag for tag-based chains
+        ...(tempData?.destination_tag && { destination_tag: Number(tempData.destination_tag) }),
         // NEW: Timer and settings
         remaining_seconds: remainingSeconds,
         grace_period_minutes: gracePeriodMinutes,
