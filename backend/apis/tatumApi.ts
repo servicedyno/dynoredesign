@@ -3485,4 +3485,6 @@ export default {
   setupXrpTrustLine,
   verifyXrpAccountActivated,
   verifyXrpTrustLine,
+  getXrpDestinationTag,
+  tatumXrpRpc,
 };
