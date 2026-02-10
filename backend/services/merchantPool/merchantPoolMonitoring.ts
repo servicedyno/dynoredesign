@@ -273,7 +273,7 @@ const processAddress = async (addr: any, result: {
       
       if (!reservedUntil) {
         console.log(`[MerchantPool] ⏭️ Skipping ${walletAddress} - no reserved_until timestamp`);
-        continue;
+        return;
       }
       
       const minutesUntilExpiry = (reservedUntil.getTime() - now.getTime()) / 60000;
@@ -284,7 +284,7 @@ const processAddress = async (addr: any, result: {
         if (minutesSinceReserved > 5) {
           console.log(`[MerchantPool] ⏭️ ${walletAddress} - reserved ${minutesSinceReserved.toFixed(1)} min ago (waiting for ${WEBHOOK_GRACE_PERIOD_MINUTES} min grace period)`);
         }
-        continue;
+        return;
       }
 
       try {
@@ -309,7 +309,7 @@ const processAddress = async (addr: any, result: {
               console.log(`[MerchantPool] 🏷️ ${walletAddress} tag:${destinationTag} — tx lookup failed (${err?.message}), using DB received_amount: ${dbReceivedAmount}`);
             } else {
               console.warn(`[MerchantPool] ⚠️ ${walletAddress} tag:${destinationTag} — tx lookup failed and no DB received_amount, skipping`);
-              continue;
+              return;
             }
           }
         } else {
@@ -320,7 +320,7 @@ const processAddress = async (addr: any, result: {
             const errMsg = balErr.message || '';
             if (errMsg.includes('account.not.found') || errMsg.includes('not.found')) {
               console.log(`[MerchantPool] ⏭️ ${walletAddress} - account not yet activated on-chain (${walletType}), skipping`);
-              continue;
+              return;
             }
             throw balanceError;
           }
@@ -329,7 +329,7 @@ const processAddress = async (addr: any, result: {
 
         if (balance <= 0) {
           console.log(`[MerchantPool] ⏭️ ${walletAddress} - no balance (customer hasn't paid)`);
-          continue;
+          return;
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -364,13 +364,13 @@ const processAddress = async (addr: any, result: {
         // Use effectiveBalance (after admin fee subtraction) for dust check
         if (effectiveBalance < dustThreshold) {
           console.log(`[MerchantPool] ⏭️ ${walletAddress} - effective balance ${effectiveBalance.toFixed(8)} ${walletType} is admin fee residual (on-chain: ${balance}, admin_fee: ${adminFeeBalance}), skipping`);
-          continue;
+          return;
         }
 
         // Skip if expected_amount is 0 — no payment was actually requested for this address
         if (expectedAmount <= 0) {
           console.log(`[MerchantPool] ⏭️ ${walletAddress} - expected_amount is ${expectedAmount}, likely stale reservation with dust. Skipping.`);
-          continue;
+          return;
         }
 
         console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance}, reserved ${minutesSinceReserved.toFixed(1)} min ago)`);
@@ -433,18 +433,18 @@ const processAddress = async (addr: any, result: {
                 result.errors.push(`Recovery failed for ${walletAddress}: ${err?.message}`);
               }
             }
-            continue;
+            return;
           } else {
             console.log(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
             result.alreadyProcessed++;
-            continue;
+            return;
           }
         }
         
         if (redisData?.status === 'processing' || redisData?.status === 'retrying') {
           console.log(`[MerchantPool] ⏭️ ${walletAddress} - Webhook currently processing (status: ${redisData.status})`);
           result.alreadyProcessed++;
-          continue;
+          return;
         }
 
         if (redisData?.incomplete === 'true' || redisData?.incomplete === true) {
@@ -465,7 +465,7 @@ const processAddress = async (addr: any, result: {
             if (minutesSincePartial < 20) {
               console.log(`[MerchantPool] ⏭️ Waiting for completion - partial received ${minutesSincePartial.toFixed(1)} min ago`);
               result.skippedTooRecent++;
-              continue;
+              return;
             } else {
               console.log(`[MerchantPool] ⚠️ Partial payment expired (${minutesSincePartial.toFixed(1)} min) - will process as-is`);
             }
@@ -491,7 +491,7 @@ const processAddress = async (addr: any, result: {
             if (minutesSincePartial < 20) {
               console.log(`[MerchantPool] ⏭️ Waiting for completion - DB partial ${minutesSincePartial.toFixed(1)} min ago`);
               result.skippedTooRecent++;
-              continue;
+              return;
             }
           }
         }
@@ -510,7 +510,7 @@ const processAddress = async (addr: any, result: {
           if (existingTx) {
             console.log(`[MerchantPool] ⏭️ ${walletAddress} - Already processed in DB (tx: ${existingTx.dataValues.transaction_reference})`);
             result.alreadyProcessed++;
-            continue;
+            return;
           }
         }
 
@@ -529,7 +529,7 @@ const processAddress = async (addr: any, result: {
           if (hoursSinceTx < 1) {
             console.log(`[MerchantPool] ⏭️ ${walletAddress} - Recent pool transaction exists (${hoursSinceTx.toFixed(1)}h ago)`);
             result.alreadyProcessed++;
-            continue;
+            return;
           }
         }
 
@@ -553,7 +553,7 @@ const processAddress = async (addr: any, result: {
           console.log(`[MerchantPool]    - Shortfall: ${(expectedAmount - effectiveBalance).toFixed(8)} ${walletType}`);
           console.log(`[MerchantPool]    - Reserved ${minutesSinceReserved.toFixed(1)} min ago (waiting until 25 min)`);
           result.skippedTooRecent++;
-          continue;
+          return;
         }
         
         if (isUnderpayment) {
@@ -685,7 +685,7 @@ const processAddress = async (addr: any, result: {
               }
               
               await deleteRedisItem(failKey);
-              continue;
+              return;
             }
             
             // No payment context or effective balance too low — admin fee residual, release
@@ -700,7 +700,7 @@ const processAddress = async (addr: any, result: {
             console.log(`[MerchantPool] ❌ No incoming transactions found for ${walletAddress} (attempt ${failCount}/3). Will retry.`);
             result.errors.push(`No transactions found for ${walletAddress} (attempt ${failCount}/3)`);
           }
-          continue;
+          return;
         }
 
         const latestTx = incomingTxs[0];
@@ -717,7 +717,7 @@ const processAddress = async (addr: any, result: {
           console.log(`[MerchantPool]    - Current: ${confirmationCheck.confirmations}/${confirmationCheck.required} confirmations`);
           console.log(`[MerchantPool]    - ${walletType} requires ${confirmationCheck.required} confirmation(s) before processing`);
           result.skippedTooRecent++;
-          continue;
+          return;
         }
         
         console.log(`[MerchantPool] ✅ Transaction confirmed: ${confirmationCheck.confirmations}/${confirmationCheck.required} confirmations`);
@@ -727,7 +727,7 @@ const processAddress = async (addr: any, result: {
         if (alreadyProcessedTx && Object.keys(alreadyProcessedTx).length > 0) {
           console.log(`[MerchantPool] ⏭️ Transaction ${latestTx.txId} already processed previously. Skipping.`);
           result.alreadyProcessed++;
-          continue;
+          return;
         }
 
         if (!redisData || Object.keys(redisData).length === 0) {
