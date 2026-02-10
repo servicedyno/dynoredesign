@@ -275,7 +275,7 @@ const getAccessToken = async (id) => {
   const { customer_id, ...userData } = user.dataValues;
   console.log(userData);
   if (tokenSecret) {
-    const token = jwt.sign(userData, tokenSecret);
+    const token = jwt.sign(userData, tokenSecret, { expiresIn: '365d' });
     const resData = { token, customer_id: userData.id };
     return resData;
   }
