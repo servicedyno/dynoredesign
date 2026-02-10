@@ -3224,6 +3224,57 @@ const getTransactionGasCost = async (
 };
 
 /**
+ * Check if an XRP account is activated on the ledger (has been funded with base reserve)
+ */
+const verifyXrpAccountActivated = async (address: string): Promise<boolean> => {
+  const tatumSdk = await getTatumSDK();
+  try {
+    const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
+    return res && Number(res.balance || 0) > 0;
+  } catch (e: unknown) {
+    const err = e as { message?: string; body?: any };
+    if ((err.message || '').includes('not.found') || (err.message || '').includes('account.not.found') ||
+        (err.body?.error_message || '').includes('not found')) {
+      return false;
+    }
+    throw e;
+  }
+};
+
+/**
+ * Verify that an XRP trust line exists for a given token/issuer
+ */
+const verifyXrpTrustLine = async (address: string, issuerAccount: string, currencyHex: string): Promise<boolean> => {
+  const tatumSdk = await getTatumSDK();
+  try {
+    const res = await tatumSdk.blockchain.xrp.xrpGetAccountBalance(address);
+    const resAny = res as any;
+    const issuerLower = issuerAccount.toLowerCase();
+    // Check obligations array (trust lines the account has set)
+    if (resAny?.obligations) {
+      for (const obligation of resAny.obligations) {
+        if ((obligation.currency || '').toUpperCase().startsWith('524C5553') ||
+            (obligation.currency || '').toUpperCase() === 'RLUSD') {
+          return true;
+        }
+      }
+    }
+    // Also check assets
+    if (resAny?.assets) {
+      for (const asset of resAny.assets) {
+        if ((asset.currency || '').toUpperCase().startsWith('524C5553') ||
+            (asset.currency || '').toUpperCase() === 'RLUSD') {
+          return true;
+        }
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Set up XRP Trust Line for RLUSD token on a new XRP address
  * Required before the address can receive RLUSD tokens
  */
