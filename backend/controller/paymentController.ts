@@ -6372,8 +6372,10 @@ const checkOnBlockchair = async () => {
           tempData[i].wallet_type
         );
 
+        // NOTE: Legacy tbl_user_temp_address doesn't have destination_tag.
+        // Tag-based chains (XRP/RLUSD) should use merchant pool flow instead.
         await getRedisItem(
-          "crypto-" + tempData[i].wallet_address
+          getCryptoRedisKey(tempData[i].wallet_address)
         );
 
         await userTempAddressModel.update(
