@@ -369,6 +369,7 @@ Check your email for a 6-digit OTP code and call \`/api/wallet/verifyOtp\` with 
                       wallet_type: { type: 'string', example: 'BTC' },
                       company_id: { type: 'integer', example: 1 },
                       wallet_name: { type: 'string', example: 'Main BTC Payment Address', nullable: true },
+                      destination_tag: { type: 'integer', example: 12345678, nullable: true, description: 'XRP/RLUSD destination tag (if provided)' },
                       email: { type: 'string', example: 'jo***@example.com', description: 'Masked email where OTP was sent' }
                     }
                   }
