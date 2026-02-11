@@ -395,6 +395,15 @@ const startServer = async () => {
     refreshBackgroundRateCache().catch(err => {
       log(`Initial rate cache population failed: ${err.message}`, "error");
     });
+
+    // Migrate stale webhook URLs from previous deployments (runs once on startup)
+    migrateWebhookUrls()
+      .then(stats => {
+        log(`Webhook URL migration complete: ${stats.updated} updated, ${stats.alreadyCorrect} already correct, ${stats.errors} errors (of ${stats.total} total)`, "info");
+      })
+      .catch(err => {
+        log(`Webhook URL migration failed: ${err.message}`, "error");
+      });
   });
 };
 
