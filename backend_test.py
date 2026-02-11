@@ -119,13 +119,13 @@ def test_4_currency_alias_map():
             capture_output=True, text=True, timeout=10
         )
         
-        success = result.returncode == 0 and ("USDC-ERC20" in result.stdout)
-        details = f"Exit code: {result.returncode}, Matches found: {len(result.stdout.splitlines())}"
+        success = result.returncode == 0 and "'USDC': 'USDC-ERC20'" in result.stdout
+        details = f"Exit code: {result.returncode}, Found USDC→USDC-ERC20 mapping: {success}"
         if result.stdout:
             # Look for the actual mapping line
             for line in result.stdout.splitlines():
-                if "USDC" in line and "ERC20" in line:
-                    details += f", USDC mapping: {line.strip()}"
+                if "'USDC': 'USDC-ERC20'" in line:
+                    details += f", Line: {line.strip()}"
                     break
         
         log_test(4, "currencyAliasMap USDC Mapping", success, details)
