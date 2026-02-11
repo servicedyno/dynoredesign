@@ -649,6 +649,10 @@ const getData = async (req: express.Request, res: express.Response) => {
       }
     }
     
+    // Normalize USDC-ERC20 → USDC for checkout frontend compatibility
+    // Checkout only has "USDC" in its cryptoOptions (no network selection for USDC)
+    availableCurrenciesList = [...new Set(availableCurrenciesList.map(c => c === 'USDC-ERC20' ? 'USDC' : c))];
+    
     if (item.pathType === "createLink") {
       payload = {
         amount: amount, // Use the converted number instead of item.base_amount
