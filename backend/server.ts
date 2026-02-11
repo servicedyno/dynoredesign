@@ -330,6 +330,7 @@ const startServer = async () => {
     // OPTIMIZED: Use alter:true only in development — production should use migrations
     const syncOptions = isProduction ? {} : { alter: true };
     
+    // OPTIMIZED: Single consolidated import instead of 3 separate await import("./models") calls
     const {
       merchantWalletModel,
       merchantTempAddressModel,
@@ -339,6 +340,8 @@ const startServer = async () => {
       referralRewardModel,
       kbCategoryModel,
       kbArticleModel,
+      refereeCodeModel,
+      userModel,
     } = await import("./models");
     
     await merchantWalletModel.sync(syncOptions);
@@ -353,7 +356,6 @@ const startServer = async () => {
     log('Referral tables synced successfully.', 'info');
     
     // Sync Referee Code model
-    const { refereeCodeModel } = await import("./models");
     await refereeCodeModel.sync(syncOptions);
     log('Referee Code table synced successfully.', 'info');
     
@@ -363,7 +365,6 @@ const startServer = async () => {
     log('Knowledge Base tables synced successfully.', 'info');
     
     // Sync user model to add referral columns
-    const { userModel } = await import("./models");
     await userModel.sync(syncOptions);
     log('User model synced with referral columns.', 'info');
     
