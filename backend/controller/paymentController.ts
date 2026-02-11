@@ -4754,20 +4754,29 @@ const getCurrencyRates = async (
             const roundedTotalAmountUSD = parseFloat(totalAmountUSD.toFixed(2));
             const totalAmountCrypto = cryptoPrice > 0 ? roundedTotalAmountUSD / cryptoPrice : 0;
             
-            console.log(`[getCurrencyRates] ${rate.currency}: base=${amount} ${source} ($${amountUSD.toFixed(2)} USD), tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)}`);
+            // Convert total back to source currency (e.g., EUR) for display
+            // Use the ratio: source_amount / usd_amount to convert USD totals back to source currency
+            const usdToSourceRate = amountUSD > 0 ? amount / amountUSD : 1;
+            const totalAmountSource = parseFloat((roundedTotalAmountUSD * usdToSourceRate).toFixed(2));
+            const processingFeeSource = parseFloat((roundedTotalFeesUSD * usdToSourceRate).toFixed(2));
+            const taxAmountSource = parseFloat((taxAmountNum * usdToSourceRate).toFixed(2));
+            
+            console.log(`[getCurrencyRates] ${rate.currency}: base=${amount} ${source} ($${amountUSD.toFixed(2)} USD), tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSource.toFixed(2)} ${source})`);
             
             return {
               ...rate,
               fee_payer: 'customer',
               base_amount: Number(rate.amount),
               base_amount_usd: parseFloat(amountUSD.toFixed(2)),
-              // Include tax in breakdown
-              tax_amount: parseFloat(taxAmountNum.toFixed(2)),
-              // Simplified - only show total processing fee, no breakdown
-              processing_fee: roundedTotalFeesUSD,
+              // Include tax in breakdown (converted to source currency)
+              tax_amount: taxAmountSource,
+              tax_amount_usd: parseFloat(taxAmountNum.toFixed(2)),
+              // Simplified - only show total processing fee (converted to source currency)
+              processing_fee: processingFeeSource,
+              processing_fee_usd: roundedTotalFeesUSD,
               total_amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto,
               total_amount_usd: roundedTotalAmountUSD,
-              total_amount_source: roundedTotalAmountUSD, // Total in source currency (USD) for display
+              total_amount_source: totalAmountSource, // Total in SOURCE currency (e.g., EUR) for display
               amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto, // Override amount with total
             };
           } catch (feeError: unknown) {
