@@ -6061,3 +6061,52 @@ ports:
           
           CONCLUSION: All 4 checkout payment status bugs have been successfully fixed and are production-ready. The fixes address overpayment status recognition by frontend, USD amount display issues, webhook payment_id consistency, and duplicate webhook processing race conditions.
 
+  - task: "Webhook URL Startup Migration — Fix stale Tatum subscription URLs from previous deployments"
+    implemented: true
+    working: true
+    files:
+      - "/app/backend/services/migrateWebhookUrls.ts"
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/server.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          ROOT CAUSE: Tatum subscription records stored webhook URLs from previous deployments
+          (e.g. dynobackendconsolidated.up.railway.app, various preview URLs). When the server
+          moved to api.dynopay.com (SERVER_URL in .env), existing subscriptions kept old URLs.
+          The self-healing in createSubscriptionBlockBeeStyle only fixed URLs on new payments.
+          
+          FIX: Created startup migration service that runs once on boot:
+          1. NEW FILE: services/migrateWebhookUrls.ts
+             - Fetches ALL Tatum subscriptions via listAllSubscriptions (paginated)
+             - Compares each subscription's URL origin against SERVER_URL from .env
+             - Updates stale URLs via PUT /v4/subscription/{id} preserving path + query params
+             - Rate-limited (100ms between PUTs) to avoid Tatum API throttling
+             - Logs every update with old → new URL
+          
+          2. MODIFIED: apis/tatumApi.ts
+             - Exported getTatumHeaders so migration service can reuse the same auth (Google KMS)
+          
+          3. MODIFIED: server.ts
+             - Added import for migrateWebhookUrls
+             - Calls migrateWebhookUrls() async after server starts listening
+             - Added POST /diagnostics/migrate-webhook-urls admin endpoint for manual re-triggering
+          
+          FIRST RUN RESULTS (167 subscriptions):
+          - Updated: 167 (ALL had stale URLs from various old deployments)
+          - Errors: 0
+          - Stale origins fixed: dynobackendconsolidated.up.railway.app, various preview URLs
+          
+          TESTS:
+          TEST 1: GET http://localhost:8001/health returns 200 with status "healthy"
+          TEST 2: cd /app/backend && npx tsc --noEmit — exit code 0
+          TEST 3: grep 'migrateWebhookUrls' /app/backend/server.ts should find import and startup call
+          TEST 4: grep 'getTatumHeaders' /app/backend/apis/tatumApi.ts | grep export — finds the new export
+          TEST 5: grep 'WebhookMigration.*Migration complete' backend logs — finds completion summary
+          TEST 6: POST /diagnostics/migrate-webhook-urls returns 200 with success=true and stats
+          Base URL: http://localhost:8001
+
