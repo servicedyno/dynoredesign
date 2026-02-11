@@ -398,12 +398,13 @@ export const triggerWalletReminder = async (userId?: number) => {
 
 /**
  * Infrastructure Health Check Cron Job
- * Schedule: Every 5 minutes
+ * Schedule: Every 15 minutes (OPTIMIZED: was */5 — health rarely changes every 5 min)
  * Logic: Run health checks on all monitored services and store results
+ * Savings: 288 → 96 runs/day, ~1,440 → ~480 DB rows/day
  */
 export const setupHealthCheckCron = () => {
-  // Run every 5 minutes
-  cron.schedule("*/5 * * * *", async () => {
+  // OPTIMIZED: Reduced from */5 to */15 — 3x fewer DB writes, health status rarely changes in 5 min
+  cron.schedule("*/15 * * * *", async () => {
     try {
       const monitoringService = require("../services/monitoringService").default;
       await monitoringService.runHealthChecks();
@@ -412,7 +413,19 @@ export const setupHealthCheckCron = () => {
     }
   });
 
-  log("Health Check Cron Job scheduled for every 5 minutes", "info");
+  // Prune health check records older than 7 days — runs daily at 3:00 AM UTC
+  // Prevents unbounded tbl_service_health growth (~480 rows/day × 7 days = ~3,360 rows max)
+  cron.schedule("0 3 * * *", async () => {
+    try {
+      const monitoringService = require("../services/monitoringService").default;
+      await monitoringService.pruneOldHealthChecks();
+    } catch (e) {
+      log(`Health Check Pruning Error: ${e}`, "error");
+    }
+  });
+
+  log("Health Check Cron Job scheduled for every 15 minutes", "info");
+  log("Health Check Retention Cleanup scheduled daily at 3:00 AM UTC (7-day retention)", "info");
 };
 
 /**
