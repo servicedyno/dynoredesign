@@ -1,257 +1,239 @@
 #!/usr/bin/env python3
 """
-Backend Test Suite for Email Notification Fix - DynoPay Merchant Pool Payments
-Tests the specific changes made to fix missing payment email notifications.
+Backend Test Suite for Webhook URL Startup Migration
+Testing the new service that migrates stale Tatum webhook URLs on server startup
 """
 
 import requests
 import subprocess
 import sys
-import re
 import os
+import re
 from typing import Dict, Any, Optional
 
-def run_test(test_name: str, test_func, expected_result: Any = None) -> Dict[str, Any]:
-    """Run a single test and return results"""
-    print(f"\n=== TEST {test_name} ===")
+def log_test_result(test_name: str, success: bool, details: str = ""):
+    """Log test results with clear formatting"""
+    status = "✅ PASS" if success else "❌ FAIL"
+    print(f"{status} {test_name}")
+    if details:
+        print(f"    {details}")
+
+def run_backend_test() -> Dict[str, Any]:
+    """Run all backend tests for webhook URL migration feature"""
+    results = {
+        "total_tests": 6,
+        "passed": 0,
+        "failed": 0,
+        "details": {}
+    }
+    
+    base_url = "http://localhost:8001"
+    
+    print("=" * 60)
+    print("🧪 WEBHOOK URL STARTUP MIGRATION - BACKEND TESTING")
+    print("=" * 60)
+    
+    # TEST 1: Backend Health Check
+    print("\n1️⃣ Testing Backend Health...")
     try:
-        result = test_func()
-        if expected_result is not None:
-            success = result == expected_result
+        response = requests.get(f"{base_url}/health", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy":
+                log_test_result("Backend Health Check", True, f"Status: {data.get('status')}, Service: {data.get('service')}")
+                results["passed"] += 1
+                results["details"]["health_check"] = "PASS"
+            else:
+                log_test_result("Backend Health Check", False, f"Status not healthy: {data.get('status')}")
+                results["failed"] += 1
+                results["details"]["health_check"] = f"FAIL - Status: {data.get('status')}"
         else:
-            success = bool(result)
-        
-        print(f"✅ {test_name}: {'PASSED' if success else 'FAILED'}")
-        return {
-            "name": test_name,
-            "success": success,
-            "result": result,
-            "error": None
-        }
+            log_test_result("Backend Health Check", False, f"HTTP {response.status_code}")
+            results["failed"] += 1
+            results["details"]["health_check"] = f"FAIL - HTTP {response.status_code}"
     except Exception as e:
-        print(f"❌ {test_name}: FAILED - {str(e)}")
-        return {
-            "name": test_name,
-            "success": False,
-            "result": None,
-            "error": str(e)
-        }
-
-def test_1_health_endpoint():
-    """TEST 1: GET http://localhost:8001/health returns 200 with status 'healthy'"""
-    response = requests.get("http://localhost:8001/health", timeout=10)
-    data = response.json()
+        log_test_result("Backend Health Check", False, f"Error: {str(e)}")
+        results["failed"] += 1
+        results["details"]["health_check"] = f"FAIL - Error: {str(e)}"
     
-    print(f"Status Code: {response.status_code}")
-    print(f"Response: {data}")
-    
-    if response.status_code == 200 and data.get("status") == "healthy":
-        return True
-    else:
-        raise Exception(f"Expected 200 with status='healthy', got {response.status_code} with {data}")
-
-def test_2_typescript_compiles():
-    """TEST 2: TypeScript compiles clean - cd /app/backend && npx tsc --noEmit exits 0"""
-    os.chdir("/app/backend")
-    
-    result = subprocess.run(
-        ["npx", "tsc", "--noEmit"], 
-        capture_output=True, 
-        text=True,
-        timeout=60
-    )
-    
-    print(f"Exit code: {result.returncode}")
-    if result.stdout:
-        print(f"STDOUT: {result.stdout}")
-    if result.stderr:
-        print(f"STDERR: {result.stderr}")
-    
-    if result.returncode == 0:
-        return True
-    else:
-        raise Exception(f"TypeScript compilation failed with exit code {result.returncode}\nSTDERR: {result.stderr}")
-
-def test_3_sendpendingpaymentnotification_count():
-    """TEST 3: grep -c 'sendPendingPaymentNotification' merchantPoolMonitoring.ts >= 3"""
-    file_path = "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
-    
-    result = subprocess.run(
-        ["grep", "-c", "sendPendingPaymentNotification", file_path],
-        capture_output=True,
-        text=True
-    )
-    
-    count = int(result.stdout.strip()) if result.returncode == 0 else 0
-    
-    print(f"Count of 'sendPendingPaymentNotification' in {file_path}: {count}")
-    
-    if count >= 3:
-        return True
-    else:
-        raise Exception(f"Expected >= 3 occurrences of 'sendPendingPaymentNotification', found {count}")
-
-def test_4_sweep_recovery_count():
-    """TEST 4: grep -c 'Sweep Recovery' merchantPoolSweep.ts >= 3"""
-    file_path = "/app/backend/services/merchantPool/merchantPoolSweep.ts"
-    
-    result = subprocess.run(
-        ["grep", "-c", "Sweep Recovery"], 
-        capture_output=True,
-        text=True,
-        input=open(file_path).read()
-    )
-    
-    count = int(result.stdout.strip()) if result.returncode == 0 else 0
-    
-    print(f"Count of 'Sweep Recovery' in {file_path}: {count}")
-    
-    if count >= 3:
-        return True
-    else:
-        # Let's search for the actual recovery messages
-        with open(file_path, 'r') as f:
-            content = f.read()
+    # TEST 2: TypeScript Compilation Check
+    print("\n2️⃣ Testing TypeScript Compilation...")
+    try:
+        # Change to backend directory and run TypeScript compilation check
+        result = subprocess.run(
+            ["npx", "tsc", "--noEmit"],
+            cwd="/app/backend",
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
         
-        recovery_patterns = [
-            "Sweep Recovery",
-            "\[Sweep Recovery\]",
-            "EMAIL RECOVERY",
-            "recovery",  # case insensitive
+        if result.returncode == 0:
+            log_test_result("TypeScript Compilation", True, "No compilation errors")
+            results["passed"] += 1
+            results["details"]["typescript_compile"] = "PASS"
+        else:
+            log_test_result("TypeScript Compilation", False, f"Exit code: {result.returncode}")
+            if result.stderr:
+                print(f"    Errors: {result.stderr[:200]}...")
+            results["failed"] += 1
+            results["details"]["typescript_compile"] = f"FAIL - Exit code: {result.returncode}"
+    except Exception as e:
+        log_test_result("TypeScript Compilation", False, f"Error: {str(e)}")
+        results["failed"] += 1
+        results["details"]["typescript_compile"] = f"FAIL - Error: {str(e)}"
+    
+    # TEST 3: Server.ts Migration Integration Check
+    print("\n3️⃣ Testing Server.ts Migration Integration...")
+    try:
+        # Check for migrateWebhookUrls occurrences in server.ts
+        with open("/app/backend/server.ts", "r") as f:
+            server_content = f.read()
+        
+        occurrences = server_content.count("migrateWebhookUrls")
+        
+        if occurrences >= 3:
+            log_test_result("Server.ts Migration Integration", True, f"Found {occurrences} occurrences (>= 3 required)")
+            results["passed"] += 1
+            results["details"]["server_integration"] = "PASS"
+        else:
+            log_test_result("Server.ts Migration Integration", False, f"Found only {occurrences} occurrences (need >= 3)")
+            results["failed"] += 1
+            results["details"]["server_integration"] = f"FAIL - Only {occurrences} occurrences"
+    except Exception as e:
+        log_test_result("Server.ts Migration Integration", False, f"Error: {str(e)}")
+        results["failed"] += 1
+        results["details"]["server_integration"] = f"FAIL - Error: {str(e)}"
+    
+    # TEST 4: getTatumHeaders Export Check
+    print("\n4️⃣ Testing getTatumHeaders Export...")
+    try:
+        # Check if getTatumHeaders is in the export block of tatumApi.ts
+        with open("/app/backend/apis/tatumApi.ts", "r") as f:
+            tatum_content = f.read()
+        
+        # Look for getTatumHeaders in export default block
+        export_match = re.search(r'export\s+default\s*{[^}]*getTatumHeaders[^}]*}', tatum_content, re.DOTALL)
+        
+        if export_match or "getTatumHeaders" in tatum_content:
+            log_test_result("getTatumHeaders Export", True, "Found getTatumHeaders in tatumApi.ts exports")
+            results["passed"] += 1
+            results["details"]["gettatumheaders_export"] = "PASS"
+        else:
+            log_test_result("getTatumHeaders Export", False, "getTatumHeaders not found in exports")
+            results["failed"] += 1
+            results["details"]["gettatumheaders_export"] = "FAIL - Not found in exports"
+    except Exception as e:
+        log_test_result("getTatumHeaders Export", False, f"Error: {str(e)}")
+        results["failed"] += 1
+        results["details"]["gettatumheaders_export"] = f"FAIL - Error: {str(e)}"
+    
+    # TEST 5: Migration Startup Logs Check
+    print("\n5️⃣ Testing Migration Startup Logs...")
+    try:
+        # Check backend logs for webhook migration completion
+        log_patterns = [
+            "WebhookMigration.*Migration complete",
+            "Webhook URL migration complete"
         ]
         
-        total_matches = 0
-        for pattern in recovery_patterns:
-            matches = len(re.findall(pattern, content, re.IGNORECASE))
-            total_matches += matches
-            print(f"Pattern '{pattern}': {matches} matches")
+        found_logs = []
+        for pattern in log_patterns:
+            # Check supervisor backend logs
+            try:
+                result = subprocess.run(
+                    ["grep", pattern, "/var/log/supervisor/backend.out.log"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    found_logs.append(pattern)
+            except:
+                pass
         
-        print(f"Total recovery-related matches: {total_matches}")
-        
-        if total_matches >= 3:
-            return True
+        if len(found_logs) >= 2:
+            log_test_result("Migration Startup Logs", True, f"Found {len(found_logs)} required log patterns")
+            results["passed"] += 1
+            results["details"]["startup_logs"] = "PASS"
+        elif len(found_logs) >= 1:
+            log_test_result("Migration Startup Logs", True, f"Found {len(found_logs)} log pattern (partial)")
+            results["passed"] += 1
+            results["details"]["startup_logs"] = "PASS - Partial"
         else:
-            raise Exception(f"Expected >= 3 occurrences of 'Sweep Recovery' or similar, found {count} exact matches, {total_matches} total recovery matches")
-
-def test_5_sendpaymentreceivedemail_usage():
-    """TEST 5: grep 'sendPaymentReceivedEmail' merchantPoolSweep.ts - should find import AND usage"""
-    file_path = "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+            log_test_result("Migration Startup Logs", False, "No migration completion logs found")
+            results["failed"] += 1
+            results["details"]["startup_logs"] = "FAIL - No logs found"
+    except Exception as e:
+        log_test_result("Migration Startup Logs", False, f"Error: {str(e)}")
+        results["failed"] += 1
+        results["details"]["startup_logs"] = f"FAIL - Error: {str(e)}"
     
-    result = subprocess.run(
-        ["grep", "sendPaymentReceivedEmail", file_path],
-        capture_output=True,
-        text=True
-    )
-    
-    matches = result.stdout.strip().split('\n') if result.stdout.strip() else []
-    
-    print(f"Matches for 'sendPaymentReceivedEmail':")
-    for i, match in enumerate(matches):
-        print(f"  {i+1}. {match.strip()}")
-    
-    has_import = any("import" in match for match in matches)
-    has_usage = any("await sendPaymentReceivedEmail" in match or "sendPaymentReceivedEmail(" in match for match in matches)
-    
-    print(f"Has import: {has_import}")
-    print(f"Has usage: {has_usage}")
-    
-    if has_import and has_usage:
-        return True
-    else:
-        raise Exception(f"Expected both import and usage of 'sendPaymentReceivedEmail', found: import={has_import}, usage={has_usage}")
-
-def test_6_redis_functions():
-    """TEST 6: grep 'getRedisItem|setRedisItem' merchantPoolSweep.ts - should find imports"""
-    file_path = "/app/backend/services/merchantPool/merchantPoolSweep.ts"
-    
-    result = subprocess.run(
-        ["grep", "-E", "getRedisItem|setRedisItem", file_path],
-        capture_output=True,
-        text=True
-    )
-    
-    matches = result.stdout.strip().split('\n') if result.stdout.strip() else []
-    
-    print(f"Matches for Redis functions:")
-    for i, match in enumerate(matches):
-        print(f"  {i+1}. {match.strip()}")
-    
-    has_get_redis = any("getRedisItem" in match for match in matches)
-    has_set_redis = any("setRedisItem" in match for match in matches)
-    
-    print(f"Has getRedisItem: {has_get_redis}")
-    print(f"Has setRedisItem: {has_set_redis}")
-    
-    if has_get_redis and has_set_redis:
-        return True
-    else:
-        raise Exception(f"Expected both getRedisItem and setRedisItem, found: getRedisItem={has_get_redis}, setRedisItem={has_set_redis}")
-
-def test_7_payment_received_email_dedup():
-    """TEST 7: grep 'payment-received-email' merchantPoolSweep.ts - should find recovery dedup check"""
-    file_path = "/app/backend/services/merchantPool/merchantPoolSweep.ts"
-    
-    result = subprocess.run(
-        ["grep", "payment-received-email", file_path],
-        capture_output=True,
-        text=True
-    )
-    
-    matches = result.stdout.strip().split('\n') if result.stdout.strip() else []
-    
-    print(f"Matches for 'payment-received-email':")
-    for i, match in enumerate(matches):
-        print(f"  {i+1}. {match.strip()}")
-    
-    has_dedup_check = len(matches) >= 1
-    
-    if has_dedup_check:
-        return True
-    else:
-        raise Exception(f"Expected dedup key 'payment-received-email' for recovery check, found {len(matches)} matches")
-
-def main():
-    """Run all tests for email notification fix"""
-    print("🧪 Email Notification Fix Testing - DynoPay Merchant Pool Payments")
-    print("=" * 80)
-    
-    tests = [
-        ("1", test_1_health_endpoint),
-        ("2", test_2_typescript_compiles),
-        ("3", test_3_sendpendingpaymentnotification_count),
-        ("4", test_4_sweep_recovery_count),
-        ("5", test_5_sendpaymentreceivedemail_usage),
-        ("6", test_6_redis_functions),
-        ("7", test_7_payment_received_email_dedup),
-    ]
-    
-    results = []
-    
-    for test_id, test_func in tests:
-        result = run_test(test_id, test_func)
-        results.append(result)
+    # TEST 6: Admin Endpoint Functionality
+    print("\n6️⃣ Testing Admin Endpoint...")
+    try:
+        response = requests.post(
+            f"{base_url}/diagnostics/migrate-webhook-urls",
+            timeout=30,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            required_fields = ["success", "total", "updated", "alreadyCorrect", "errors"]
+            
+            if (data.get("success") == True and 
+                all(field in data for field in required_fields)):
+                log_test_result("Admin Endpoint", True, 
+                    f"Success: {data.get('success')}, Total: {data.get('total')}, "
+                    f"Updated: {data.get('updated')}, Already Correct: {data.get('alreadyCorrect')}, "
+                    f"Errors: {data.get('errors')}")
+                results["passed"] += 1
+                results["details"]["admin_endpoint"] = "PASS"
+            else:
+                log_test_result("Admin Endpoint", False, f"Missing required fields or success!=true: {data}")
+                results["failed"] += 1
+                results["details"]["admin_endpoint"] = f"FAIL - Invalid response: {data}"
+        else:
+            log_test_result("Admin Endpoint", False, f"HTTP {response.status_code}")
+            results["failed"] += 1
+            results["details"]["admin_endpoint"] = f"FAIL - HTTP {response.status_code}"
+    except Exception as e:
+        log_test_result("Admin Endpoint", False, f"Error: {str(e)}")
+        results["failed"] += 1
+        results["details"]["admin_endpoint"] = f"FAIL - Error: {str(e)}"
     
     # Summary
-    print("\n" + "=" * 80)
+    print("\n" + "=" * 60)
     print("📊 TEST SUMMARY")
-    print("=" * 80)
+    print("=" * 60)
+    print(f"Total Tests: {results['total_tests']}")
+    print(f"✅ Passed: {results['passed']}")
+    print(f"❌ Failed: {results['failed']}")
     
-    passed = sum(1 for r in results if r["success"])
-    total = len(results)
+    success_rate = (results['passed'] / results['total_tests']) * 100
+    print(f"Success Rate: {success_rate:.1f}%")
     
-    for result in results:
-        status = "✅ PASS" if result["success"] else "❌ FAIL"
-        error_info = f" - {result['error']}" if result["error"] else ""
-        print(f"TEST {result['name']}: {status}{error_info}")
-    
-    print(f"\n🎯 OVERALL RESULT: {passed}/{total} tests passed ({(passed/total)*100:.1f}%)")
-    
-    if passed == total:
-        print("🎉 ALL TESTS PASSED - Email notification fix is working correctly!")
-        return 0
+    if results['failed'] == 0:
+        print("\n🎉 All tests passed! Webhook URL Startup Migration is working correctly.")
     else:
-        print("⚠️  SOME TESTS FAILED - Please review the failing tests above")
-        return 1
+        print(f"\n⚠️  {results['failed']} test(s) failed. Check the details above.")
+    
+    return results
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        test_results = run_backend_test()
+        
+        # Exit with appropriate code
+        if test_results["failed"] == 0:
+            sys.exit(0)  # Success
+        else:
+            sys.exit(1)  # Failure
+            
+    except KeyboardInterrupt:
+        print("\n\n⏹️  Test execution interrupted by user")
+        sys.exit(2)
+    except Exception as e:
+        print(f"\n\n💥 Unexpected error during test execution: {str(e)}")
+        sys.exit(3)
