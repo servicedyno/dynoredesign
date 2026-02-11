@@ -242,9 +242,10 @@ cron.schedule("0 */2 * * *", function () {
   });
 });
 
-// Merchant Pool: Check for missed webhooks every 5 minutes
+// Merchant Pool: Check for missed webhooks every 10 minutes
 // This is a fallback mechanism when Tatum webhooks fail to deliver
-cron.schedule("*/5 * * * *", async function () {
+// OPTIMIZED: Reduced from 5 min to 10 min — reduces Tatum API calls by ~50%
+cron.schedule("*/10 * * * *", async function () {
   const lockAcquired = await acquireLock("cron:checkMissedPayments", 240, 1);
   if (!lockAcquired) { log("Cron: checkMissedPayments skipped (already running)", "info"); return; }
   try {
