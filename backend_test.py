@@ -47,7 +47,11 @@ def test_2_get_data_usdc_normalization():
             return False, None
             
         data = response.json()
-        available_currencies = data.get("available_currencies", [])
+        # Handle nested data structure
+        if "data" in data and isinstance(data["data"], dict):
+            available_currencies = data["data"].get("available_currencies", [])
+        else:
+            available_currencies = data.get("available_currencies", [])
         
         has_usdc = "USDC" in available_currencies
         has_usdc_erc20 = "USDC-ERC20" in available_currencies
