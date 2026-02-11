@@ -1038,7 +1038,24 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           
           // Get fee_payer mode from original payment link data
           const fee_payer = items.fee_payer || 'company';
-          const baseAmountUSD = Number(items.base_amount || items.amount || 0);
+          const baseAmountRaw = Number(items.base_amount || items.amount || 0);
+          const baseCurrency = items.base_currency || 'USD';
+          
+          // Convert base amount to USD if not already USD (e.g., EUR → USD)
+          let baseAmountUSD = baseAmountRaw;
+          if (baseCurrency !== 'USD') {
+            try {
+              const usdConversionResult = await currencyConvert({
+                from: baseCurrency,
+                to: 'USD',
+                amount: baseAmountRaw,
+              });
+              baseAmountUSD = Number(usdConversionResult?.amount || baseAmountRaw);
+              console.log(`[addPayment] Converted ${baseAmountRaw} ${baseCurrency} → $${baseAmountUSD.toFixed(2)} USD`);
+            } catch (convErr) {
+              console.log(`[addPayment] Currency conversion failed (${baseCurrency}→USD), using raw amount:`, convErr);
+            }
+          }
           
           // Calculate fees using tier-based structure (2% + fixed + buffer)
           let merchant_amount_crypto = 0;
