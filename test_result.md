@@ -5490,12 +5490,12 @@ ports:
 
   - task: "Checkout currency consistency - USDC normalization, tag/memo for XRP/RLUSD"
     implemented: true
-    working: "NA"
+    working: true
     files:
       - "/app/backend/controller/paymentController.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
