@@ -1046,11 +1046,12 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           if (baseCurrency !== 'USD') {
             try {
               const usdConversionResult = await currencyConvert({
-                from: baseCurrency,
-                to: 'USD',
+                currency: ['USD'],
+                sourceCurrency: baseCurrency,
                 amount: baseAmountRaw,
+                fixedDecimal: true,
               });
-              baseAmountUSD = Number(usdConversionResult?.amount || baseAmountRaw);
+              baseAmountUSD = Number(usdConversionResult?.[0]?.amount || baseAmountRaw);
               console.log(`[addPayment] Converted ${baseAmountRaw} ${baseCurrency} → $${baseAmountUSD.toFixed(2)} USD`);
             } catch (convErr) {
               console.log(`[addPayment] Currency conversion failed (${baseCurrency}→USD), using raw amount:`, convErr);
