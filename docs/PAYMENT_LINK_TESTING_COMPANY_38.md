@@ -2,7 +2,7 @@
 **Test Date**: 2026-01-26  
 **User**: richard@dyno.pt (user_id: 28, Johnny LTD)  
 **Company ID**: 38  
-**Backend URL**: https://install-manager-5.preview.emergentagent.com  
+**Backend URL**: https://build-foundation-7.preview.emergentagent.com  
 **Checkout URL**: https://dynocheckoutfix-production.up.railway.app/
 
 ---

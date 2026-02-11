@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://install-manager-5.preview.emergentagent.com/api/docs/
+**URL:** https://build-foundation-7.preview.emergentagent.com/api/docs/
 
 ---
 

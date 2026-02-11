@@ -7,7 +7,7 @@ import requests
 import json
 
 # Get backend URL
-backend_url = "https://install-manager-5.preview.emergentagent.com"
+backend_url = "https://build-foundation-7.preview.emergentagent.com"
 
 # Authenticate first
 login_response = requests.post(

@@ -8,7 +8,7 @@ Follow these simple steps:
 
 ## Step 1: Open Swagger UI
 
-Go to: https://install-manager-5.preview.emergentagent.com/api/docs
+Go to: https://build-foundation-7.preview.emergentagent.com/api/docs
 
 ---
 
