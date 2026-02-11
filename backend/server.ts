@@ -26,6 +26,7 @@ import { getTransactionFee, getBlockchainFee, paymentController } from "./contro
 import sequelize from "./utils/dbInstance";
 import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron, setupRefereeCodeReminderCron, setupPaymentLinkReminderCron } from "./utils/cronJobs";
 import { getOptimizationDiagnostics } from "./services/tronEnergyService";
+import { migrateWebhookUrls } from "./services/migrateWebhookUrls";
 
 // Load environment variables
 dotenv.config();
