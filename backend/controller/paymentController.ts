@@ -3624,8 +3624,8 @@ const verifyCryptoPayment = async (
       });
     }
     
-    // Fallback - try original verification
-    const result = await cryptoVerification(address, false);
+    // Fallback - try original verification with the resolved tag-based key
+    const result = await cryptoVerification(address, false, verifyRedisKey !== `crypto-${address}` ? verifyRedisKey : undefined);
     console.log("result===========>", result, address);
     const { message, status } = result;
     if (status === 500) {
