@@ -105,7 +105,8 @@ def test_startup_log_retention() -> bool:
 
 def test_single_import() -> bool:
     """TEST 8: Single consolidated import"""
-    exit_code, stdout, stderr = run_command("grep -c 'await import(\"./models\")' /app/backend/server.ts")
+    # Count actual import statements, not comments
+    exit_code, stdout, stderr = run_command("grep -c '} = await import(\"./models\")' /app/backend/server.ts")
     if exit_code == 0:
         count = int(stdout.strip())
         if count == 1:
