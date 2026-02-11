@@ -62,6 +62,8 @@ const createTransports = (logFileName: string) => {
       new winston.transports.File({ 
         filename: `logs/${logFileName}`,
         format: combine(timestamp(), json()),
+        maxsize: 10 * 1024 * 1024, // 10MB per file — prevents unbounded disk growth
+        maxFiles: 5,               // Keep max 5 rotated files (50MB total per logger)
       })
     );
   }
