@@ -7321,8 +7321,10 @@ const getConfiguredCurrenciesForCheckout = async (
       wallet_count: configuredWallets.length,
       wallets: configuredWallets.map((w) => {
         const walletData = w.dataValues as { wallet_type: string; wallet_name?: string; wallet_address?: string };
+        // Normalize USDC-ERC20 → USDC for checkout consistency
+        const normalizedType = walletData.wallet_type === 'USDC-ERC20' ? 'USDC' : walletData.wallet_type;
         return {
-          currency: walletData.wallet_type,
+          currency: normalizedType,
           label: walletData.wallet_name,
           address_masked: walletData.wallet_address ? 
             `${walletData.wallet_address.substring(0, 6)}...${walletData.wallet_address.substring(walletData.wallet_address.length - 4)}` : 
