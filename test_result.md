@@ -5488,6 +5488,66 @@ ports:
 
           CONCLUSION: All 7 backend log issues have been successfully fixed and verified through comprehensive code analysis. The fixes address critical Tatum SDK bugs, reduce unnecessary API calls, eliminate noisy error logs, and improve system reliability. All verification requirements from the review request have been satisfied with 100% success rate.
 
+  - task: "Checkout currency consistency - USDC normalization, tag/memo for XRP/RLUSD"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          ANALYSIS OF CHECKOUT CODEBASE (https://github.com/Moxxcompany/CheckoutDyno):
+          
+          FIXES APPLIED (4 backend changes for checkout consistency):
+          
+          FIX 1: USDC-ERC20 → USDC normalization in getData response
+          - Backend stored USDC-ERC20 but checkout cryptoOptions only has value: "USDC"  
+          - available_currencies now returns "USDC" instead of "USDC-ERC20"
+          
+          FIX 2: USDC-ERC20 → USDC normalization in configured-currencies endpoint
+          - configured_currencies and wallets now show "USDC" not "USDC-ERC20"
+          
+          FIX 3: USDC → USDC-ERC20 normalization in createCryptoPayment
+          - Checkout sends "USDC" but wallet lookup needs "USDC-ERC20"
+          - Added currencyAliasMap to resolve USDC → USDC-ERC20 for internal processing
+          - Validation now checks both original and internal currency names
+          
+          FIX 4: USDC normalization in calculateCheckoutFees
+          - Accepts "USDC" from checkout and normalizes to "USDC-ERC20" internally
+          
+          CHECKOUT FRONTEND OBSERVATIONS (already handled by checkout code):
+          ✅ memo field extraction: result?.memo || result?.tag || result?.destination_tag || result?.dt
+          ✅ requiresMemo() checks XRP and RLUSD-XRPL
+          ✅ Memo/Tag UI with copy button and warning  
+          ✅ USDT network selection (TRC20/ERC20/POLYGON)
+          ✅ RLUSD network selection (XRPL/ERC20)
+          
+          TESTS:
+          TEST 1: Backend health - GET http://localhost:8001/api/status/health → 200 "healthy"
+          
+          TEST 2: getData returns USDC (not USDC-ERC20) in available_currencies
+          - POST http://localhost:8001/api/pay/getData with body {"data":"0cc0c446d0c98198c2086b14b42785898b6f7144359ff93e"}
+          - Response available_currencies should contain "USDC" and NOT "USDC-ERC20"
+          
+          TEST 3: configured-currencies returns USDC (not USDC-ERC20)
+          - Need payment token from getData first, then GET /api/pay/configured-currencies
+          - configured_currencies should contain "USDC" not "USDC-ERC20"
+          
+          TEST 4: USDC alias normalization in createCryptoPayment
+          - grep 'currencyAliasMap' /app/backend/controller/paymentController.ts — should find USDC → USDC-ERC20 mapping
+          
+          TEST 5: USDC normalization in calculateCheckoutFees  
+          - grep "crypto === 'USDC'" /app/backend/controller/paymentController.ts — should find normalization
+          
+          TEST 6: No compilation errors
+          - tail -10 /var/log/supervisor/backend.err.log — should have no TypeScript errors
+          
+          Base URL: http://localhost:8001
+
   - task: "Add memo field to /pay/addPayment response for XRP and RLUSD-XRPL payments"
     implemented: true
     working: true
