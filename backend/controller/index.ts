@@ -208,13 +208,23 @@ export const calculateTransactionFeesWithDiscount = async (
     id?: number;
   }
   const tiers = (config.tiers || []) as FeeTierDiscount[];
-  const matchingTier = tiers.find(
+  const matchingTierDiscount = tiers.find(
     (tier: FeeTierDiscount) =>
       amount >= tier.min_amount &&
       (tier.max_amount === null || amount <= tier.max_amount)
   );
 
-  if (!matchingTier) {
+  // Fallback: if amount is below the lowest tier, use the lowest tier
+  const effectiveTierDiscount = matchingTierDiscount || (() => {
+    const sortedTiers = [...tiers].sort((a: FeeTierDiscount, b: FeeTierDiscount) => a.min_amount - b.min_amount);
+    if (sortedTiers[0] && amount > 0) {
+      console.warn(`[calculateTransactionFeesWithDiscount] No exact tier for amount ${amount}, using lowest tier (min=${sortedTiers[0].min_amount})`);
+      return sortedTiers[0];
+    }
+    return null;
+  })();
+
+  if (!effectiveTierDiscount) {
     throw new Error(`No fee tier found for amount ${amount}`);
   }
 
@@ -223,7 +233,7 @@ export const calculateTransactionFeesWithDiscount = async (
   const discountPercent = discountInfo.discount_percent || 0;
 
   // Calculate fees directly in native currency
-  const fixedFee = matchingTier.fixed_fee;
+  const fixedFee = effectiveTierDiscount.fixed_fee;
   const baseTransactionFeePercent = config.transaction_fee_percent;
   
   // Apply discount to transaction fee percentage
@@ -233,7 +243,7 @@ export const calculateTransactionFeesWithDiscount = async (
   
   const transactionFee = (amount * discountedFeePercent) / 100;
   const blockchainBuffer =
-    (amount * matchingTier.blockchain_buffer_percent) / 100;
+    (amount * effectiveTierDiscount.blockchain_buffer_percent) / 100;
 
   const totalDeduction = fixedFee + transactionFee + blockchainBuffer;
   const userReceives = amount - totalDeduction;
@@ -245,7 +255,7 @@ export const calculateTransactionFeesWithDiscount = async (
     blockchainBuffer,
     totalDeduction,
     userReceives,
-    tierId: matchingTier.id ?? 0,
+    tierId: effectiveTierDiscount.id ?? 0,
     minForwarding: config.min_forwarding_amount,
     // Discount info
     discountApplied: discountPercent > 0,
