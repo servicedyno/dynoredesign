@@ -7237,6 +7237,13 @@ const getConfiguredCurrenciesForCheckout = async (
       currencies = currencies.filter(c => acceptedCurrenciesFilter!.includes(c));
     }
     
+    // Normalize USDC-ERC20 → USDC for checkout compatibility
+    // The checkout frontend only knows about "USDC" (no network selection needed since USDC only runs on ERC-20)
+    // This ensures the checkout's cryptoOptions (which has value: "USDC") can match the configured currency
+    currencies = currencies.map(c => c === 'USDC-ERC20' ? 'USDC' : c);
+    // De-duplicate after normalization
+    currencies = [...new Set(currencies)];
+    
     console.log(`[getConfiguredCurrenciesForCheckout] Found ${currencies.length} currencies: ${currencies.join(', ')}`);
     
     let feeInfo = {
