@@ -3534,4 +3534,5 @@ export default {
   verifyXrpTrustLine,
   getXrpDestinationTag,
   tatumXrpRpc,
+  getTatumHeaders,
 };
