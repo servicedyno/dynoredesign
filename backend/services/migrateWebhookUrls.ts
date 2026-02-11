@@ -73,23 +73,6 @@ interface MigrationStats {
   }>;
 }
 
-// ── Tatum header helper (re-use from tatumApi) ─────────────────────
-
-/**
- * We cannot import getTatumHeaders directly (not exported), so we
- * call listAllSubscriptions which already handles auth, and for the
- * PUT calls we use the same key via env.
- */
-const getTatumApiKey = (): string => {
-  return process.env.TATUM_API_KEY || "";
-};
-
-const buildHeaders = (): Record<string, string> => {
-  const key = getTatumApiKey();
-  if (!key) throw new Error("TATUM_API_KEY is not set in .env");
-  return { "x-api-key": key };
-};
-
 // ── core logic ─────────────────────────────────────────────────────
 
 export const migrateWebhookUrls = async (): Promise<MigrationStats> => {
@@ -105,7 +88,7 @@ export const migrateWebhookUrls = async (): Promise<MigrationStats> => {
     details: [],
   };
 
-  // 1. Fetch all subscriptions via the existing helper
+  // 1. Fetch all subscriptions via the existing helper (handles auth internally)
   let subscriptions: Array<Record<string, unknown>>;
   try {
     subscriptions = await tatumApi.listAllSubscriptions();
@@ -123,13 +106,13 @@ export const migrateWebhookUrls = async (): Promise<MigrationStats> => {
     return stats;
   }
 
-  // 2. Build headers for PUT calls
+  // 2. Get Tatum headers (same auth used by all other API calls)
   let headers: Record<string, string>;
   try {
-    headers = buildHeaders();
+    headers = await tatumApi.getTatumHeaders();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[WebhookMigration] ❌ ${msg}`);
+    console.error(`[WebhookMigration] ❌ Failed to get Tatum headers: ${msg}`);
     throw err;
   }
 
