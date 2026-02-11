@@ -1317,8 +1317,10 @@ const createCryptoPayment = async (
       
       // Normalize checkout currency aliases to internal wallet types
       // Checkout sends "USDC" but wallets are stored as "USDC-ERC20"
+      // Checkout sends "RLUSD-XRPL" but wallets are stored as "RLUSD"
       const currencyAliasMap: Record<string, string> = {
         'USDC': 'USDC-ERC20',
+        'RLUSD-XRPL': 'RLUSD',
       };
       const internalCurrency = currencyAliasMap[requestedCurrency] || requestedCurrency;
       
