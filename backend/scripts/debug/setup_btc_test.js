@@ -44,7 +44,7 @@ async function setup() {
     console.log("✅ Address registered in database");
     
     // Create webhook
-    const webhookUrl = "https://code-analyzer-261.preview.emergentagent.com/api/tatum-crypto-webhook";
+    const webhookUrl = "https://setup-deps-7.preview.emergentagent.com/api/tatum-crypto-webhook";
     const subRes = await axios.post(
       "https://api.tatum.io/v3/subscription",
       {
