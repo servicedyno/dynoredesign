@@ -420,6 +420,25 @@ const processAddress = async (addr: any, result: {
             const processedTxKey = `processed-tx-${savedTxId}`;
             await deleteRedisItem(processedTxKey);
             
+            // FIX: Send pending notification for failed payment recovery too
+            try {
+              const { sendPendingPaymentNotification } = await import("../pendingPaymentService");
+              await sendPendingPaymentNotification(
+                walletAddress,
+                savedTxId,
+                savedReceivedAmount,
+                walletType,
+                {
+                  adm_id: ownerId,
+                  company_id: companyId,
+                }
+              );
+              console.log(`[MerchantPool] 📧 Pending notification sent for recovered payment on ${walletAddress}`);
+            } catch (notifError: unknown) {
+              const notifErr = notifError as { message?: string };
+              console.warn(`[MerchantPool] ⚠️ Failed to send pending notification (non-critical): ${notifErr?.message}`);
+            }
+
             // Directly call cryptoVerification — all data is in Redis
             try {
               const verificationResult = await paymentController.cryptoVerification(walletAddress, true, cryptoRedisKey) as { duplicate?: boolean; status?: number; paymentStatus?: string };
