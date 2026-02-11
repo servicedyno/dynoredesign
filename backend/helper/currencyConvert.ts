@@ -439,7 +439,7 @@ const normalizeCurrency = (currency: string): string => {
   if (upper.includes("USDC")) return "USDC";
   if (upper.includes("TRON") || upper === "TRX") return "TRX";
   if (upper.includes("BSC") || upper === "BNB") return "BNB";
-  if (upper === "RLUSD" || upper === "RLUSD-ERC20") return "RLUSD";
+  if (upper === "RLUSD" || upper === "RLUSD-ERC20" || upper === "RLUSD-XRPL") return "RLUSD";
   if (upper === "POLYGON" || upper === "MATIC") return "MATIC";
   return upper;
 };
