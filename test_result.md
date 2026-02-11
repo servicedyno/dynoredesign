@@ -7,6 +7,36 @@
 user_problem_statement: "XRP/RLUSD tag implementation, gas wallet separation, and fee alert expansion"
 
 current_test_task:
+  - task: "Fix Fee Tier Gap (No tier for amount < $5) + PayloadTooLargeError"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/.env"
+      - "/app/backend/controller/index.ts"
+      - "/app/backend/server.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          BUG 1: "No fee tier found for amount 1" - FEE_TIER_1_MIN was 5, so $1-$4.99 had no tier.
+          FIX: Changed FEE_TIER_1_MIN from 5 to 0 in .env. Also added defensive fallback in 
+          calculateTransactionFees and calculateTransactionFeesWithDiscount - if no exact tier matches,
+          uses the lowest available tier (sorted by min_amount) instead of throwing.
+          
+          BUG 2: "PayloadTooLargeError: request entity too large" - Express default 100kb limit.
+          FIX: Changed express.json() to express.json({ limit: '10mb' }) and added 
+          express.urlencoded({ extended: true, limit: '10mb' }) in server.ts.
+          
+          TESTS:
+          TEST 1: GET http://localhost:8001/health returns 200 with status "healthy"
+          TEST 2: Verify FEE_TIER_1_MIN=0 in .env: grep FEE_TIER_1_MIN /app/backend/.env
+          TEST 3: Verify fallback logic in controller/index.ts: grep 'effectiveTier' /app/backend/controller/index.ts should find >= 4 occurrences
+          TEST 4: Verify body parser limit: grep "limit.*10mb" /app/backend/server.ts finds the config
+          TEST 5: Verify express.urlencoded added: grep "urlencoded" /app/backend/server.ts finds the config
+          Base URL: http://localhost:8001
   - task: "Fix Missing Payment Email Notifications (Pending + Confirmed) for Merchant Pool Payments"
     implemented: true
     working: true
