@@ -359,7 +359,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       }
       throw balanceError;
     }
-    const actualBalance = parseFloat(balanceData?.balance || "0");
+    let actualBalance = parseFloat(balanceData?.balance || "0");
 
     if (actualBalance <= 0) {
       await poolAddress.update({
