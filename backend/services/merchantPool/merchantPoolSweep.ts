@@ -440,9 +440,14 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       //   Base reserve: 1 XRP per account (was 10 XRP)
       //   Owner reserve: 0.2 XRP per trust line (was 2 XRP)
       // See: https://xrpl.org/blog/2024/lower-reserves-are-in-effect
+      // NOTE: The XRP master pool address may have RLUSD trust lines, so we must always
+      // account for potential owner reserves even when sweeping XRP.
       let accountReserve = 0;
       if (walletType === 'XRP') {
-        accountReserve = 1; // 1 XRP base reserve (post Dec 2024)
+        // Use 1.2 XRP reserve (base + 1 trust line for RLUSD) since the master pool address
+        // is shared between XRP and RLUSD. If the address has no trust lines, the extra 0.2
+        // is just a safety margin. This prevents "Insufficient XRP balance" errors.
+        accountReserve = 1.2; // 1 XRP base + 0.2 XRP RLUSD trust line reserve
       } else if (walletType === 'RLUSD') {
         accountReserve = 1.2; // 1 XRP base reserve + 0.2 XRP trust line reserve (post Dec 2024)
       }
