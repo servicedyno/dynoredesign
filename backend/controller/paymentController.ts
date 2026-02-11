@@ -4715,7 +4715,9 @@ const getCurrencyRates = async (
                 processing_fee: convertedTotalFees,
                 processing_fee_usd: roundedTotalFeesUSD,
                 total_amount: convertedTotalAmount,
-                total_amount_usd: roundedTotalAmountUSD,
+                // IMPORTANT: Checkout reads total_amount_usd first and multiplies by transferRate (1 for same currency)
+                // So total_amount_usd MUST be in source currency for correct display
+                total_amount_usd: totalAmountSourceCurrency,
                 total_amount_source: totalAmountSourceCurrency, // Total in SOURCE currency (e.g., EUR) for display
                 // Use the properly converted amount for display
                 amount: convertedTotalAmount,
