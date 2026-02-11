@@ -4697,7 +4697,11 @@ const getCurrencyRates = async (
               const convertedTaxAmount = parseFloat((taxAmountNum * exchangeRate).toFixed(2));
               const convertedTotalAmount = parseFloat((roundedTotalAmountUSD * exchangeRate).toFixed(2));
               
-              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=${amount} ${source} ($${amountUSD.toFixed(2)} USD) = ${convertedBaseAmount} ${rate.currency}, tax=$${taxAmountNum.toFixed(2)} USD = ${convertedTaxAmount} ${rate.currency}, fees=$${roundedTotalFeesUSD.toFixed(2)} USD = ${convertedTotalFees} ${rate.currency}, total=$${roundedTotalAmountUSD.toFixed(2)} USD = ${convertedTotalAmount} ${rate.currency}`);
+              // Convert total back to source currency for total_amount_source
+              const usdToSourceRate = amountUSD > 0 ? amount / amountUSD : 1;
+              const totalAmountSourceCurrency = parseFloat((roundedTotalAmountUSD * usdToSourceRate).toFixed(2));
+              
+              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=${amount} ${source} ($${amountUSD.toFixed(2)} USD) = ${convertedBaseAmount} ${rate.currency}, tax=$${taxAmountNum.toFixed(2)} USD = ${convertedTaxAmount} ${rate.currency}, fees=$${roundedTotalFeesUSD.toFixed(2)} USD = ${convertedTotalFees} ${rate.currency}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSourceCurrency.toFixed(2)} ${source}) = ${convertedTotalAmount} ${rate.currency}`);
               
               return {
                 ...rate,
@@ -4712,7 +4716,7 @@ const getCurrencyRates = async (
                 processing_fee_usd: roundedTotalFeesUSD,
                 total_amount: convertedTotalAmount,
                 total_amount_usd: roundedTotalAmountUSD,
-                total_amount_source: roundedTotalAmountUSD,
+                total_amount_source: totalAmountSourceCurrency, // Total in SOURCE currency (e.g., EUR) for display
                 // Use the properly converted amount for display
                 amount: convertedTotalAmount,
               };
