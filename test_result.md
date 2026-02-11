@@ -6282,14 +6282,14 @@ ports:
 
   - task: "Railway Usage Optimization Phase 2 — Health Check DB Retention + Startup Import Consolidation"
     implemented: true
-    working: unknown
+    working: true
     files:
       - "/app/backend/services/monitoringService.ts"
       - "/app/backend/utils/cronJobs.ts"
       - "/app/backend/server.ts"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -6322,4 +6322,45 @@ ports:
           TEST 8: Single import — grep -c 'await import("./models")' /app/backend/server.ts should return exactly 1
           TEST 9: All models in single import — grep 'refereeCodeModel\|userModel' /app/backend/server.ts should show them in the same import block (not separate await import calls)
           Base URL: http://localhost:8001
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ RAILWAY USAGE OPTIMIZATION PHASE 2 TESTING COMPLETED: 100% SUCCESS (9/9 tests passed)
+          
+          🎉 ALL 9 VERIFICATION REQUIREMENTS SUCCESSFULLY VALIDATED:
+          
+          ✅ TEST 1 - BACKEND HEALTH: GET http://localhost:8001/health returns 200 with status="healthy"
+            - Response: {"status":"healthy","service":"Dynopay Backend","database":"connected","uptime":215.25}
+          ✅ TEST 2 - TYPESCRIPT COMPILATION: npx tsc --noEmit exits with code 0, no compilation errors
+          ✅ TEST 3 - HEALTH CHECK FREQUENCY: Found 15-minute schedule pattern "*/15 * * * *" in cronJobs.ts
+            - Successfully reduced from */5 (every 5 min) to */15 (every 15 min) = 3x fewer DB writes
+          ✅ TEST 4 - RETENTION CLEANUP FUNCTION: pruneOldHealthChecks function found in monitoringService.ts
+            - Function deletes tbl_service_health records older than 7 days
+          ✅ TEST 5 - DAILY PRUNE CRON: Schedule "0 3 * * *" found calling monitoringService.pruneOldHealthChecks()
+            - Daily cleanup at 3:00 AM UTC prevents unbounded table growth
+          ✅ TEST 6 - STARTUP LOG 15MIN CONFIRMATION: Found "every 15 minutes" in backend startup logs
+            - Confirms health check cron is properly scheduled on server startup
+          ✅ TEST 7 - STARTUP LOG RETENTION CONFIRMATION: Found "7-day retention" in backend startup logs
+            - Confirms retention cleanup cron is properly scheduled on server startup
+          ✅ TEST 8 - SINGLE CONSOLIDATED IMPORT: Exactly 1 'await import("./models")' found in server.ts
+            - Successfully consolidated 3 separate imports into 1 (reduces cold start overhead)
+          ✅ TEST 9 - ALL MODELS IN SINGLE IMPORT: All models found in same destructured import block
+            - refereeCodeModel, userModel, merchantWalletModel all in single import (lines 334-345)
+          
+          🔧 IMPLEMENTATION VERIFICATION RESULTS:
+          1. ✅ Health Check Optimization: Frequency reduced from */5 to */15 minutes (3x fewer DB writes)
+          2. ✅ Database Retention: pruneOldHealthChecks() deletes records older than 7 days  
+          3. ✅ Automatic Cleanup: Daily cron at 3:00 AM UTC prevents unbounded table growth
+          4. ✅ Startup Consolidation: Single import reduces module resolution overhead during cold starts
+          5. ✅ Logging Confirmation: Both optimizations confirmed in startup logs
+          6. ✅ Code Quality: TypeScript compilation clean with no errors
+          7. ✅ Backend Health: All services operational with proper database connectivity
+          
+          📊 RAILWAY OPTIMIZATION IMPACT:
+          - Health Check DB Writes: 1,440 → 480 rows/day (66.7% reduction)
+          - Max Table Size: Unbounded growth → ~3,360 rows (7 days × 480/day)
+          - Module Resolution: 3 separate imports → 1 consolidated import (cold start optimization)
+          - Daily Cleanup: Automatic pruning prevents long-term storage bloat
+          
+          CONCLUSION: Railway Usage Optimization Phase 2 is fully operational and production-ready. All 9 verification requirements from the review request have been successfully validated. The system now operates with significantly reduced database operations (3x fewer health check writes) and optimized startup performance (consolidated imports), directly reducing Railway compute costs while maintaining all health monitoring functionality.
 
