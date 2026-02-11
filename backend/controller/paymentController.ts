@@ -4779,7 +4779,9 @@ const getCurrencyRates = async (
               processing_fee: processingFeeSource,
               processing_fee_usd: roundedTotalFeesUSD,
               total_amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto,
-              total_amount_usd: roundedTotalAmountUSD,
+              // IMPORTANT: Checkout reads total_amount_usd first and multiplies by transferRate (1 for same currency)
+              // So total_amount_usd MUST be in source currency for correct display
+              total_amount_usd: totalAmountSource,
               total_amount_source: totalAmountSource, // Total in SOURCE currency (e.g., EUR) for display
               amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto, // Override amount with total
             };
