@@ -181,7 +181,7 @@ export const calculateTransactionFees = async (
     blockchainBuffer,
     totalDeduction,
     userReceives,
-    tierId: matchingTier.id ?? 0,
+    tierId: effectiveTier.id ?? 0,
     minForwarding: config.min_forwarding_amount,
   };
 };
