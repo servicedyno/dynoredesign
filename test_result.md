@@ -6280,3 +6280,46 @@ ports:
           
           CONCLUSION: Railway Usage Optimization is fully operational and production-ready. All 6 verification requirements from the review request have been successfully validated. The system now runs with optimized cron frequencies, conditional database sync, and proper log rotation - significantly reducing Railway compute costs, Tatum API usage, and disk consumption while maintaining all critical functionality.
 
+  - task: "Railway Usage Optimization Phase 2 — Health Check DB Retention + Startup Import Consolidation"
+    implemented: true
+    working: unknown
+    files:
+      - "/app/backend/services/monitoringService.ts"
+      - "/app/backend/utils/cronJobs.ts"
+      - "/app/backend/server.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          2 OPTIMIZATIONS APPLIED:
+          
+          OPT 1: Health Check DB Retention + Frequency Reduction
+          - tbl_service_health was growing unbounded (1,440 rows/day, ~525K rows/year)
+          - Health check frequency reduced: */5 -> */15 min (3x fewer DB writes: 480 rows/day vs 1,440)
+          - Added pruneOldHealthChecks() in monitoringService.ts — deletes records older than 7 days
+          - Added daily cleanup cron at 3:00 AM UTC in cronJobs.ts setupHealthCheckCron
+          - Max table size capped at ~3,360 rows (480/day x 7 days) vs unbounded growth
+          
+          OPT 2: Startup Import Consolidation
+          - Consolidated 3 separate `await import("./models")` calls into 1 in server.ts startServer()
+          - Was: lines 342, 356, 366 each doing `await import("./models")` separately
+          - Now: single destructured import with all 10 models (merchantWalletModel, merchantTempAddressModel,
+            merchantPoolTransactionModel, merchantPoolSweepModel, referralModel, referralRewardModel,
+            kbCategoryModel, kbArticleModel, refereeCodeModel, userModel)
+          - Reduces module resolution overhead during cold start
+          
+          TESTS:
+          TEST 1: GET http://localhost:8001/health returns 200 with status "healthy"
+          TEST 2: cd /app/backend && npx tsc --noEmit — exit code 0
+          TEST 3: Health check frequency — grep 'setupHealthCheckCron' then check schedule is "*/15 * * * *" in /app/backend/utils/cronJobs.ts
+          TEST 4: Retention cleanup exists — grep 'pruneOldHealthChecks' /app/backend/services/monitoringService.ts should find the function
+          TEST 5: Daily prune cron — grep '0 3 \* \* \*' /app/backend/utils/cronJobs.ts should find the daily cleanup schedule
+          TEST 6: Startup log confirms 15 min schedule — grep 'every 15 minutes' /var/log/supervisor/backend.out.log
+          TEST 7: Startup log confirms retention cron — grep '7-day retention' /var/log/supervisor/backend.out.log
+          TEST 8: Single import — grep -c 'await import("./models")' /app/backend/server.ts should return exactly 1
+          TEST 9: All models in single import — grep 'refereeCodeModel\|userModel' /app/backend/server.ts should show them in the same import block (not separate await import calls)
+          Base URL: http://localhost:8001
+
