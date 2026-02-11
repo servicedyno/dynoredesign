@@ -1309,7 +1309,14 @@ const createCryptoPayment = async (
       }
 
       // Phase 11: Validate requested currency is in available_currencies list
-      const requestedCurrency = data.currency;
+      let requestedCurrency = data.currency;
+      
+      // Normalize checkout currency aliases to internal wallet types
+      // Checkout sends "USDC" but wallets are stored as "USDC-ERC20"
+      const currencyAliasMap: Record<string, string> = {
+        'USDC': 'USDC-ERC20',
+      };
+      const internalCurrency = currencyAliasMap[requestedCurrency] || requestedCurrency;
       
       // Parse available_currencies - could be array or comma-separated string from Redis
       let availableCurrenciesList: string[] = [];
@@ -1322,16 +1329,20 @@ const createCryptoPayment = async (
       }
       
       if (availableCurrenciesList.length > 0) {
-        if (!availableCurrenciesList.includes(requestedCurrency)) {
-          console.log(`[Phase 11] Currency ${requestedCurrency} not in available list:`, availableCurrenciesList);
+        // Check both the original and internal currency names for validation
+        if (!availableCurrenciesList.includes(requestedCurrency) && !availableCurrenciesList.includes(internalCurrency)) {
+          console.log(`[Phase 11] Currency ${requestedCurrency} (internal: ${internalCurrency}) not in available list:`, availableCurrenciesList);
           return errorResponseHelper(
             res,
             400,
             `${requestedCurrency} is not available for this payment. Available currencies: ${availableCurrenciesList.join(', ')}`
           );
         }
-        console.log(`[Phase 11] Currency ${requestedCurrency} validated against available list:`, availableCurrenciesList);
+        console.log(`[Phase 11] Currency ${requestedCurrency} (internal: ${internalCurrency}) validated against available list:`, availableCurrenciesList);
       }
+      
+      // Use internal currency name for wallet lookup and payment processing
+      requestedCurrency = internalCurrency;
 
       // PHASE 12: Check for existing incomplete payment - prevent currency switching
       // This ensures customer completes partial payment on same currency before switching
