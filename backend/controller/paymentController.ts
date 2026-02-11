@@ -3249,66 +3249,35 @@ const verifyCryptoPayment = async (
 ) => {
   try {
     const { address, destination_tag } = req.body;
+    const userData = jwt.decode(res.locals.token) as { ref?: string; transaction_id?: string; [key: string]: unknown } | null;
     
-    console.log("[verifyCryptoPayment] Checking address:", address, destination_tag ? `tag: ${destination_tag}` : '');
+    console.log("[verifyCryptoPayment] Checking address:", address, destination_tag ? `tag: ${destination_tag}` : '', `session: ${userData?.ref || 'unknown'}`);
     
-    // First check Redis for current payment status
-    let verifyRedisKey = destination_tag ? getCryptoRedisKey(address, Number(destination_tag)) : `crypto-${address}`;
-    let tempData = await getRedisItem(verifyRedisKey);
+    // SECURE: Resolve destination_tag from customer session if not provided
+    // For tag-based chains (XRP, RLUSD), the same master address handles many concurrent payments.
+    // The only secure way to identify the correct payment is via the destination_tag,
+    // which is stored in the customer session (customer-{ref}) under active_crypto_address.
+    let resolvedTag = destination_tag ? Number(destination_tag) : null;
     
-    // If no data found and no destination_tag provided, try scanning for tag-based keys
-    // This handles the case where checkout doesn't send destination_tag for XRP/tag-based chains
-    if ((!tempData || Object.keys(tempData).length === 0) && !destination_tag) {
+    if (!resolvedTag && userData?.ref) {
       try {
-        const { redis } = require("../utils/redisInstance");
-        const tagPattern = `crypto-${address}-tag-*`;
-        // Try both JSON and hash variants
-        const jsonPattern = `crypto-${address}-tag-*:json`;
-        const [tagKeys, jsonKeys] = await Promise.all([
-          redis.keys(tagPattern),
-          redis.keys(jsonPattern),
-        ]);
-        
-        // Combine and deduplicate (strip :json suffix)
-        const allKeys = new Set<string>();
-        if (tagKeys?.length) tagKeys.forEach((k: string) => { if (!k.endsWith(':json')) allKeys.add(k); });
-        if (jsonKeys?.length) jsonKeys.forEach((k: string) => allKeys.add(k.replace(':json', '')));
-        
-        if (allKeys.size > 0) {
-          // Find the best matching key - prefer ones with txId (confirmed payments) 
-          // or completed/confirmed status over pending/waiting
-          let bestKey = '';
-          let bestData: any = null;
-          const statusPriority: Record<string, number> = { 'confirmed': 4, 'completed': 3, 'partial': 2, 'pending': 1, 'waiting': 0 };
-          
-          for (const candidateKey of allKeys) {
-            const candidateData = await getRedisItem(candidateKey);
-            if (!candidateData || Object.keys(candidateData).length === 0) continue;
-            
-            const candidateStatus = candidateData?.status || 'waiting';
-            const candidatePriority = statusPriority[candidateStatus] ?? 0;
-            const bestStatus = bestData?.status || 'waiting';
-            const bestPriority = statusPriority[bestStatus] ?? 0;
-            
-            // Pick this key if it has higher priority status, or has txId when current best doesn't
-            if (!bestData || candidatePriority > bestPriority || (candidateData?.txId && !bestData?.txId)) {
-              bestKey = candidateKey;
-              bestData = candidateData;
-            }
-          }
-          
-          if (bestKey && bestData) {
-            console.log(`[verifyCryptoPayment] Found tag-based key: ${bestKey} (status: ${bestData?.status}, from ${allKeys.size} matches)`);
-            verifyRedisKey = bestKey;
-            tempData = bestData;
-          }
+        const customerSessionKey = `customer-${userData.ref}`;
+        const customerSession = await getRedisItem(customerSessionKey);
+        const sessionTag = customerSession?.active_crypto_address?.destination_tag;
+        if (sessionTag) {
+          resolvedTag = Number(sessionTag);
+          console.log(`[verifyCryptoPayment] Resolved destination_tag ${resolvedTag} from session ${customerSessionKey}`);
         }
-      } catch (scanErr) {
-        console.log("[verifyCryptoPayment] Tag scan error:", scanErr);
+      } catch (sessionErr) {
+        console.log("[verifyCryptoPayment] Session lookup error:", sessionErr);
       }
     }
     
-    console.log("[verifyCryptoPayment] Redis data:", tempData?.status, tempData?.txId ? "has txId" : "no txId");
+    // Build Redis key using resolved tag (secure, session-specific)
+    const verifyRedisKey = resolvedTag ? getCryptoRedisKey(address, resolvedTag) : `crypto-${address}`;
+    const tempData = await getRedisItem(verifyRedisKey);
+    
+    console.log("[verifyCryptoPayment] Redis key:", verifyRedisKey, "data:", tempData?.status, tempData?.txId ? "has txId" : "no txId");
     
     if (!tempData || Object.keys(tempData).length === 0) {
       // No payment data found - payment hasn't been initiated or address is invalid
