@@ -35,7 +35,8 @@ dotenv.config();
 // RAILWAY LOGGING FIX: Disable output buffering
 // This ensures logs appear immediately in Railway's deploy logs
 // ============================================
-if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
+const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
+if (isProduction) {
   // Force unbuffered output for Railway
   if (process.stdout.isTTY === false) {
     const originalWrite = process.stdout.write.bind(process.stdout);
