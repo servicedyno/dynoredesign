@@ -232,10 +232,10 @@ cron.schedule("*/15 * * * *", function () {
   merchantPoolService.cleanupStaleAddresses();
 });
 
-// Merchant Pool: Subscription health monitor every 30 minutes
+// Merchant Pool: Subscription health monitor every 2 hours
 // Ensures all pool addresses have valid Tatum webhook subscriptions
-// Cost: ~2 credits per check (minimal)
-cron.schedule("*/30 * * * *", function () {
+// OPTIMIZED: Reduced from 30 min to 2h — subscriptions rarely break on their own
+cron.schedule("0 */2 * * *", function () {
   log("Cron: ensurePoolSubscriptions running", "info");
   merchantPoolService.ensurePoolSubscriptions().catch(err => {
     log(`Cron: Subscription health check failed: ${err.message}`, "error");
