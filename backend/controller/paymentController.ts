@@ -3253,8 +3253,38 @@ const verifyCryptoPayment = async (
     console.log("[verifyCryptoPayment] Checking address:", address, destination_tag ? `tag: ${destination_tag}` : '');
     
     // First check Redis for current payment status
-    const verifyRedisKey = destination_tag ? getCryptoRedisKey(address, Number(destination_tag)) : `crypto-${address}`;
-    const tempData = await getRedisItem(verifyRedisKey);
+    let verifyRedisKey = destination_tag ? getCryptoRedisKey(address, Number(destination_tag)) : `crypto-${address}`;
+    let tempData = await getRedisItem(verifyRedisKey);
+    
+    // If no data found and no destination_tag provided, try scanning for tag-based keys
+    // This handles the case where checkout doesn't send destination_tag for XRP/tag-based chains
+    if ((!tempData || Object.keys(tempData).length === 0) && !destination_tag) {
+      try {
+        const { redis } = require("../utils/redisInstance");
+        const tagPattern = `crypto-${address}-tag-*`;
+        // Try both JSON and hash variants
+        const jsonPattern = `crypto-${address}-tag-*:json`;
+        const [tagKeys, jsonKeys] = await Promise.all([
+          redis.keys(tagPattern),
+          redis.keys(jsonPattern),
+        ]);
+        
+        // Combine and deduplicate (strip :json suffix)
+        const allKeys = new Set<string>();
+        if (tagKeys?.length) tagKeys.forEach((k: string) => { if (!k.endsWith(':json')) allKeys.add(k); });
+        if (jsonKeys?.length) jsonKeys.forEach((k: string) => allKeys.add(k.replace(':json', '')));
+        
+        if (allKeys.size > 0) {
+          // Use the most recent key (last one found)
+          const foundKey = Array.from(allKeys)[allKeys.size - 1];
+          console.log(`[verifyCryptoPayment] Found tag-based key: ${foundKey} (from ${allKeys.size} matches)`);
+          verifyRedisKey = foundKey;
+          tempData = await getRedisItem(foundKey);
+        }
+      } catch (scanErr) {
+        console.log("[verifyCryptoPayment] Tag scan error:", scanErr);
+      }
+    }
     
     console.log("[verifyCryptoPayment] Redis data:", tempData?.status, tempData?.txId ? "has txId" : "no txId");
     
