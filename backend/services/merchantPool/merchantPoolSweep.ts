@@ -598,6 +598,87 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         }
       } catch (emailError) {
         console.error(`[MerchantPool] ⚠️ Admin sweep email failed (non-critical):`, emailError);
+
+      // ===== EMAIL RECOVERY (FIX) =====
+      // When a payment was processed by another server instance (e.g. webhook URL pointed
+      // to old server) or the email failed silently, the merchant never gets notified.
+      // This is the LAST checkpoint before the address returns to the pool — recover
+      // any missed payment notification emails here.
+      try {
+        const latestPoolTx = await merchantPoolTransactionModel.findOne({
+          where: { temp_address_id: tempAddressId },
+          order: [['created_at', 'DESC']],
+        });
+
+        if (latestPoolTx?.dataValues?.incoming_tx_id) {
+          const incomingTxId = latestPoolTx.dataValues.incoming_tx_id;
+          const ownerUserId = poolAddress.dataValues.owner_user_id;
+          const merchantAmount = parseFloat(latestPoolTx.dataValues.merchant_amount || '0');
+          const paymentAmount = merchantAmount + parseFloat(latestPoolTx.dataValues.admin_fee_amount || '0');
+
+          // Check and recover "Payment Pending" notification
+          const pendingKey = `pending-notif-${incomingTxId}`;
+          const pendingSent = await getRedisItem(pendingKey);
+
+          if (!pendingSent || !pendingSent.sent) {
+            try {
+              const { sendPendingPaymentNotification } = await import("../pendingPaymentService");
+              await sendPendingPaymentNotification(
+                poolAddress.dataValues.wallet_address,
+                incomingTxId,
+                paymentAmount,
+                walletType,
+                {
+                  adm_id: ownerUserId,
+                  company_id: latestPoolTx.dataValues.company_id,
+                }
+              );
+              console.log(`[MerchantPool] 📧 [Sweep Recovery] Sent missed pending notification for ${poolAddress.dataValues.wallet_address}`);
+            } catch (pendingErr: unknown) {
+              console.warn(`[MerchantPool] ⚠️ [Sweep Recovery] Pending notification failed:`, getErrorMessage(pendingErr));
+            }
+          }
+
+          // Check and recover "Payment Received" email
+          const emailKey = `payment-received-email-${incomingTxId}`;
+          const emailSent = await getRedisItem(emailKey);
+
+          if (!emailSent || !emailSent.sent) {
+            try {
+              const { userModel, companyModel } = await import("../../models");
+              const userData = (await userModel.findOne({ where: { user_id: ownerUserId } }))?.dataValues;
+              const companyData = (await companyModel.findOne({ where: { user_id: ownerUserId } }))?.dataValues;
+
+              if (userData?.email) {
+                const txCreatedAt = new Date(latestPoolTx.dataValues.created_at);
+                const dateStr = txCreatedAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                const timeStr = txCreatedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                await sendPaymentReceivedEmail(
+                  userData.email,
+                  userData.name,
+                  merchantAmount.toString(),
+                  walletType,
+                  companyData?.company_name || '',
+                  incomingTxId,
+                  dateStr,
+                  timeStr
+                );
+
+                // Set dedup key so it won't be sent again
+                await setRedisItem(emailKey, { sent: true, sentAt: new Date().toISOString(), recoveredBySweep: true });
+                await setRedisTTL(emailKey, 86400);
+
+                console.log(`[MerchantPool] 📧 [Sweep Recovery] Sent missed payment-received email to ${userData.email} for ${poolAddress.dataValues.wallet_address}`);
+              }
+            } catch (receivedErr: unknown) {
+              console.warn(`[MerchantPool] ⚠️ [Sweep Recovery] Payment received email failed:`, getErrorMessage(receivedErr));
+            }
+          }
+        }
+      } catch (recoveryError: unknown) {
+        console.warn(`[MerchantPool] ⚠️ Email recovery check failed (non-critical):`, getErrorMessage(recoveryError));
+      }
       }
 
       return { success: true, amount: amountToSend, txId: sweepTxId };
