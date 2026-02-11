@@ -454,6 +454,10 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       
       amountToSend = actualBalance - gasFee - accountReserve;
       
+      // Safety buffer: round down to 6 decimal places to avoid edge cases
+      // from balance timing differences between API reads and on-chain state
+      amountToSend = Math.floor(amountToSend * 1000000) / 1000000;
+      
       if (amountToSend <= 0) {
         const reserveNote = accountReserve > 0 ? ` + ${accountReserve} reserve` : '';
         console.warn(`[MerchantPool] ⚠️ Balance too low for sweep after deductions: ${actualBalance} - ${gasFee} (gas)${reserveNote} = ${amountToSend}`);
