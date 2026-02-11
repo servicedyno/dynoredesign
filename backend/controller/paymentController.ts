@@ -1009,6 +1009,17 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           });
         }
         if (value.paymentType === paymentTypes.CRYPTO) {
+          // Normalize checkout currency aliases to internal wallet types
+          // Checkout sends "USDC" but wallets are "USDC-ERC20", "RLUSD-XRPL" but wallets are "RLUSD"
+          const cryptoAliasMap: Record<string, string> = {
+            'USDC': 'USDC-ERC20',
+            'RLUSD-XRPL': 'RLUSD',
+          };
+          if (cryptoAliasMap[value.currency]) {
+            console.log(`[addPayment] Normalizing currency: ${value.currency} → ${cryptoAliasMap[value.currency]}`);
+            value.currency = cryptoAliasMap[value.currency];
+          }
+          
           const { paymentRes, uniqueRef } = await Crypto(value, {
             ...userData,
             adm_id: items.adm_id,
