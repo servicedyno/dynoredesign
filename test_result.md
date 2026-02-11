@@ -7,9 +7,46 @@
 user_problem_statement: "XRP/RLUSD tag implementation, gas wallet separation, and fee alert expansion"
 
 current_test_task:
-  - task: "XRP/RLUSD Destination Tag Gaps Fixed + Gas Wallet + Fee Alerts"
+  - task: "Fix Missing Payment Email Notifications (Pending + Confirmed) for Merchant Pool Payments"
     implemented: true
-    working: true
+    working: "NA"
+    files:
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          ROOT CAUSE: When payment is processed via checkMissedPayments or by another 
+          server instance (webhook URL pointed to old api.dynopay.com), the "Payment Pending" 
+          and "Payment Received" email notifications were never sent from this server.
+          
+          FIX 1 (merchantPoolMonitoring.ts): Added sendPendingPaymentNotification call 
+          BEFORE cryptoVerification in both checkMissedPayments and failed payment recovery flows.
+          Previously only the webhook handler sent the pending email - checkMissedPayments skipped it.
+          
+          FIX 2 (merchantPoolSweep.ts): Added EMAIL RECOVERY in sweepPoolAddress - during sweep,
+          checks Redis dedup keys (pending-notif-{txId} and payment-received-email-{txId}). 
+          If emails were never sent, recovers them by looking up the pool transaction, user data, 
+          and company data. This is the LAST checkpoint before the address returns to pool.
+          
+          New imports added to merchantPoolSweep.ts:
+          - merchantPoolTransactionModel (from models)
+          - sendPaymentReceivedEmail (from helper/sendEmail)
+          - getRedisItem, setRedisItem, setRedisTTL (from utils/redisInstance)
+          
+          TESTS:
+          TEST 1: GET http://localhost:8001/health returns 200 with status "healthy"
+          TEST 2: TypeScript compiles clean - cd /app/backend && npx tsc --noEmit exits 0
+          TEST 3: grep -c 'sendPendingPaymentNotification' /app/backend/services/merchantPool/merchantPoolMonitoring.ts >= 3
+          TEST 4: grep -c 'Sweep Recovery' /app/backend/services/merchantPool/merchantPoolSweep.ts >= 3
+          TEST 5: grep 'sendPaymentReceivedEmail' /app/backend/services/merchantPool/merchantPoolSweep.ts finds import and usage
+          TEST 6: grep 'getRedisItem\|setRedisItem' /app/backend/services/merchantPool/merchantPoolSweep.ts finds imports
+          TEST 7: grep 'payment-received-email' /app/backend/services/merchantPool/merchantPoolSweep.ts finds recovery check
+          Base URL: http://localhost:8001
     files:
       - "/app/backend/controller/paymentController.ts"
       - "/app/backend/routes/merchantApiRouter.ts"
