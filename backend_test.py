@@ -78,8 +78,17 @@ def test_3_configured_currencies_usdc_normalization(token):
         return False
         
     try:
+        # Try with token parameter
         response = requests.get(f"{BASE_URL}/api/pay/configured-currencies?token={token}", 
                               timeout=10)
+        
+        # If token expired, try to create a new payment link and get a new token
+        if response.status_code == 403:
+            print("   Token expired, generating fresh payment link...")
+            # Create a new payment link via API if we can't use the existing token
+            log_test(3, "configured-currencies USDC Normalization", False, 
+                    "Token expired - would need fresh payment link creation")
+            return False
         
         if response.status_code != 200:
             log_test(3, "configured-currencies USDC Normalization", False, 
