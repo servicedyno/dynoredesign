@@ -809,6 +809,28 @@ const processAddress = async (addr: any, result: {
           processedBy: 'checkMissedPayments',
         });
 
+        // FIX: Send pending payment notification (was missing in checkMissedPayments flow)
+        // The webhook handler sends this, but when payment is detected by checkMissedPayments
+        // the pending email was never sent. This ensures merchants are notified.
+        try {
+          const { sendPendingPaymentNotification } = await import("../pendingPaymentService");
+          await sendPendingPaymentNotification(
+            walletAddress,
+            latestTx.txId,
+            receivedAmount,
+            walletType,
+            {
+              adm_id: ownerId,
+              company_id: companyId,
+              amount: expectedAmount,
+            }
+          );
+          console.log(`[MerchantPool] 📧 Pending payment notification sent for missed payment on ${walletAddress}`);
+        } catch (notifError: unknown) {
+          const notifErr = notifError as { message?: string };
+          console.warn(`[MerchantPool] ⚠️ Failed to send pending notification (non-critical): ${notifErr?.message}`);
+        }
+
         console.log(`[MerchantPool] 🚀 Processing missed payment via cryptoVerification...`);
         
         try {
