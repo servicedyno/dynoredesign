@@ -124,15 +124,18 @@ def test_3_configured_currencies_usdc_normalization(token):
 def test_4_currency_alias_map():
     """TEST 4: Check currencyAliasMap exists in paymentController.ts"""
     try:
+        # Search for the currencyAliasMap block with context to get the mapping line
         result = subprocess.run(
-            ["grep", "currencyAliasMap", "/app/backend/controller/paymentController.ts"],
+            ["grep", "-A5", "currencyAliasMap.*Record", "/app/backend/controller/paymentController.ts"],
             capture_output=True, text=True, timeout=10
         )
         
-        # Check both the grep and the actual content check
-        found_mapping = "'USDC': 'USDC-ERC20'," in result.stdout
+        # Check both the grep result and look for the USDC mapping specifically
+        found_mapping = "'USDC': 'USDC-ERC20'" in result.stdout
         success = result.returncode == 0 and found_mapping
         details = f"Exit code: {result.returncode}, Found USDC→USDC-ERC20 mapping: {found_mapping}"
+        if result.stdout:
+            details += f", Output lines: {len(result.stdout.splitlines())}"
         
         log_test(4, "currencyAliasMap USDC Mapping", success, details)
         return success
