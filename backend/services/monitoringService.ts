@@ -252,7 +252,7 @@ export const pruneOldHealthChecks = async (): Promise<{ deleted: number }> => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const [, deleted] = await sequelize.query(
+    const result = await sequelize.query(
       `DELETE FROM tbl_service_health WHERE check_timestamp < :cutoff`,
       {
         replacements: { cutoff: sevenDaysAgo.toISOString() },
@@ -260,7 +260,7 @@ export const pruneOldHealthChecks = async (): Promise<{ deleted: number }> => {
       }
     );
 
-    const deletedCount = typeof deleted === "number" ? deleted : 0;
+    const deletedCount = typeof result === "number" ? result : 0;
     if (deletedCount > 0) {
       log(`[Monitor] Pruned ${deletedCount} health check records older than 7 days`, "info");
     }
