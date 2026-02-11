@@ -79,7 +79,8 @@ def test_cron_schedules():
             # Search for the pattern near the job name
             job_pattern = f'cron\\.schedule\\("{pattern}".*{job_name}'
             if re.search(job_pattern, content, re.DOTALL):
-                print(f"✅ PASS: {job_name} has correct schedule '{pattern.replace('\\\\', '')}'")
+                clean_pattern = pattern.replace('\\\\', '')
+                print(f"✅ PASS: {job_name} has correct schedule '{clean_pattern}'")
             else:
                 # Try a broader search
                 lines = content.split('\n')
@@ -89,11 +90,13 @@ def test_cron_schedules():
                         # Found reference, check nearby lines for pattern
                         context = '\n'.join(lines[max(0, i-10):i+10])
                         if re.search(pattern, context):
-                            print(f"✅ PASS: {job_name} has correct schedule '{pattern.replace('\\\\', '')}'")
+                            clean_pattern = pattern.replace('\\\\', '')
+                            print(f"✅ PASS: {job_name} has correct schedule '{clean_pattern}'")
                             found = True
                             break
                 if not found:
-                    print(f"❌ FAIL: {job_name} schedule pattern '{pattern.replace('\\\\', '')}' not found")
+                    clean_pattern = pattern.replace('\\\\', '')
+                    print(f"❌ FAIL: {job_name} schedule pattern '{clean_pattern}' not found")
                     all_passed = False
         
         return all_passed
