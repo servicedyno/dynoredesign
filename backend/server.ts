@@ -276,10 +276,11 @@ cron.schedule("0 * * * *", async function () {
   }
 });
 
-// Merchant Pool: Pre-warm pool addresses every 3 minutes
+// Merchant Pool: Pre-warm pool addresses every 15 minutes
 // Ensures each active merchant has AVAILABLE addresses ready for instant reservation
 // Eliminates ~3-4s Tatum API call bottleneck during payment creation
-cron.schedule("*/3 * * * *", function () {
+// OPTIMIZED: Reduced from 3 min to 15 min — pool rarely needs new addresses
+cron.schedule("*/15 * * * *", function () {
   log("Cron: prewarmPoolAddresses running", "info");
   merchantPoolService.prewarmPoolAddresses().catch(err => {
     log(`Cron: Pool pre-warming failed: ${err.message}`, "error");
