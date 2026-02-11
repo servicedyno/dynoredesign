@@ -3263,7 +3263,8 @@ const verifyCryptoPayment = async (
       try {
         const customerSessionKey = `customer-${userData.ref}`;
         const customerSession = await getRedisItem(customerSessionKey);
-        const sessionTag = customerSession?.active_crypto_address?.destination_tag;
+        // destination_tag can be top-level (set by webhook/settlement) or nested in active_crypto_address (set by addPayment)
+        const sessionTag = customerSession?.destination_tag || customerSession?.active_crypto_address?.destination_tag;
         if (sessionTag) {
           resolvedTag = Number(sessionTag);
           console.log(`[verifyCryptoPayment] Resolved destination_tag ${resolvedTag} from session ${customerSessionKey}`);
