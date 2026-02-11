@@ -242,11 +242,42 @@ export const getMonitoredServices = () => MONITORED_SERVICES.map(s => ({
   name: s.name
 }));
 
+/**
+ * Prune old health check records to prevent unbounded table growth
+ * Keeps only the last 7 days of data
+ * ~1,440 rows/day × 7 days = ~10,080 rows max (vs unbounded growth)
+ */
+export const pruneOldHealthChecks = async (): Promise<{ deleted: number }> => {
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [, deleted] = await sequelize.query(
+      `DELETE FROM tbl_service_health WHERE check_timestamp < :cutoff`,
+      {
+        replacements: { cutoff: sevenDaysAgo.toISOString() },
+        type: QueryTypes.DELETE,
+      }
+    );
+
+    const deletedCount = typeof deleted === "number" ? deleted : 0;
+    if (deletedCount > 0) {
+      log(`[Monitor] Pruned ${deletedCount} health check records older than 7 days`, "info");
+    }
+    return { deleted: deletedCount };
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    log(`[Monitor] Error pruning old health checks: ${err.message}`, "error");
+    return { deleted: 0 };
+  }
+};
+
 export default {
   runHealthChecks,
   getDailyServiceStatus,
   getCurrentServiceStatus,
   calculateServiceUptime,
   getMonitoredServices,
+  pruneOldHealthChecks,
   MONITORED_SERVICES
 };
