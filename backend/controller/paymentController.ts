@@ -3275,11 +3275,33 @@ const verifyCryptoPayment = async (
         if (jsonKeys?.length) jsonKeys.forEach((k: string) => allKeys.add(k.replace(':json', '')));
         
         if (allKeys.size > 0) {
-          // Use the most recent key (last one found)
-          const foundKey = Array.from(allKeys)[allKeys.size - 1];
-          console.log(`[verifyCryptoPayment] Found tag-based key: ${foundKey} (from ${allKeys.size} matches)`);
-          verifyRedisKey = foundKey;
-          tempData = await getRedisItem(foundKey);
+          // Find the best matching key - prefer ones with txId (confirmed payments) 
+          // or completed/confirmed status over pending/waiting
+          let bestKey = '';
+          let bestData: any = null;
+          const statusPriority: Record<string, number> = { 'confirmed': 4, 'completed': 3, 'partial': 2, 'pending': 1, 'waiting': 0 };
+          
+          for (const candidateKey of allKeys) {
+            const candidateData = await getRedisItem(candidateKey);
+            if (!candidateData || Object.keys(candidateData).length === 0) continue;
+            
+            const candidateStatus = candidateData?.status || 'waiting';
+            const candidatePriority = statusPriority[candidateStatus] ?? 0;
+            const bestStatus = bestData?.status || 'waiting';
+            const bestPriority = statusPriority[bestStatus] ?? 0;
+            
+            // Pick this key if it has higher priority status, or has txId when current best doesn't
+            if (!bestData || candidatePriority > bestPriority || (candidateData?.txId && !bestData?.txId)) {
+              bestKey = candidateKey;
+              bestData = candidateData;
+            }
+          }
+          
+          if (bestKey && bestData) {
+            console.log(`[verifyCryptoPayment] Found tag-based key: ${bestKey} (status: ${bestData?.status}, from ${allKeys.size} matches)`);
+            verifyRedisKey = bestKey;
+            tempData = bestData;
+          }
         }
       } catch (scanErr) {
         console.log("[verifyCryptoPayment] Tag scan error:", scanErr);
