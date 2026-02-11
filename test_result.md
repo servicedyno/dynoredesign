@@ -5488,6 +5488,49 @@ ports:
 
           CONCLUSION: All 7 backend log issues have been successfully fixed and verified through comprehensive code analysis. The fixes address critical Tatum SDK bugs, reduce unnecessary API calls, eliminate noisy error logs, and improve system reliability. All verification requirements from the review request have been satisfied with 100% success rate.
 
+  - task: "Add memo field to /pay/addPayment response for XRP and RLUSD-XRPL payments"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Added memo field (string form of destination_tag) across ALL response paths for XRP/RLUSD:
+          
+          1. Crypto() function return (base for addPayment + createCryptoPayment) — line 2718
+          2. Phase 12.1 existing address return (page refresh) — line 1398
+          3. verifyCryptoPayment: waiting, pending, processing, confirmed, underpaid — lines 3379,3452,3472,3491,3510
+          4. getData incomplete_payment — lines 714, 773, 823
+          Total: 10 memo insertions
+          
+          TESTS:
+          TEST 1: Backend health - GET http://localhost:8001/api/status/health → 200 "healthy"
+          
+          TEST 2: memo in Crypto function return
+          - grep 'memo.*String.*destinationTag' /app/backend/controller/paymentController.ts — should find 1 match
+          
+          TEST 3: memo in Phase 12.1 existing address return
+          - grep 'memo.*String.*existingDestTag' /app/backend/controller/paymentController.ts — should find 1 match
+          
+          TEST 4: memo in all verifyCryptoPayment responses
+          - grep -c 'memo.*String.*tempData.*destination_tag' /app/backend/controller/paymentController.ts — should return 5
+          
+          TEST 5: memo in getData incomplete_payment responses
+          - grep -c 'memo.*String.*incomplete_payment.*destination_tag' /app/backend/controller/paymentController.ts — should return 3
+          
+          TEST 6: Total memo count
+          - grep -c 'memo.*String' /app/backend/controller/paymentController.ts — should return 10
+          
+          TEST 7: No errors in backend logs
+          - tail -20 /var/log/supervisor/backend.err.log — should have no TypeScript/compilation errors
+          
+          Base URL: http://localhost:8001
+
   - task: "Ensure destination_tag passed to checkout for XRP/RLUSD in all responses"
     implemented: true
     working: true
