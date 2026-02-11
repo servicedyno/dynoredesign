@@ -326,6 +326,9 @@ const startServer = async () => {
     log('PostgreSQL Connection has been established successfully.', 'info');
     
     // Sync Merchant Pool models (per-merchant system for ALL chains including USDT)
+    // OPTIMIZED: Use alter:true only in development — production should use migrations
+    const syncOptions = isProduction ? {} : { alter: true };
+    
     const {
       merchantWalletModel,
       merchantTempAddressModel,
@@ -337,30 +340,30 @@ const startServer = async () => {
       kbArticleModel,
     } = await import("./models");
     
-    await merchantWalletModel.sync({ alter: true });
-    await merchantTempAddressModel.sync({ alter: true });
-    await merchantPoolTransactionModel.sync({ alter: true });
-    await merchantPoolSweepModel.sync({ alter: true });
-    log('Merchant Pool tables synced successfully.', 'info');
+    await merchantWalletModel.sync(syncOptions);
+    await merchantTempAddressModel.sync(syncOptions);
+    await merchantPoolTransactionModel.sync(syncOptions);
+    await merchantPoolSweepModel.sync(syncOptions);
+    log(`Merchant Pool tables synced successfully${isProduction ? ' (no-alter)' : ' (alter)' }.`, 'info');
     
     // Sync Referral models
-    await referralModel.sync({ alter: true });
-    await referralRewardModel.sync({ alter: true });
+    await referralModel.sync(syncOptions);
+    await referralRewardModel.sync(syncOptions);
     log('Referral tables synced successfully.', 'info');
     
     // Sync Referee Code model
     const { refereeCodeModel } = await import("./models");
-    await refereeCodeModel.sync({ alter: true });
+    await refereeCodeModel.sync(syncOptions);
     log('Referee Code table synced successfully.', 'info');
     
     // Sync Knowledge Base models
-    await kbCategoryModel.sync({ alter: true });
-    await kbArticleModel.sync({ alter: true });
+    await kbCategoryModel.sync(syncOptions);
+    await kbArticleModel.sync(syncOptions);
     log('Knowledge Base tables synced successfully.', 'info');
     
     // Sync user model to add referral columns
     const { userModel } = await import("./models");
-    await userModel.sync({ alter: true });
+    await userModel.sync(syncOptions);
     log('User model synced with referral columns.', 'info');
     
     // Validate Merchant Pool Configuration (CRITICAL STARTUP CHECK)
