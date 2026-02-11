@@ -5488,6 +5488,66 @@ ports:
 
           CONCLUSION: All 7 backend log issues have been successfully fixed and verified through comprehensive code analysis. The fixes address critical Tatum SDK bugs, reduce unnecessary API calls, eliminate noisy error logs, and improve system reliability. All verification requirements from the review request have been satisfied with 100% success rate.
 
+  - task: "Fix RLUSD-XRPL alias and checkout code analysis"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/helper/currencyConvert.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          BACKEND FIXES:
+          
+          FIX 1: RLUSD-XRPL → RLUSD alias in createCryptoPayment currencyAliasMap
+          - Checkout sends "RLUSD-XRPL" when user selects RLUSD on XRPL network
+          - Backend wallets stored as "RLUSD" — validation would FAIL with 400 error
+          - Added RLUSD-XRPL → RLUSD to currencyAliasMap
+          
+          FIX 2: RLUSD-XRPL → RLUSD in calculateCheckoutFees
+          - Same normalization for fee calculation
+          
+          FIX 3: RLUSD-XRPL → RLUSD in currencyConvert normalization
+          - Exchange rate lookup now recognizes RLUSD-XRPL as RLUSD
+          
+          CHECKOUT FRONTEND ISSUES IDENTIFIED (for CheckoutDyno repo):
+          
+          ISSUE 1: unAuthorizedHelper too aggressive
+          - On ANY 403, removes token from localStorage and redirects to /auth/login
+          - This is why "token expires quickly" — any API error triggers token wipe
+          - Recommendation: Don't redirect to login on checkout; show error on page instead
+          
+          ISSUE 2: incompletePayment state missing memo/destination_tag
+          - On page refresh during XRP/RLUSD payment, memo/tag disappears from UI
+          - getData returns destination_tag and memo in incomplete_payment, but checkout doesn't store them
+          - Recommendation: Add memo and destination_tag to incompletePayment state
+          
+          TOKEN ANALYSIS:
+          - JWT token has NO expiresIn → token NEVER expires based on time
+          - "Token expiring" is actually caused by 403 responses triggering unAuthorizedHelper
+          - The 403 was caused by RLUSD-XRPL validation failure (now fixed)
+          
+          TESTS:
+          TEST 1: Backend health — GET http://localhost:8001/api/status/health → 200 "healthy"
+          
+          TEST 2: RLUSD-XRPL alias in createCryptoPayment
+          - grep "RLUSD-XRPL.*RLUSD" /app/backend/controller/paymentController.ts — should find alias mapping
+          
+          TEST 3: RLUSD-XRPL alias in calculateCheckoutFees
+          - grep "RLUSD-XRPL" /app/backend/controller/paymentController.ts — should find normalization
+          
+          TEST 4: RLUSD-XRPL in currencyConvert
+          - grep "RLUSD-XRPL" /app/backend/helper/currencyConvert.ts — should find normalization
+          
+          TEST 5: No compilation errors
+          - tail -10 /var/log/supervisor/backend.err.log — should have no errors
+          
+          Base URL: http://localhost:8001
+
   - task: "Checkout currency consistency - USDC normalization, tag/memo for XRP/RLUSD"
     implemented: true
     working: true
