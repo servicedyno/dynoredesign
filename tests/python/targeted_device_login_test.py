@@ -14,7 +14,7 @@ import subprocess
 
 class TargetedDeviceLoginTester:
     def __init__(self):
-        self.backend_url = "https://install-hub-11.preview.emergentagent.com"
+        self.backend_url = "https://dependency-manager-1.preview.emergentagent.com"
         self.test_results = {}
         self.errors = []
         

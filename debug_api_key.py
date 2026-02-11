@@ -7,7 +7,7 @@ import requests
 import json
 
 def debug_api_key_response():
-    backend_url = "https://install-hub-11.preview.emergentagent.com"
+    backend_url = "https://dependency-manager-1.preview.emergentagent.com"
     
     # First authenticate
     auth_response = requests.post(

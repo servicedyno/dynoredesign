@@ -27,7 +27,7 @@ import os
 from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://install-hub-11.preview.emergentagent.com"
+BACKEND_URL = "https://dependency-manager-1.preview.emergentagent.com"
 TEST_USER_EMAIL = "richard@dyno.pt"
 TEST_USER_PASSWORD = "Katiekendra123@"
 COMPANY_ID = 38
