@@ -711,6 +711,7 @@ const getData = async (req: express.Request, res: express.Response) => {
             qr_code: item.incomplete_payment.qr_code,
             // XRP/RLUSD: Include destination tag for tag-based chains
             ...(item.incomplete_payment.destination_tag && { destination_tag: Number(item.incomplete_payment.destination_tag) }),
+            ...(item.incomplete_payment.destination_tag && { memo: String(item.incomplete_payment.destination_tag) }),
           }
         }),
       };
@@ -769,6 +770,7 @@ const getData = async (req: express.Request, res: express.Response) => {
               qr_code: item.incomplete_payment.qr_code,
               // XRP/RLUSD: Include destination tag for tag-based chains
               ...(item.incomplete_payment.destination_tag && { destination_tag: Number(item.incomplete_payment.destination_tag) }),
+            ...(item.incomplete_payment.destination_tag && { memo: String(item.incomplete_payment.destination_tag) }),
             }
           }),
         };
@@ -818,6 +820,7 @@ const getData = async (req: express.Request, res: express.Response) => {
               qr_code: item.incomplete_payment.qr_code,
               // XRP/RLUSD: Include destination tag for tag-based chains
               ...(item.incomplete_payment.destination_tag && { destination_tag: Number(item.incomplete_payment.destination_tag) }),
+            ...(item.incomplete_payment.destination_tag && { memo: String(item.incomplete_payment.destination_tag) }),
             }
           }),
         };
