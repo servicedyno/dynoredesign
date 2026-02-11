@@ -1177,6 +1177,28 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             - Merchant Amount: ${merchant_amount_crypto}
             - Fees: ${total_fees_crypto}
             - Tax: ${taxAmount} USD (${taxAmountCrypto} crypto)`);
+          
+          // PHASE 12.1: Store active_crypto_address (including destination_tag) in customer session
+          // This is CRITICAL for verifyCryptoPayment to resolve tag-based chains (XRP/RLUSD)
+          // Without this, polling can't find the correct crypto-{addr}-tag-{tag} Redis key
+          const customerSessionKey = "customer-" + userData.ref;
+          const customerSessionData = await getRedisItem(customerSessionKey);
+          if (customerSessionData && Object.keys(customerSessionData).length > 0) {
+            const updatedSession = {
+              ...customerSessionData,
+              active_crypto_address: {
+                currency: value.currency,
+                address: paymentRes.address,
+                payment_id: paymentRes.transaction_id,
+                created_at: new Date().toISOString(),
+                ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
+              },
+              // Also store destination_tag at top level for direct access
+              ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
+            };
+            await setRedisItem(customerSessionKey, updatedSession);
+            console.log(`[addPayment] Phase 12.1: Stored active_crypto_address in ${customerSessionKey}: ${paymentRes.address}${paymentRes.destination_tag ? `:${paymentRes.destination_tag}` : ''}`);
+          }
         }
         successResponseHelper(res, 200, "Payment created successfully", finalRes);
       } else {
