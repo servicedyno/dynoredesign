@@ -151,15 +151,26 @@ export const calculateTransactionFees = async (
       (tier.max_amount === null || amount <= tier.max_amount)
   );
 
-  if (!matchingTier) {
+  // Fallback: if amount is below the lowest tier, use the lowest tier
+  // This handles edge cases like very small payments ($1-$4) that fall below tier minimums
+  const effectiveTier = matchingTier || (() => {
+    const sortedTiers = [...tiers].sort((a: FeeTier, b: FeeTier) => a.min_amount - b.min_amount);
+    if (sortedTiers[0] && amount > 0) {
+      console.warn(`[calculateTransactionFees] No exact tier for amount ${amount}, using lowest tier (min=${sortedTiers[0].min_amount})`);
+      return sortedTiers[0];
+    }
+    return null;
+  })();
+
+  if (!effectiveTier) {
     throw new Error(`No fee tier found for amount ${amount}`);
   }
 
   // Calculate fees directly in native currency
-  const fixedFee = matchingTier.fixed_fee;
+  const fixedFee = effectiveTier.fixed_fee;
   const transactionFee = (amount * config.transaction_fee_percent) / 100;
   const blockchainBuffer =
-    (amount * matchingTier.blockchain_buffer_percent) / 100;
+    (amount * effectiveTier.blockchain_buffer_percent) / 100;
 
   const totalDeduction = fixedFee + transactionFee + blockchainBuffer;
   const userReceives = amount - totalDeduction;
