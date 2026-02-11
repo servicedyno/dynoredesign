@@ -77,11 +77,11 @@ def test_retention_cleanup_exists() -> bool:
 
 def test_daily_prune_cron() -> bool:
     """TEST 5: Daily prune cron schedule at 3:00 AM UTC"""
-    exit_code, stdout, stderr = run_command("grep '0 3' /app/backend/utils/cronJobs.ts")
+    exit_code, stdout, stderr = run_command("grep -A5 '0 3' /app/backend/utils/cronJobs.ts")
     if exit_code == 0:
-        # Check if it calls pruneOldHealthChecks
+        # Check if it calls pruneOldHealthChecks (also check for dynamic require pattern)
         if "monitoringService.pruneOldHealthChecks" in stdout or "pruneOldHealthChecks" in stdout:
-            return log_test("5", True, f"Daily cleanup cron found: {stdout.strip()}")
+            return log_test("5", True, f"Daily cleanup cron found calling pruneOldHealthChecks")
         else:
             return log_test("5", False, f"Found '0 3' but doesn't call pruneOldHealthChecks: {stdout}")
     else:
