@@ -202,10 +202,10 @@ cron.schedule("0 */24 * * *", function () {
 // ===========================================
 import * as merchantPoolService from "./services/merchantPoolService";
 
-// Merchant Pool: Sweep accumulated admin fees every 1 minute
+// Merchant Pool: Sweep accumulated admin fees every 2 minutes
 // Handles both threshold-based ($30 USD) and time-based (3 min for ETH/TRX) sweeps
-// Running every 1 min ensures sweeps happen promptly after time threshold is met
-cron.schedule("* * * * *", async function () {
+// OPTIMIZED: Reduced from 1 min to 2 min — sweeps still trigger within time thresholds
+cron.schedule("*/2 * * * *", async function () {
   const lockAcquired = await acquireLock("cron:performScheduledSweeps", 50, 1);
   if (!lockAcquired) { log("Cron: performScheduledSweeps skipped (already running)", "info"); return; }
   try {
