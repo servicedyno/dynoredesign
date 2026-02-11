@@ -92,7 +92,7 @@ All missing endpoints have been added to the Swagger documentation.
 
 ## 🔗 ACCESS SWAGGER DOCUMENTATION
 
-**URL:** https://build-foundation-7.preview.emergentagent.com/api/docs/
+**URL:** https://install-hub-11.preview.emergentagent.com/api/docs/
 
 ---
 

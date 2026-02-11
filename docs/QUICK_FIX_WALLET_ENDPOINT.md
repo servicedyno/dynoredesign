@@ -30,11 +30,11 @@ fetch(`${API_URL}/wallet/getWallet?company_id=${companyId}`)
 
 ```bash
 # ❌ Wrong endpoint (returns empty)
-curl -X GET "https://build-foundation-7.preview.emergentagent.com/api/wallet/getWalletAddresses?company_id=38" \
+curl -X GET "https://install-hub-11.preview.emergentagent.com/api/wallet/getWalletAddresses?company_id=38" \
   -H "Authorization: Bearer YOUR_TOKEN"
 
 # ✅ Correct endpoint (returns your wallets)
-curl -X GET "https://build-foundation-7.preview.emergentagent.com/api/wallet/getWallet?company_id=38" \
+curl -X GET "https://install-hub-11.preview.emergentagent.com/api/wallet/getWallet?company_id=38" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
