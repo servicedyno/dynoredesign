@@ -2744,13 +2744,17 @@ const Crypto = async (
   // Fallback: Use legacy admin wallet system for unsupported currencies
   console.log(`[Crypto] Using LEGACY admin wallet for ${currency} payment`);
   
-  const walletDetails = await (
-    await adminWalletModel.findOne({
-      where: {
-        wallet_type: currency,
-      },
-    })
-  ).dataValues;
+  const adminWallet = await adminWalletModel.findOne({
+    where: {
+      wallet_type: currency,
+    },
+  });
+  
+  if (!adminWallet) {
+    throw { message: `No wallet configured for ${currency}. Please contact the merchant.` };
+  }
+  
+  const walletDetails = adminWallet.dataValues;
 
   if (Object.keys(walletDetails).length > 0) {
     const decrytedData = await tatumApi.decryptSymmetric(
