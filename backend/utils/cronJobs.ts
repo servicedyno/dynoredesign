@@ -398,9 +398,9 @@ export const triggerWalletReminder = async (userId?: number) => {
 
 /**
  * Infrastructure Health Check Cron Job
- * Schedule: Every 15 minutes (OPTIMIZED: was */5 — health rarely changes every 5 min)
+ * Schedule: Every 15 minutes (OPTIMIZED: was every-5-min, health rarely changes that fast)
  * Logic: Run health checks on all monitored services and store results
- * Savings: 288 → 96 runs/day, ~1,440 → ~480 DB rows/day
+ * Savings: 288 to 96 runs/day, ~1440 to ~480 DB rows/day
  */
 export const setupHealthCheckCron = () => {
   // OPTIMIZED: Reduced from */5 to */15 — 3x fewer DB writes, health status rarely changes in 5 min
