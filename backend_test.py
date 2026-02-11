@@ -73,22 +73,32 @@ def test_2_get_data_usdc_normalization():
 
 def test_3_configured_currencies_usdc_normalization(token):
     """TEST 3: configured-currencies returns USDC (not USDC-ERC20)"""
-    if not token:
-        log_test(3, "configured-currencies USDC Normalization", False, "No token from test 2")
-        return False
-        
     try:
-        # Try with token parameter
-        response = requests.get(f"{BASE_URL}/api/pay/configured-currencies?token={token}", 
-                              timeout=10)
+        # Generate a fresh token since they expire quickly
+        payload = {"data": "0cc0c446d0c98198c2086b14b42785898b6f7144359ff93e"}
+        response = requests.post(f"{BASE_URL}/api/pay/getData", 
+                               json=payload, headers=HEADERS, timeout=10)
         
-        # If token expired, try to create a new payment link and get a new token
-        if response.status_code == 403:
-            print("   Token expired, generating fresh payment link...")
-            # Create a new payment link via API if we can't use the existing token
+        if response.status_code != 200:
             log_test(3, "configured-currencies USDC Normalization", False, 
-                    "Token expired - would need fresh payment link creation")
+                    "Cannot get fresh token from getData")
             return False
+            
+        data = response.json()
+        # Handle nested data structure
+        if "data" in data and isinstance(data["data"], dict):
+            fresh_token = data["data"].get("token")
+        else:
+            fresh_token = data.get("token")
+            
+        if not fresh_token:
+            log_test(3, "configured-currencies USDC Normalization", False, 
+                    "No fresh token available")
+            return False
+        
+        # Now test configured-currencies with fresh token
+        response = requests.get(f"{BASE_URL}/api/pay/configured-currencies?token={fresh_token}", 
+                              timeout=10)
         
         if response.status_code != 200:
             log_test(3, "configured-currencies USDC Normalization", False, 
