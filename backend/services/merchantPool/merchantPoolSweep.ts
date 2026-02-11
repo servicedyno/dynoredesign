@@ -598,6 +598,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         }
       } catch (emailError) {
         console.error(`[MerchantPool] ⚠️ Admin sweep email failed (non-critical):`, emailError);
+      }
 
       // ===== EMAIL RECOVERY (FIX) =====
       // When a payment was processed by another server instance (e.g. webhook URL pointed
@@ -678,7 +679,6 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         }
       } catch (recoveryError: unknown) {
         console.warn(`[MerchantPool] ⚠️ Email recovery check failed (non-critical):`, getErrorMessage(recoveryError));
-      }
       }
 
       return { success: true, amount: amountToSend, txId: sweepTxId };
