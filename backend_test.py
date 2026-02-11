@@ -61,8 +61,10 @@ def test_2_get_data_usdc_normalization():
         
         log_test(2, "getData USDC Normalization", success, details)
         
-        # Return token for test 3
+        # Return token for test 3 - try multiple possible locations
         token = data.get("token")
+        if not token and "data" in data:
+            token = data["data"].get("token")
         return success, token
         
     except Exception as e:
