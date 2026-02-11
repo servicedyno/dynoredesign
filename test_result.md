@@ -6182,3 +6182,54 @@ ports:
           TEST 6: POST /diagnostics/migrate-webhook-urls returns 200 with success=true and stats
           Base URL: http://localhost:8001
 
+  - task: "Railway Usage Optimization — Cron Frequency, Startup Sync, Log Rotation"
+    implemented: true
+    working: unknown
+    files:
+      - "/app/backend/server.ts"
+      - "/app/backend/utils/loggers.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          10 OPTIMIZATIONS APPLIED to reduce Railway compute, Tatum API credits, and disk usage:
+          
+          CRON SCHEDULE OPTIMIZATIONS (server.ts):
+          1. detectOrphanPayments: */10 → hourly (0 * * * *) — was ~22,000 Tatum API calls/day scanning 154 AVAILABLE addresses
+          2. performScheduledSweeps: every 1 min → every 2 min — halves cron overhead, still within sweep thresholds
+          3. checkMissedPayments: */5 → */10 — reduces Tatum API calls by ~50%
+          4. ensurePoolSubscriptions: */30 → every 2h (0 */2 * * *) — subscriptions rarely break
+          5. prewarmPoolAddresses: */3 → */15 — pool rarely needs new addresses
+          6. checkingUSDT: */30 → every 2h (0 */2 * * *) — legacy system, rarely has pending addresses
+          
+          STARTUP OPTIMIZATION (server.ts):
+          7. sync({ alter: true }) → conditional: uses alter:true only in dev, plain sync() in production
+             Prevents ALTER TABLE on 10 tables every Railway deploy
+          
+          LOG ROTATION (loggers.ts):
+          8. Winston file transport: added maxsize: 10MB, maxFiles: 5 — prevents unbounded disk growth
+          
+          ESTIMATED SAVINGS:
+          - Tatum API calls: ~22,000/day → ~2,200/day (detectOrphanPayments alone)
+          - Total cron runs: ~4,000/day → ~1,500/day
+          - Startup time: ~10 ALTER TABLE queries saved per production deploy
+          - Disk: Log files capped at 50MB per logger (was unbounded)
+          
+          TESTS:
+          TEST 1: GET http://localhost:8001/health returns 200 with status "healthy"
+          TEST 2: cd /app/backend && npx tsc --noEmit — exit code 0
+          TEST 3: Cron schedule verification:
+            - grep 'detectOrphan' /app/backend/server.ts should show "0 * * * *" (hourly)
+            - grep 'performScheduledSweeps' /app/backend/server.ts should show "*/2 * * * *"
+            - grep 'checkMissedPayments' /app/backend/server.ts should show "*/10 * * * *"
+            - grep 'ensurePoolSubscriptions' /app/backend/server.ts should show "0 */2 * * *"
+            - grep 'prewarmPoolAddresses' /app/backend/server.ts should show "*/15 * * * *"
+            - grep 'checkingUSDT' /app/backend/server.ts should show "0 */2 * * *"
+          TEST 4: sync optimization — grep 'syncOptions' /app/backend/server.ts should find conditional logic
+          TEST 5: log rotation — grep 'maxsize\|maxFiles' /app/backend/utils/loggers.ts should find both settings
+          TEST 6: Verify no cron runs at old frequency — monitor logs for 2 min, detectOrphanPayments should NOT run
+          Base URL: http://localhost:8001
+
