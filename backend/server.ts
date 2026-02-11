@@ -154,6 +154,17 @@ app.get("/diagnostics/fee-optimization", async (req: express.Request, res: expre
   }
 });
 
+// ─── Webhook URL Migration (Admin) ───────────────────────────────────────────
+app.post("/diagnostics/migrate-webhook-urls", async (req: express.Request, res: express.Response) => {
+  try {
+    log("Admin triggered webhook URL migration", "info");
+    const stats = await migrateWebhookUrls();
+    res.status(200).json({ success: true, ...stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
 cron.schedule("*/30 * * * *", function () {
   log("Cron: USDT check running", "info");
   paymentController.checkingUSDT();
