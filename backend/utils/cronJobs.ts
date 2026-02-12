@@ -396,6 +396,7 @@ export const triggerWalletReminder = async (userId?: number) => {
 
   } catch (e) {
     console.error("Trigger wallet reminder error:", e);
+    captureError(e, 'cron', { extraContext: 'triggerWalletReminder' });
     throw e;
   }
 };
