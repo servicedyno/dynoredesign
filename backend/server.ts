@@ -309,6 +309,38 @@ app.get("/diagnostics/fee-rates", async (req: express.Request, res: express.Resp
   }
 });
 
+// ─── Error Monitoring Diagnostics ────────────────────────────────────────────
+app.get("/diagnostics/error-monitor", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
+  try {
+    const stats = getMonitoringStats();
+    res.status(200).json({ success: true, ...stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+app.post("/diagnostics/error-monitor/flush", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
+  try {
+    const result = await flushErrorDigest();
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+app.post("/diagnostics/error-monitor/test", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
+  try {
+    captureError(new Error("Test error from diagnostics endpoint"), "system", {
+      severity: "low",
+      requestContext: "POST /diagnostics/error-monitor/test",
+      extraContext: "This is a test error to verify the error monitoring pipeline",
+    });
+    res.status(200).json({ success: true, message: "Test error captured. It will appear in the next digest (or flush now via POST /diagnostics/error-monitor/flush)." });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
 // OPTIMIZED: Reduced from */30 to every 2h — legacy system, rarely has pending addresses
 cron.schedule("0 */2 * * *", function () {
   log("Cron: USDT check running", "info");
