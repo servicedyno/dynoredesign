@@ -441,6 +441,49 @@ const startServer = async () => {
         log(`Webhook URL migration failed: ${err.message}`, "error");
       });
   });
+
+  // ─── Global Error Handler (must be AFTER all routes) ─────────────────────────
+  // Catches unhandled errors in route handlers and prevents stack trace leakage
+  app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const isProduction = process.env.NODE_ENV === 'production';
+    log(`[GlobalErrorHandler] Unhandled error: ${err.message}${!isProduction ? `\n${err.stack}` : ''}`, 'error');
+    res.status(500).json({
+      success: false,
+      message: isProduction ? 'Internal server error' : err.message,
+      statusCode: 500,
+    });
+  });
 };
 
 startServer();
+
+// ─── Graceful Shutdown ───────────────────────────────────────────────────────
+// Ensures open DB connections, Redis, and cron jobs are properly cleaned up
+const gracefulShutdown = async (signal: string) => {
+  log(`Received ${signal}. Starting graceful shutdown...`, 'warn');
+  
+  try {
+    // Close database connection
+    await sequelize.close();
+    log('Database connection closed.', 'info');
+  } catch (err) {
+    log(`Error closing database: ${err}`, 'error');
+  }
+
+  log('Graceful shutdown complete. Exiting.', 'info');
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  log(`Unhandled Promise Rejection at: ${promise}, reason: ${reason}`, 'error');
+  // Don't exit — log and continue
+});
+
+process.on('uncaughtException', (error: Error) => {
+  log(`Uncaught Exception: ${error.message}\n${error.stack}`, 'error');
+  // For uncaught exceptions, exit after logging (Node.js best practice)
+  process.exit(1);
+});
