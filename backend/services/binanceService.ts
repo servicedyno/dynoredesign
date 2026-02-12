@@ -91,6 +91,7 @@ const makeSignedRequest = async (
       url,
       headers,
       timeout: 30000,
+      ...(proxyAgent ? { httpAgent: proxyAgent, httpsAgent: proxyAgent } : {}),
     });
     return response.data;
   } catch (error) {
