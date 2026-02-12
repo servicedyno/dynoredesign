@@ -265,6 +265,49 @@ app.post("/diagnostics/trigger-conversion", adminAuthMiddleware, async (req: exp
   }
 });
 
+// Diagnostics: Volatility monitor states
+app.get("/diagnostics/volatility", async (_req: express.Request, res: express.Response) => {
+  try {
+    const states = getAllMarketStates();
+    const assets = Object.values(states);
+    const declining = assets.filter((a) => a.roc30m < -1.5);
+    res.status(200).json({
+      success: true,
+      monitoredAssets: assets.length,
+      decliningAssets: declining.length,
+      states,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+// Diagnostics: Force volatility monitor cycle
+app.post("/diagnostics/volatility-refresh", async (_req: express.Request, res: express.Response) => {
+  try {
+    const results = await runMonitorCycle();
+    res.status(200).json({ success: true, refreshed: results.length, states: results });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+// Diagnostics: Live blockchain fee rates
+app.get("/diagnostics/fee-rates", async (req: express.Request, res: express.Response) => {
+  try {
+    const chain = req.query.chain as string;
+    if (chain) {
+      const rates = await getFeeRates(chain);
+      res.status(200).json({ success: true, rates });
+    } else {
+      const allRates = getAllFeeRates();
+      res.status(200).json({ success: true, rates: allRates });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
 // OPTIMIZED: Reduced from */30 to every 2h — legacy system, rarely has pending addresses
 cron.schedule("0 */2 * * *", function () {
   log("Cron: USDT check running", "info");
