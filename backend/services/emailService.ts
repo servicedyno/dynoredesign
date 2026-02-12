@@ -12,7 +12,8 @@ const DYNOPAY_WHITE_LOGO_SVG = "https://raw.githubusercontent.com/Moxxcompany/Dy
 const getDynopayLogoUrl = () => {
   const serverUrl = process.env.SERVER_URL;
   if (serverUrl) {
-    return `${serverUrl}/dynopay-white-logo.png`;
+    // Use /api/static prefix so K8s ingress routes to backend (port 8001) instead of frontend
+    return `${serverUrl}/api/static/dynopay-white-logo.png`;
   }
   return DYNOPAY_WHITE_LOGO_SVG;
 };
