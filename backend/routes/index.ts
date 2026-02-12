@@ -19,6 +19,7 @@ import {
   walletMiddleware,
 } from "../middleware";
 // ITatumWebHook, IWebHook imports removed - not used
+import { strictRateLimiter } from "../middleware/rateLimitMiddleware";
 import apiRouter from "./apiRouter";
 import paymentRouter from "./paymentRouter";
 import {
@@ -28,6 +29,7 @@ import {
 } from "../webhooks";
 import crypto from "crypto";
 import adminRouter from "./adminRouter";
+import { logWebhookValidationFailure } from "../utils/securityLogger";
 
 /**
  * Tatum webhook HMAC signature verification middleware.
@@ -44,6 +46,7 @@ const verifyTatumWebhookSource = (req: express.Request, res: express.Response, n
   const signature = req.headers["x-payload-hash"] as string;
   if (!signature) {
     console.warn(`[WebhookAuth] Missing x-payload-hash header from ${req.ip}`);
+    logWebhookValidationFailure('tatum', req.ip || 'unknown', 'Missing x-payload-hash header');
     return res.status(401).json({ error: "Missing webhook signature" });
   }
 
@@ -52,6 +55,7 @@ const verifyTatumWebhookSource = (req: express.Request, res: express.Response, n
 
   if (signature !== expectedSignature) {
     console.warn(`[WebhookAuth] Invalid webhook signature from ${req.ip}`);
+    logWebhookValidationFailure('tatum', req.ip || 'unknown', 'Invalid HMAC signature');
     return res.status(401).json({ error: "Invalid webhook signature" });
   }
 
@@ -114,9 +118,9 @@ router.use("/referral", referralRouter); // Referral system endpoints
 router.use("/kb", knowledgeBaseRouter); // Knowledge Base endpoints
 router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
-router.post("/webhook", flutterwaveWebHook);
-router.post("/failed_webhook", flutterwaveWebHook);
-router.post("/tatum-webhook", verifyTatumWebhookSource, tatumWebHook);
-router.post("/tatum-crypto-webhook", verifyTatumWebhookSource, tatumCryptoWebHook);
+router.post("/webhook", strictRateLimiter, flutterwaveWebHook);
+router.post("/failed_webhook", strictRateLimiter, flutterwaveWebHook);
+router.post("/tatum-webhook", strictRateLimiter, verifyTatumWebhookSource, tatumWebHook);
+router.post("/tatum-crypto-webhook", strictRateLimiter, verifyTatumWebhookSource, tatumCryptoWebHook);
 
 export default router;
