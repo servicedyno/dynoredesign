@@ -182,8 +182,8 @@ app.get("/diagnostics/fee-optimization", adminAuthMiddleware, async (req: expres
   }
 });
 
-// ─── Webhook URL Migration (Admin) ───────────────────────────────────────────
-app.post("/diagnostics/migrate-webhook-urls", async (req: express.Request, res: express.Response) => {
+// ─── Webhook URL Migration (Admin-protected) ─────────────────────────────────
+app.post("/diagnostics/migrate-webhook-urls", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     log("Admin triggered webhook URL migration", "info");
     const stats = await migrateWebhookUrls();
