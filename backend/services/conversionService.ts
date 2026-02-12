@@ -171,22 +171,18 @@ const processConversions = async (): Promise<number> => {
         continue;
       }
 
-      // Get conversion quote
-      log(`📊 Getting quote: ${sourceAmount} ${fromAsset} → ${toAsset}`);
+      // Get conversion quote via spot market
+      log(`📊 Getting spot price: ${sourceAmount} ${fromAsset} → ${toAsset}`);
       await record.update({ status: "CONVERTING" });
 
-      const quote = await binanceService.getConvertQuote(fromAsset, toAsset, sourceAmount);
-      log(`📊 Quote #${quote.quoteId}: ${quote.fromAmount} ${fromAsset} → ${quote.toAmount} ${toAsset} (rate: ${quote.ratio})`);
-
-      // Accept the quote (EXECUTES conversion)
-      const result = await binanceService.acceptConvertQuote(quote.quoteId);
-      log(`✅ Conversion executed: order #${result.orderId}, status: ${result.orderStatus}`);
+      // Execute conversion via spot market order (works with standard canTrade permission)
+      const result = await binanceService.convertViaSpotTrade(fromAsset, toAsset, sourceAmount);
+      log(`✅ Spot trade executed: order #${result.orderId}, ${result.fromAmount} ${fromAsset} → ${result.toAmount} ${toAsset} (avg price: ${result.avgPrice})`);
 
       await record.update({
-        binance_quote_id: quote.quoteId,
-        binance_order_id: result.orderId,
-        conversion_rate: parseFloat(quote.ratio),
-        target_amount: parseFloat(quote.toAmount),
+        binance_order_id: String(result.orderId),
+        conversion_rate: parseFloat(result.avgPrice),
+        target_amount: parseFloat(result.toAmount),
         status: "CONVERTED",
         converted_at: new Date(),
       });
