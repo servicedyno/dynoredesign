@@ -400,6 +400,7 @@ cron.schedule("*/2 * * * *", function () {
   log("Cron: releaseMerchantPoolExpiredReservations running", "info");
   merchantPoolService.releaseExpiredReservations().catch(err => {
     log(`Cron: Release expired failed, will retry next cycle: ${err.message}`, "error");
+    captureError(err, 'cron', { extraContext: 'releaseExpiredReservations' });
   });
 });
 
