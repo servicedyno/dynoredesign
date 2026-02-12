@@ -118,12 +118,5 @@ router.post("/webhook", flutterwaveWebHook);
 router.post("/failed_webhook", flutterwaveWebHook);
 router.post("/tatum-webhook", verifyTatumWebhookSource, tatumWebHook);
 router.post("/tatum-crypto-webhook", verifyTatumWebhookSource, tatumCryptoWebHook);
-router.post("/test-webhook", (req: express.Request, res: express.Response) => {
-  console.log(req.body, JSON.stringify(req.body));
-  const tempData = req.body;
-  console.log("from test-webhook==========tempData==============>", tempData);
-
-  res.status(200).end();
-});
 
 export default router;
