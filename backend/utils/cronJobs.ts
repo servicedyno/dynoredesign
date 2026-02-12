@@ -142,6 +142,7 @@ export const setupWeeklySummaryCron = () => {
     } catch (e) {
       log(`Weekly Summary Cron Job Error: ${e}`, "error");
       cronLogger?.error?.("Weekly Summary Cron Error", {}, new Error(String(e)));
+      captureError(e, 'cron', { extraContext: 'setupWeeklySummaryCron' });
     }
   });
 
