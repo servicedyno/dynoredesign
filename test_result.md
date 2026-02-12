@@ -7059,3 +7059,64 @@ ports:
           - All conditional checks working correctly (auto_convert_enabled && settlement_currency && settlement_wallet_address && settlement_chain)
           
           CONCLUSION: Auto-Conversion Disable Flow Enhancement is fully operational and production-ready. All 6 verification requirements from the review request have been successfully validated. The system correctly enables/disables auto-conversion functionality at the company level and properly skips auto-conversion in payment flow when disabled.
+  - task: "Binance WebSocket Price Stream + Rate-Limit Fix + Unavailability Handling"
+    implemented: true
+    working: pending_test
+    files:
+      - "/app/backend/services/binanceWebSocketService.ts"
+      - "/app/backend/services/volatilityMonitorService.ts"
+      - "/app/backend/services/binanceService.ts"
+      - "/app/backend/services/conversionService.ts"
+      - "/app/backend/server.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          BINANCE WEBSOCKET + RATE-LIMIT FIX:
+          
+          1. Created binanceWebSocketService.ts:
+             - Persistent WebSocket connection to wss://stream.binance.com:9443/stream
+             - Subscribes to miniTicker + kline_5m for all 10 tracked assets
+             - In-memory price + kline cache with Redis sync every 10s
+             - Auto-reconnect with exponential backoff
+             - REST fallback with its own circuit breaker
+             - Geo-block detection (HTTP 451) → slows reconnect to 5-min probes
+             
+          2. Rewrote volatilityMonitorService.ts (v2):
+             - ZERO REST calls — reads from WebSocket cache only
+             - Cycle interval reduced from 60s to 30s (free since no REST)
+             - Same classification logic (ROC, volume ratio, state tiers)
+             - Gracefully handles zero data (WebSocket warming up or geo-blocked)
+             
+          3. Updated binanceService.ts:
+             - getPrice() and getAllPrices() now check WebSocket cache first
+             - Falls back to REST only if WebSocket cache is stale
+             
+          4. Updated conversionService.ts:
+             - Added Binance Availability Guard at top of processStablecoinConversions()
+             - When Binance is unreachable: skips conversion/withdrawal phases
+             - Still checks deposits as a connectivity probe
+             - Returns skipped_reason: "binance_unreachable"
+             
+          5. Updated server.ts:
+             - Starts WebSocket before volatility monitor
+             - Health endpoint shows WebSocket status + geo_blocked flag
+          
+          NOTE: On this US dev server, Binance is geo-blocked (HTTP 451). Both WebSocket and REST fail.
+          In production (non-US server like Railway), the WebSocket will connect and stream live prices.
+          The geo-block is properly detected and reconnect is slowed to 5-minute probes.
+          
+          TESTS TO RUN:
+          TEST 1: Backend healthy — GET http://localhost:8001/health returns 200 with status "healthy"
+          TEST 2: Health shows WebSocket status — GET /health should include binance_websocket object with connected, geo_blocked, cached_prices fields
+          TEST 3: Geo-block detected — health.binance_websocket.geo_blocked should be true on this server
+          TEST 4: No rate-limit errors — check backend logs for any "rate limited" or "10/10 assets failed" errors (should be NONE)
+          TEST 5: WebSocket service started — check logs for "[BinanceWS] Starting Binance WebSocket" and geo-block detection message
+          TEST 6: Volatility monitor WebSocket-powered — check logs for "[VolatilityMonitor] Starting volatility monitor (30s interval, WebSocket-powered)"
+          TEST 7: Conversion guard works — check logs for "Binance appears unreachable" or successful cycle
+          TEST 8: Swagger spec still works — GET /api/docs.json should return valid spec with 197+ paths
+          
+          Base URL: http://localhost:8001
