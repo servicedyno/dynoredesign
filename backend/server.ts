@@ -645,7 +645,10 @@ const startServer = async () => {
       log(`Initial rate cache population failed: ${err.message}`, "error");
     });
 
-    // Start volatility monitor (checks price movement every 60s for adaptive sweep fees)
+    // Start Binance WebSocket price stream (replaces REST polling for live prices)
+    startBinanceWebSocket();
+
+    // Start volatility monitor (now reads from WebSocket cache — zero REST calls)
     startVolatilityMonitor();
 
     // Start error monitoring (sends admin digest every 15 min when errors exist)
