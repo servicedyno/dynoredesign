@@ -263,9 +263,9 @@ export const runMonitorCycle = async (): Promise<MarketState[]> => {
 
     // Only log every Nth rate-limited cycle to avoid flooding
     if (consecutiveRateLimitCycles % MAX_RATE_LIMIT_LOG_FREQUENCY === 1) {
-      log(`⚠️ Rate limited (418/429) for ${failedAssets.length}/${MONITORED_ASSETS.length} assets. Backing off for ${Math.round(backoffMs / 1000)}s (cycle #${consecutiveRateLimitCycles})`);
+      log(`⚠️ Rate limited (418/429/451) for ${failedAssets.length}/${MONITORED_ASSETS.length} assets. Backing off for ${Math.round(backoffMs / 1000)}s (cycle #${consecutiveRateLimitCycles})`);
       captureError(
-        new Error(`Binance API rate limited (418/429) — ${failedAssets.length}/${MONITORED_ASSETS.length} assets failed`),
+        new Error(`Binance API rate limited — ${failedAssets.length}/${MONITORED_ASSETS.length} assets failed`),
         "blockchain",
         {
           severity: "medium",
