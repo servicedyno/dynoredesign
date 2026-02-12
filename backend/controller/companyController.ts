@@ -1625,6 +1625,81 @@ const getConversionHistory = async (
   }
 };
 
+// Get single conversion detail by conversionId
+const getConversionDetail = async (req: Request, res: Response) => {
+  try {
+    const conversionId = parseInt(req.params.conversionId);
+    if (isNaN(conversionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid conversion ID' });
+    }
+
+    const { stablecoinConversion } = await import("../models");
+
+    const conversion = await stablecoinConversion.findOne({
+      where: { conversion_id: conversionId },
+    });
+
+    if (!conversion) {
+      return res.status(404).json({ success: false, message: 'Conversion not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: conversion,
+    });
+  } catch (error) {
+    console.error('Error getting conversion detail:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Retry a failed conversion
+const retryConversion = async (req: Request, res: Response) => {
+  try {
+    const conversionId = parseInt(req.params.conversionId);
+    if (isNaN(conversionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid conversion ID' });
+    }
+
+    const { stablecoinConversion } = await import("../models");
+
+    const conversion = await stablecoinConversion.findOne({
+      where: { conversion_id: conversionId },
+    });
+
+    if (!conversion) {
+      return res.status(404).json({ success: false, message: 'Conversion not found' });
+    }
+
+    if (conversion.dataValues.status !== 'FAILED') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot retry conversion with status '${conversion.dataValues.status}'. Only FAILED conversions can be retried.`,
+      });
+    }
+
+    // Reset status to PENDING_DEPOSIT to re-enter the pipeline
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (conversion as any).update({
+      status: 'PENDING_DEPOSIT',
+      error_message: null,
+      retry_count: (conversion.dataValues.retry_count || 0) + 1,
+    });
+
+    // Reload to get updated values
+    await conversion.reload();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Conversion retry initiated. Status reset to PENDING_DEPOSIT.',
+      data: conversion,
+    });
+  } catch (error) {
+    console.error('Error retrying conversion:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 export default {
   addCompany,
   getCompany,
@@ -1642,4 +1717,6 @@ export default {
   getAutoConvertSettings,
   updateAutoConvertSettings,
   getConversionHistory,
+  getConversionDetail,
+  retryConversion,
 };
