@@ -1120,8 +1120,8 @@ const resetPassword = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 400, "Invalid or expired reset token");
     }
 
-    // Hash new password and update
-    const hashedPassword = sha256(newPassword).toString();
+    // Hash new password with bcrypt and update
+    const hashedPassword = hashPassword(newPassword);
 
     await userModel.update(
       {
