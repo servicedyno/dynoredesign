@@ -180,8 +180,9 @@ const maybeAlertAdmin = async (state: MarketState) => {
     // Use existing admin alert email (reuse sendAdminLowBalanceAlert or similar)
     // For now, log prominently
     console.warn(`\n${"=".repeat(60)}\n🚨 VOLATILITY ALERT: ${message}\n${"=".repeat(60)}\n`);
-  } catch (err) {
-    logError(`Failed to send admin alert: ${err}`);
+  } catch (err: any) {
+    log(`❌ Failed to send admin alert: ${err.message}`);
+    captureError(err, 'blockchain', { extraContext: `Volatility alert for ${state.asset}` });
   }
 };
 
