@@ -156,8 +156,18 @@ const connect = () => {
   });
 
   ws.on("error", (err) => {
-    log(`❌ WebSocket error: ${err.message}`);
+    const errMsg = err.message || "";
+    log(`❌ WebSocket error: ${errMsg}`);
     isConnecting = false;
+
+    // Detect geo-restriction (HTTP 451 Unavailable For Legal Reasons)
+    if (errMsg.includes("451") || errMsg.includes("403")) {
+      if (!geoBlocked) {
+        geoBlocked = true;
+        log(`🌍 Binance WebSocket geo-blocked from this server region. ` +
+          `Will retry every 5 minutes. In production (non-US server), this will work automatically.`);
+      }
+    }
   });
 
   ws.on("close", (code, reason) => {
