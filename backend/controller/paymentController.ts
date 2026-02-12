@@ -4062,6 +4062,52 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           }
         }
 
+        // ============================================
+        // AUTO-STABLECOIN CONVERSION: Redirect to admin wallet if enabled
+        // ============================================
+        let autoConvertEnabled = false;
+        let autoConvertTargetCurrency = "";
+        let autoConvertSettlementAddress = "";
+        let autoConvertSettlementChain = "";
+        let originalUserAddress = walletData.dataValues.wallet_address;
+        let originalUserAmount = userAmountToSend;
+
+        if (
+          company_data.auto_convert_enabled &&
+          company_data.settlement_currency &&
+          company_data.settlement_wallet_address &&
+          company_data.settlement_chain &&
+          isVolatileCrypto(tempCurrency) &&
+          userAmountToSend > 0
+        ) {
+          autoConvertEnabled = true;
+          autoConvertTargetCurrency = company_data.settlement_currency;
+          autoConvertSettlementAddress = company_data.settlement_wallet_address;
+          autoConvertSettlementChain = company_data.settlement_chain;
+
+          // Redirect merchant portion to admin wallet (= Binance deposit address)
+          // Admin wallet gets: admin fee portion + merchant portion (for conversion)
+          const adminWalletAddr = getAdminWalletAddress(tempCurrency);
+          if (adminWalletAddr) {
+            console.log(`[AutoConvert] ✅ ACTIVE for company ${customerData.company_id}:
+              - Source: ${userAmountToSend.toFixed(8)} ${tempCurrency}
+              - Target: ${autoConvertTargetCurrency} on ${autoConvertSettlementChain}
+              - Redirecting merchant portion to admin wallet: ${adminWalletAddr.substring(0, 12)}...
+              - Merchant settlement address: ${autoConvertSettlementAddress.substring(0, 12)}...`);
+
+            // Add merchant portion to admin portion (all goes to admin/Binance)
+            adminAmountToSend = adminAmountToSend + userAmountToSend;
+            userAmountToSend = 0; // Nothing goes directly to merchant
+
+            console.log(`[AutoConvert] Updated distribution:
+              - Admin total (fees + merchant): ${adminAmountToSend.toFixed(8)} ${tempCurrency}
+              - Merchant direct: 0 (will receive ${autoConvertTargetCurrency} after conversion)`);
+          } else {
+            console.warn(`[AutoConvert] ⚠️ No admin wallet for ${tempCurrency}, falling back to normal settlement`);
+            autoConvertEnabled = false;
+          }
+        }
+
         const adminTransferResult = await settleCryptoTransaction({
           tempAddressData: tempAddressData,
           receivedAmount: Number(adminAmountToSend),
