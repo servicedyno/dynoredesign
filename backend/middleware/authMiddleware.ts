@@ -36,7 +36,6 @@ const authMiddleware = async (
       
       // Check if decoded token has user_id
       if (!decoded || !decoded.user_id) {
-        console.log("Auth Middleware - Token validation failed: missing user_id");
         return errorResponseHelper(res, 401, "Invalid token format. Please login again.");
       }
       
