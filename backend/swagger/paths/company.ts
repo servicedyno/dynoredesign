@@ -288,7 +288,7 @@ export const companyPaths = {
     put: {
       tags: ['Auto-Stablecoin Conversion'],
       summary: 'Update auto-convert settings',
-      description: 'Enable or update auto-stablecoin conversion for a company.\n\nWhen enabled, volatile crypto payments (BTC, ETH, etc.) are automatically converted to the chosen stablecoin via Binance and sent to the settlement wallet.\n\n**Note:** Stablecoin payments (USDT, USDC, RLUSD) bypass conversion and go directly to the merchant wallet.',
+      description: 'Enable or disable auto-stablecoin conversion for a company.\n\n**To Enable:** Send `auto_convert_enabled: true` with `settlement_currency`, `settlement_chain`. Volatile crypto will be auto-converted to your chosen stablecoin.\n\n**To Disable:** Send `auto_convert_enabled: false`. Returns `wallet_readiness` showing which volatile crypto wallets are configured. Payments resume forwarding directly to your saved merchant wallets.\n\n**When Disabled:** All payments go directly to merchant wallets. Missing wallets for specific currencies will cause those payments to fail.',
       security: [{ BearerAuth: [] }],
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' }, description: 'Company ID' }],
       requestBody: {
@@ -299,18 +299,18 @@ export const companyPaths = {
               type: 'object',
               required: ['auto_convert_enabled'],
               properties: {
-                auto_convert_enabled: { type: 'boolean', example: true, description: 'Enable/disable auto-conversion' },
-                settlement_currency: { type: 'string', enum: ['USDT', 'USDC'], example: 'USDT', description: 'Required when enabling' },
-                settlement_wallet_address: { type: 'string', example: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18', description: 'Required when enabling' },
-                settlement_chain: { type: 'string', enum: ['ERC20', 'TRC20', 'POLYGON', 'BEP20', 'SOL'], example: 'ERC20', description: 'Required when enabling' },
+                auto_convert_enabled: { type: 'boolean', example: false, description: 'Set to false to disable and resume direct wallet forwarding' },
+                settlement_currency: { type: 'string', enum: ['USDT', 'USDC'], example: 'USDT', description: 'Required only when enabling' },
+                settlement_wallet_address: { type: 'string', example: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18', description: 'Required only when enabling' },
+                settlement_chain: { type: 'string', enum: ['ERC20', 'TRC20', 'POLYGON', 'BEP20', 'SOL'], example: 'ERC20', description: 'Required only when enabling' },
               },
             },
           },
         },
       },
       responses: {
-        200: { description: 'Settings updated', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' }, data: { type: 'object', properties: { company_id: { type: 'integer' }, auto_convert_enabled: { type: 'boolean' }, settlement_currency: { type: 'string' }, settlement_wallet_address: { type: 'string' }, settlement_chain: { type: 'string' } } } } } } } },
-        400: { description: 'Validation error' },
+        200: { description: 'Settings updated. When disabling, includes wallet_readiness check.', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string', description: 'Includes warning if merchant wallets are missing for some currencies' }, data: { type: 'object', properties: { auto_convert_enabled: { type: 'boolean' }, forwarding_mode: { type: 'string', enum: ['direct_to_merchant_wallets', 'auto_convert_via_binance'] }, previous_settlement: { type: 'object', nullable: true, properties: { currency: { type: 'string' }, chain: { type: 'string' } } }, wallet_readiness: { type: 'object', description: 'Only present when disabling', properties: { all_configured: { type: 'boolean', description: 'True if merchant has wallets for all volatile currencies' }, configured_wallets: { type: 'array', items: { type: 'string' }, example: ['BTC', 'ETH'] }, missing_wallets: { type: 'array', items: { type: 'string' }, example: ['LTC', 'DOGE', 'SOL'] }, total_volatile_currencies: { type: 'integer', example: 8 } } } } } } } } } },
+        400: { description: 'Validation error (invalid currency/chain when enabling)' },
         404: { description: 'Company not found' },
         401: { description: 'Unauthorized' },
       },
