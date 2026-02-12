@@ -360,7 +360,8 @@ export const startVolatilityMonitor = () => {
     try {
       await runMonitorCycle();
     } catch (err: any) {
-      logError(`Monitor cycle failed: ${err.message}`);
+      log(`❌ Monitor cycle failed: ${err.message}`);
+      captureError(err, 'blockchain', { extraContext: 'VolatilityMonitor cycle' });
     }
   }, 60000); // Every 60 seconds
 };
