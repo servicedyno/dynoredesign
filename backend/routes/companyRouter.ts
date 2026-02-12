@@ -44,4 +44,8 @@ companyRouter.get("/auto-convert/:id", authMiddleware, companyOwnershipMiddlewar
 companyRouter.put("/auto-convert/:id", authMiddleware, companyOwnershipMiddleware, companyController.updateAutoConvertSettings);
 companyRouter.get("/conversion-history/:id", authMiddleware, companyOwnershipMiddleware, companyController.getConversionHistory);
 
+// Single conversion detail & retry
+companyRouter.get("/conversion/:conversionId", authMiddleware, companyController.getConversionDetail);
+companyRouter.post("/conversion/:conversionId/retry", authMiddleware, companyController.retryConversion);
+
 export default companyRouter;
