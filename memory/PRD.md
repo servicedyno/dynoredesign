@@ -95,6 +95,19 @@ Full-stack cryptocurrency payment gateway (DynoPay) with Node.js/TypeScript back
 
 ## Pending/Backlog
 - P1: End-to-end auto-conversion test on Railway (blocked on deployment)
-- P2: Brevo API ERR_BAD_REQUEST investigation
-- P2: Consolidate error handling (captureError vs console.log duplication)
+
+### Session 10b (Feb 12, 2026) - Brevo Fix + Error Logging Consolidation
+- **Brevo ERR_BAD_REQUEST fix** in `backend/utils/mailTransporter.ts`:
+  - Added input validation (email format, empty subject/body) before hitting Brevo API
+  - Added 15s timeout to prevent hung requests
+  - Capped `textContent` at 50K chars to prevent oversized payloads
+  - Wrapped Brevo API call in try/catch with `captureError` including payload size for diagnostics
+- **Consolidated error logging** across the codebase:
+  - `captureError` now logs a structured one-liner (`[ErrorMonitor] [COMPONENT] message | code | status | ctx`) at warn/error level
+  - Removed all 15 duplicate `console.log(...formatEmailError(e))` lines from `sendEmail.ts`
+  - Removed 2 duplicate `console.error` lines from `cronJobs.ts`
+  - Deleted unused `formatEmailError` helper function
+  - All error paths now go through a single `captureError` → log + buffer + optional alert pipeline
+
+- P3: Refactor error handling consolidation further if needed
 
