@@ -1154,6 +1154,13 @@ function verifyWebhookSignature(payload, signature, secret) {
       { name: "Dashboard", description: "Analytics and statistics" },
       { name: "Invoices", description: "Transaction invoices and PDF generation" },
       { name: "Subscriptions", description: "Recurring payment management" },
+      { name: "Auto-Stablecoin Conversion", description: `Automatic conversion of volatile crypto (BTC, ETH, SOL, etc.) to stablecoins (USDT/USDC) via Binance.
+
+**Flow:** Payment received in volatile crypto → Redirected to admin wallet (Binance deposit) → Binance Convert API → Stablecoin withdrawn to merchant's settlement wallet.
+
+**Statuses:** PENDING_DEPOSIT → DEPOSIT_CREDITED → CONVERTING → CONVERTED → WITHDRAWING → COMPLETED
+
+**Note:** Stablecoin payments (USDT, USDC, RLUSD) are NOT converted — they go directly to the merchant wallet.` },
       
       // === INTEGRATIONS ===
       { name: "Webhooks", description: `Webhook configuration and delivery.
