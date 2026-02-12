@@ -93,7 +93,7 @@ router.get("/binance-account", async (_req: express.Request, res: express.Respon
 
 /**
  * GET /diagnostics/binance-quote
- * Test conversion quote API
+ * Test spot price quote (non-executing, safe for testing)
  */
 router.get("/binance-quote", async (req: express.Request, res: express.Response) => {
   try {
@@ -101,27 +101,42 @@ router.get("/binance-quote", async (req: express.Request, res: express.Response)
     const toAsset = req.query.to as string || "USDT";
     const amount = parseFloat(req.query.amount as string || "0.001");
 
-    const quote: any = await binanceService.getConvertQuote(fromAsset, toAsset, amount);
+    // Use spot price quote instead of Convert API (Convert requires special Binance approval)
+    const quote = await binanceService.getSpotQuote(fromAsset, toAsset, amount);
     
     res.status(200).json({
       success: true,
       quote: {
-        quoteId: quote.quoteId,
-        fromAsset: fromAsset,
-        toAsset: toAsset,
+        symbol: quote.symbol,
+        fromAsset: quote.fromAsset,
+        toAsset: quote.toAsset,
         fromAmount: quote.fromAmount,
-        toAmount: quote.toAmount,
-        ratio: quote.ratio,
-        inverseRatio: quote.inverseRatio
+        estimatedToAmount: quote.estimatedToAmount,
+        price: quote.price,
       },
-      message: "Binance Convert API working"
+      method: "spot_market_price",
+      message: "Binance Spot quote retrieved successfully"
     });
   } catch (error: any) {
     res.status(500).json({
       success: false,
       error: error.message,
-      message: "Binance Convert API failed"
+      message: "Binance Spot quote failed"
     });
+  }
+});
+
+/**
+ * GET /diagnostics/binance-exchange-info
+ * Get trading pair info (min quantity, step size)
+ */
+router.get("/binance-exchange-info", async (req: express.Request, res: express.Response) => {
+  try {
+    const symbol = req.query.symbol as string || "BTCUSDT";
+    const info = await binanceService.getExchangeInfo(symbol);
+    res.status(200).json({ success: true, ...info });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
