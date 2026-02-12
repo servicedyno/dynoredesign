@@ -660,9 +660,19 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
 
     const resData = await sequelize.query(
       `
-      select ut.*,c.customer_name,c.email,cm.company_name,cm.company_id from tbl_user_transaction ut 
+      select ut.*,c.customer_name,c.email,cm.company_name,cm.company_id,
+        sc.conversion_id as auto_convert_id,
+        sc.status as auto_convert_status,
+        sc.target_currency as auto_convert_target_currency,
+        sc.target_amount as auto_convert_target_amount,
+        sc.settlement_chain as auto_convert_settlement_chain,
+        sc.conversion_rate as auto_convert_rate,
+        sc.completed_at as auto_convert_completed_at
+      from tbl_user_transaction ut 
       join tbl_customer c on c.customer_id=ut.customer_id
-      join tbl_company cm on cm.company_id=c.company_id where c.company_id=${id}`,
+      join tbl_company cm on cm.company_id=c.company_id
+      left join tbl_stablecoin_conversion sc on sc.transaction_id=ut.transaction_id
+      where c.company_id=${id}`,
       { type: QueryTypes.SELECT }
     );
 
