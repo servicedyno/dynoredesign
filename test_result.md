@@ -4,50 +4,40 @@
 # Last Updated: 2026-02-12
 #===================================================
 
-user_problem_statement: "Security audit — OWASP compliance, bcrypt, XSS sanitization, global error handling, graceful shutdown"
+user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
-  - task: "Security Audit — 10 OWASP Compliance Fixes"
+  - task: "Auto-Stablecoin Conversion via Binance"
     implemented: true
-    working: true
+    working: "needs_testing"
     files:
-      - "/app/backend/helper/passwordHelper.ts"
-      - "/app/backend/middleware/sanitizeInput.ts"
-      - "/app/backend/middleware/requestLogger.ts"
-      - "/app/backend/controller/userController.ts"
-      - "/app/backend/middleware/authMiddleware.ts"
-      - "/app/backend/middleware/customerAuthMiddleware.ts"
-      - "/app/backend/middleware/userMiddleware.ts"
+      - "/app/backend/models/stablecoinConversionModel.ts"
+      - "/app/backend/services/binanceService.ts"
+      - "/app/backend/services/conversionService.ts"
+      - "/app/backend/controller/companyController.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/routes/companyRouter.ts"
+      - "/app/backend/models/companyModels/companyModel.ts"
+      - "/app/backend/models/index.ts"
       - "/app/backend/server.ts"
-      - "/app/backend/routes/index.ts"
-      - "/app/backend/utils/dbInstance.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
         comment: |
-          SECURITY AUDIT — 10 OWASP COMPLIANCE FIXES IMPLEMENTED:
+          AUTO-STABLECOIN CONVERSION IMPLEMENTATION:
           
-          FIX 1 — BCRYPT PASSWORD HASHING (OWASP A02):
-          - Replaced SHA-256 with bcrypt (12 rounds) in passwordHelper.ts
-          - Transparent migration: on login, old SHA-256 passwords auto-upgrade to bcrypt
-          - All password operations (register, login, changePassword, resetPassword, changeEmail, changePhone, removeEmail, removePhone, deleteAccount) now use bcrypt
+          1. Company Settings: auto_convert_enabled, settlement_currency (USDT/USDC), settlement_wallet_address, settlement_chain (ERC20/TRC20/POLYGON/BEP20/SOL)
+          2. Settlement Redirect: When auto-convert ON + volatile crypto → merchant portion redirected to admin wallet (Binance deposit address)
+          3. Binance Service: Full API client with HMAC-SHA256 signing, Convert API (getQuote/acceptQuote), withdrawal, deposit detection
+          4. Conversion Service: Cron-based pipeline — PENDING_DEPOSIT → DEPOSIT_CREDITED → CONVERTING → CONVERTED → WITHDRAWING → COMPLETED
+          5. Conversion Model: tbl_stablecoin_conversion with full audit trail
+          6. API Endpoints: GET/PUT /api/company/auto-convert/:id, GET /api/company/conversion-history/:id
+          7. Admin Diagnostics: /diagnostics/conversion-stats, /diagnostics/trigger-conversion
           
-          FIX 2 — GLOBAL ERROR HANDLER + GRACEFUL SHUTDOWN:
-          - Added Express error-handling middleware (err, req, res, next) at end of route chain
-          - Added SIGTERM, SIGINT, unhandledRejection, uncaughtException handlers
-          - Graceful shutdown closes DB connections before exit
-          
-          FIX 3 — PROTECTED DIAGNOSTICS ENDPOINTS:
-          - /diagnostics/fee-optimization now requires adminAuthMiddleware
-          - /diagnostics/migrate-webhook-urls now requires adminAuthMiddleware
-          - Removed /api/test-webhook endpoint entirely
-          
-          FIX 4 — TRUST PROXY + CORS TIGHTENING:
-          - Added app.set('trust proxy', 1) for correct req.ip behind K8s
-          - CORS origins now configurable via CORS_ALLOWED_ORIGINS env var
+          NOTE: Binance API (api.binance.com) cannot be reached from this US-based pod. The Binance integration code will work on a non-US server (Railway deployment).
           - Added X-Request-ID to allowed headers
           
           FIX 5 — XSS SANITIZATION MIDDLEWARE:
