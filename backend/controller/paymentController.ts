@@ -4137,7 +4137,17 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         if (autoConvertEnabled && originalUserAmount > 0) {
           try {
             const adminWalletAddr = getAdminWalletAddress(tempCurrency) || "";
-            const usdValue = amountInUSD && amountInUSD[0] ? Number(amountInUSD[0].amount) : undefined;
+            // Use receivedAmount and currencyConvert for USD value since amountInUSD is block-scoped
+            let usdValue: number | undefined;
+            try {
+              const usdConvert = await currencyConvert({
+                sourceCurrency: tempCurrency,
+                currency: ["USD"],
+                amount: originalUserAmount,
+                fixedDecimal: false,
+              });
+              usdValue = usdConvert && usdConvert[0] ? Number(usdConvert[0].amount) : undefined;
+            } catch { usdValue = undefined; }
             
             await createConversionRecord({
               transactionId: parseInt(transactionId),
