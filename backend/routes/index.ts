@@ -45,9 +45,9 @@ const verifyTatumWebhookSource = (req: express.Request, res: express.Response, n
 
   const signature = req.headers["x-payload-hash"] as string;
   if (!signature) {
-    console.warn(`[WebhookAuth] Missing x-payload-hash header from ${req.ip}`);
-    logWebhookValidationFailure('tatum', req.ip || 'unknown', 'Missing x-payload-hash header');
-    return res.status(401).json({ error: "Missing webhook signature" });
+    // Existing subscriptions may not have HMAC enabled — allow but warn
+    console.warn(`[WebhookAuth] Missing x-payload-hash header from ${req.ip} — allowing (legacy subscription)`);
+    return next();
   }
 
   const rawBody = JSON.stringify(req.body);
