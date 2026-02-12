@@ -257,14 +257,30 @@ const processWithdrawals = async (): Promise<number> => {
     const data = record.dataValues;
     try {
       const coin = data.target_currency; // USDT or USDC
-      const amount = parseFloat(data.target_amount);
       const address = data.settlement_wallet_address;
       const network = data.settlement_chain;
 
+      // Use merchant_payout_usd (from payout calculation) as the withdrawal amount
+      // This already accounts for: platform surplus deduction, but not withdrawal fee
+      const merchantPayout = parseFloat(data.merchant_payout_usd || data.target_amount || "0");
+
+      // Estimate Binance withdrawal fee based on network
+      const withdrawalFeeEstimate = getWithdrawalFeeEstimate(network);
+      const withdrawalAmount = Math.max(0, merchantPayout - withdrawalFeeEstimate);
+
+      if (withdrawalAmount <= 0) {
+        log(`⚠️ Withdrawal amount too small for conversion #${data.conversion_id}: payout $${merchantPayout}, fee $${withdrawalFeeEstimate}`);
+        await record.update({
+          status: "FAILED",
+          error_message: `Withdrawal amount ($${withdrawalAmount.toFixed(2)}) too small after fees`,
+        });
+        continue;
+      }
+
       // Verify we have enough balance
       const balance = await binanceService.getAssetBalance(coin);
-      if (balance.free < amount * 0.99) {
-        log(`⚠️ Insufficient ${coin} for withdrawal #${data.conversion_id}: have ${balance.free}, need ${amount}`);
+      if (balance.free < withdrawalAmount * 0.99) {
+        log(`⚠️ Insufficient ${coin} for withdrawal #${data.conversion_id}: have ${balance.free}, need ${withdrawalAmount}`);
         await record.update({
           retry_count: data.retry_count + 1,
           last_retry_at: new Date(),
@@ -273,19 +289,21 @@ const processWithdrawals = async (): Promise<number> => {
         continue;
       }
 
-      log(`💸 Withdrawing ${amount} ${coin} (${network}) to ${address.substring(0, 10)}...`);
+      log(`💸 Withdrawing ${withdrawalAmount.toFixed(2)} ${coin} (${network}) to ${address.substring(0, 10)}... (payout: $${merchantPayout.toFixed(2)}, w/fee: $${withdrawalFeeEstimate})`);
       await record.update({ status: "WITHDRAWING" });
 
       const withdrawal = await binanceService.submitWithdrawal({
         coin,
         address,
-        amount,
+        amount: withdrawalAmount,
         network,
       });
 
       log(`✅ Withdrawal initiated: ID ${withdrawal.id}`);
       await record.update({
         withdrawal_id: withdrawal.id,
+        withdrawal_fee: withdrawalFeeEstimate,
+        merchant_payout_usd: withdrawalAmount, // Final amount after all fees
         withdrawn_at: new Date(),
       });
 
