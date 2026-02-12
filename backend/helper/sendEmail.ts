@@ -1171,6 +1171,194 @@ const sendAutoConversionPayoutEmail = async (
   }
 };
 
+/**
+ * Send weekly conversion summary email
+ * Aggregates all auto-conversions for the past week per merchant
+ * Shows: total volume, total saved, per-crypto breakdown with price movement mini-chart
+ */
+const sendWeeklyConversionSummaryEmail = async (
+  recipientEmail: string,
+  name: string,
+  companyName: string,
+  data: {
+    periodStart: string;
+    periodEnd: string;
+    totalConversions: number;
+    totalSourceUsd: number;
+    totalPayoutUsd: number;
+    totalSavedUsd: number;
+    totalVolatileConversions: number;
+    avgPriceMovementPct: number;
+    cryptoBreakdown: Array<{
+      currency: string;
+      count: number;
+      totalAmount: string;
+      totalPayoutUsd: number;
+      avgMovementPct: number;
+    }>;
+    dailyVolume: Array<{
+      day: string;
+      label: string;
+      payoutUsd: number;
+    }>;
+  }
+) => {
+  try {
+    const {
+      periodStart, periodEnd, totalConversions,
+      totalSourceUsd, totalPayoutUsd, totalSavedUsd,
+      totalVolatileConversions, avgPriceMovementPct,
+      cryptoBreakdown, dailyVolume,
+    } = data;
+
+    if (totalConversions === 0) return; // No conversions, skip
+
+    const subject = `Weekly Conversion Report — ${totalConversions} conversion${totalConversions !== 1 ? 's' : ''}, $${totalPayoutUsd.toFixed(2)} paid out`;
+
+    // Build daily volume mini-chart (horizontal bar chart using HTML tables)
+    const maxDailyVolume = Math.max(...dailyVolume.map(d => d.payoutUsd), 1);
+    const chartRows = dailyVolume.map(d => {
+      const barWidth = Math.max(2, Math.round((d.payoutUsd / maxDailyVolume) * 100));
+      const hasActivity = d.payoutUsd > 0;
+      return `
+        <tr>
+          <td style="padding: 4px 8px 4px 0; font-size: 12px; color: #6b7280; font-family: 'Inter', Arial, sans-serif; white-space: nowrap; width: 40px;">${d.label}</td>
+          <td style="padding: 4px 0; width: 100%;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 3px; height: 18px;">
+              <tr>
+                <td style="width: ${barWidth}%; background: ${hasActivity ? 'linear-gradient(90deg, #1034a6, #3b82f6)' : 'transparent'}; border-radius: 3px; height: 18px;">&nbsp;</td>
+                <td style="height: 18px;">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+          <td style="padding: 4px 0 4px 8px; font-size: 12px; color: ${hasActivity ? '#1a1a2e' : '#9ca3af'}; font-family: 'Inter', Arial, sans-serif; white-space: nowrap; text-align: right; width: 60px; font-weight: ${hasActivity ? '600' : '400'};">${hasActivity ? '$' + d.payoutUsd.toFixed(0) : '-'}</td>
+        </tr>`;
+    }).join('');
+
+    // Build crypto breakdown rows
+    const breakdownRows = cryptoBreakdown.map(c => {
+      const movementColor = c.avgMovementPct < -1 ? '#dc2626' : c.avgMovementPct < 0 ? '#f59e0b' : '#22c55e';
+      const movementSign = c.avgMovementPct >= 0 ? '+' : '';
+      return `
+        <tr>
+          <td style="padding: 10px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">${c.currency}</td>
+          <td style="padding: 10px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: center; border-bottom: 1px solid #f3f4f6;">${c.count}</td>
+          <td style="padding: 10px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">$${c.totalPayoutUsd.toFixed(2)}</td>
+          <td style="padding: 10px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">
+            <span style="color: ${movementColor}; font-size: 13px; font-weight: 500;">${movementSign}${c.avgMovementPct.toFixed(2)}%</span>
+          </td>
+        </tr>`;
+    }).join('');
+
+    // Savings highlight (only if there were actual savings)
+    const savingsBlock = totalSavedUsd > 0.01 ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+        <tr>
+          <td style="padding: 24px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px; text-align: center;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="font-size: 13px; font-weight: 600; color: #166534; font-family: 'Inter', Arial, sans-serif; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                  Total Protected This Week
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size: 32px; font-weight: 700; color: #15803d; font-family: 'Inter', Arial, sans-serif; padding: 8px 0;">
+                  ~$${totalSavedUsd.toFixed(2)}
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size: 13px; color: #166534; font-family: 'Inter', Arial, sans-serif; line-height: 1.5;">
+                  saved by converting before further price drops<br/>
+                  <span style="color: #6b7280;">${totalVolatileConversions} of ${totalConversions} conversions occurred during volatile markets</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>` : '';
+
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">
+        Here's your weekly auto-conversion report for <strong style="color: #1a1a2e;">${companyName}</strong>.
+      </p>
+
+      <!-- Top Stats -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+        <tr>
+          <td style="padding: 0 4px 8px 0; width: 33%;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px;">
+              <tr><td style="padding: 16px 8px; text-align: center;">
+                <p style="font-size: 24px; font-weight: 700; color: #1034a6; margin: 0; font-family: 'Inter', Arial, sans-serif;">${totalConversions}</p>
+                <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase;">Conversions</p>
+              </td></tr>
+            </table>
+          </td>
+          <td style="padding: 0 4px 8px 4px; width: 34%;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px;">
+              <tr><td style="padding: 16px 8px; text-align: center;">
+                <p style="font-size: 24px; font-weight: 700; color: #15803d; margin: 0; font-family: 'Inter', Arial, sans-serif;">$${totalPayoutUsd.toFixed(0)}</p>
+                <p style="font-size: 11px; color: #166534; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase;">Total Payout</p>
+              </td></tr>
+            </table>
+          </td>
+          <td style="padding: 0 0 8px 4px; width: 33%;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${avgPriceMovementPct < -0.5 ? '#fef2f2' : '#f8f9ff'}; border-radius: 8px;">
+              <tr><td style="padding: 16px 8px; text-align: center;">
+                <p style="font-size: 24px; font-weight: 700; color: ${avgPriceMovementPct < -0.5 ? '#dc2626' : '#1034a6'}; margin: 0; font-family: 'Inter', Arial, sans-serif;">${avgPriceMovementPct >= 0 ? '+' : ''}${avgPriceMovementPct.toFixed(1)}%</p>
+                <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase;">Avg Movement</p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      ${savingsBlock}
+
+      <!-- Daily Volume Chart -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; margin: 0 0 24px 0;">
+        <tr><td style="padding: 20px;">
+          <p style="font-size: 13px; font-weight: 600; color: #1a1a2e; font-family: 'Inter', Arial, sans-serif; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Daily Conversion Volume</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${chartRows}
+          </table>
+        </td></tr>
+      </table>
+
+      <!-- Crypto Breakdown -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6; margin: 0 0 24px 0;">
+        <tr><td style="padding: 20px;">
+          <p style="font-size: 13px; font-weight: 600; color: #1a1a2e; font-family: 'Inter', Arial, sans-serif; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Breakdown by Crypto</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Asset</td>
+              <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-align: center; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Count</td>
+              <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-align: right; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Payout</td>
+              <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-align: right; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Avg Move</td>
+            </tr>
+            ${breakdownRows}
+          </table>
+        </td></tr>
+      </table>
+
+      <p style="font-size: 13px; color: #9ca3af; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">
+        Report period: ${periodStart} to ${periodEnd}. Auto-conversion protects your revenue from crypto price volatility by instantly converting to stablecoins.
+      </p>`;
+
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Weekly Conversion Report");
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name,
+      subject,
+      body: htmlBody,
+    });
+
+    console.log(`[Email] Weekly conversion summary sent to ${recipientEmail} (${totalConversions} conversions)`);
+    return info;
+  } catch (e) {
+    console.log("Weekly conversion summary email error:", e);
+  }
+};
+
 export default sendEmail;
 export {
   sendEmail,
@@ -1187,5 +1375,6 @@ export {
   sendRefereeCodeReminderEmail,
   sendPaymentLinkReminderEmail,
   sendAutoConversionPayoutEmail,
+  sendWeeklyConversionSummaryEmail,
   dynoPayEmailTemplate,
 };
