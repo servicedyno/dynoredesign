@@ -106,7 +106,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-      imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net", "https://swagger-ui.netlify.app"],
+      imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net", "https://swagger-ui.netlify.app", "https://files.catbox.moe", "https://cdn-icons-png.flaticon.com"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
       objectSrc: ["'none'"],
