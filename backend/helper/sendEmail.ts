@@ -1011,7 +1011,7 @@ const sendPaymentLinkReminderEmail = async (
     console.log(`[Email] Payment link reminder (${reminderType}) sent to ${recipientEmail}`);
     return info;
   } catch (e) {
-    console.log("Payment link reminder email error:", e);
+    console.log("Payment link reminder email error:", formatEmailError(e));
   }
 };
 
