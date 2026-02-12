@@ -198,6 +198,23 @@ app.get("/health", async (_req: express.Request, res: express.Response) => {
     health.tatum_api = "unknown";
   }
   
+  // Check Binance WebSocket
+  try {
+    const wsStatus = getWsStatus();
+    health.binance_websocket = {
+      connected: wsStatus.connected,
+      cached_prices: wsStatus.cachedPrices,
+      cached_klines: wsStatus.cachedKlines,
+      last_message_age_ms: wsStatus.lastMessageAge,
+      rest_fallback_failures: wsStatus.restFallbackFailures,
+    };
+    if (!wsStatus.connected && wsStatus.lastMessageAge > 5 * 60 * 1000) {
+      health.status = "degraded";
+    }
+  } catch {
+    health.binance_websocket = "unknown";
+  }
+
   // Overall status
   if (statusCode !== 200) {
     health.status = "unhealthy";
