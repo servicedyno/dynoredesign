@@ -751,7 +751,7 @@ const sendAdminFeeReceivedEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Admin fee received email error:", e);
+    console.log("Admin fee received email error:", formatEmailError(e));
   }
 };
 
