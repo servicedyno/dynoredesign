@@ -42,6 +42,7 @@ const allPaths = {
   ...webhookPaths,
   ...dashboardPaths,
   ...invoicePaths,
+  ...statusPaths,
 };
 
 const options: swaggerJsdoc.Options = {
