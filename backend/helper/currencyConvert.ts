@@ -24,63 +24,17 @@ const CACHE_CRYPTO_TARGETS = ['ETH', 'BTC', 'TRX', 'LTC', 'DOGE'];
 
 /**
  * Background rate refresh — called every 60s by cron
- * Fetches ALL crypto rates from CoinGecko in minimal API calls (free)
- * If CoinGecko rate-limited → falls back to Tatum
+ * Uses Tatum (paid, reliable) as PRIMARY provider for crypto rates
+ * Falls back to CoinGecko (free) only if Tatum fails
+ * FastForex handles fiat↔fiat separately (not used for crypto)
  */
 export const refreshBackgroundRateCache = async (): Promise<void> => {
   const startTime = Date.now();
-  let provider = 'CoinGecko';
+  let provider = 'Tatum';
   let ratesUpdated = 0;
   
   try {
-    // CoinGecko: Fetch ALL crypto→USD rates in 1 API call
-    const coinIds = CACHE_CRYPTO_TARGETS
-      .map(c => COINGECKO_IDS[c])
-      .filter(Boolean)
-      .join(',');
-    const fiatTargets = CACHE_FIAT_TARGETS.map(f => f.toLowerCase()).join(',');
-    
-    const { data } = await axios.get(
-      `https://api.coingecko.com/api/v3/simple/price`,
-      {
-        params: { ids: coinIds, vs_currencies: fiatTargets },
-        timeout: 8000,
-      }
-    );
-
-    // Store rates in background cache
-    for (const crypto of CACHE_CRYPTO_TARGETS) {
-      const coinId = COINGECKO_IDS[crypto];
-      if (!coinId || !data[coinId]) continue;
-      
-      for (const fiat of CACHE_FIAT_TARGETS) {
-        const priceInFiat = data[coinId][fiat.toLowerCase()];
-        if (priceInFiat && priceInFiat > 0) {
-          // Crypto→Fiat (e.g., ETH→USD = 2040)
-          const cryptoToFiat = `rate_bg:${crypto}:${fiat}`;
-          backgroundRateCache.set(cryptoToFiat, { rate: priceInFiat, timestamp: Date.now() });
-          
-          // Fiat→Crypto (e.g., USD→ETH = 1/2040)
-          const fiatToCrypto = `rate_bg:${fiat}:${crypto}`;
-          backgroundRateCache.set(fiatToCrypto, { rate: 1 / priceInFiat, timestamp: Date.now() });
-          
-          ratesUpdated += 2;
-        }
-      }
-    }
-  } catch (error: unknown) {
-    const err = error as { response?: { status?: number }; message?: string };
-    const isRateLimited = err.response?.status === 429;
-    
-    if (isRateLimited) {
-      console.warn(`[BackgroundCache] CoinGecko rate-limited, falling back to Tatum`);
-    } else {
-      console.warn(`[BackgroundCache] CoinGecko failed: ${err.message}, falling back to Tatum`);
-    }
-    
-    // Fallback: Tatum — batch requests in groups of 4 to avoid rate-limiting/timeouts
-    // Note: Some pairs may 403 (e.g., TRX→GBP) — getTatumRate handles negative caching silently
-    provider = 'Tatum';
+    // PRIMARY: Tatum — batch requests in groups of 4 (paid, reliable, no rate limits)
     const tatumPairs: Array<{ crypto: string; fiat: string }> = [];
     for (const crypto of CACHE_CRYPTO_TARGETS) {
       for (const fiat of CACHE_FIAT_TARGETS) {
@@ -102,7 +56,7 @@ export const refreshBackgroundRateCache = async (): Promise<void> => {
               ratesUpdated += 2;
             }
           } catch {
-            // Skip silently
+            // Skip silently — individual pair failure
           }
         })()
       );
@@ -125,8 +79,7 @@ export const refreshBackgroundRateCache = async (): Promise<void> => {
         const cryptoUsd = backgroundRateCache.get(cryptoUsdKey);
         
         if (cryptoUsd && fiat === 'USD') {
-          // Already have it via USD key
-          continue;
+          continue; // Already have via USD key
         }
         
         // Get USD→fiat rate from existing cache or USDT proxy
@@ -152,6 +105,49 @@ export const refreshBackgroundRateCache = async (): Promise<void> => {
         }
       }
     }
+    
+    // If Tatum produced very few rates, supplement with CoinGecko as fallback
+    if (ratesUpdated < 8) {
+      console.warn(`[BackgroundCache] Tatum only returned ${ratesUpdated} rates, supplementing with CoinGecko`);
+      provider = 'Tatum+CoinGecko';
+      try {
+        const coinIds = CACHE_CRYPTO_TARGETS
+          .map(c => COINGECKO_IDS[c])
+          .filter(Boolean)
+          .join(',');
+        const fiatTargets = CACHE_FIAT_TARGETS.map(f => f.toLowerCase()).join(',');
+        
+        const { data } = await axios.get(
+          `https://api.coingecko.com/api/v3/simple/price`,
+          {
+            params: { ids: coinIds, vs_currencies: fiatTargets },
+            timeout: 8000,
+          }
+        );
+
+        for (const crypto of CACHE_CRYPTO_TARGETS) {
+          const coinId = COINGECKO_IDS[crypto];
+          if (!coinId || !data[coinId]) continue;
+          
+          for (const fiat of CACHE_FIAT_TARGETS) {
+            const cacheKey = `rate_bg:${crypto}:${fiat}`;
+            if (backgroundRateCache.has(cacheKey)) continue; // Tatum already filled this
+            
+            const priceInFiat = data[coinId][fiat.toLowerCase()];
+            if (priceInFiat && priceInFiat > 0) {
+              backgroundRateCache.set(cacheKey, { rate: priceInFiat, timestamp: Date.now() });
+              backgroundRateCache.set(`rate_bg:${fiat}:${crypto}`, { rate: 1 / priceInFiat, timestamp: Date.now() });
+              ratesUpdated += 2;
+            }
+          }
+        }
+      } catch {
+        console.warn(`[BackgroundCache] CoinGecko fallback also failed — using Tatum-only rates`);
+      }
+    }
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error(`[BackgroundCache] Rate refresh failed: ${err.message}`);
   }
   
   const elapsed = Date.now() - startTime;
