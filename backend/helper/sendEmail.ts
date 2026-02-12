@@ -508,7 +508,7 @@ const sendPaymentPendingEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Payment pending email error:", e);
+    console.log("Payment pending email error:", formatEmailError(e));
   }
 };
 
