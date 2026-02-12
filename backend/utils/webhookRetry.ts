@@ -1,0 +1,291 @@
+/**
+ * Webhook Retry Service
+ * Implements exponential backoff retry logic for failed webhook deliveries
+ * Stores failed webhooks in a dead letter queue after max retries
+ */
+
+import axios, { AxiosError } from 'axios';
+import { setRedisItem, getRedisItem, deleteRedisItem } from './redisInstance';
+
+interface WebhookPayload {
+  url: string;
+  payload: unknown;
+  headers: Record<string, string>;
+  companyId: number;
+  eventType: string;
+  webhookId: string;
+}
+
+interface RetryConfig {
+  maxRetries: number;
+  initialDelayMs: number;
+  maxDelayMs: number;
+  backoffMultiplier: number;
+}
+
+const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  initialDelayMs: 1000,      // 1 second
+  maxDelayMs: 60000,          // 1 minute
+  backoffMultiplier: 2        // Exponential: 1s, 2s, 4s
+};
+
+/**
+ * Calculate delay for next retry using exponential backoff
+ */
+const calculateRetryDelay = (
+  attemptNumber: number,
+  config: RetryConfig = DEFAULT_RETRY_CONFIG
+): number => {
+  const delay = config.initialDelayMs * Math.pow(config.backoffMultiplier, attemptNumber - 1);
+  return Math.min(delay, config.maxDelayMs);
+};
+
+/**
+ * Store failed webhook in retry queue
+ */
+const storeFailedWebhook = async (
+  webhookData: WebhookPayload,
+  attemptNumber: number,
+  error: string
+): Promise<void> => {
+  const retryKey = `webhook:retry:${webhookData.webhookId}:${attemptNumber}`;
+  const retryData = {
+    ...webhookData,
+    attemptNumber,
+    error,
+    scheduledFor: Date.now() + calculateRetryDelay(attemptNumber)
+  };
+  
+  // Store with TTL of 24 hours
+  await setRedisItem(retryKey, retryData, 86400);
+  
+  // Add to retry queue index
+  const queueKey = 'webhook:retry:queue';
+  const queueData = await getRedisItem(queueKey) || { items: [] };
+  queueData.items.push({
+    key: retryKey,
+    scheduledFor: retryData.scheduledFor,
+    webhookId: webhookData.webhookId
+  });
+  await setRedisItem(queueKey, queueData, 86400);
+};
+
+/**
+ * Move webhook to dead letter queue after max retries
+ */
+const moveToDeadLetterQueue = async (
+  webhookData: WebhookPayload,
+  finalError: string
+): Promise<void> => {
+  const dlqKey = `webhook:dlq:${webhookData.webhookId}`;
+  const dlqData = {
+    ...webhookData,
+    failedAt: Date.now(),
+    finalError,
+    maxRetriesExceeded: true
+  };
+  
+  // Store in DLQ with 7 day TTL for manual review
+  await setRedisItem(dlqKey, dlqData, 604800);
+  
+  // Log to database
+  try {
+    const sequelize = require('./dbInstance').default;
+    await sequelize.query(
+      `INSERT INTO tbl_webhook_delivery_log 
+       (company_id, webhook_url, event_type, webhook_id, payload, status, error_message, retry_count, created_at, completed_at)
+       VALUES (:companyId, :url, :eventType, :webhookId, :payload, 'dead_letter_queue', :error, :retries, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      {
+        replacements: {
+          companyId: webhookData.companyId,
+          url: webhookData.url,
+          eventType: webhookData.eventType,
+          webhookId: webhookData.webhookId,
+          payload: JSON.stringify(webhookData.payload),
+          error: finalError,
+          retries: DEFAULT_RETRY_CONFIG.maxRetries
+        }
+      }
+    );
+  } catch (dbErr) {
+    console.error('[WebhookRetry] Failed to log DLQ entry:', dbErr);
+  }
+  
+  console.error(
+    `[WebhookRetry] Webhook ${webhookData.webhookId} moved to DLQ after ${DEFAULT_RETRY_CONFIG.maxRetries} failed attempts. ` +
+    `URL: ${webhookData.url}, Error: ${finalError}`
+  );
+};
+
+/**
+ * Deliver webhook with retry logic
+ */
+export const deliverWebhookWithRetry = async (
+  webhookData: WebhookPayload,
+  attemptNumber: number = 1,
+  config: RetryConfig = DEFAULT_RETRY_CONFIG
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const startTime = Date.now();
+    
+    const response = await axios.post(webhookData.url, webhookData.payload, {
+      headers: webhookData.headers,
+      timeout: 10000,  // 10 second timeout
+      validateStatus: (status) => status >= 200 && status < 300
+    });
+    
+    const responseTime = Date.now() - startTime;
+    
+    // Log successful delivery
+    console.log(
+      `[WebhookRetry] ✅ Webhook delivered successfully on attempt ${attemptNumber}. ` +
+      `URL: ${webhookData.url}, Response time: ${responseTime}ms, Status: ${response.status}`
+    );
+    
+    // Clean up retry queue entry if this was a retry
+    if (attemptNumber > 1) {
+      const retryKey = `webhook:retry:${webhookData.webhookId}:${attemptNumber}`;
+      await deleteRedisItem(retryKey);
+    }
+    
+    return { success: true };
+    
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    const errorMessage = axiosError.response 
+      ? `HTTP ${axiosError.response.status}: ${axiosError.message}`
+      : axiosError.message || 'Unknown error';
+    
+    console.error(
+      `[WebhookRetry] ❌ Webhook delivery failed (attempt ${attemptNumber}/${config.maxRetries}). ` +
+      `URL: ${webhookData.url}, Error: ${errorMessage}`
+    );
+    
+    // Check if we should retry
+    if (attemptNumber < config.maxRetries) {
+      // Store for retry
+      await storeFailedWebhook(webhookData, attemptNumber + 1, errorMessage);
+      
+      const nextDelay = calculateRetryDelay(attemptNumber + 1, config);
+      console.log(
+        `[WebhookRetry] ⏳ Webhook ${webhookData.webhookId} scheduled for retry in ${nextDelay}ms`
+      );
+      
+      return { success: false, error: `Failed, retry scheduled (attempt ${attemptNumber}/${config.maxRetries})` };
+    } else {
+      // Max retries exceeded, move to DLQ
+      await moveToDeadLetterQueue(webhookData, errorMessage);
+      return { success: false, error: `Failed after ${config.maxRetries} attempts, moved to DLQ` };
+    }
+  }
+};
+
+/**
+ * Process webhook retry queue (called by cron job)
+ */
+export const processWebhookRetryQueue = async (): Promise<{
+  processed: number;
+  succeeded: number;
+  failed: number;
+}> => {
+  const stats = { processed: 0, succeeded: 0, failed: 0 };
+  
+  try {
+    const queueKey = 'webhook:retry:queue';
+    const queueData = await getRedisItem(queueKey);
+    
+    if (!queueData || !queueData.items || queueData.items.length === 0) {
+      return stats;
+    }
+    
+    const now = Date.now();
+    const itemsToRetry = queueData.items.filter(
+      (item: { scheduledFor: number }) => item.scheduledFor <= now
+    );
+    
+    console.log(`[WebhookRetry] Processing ${itemsToRetry.length} webhooks from retry queue`);
+    
+    for (const item of itemsToRetry) {
+      const webhookData = await getRedisItem(item.key);
+      
+      if (!webhookData) {
+        console.warn(`[WebhookRetry] Webhook data not found for key: ${item.key}`);
+        continue;
+      }
+      
+      stats.processed++;
+      
+      const result = await deliverWebhookWithRetry(
+        webhookData,
+        webhookData.attemptNumber
+      );
+      
+      if (result.success) {
+        stats.succeeded++;
+      } else {
+        stats.failed++;
+      }
+      
+      // Remove from queue
+      queueData.items = queueData.items.filter(
+        (i: { key: string }) => i.key !== item.key
+      );
+    }
+    
+    // Update queue
+    await setRedisItem(queueKey, queueData, 86400);
+    
+    if (stats.processed > 0) {
+      console.log(
+        `[WebhookRetry] Queue processing complete: ` +
+        `${stats.succeeded} succeeded, ${stats.failed} failed, ${stats.processed} total`
+      );
+    }
+    
+  } catch (error) {
+    console.error('[WebhookRetry] Error processing retry queue:', error);
+  }
+  
+  return stats;
+};
+
+/**
+ * Get webhook dead letter queue items for manual review
+ */
+export const getDeadLetterQueueItems = async (): Promise<unknown[]> => {
+  // This would typically query Redis for all webhook:dlq:* keys
+  // Implementation depends on Redis client capabilities
+  return [];
+};
+
+/**
+ * Manually retry a webhook from DLQ
+ */
+export const retryFromDeadLetterQueue = async (webhookId: string): Promise<boolean> => {
+  const dlqKey = `webhook:dlq:${webhookId}`;
+  const webhookData = await getRedisItem(dlqKey);
+  
+  if (!webhookData) {
+    console.error(`[WebhookRetry] Webhook not found in DLQ: ${webhookId}`);
+    return false;
+  }
+  
+  console.log(`[WebhookRetry] Manually retrying webhook from DLQ: ${webhookId}`);
+  
+  const result = await deliverWebhookWithRetry(webhookData, 1);
+  
+  if (result.success) {
+    // Remove from DLQ on success
+    await deleteRedisItem(dlqKey);
+  }
+  
+  return result.success;
+};
+
+export default {
+  deliverWebhookWithRetry,
+  processWebhookRetryQueue,
+  getDeadLetterQueueItems,
+  retryFromDeadLetterQueue
+};
