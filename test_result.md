@@ -9,7 +9,7 @@ user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → pa
 current_test_task:
   - task: "Auto-Stablecoin Conversion via Binance"
     implemented: true
-    working: "needs_testing"
+    working: true
     files:
       - "/app/backend/models/stablecoinConversionModel.ts"
       - "/app/backend/services/binanceService.ts"
