@@ -465,10 +465,12 @@ cron.schedule("*/15 * * * *", function () {
   log("Cron: prewarmPoolAddresses running", "info");
   merchantPoolService.prewarmPoolAddresses().catch(err => {
     log(`Cron: Pool pre-warming failed: ${err.message}`, "error");
+    captureError(err, 'cron', { extraContext: 'prewarmPoolAddresses' });
   });
   // Also retry any RLUSD addresses with pending trust lines
   merchantPoolService.retryPendingTrustLines().catch(err => {
     log(`Cron: Trust line retry failed: ${err.message}`, "error");
+    captureError(err, 'cron', { extraContext: 'retryPendingTrustLines' });
   });
 });
 
