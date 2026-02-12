@@ -1014,7 +1014,6 @@ const sendPaymentLinkReminderEmail = async (
     console.log(`[Email] Payment link reminder (${reminderType}) sent to ${recipientEmail}`);
     return info;
   } catch (e) {
-    console.log("Payment link reminder email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendPaymentLinkReminderEmail' });
   }
 };
@@ -1200,7 +1199,6 @@ const sendAutoConversionPayoutEmail = async (
     console.log(`[Email] Auto-conversion payout email sent to ${recipientEmail} (conversion #${conversionId})`);
     return info;
   } catch (e) {
-    console.log("Auto-conversion payout email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendAutoConversionPayoutEmail' });
   }
 };
@@ -1389,7 +1387,6 @@ const sendWeeklyConversionSummaryEmail = async (
     console.log(`[Email] Weekly conversion summary sent to ${recipientEmail} (${totalConversions} conversions)`);
     return info;
   } catch (e) {
-    console.log("Weekly conversion summary email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendWeeklyConversionSummaryEmail' });
   }
 };
