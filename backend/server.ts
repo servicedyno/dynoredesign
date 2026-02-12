@@ -349,6 +349,23 @@ setupRefereeCodeReminderCron();
 // Setup payment link reminder cron job (every hour)
 setupPaymentLinkReminderCron();
 
+// Stablecoin Conversion: Process pending conversions via Binance
+// Runs every 5 minutes (configurable via BINANCE_CONVERT_INTERVAL_MINUTES)
+const convertIntervalMinutes = parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "5");
+cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
+  const lockAcquired = await acquireLock("cron:stablecoinConversion", 300, 1);
+  if (!lockAcquired) { log("Cron: stablecoinConversion skipped (already running)", "info"); return; }
+  try {
+    log("Cron: processStablecoinConversions running", "info");
+    await processStablecoinConversions();
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    log(`Cron: Stablecoin conversion failed: ${errMsg}`, "error");
+  } finally {
+    await releaseLock("cron:stablecoinConversion");
+  }
+});
+
 const startServer = async () => {
   log('Connecting to Redis...', 'info');
   await connectRedis();
