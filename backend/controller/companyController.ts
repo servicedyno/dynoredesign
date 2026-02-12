@@ -729,6 +729,13 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
               source_currency: rest.auto_convert_source_currency,
               source_amount: rest.auto_convert_source_amount ? Number(rest.auto_convert_source_amount) : null,
               source_amount_usd: rest.auto_convert_source_amount_usd ? Number(rest.auto_convert_source_amount_usd) : null,
+              // Show source amount in base key currency
+              source_amount_display: rest.auto_convert_source_amount && rest.auto_convert_source_currency
+                ? (String(rest.auto_convert_source_currency) === preferredCurrency
+                  ? Number(rest.auto_convert_source_amount)
+                  : Math.round(Number(rest.auto_convert_source_amount) * (conversionRates[String(rest.auto_convert_source_currency)] || 0) * 100) / 100)
+                : null,
+              source_amount_display_currency: preferredCurrency,
               target_currency: rest.auto_convert_target_currency,
               target_amount: rest.auto_convert_target_amount ? Number(rest.auto_convert_target_amount) : null,
               settlement_chain: rest.auto_convert_settlement_chain,
