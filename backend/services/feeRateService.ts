@@ -7,7 +7,7 @@
  */
 
 import axios from "axios";
-import redisClient from "../utils/redisInstance";
+import { redis as redisClient } from "../utils/redisInstance";
 
 const LOG_PREFIX = "[FeeRateService]";
 const log = (msg: string) => console.log(`${LOG_PREFIX} ${msg}`);

@@ -10,7 +10,7 @@
  */
 
 import axios from "axios";
-import redisClient from "../utils/redisInstance";
+import { redis as redisClient } from "../utils/redisInstance";
 import { sendAdminLowBalanceAlert } from "../helper/sendEmail";
 
 const LOG_PREFIX = "[VolatilityMonitor]";
