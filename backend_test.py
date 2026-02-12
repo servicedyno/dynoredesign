@@ -150,14 +150,14 @@ def test_trust_proxy() -> bool:
 
 def test_db_pool_config() -> bool:
     """TEST 10: grep 'pool' dbInstance.ts - should find pool configuration with max, min, idle"""
-    exit_code, stdout, stderr = run_command("grep 'pool' /app/backend/utils/dbInstance.ts")
+    exit_code, stdout, stderr = run_command("grep -A3 -B1 'poolConfig' /app/backend/utils/dbInstance.ts")
     if exit_code == 0 and stdout:
-        # Check for pool configuration keywords
+        # Check for pool configuration keywords in the poolConfig object
         pool_content = stdout.lower()
-        if 'max' in pool_content and 'min' in pool_content and 'idle' in pool_content:
+        if 'max:' in pool_content and 'min:' in pool_content and 'idle:' in pool_content:
             return log_test("10", True, f"DB pool configuration found with max, min, idle parameters")
         else:
-            return log_test("10", False, f"Pool found but missing required parameters (max, min, idle)")
+            return log_test("10", False, f"Pool config found but missing required parameters. Found: {stdout[:100]}...")
     else:
         return log_test("10", False, "DB pool configuration not found in dbInstance.ts")
 
