@@ -913,6 +913,7 @@ const sendRefereeCodeReminderEmail = async (
     return info;
   } catch (e) {
     console.log("Referee code reminder email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendRefereeCodeReminderEmail' });
   }
 };
 
