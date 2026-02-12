@@ -206,7 +206,14 @@ const memoryCache: Record<string, MarketState> = {};
  * Run one cycle of the volatility monitor
  */
 export const runMonitorCycle = async (): Promise<MarketState[]> => {
+  // Rate-limit backoff: skip cycle if we're in backoff period
+  if (Date.now() < rateLimitBackoffUntil) {
+    return Object.values(memoryCache); // Return cached data
+  }
+
   const results: MarketState[] = [];
+  const failedAssets: string[] = [];
+  let rateLimited = false;
 
   // Process assets in batches of 3 to avoid rate limiting
   for (let i = 0; i < MONITORED_ASSETS.length; i += 3) {
@@ -214,12 +221,22 @@ export const runMonitorCycle = async (): Promise<MarketState[]> => {
     const promises = batch.map((asset) => analyzeAsset(asset));
     const batchResults = await Promise.allSettled(promises);
 
-    for (const result of batchResults) {
+    for (let j = 0; j < batchResults.length; j++) {
+      const result = batchResults[j];
       if (result.status === "fulfilled" && result.value) {
         results.push(result.value);
         memoryCache[result.value.asset] = result.value;
         await storeState(result.value);
         await maybeAlertAdmin(result.value);
+      } else {
+        failedAssets.push(batch[j]);
+        // Check if it's a rate limit error (418 or 429)
+        if (result.status === "rejected") {
+          const errMsg = result.reason?.message || "";
+          if (errMsg.includes("418") || errMsg.includes("429")) {
+            rateLimited = true;
+          }
+        }
       }
     }
 
@@ -227,6 +244,43 @@ export const runMonitorCycle = async (): Promise<MarketState[]> => {
     if (i + 3 < MONITORED_ASSETS.length) {
       await new Promise((r) => setTimeout(r, 200));
     }
+  }
+
+  // Handle rate limiting with backoff
+  if (rateLimited) {
+    consecutiveRateLimitCycles++;
+    // Exponential backoff: 5 min, 10 min, 15 min... capped at 15 min
+    const backoffMs = Math.min(RATE_LIMIT_BACKOFF_MS * Math.ceil(consecutiveRateLimitCycles / 3), 15 * 60 * 1000);
+    rateLimitBackoffUntil = Date.now() + backoffMs;
+
+    // Only log every Nth rate-limited cycle to avoid flooding
+    if (consecutiveRateLimitCycles % MAX_RATE_LIMIT_LOG_FREQUENCY === 1) {
+      log(`⚠️ Rate limited (418/429) for ${failedAssets.length}/${MONITORED_ASSETS.length} assets. Backing off for ${Math.round(backoffMs / 1000)}s (cycle #${consecutiveRateLimitCycles})`);
+      captureError(
+        new Error(`Binance API rate limited (418/429) — ${failedAssets.length}/${MONITORED_ASSETS.length} assets failed`),
+        "blockchain",
+        {
+          severity: "medium",
+          extraContext: `Failed assets: ${failedAssets.join(", ")} | Backoff: ${Math.round(backoffMs / 1000)}s | Consecutive rate-limit cycles: ${consecutiveRateLimitCycles}`,
+        }
+      );
+    }
+  } else {
+    // Reset backoff counter on success
+    if (consecutiveRateLimitCycles > 0) {
+      log(`✅ Rate limit cleared after ${consecutiveRateLimitCycles} cycles`);
+    }
+    consecutiveRateLimitCycles = 0;
+  }
+
+  // Log non-rate-limit failures in a single summary line
+  if (failedAssets.length > 0 && !rateLimited) {
+    log(`⚠️ Failed: ${failedAssets.join(", ")} (${failedAssets.length}/${MONITORED_ASSETS.length})`);
+    captureError(
+      new Error(`Volatility monitor failed for ${failedAssets.length} assets: ${failedAssets.join(", ")}`),
+      "blockchain",
+      { severity: "low", extraContext: `Successful: ${results.length}, Failed: ${failedAssets.length}` }
+    );
   }
 
   return results;
