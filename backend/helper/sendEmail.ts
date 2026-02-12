@@ -560,7 +560,7 @@ const sendPaymentConfirmingEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Payment confirming email error:", e);
+    console.log("Payment confirming email error:", formatEmailError(e));
   }
 };
 
