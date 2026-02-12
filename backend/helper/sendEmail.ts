@@ -986,6 +986,191 @@ const sendPaymentLinkReminderEmail = async (
   }
 };
 
+/**
+ * Send auto-conversion payout email
+ * Sent when a crypto payment is auto-converted to stablecoin and withdrawn to merchant wallet
+ * Conditional design: visual volatility indicator if market was volatile, text-focused if stable
+ */
+const sendAutoConversionPayoutEmail = async (
+  recipientEmail: string,
+  name: string,
+  companyName: string,
+  data: {
+    sourceCurrency: string;
+    sourceAmount: string;
+    sourceAmountUsd: string;
+    targetCurrency: string;
+    payoutAmount: string;
+    conversionRate: string;
+    priceAtConversion: number;
+    currentPrice: number;
+    priceMovementPct: number;
+    marketState: string;
+    feeTierUsed: string;
+    transactionId: string;
+    conversionId: string;
+    withdrawalTxHash?: string;
+  }
+) => {
+  try {
+    const {
+      sourceCurrency, sourceAmount, sourceAmountUsd,
+      targetCurrency, payoutAmount, conversionRate,
+      priceAtConversion, currentPrice, priceMovementPct,
+      marketState, feeTierUsed, transactionId, conversionId,
+      withdrawalTxHash,
+    } = data;
+
+    const isVolatile = ["VOLATILE", "DECLINING"].includes(marketState);
+    const priceDiffSinceConversion = ((currentPrice - priceAtConversion) / priceAtConversion) * 100;
+    const priceDroppedSinceConversion = priceDiffSinceConversion < -0.1;
+    const savedAmount = priceDroppedSinceConversion
+      ? Math.abs(priceDiffSinceConversion / 100) * parseFloat(payoutAmount)
+      : 0;
+
+    const subject = `Payout Complete — ${payoutAmount} ${targetCurrency} from ${sourceAmount} ${sourceCurrency}`;
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    // Volatility visual bar (only shown when volatile)
+    const volatilityVisual = isVolatile ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0 24px 0;">
+        <tr>
+          <td style="padding: 16px 20px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #ef4444;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="font-size: 13px; font-weight: 600; color: #991b1b; font-family: 'Inter', Arial, sans-serif; padding-bottom: 10px;">
+                  MARKET VOLATILITY AT TIME OF CONVERSION
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fecaca; border-radius: 4px; height: 10px;">
+                    <tr>
+                      <td style="width: ${Math.min(100, Math.abs(priceMovementPct) * 20)}%; background: linear-gradient(90deg, #ef4444, #dc2626); border-radius: 4px; height: 10px;">&nbsp;</td>
+                      <td style="height: 10px;">&nbsp;</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size: 12px; color: #7f1d1d; font-family: 'Inter', Arial, sans-serif; padding-top: 6px;">
+                  ${sourceCurrency} moved <strong>${Math.abs(priceMovementPct).toFixed(2)}%</strong> during conversion window &mdash; ${feeTierUsed === 'fast' || feeTierUsed === 'fastest' ? 'fast-tracked with priority fees' : 'processed with standard fees'}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>` : '';
+
+    // Savings block (shown when price dropped since conversion)
+    const savingsBlock = priceDroppedSinceConversion ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+        <tr>
+          <td style="padding: 20px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px; border-left: 4px solid #22c55e; text-align: center;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="font-size: 13px; font-weight: 600; color: #166534; font-family: 'Inter', Arial, sans-serif; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                  Auto-Conversion Protected You
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size: 28px; font-weight: 700; color: #15803d; font-family: 'Inter', Arial, sans-serif; padding: 8px 0;">
+                  ~$${savedAmount.toFixed(2)} saved
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size: 13px; color: #166534; font-family: 'Inter', Arial, sans-serif; line-height: 1.5;">
+                  ${sourceCurrency} has dropped <strong>${Math.abs(priceDiffSinceConversion).toFixed(2)}%</strong> since your conversion<br/>
+                  <span style="color: #6b7280;">Converted at $${priceAtConversion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} &mdash; Now $${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>` : '';
+
+    // Price went up since conversion (no savings, but show info)
+    const priceUpBlock = !priceDroppedSinceConversion && Math.abs(priceDiffSinceConversion) > 0.1 ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+        <tr>
+          <td style="padding: 16px 20px; background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6;">
+            <p style="margin: 0; font-size: 13px; color: #4a4a4a; font-family: 'Inter', Arial, sans-serif; line-height: 1.5;">
+              ${sourceCurrency} is currently at <strong>$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> 
+              (${priceDiffSinceConversion > 0 ? '+' : ''}${priceDiffSinceConversion.toFixed(2)}% since conversion). 
+              Your payout was locked in at <strong>$${priceAtConversion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> for price certainty.
+            </p>
+          </td>
+        </tr>
+      </table>` : '';
+
+    const htmlContent = `
+      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">
+        Your crypto payment has been auto-converted and the payout has been sent to your wallet.
+      </p>
+
+      <!-- Payment & Payout Summary -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+        <tr>
+          <td style="padding: 0 4px 12px 0; width: 50%;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px;">
+              <tr><td style="padding: 16px; text-align: center;">
+                <p style="font-size: 11px; font-weight: 600; color: #6b7280; margin: 0 0 4px 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Received</p>
+                <p style="font-size: 22px; font-weight: 700; color: #1034a6; margin: 0; font-family: 'Inter', Arial, sans-serif;">${sourceAmount} ${sourceCurrency}</p>
+                <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif;">~$${parseFloat(sourceAmountUsd).toFixed(2)} USD</p>
+              </td></tr>
+            </table>
+          </td>
+          <td style="padding: 0 0 12px 4px; width: 50%;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px;">
+              <tr><td style="padding: 16px; text-align: center;">
+                <p style="font-size: 11px; font-weight: 600; color: #6b7280; margin: 0 0 4px 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Payout</p>
+                <p style="font-size: 22px; font-weight: 700; color: #15803d; margin: 0; font-family: 'Inter', Arial, sans-serif;">${payoutAmount} ${targetCurrency}</p>
+                <p style="font-size: 12px; color: #166534; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif;">Sent to your wallet</p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      ${volatilityVisual}
+      ${savingsBlock}
+      ${priceUpBlock}
+
+      <!-- Conversion Details -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6; margin: 0 0 24px 0;">
+        <tr><td style="padding: 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Conversion Rate</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">1 ${sourceCurrency} = ${parseFloat(conversionRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${targetCurrency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Market State</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;"><span style="background: ${isVolatile ? '#fef3c7' : '#dcfce7'}; color: ${isVolatile ? '#92400e' : '#166534'}; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">${marketState}</span></td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Date</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${dateStr} at ${timeStr}</td></tr>
+            ${withdrawalTxHash ? `<tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Withdrawal TX</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 12px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all; border-bottom: 1px solid #f3f4f6;">${withdrawalTxHash}</td></tr>` : ''}
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Conversion ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">#${conversionId}</td></tr>
+          </table>
+        </td></tr>
+      </table>
+
+      <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">
+        Auto-conversion ensures you receive stablecoins, protecting your revenue from crypto price swings. View your full transaction history in your Dynopay dashboard.
+      </p>`;
+
+    const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Payout Complete");
+    const info = await mailTransporter({
+      to: recipientEmail,
+      name,
+      subject,
+      body: htmlBody,
+    });
+
+    console.log(`[Email] Auto-conversion payout email sent to ${recipientEmail} (conversion #${conversionId})`);
+    return info;
+  } catch (e) {
+    console.log("Auto-conversion payout email error:", e);
+  }
+};
+
 export default sendEmail;
 export {
   sendEmail,
@@ -1001,5 +1186,6 @@ export {
   sendSecurityAlertEmail,
   sendRefereeCodeReminderEmail,
   sendPaymentLinkReminderEmail,
+  sendAutoConversionPayoutEmail,
   dynoPayEmailTemplate,
 };
