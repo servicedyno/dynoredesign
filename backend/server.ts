@@ -451,6 +451,7 @@ cron.schedule("0 * * * *", async function () {
     await merchantPoolService.detectOrphanPayments();
   } catch (err) {
     log(`Cron: Orphan payment detection failed: ${err.message}`, "error");
+    captureError(err, 'cron', { extraContext: 'detectOrphanPayments' });
   } finally {
     await releaseLock("cron:detectOrphanPayments");
   }
