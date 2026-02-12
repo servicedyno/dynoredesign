@@ -13,6 +13,7 @@
 
 import stablecoinConversionModel from "../models/stablecoinConversionModel";
 import * as binanceService from "./binanceService";
+import { getMarketState, getRecommendedFeeTier } from "./volatilityMonitorService";
 import { Op } from "sequelize";
 
 const MAX_RETRIES = 5;
