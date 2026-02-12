@@ -27,8 +27,6 @@ const customerAuthMiddleware = async (
       // Verify token synchronously
       const decoded = jwt.verify(token, tokenSecret) as { user_id?: number; customer_id?: string; email?: string; [key: string]: unknown };
       
-      console.log("userData=========>", decoded);
-      
       // Check if decoded token is valid
       if (!decoded) {
         return errorResponseHelper(res, 403, "Invalid token format");
