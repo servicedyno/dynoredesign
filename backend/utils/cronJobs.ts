@@ -335,6 +335,7 @@ export const setupWalletReminderCron = () => {
     } catch (e) {
       log(`Wallet Reminder Cron Job Error: ${e}`, "error");
       cronLogger?.error?.("Wallet Reminder Cron Error", {}, new Error(String(e)));
+      captureError(e, 'cron', { extraContext: 'setupWalletReminderCron' });
     }
   });
 
