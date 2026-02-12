@@ -607,8 +607,20 @@ export const directApiPaths = {
 
 **Authentication:** 
 - Header \`x-api-key\`: Your merchant API key
-- Header \`Authorization\`: Bearer token from /api/user/createUser`,
+- Header \`Authorization\`: Bearer token from /api/user/createUser
+
+**Auto-Stablecoin Conversion:**
+Transactions that were auto-converted from volatile crypto to stablecoin include:
+- \`auto_converted: true\` — indicates the transaction went through Binance conversion
+- \`auto_convert\` object — full conversion details (source crypto, converted stablecoin, rate, status)
+- \`display_currency\` — amounts shown in the API key's base currency
+
+**Conversion Statuses:** PENDING_DEPOSIT → DEPOSIT_CREDITED → CONVERTING → CONVERTED → WITHDRAWING → COMPLETED`,
       security: [{ ApiKeyAuth: [], BearerAuth: [] }],
+      parameters: [
+        { in: 'query', name: 'page', schema: { type: 'integer', default: 1 }, description: 'Page number' },
+        { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 }, description: 'Items per page' },
+      ],
       responses: {
         200: {
           description: 'Transactions retrieved successfully',
@@ -617,17 +629,25 @@ export const directApiPaths = {
               schema: {
                 type: 'object',
                 properties: {
+                  success: { type: 'boolean' },
                   message: { type: 'string' },
+                  display_currency: { type: 'string', description: "API key's base currency", example: 'USD' },
                   data: {
                     type: 'array',
                     items: {
                       type: 'object',
                       properties: {
-                        transaction_id: { type: 'string' },
-                        amount: { type: 'number' },
-                        currency: { type: 'string' },
-                        status: { type: 'string', enum: ['pending', 'confirmed', 'failed'] },
-                        created_at: { type: 'string', format: 'date-time' }
+                        id: { type: 'integer' },
+                        payment_mode: { type: 'string' },
+                        base_amount: { type: 'number' },
+                        base_currency: { type: 'string' },
+                        paid_amount: { type: 'number' },
+                        paid_currency: { type: 'string' },
+                        status: { type: 'string', enum: ['pending', 'done', 'failed'] },
+                        display_currency: { type: 'string', description: "API base key currency" },
+                        auto_converted: { type: 'boolean', description: 'Whether this transaction was auto-converted to stablecoin' },
+                        auto_convert: { nullable: true, $ref: '#/components/schemas/AutoConvertInfo' },
+                        createdAt: { type: 'string', format: 'date-time' }
                       }
                     }
                   }
