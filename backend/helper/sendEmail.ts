@@ -568,6 +568,7 @@ const sendPaymentConfirmingEmail = async (
     return info;
   } catch (e) {
     console.log("Payment confirming email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendPaymentConfirmingEmail' });
   }
 };
 
