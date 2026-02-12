@@ -260,7 +260,6 @@ const sendEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Email send error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendEmail (generic)' });
   }
 };
@@ -308,7 +307,6 @@ const sendPaymentReceivedEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Payment received email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendPaymentReceivedEmail' });
   }
 };
@@ -351,7 +349,6 @@ const sendTransactionConfirmedEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Transaction confirmed email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendTransactionConfirmedEmail' });
   }
 };
@@ -418,7 +415,6 @@ const sendWeeklySummaryEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Weekly summary email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendWeeklySummaryEmail' });
   }
 };
@@ -460,7 +456,6 @@ const sendSecurityAlertEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Security alert email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendSecurityAlertEmail' });
   }
 };
@@ -514,7 +509,6 @@ const sendPaymentPendingEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Payment pending email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendPaymentPendingEmail' });
   }
 };
@@ -567,7 +561,6 @@ const sendPaymentConfirmingEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Payment confirming email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendPaymentConfirmingEmail' });
   }
 };
@@ -624,7 +617,6 @@ const sendPaymentPartialEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Payment partial email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendPaymentPartialEmail' });
   }
 };
@@ -681,7 +673,6 @@ const sendPaymentPartialExpiredEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Payment partial expired email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendPaymentPartialExpiredEmail' });
   }
 };
@@ -761,7 +752,6 @@ const sendAdminFeeReceivedEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Admin fee received email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendAdminFeeReceivedEmail' });
   }
 };
@@ -816,7 +806,6 @@ const sendAdminFeeSweepEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Admin fee sweep email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendAdminFeeSweepEmail' });
   }
 };
@@ -912,7 +901,6 @@ const sendRefereeCodeReminderEmail = async (
     console.log(`[Email] Referee reminder (${reminderType}) sent to ${recipientEmail}`);
     return info;
   } catch (e) {
-    console.log("Referee code reminder email error:", formatEmailError(e));
     captureError(e, 'email', { extraContext: 'sendRefereeCodeReminderEmail' });
   }
 };
