@@ -322,8 +322,8 @@ cron.schedule("*/10 * * * *", async function () {
 // Uses saved last_payment_context for proper merchant/admin fee split
 // OPTIMIZED: Reduced from 10 min to hourly — was ~22,000 Tatum API calls/day scanning 154 addresses
 cron.schedule("0 * * * *", async function () {
-  // FIX: Increased lock TTL from 540s to 900s — scanning 158+ addresses can take >9 min with API latency
-  const lockAcquired = await acquireLock("cron:detectOrphanPayments", 900, 1);
+  // FIX: Increased lock TTL from 900s to 1800s (30 min) — scanning 158+ addresses can take 10+ min with API latency
+  const lockAcquired = await acquireLock("cron:detectOrphanPayments", 1800, 1);
   if (!lockAcquired) { log("Cron: detectOrphanPayments skipped (already running)", "info"); return; }
   try {
     log("Cron: detectOrphanPayments running", "info");
