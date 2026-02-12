@@ -14,6 +14,7 @@
 import stablecoinConversionModel from "../models/stablecoinConversionModel";
 import * as binanceService from "./binanceService";
 import { getMarketState, getRecommendedFeeTier } from "./volatilityMonitorService";
+import { isConnected as wsBinanceConnected, getStatus as getBinanceWsStatus } from "./binanceWebSocketService";
 import { Op, fn, col, literal } from "sequelize";
 import sequelize from "../utils/dbInstance";
 import userModel from "../models/userModels/userModel";
