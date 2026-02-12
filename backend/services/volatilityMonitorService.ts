@@ -201,9 +201,7 @@ const maybeAlertAdmin = async (state: MarketState) => {
 const storeState = async (state: MarketState) => {
   try {
     const key = `${REDIS_KEY_PREFIX}:${state.asset}`;
-    if (redisClient && redisClient.isReady) {
-      await redisClient.set(key, JSON.stringify(state), { EX: 120 });
-    }
+    await setRedisItemWithTTL(key, JSON.stringify(state), 120);
   } catch {
     // Redis may not be available — fail silently
   }
