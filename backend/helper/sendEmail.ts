@@ -515,6 +515,7 @@ const sendPaymentPendingEmail = async (
     return info;
   } catch (e) {
     console.log("Payment pending email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendPaymentPendingEmail' });
   }
 };
 
