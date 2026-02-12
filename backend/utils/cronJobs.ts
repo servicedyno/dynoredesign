@@ -542,6 +542,7 @@ export const setupRefereeCodeReminderCron = () => {
       const err = e as { message?: string };
       log(`Referee Code Reminder Cron Job Error: ${err.message}`, "error");
       cronLogger?.error?.("Referee Code Reminder Cron Error", {}, new Error(err.message));
+      captureError(e, 'cron', { extraContext: 'setupRefereeCodeReminderCron' });
     }
   });
   
