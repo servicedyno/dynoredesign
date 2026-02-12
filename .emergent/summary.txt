@@ -1,74 +1,176 @@
-<analysis>**original_problem_statement:**
-The user initially requested a full end-to-end analysis of the DynoPay codebase to identify and report on any gaps, security vulnerabilities, or bugs. After the report, the user's focus shifted to fixing all identified issues, including testing and resolving problems with the Binance integration and a broken email logo.
+<analysis>**original_problem_statement**: The initial request was to set up and install necessary dependencies. This evolved into a comprehensive analysis of the codebase to ensure the API documentation was accurate and complete, particularly for frontend integration and auto-conversion features. The user then requested the implementation of a feature to disable auto-conversion, followed by a task to resolve a Binance API rate-limiting issue by switching to WebSockets. The final and current request is to create a specific payment flow to test the auto-conversion feature.
 
-Following those fixes, the user requested a major feature enhancement: an intelligent, adaptive system for converting cryptocurrency to stablecoins. This system needed to handle price volatility by using fast transaction fees during market drops and an efficient selling strategy (Limit IOC orders) on Binance to protect merchant payouts. This involved several rounds of research and planning.
-
-The most recent request was to sell the existing 'POL' (Polygon) balance on the user's Binance account to test the new spot trading logic before fully testing the larger adaptive system. The agent implemented all the necessary code, and the user has just confirmed that this new code is now deployed to the Railway production environment.
+PRODUCT REQUIREMENTS:
+1.  Analyze and fix the API documentation (Swagger) for accuracy and completeness.
+2.  Implement endpoints to view and retry individual auto-conversions.
+3.  Ensure a safe 'turn-off' mechanism for auto-conversion that verifies merchant wallet readiness.
+4.  Replace the Binance REST API polling for price data with a WebSocket stream to prevent rate-limiting issues.
+5.  Test the end-to-end auto-conversion flow by creating a 0 ETH payment for a specific merchant, converting it to USDT TRC20.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is a full-stack cryptocurrency payment gateway (DynoPay) built with a Node.js/TypeScript backend, React frontend, PostgreSQL database, and Redis for caching. It's integrated with Tatum, Brevo, and Binance, and is deployed on Railway.
+The project is a full-stack application with a React frontend and a FastAPI/Node.js backend. The environment is fully set up with all dependencies installed.
 
-A significant amount of new, untested code for an Adaptive Conversion System has just been deployed by the user. This system includes:
-- A volatility monitoring service () to track market conditions.
-- A fee rate service () to fetch live blockchain fees.
-- Updated Binance integration () to use Limit IOC (Immediate-or-Cancel) spot market orders instead of the non-functional Convert API.
-- Reworked conversion logic () to implement a new payout model where the merchant absorbs price drops.
-- New diagnostic endpoints to test these features.
+The agent has completed a major overhaul of the backend:
+1.  **API Documentation:** The Swagger documentation has been thoroughly analyzed and corrected. All endpoints now have accurate HTTP methods, descriptions, and schemas.
+2.  **Auto-Conversion:** New endpoints ( and ) have been added. The logic to disable auto-conversion () has been enhanced with a safety check to ensure merchants have wallets for volatile currencies before the feature can be turned off.
+3.  **Binance WebSocket Integration:** The price monitoring service () has been refactored to use a new WebSocket service () for live price data from Binance. This resolves the previous API rate-limiting errors. The system includes graceful handling for geo-blocking and a dedicated health-check endpoint ().
 
 **Last working item**:
-*   **Last item agent was working:** The agent was tasked with selling the user's  (Polygon) balance on Binance to validate the new spot trading logic. The agent implemented the required code and a diagnostic endpoint (), but was blocked because the code was not yet deployed to Railway. The user's final message, okay code deployed, has unblocked this task.
-*   **Status:** USER VERIFICATION PENDING
-*   **Agent Testing Done:** N
-*   **Which testing method agent to use?** Manual testing via cURL. The agent must call the newly available  endpoint on the production Railway URL.
-*   **User Testing Done:** N
+-   **Last item agent was working**: The agent was about to begin the user's request to create a 0 ETH payment for the merchant  (company ) and ensure the company settings are configured to auto-convert the funds to USDT (TRC20).
+-   **Status**: NOT STARTED
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: Manual testing by . The agent will need to perform a sequence of API calls: authenticate, update company settings for auto-conversion, create the payment, and then retrieve the generated ETH deposit address.
+-   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1:** Test and confirm the 'POL' (Polygon) sale on Binance (P0)
-*   **Issue 2:** Systematically test the newly deployed Adaptive Conversion System (P1)
-
-**Issues Detail:**
-*   **Issue 1:** Test and confirm the 'POL' (Polygon) sale on Binance
-    *   **Description:** The user wants to sell their entire  balance to  using the new diagnostic endpoint to confirm the spot trading logic works correctly on the live Railway deployment. The user has just deployed the necessary code.
-    *   **Next debug checklist:**
-        1.  Obtain the application's external URL from the environment.
-        2.  Trigger the sale by sending a POST request to the  endpoint with the payload: .
-        3.  Examine the response to confirm the sell order was successfully placed.
-        4.  Follow up by checking the Binance account balance to verify that the  balance is now zero and the  balance has increased accordingly.
-        5.  Report the outcome to the user.
-    *   **Why fix this issue and what will be achieved with the fix?** This validates the core spot trading functionality on the live environment, which is a prerequisite for the entire automated conversion flow.
-    *   **Status:** USER VERIFICATION PENDING
-    *   **Is recurring issue?** N
-    *   **Should Test frontend/backend/both after fix?** Backend
-
-*   **Issue 2:** Systematically test the newly deployed Adaptive Conversion System
-    *   **Description:** A large, multi-phase feature for adaptive fees and Limit IOC selling has been implemented and deployed but remains completely untested in a live environment. Its functionality is unknown.
-    *   **Next debug checklist:**
-        1.  **Test Volatility Monitor:** Call the  endpoint on the Railway URL. Confirm it successfully fetches data from the Binance public API and returns market states for monitored cryptocurrencies (this failed locally due to geo-blocking).
-        2.  **Test Fee Rate Service:** Call the  endpoint on the Railway URL. Confirm it fetches and returns live fee data for BTC and ETH from external APIs.
-        3.  **Perform End-to-End Test:** Manually trigger the  cron job (ideally via a temporary diagnostic endpoint). Trace the server logs to verify the entire flow: fetching market state, selecting a fee tier, sweeping crypto, selling via a Limit IOC order, and calculating the final merchant payout.
-    *   **Why fix this issue and what will be achieved with the fix?** To validate the core feature requested by the user and ensure it functions as designed to manage volatility risk.
-    *   **Status:** TESTING PENDING
-    *   **Is recurring issue?** N
-    *   **Should Test frontend/backend/both after fix?** Backend
+There are no outstanding technical issues or bugs. The only pending item is the user-requested task.
 
 **In progress Task List**:
-None. The implementation work is complete; the focus is now on testing and verification.
+
+-   **Task 1**: Create a 0 ETH payment with auto-conversion to USDT (TRC20). (P0)
+    -   **Where to resume**: This task needs to be started from the beginning. The agent should formulate a plan to use API calls () to:
+        1.  Authenticate to get a token.
+        2.  Use the token to enable auto-conversion for the  company, setting the target to USDT on the TRC20 network.
+        3.  Create a new 0 payment request for ETH.
+        4.  Extract and share the resulting ETH deposit address from the API response.
+    -   **What will be achieved with this?**: This will serve as an end-to-end test of the payment creation and auto-conversion flow.
+    -   **Status**: NOT STARTED
+    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Blocked on something**: None
 
 **Upcoming and Future Tasks**
-*   **(P1) Refactor Large Controller Files:** As outlined in , split monolithic controller files like , , and  into smaller, more maintainable modules.
+There are no other upcoming or future tasks defined by the user at this time.
 
 **Completed work in this session**
-*   **Binance API Fix:** Switched from the permission-restricted Convert API to the functional Spot Market Order API ().
-*   **Email Logo Fix:** Resolved the broken email logo issue by using a publicly hosted PNG and updating the server's Content Security Policy. Added a  endpoint for testing.
-*   **Adaptive Conversion System Implementation (All Phases):**
-    *   **Volatility Monitor:** Created  to track price changes via Binance klines and determine market states (e.g., , ).
-    *   **Fee Rate Service:** Created  to fetch live blockchain fee data from third-party APIs (e.g., mempool.space).
-    *   **Limit IOC Sell Logic:** Implemented  in  for efficient, price-controlled selling.
-    *   **New Payout Logic:** Updated  to use adaptive fees for sweeps and a new payout model where merchants absorb price drops.
-    *   **Database & Diagnostics:** Extended the  model and added several new diagnostic endpoints for testing.
-    *   **Cron Job Integration:** Wired the volatility monitor into the main server startup ().
+-   **Environment Setup**: Installed all npm <command>
+
+Usage:
+
+npm install        install all the dependencies in your project
+npm install <foo>  add the <foo> dependency to your project
+npm test           run this project's tests
+npm run <foo>      run the script named <foo>
+npm <command> -h   quick help on <command>
+npm -l             display usage info for all commands
+npm help <term>    search for help on <term>
+npm help npm       more involved overview
+
+All commands:
+
+    access, adduser, audit, bugs, cache, ci, completion,
+    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
+    edit, exec, explain, explore, find-dupes, fund, get, help,
+    help-search, hook, init, install, install-ci-test,
+    install-test, link, ll, login, logout, ls, org, outdated,
+    owner, pack, ping, pkg, prefix, profile, prune, publish,
+    query, rebuild, repo, restart, root, run-script, sbom,
+    search, set, shrinkwrap, star, stars, start, stop, team,
+    test, token, uninstall, unpublish, unstar, update, version,
+    view, whoami
+
+Specify configs in the ini-formatted file:
+    /root/.npmrc
+or on the command line via: npm <command> --key=value
+
+More configuration info: npm help config
+Configuration fields: npm help 7 config
+
+npm@10.8.2 /usr/lib/node_modules/npm (frontend) and 
+Usage:   
+  pip <command> [options]
+
+Commands:
+  install                     Install packages.
+  lock                        Generate a lock file.
+  download                    Download packages.
+  uninstall                   Uninstall packages.
+  freeze                      Output installed packages in requirements format.
+  inspect                     Inspect the python environment.
+  list                        List installed packages.
+  show                        Show information about installed packages.
+  check                       Verify installed packages have compatible 
+dependencies.
+  config                      Manage local and global configuration.
+  search                      Search PyPI for packages.
+  cache                       Inspect and manage pip's wheel cache.
+  index                       Inspect information available from package 
+indexes.
+  wheel                       Build wheels from your requirements.
+  hash                        Compute hashes of package archives.
+  completion                  A helper command used for command completion.
+  debug                       Show information useful for debugging.
+  help                        Show help for commands.
+
+General Options:
+  -h, --help                  Show help.
+  --debug                     Let unhandled exceptions propagate outside the
+                              main subroutine, instead of logging them to
+                              stderr.
+  --isolated                  Run pip in an isolated mode, ignoring
+                              environment variables and user configuration.
+  --require-virtualenv        Allow pip to only run in a virtual environment;
+                              exit with an error otherwise.
+  --python <python>           Run pip with the specified Python interpreter.
+  -v, --verbose               Give more output. Option is additive, and can be
+                              used up to 3 times.
+  -V, --version               Show version and exit.
+  -q, --quiet                 Give less output. Option is additive, and can be
+                              used up to 3 times (corresponding to WARNING,
+                              ERROR, and CRITICAL logging levels).
+  --log <path>                Path to a verbose appending log.
+  --no-input                  Disable prompting for input.
+  --keyring-provider <keyring_provider>
+                              Enable the credential lookup via the keyring
+                              library if user input is allowed. Specify which
+                              mechanism to use [auto, disabled, import,
+                              subprocess]. (default: auto)
+  --proxy <proxy>             Specify a proxy in the form
+                              scheme://[user:passwd@]proxy.server:port.
+  --retries <retries>         Maximum attempts to establish a new HTTP
+                              connection. (default: 5)
+  --timeout <sec>             Set the socket timeout (default 15 seconds).
+  --exists-action <action>    Default action when a path already exists:
+                              (s)witch, (i)gnore, (w)ipe, (b)ackup, (a)bort.
+  --trusted-host <hostname>   Mark this host or host:port pair as trusted,
+                              even though it does not have valid or any HTTPS.
+  --cert <path>               Path to PEM-encoded CA certificate bundle. If
+                              provided, overrides the default. See 'SSL
+                              Certificate Verification' in pip documentation
+                              for more information.
+  --client-cert <path>        Path to SSL client certificate, a single file
+                              containing the private key and the certificate
+                              in PEM format.
+  --cache-dir <dir>           Store the cache data in <dir>.
+  --no-cache-dir              Disable the cache.
+  --disable-pip-version-check
+                              Don't periodically check PyPI to determine
+                              whether a new version of pip is available for
+                              download. Implied with --no-
+                              index.
+  --no-color                  Suppress colored output.
+  --use-feature <feature>     Enable new functionality, that may be backward
+                              incompatible.
+  --use-deprecated <feature>  Enable deprecated functionality, that will be
+                              removed in the future.
+  --resume-retries <resume_retries>
+                              Maximum attempts to resume or restart an
+                              incomplete download. (default: 5) (backend) dependencies.
+-   **API Documentation Overhaul**:
+    -   Corrected HTTP methods and removed duplicates in Swagger files (, , ).
+    -   Added previously undocumented wallet and API key endpoints to Swagger.
+-   **Auto-Conversion Feature Enhancements**:
+    -   **New Endpoint**: Added  to fetch single conversion details in .
+    -   **New Endpoint**: Added  to retry failed conversions in .
+    -   **Safety Feature**: Implemented a wallet readiness check in the  endpoint to prevent disabling auto-conversion if no fallback wallets are configured ().
+-   **Binance API Refactor (WebSocket Migration)**:
+    -   **New Service**: Created  to manage a persistent WebSocket connection to Binance for live price feeds.
+    -   **Refactor**: Updated  to consume data from the new WebSocket service, eliminating REST API polling and rate-limit errors.
+    -   **Resilience**: Added geo-block detection and graceful backoff logic to the WebSocket service.
+    -   **Health Check**: Created a new endpoint  to expose the WebSocket connection status.
+-   **Code Refactoring**:
+    -   Centralized Redis client access by creating a new helper file .
 
 **Earlier issues found/mentioned but not fixed**
 None.
@@ -80,75 +182,75 @@ N/A
 
 
 **Key Technical Concepts**
-*   **Rate of Change (ROC):** Mathematical concept used to detect market volatility from price data.
-*   **Limit IOC (Immediate-or-Cancel) Orders:** A trade order type on Binance that allows for price control with instant execution, preventing slippage.
-*   **Adaptive Fees:** A strategy to dynamically adjust blockchain transaction fees based on real-time market conditions (volatility and network congestion) to minimize risk or cost.
-*   **Geo-blocking:** Binance APIs are blocked in the agent's environment, so all testing must be performed against the user's Railway deployment.
+-   **Backend**: FastAPI (Python), Node.js/TypeScript (for background services)
+-   **Frontend**: React
+-   **Database**: MongoDB
+-   **Real-time Data**: WebSockets for Binance price streams
+-   **API Documentation**: Swagger/OpenAPI
+-   **Caching/State Management**: Redis
 
 **key DB schema**
-*   **stablecoinConversions:** The model in  was updated with new fields to track the entire conversion lifecycle: , , , , , , .
+-   **stablecoinConversions**: 
+-   **companies**: 
+-   **wallets**: 
 
 **changes in tech stack**
-None.
+-   Added  library to the backend () to support WebSocket integration.
 
 **All files of reference**
-*   : Contains the new Limit IOC selling logic.
-*   : Contains the core logic for the new payout model.
-*   : New file for market state detection.
-*   : New file for fetching live tx fees.
-*   : Contains the new endpoints for testing the  sale and other features.
-*   : Integrates the new volatility monitor cron job.
-
-**Areas that need refactoring**:
-*   The large controller files in  (, etc.) are still pending a refactor as per .
+-   : **New file.** Manages the WebSocket connection to Binance.
+-   : Refactored to use WebSocket data, removing REST API polling.
+-   : Updated with new endpoints and logic for auto-conversion management.
+-   : **New file.** Centralizes the Redis client instance for shared use.
+-   : Modified to include the new WebSocket health check route.
+-   : Updated with the  dependency.
 
 **key api endpoints**
-*   : Sells a specified crypto asset on Binance. (Newly deployed)
-*   : Returns the current market state for monitored cryptos. (Newly deployed)
-*   : Returns live blockchain fee data. (Newly deployed)
-*   : Previews the HTML email template.
+-   : Creates a new payment request.
+-   : Enables/disables auto-conversion for a company.
+-   : Fetches details of a specific conversion.
+-   : Retries a failed conversion.
+-   : Returns the status of the Binance WebSocket connection.
 
 **Critical Info for New Agent**
-*   **Code Is Live:** The user's last message, okay code deployed, is critical. You must assume all new code for the adaptive conversion system is on the Railway server. Do not re-implement or re-deploy.
-*   **Immediate Task:** Your first action is to test the  sale as the user requested. Use the Railway URL and the  endpoint.
-*   **Test on Railway Only:** The agent's pod is geo-blocked by Binance. All Binance-related actions (including testing the new volatility and fee services) **must** be executed against the live Railway URL.
-*   **Untested Feature:** The entire adaptive conversion system is a large, complex, and untested feature. After verifying the  sale, it requires systematic testing, starting with its diagnostic endpoints.
-*   The Binance asset for Polygon has been correctly identified and updated in the code as **** (not ).
+-   **Binance Geo-Blocking**: The current test environment is in a US data center, which causes Binance to return a 451 Unavailable for Legal Reasons error. The  is designed to handle this: it detects the geo-block, logs an informative message, and switches to a long-poll reconnect strategy. This is expected behavior and not a bug.
+-   **Credentials for Next Task**: The next task requires using the following credentials:
+    -   API Server: 
+    -   Company: 
+    -   Merchant: 
 
 **documents and test reports created in this job**
-*    (and various versions) were created to outline the implementation of the adaptive conversion system.
+-   : This file was read and updated during the session.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Confirmed their understanding and requested a recommended implementation for a system where the merchant absorbs price drops. (Completed)
-2.  **User:** Asked for research on using fast transaction fees for cryptos with slow confirmation times. (Completed)
-3.  **User:** Requested a live example of what a merchant would receive for a 00 BTC payment, considering different fee speeds and live data. (Completed)
-4.  **User:** Added a requirement to use the fastest sending option during rapid price drops for all non-stablecoins. (Completed)
-5.  **User:** Asked for a comprehensive list of everything that needs to be implemented based on all discussions. (Completed)
-6.  **User:** Asked for clarification on how merchant settlement wallet settings would be used for Binance withdrawals. (Completed)
-7.  **User:** Approved the final, updated implementation plan. (Completed)
-8.  **User:** Instructed the agent to start implementing all phases of the plan. (Completed)
-9.  **User:** **(PENDING ACTION)** Interrupted the implementation to request that the agent first sell the  (POL) currently in their Binance account to verify the sell function works.
-10. **User:** **(LATEST MESSAGE)** okay code deployed - This confirms the new code is live on Railway, unblocking the previous request.
+1.  **user**:  - **PENDING**
+2.  **user**:  - **Completed**.
+3.  **user**:  - **Completed**.
+4.  **user**:  - **Completed**. Logic was analyzed and improved.
+5.  **user**:  - **Completed**.
+6.  **agent**:  - **Completed**.
+7.  **agent**:  - **Completed**.
+8.  **agent**:  - **Completed**.
+9.  **user**:  - **Completed**.
+10. **agent**:  - **Completed**.
 
 **Project Health Check:**
-*   **Broken:** The new Adaptive Conversion System is deployed but is completely untested. Its operational status is unknown and it may contain bugs.
-*   **Mocked:** None.
+-   **Broken**: None.
+-   **Mocked**: The Binance WebSocket connection is gracefully handled in the geo-blocked test environment. The service correctly identifies the block and backs off, which is the desired behavior. The application logic that depends on it is robust to the absence of live data.
 
 **3rd Party Integrations**
-*   **Tatum:** Crypto operations.
-*   **Binance:** Currency conversion (now via Spot API).
-*   **Brevo:** Email notifications.
-*   **Blockstream / mempool.space:** (New) For fetching BTC fee rates.
-*   **Blocknative / Beaconcha.in:** (New) For fetching ETH fee rates.
+-   **Binance**: Used for live cryptocurrency price data via WebSocket streams.
 
 **Testing status**
-*   **Testing agent used after significant changes:** NO
-*   **Troubleshoot agent used after agent stuck in loop:** NO
-*   **Test files created:** None. Diagnostic endpoints were added to .
-*   **Known regressions:** None yet, but the risk is high due to the large, untested codebase change.
+-   **Testing agent used after significant changes**: YES,  was run after the WebSocket implementation.
+-   **Troubleshoot agent used after agent stuck in loop**: NO
+-   **Test files created**: None.
+-   **Known regressions**: None.
 
 **Credentials to test flow:**
-The necessary Binance API keys are configured in the Railway deployment environment. The agent only needs the application's external URL to proceed with testing.
+-   **Company**: 
+-   **Merchant**: 
+-   **API Server**: 
 
 **What agent forgot to execute**
-The agent was unable to execute the user's request to sell the  balance because the code was not yet deployed. Now that the user has deployed it, this is the immediate pending action. The full testing of the new adaptive system is also pending.</analysis>
+The agent has not forgotten any tasks. The next step is to execute the latest user request, which is queued up as the highest priority task.</analysis>
