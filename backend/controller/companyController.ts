@@ -1305,6 +1305,177 @@ const getWebhookStats = async (req: express.Request, res: express.Response) => {
   }
 };
 
+// ============================================
+// Auto-Stablecoin Conversion Settings
+// ============================================
+
+const VALID_SETTLEMENT_CURRENCIES = ["USDT", "USDC"];
+const VALID_SETTLEMENT_CHAINS = ["ERC20", "TRC20", "POLYGON", "BEP20", "SOL"];
+
+/**
+ * Get auto-convert settings for a company
+ * GET /api/company/auto-convert/:id
+ */
+const getAutoConvertSettings = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  const { id } = req.params;
+
+  try {
+    const company = await companyModel.findOne({
+      where: { company_id: id, user_id: userData.user_id },
+      attributes: [
+        "company_id",
+        "company_name",
+        "auto_convert_enabled",
+        "settlement_currency",
+        "settlement_wallet_address",
+        "settlement_chain",
+      ],
+    });
+
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found");
+    }
+
+    const data = company.dataValues;
+    successResponseHelper(res, 200, "Auto-convert settings retrieved", {
+      company_id: data.company_id,
+      company_name: data.company_name,
+      auto_convert_enabled: data.auto_convert_enabled || false,
+      settlement_currency: data.settlement_currency || null,
+      settlement_wallet_address: data.settlement_wallet_address || null,
+      settlement_chain: data.settlement_chain || null,
+      valid_currencies: VALID_SETTLEMENT_CURRENCIES,
+      valid_chains: VALID_SETTLEMENT_CHAINS,
+    });
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    companyLogger.error(errorMessage, { user_id: userData.user_id }, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
+ * Update auto-convert settings for a company
+ * PUT /api/company/auto-convert/:id
+ * Body: { auto_convert_enabled, settlement_currency, settlement_wallet_address, settlement_chain }
+ */
+const updateAutoConvertSettings = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  const { id } = req.params;
+  const { auto_convert_enabled, settlement_currency, settlement_wallet_address, settlement_chain } = req.body;
+
+  try {
+    const company = await companyModel.findOne({
+      where: { company_id: id, user_id: userData.user_id },
+    });
+
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found");
+    }
+
+    // Validate fields if enabling
+    if (auto_convert_enabled) {
+      if (!settlement_currency || !VALID_SETTLEMENT_CURRENCIES.includes(settlement_currency)) {
+        return errorResponseHelper(
+          res,
+          400,
+          `settlement_currency must be one of: ${VALID_SETTLEMENT_CURRENCIES.join(", ")}`
+        );
+      }
+      if (!settlement_wallet_address || settlement_wallet_address.length < 10) {
+        return errorResponseHelper(res, 400, "Valid settlement_wallet_address is required");
+      }
+      if (!settlement_chain || !VALID_SETTLEMENT_CHAINS.includes(settlement_chain)) {
+        return errorResponseHelper(
+          res,
+          400,
+          `settlement_chain must be one of: ${VALID_SETTLEMENT_CHAINS.join(", ")}`
+        );
+      }
+    }
+
+    await company.update({
+      auto_convert_enabled: auto_convert_enabled || false,
+      settlement_currency: settlement_currency || null,
+      settlement_wallet_address: settlement_wallet_address || null,
+      settlement_chain: settlement_chain || null,
+    });
+
+    console.log(
+      `[AutoConvert] Company ${id} settings updated: enabled=${auto_convert_enabled}, currency=${settlement_currency}, chain=${settlement_chain}`
+    );
+
+    successResponseHelper(res, 200, "Auto-convert settings updated", {
+      auto_convert_enabled: auto_convert_enabled || false,
+      settlement_currency,
+      settlement_wallet_address,
+      settlement_chain,
+    });
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    companyLogger.error(errorMessage, { user_id: userData.user_id }, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
+/**
+ * Get conversion history for a company
+ * GET /api/company/conversion-history/:id?page=1&limit=20
+ */
+const getConversionHistory = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  const { id } = req.params;
+  const { page = 1, limit = 20, status } = req.query;
+
+  try {
+    // Verify ownership
+    const company = await companyModel.findOne({
+      where: { company_id: id, user_id: userData.user_id },
+    });
+
+    if (!company) {
+      return errorResponseHelper(res, 404, "Company not found");
+    }
+
+    const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const whereClause: Record<string, unknown> = { company_id: parseInt(id) };
+    if (status) {
+      whereClause.status = status;
+    }
+
+    const { count, rows } = await stablecoinConversionModel.findAndCountAll({
+      where: whereClause,
+      limit: parseInt(limit as string),
+      offset,
+      order: [["createdAt", "DESC"]],
+    });
+
+    successResponseHelper(res, 200, "Conversion history retrieved", {
+      conversions: rows.map((r: { dataValues: Record<string, unknown> }) => r.dataValues),
+      pagination: {
+        total: count,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        totalPages: Math.ceil(count / parseInt(limit as string)),
+      },
+    });
+  } catch (e) {
+    const errorMessage = getErrorMessage(e);
+    companyLogger.error(errorMessage, { user_id: userData.user_id }, new Error(e));
+    errorResponseHelper(res, 500, errorMessage);
+  }
+};
+
 export default {
   addCompany,
   getCompany,
@@ -1319,4 +1490,7 @@ export default {
   getWebhookHistory,
   getWebhookDetail,
   getWebhookStats,
+  getAutoConvertSettings,
+  updateAutoConvertSettings,
+  getConversionHistory,
 };
