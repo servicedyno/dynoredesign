@@ -418,7 +418,19 @@
  *     tags:
  *       - Company Management
  *     summary: Get company transactions
- *     description: Retrieve all transactions for a specific company
+ *     description: |
+ *       Retrieve all transactions for a specific company.
+ *       
+ *       Amounts are displayed in the company's preferred base currency.
+ *       
+ *       **Auto-Stablecoin Conversion:**
+ *       If a transaction went through auto-conversion (volatile crypto → stablecoin via Binance),
+ *       the response includes `auto_converted: true` and an `auto_convert` object with:
+ *       - Original crypto (`source_currency`, `source_amount`)
+ *       - USD value at time of payment (`source_amount_usd`)
+ *       - Original amount in base currency (`source_amount_display`)
+ *       - Converted stablecoin (`target_currency`, `target_amount`)
+ *       - Conversion rate and status
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -431,6 +443,41 @@
  *     responses:
  *       200:
  *         description: List of transactions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       transaction_id:
+ *                         type: integer
+ *                       base_amount:
+ *                         type: number
+ *                       base_currency:
+ *                         type: string
+ *                       display_amount:
+ *                         type: number
+ *                         description: Amount in company's preferred currency
+ *                       display_currency:
+ *                         type: string
+ *                         description: Company's preferred/base currency
+ *                       amount_display:
+ *                         type: string
+ *                         description: Formatted display (e.g., "$100.00")
+ *                       status:
+ *                         type: string
+ *                       auto_converted:
+ *                         type: boolean
+ *                         description: Whether this transaction was auto-converted to stablecoin
+ *                       auto_convert:
+ *                         nullable: true
+ *                         $ref: '#/components/schemas/AutoConvertInfo'
  *       401:
  *         description: Authentication required
  *       404:
