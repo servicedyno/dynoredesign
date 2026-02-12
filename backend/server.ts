@@ -41,6 +41,7 @@ import { migrateWebhookUrls } from "./services/migrateWebhookUrls";
 import { processStablecoinConversions, getConversionStats } from "./services/conversionService";
 import stablecoinConversionModel from "./models/stablecoinConversionModel";
 import { processWebhookRetryQueue } from "./utils/webhookRetry";
+import binanceRelayRouter from "./routes/binanceRelayRouter";
 
 // ============================================
 // RAILWAY LOGGING FIX: Disable output buffering
