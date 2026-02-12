@@ -4217,23 +4217,38 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               await setRedisItem(adminFeeEmailKey, { sent: true, sentAt: new Date().toISOString() });
               await setRedisTTL(adminFeeEmailKey, 86400); // 24 hour TTL
               
-              const isUnderThreshold = userAmountToSend === 0 && adminAmountToSend === Number(totalAmountReceived);
+              const isUnderThreshold = userAmountToSend === 0 && adminAmountToSend === Number(totalAmountReceived) && !autoConvertEnabled;
               
-              await sendAdminFeeReceivedEmail(
-                adminEmail,
-                "Dynopay Admin",
-                Number(adminAmountToSend).toFixed(8),
-                tempCurrency,
-                transactionId,
-                company_data?.company_name || "Unknown Company",
-                Number(userAmountToSend).toFixed(8),
-                Number(totalAmountReceived).toFixed(8)
-              );
-              
-              if (isUnderThreshold) {
-                console.log(`[Admin Fee Notification - UNDER THRESHOLD] Sent email: ${adminAmountToSend} ${tempCurrency} (100%) from Company ${company_data?.company_id || 'N/A'} - Payment below minimum threshold`);
+              if (autoConvertEnabled) {
+                // Auto-convert: admin gets all crypto (fee + merchant-for-conversion)
+                await sendAdminFeeReceivedEmail(
+                  adminEmail,
+                  "Dynopay Admin",
+                  Number(adminAmountToSend - originalUserAmount).toFixed(8), // actual admin fee only
+                  tempCurrency,
+                  transactionId,
+                  company_data?.company_name || "Unknown Company",
+                  Number(originalUserAmount).toFixed(8), // merchant portion pending conversion
+                  Number(totalAmountReceived).toFixed(8)
+                );
+                console.log(`[Admin Fee Notification - AUTO-CONVERT] Sent email: fee=${(adminAmountToSend - originalUserAmount).toFixed(8)} ${tempCurrency}, merchant_for_conversion=${originalUserAmount.toFixed(8)} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
               } else {
-                console.log(`[Admin Fee Notification] Sent email for ${adminAmountToSend} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
+                await sendAdminFeeReceivedEmail(
+                  adminEmail,
+                  "Dynopay Admin",
+                  Number(adminAmountToSend).toFixed(8),
+                  tempCurrency,
+                  transactionId,
+                  company_data?.company_name || "Unknown Company",
+                  Number(userAmountToSend).toFixed(8),
+                  Number(totalAmountReceived).toFixed(8)
+                );
+                
+                if (isUnderThreshold) {
+                  console.log(`[Admin Fee Notification - UNDER THRESHOLD] Sent email: ${adminAmountToSend} ${tempCurrency} (100%) from Company ${company_data?.company_id || 'N/A'} - Payment below minimum threshold`);
+                } else {
+                  console.log(`[Admin Fee Notification] Sent email for ${adminAmountToSend} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
+                }
               }
             }
           }
