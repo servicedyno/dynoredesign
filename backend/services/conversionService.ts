@@ -19,6 +19,22 @@ import { Op } from "sequelize";
 const MAX_RETRIES = 5;
 const LOG_PREFIX = "[StablecoinConvert]";
 
+// Estimated Binance withdrawal fees by network (in USDT)
+const WITHDRAWAL_FEE_ESTIMATES: Record<string, number> = {
+  TRC20: 1.0,
+  POLYGON: 0.8,
+  BEP20: 0.8,
+  SOL: 1.0,
+  ERC20: 3.2,
+  ARBITRUM: 0.5,
+  OPTIMISM: 0.5,
+};
+
+/** Get estimated withdrawal fee for a network */
+const getWithdrawalFeeEstimate = (network: string): number => {
+  return WITHDRAWAL_FEE_ESTIMATES[network?.toUpperCase()] || 1.0;
+};
+
 // ============================================
 // Helper: Log with prefix
 // ============================================
