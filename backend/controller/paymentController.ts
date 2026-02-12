@@ -4535,8 +4535,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             transaction_reference: transactionId,
             status: customerPayload.status,
             
-            // Amount received (crypto)
-            amount: userAmountToSend,
+            // Amount received (crypto) — use original merchant amount if auto-converting
+            amount: autoConvertEnabled ? originalUserAmount : userAmountToSend,
             currency: tempCurrency,
             
             // Original payment request (fiat)
@@ -4544,12 +4544,20 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             base_currency: customerData?.base_currency,
             
             // ENHANCED: Merchant receives (net after fees)
-            merchant_amount: userAmountToSend,
+            merchant_amount: autoConvertEnabled ? originalUserAmount : userAmountToSend,
             
-            // ENHANCED: Fee information
-            total_fee: adminAmountToSend,
+            // ENHANCED: Fee information — show actual fee, not fee+merchant when auto-converting
+            total_fee: autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend,
             total_fee_usd: Number(totalFeeUsd.toFixed(2)),
             fee_payer: tempData?.fee_payer || customerData?.fee_payer || 'company',
+            
+            // Auto-conversion info (if applicable)
+            ...(autoConvertEnabled ? {
+              auto_convert: true,
+              converting_to: autoConvertTargetCurrency,
+              settlement_chain: autoConvertSettlementChain,
+              merchant_crypto_pending_conversion: originalUserAmount,
+            } : {}),
             
             // ENHANCED: Customer & payment link details
             customer_name: customerData?.customer_name || tempData?.customer_name || null,
