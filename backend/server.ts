@@ -41,6 +41,8 @@ import { migrateWebhookUrls } from "./services/migrateWebhookUrls";
 import { processStablecoinConversions, getConversionStats } from "./services/conversionService";
 import stablecoinConversionModel from "./models/stablecoinConversionModel";
 import { processWebhookRetryQueue } from "./utils/webhookRetry";
+import { startVolatilityMonitor, getAllMarketStates, runMonitorCycle } from "./services/volatilityMonitorService";
+import { getAllFeeRates, getFeeRates } from "./services/feeRateService";
 
 // ============================================
 // RAILWAY LOGGING FIX: Disable output buffering
