@@ -38,6 +38,9 @@ import refereeCodeModel from "./referralModels/refereeCodeModel";
 import kbCategoryModel from "./knowledgeBaseModels/kbCategoryModel";
 import kbArticleModel from "./knowledgeBaseModels/kbArticleModel";
 
+// Stablecoin Conversion
+import stablecoinConversionModel from "./stablecoinConversionModel";
+
 // USDT Pool System models (legacy - to be deprecated)
 import {
   usdtPoolAddressModel,
