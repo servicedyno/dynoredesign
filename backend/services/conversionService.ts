@@ -12,9 +12,7 @@
  */
 
 import stablecoinConversionModel from "../models/stablecoinConversionModel";
-import { companyModel } from "../models";
 import * as binanceService from "./binanceService";
-import { convertToUSD } from "../utils/currencyUtils";
 import { Op } from "sequelize";
 
 const MAX_RETRIES = 5;
