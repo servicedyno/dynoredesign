@@ -707,13 +707,40 @@ export const getDepositAddress = async (
 // ============================================
 
 /** Get current price for a trading pair */
+/** Get current price for a symbol — prefers WebSocket cache, falls back to REST */
 export const getPrice = async (symbol: string): Promise<number> => {
+  // Try WebSocket cache first (no REST call needed)
+  try {
+    const { getPrice: wsGetPrice } = require("./binanceWebSocketService");
+    const asset = symbol.replace("USDT", "");
+    const wsPrice = await wsGetPrice(asset);
+    if (wsPrice > 0) return wsPrice;
+  } catch {
+    // WebSocket not available, fall through to REST
+  }
+
   const data = (await makePublicRequest("/api/v3/ticker/price", { symbol })) as { price: string };
   return parseFloat(data.price);
 };
 
-/** Get all prices */
+/** Get all prices — prefers WebSocket cache, falls back to REST */
 export const getAllPrices = async (): Promise<Record<string, number>> => {
+  // Try WebSocket cache first
+  try {
+    const { getAllPrices: wsGetAllPrices } = require("./binanceWebSocketService");
+    const wsPrices = await wsGetAllPrices();
+    if (Object.keys(wsPrices).length > 0) {
+      // Convert asset names to symbol format (BTC → BTCUSDT)
+      const result: Record<string, number> = {};
+      for (const [asset, price] of Object.entries(wsPrices)) {
+        result[`${asset}USDT`] = price as number;
+      }
+      return result;
+    }
+  } catch {
+    // Fall through to REST
+  }
+
   const data = (await makePublicRequest("/api/v3/ticker/price")) as Array<{ symbol: string; price: string }>;
   const prices: Record<string, number> = {};
   for (const item of data) {
