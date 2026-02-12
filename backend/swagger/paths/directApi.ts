@@ -794,5 +794,136 @@ Transactions that were auto-converted from volatile crypto to stablecoin include
         }
       }
     }
-  }
+  },
+  '/api/user/createPayment': {
+    post: {
+      tags: ['Direct API - Merchant Integration'],
+      summary: 'Create payment link via API',
+      operationId: 'createPaymentViaApi',
+      description: '**Create Payment Link Programmatically**\n\nCreate a payment link-style payment via the merchant API. This creates a hosted checkout page.\n\n**Authentication:** API Key (x-api-key header)',
+      security: [{ ApiKeyAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['amount', 'currency'],
+              properties: {
+                amount: { type: 'number', example: 100, description: 'Payment amount' },
+                currency: { type: 'string', example: 'USD', description: 'Base fiat currency' },
+                description: { type: 'string', example: 'Product Purchase' },
+                customer_email: { type: 'string', format: 'email', example: 'customer@example.com' },
+                webhook_url: { type: 'string', format: 'uri', example: 'https://yourapp.com/webhooks/payment' },
+                redirect_uri: { type: 'string', format: 'uri', example: 'https://yourapp.com/success' },
+                metadata: { type: 'object', description: 'Custom metadata', example: { order_id: 'ORD-123' } },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: { description: 'Payment link created', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' }, data: { type: 'object', properties: { link_id: { type: 'integer' }, payment_link: { type: 'string' } } } } } } } },
+        400: { description: 'Missing amount or currency' },
+        401: { description: 'Invalid or missing API key' },
+      },
+    },
+  },
+  '/api/user/addFunds': {
+    post: {
+      tags: ['Direct API - Merchant Integration'],
+      summary: 'Add funds to customer wallet',
+      operationId: 'addFundsViaApi',
+      description: '**Add Funds to Customer Wallet**\n\nInitiate a crypto deposit to a customer wallet.\n\n**Authentication:** API Key + Customer Bearer Token',
+      security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['amount', 'currency'],
+              properties: {
+                amount: { type: 'number', example: 50 },
+                currency: { type: 'string', example: 'BTC' },
+                redirect_uri: { type: 'string', format: 'uri' },
+                webhook_url: { type: 'string', format: 'uri' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: { description: 'Deposit initiated' },
+        400: { description: 'Missing required fields' },
+        401: { description: 'Customer authentication required' },
+      },
+    },
+  },
+  '/api/user/useWallet': {
+    post: {
+      tags: ['Direct API - Merchant Integration'],
+      summary: 'Pay using wallet balance',
+      operationId: 'useWalletViaApi',
+      description: '**Use Wallet Balance for Payment**\n\nMake a payment using the customer existing wallet balance.\n\n**Authentication:** API Key + Customer Bearer Token',
+      security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['amount', 'currency'],
+              properties: {
+                amount: { type: 'number', example: 25.00 },
+                currency: { type: 'string', example: 'USDT' },
+                recipient_email: { type: 'string', format: 'email' },
+                description: { type: 'string' },
+                webhook_url: { type: 'string', format: 'uri' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: { description: 'Wallet payment processed', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' }, data: { type: 'object', properties: { transaction_id: { type: 'string' }, amount: { type: 'number' }, status: { type: 'string' } } } } } } } },
+        400: { description: 'Missing required fields' },
+        401: { description: 'Customer authentication required' },
+      },
+    },
+  },
+  '/api/user/getSingleTransaction/{id}': {
+    get: {
+      tags: ['Direct API - Merchant Integration'],
+      summary: 'Get single transaction',
+      operationId: 'getSingleTransaction',
+      description: '**Get Transaction Details**\n\nRetrieve details of a specific transaction by ID.\n\n**Authentication:** API Key + Customer Bearer Token',
+      security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+      parameters: [
+        { name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Transaction ID' },
+      ],
+      responses: {
+        200: { description: 'Transaction details', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, data: { $ref: '#/components/schemas/Transaction' } } } } } },
+        404: { description: 'Transaction not found' },
+        401: { description: 'Invalid or missing API key' },
+      },
+    },
+  },
+  '/api/user/getCryptoTransaction/{address}': {
+    get: {
+      tags: ['Direct API - Merchant Integration'],
+      summary: 'Get transaction by crypto address',
+      operationId: 'getCryptoTransaction',
+      description: '**Lookup Transaction by Crypto Address**\n\nFind the transaction associated with a specific crypto deposit address.\n\n**Authentication:** API Key + Customer Bearer Token',
+      security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+      parameters: [
+        { name: 'address', in: 'path', required: true, schema: { type: 'string' }, description: 'Crypto address' },
+      ],
+      responses: {
+        200: { description: 'Transaction found', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, data: { type: 'object', properties: { pool_transaction: { type: 'object' }, transaction: { $ref: '#/components/schemas/Transaction' }, address: { type: 'string' }, status: { type: 'string' } } } } } } } },
+        404: { description: 'No transaction found for this address' },
+        401: { description: 'Invalid or missing API key' },
+      },
+    },
+  },
 };
