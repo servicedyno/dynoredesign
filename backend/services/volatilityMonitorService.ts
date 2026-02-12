@@ -238,10 +238,10 @@ export const runMonitorCycle = async (): Promise<MarketState[]> => {
         await maybeAlertAdmin(result.value);
       } else {
         failedAssets.push(batch[j]);
-        // Check if it's a rate limit error (418 or 429)
+        // Check if it's a rate limit / geo-block error (418, 429, 451)
         if (result.status === "rejected") {
           const errMsg = result.reason?.message || "";
-          if (errMsg.includes("418") || errMsg.includes("429")) {
+          if (errMsg.includes("418") || errMsg.includes("429") || errMsg.includes("451")) {
             rateLimited = true;
           }
         }
