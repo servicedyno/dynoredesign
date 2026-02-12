@@ -9,6 +9,13 @@ import sanitizeInputMiddleware from "./middleware/sanitizeInput";
 import requestLoggerMiddleware from "./middleware/requestLogger";
 import adminAuthMiddleware from "./middleware/adminAuthMiddleware";
 
+// Load environment variables FIRST
+dotenv.config();
+
+// Validate environment variables on startup (SECURITY FIX)
+import { validateEnvironment } from "./utils/envValidator";
+validateEnvironment();
+
 // Redis imports - only used ones
 import { connectRedis, acquireLock, releaseLock } from "./utils/redisInstance";
 // Unused Redis imports removed: deleteRedisItem, getRedisItem, setRedisItem
@@ -33,9 +40,7 @@ import { getOptimizationDiagnostics } from "./services/tronEnergyService";
 import { migrateWebhookUrls } from "./services/migrateWebhookUrls";
 import { processStablecoinConversions, getConversionStats } from "./services/conversionService";
 import stablecoinConversionModel from "./models/stablecoinConversionModel";
-
-// Load environment variables
-dotenv.config();
+import { processWebhookRetryQueue } from "./utils/webhookRetry";
 
 // ============================================
 // RAILWAY LOGGING FIX: Disable output buffering
