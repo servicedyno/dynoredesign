@@ -298,7 +298,7 @@ const toBinanceAsset = (currency: string): string => {
     BCH: "BCH",
     SOL: "SOL",
     XRP: "XRP",
-    POLYGON: "MATIC",  // Binance uses MATIC for Polygon
+    POLYGON: "POL",  // Binance renamed MATIC to POL (2024)
     USDT: "USDT",
     USDC: "USDC",
     "USDT-TRC20": "USDT",
