@@ -805,7 +805,7 @@ const sendAdminFeeSweepEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Admin fee sweep email error:", e);
+    console.log("Admin fee sweep email error:", formatEmailError(e));
   }
 };
 
