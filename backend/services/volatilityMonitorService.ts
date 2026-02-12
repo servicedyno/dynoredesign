@@ -66,15 +66,26 @@ export interface MarketState {
 
 /**
  * Fetch 5-min klines from Binance for a given symbol
- * Returns last 6 candles (= 30 minutes of data)
+ * Returns last 12 candles (= 60 minutes of data, need min 7 for 30-min ROC)
+ *
+ * Note: Binance WAF returns 418 if User-Agent is missing or looks like a bot.
+ * We use a standard browser-like User-Agent to avoid WAF blocks.
  */
+const BINANCE_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (compatible; DynoPay/1.0)",
+  "Accept": "application/json",
+};
+
 const fetchKlines = async (symbol: string): Promise<Array<{
   close: number;
   volume: number;
   closeTime: number;
 }>> => {
   const url = `${BINANCE_PUBLIC_URL}/api/v3/klines?symbol=${symbol}&interval=5m&limit=12`;
-  const response = await axios.get(url, { timeout: 10000 });
+  const response = await axios.get(url, {
+    timeout: 10000,
+    headers: BINANCE_HEADERS,
+  });
   return response.data.map((k: any[]) => ({
     close: parseFloat(k[4]),
     volume: parseFloat(k[5]),
