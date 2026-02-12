@@ -103,6 +103,28 @@ const companyModel = sequelize.define(
       allowNull: true,
       comment: "Company's backend URL for Tatum webhook delivery (e.g., https://company1.mysite.com). If null, uses global SERVER_URL.",
     },
+    // Auto-Stablecoin Conversion Settings
+    auto_convert_enabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: "Enable auto-conversion of volatile crypto (BTC, ETH, etc.) to stablecoin via Binance",
+    },
+    settlement_currency: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      comment: "Target stablecoin for auto-conversion: USDT or USDC",
+    },
+    settlement_wallet_address: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      comment: "Merchant's stablecoin wallet address for receiving converted funds",
+    },
+    settlement_chain: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: "Blockchain network for stablecoin withdrawal: ERC20, TRC20, POLYGON, BEP20, SOL",
+    },
   },
   {
     tableName: "tbl_company",
