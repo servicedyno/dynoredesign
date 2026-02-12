@@ -342,6 +342,58 @@ const processWithdrawals = async (): Promise<number> => {
 };
 
 // ============================================
+// Helper: Send Payout Notification Email
+// ============================================
+
+const sendConversionPayoutNotification = async (data: any, withdrawalTxHash: string) => {
+  // Fetch merchant user and company info
+  const user: any = await userModel.findOne({ where: { id: data.user_id }, raw: true });
+  const company: any = await companyModel.findOne({ where: { id: data.company_id }, raw: true });
+
+  if (!user?.email) {
+    log(`⚠️ No email found for user #${data.user_id}, skipping payout notification`);
+    return;
+  }
+
+  // Fetch current live price for the source currency
+  const fromAsset = binanceService.default.toBinanceAsset(data.source_currency);
+  let currentPrice = 0;
+  try {
+    const quote = await binanceService.getSpotQuote(fromAsset, "USDT", 1);
+    currentPrice = parseFloat(quote.price);
+  } catch {
+    log(`⚠️ Could not fetch current price for ${fromAsset}, using conversion rate`);
+    currentPrice = parseFloat(data.conversion_rate || "0");
+  }
+
+  const priceAtConversion = parseFloat(data.conversion_rate || "0");
+
+  await sendAutoConversionPayoutEmail(
+    user.email,
+    user.name || "Merchant",
+    company?.company_name || "Your Company",
+    {
+      sourceCurrency: data.source_currency,
+      sourceAmount: parseFloat(data.source_amount).toString(),
+      sourceAmountUsd: data.source_amount_usd || data.locked_merchant_usd || "0",
+      targetCurrency: data.target_currency,
+      payoutAmount: parseFloat(data.merchant_payout_usd || data.target_amount || "0").toFixed(2),
+      conversionRate: priceAtConversion.toString(),
+      priceAtConversion,
+      currentPrice,
+      priceMovementPct: parseFloat(data.price_movement_pct || "0"),
+      marketState: data.market_state_at_sweep || "STABLE",
+      feeTierUsed: data.fee_tier_used || "slow",
+      transactionId: String(data.transaction_id),
+      conversionId: String(data.conversion_id),
+      withdrawalTxHash,
+    }
+  );
+
+  log(`📧 Payout email sent to ${user.email} for conversion #${data.conversion_id}`);
+};
+
+// ============================================
 // Phase 4: Monitor Withdrawals
 // ============================================
 
