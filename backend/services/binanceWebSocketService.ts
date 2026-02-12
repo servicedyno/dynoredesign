@@ -74,6 +74,7 @@ let pingTimer: NodeJS.Timeout | null = null;
 let reconnectAttempts = 0;
 let isConnecting = false;
 let lastMessageTime = 0;
+let geoBlocked = false; // True when we detect 451 / region-blocked
 
 /** Real-time price cache: { "BTC": TickerData, ... } */
 const priceCache: Record<string, TickerData> = {};
