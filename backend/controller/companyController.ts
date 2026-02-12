@@ -1633,9 +1633,7 @@ const getConversionDetail = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Invalid conversion ID' });
     }
 
-    const { stablecoinConversion } = await import("../models");
-
-    const conversion = await stablecoinConversion.findOne({
+    const conversion = await stablecoinConversionModel.findOne({
       where: { conversion_id: conversionId },
     });
 
@@ -1661,9 +1659,7 @@ const retryConversion = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Invalid conversion ID' });
     }
 
-    const { stablecoinConversion } = await import("../models");
-
-    const conversion = await stablecoinConversion.findOne({
+    const conversion = await stablecoinConversionModel.findOne({
       where: { conversion_id: conversionId },
     });
 
