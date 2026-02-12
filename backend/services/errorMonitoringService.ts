@@ -179,6 +179,19 @@ export const captureError = (
     const details = extractErrorDetails(error);
     const severity = options.severity || inferSeverity(component, details.statusCode);
 
+    // Consolidated logging — one line per captured error replaces scattered console.log/console.error calls
+    const logParts: string[] = [`[${component.toUpperCase()}]`, details.message];
+    if (details.code) logParts.push(`code=${details.code}`);
+    if (details.statusCode) logParts.push(`status=${details.statusCode}`);
+    if (options.extraContext) logParts.push(`ctx=${options.extraContext}`);
+    if (details.responseBody) logParts.push(`body=${details.responseBody.substring(0, 200)}`);
+    const logLine = logParts.join(" | ");
+    if (severity === "critical" || severity === "high") {
+      console.error(`[ErrorMonitor] ${logLine}`);
+    } else {
+      console.warn(`[ErrorMonitor] ${logLine}`);
+    }
+
     const entry: ErrorEntry = {
       message: details.message,
       component,
