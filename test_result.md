@@ -6832,3 +6832,65 @@ ports:
           8. ✅ TypeScript Compilation: Clean build with no compilation errors
           
           CONCLUSION: Both fixes are fully operational and production-ready. The auto-convert wallet lookup eliminates manual configuration by automatically resolving wallet addresses from existing company wallets. The Binance 418 WAF User-Agent fix prevents "I'm a teapot" errors by including proper User-Agent headers in all Binance API requests. All 6 verification requirements from the review request have been successfully validated.
+  - task: "Swagger API Documentation Overhaul + Missing Endpoints + Auto-Conversion UX"
+    implemented: true
+    working: pending_test
+    files:
+      - "/app/backend/swagger/paths/admin.ts"
+      - "/app/backend/swagger/paths/api.ts"
+      - "/app/backend/swagger/paths/status.ts"
+      - "/app/backend/swagger/paths/company.ts"
+      - "/app/backend/swagger/paths/subscription.ts"
+      - "/app/backend/swagger/paths/directApi.ts"
+      - "/app/backend/swagger/paths/wallet.ts"
+      - "/app/backend/swagger/paths/apiKeys.ts"
+      - "/app/backend/swagger/index.ts"
+      - "/app/backend/controller/companyController.ts"
+      - "/app/backend/routes/companyRouter.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          SWAGGER API DOCUMENTATION OVERHAUL + NEW ENDPOINTS:
+          
+          PHASE 1 - Fixed Wrong HTTP Methods:
+          1. admin.ts: Removed duplicate GET/POST for all 15 endpoints, kept correct method only (POST for login/create, PUT for updates, GET for reads)
+          2. company.ts: Converted from JSDoc-only (all showing as GET) to programmatic exports with correct methods (POST for addCompany, PUT for updateCompany, DELETE for deleteCompany, etc.)
+          3. api.ts: Removed duplicate JSDoc annotations that overlapped with user.ts, dashboard.ts, notification.ts, tax.ts causing method conflicts
+          4. status.ts: Converted from JSDoc to programmatic exports, removed duplicate JSDoc for company/payment/wallet/invoice paths
+          5. swagger/index.ts: Added statusPaths import
+          
+          PHASE 2 - Added Missing Endpoints:
+          6. directApi.ts: Added 5 missing merchant API endpoints (createPayment, addFunds, useWallet, getSingleTransaction/{id}, getCryptoTransaction/{address})
+          7. subscription.ts: Added POST (create), PUT (update), DELETE (cancel) - previously only had GET endpoints
+          8. wallet.ts: Added 10 missing endpoints (getWalletAddresses, addWalletAddress, address OTP flows, deleteWalletAddress, sendConfirmationOTP, withdrawAssets, exchangeCreate, confirmExchange, getExchange)
+          9. apiKeys.ts: Added availableCurrencies/{company_id} endpoint
+          
+          PHASE 3 - New Auto-Conversion Endpoints:
+          10. companyController.ts: Added getConversionDetail() and retryConversion() controller methods
+          11. companyRouter.ts: Added GET /conversion/:conversionId and POST /conversion/:conversionId/retry routes
+          12. company.ts swagger: Documented both new endpoints with full schemas
+          
+          PHASE 4 - API UX Improvements:
+          13. All company endpoints now show correct HTTP methods in Swagger UI
+          14. Auto-conversion section has comprehensive descriptions including status flow diagram
+          15. Webhook events now include conversion.completed and conversion.failed
+          
+          RESULTS: 192 documented paths (was 131), correct method distribution (GET=85, POST=83, PUT=24, DELETE=11), only 1 legitimate dual-method path (/api/subscriptions GET+POST)
+          
+          TESTS TO RUN:
+          TEST 1: Backend healthy — GET http://localhost:8001/health returns 200
+          TEST 2: Swagger spec loads — GET http://localhost:8001/api/docs.json returns valid JSON with paths
+          TEST 3: Total path count — curl http://localhost:8001/api/docs.json | check paths count >= 190
+          TEST 4: Company methods correct — /api/company/addCompany should be POST only, /api/company/updateCompany/{id} should be PUT only, /api/company/deleteCompany/{id} should be DELETE only
+          TEST 5: New conversion detail endpoint — GET /api/company/conversion/1 returns 401 (auth required)
+          TEST 6: New retry endpoint — POST /api/company/conversion/1/retry returns 401 (auth required)
+          TEST 7: Admin methods correct — /api/admin/login should be POST only (no GET), /api/admin/changePassword should be PUT only
+          TEST 8: Merchant API missing endpoints present — /api/user/createPayment, /api/user/addFunds, /api/user/useWallet should exist in spec
+          TEST 9: Missing wallet endpoints present — /api/wallet/getWalletAddresses, /api/wallet/withdrawAssets, /api/wallet/exchangeCreate should exist in spec
+          TEST 10: Subscription CRUD — /api/subscriptions should have both GET and POST, /api/subscriptions/{id} should have GET, PUT, and DELETE
+          
+          Base URL: http://localhost:8001
