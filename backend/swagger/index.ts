@@ -21,6 +21,7 @@ import { directApiPaths } from "./paths/directApi";
 import { webhookPaths } from "./paths/webhooks";
 import { dashboardPaths } from "./paths/dashboard";
 import { invoicePaths } from "./paths/invoice";
+import { statusPaths } from "./paths/status";
 
 // Merge all paths
 const allPaths = {
