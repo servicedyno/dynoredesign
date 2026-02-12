@@ -564,6 +564,9 @@ const getAllTransactions = async (
           ? {
               conversion_id: x.auto_convert_id,
               status: x.auto_convert_status,
+              source_currency: x.auto_convert_source_currency,
+              source_amount: x.auto_convert_source_amount ? Number(x.auto_convert_source_amount) : null,
+              source_amount_usd: x.auto_convert_source_amount_usd ? Number(x.auto_convert_source_amount_usd) : null,
               target_currency: x.auto_convert_target_currency,
               target_amount: x.auto_convert_target_amount ? Number(x.auto_convert_target_amount) : null,
               settlement_chain: x.auto_convert_settlement_chain,
