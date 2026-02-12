@@ -142,6 +142,9 @@ setupSwagger(app);
 app.use("/api", router);
 app.use("/api/v1", router);
 
+// Binance relay endpoint (can be on separate Railway deployment)
+app.use("/api", binanceRelayRouter);
+
 // Health check endpoint for Railway
 app.get("/health", async (_req: express.Request, res: express.Response) => {
   const health: Record<string, unknown> = {
