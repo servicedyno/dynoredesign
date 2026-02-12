@@ -608,6 +608,9 @@ const startServer = async () => {
     // Start volatility monitor (checks price movement every 60s for adaptive sweep fees)
     startVolatilityMonitor();
 
+    // Start error monitoring (sends admin digest every 15 min when errors exist)
+    startErrorMonitoring();
+
     // Migrate stale webhook URLs from previous deployments (runs once on startup)
     migrateWebhookUrls()
       .then(stats => {
