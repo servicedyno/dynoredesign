@@ -6756,3 +6756,42 @@ ports:
           - Error integration: 6 captureError calls ensuring admin visibility via digest emails
           
           CONCLUSION: VolatilityMonitor log flooding fix is fully operational and production-ready. All 5 verification requirements from the review request have been successfully validated. The system now provides clean, batched logging with intelligent rate-limit backoff and proper error monitoring integration.
+  - task: "Fix auto-convert wallet lookup + Binance 418 WAF User-Agent fix"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/companyController.ts"
+      - "/app/backend/services/volatilityMonitorService.ts"
+      - "/app/backend/services/binanceService.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          TWO FIXES:
+          
+          FIX 1: Auto-convert wallet auto-lookup (companyController.ts)
+          - updateAutoConvertSettings no longer requires settlement_wallet_address in body
+          - Auto-resolves wallet address from company's existing wallets via wallet_type mapping
+          - Maps settlement_currency + settlement_chain → wallet_type (e.g., USDT + TRC20 → "USDT-TRC20")
+          - Validates wallet exists before enabling, returns error with helpful message if not
+          - getAutoConvertSettings now returns available_settlement_options with all configured stablecoin wallets
+          
+          FIX 2: Binance 418 WAF block (volatilityMonitorService.ts + binanceService.ts)
+          - Root cause: Axios sends no User-Agent header by default
+          - Binance WAF returns 418 "I'm a teapot" for requests without User-Agent
+          - Added "User-Agent: Mozilla/5.0 (compatible; DynoPay/1.0)" to:
+            a) volatilityMonitorService.ts fetchKlines()
+            b) binanceService.ts makeSignedRequest() 
+            c) binanceService.ts makePublicRequest()
+          
+          TESTS:
+          TEST 1: Backend healthy — GET http://localhost:8001/health returns 200
+          TEST 2: TypeScript compiles — cd /app/backend && npx tsc --noEmit exits 0
+          TEST 3: User-Agent in volatility service — grep 'User-Agent' /app/backend/services/volatilityMonitorService.ts should find the header
+          TEST 4: User-Agent in binance service — grep -c 'User-Agent' /app/backend/services/binanceService.ts should be >= 2
+          TEST 5: Auto-convert wallet lookup — grep 'mapSettlementToWalletType\|userWalletModel.findOne' /app/backend/controller/companyController.ts should find the auto-lookup logic
+          TEST 6: Available options returned — grep 'available_settlement_options' /app/backend/controller/companyController.ts should find the new field
+          Base URL: http://localhost:8001
