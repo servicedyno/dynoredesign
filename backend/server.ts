@@ -623,6 +623,11 @@ const startServer = async () => {
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const isProduction = process.env.NODE_ENV === 'production';
     log(`[GlobalErrorHandler] Unhandled error: ${err.message}${!isProduction ? `\n${err.stack}` : ''}`, 'error');
+    captureError(err, 'api', {
+      severity: 'high',
+      requestContext: `${_req.method} ${_req.originalUrl}`,
+      extraContext: `IP: ${_req.ip} | Body keys: ${Object.keys(_req.body || {}).join(', ') || 'none'}`,
+    });
     res.status(500).json({
       success: false,
       message: isProduction ? 'Internal server error' : err.message,
