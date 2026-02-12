@@ -1389,6 +1389,30 @@ const getAutoConvertSettings = async (
       return errorResponseHelper(res, 404, "Company not found");
     }
 
+    // Fetch all stablecoin wallets the company has configured
+    // These are the only valid settlement options
+    const stablecoinWalletTypes = VALID_SETTLEMENT_CURRENCIES.flatMap((currency) =>
+      VALID_SETTLEMENT_CHAINS.map((chain) => `${currency}-${chain}`)
+    );
+
+    const companyWallets = await userWalletModel.findAll({
+      where: {
+        company_id: parseInt(id),
+        wallet_type: stablecoinWalletTypes,
+      },
+      attributes: ["wallet_type", "wallet_address"],
+    });
+
+    const availableOptions = companyWallets.map((w: { dataValues: { wallet_type: string; wallet_address: string } }) => {
+      const parts = w.dataValues.wallet_type.split("-");
+      return {
+        wallet_type: w.dataValues.wallet_type,
+        settlement_currency: parts[0],     // e.g., "USDT"
+        settlement_chain: parts.slice(1).join("-"),  // e.g., "TRC20" or "ERC20"
+        wallet_address: w.dataValues.wallet_address,
+      };
+    });
+
     const data = company.dataValues;
     successResponseHelper(res, 200, "Auto-convert settings retrieved", {
       company_id: data.company_id,
@@ -1399,6 +1423,7 @@ const getAutoConvertSettings = async (
       settlement_chain: data.settlement_chain || null,
       valid_currencies: VALID_SETTLEMENT_CURRENCIES,
       valid_chains: VALID_SETTLEMENT_CHAINS,
+      available_settlement_options: availableOptions,
     });
   } catch (e) {
     const errorMessage = getErrorMessage(e);
