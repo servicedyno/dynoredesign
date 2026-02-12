@@ -1,179 +1,205 @@
 #!/usr/bin/env python3
 """
-Email Bug Fixes Testing Script
-Tests the 6 verification requirements for email bug fixes in DynoPay backend
+Error Monitoring Service Backend Testing
+Testing Agent: Comprehensive testing of Error Monitoring Service implementation
 """
 
 import requests
 import subprocess
+import os
 import sys
-import re
 
 def test_backend_health():
-    """Test 1: GET http://localhost:8001/health — returns 200 with status "healthy" """
+    """TEST 1: Backend health check"""
+    print("🧪 TEST 1: Backend Health Check")
     try:
-        response = requests.get('http://localhost:8001/health', timeout=10)
+        response = requests.get("http://localhost:8001/health", timeout=10)
+        print(f"   Status: {response.status_code}")
         if response.status_code == 200:
             data = response.json()
-            if data.get('status') == 'healthy':
-                print("✅ TEST 1 PASSED: Backend health check returns 200 with status 'healthy'")
+            print(f"   Response: {data}")
+            if data.get("status") == "healthy":
+                print("   ✅ PASSED: Backend healthy")
                 return True
             else:
-                print(f"❌ TEST 1 FAILED: Backend health status is '{data.get('status')}', expected 'healthy'")
+                print("   ❌ FAILED: Backend not healthy")
                 return False
         else:
-            print(f"❌ TEST 1 FAILED: Backend health returns status code {response.status_code}, expected 200")
+            print("   ❌ FAILED: Non-200 status code")
             return False
     except Exception as e:
-        print(f"❌ TEST 1 FAILED: Backend health check error: {e}")
+        print(f"   ❌ FAILED: {e}")
         return False
 
 def test_typescript_compilation():
-    """Test 2: TypeScript compilation: cd /app/backend && npx tsc --noEmit — exits 0"""
+    """TEST 2: TypeScript compilation"""
+    print("\n🧪 TEST 2: TypeScript Compilation")
     try:
-        result = subprocess.run(['npx', 'tsc', '--noEmit'], 
-                              cwd='/app/backend', 
-                              capture_output=True, 
-                              text=True,
-                              timeout=60)
+        os.chdir("/app/backend")
+        result = subprocess.run(["npx", "tsc", "--noEmit"], 
+                              capture_output=True, text=True, timeout=60)
+        print(f"   Exit code: {result.returncode}")
         if result.returncode == 0:
-            print("✅ TEST 2 PASSED: TypeScript compilation exits with code 0")
+            print("   ✅ PASSED: TypeScript compiles without errors")
             return True
         else:
-            print(f"❌ TEST 2 FAILED: TypeScript compilation exits with code {result.returncode}")
-            print(f"Stderr: {result.stderr}")
+            print(f"   ❌ FAILED: TypeScript compilation errors:")
+            print(f"   stdout: {result.stdout}")
+            print(f"   stderr: {result.stderr}")
             return False
     except Exception as e:
-        print(f"❌ TEST 2 FAILED: TypeScript compilation error: {e}")
+        print(f"   ❌ FAILED: {e}")
+        return False
+    finally:
+        os.chdir("/app")
+
+def test_error_monitor_started():
+    """TEST 3: Error monitor startup log"""
+    print("\n🧪 TEST 3: Error Monitor Startup Log")
+    try:
+        result = subprocess.run(["grep", "ErrorMonitor.*Started", 
+                               "/var/log/supervisor/backend.out.log"], 
+                              capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            print(f"   ✅ PASSED: Found startup log:")
+            print(f"   {result.stdout.strip()}")
+            return True
+        else:
+            print("   ❌ FAILED: ErrorMonitor startup log not found")
+            print(f"   grep exit code: {result.returncode}")
+            return False
+    except Exception as e:
+        print(f"   ❌ FAILED: {e}")
         return False
 
-def test_format_email_error_exists():
-    """Test 3: formatEmailError function exists: grep -c 'formatEmailError' should find >= 16 occurrences"""
-    try:
-        result = subprocess.run(['grep', '-c', 'formatEmailError', '/app/backend/helper/sendEmail.ts'], 
-                              capture_output=True, 
-                              text=True)
-        if result.returncode == 0:
-            count = int(result.stdout.strip())
-            if count >= 16:
-                print(f"✅ TEST 3 PASSED: formatEmailError found {count} times (>= 16 required)")
-                return True
+def test_capture_error_usage():
+    """TEST 4: captureError usage across files"""
+    print("\n🧪 TEST 4: captureError Usage Verification")
+    
+    files_to_check = [
+        ("/app/backend/helper/sendEmail.ts", 15),
+        ("/app/backend/utils/cronJobs.ts", 6),
+        ("/app/backend/server.ts", 8)
+    ]
+    
+    all_passed = True
+    
+    for file_path, min_count in files_to_check:
+        try:
+            result = subprocess.run(["grep", "-c", "captureError", file_path], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                count = int(result.stdout.strip())
+                print(f"   {file_path}: {count} occurrences (minimum: {min_count})")
+                if count >= min_count:
+                    print(f"   ✅ PASSED: {file_path}")
+                else:
+                    print(f"   ❌ FAILED: {file_path} - insufficient occurrences")
+                    all_passed = False
             else:
-                print(f"❌ TEST 3 FAILED: formatEmailError found {count} times (< 16 required)")
-                return False
-        else:
-            print(f"❌ TEST 3 FAILED: grep command failed with return code {result.returncode}")
-            return False
-    except Exception as e:
-        print(f"❌ TEST 3 FAILED: formatEmailError search error: {e}")
-        return False
+                print(f"   ❌ FAILED: {file_path} - file not found or no matches")
+                all_passed = False
+        except Exception as e:
+            print(f"   ❌ FAILED: {file_path} - {e}")
+            all_passed = False
+    
+    return all_passed
 
-def test_no_raw_error_dumps():
-    """Test 4: No raw error dumps left: grep -c 'console.log.*", e)' should return 0"""
+def test_service_file_exists():
+    """TEST 5: Error monitoring service file exists"""
+    print("\n🧪 TEST 5: Service File Existence")
     try:
-        result = subprocess.run(['grep', '-c', 'console.log.*", e)', '/app/backend/helper/sendEmail.ts'], 
-                              capture_output=True, 
-                              text=True)
-        # When grep finds 0 matches, it returns exit code 1
-        if result.returncode == 1 and result.stdout.strip() == '':
-            print("✅ TEST 4 PASSED: No raw error dumps found (0 occurrences of old pattern)")
+        result = subprocess.run(["ls", "/app/backend/services/errorMonitoringService.ts"], 
+                              capture_output=True, text=True)
+        if result.returncode == 0:
+            print("   ✅ PASSED: errorMonitoringService.ts exists")
             return True
-        elif result.returncode == 0:
-            count = int(result.stdout.strip())
-            print(f"❌ TEST 4 FAILED: Found {count} raw error dumps (should be 0)")
-            return False
         else:
-            print(f"❌ TEST 4 FAILED: grep command failed with unexpected return code {result.returncode}")
+            print("   ❌ FAILED: errorMonitoringService.ts not found")
             return False
     except Exception as e:
-        print(f"❌ TEST 4 FAILED: Raw error dump search error: {e}")
+        print(f"   ❌ FAILED: {e}")
         return False
 
-def test_unsubscribe_uses_server_url():
-    """Test 5: Unsubscribe URL uses SERVER_URL: grep 'SERVER_URL' should find the backendUrl variable"""
+def test_diagnostics_endpoints():
+    """TEST 6: Diagnostics endpoints in server.ts"""
+    print("\n🧪 TEST 6: Diagnostics Endpoints")
     try:
-        result = subprocess.run(['grep', 'SERVER_URL', '/app/backend/helper/sendEmail.ts'], 
-                              capture_output=True, 
-                              text=True)
+        result = subprocess.run(["grep", "error-monitor", "/app/backend/server.ts"], 
+                              capture_output=True, text=True)
         if result.returncode == 0:
             lines = result.stdout.strip().split('\n')
-            # Look for the backendUrl assignment that uses SERVER_URL
+            count = len([line for line in lines if line.strip()])
+            print(f"   Found {count} error-monitor route references:")
             for line in lines:
-                if 'backendUrl' in line and 'SERVER_URL' in line:
-                    print("✅ TEST 5 PASSED: Unsubscribe URL uses SERVER_URL (found backendUrl variable)")
-                    return True
-            print("❌ TEST 5 FAILED: SERVER_URL found but not in backendUrl context")
-            print(f"Found: {lines}")
-            return False
-        else:
-            print("❌ TEST 5 FAILED: SERVER_URL not found in sendEmail.ts")
-            return False
-    except Exception as e:
-        print(f"❌ TEST 5 FAILED: SERVER_URL search error: {e}")
-        return False
-
-def test_error_formatter_extracts_response():
-    """Test 6: Error formatter extracts response status/data"""
-    try:
-        result = subprocess.run(['grep', 'response.*status\\|response.*data', '/app/backend/helper/sendEmail.ts'], 
-                              capture_output=True, 
-                              text=True)
-        if result.returncode == 0:
-            lines = result.stdout.strip().split('\n')
-            has_status = any('status' in line for line in lines)
-            has_data = any('data' in line for line in lines)
-            if has_status and has_data:
-                print("✅ TEST 6 PASSED: Error formatter extracts both response status and data")
+                print(f"   {line.strip()}")
+            if count >= 3:
+                print("   ✅ PASSED: Found 3+ error-monitor routes")
                 return True
             else:
-                print(f"❌ TEST 6 FAILED: Missing status ({has_status}) or data ({has_data}) extraction")
+                print("   ❌ FAILED: Less than 3 error-monitor routes found")
                 return False
         else:
-            print("❌ TEST 6 FAILED: No response status/data extraction found")
+            print("   ❌ FAILED: No error-monitor routes found")
             return False
     except Exception as e:
-        print(f"❌ TEST 6 FAILED: Response extraction search error: {e}")
+        print(f"   ❌ FAILED: {e}")
         return False
 
 def main():
-    """Run all email bug fix tests"""
-    print("=== EMAIL BUG FIXES TESTING ===")
-    print("Testing 6 verification requirements for email bug fixes in DynoPay backend")
-    print()
+    """Run all Error Monitoring Service tests"""
+    print("=" * 60)
+    print("🔍 ERROR MONITORING SERVICE BACKEND TESTING")
+    print("=" * 60)
     
     tests = [
-        ("Backend Health Check", test_backend_health),
-        ("TypeScript Compilation", test_typescript_compilation), 
-        ("formatEmailError Function Exists", test_format_email_error_exists),
-        ("No Raw Error Dumps", test_no_raw_error_dumps),
-        ("Unsubscribe Uses SERVER_URL", test_unsubscribe_uses_server_url),
-        ("Error Formatter Extracts Response", test_error_formatter_extracts_response)
+        test_backend_health,
+        test_typescript_compilation,
+        test_error_monitor_started,
+        test_capture_error_usage,
+        test_service_file_exists,
+        test_diagnostics_endpoints
     ]
     
-    passed = 0
-    total = len(tests)
-    
-    for test_name, test_func in tests:
-        print(f"Running: {test_name}")
+    results = []
+    for test in tests:
         try:
-            if test_func():
-                passed += 1
-            else:
-                pass  # Error already printed by test function
+            result = test()
+            results.append(result)
         except Exception as e:
-            print(f"❌ {test_name} FAILED: Unexpected error: {e}")
-        print()
+            print(f"   ❌ TEST FAILED: {e}")
+            results.append(False)
     
-    print("=== SUMMARY ===")
-    print(f"Tests passed: {passed}/{total} ({passed/total*100:.1f}%)")
+    # Summary
+    print("\n" + "=" * 60)
+    print("📊 TEST SUMMARY")
+    print("=" * 60)
+    
+    passed = sum(results)
+    total = len(results)
+    
+    test_names = [
+        "Backend Health",
+        "TypeScript Compilation", 
+        "Error Monitor Startup",
+        "captureError Usage",
+        "Service File Exists",
+        "Diagnostics Endpoints"
+    ]
+    
+    for i, (name, result) in enumerate(zip(test_names, results)):
+        status = "✅ PASSED" if result else "❌ FAILED"
+        print(f"   TEST {i+1}: {name} - {status}")
+    
+    print(f"\n🎯 OVERALL RESULT: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
     
     if passed == total:
-        print("🎉 ALL TESTS PASSED: Email bug fixes are working correctly!")
-        return True
+        print("🎉 ALL TESTS PASSED - Error Monitoring Service is working correctly!")
+        return 0
     else:
-        print("⚠️  SOME TESTS FAILED: Email bug fixes need attention")
-        return False
+        print("⚠️ SOME TESTS FAILED - Error Monitoring Service needs attention!")
+        return 1
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    exit_code = main()
+    sys.exit(exit_code)
