@@ -17,7 +17,7 @@
 
 import WebSocket from "ws";
 import axios from "axios";
-import { redis as redisClient } from "../utils/redisInstance";
+import { setRedisItemWithTTL, getRedisItem } from "../utils/redisInstance";
 import { captureError } from "./errorMonitoringService";
 
 const LOG_PREFIX = "[BinanceWS]";
