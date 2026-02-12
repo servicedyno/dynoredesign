@@ -86,7 +86,10 @@ const makePublicRequest = async (
   const url = `${BINANCE_BASE_URL}${endpoint}${queryString ? `?${queryString}` : ""}`;
 
   try {
-    const response = await axios.get(url, { timeout: 15000 });
+    const response = await axios.get(url, {
+      timeout: 15000,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; DynoPay/1.0)" },
+    });
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ code?: number; msg?: string }>;
