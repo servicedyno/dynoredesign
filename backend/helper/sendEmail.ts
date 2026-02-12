@@ -1,6 +1,35 @@
 import mailTransporter from "../utils/mailTransporter";
 
 /**
+ * Safely extract error details for logging without dumping entire Axios objects.
+ * Axios errors contain the full request config (including 16KB+ HTML email bodies),
+ * which floods logs and triggers Railway rate limits.
+ */
+const formatEmailError = (e: unknown): string => {
+  if (e && typeof e === 'object') {
+    const err = e as {
+      message?: string;
+      code?: string;
+      response?: { status?: number; statusText?: string; data?: unknown };
+    };
+    const parts: string[] = [];
+    if (err.message) parts.push(err.message);
+    if (err.code) parts.push(`code=${err.code}`);
+    if (err.response) {
+      parts.push(`status=${err.response.status} ${err.response.statusText || ''}`);
+      if (err.response.data) {
+        const dataStr = typeof err.response.data === 'string'
+          ? err.response.data.substring(0, 500)
+          : JSON.stringify(err.response.data).substring(0, 500);
+        parts.push(`body=${dataStr}`);
+      }
+    }
+    return parts.join(' | ');
+  }
+  return String(e);
+};
+
+/**
  * Get currency symbol for a given currency code
  * @param currency - ISO 4217 currency code (e.g., 'USD', 'EUR', 'GBP')
  * @returns Currency symbol (e.g., '$', '€', '£')
