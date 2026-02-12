@@ -76,9 +76,17 @@ const userMiddleware = (
       validateFields = { email, password };
     } else if (pathname.includes("changePassword")) {
       schema = {
-        newPassword: Joi.string().required().messages({
-          "string.empty": "New Password is Required",
-        }),
+        newPassword: Joi.string().min(8).max(128)
+          .pattern(/[a-z]/, 'lowercase')
+          .pattern(/[A-Z]/, 'uppercase')
+          .pattern(/[0-9]/, 'digit')
+          .required()
+          .messages({
+            "string.empty": "New Password is Required",
+            "string.min": "Password must be at least 8 characters",
+            "string.max": "Password must not exceed 128 characters",
+            "string.pattern.name": "Password must contain at least one {#name} character",
+          }),
         oldPassword: Joi.string().required().messages({
           "string.empty": "Old Password is Required",
         }),
@@ -93,9 +101,17 @@ const userMiddleware = (
           "string.empty": "Email is Required",
           "string.email": "Please Enter Valid Email",
         }),
-        password: Joi.string().required().messages({
-          "string.empty": "Password is Required",
-        }),
+        password: Joi.string().min(8).max(128)
+          .pattern(/[a-z]/, 'lowercase')
+          .pattern(/[A-Z]/, 'uppercase')
+          .pattern(/[0-9]/, 'digit')
+          .required()
+          .messages({
+            "string.empty": "Password is Required",
+            "string.min": "Password must be at least 8 characters",
+            "string.max": "Password must not exceed 128 characters",
+            "string.pattern.name": "Password must contain at least one {#name} character",
+          }),
       };
       validateFields = { name, email, password };
     } else {
