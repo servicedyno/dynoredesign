@@ -826,6 +826,8 @@ router.get("/getTransactions", legacyApiAuthMiddleware, async (req, res) => {
 router.get("/getSingleTransaction/:id", legacyApiAuthMiddleware, async (req, res) => {
   try {
     const userData = res.locals.user;
+    const apiKeyData = res.locals.apiKeyData;
+    const baseCurrency = apiKeyData?.base_currency || "USD";
     const { id } = req.params;
     
     if (!id) {
@@ -836,11 +838,23 @@ router.get("/getSingleTransaction/:id", legacyApiAuthMiddleware, async (req, res
     }
     
     const transaction = await sequelize.query<Record<string, unknown>>(
-      `SELECT id, payment_mode, base_amount, base_currency, paid_amount, paid_currency,
-              transaction_type, transaction_details, transaction_reference, status, "createdAt"
-       FROM tbl_customer_transaction 
-       WHERE customer_id = (SELECT customer_id FROM tbl_customer WHERE id = $1)
-       AND id = $2`,
+      `SELECT ct.id, ct.payment_mode, ct.base_amount, ct.base_currency, ct.paid_amount, ct.paid_currency,
+              ct.transaction_type, ct.transaction_details, ct.transaction_reference, ct.status, ct."createdAt",
+              sc.conversion_id as auto_convert_id,
+              sc.status as auto_convert_status,
+              sc.source_currency as auto_convert_source_currency,
+              sc.source_amount as auto_convert_source_amount,
+              sc.source_amount_usd as auto_convert_source_amount_usd,
+              sc.target_currency as auto_convert_target_currency,
+              sc.target_amount as auto_convert_target_amount,
+              sc.settlement_chain as auto_convert_settlement_chain,
+              sc.conversion_rate as auto_convert_rate,
+              sc.completed_at as auto_convert_completed_at
+       FROM tbl_customer_transaction ct
+       LEFT JOIN tbl_user_transaction ut ON ut.customer_id = ct.customer_id AND ut.base_amount = ct.base_amount
+       LEFT JOIN tbl_stablecoin_conversion sc ON sc.transaction_id = ut.transaction_id
+       WHERE ct.customer_id = (SELECT customer_id FROM tbl_customer WHERE id = $1)
+       AND ct.id = $2`,
       {
         bind: [userData.id, id],
         type: QueryTypes.SELECT
@@ -853,11 +867,33 @@ router.get("/getSingleTransaction/:id", legacyApiAuthMiddleware, async (req, res
         message: "Please provide a valid transaction_id!"
       });
     }
+
+    const tx = transaction[0];
+    const data = {
+      ...tx,
+      display_currency: baseCurrency,
+      auto_converted: !!tx.auto_convert_id,
+      auto_convert: tx.auto_convert_id
+        ? {
+            conversion_id: tx.auto_convert_id,
+            status: tx.auto_convert_status,
+            source_currency: tx.auto_convert_source_currency,
+            source_amount: tx.auto_convert_source_amount ? Number(tx.auto_convert_source_amount) : null,
+            source_amount_usd: tx.auto_convert_source_amount_usd ? Number(tx.auto_convert_source_amount_usd) : null,
+            target_currency: tx.auto_convert_target_currency,
+            target_amount: tx.auto_convert_target_amount ? Number(tx.auto_convert_target_amount) : null,
+            settlement_chain: tx.auto_convert_settlement_chain,
+            conversion_rate: tx.auto_convert_rate ? Number(tx.auto_convert_rate) : null,
+            completed_at: tx.auto_convert_completed_at,
+          }
+        : null,
+    };
     
     return res.status(200).json({
       success: true,
       message: "Transaction retrieved",
-      data: transaction[0]
+      data,
+      display_currency: baseCurrency,
     });
     
   } catch (error) {
