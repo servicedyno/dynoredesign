@@ -7,14 +7,38 @@
  * - Withdrawal API
  * - Deposit detection
  * - Account balance queries
+ * - SOCKS5 proxy support for geo-restricted regions (US)
  */
 
 import crypto from "crypto";
 import axios, { AxiosError } from "axios";
+import { SocksProxyAgent } from "socks-proxy-agent";
 
 const BINANCE_API_KEY = process.env.BINANCE_API_KEY || "";
 const BINANCE_API_SECRET = process.env.BINANCE_API_SECRET || "";
 const BINANCE_BASE_URL = process.env.BINANCE_BASE_URL || "https://api.binance.com";
+const BINANCE_PROXY_URL = process.env.BINANCE_PROXY_URL || ""; // e.g., socks5://127.0.0.1:1080
+
+// ============================================
+// SOCKS5 Proxy Agent (for bypassing geo-blocks)
+// ============================================
+
+const getBinanceProxyAgent = (): SocksProxyAgent | undefined => {
+  if (!BINANCE_PROXY_URL) return undefined;
+  try {
+    return new SocksProxyAgent(BINANCE_PROXY_URL);
+  } catch (err) {
+    console.error(`[Binance] Failed to create SOCKS proxy agent: ${err}`);
+    return undefined;
+  }
+};
+
+const proxyAgent = getBinanceProxyAgent();
+if (proxyAgent) {
+  console.log(`[Binance] SOCKS5 proxy enabled: ${BINANCE_PROXY_URL}`);
+} else if (BINANCE_PROXY_URL) {
+  console.warn(`[Binance] Proxy URL set but agent creation failed: ${BINANCE_PROXY_URL}`);
+}
 
 // ============================================
 // HMAC-SHA256 Signing
