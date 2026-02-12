@@ -440,7 +440,7 @@ current_test_task:
           
           🎉 ALL 7 VERIFICATION REQUIREMENTS SUCCESSFULLY VALIDATED:
           
-          ✅ TEST 1 - BACKEND HEALTH: GET https://proxy-connect-lab.preview.emergentagent.com/api/status/health returns 200 with "healthy" status
+          ✅ TEST 1 - BACKEND HEALTH: GET https://auto-convert-verify.preview.emergentagent.com/api/status/health returns 200 with "healthy" status
           ✅ TEST 2 - TYPESCRIPT COMPILATION: npx tsc --noEmit exits with code 0, no compilation errors
           ✅ TEST 3 - MERCHANT API DESTINATION_TAG: 3 occurrences found in merchantApiRouter.ts (>= 2 required) ✅
             - Line 371: const { qr_code, address, transaction_id, destination_tag } = paymentData;
@@ -1045,7 +1045,7 @@ current_test_task:
           - Response should have accountResources with address field matching
           
           Base URL for curl: http://localhost:8001 (internal)
-          Or via ingress: https://proxy-connect-lab.preview.emergentagent.com
+          Or via ingress: https://auto-convert-verify.preview.emergentagent.com
       - working: true
         agent: "testing"
         comment: |
@@ -1158,7 +1158,7 @@ current_test_task:
           7. Create a USDT-TRC20 payment via Legacy API and check logs for "[TronEnergy]" entries
           
           Credentials: richard@dyno.pt / Katiekendra123@
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
       - working: true
         agent: "testing"
         comment: |
@@ -1292,7 +1292,7 @@ current_test_task:
           6. Backend healthy with no TS errors
           
           Credentials: richard@dyno.pt / Katiekendra123@
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
       - working: true
         agent: "testing"
         comment: |
@@ -1448,7 +1448,7 @@ current_test_task:
           last_payment_context, and processes via cryptoVerification.
           
           Credentials: richard@dyno.pt / Katiekendra123@
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
       - working: true
         agent: "testing"
         comment: |
@@ -1525,7 +1525,7 @@ current_test_task:
           5. Backend healthy, no compilation errors
           
           Credentials: richard@dyno.pt / Katiekendra123@
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
       - working: true
         agent: "testing"
         comment: |
@@ -1599,7 +1599,7 @@ current_test_task:
           7. No grep matches for "api-service" in active .ts files (excluding comments in test_result.md)
           
           Credentials: richard@dyno.pt / Katiekendra123@
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
       - working: true
         agent: "testing"
         comment: |
@@ -1679,7 +1679,7 @@ current_test_task:
           4. Check backend /health is 200
           
           Credentials: richard@dyno.pt / Katiekendra123@
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
       - working: true
         agent: "testing"
         comment: |
@@ -1856,7 +1856,7 @@ current_test_task:
           14. CONFIGURABLE TIMEOUT: Verify RESERVATION_TIMEOUT_MINUTES reads from env (not hardcoded 30)
           
           Credentials: richard@dyno.pt / Katiekendra123@, company_id: 38
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
       - working: true
         agent: "testing"
         comment: |
@@ -2026,7 +2026,7 @@ current_test_task:
           ✅ TEST 7 - BACKEND HEALTH: /health endpoint returns HTTP 200 - backend operational ✅
           
           🔧 DOCUMENTATION VERIFICATION RESULTS:
-          1. ✅ Swagger UI accessible at https://proxy-connect-lab.preview.emergentagent.com/api/docs
+          1. ✅ Swagger UI accessible at https://auto-convert-verify.preview.emergentagent.com/api/docs
           2. ✅ OpenAPI specification valid JSON with 178 documented API endpoints
           3. ✅ Direct API cryptoPayment endpoint clearly documents no grace period, no thresholds
           4. ✅ Company settings properly annotated "Payment Links only" with max 30min cap
@@ -2048,7 +2048,7 @@ current_test_task:
         comment: "1) Fixed CRITICAL redirect_uri/callback_url/webhook_url descriptions — redirect_uri now warns 'NOT a webhook', callback_url clarified as server-to-server, webhook_url marked as 'MOST MERCHANTS NEED' with full payload example. 2) Added dashboard docs (4 endpoints). 3) Added invoice docs (4 endpoints). 4) Total documented endpoints: 178. Verify at /api/docs."
       - working: true
         agent: "testing"
-        comment: "✅ SWAGGER API DOCUMENTATION TESTING COMPLETED: 100% success rate (9/9 tests passed). ✅ OPENAPI SPEC ENDPOINT: /api/docs.json returns HTTP 200 with valid JSON OpenAPI specification. ✅ TOTAL PATHS COUNT: Confirmed exactly 178 paths in API specification as expected. ✅ CRITICAL FIELD DESCRIPTIONS VERIFIED: All 3 cryptoPayment endpoint field descriptions correctly updated - redirect_uri contains 'NOT a webhook' warning with proper use case explanation, callback_url contains 'server-to-server' description clarifying it's different from redirect_uri, webhook_url contains 'MOST MERCHANTS NEED' emphasis with comprehensive payload example including merchant_amount, total_fee, and all webhook event types. ✅ NEW DASHBOARD ENDPOINTS: All 4 dashboard endpoints confirmed in API spec - /api/dashboard, /api/dashboard/chart, /api/dashboard/fee-tiers, /api/dashboard/recent-transactions. ✅ NEW INVOICE ENDPOINTS: All 4 invoice endpoints confirmed in API spec - /api/invoices, /api/invoices/{id}, /api/invoices/{id}/pdf, /api/transactions/{id}/invoice. ✅ SWAGGER UI ACCESSIBILITY: /api/docs endpoint loads successfully with HTTP 200, returns HTML content with Swagger UI interface working correctly. CONCLUSION: All Swagger API documentation updates are fully implemented and accessible. The critical webhook/redirect URI confusion has been resolved with clear descriptions, and all new endpoints are properly documented and available at https://proxy-connect-lab.preview.emergentagent.com/api/docs."
+        comment: "✅ SWAGGER API DOCUMENTATION TESTING COMPLETED: 100% success rate (9/9 tests passed). ✅ OPENAPI SPEC ENDPOINT: /api/docs.json returns HTTP 200 with valid JSON OpenAPI specification. ✅ TOTAL PATHS COUNT: Confirmed exactly 178 paths in API specification as expected. ✅ CRITICAL FIELD DESCRIPTIONS VERIFIED: All 3 cryptoPayment endpoint field descriptions correctly updated - redirect_uri contains 'NOT a webhook' warning with proper use case explanation, callback_url contains 'server-to-server' description clarifying it's different from redirect_uri, webhook_url contains 'MOST MERCHANTS NEED' emphasis with comprehensive payload example including merchant_amount, total_fee, and all webhook event types. ✅ NEW DASHBOARD ENDPOINTS: All 4 dashboard endpoints confirmed in API spec - /api/dashboard, /api/dashboard/chart, /api/dashboard/fee-tiers, /api/dashboard/recent-transactions. ✅ NEW INVOICE ENDPOINTS: All 4 invoice endpoints confirmed in API spec - /api/invoices, /api/invoices/{id}, /api/invoices/{id}/pdf, /api/transactions/{id}/invoice. ✅ SWAGGER UI ACCESSIBILITY: /api/docs endpoint loads successfully with HTTP 200, returns HTML content with Swagger UI interface working correctly. CONCLUSION: All Swagger API documentation updates are fully implemented and accessible. The critical webhook/redirect URI confusion has been resolved with clear descriptions, and all new endpoints are properly documented and available at https://auto-convert-verify.preview.emergentagent.com/api/docs."
       - working: true
         agent: "testing"
         comment: "✅ CRASH RECOVERY LOGIC FOR STALE 'PROCESSING' PAYMENTS TESTING COMPLETED: 100% success rate (6/6 tests passed). ✅ TEST 1 - RECOVERY DETECTION LOGIC: isStaleProcessing variable correctly implemented at line 518 with ALL THREE required conditions: items.status === 'processing', !!items.txId, and time elapsed > 60000ms from lastAttempt. Guard condition 'isStaleProcessing && incomingAmount > 0' properly placed AFTER isAlreadySuccessful check (L508) and BEFORE main processing condition (L628). ✅ TEST 2 - RECOVERY PATH A (CRYPTOVERIFICATION RETRY): paymentController.cryptoVerification(address, true) call found in try block, Redis updated with status: 'successful' and recoveredAt timestamp on success, processed-tx-${payload.txId} marker set with recovered: true flag, proper TTLs configured (1800s for crypto key, 172800s for processed-tx). ✅ TEST 3 - RECOVERY PATH B (DIRECT WEBHOOK FALLBACK): customerData retrieval from Redis using items.ref with fallback to items if not found, callMerchantWebhook called with event: 'payment.confirmed' and recovered: true flag, all required webhook payload fields present (payment_id, transaction_reference, status, amount, currency, customer_name, customer_email, fee_payer), Redis updated to status: 'recovered' on success/failure to prevent infinite loops, processed-tx marker also set in fallback path. ✅ TEST 4 - ISALREADYSUCCESSFUL GUARD UPDATED: isAlreadySuccessful now includes 'recovered' status: 'items.status === \"successful\" || items.status === \"completed\" || items.status === \"recovered\"' preventing recovered payments from re-processing. ✅ TEST 5 - NORMAL FLOW NOT BROKEN: Original condition 'if ((isFirstTransaction || isCompletionPayment) && incomingAmount > 0)' unchanged, recovery block returns res.status(200).end() at line 625 before normal flow (prevents double-processing), existing duplicate detection 'Duplicate transaction or txId already exists' still present. ✅ TEST 6 - BACKEND HEALTH: Backend running correctly at /health endpoint (200 OK), no TypeScript compilation errors detected in logs. CONCLUSION: Crash recovery logic is fully implemented and production-ready. Payments stuck in 'processing' state after backend crashes will be automatically recovered through either cryptoVerification retry or direct webhook delivery, preventing merchant webhook delivery failures."
@@ -2490,7 +2490,7 @@ previous_test_tasks:
         comment: "Test all critical endpoints after multi-tenant isolation fixes: (1) Authentication endpoints, (2) Company CRUD with ownership validation, (3) Payment link creation, (4) Wallet operations, (5) Dashboard endpoints. Verify TypeScript build passes and no runtime errors."
       - working: true
         agent: "testing"
-        comment: "✅ MULTI-TENANT BACKEND VERIFICATION COMPLETED: 100% success rate (17/17 tests passed). ✅ HEALTH CHECK: Backend is running and responding correctly at https://proxy-connect-lab.preview.emergentagent.com/health. ✅ AUTHENTICATION: Successfully authenticated richard@dyno.pt (user_id: 28, Johnny LTD) with JWT token generation working correctly. ✅ COMPANY OWNERSHIP VALIDATION: All company endpoints properly validate ownership - GET /api/company/getCompany returns user's companies (found company ID 38), GET /api/company/getCompany/:id validates ownership (403 for unauthorized access), PUT /api/company/updateCompany/:id validates ownership before updates, GET /api/company/getTransactions/:id and GET /api/company/webhook-settings/:id both validate ownership correctly. ✅ PAYMENT LINK CREATION: POST /api/pay/createPaymentLink successfully creates payment links with company_id validation (created $50 USD payment for company ID 38), correctly blocks creation with invalid company_id (400 error). ✅ WALLET MULTI-TENANT ISOLATION: GET /api/wallet/getWallet returns 18 wallets all belonging to user 28, GET /api/wallet/getWalletAddresses returns 0 addresses all properly filtered by user - no cross-company data leakage detected. ✅ DASHBOARD DATA ISOLATION: GET /api/dashboard returns stats with proper company_id filtering, GET /api/dashboard/chart returns analytics with proper data isolation for 30d period. ✅ TYPESCRIPT BUILD: No compilation errors or critical issues found in backend logs. ✅ MULTI-TENANT ISOLATION VERIFIED: Company ownership middleware working correctly, wallet data properly filtered by user, no cross-tenant data access possible. CONCLUSION: All multi-tenant isolation fixes are working correctly. TypeScript build errors resolved. Backend is production-ready with proper security isolation between tenants."
+        comment: "✅ MULTI-TENANT BACKEND VERIFICATION COMPLETED: 100% success rate (17/17 tests passed). ✅ HEALTH CHECK: Backend is running and responding correctly at https://auto-convert-verify.preview.emergentagent.com/health. ✅ AUTHENTICATION: Successfully authenticated richard@dyno.pt (user_id: 28, Johnny LTD) with JWT token generation working correctly. ✅ COMPANY OWNERSHIP VALIDATION: All company endpoints properly validate ownership - GET /api/company/getCompany returns user's companies (found company ID 38), GET /api/company/getCompany/:id validates ownership (403 for unauthorized access), PUT /api/company/updateCompany/:id validates ownership before updates, GET /api/company/getTransactions/:id and GET /api/company/webhook-settings/:id both validate ownership correctly. ✅ PAYMENT LINK CREATION: POST /api/pay/createPaymentLink successfully creates payment links with company_id validation (created $50 USD payment for company ID 38), correctly blocks creation with invalid company_id (400 error). ✅ WALLET MULTI-TENANT ISOLATION: GET /api/wallet/getWallet returns 18 wallets all belonging to user 28, GET /api/wallet/getWalletAddresses returns 0 addresses all properly filtered by user - no cross-company data leakage detected. ✅ DASHBOARD DATA ISOLATION: GET /api/dashboard returns stats with proper company_id filtering, GET /api/dashboard/chart returns analytics with proper data isolation for 30d period. ✅ TYPESCRIPT BUILD: No compilation errors or critical issues found in backend logs. ✅ MULTI-TENANT ISOLATION VERIFIED: Company ownership middleware working correctly, wallet data properly filtered by user, no cross-tenant data access possible. CONCLUSION: All multi-tenant isolation fixes are working correctly. TypeScript build errors resolved. Backend is production-ready with proper security isolation between tenants."
 
   - task: "ETH Payment Creation Test for richard@dyno.pt - $10 USD Payment with Real Testing Address"
     implemented: true
@@ -4728,12 +4728,12 @@ backend:
   - agent: "testing"
     message: "✅ PHASE 12 COMPREHENSIVE PAYMENT SYSTEM TESTING COMPLETED: 86.7% success rate (26/30 tests passed). All core payment system features are working correctly: ✅ Payment link configuration (fee_payer/apply_tax updates), ✅ Tax calculation with geolocation (23% VAT for Portugal), ✅ Fee payer modes (customer vs company), ✅ Incomplete payment currency lock mechanism, ✅ Email configuration and services, ✅ Payment distribution logic, ✅ API endpoint health. Minor issues: getCurrencyRates endpoint HTTP 520 errors (likely external currency service), different BTC addresses generated for same payment (expected merchant pool behavior). System is production-ready for Phase 12 features."
   - agent: "testing"
-    message: "🎉 MULTI-TENANT ISOLATION FIXES VERIFICATION COMPLETE: Comprehensive backend testing completed with 100% success rate (17/17 tests passed) after multi-tenant isolation fixes. ✅ AUTHENTICATION: richard@dyno.pt authentication working correctly with JWT token generation. ✅ COMPANY OWNERSHIP VALIDATION: All company endpoints properly validate ownership - GET /api/company/getCompany returns user's companies, individual company access validates ownership (403 for unauthorized), updates validate ownership before execution. ✅ PAYMENT LINK CREATION: POST /api/pay/createPaymentLink successfully creates links with company_id validation, blocks invalid company_id access. ✅ WALLET MULTI-TENANT ISOLATION: All wallet endpoints properly filter by user (18 wallets for user 28), no cross-company data leakage detected. ✅ DASHBOARD DATA ISOLATION: Stats and analytics endpoints properly filter by company_id. ✅ TYPESCRIPT BUILD: No compilation errors detected in backend logs. ✅ BACKEND HEALTH: Service running correctly at https://proxy-connect-lab.preview.emergentagent.com. CONCLUSION: Multi-tenant isolation fixes are working perfectly. All critical endpoints validate ownership, data is properly isolated between tenants, and TypeScript build errors are resolved. Backend is production-ready with proper security isolation."
+    message: "🎉 MULTI-TENANT ISOLATION FIXES VERIFICATION COMPLETE: Comprehensive backend testing completed with 100% success rate (17/17 tests passed) after multi-tenant isolation fixes. ✅ AUTHENTICATION: richard@dyno.pt authentication working correctly with JWT token generation. ✅ COMPANY OWNERSHIP VALIDATION: All company endpoints properly validate ownership - GET /api/company/getCompany returns user's companies, individual company access validates ownership (403 for unauthorized), updates validate ownership before execution. ✅ PAYMENT LINK CREATION: POST /api/pay/createPaymentLink successfully creates links with company_id validation, blocks invalid company_id access. ✅ WALLET MULTI-TENANT ISOLATION: All wallet endpoints properly filter by user (18 wallets for user 28), no cross-company data leakage detected. ✅ DASHBOARD DATA ISOLATION: Stats and analytics endpoints properly filter by company_id. ✅ TYPESCRIPT BUILD: No compilation errors detected in backend logs. ✅ BACKEND HEALTH: Service running correctly at https://auto-convert-verify.preview.emergentagent.com. CONCLUSION: Multi-tenant isolation fixes are working perfectly. All critical endpoints validate ownership, data is properly isolated between tenants, and TypeScript build errors are resolved. Backend is production-ready with proper security isolation."
   - agent: "testing"
     message: "✅ COMPREHENSIVE EMAIL NOTIFICATION SYSTEM TESTING COMPLETED: Successfully tested all 10 new email notification templates (Templates 22-31) with 87.5% success rate (7/8 tests passed). ✅ LOGIN IP TRACKING & NEW DEVICE ALERTS: Verified working - backend logs show '[Email] New device login alert sent to richard@dyno.pt' and '[Login] New device alert sent' messages. IP tracking updates last_login_ip field correctly. ✅ API KEY REGENERATION EMAILS: Successfully tested regeneration of API key ID 27 - backend logs confirm '[Email] API key regenerated notification sent' and '[ApiKey] Regeneration notification sent'. ✅ EMAIL SERVICE TEMPLATES: All 10 new functions verified and properly exported from emailService.ts (sendPaymentExpiringEmail, sendNewDeviceLoginEmail, sendFailedLoginAttemptsEmail, sendPaymentFailedEmail, sendApiKeyCreatedEmail, sendWalletDeletedEmail, sendLargeTransactionAlertEmail, sendSubscriptionCreatedEmail, sendSubscriptionCancelledEmail, sendSubscriptionPaymentFailedEmail). ✅ WEEKLY SUMMARY CRON: Verified enabled in cronJobs.ts, scheduled for Mondays at 9:00 AM UTC. ✅ EMAIL SERVICE INTEGRATION: Verified proper integration in userController.ts, paymentController.ts, and cronJobs.ts. ✅ FAILED LOGIN ATTEMPTS: Successfully generated 4 failed login attempts with 401 responses. Minor issues: Redis parsing error in failed login tracking and IP field database limitation, but core functionality works. All critical email notification features are operational and properly integrated."
     message: "✅ PRODUCTION READINESS TESTING COMPLETED - Critical Path Verification with nomadly@moxx.co credentials. RESULTS: ✅ Authentication working (login/profile/JWT), ✅ Account setup working (company/wallet/API keys), ✅ Dashboard analytics working (stats/charts/transactions), ✅ Transaction filtering working, ✅ Error handling working (401/403/404 responses), ✅ Tax compliance working (PT 23% rate, 102 countries, cache logic). ❌ ISSUES FOUND: Payment link creation API expects different field structure (email, amount, modes instead of base_amount, base_currency), but existing payment links work correctly. ❌ API returns 403 instead of 401 for invalid tokens (acceptable behavior). ❌ Tax rates return 23.00% instead of 23% (formatting difference). RECOMMENDATION: Core functionality working, minor API structure differences need adjustment for full compatibility."
   - agent: "testing"
-    message: "✅ FINAL VERIFICATION TESTING COMPLETED - All Phases with Valid Credentials. Backend URL: https://proxy-connect-lab.preview.emergentagent.com. Valid Credentials: nomadly@moxx.co / Katiekendra123@. RESULTS: 85.7% success rate (24/28 tests passed). CRITICAL FINDINGS: (1) All Tax API endpoints working perfectly - PT=23%, DE=19%, 102 countries, lookup working. (2) Dashboard API fully functional with JWT authentication - statistics, charts (7d/30d), fee tiers (5 tiers). (3) Authentication working - login, forgot password, Google sign-in validation. (4) Wallet Management working - 16 wallets, 1 address, 1 API key retrieved. (5) Payment Links working - endpoint accessible. (6) Company endpoint working. (7) Swagger documentation accessible (/api/docs and /api/docs.json). MINOR ISSUES IDENTIFIED: (1) Some notification endpoints (preferences, types) require JWT authentication but test was not passing token correctly - FIXED when tested manually with proper JWT. (2) Transaction endpoint response structure has pagination fields in 'pagination' object, not directly in data - this is correct API design. (3) Invoice endpoint response structure also uses 'pagination' object - this is correct API design. ALL CORE FUNCTIONALITY WORKING CORRECTLY. Backend is stable and ready for production use."
+    message: "✅ FINAL VERIFICATION TESTING COMPLETED - All Phases with Valid Credentials. Backend URL: https://auto-convert-verify.preview.emergentagent.com. Valid Credentials: nomadly@moxx.co / Katiekendra123@. RESULTS: 85.7% success rate (24/28 tests passed). CRITICAL FINDINGS: (1) All Tax API endpoints working perfectly - PT=23%, DE=19%, 102 countries, lookup working. (2) Dashboard API fully functional with JWT authentication - statistics, charts (7d/30d), fee tiers (5 tiers). (3) Authentication working - login, forgot password, Google sign-in validation. (4) Wallet Management working - 16 wallets, 1 address, 1 API key retrieved. (5) Payment Links working - endpoint accessible. (6) Company endpoint working. (7) Swagger documentation accessible (/api/docs and /api/docs.json). MINOR ISSUES IDENTIFIED: (1) Some notification endpoints (preferences, types) require JWT authentication but test was not passing token correctly - FIXED when tested manually with proper JWT. (2) Transaction endpoint response structure has pagination fields in 'pagination' object, not directly in data - this is correct API design. (3) Invoice endpoint response structure also uses 'pagination' object - this is correct API design. ALL CORE FUNCTIONALITY WORKING CORRECTLY. Backend is stable and ready for production use."
   - agent: "testing"
     message: "✅ VERIFY FIXES TESTING COMPLETED - All Minor Issues Successfully Resolved. Test User: nomadly@moxx.co. SUCCESS RATE: 100% (12/12 tests passed). ✅ PAYMENT LINK CREATION: Both field formats working correctly - NEW format (base_amount/base_currency) and LEGACY format (amount/currency) both create payment links successfully. API currently requires both amount and base_amount fields for full backward compatibility. Validation working correctly for missing amount/currency fields. ✅ AUTHENTICATION TOKEN RESPONSE CODES: All auth endpoints correctly return 401 (not 403) for missing/invalid tokens. Missing token: 'Authentication required. Please provide a valid token.' Invalid token: 'Invalid or expired token. Please login again.' Valid token authentication working correctly. ✅ TAX RATE FORMATTING: All tax rates returned as clean numbers (23, 19, 20) not percentage strings ('23.00%'). Cache behavior consistent. ALL PREVIOUSLY IDENTIFIED MINOR ISSUES HAVE BEEN SUCCESSFULLY RESOLVED. System ready for production use."
     message: "✅ PHASE 3 DASHBOARD API TESTING COMPLETE: All 5 dashboard endpoints working perfectly with JWT authentication. GET /api/dashboard returns comprehensive statistics (transactions, volume, wallets, fee tiers). GET /api/dashboard/chart works for all periods (7d, 30d, 90d, 1y) with proper aggregation. GET /api/dashboard/fee-tiers returns exact 5-tier structure as specified. GET /api/dashboard/recent-transactions handles different limits correctly. JWT authentication flow verified: login → token → authenticated API calls. Success rate: 96.4% (27/28 tests passed). All Phase 3 requirements met."
@@ -4960,7 +4960,7 @@ ports:
           6. GET /health → healthy
           
           Credentials: richard@dyno.pt / Katiekendra123@
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
   - task: "Architecture Fixes Testing - Payment getData Endpoint"
     implemented: true
     working: true
@@ -5025,7 +5025,7 @@ ports:
           6. GET /health → healthy
           
           Credentials: richard@dyno.pt / Katiekendra123@
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
   - task: "SmartGas Integration for Token Merchant Transfers (USDT-TRC20, USDT-ERC20, USDC-ERC20)"
     implemented: true
     working: "NA"
@@ -5064,7 +5064,7 @@ ports:
           Verify sweep flow also has waitForTransactionConfirmation after gas funding.
           
           Credentials: richard@dyno.pt / Katiekendra123@
-          Base URL: https://proxy-connect-lab.preview.emergentagent.com
+          Base URL: https://auto-convert-verify.preview.emergentagent.com
   - task: "FIX: Admin not getting email when admin fee sweep occurs for USDT-TRC20, USDT-ERC20, USDC-ERC20"
     implemented: true
     working: true
