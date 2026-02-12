@@ -6498,3 +6498,44 @@ ports:
           
           CONCLUSION: Railway Usage Optimization Phase 2 is fully operational and production-ready. All 9 verification requirements from the review request have been successfully validated. The system now operates with significantly reduced database operations (3x fewer health check writes) and optimized startup performance (consolidated imports), directly reducing Railway compute costs while maintaining all health monitoring functionality.
 
+  - task: "Fix Email Bugs: Unsubscribe URL localhost + Excessive Logging + Brevo Error Visibility"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/helper/sendEmail.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          3 BUGS FIXED IN EMAIL SYSTEM:
+          
+          BUG 1 (CRITICAL): Unsubscribe URL used localhost:3300 in production emails
+          - sendPaymentLinkReminderEmail used FRONTEND_URL for unsubscribe link
+          - But /api/user/unsubscribe-payment-reminders is a BACKEND route
+          - FIX: Now uses SERVER_URL for unsubscribe URL (falls back to FRONTEND_URL)
+          - Line ~924-926: const backendUrl = process.env.SERVER_URL || baseUrl;
+          
+          BUG 2 (HIGH): Excessive logging triggered Railway 500 logs/sec rate limit
+          - All 15 catch blocks in sendEmail.ts did console.log("... error:", e)
+          - Axios errors contain full request config with 16KB+ HTML email bodies
+          - This caused Railway to drop 1740 log messages per cycle
+          - FIX: Added formatEmailError() helper that extracts only:
+            message, code, response.status, response.data (truncated to 500 chars)
+          - All 15 catch blocks now use formatEmailError(e)
+          
+          BUG 3 (MEDIUM): Brevo ERR_BAD_REQUEST was invisible due to log flood
+          - The actual Brevo error response was buried in the massive Axios dump
+          - FIX: formatEmailError now cleanly surfaces response.status and response.data
+          - After deploy, the actual Brevo rejection reason will be clearly visible in logs
+          
+          TESTS:
+          TEST 1: Backend healthy — GET http://localhost:8001/health returns 200
+          TEST 2: TypeScript compiles — cd /app/backend && npx tsc --noEmit exits 0
+          TEST 3: formatEmailError exists — grep 'formatEmailError' /app/backend/helper/sendEmail.ts should find >= 16 occurrences (1 definition + 15 usages)
+          TEST 4: No raw error dumps — grep 'console.log.*error.*", e)' /app/backend/helper/sendEmail.ts should return 0 matches (all replaced with formatEmailError)
+          TEST 5: Unsubscribe uses SERVER_URL — grep 'SERVER_URL.*backendUrl\|backendUrl.*unsubscribe' /app/backend/helper/sendEmail.ts should find the fix
+          TEST 6: Error format extracts status — grep 'response.*status\|response.*data' /app/backend/helper/sendEmail.ts should find extraction logic in formatEmailError
+          Base URL: http://localhost:8001
