@@ -14,7 +14,7 @@
  * The WebSocket service handles its own reconnect/fallback logic.
  */
 
-import { redis as redisClient } from "../utils/redisInstance";
+import { setRedisItemWithTTL, getRedisItem } from "../utils/redisInstance";
 import { captureError } from "./errorMonitoringService";
 import {
   getKlines,
