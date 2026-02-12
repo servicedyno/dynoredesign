@@ -401,4 +401,143 @@ router.get("/conversion-email-preview", async (req: express.Request, res: expres
   res.send(html);
 });
 
+/**
+ * GET /diagnostics/weekly-conversion-email-preview
+ * Preview the weekly conversion summary email with sample data
+ */
+router.get("/weekly-conversion-email-preview", async (_req: express.Request, res: express.Response) => {
+  const sampleData = {
+    periodStart: "2026-02-05",
+    periodEnd: "2026-02-12",
+    totalConversions: 12,
+    totalSourceUsd: 4250.00,
+    totalPayoutUsd: 4182.35,
+    totalSavedUsd: 47.82,
+    totalVolatileConversions: 5,
+    avgPriceMovementPct: -1.28,
+    cryptoBreakdown: [
+      { currency: "BTC", count: 5, totalAmount: "0.06250000", totalPayoutUsd: 2845.20, avgMovementPct: -1.85 },
+      { currency: "ETH", count: 4, totalAmount: "1.42000000", totalPayoutUsd: 985.60, avgMovementPct: -0.92 },
+      { currency: "SOL", count: 2, totalAmount: "4.35000000", totalPayoutUsd: 285.55, avgMovementPct: -0.45 },
+      { currency: "XRP", count: 1, totalAmount: "47.80000000", totalPayoutUsd: 66.00, avgMovementPct: 0.12 },
+    ],
+    dailyVolume: [
+      { day: "2026-02-06", label: "Thu", payoutUsd: 420 },
+      { day: "2026-02-07", label: "Fri", payoutUsd: 850 },
+      { day: "2026-02-08", label: "Sat", payoutUsd: 0 },
+      { day: "2026-02-09", label: "Sun", payoutUsd: 120 },
+      { day: "2026-02-10", label: "Mon", payoutUsd: 1580 },
+      { day: "2026-02-11", label: "Tue", payoutUsd: 910 },
+      { day: "2026-02-12", label: "Wed", payoutUsd: 302 },
+    ],
+  };
+
+  const maxDailyVolume = Math.max(...sampleData.dailyVolume.map(d => d.payoutUsd), 1);
+
+  const chartRows = sampleData.dailyVolume.map(d => {
+    const barWidth = Math.max(2, Math.round((d.payoutUsd / maxDailyVolume) * 100));
+    const hasActivity = d.payoutUsd > 0;
+    return `
+      <tr>
+        <td style="padding: 4px 8px 4px 0; font-size: 12px; color: #6b7280; font-family: 'Inter', Arial, sans-serif; white-space: nowrap; width: 40px;">${d.label}</td>
+        <td style="padding: 4px 0; width: 100%;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 3px; height: 18px;">
+            <tr>
+              <td style="width: ${barWidth}%; background: ${hasActivity ? 'linear-gradient(90deg, #1034a6, #3b82f6)' : 'transparent'}; border-radius: 3px; height: 18px;">&nbsp;</td>
+              <td style="height: 18px;">&nbsp;</td>
+            </tr>
+          </table>
+        </td>
+        <td style="padding: 4px 0 4px 8px; font-size: 12px; color: ${hasActivity ? '#1a1a2e' : '#9ca3af'}; font-family: 'Inter', Arial, sans-serif; white-space: nowrap; text-align: right; width: 60px; font-weight: ${hasActivity ? '600' : '400'};">${hasActivity ? '$' + d.payoutUsd : '-'}</td>
+      </tr>`;
+  }).join('');
+
+  const breakdownRows = sampleData.cryptoBreakdown.map(c => {
+    const movementColor = c.avgMovementPct < -1 ? '#dc2626' : c.avgMovementPct < 0 ? '#f59e0b' : '#22c55e';
+    const movementSign = c.avgMovementPct >= 0 ? '+' : '';
+    return `
+      <tr>
+        <td style="padding: 10px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">${c.currency}</td>
+        <td style="padding: 10px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: center; border-bottom: 1px solid #f3f4f6;">${c.count}</td>
+        <td style="padding: 10px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">$${c.totalPayoutUsd.toFixed(2)}</td>
+        <td style="padding: 10px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">
+          <span style="color: ${movementColor}; font-size: 13px; font-weight: 500;">${movementSign}${c.avgMovementPct.toFixed(2)}%</span>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const htmlContent = `
+    <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">
+      Here's your weekly auto-conversion report for <strong style="color: #1a1a2e;">Acme Payments Inc.</strong>.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td style="padding: 0 4px 8px 0; width: 33%;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px;">
+            <tr><td style="padding: 16px 8px; text-align: center;">
+              <p style="font-size: 24px; font-weight: 700; color: #1034a6; margin: 0; font-family: 'Inter', Arial, sans-serif;">12</p>
+              <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase;">Conversions</p>
+            </td></tr>
+          </table>
+        </td>
+        <td style="padding: 0 4px 8px 4px; width: 34%;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px;">
+            <tr><td style="padding: 16px 8px; text-align: center;">
+              <p style="font-size: 24px; font-weight: 700; color: #15803d; margin: 0; font-family: 'Inter', Arial, sans-serif;">$4182</p>
+              <p style="font-size: 11px; color: #166534; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase;">Total Payout</p>
+            </td></tr>
+          </table>
+        </td>
+        <td style="padding: 0 0 8px 4px; width: 33%;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fef2f2; border-radius: 8px;">
+            <tr><td style="padding: 16px 8px; text-align: center;">
+              <p style="font-size: 24px; font-weight: 700; color: #dc2626; margin: 0; font-family: 'Inter', Arial, sans-serif;">-1.3%</p>
+              <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase;">Avg Movement</p>
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+      <tr>
+        <td style="padding: 24px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px; text-align: center;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="font-size: 13px; font-weight: 600; color: #166534; font-family: 'Inter', Arial, sans-serif; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Protected This Week</td></tr>
+            <tr><td style="font-size: 32px; font-weight: 700; color: #15803d; font-family: 'Inter', Arial, sans-serif; padding: 8px 0;">~$47.82</td></tr>
+            <tr><td style="font-size: 13px; color: #166534; font-family: 'Inter', Arial, sans-serif; line-height: 1.5;">saved by converting before further price drops<br/><span style="color: #6b7280;">5 of 12 conversions occurred during volatile markets</span></td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; margin: 0 0 24px 0;">
+      <tr><td style="padding: 20px;">
+        <p style="font-size: 13px; font-weight: 600; color: #1a1a2e; font-family: 'Inter', Arial, sans-serif; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Daily Conversion Volume</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${chartRows}
+        </table>
+      </td></tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6; margin: 0 0 24px 0;">
+      <tr><td style="padding: 20px;">
+        <p style="font-size: 13px; font-weight: 600; color: #1a1a2e; font-family: 'Inter', Arial, sans-serif; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Breakdown by Crypto</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Asset</td>
+            <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-align: center; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Count</td>
+            <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-align: right; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Payout</td>
+            <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-align: right; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Avg Move</td>
+          </tr>
+          ${breakdownRows}
+        </table>
+      </td></tr>
+    </table>
+    <p style="font-size: 13px; color: #9ca3af; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">
+      Report period: Feb 5, 2026 to Feb 12, 2026. Auto-conversion protects your revenue from crypto price volatility by instantly converting to stablecoins.
+    </p>`;
+
+  const html = dynoPayEmailTemplate("Alex", htmlContent, "Weekly Conversion Report");
+  res.setHeader("Content-Type", "text/html");
+  res.send(html);
+});
+
 export default router;
