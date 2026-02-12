@@ -57,13 +57,13 @@ router.get("/binance-time", async (_req: express.Request, res: express.Response)
  */
 router.get("/binance-account", async (_req: express.Request, res: express.Response) => {
   try {
-    const accountInfo = await binanceService.getAccountInfo();
+    const accountInfo: any = await binanceService.getAccountInfo();
     res.status(200).json({
       success: true,
-      accountType: accountInfo.accountType,
-      canTrade: accountInfo.canTrade,
-      canWithdraw: accountInfo.canWithdraw,
-      canDeposit: accountInfo.canDeposit,
+      accountType: accountInfo.accountType || 'SPOT',
+      canTrade: accountInfo.canTrade || false,
+      canWithdraw: accountInfo.canWithdraw || false,
+      canDeposit: accountInfo.canDeposit || false,
       balanceCount: accountInfo.balances?.length || 0,
       message: "Binance authenticated API working"
     });
@@ -86,14 +86,14 @@ router.get("/binance-quote", async (req: express.Request, res: express.Response)
     const toAsset = req.query.to as string || "USDT";
     const amount = parseFloat(req.query.amount as string || "0.001");
 
-    const quote = await binanceService.getConvertQuote(fromAsset, toAsset, amount);
+    const quote: any = await binanceService.getConvertQuote(fromAsset, toAsset, amount);
     
     res.status(200).json({
       success: true,
       quote: {
         quoteId: quote.quoteId,
-        fromAsset: quote.fromAsset,
-        toAsset: quote.toAsset,
+        fromAsset: fromAsset,
+        toAsset: toAsset,
         fromAmount: quote.fromAmount,
         toAmount: quote.toAmount,
         ratio: quote.ratio,
