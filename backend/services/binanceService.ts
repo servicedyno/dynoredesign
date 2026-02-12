@@ -1,0 +1,463 @@
+/**
+ * Binance API Service
+ * 
+ * Handles all communication with Binance's REST API:
+ * - HMAC-SHA256 request signing
+ * - Convert API (getQuote, acceptQuote)
+ * - Withdrawal API
+ * - Deposit detection
+ * - Account balance queries
+ */
+
+import crypto from "crypto";
+import axios, { AxiosError } from "axios";
+
+const BINANCE_API_KEY = process.env.BINANCE_API_KEY || "";
+const BINANCE_API_SECRET = process.env.BINANCE_API_SECRET || "";
+const BINANCE_BASE_URL = process.env.BINANCE_BASE_URL || "https://api.binance.com";
+
+// ============================================
+// HMAC-SHA256 Signing
+// ============================================
+
+const generateSignature = (queryString: string): string => {
+  return crypto
+    .createHmac("sha256", BINANCE_API_SECRET)
+    .update(queryString)
+    .digest("hex");
+};
+
+const getTimestamp = (): number => Date.now();
+
+const buildQueryString = (params: Record<string, string | number | boolean | undefined>): string => {
+  const filtered: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      filtered[key] = String(value);
+    }
+  }
+  return new URLSearchParams(filtered).toString();
+};
+
+// ============================================
+// HTTP Client
+// ============================================
+
+const makeSignedRequest = async (
+  method: "GET" | "POST" | "DELETE",
+  endpoint: string,
+  params: Record<string, string | number | boolean | undefined> = {}
+): Promise<unknown> => {
+  const timestamp = getTimestamp();
+  const allParams = { ...params, timestamp };
+  const queryString = buildQueryString(allParams);
+  const signature = generateSignature(queryString);
+  const signedQuery = `${queryString}&signature=${signature}`;
+
+  const url = `${BINANCE_BASE_URL}${endpoint}?${signedQuery}`;
+  const headers = {
+    "X-MBX-APIKEY": BINANCE_API_KEY,
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+
+  try {
+    const response = await axios({
+      method,
+      url,
+      headers,
+      timeout: 30000,
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ code?: number; msg?: string }>;
+    const errMsg = axiosError.response?.data?.msg || axiosError.message;
+    const errCode = axiosError.response?.data?.code;
+    console.error(`[Binance] ${method} ${endpoint} failed: [${errCode}] ${errMsg}`);
+    throw new Error(`Binance API error [${errCode || "NETWORK"}]: ${errMsg}`);
+  }
+};
+
+const makePublicRequest = async (
+  endpoint: string,
+  params: Record<string, string | number | boolean | undefined> = {}
+): Promise<unknown> => {
+  const queryString = buildQueryString(params);
+  const url = `${BINANCE_BASE_URL}${endpoint}${queryString ? `?${queryString}` : ""}`;
+
+  try {
+    const response = await axios.get(url, { timeout: 15000 });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ code?: number; msg?: string }>;
+    throw new Error(`Binance public API error: ${axiosError.response?.data?.msg || axiosError.message}`);
+  }
+};
+
+// ============================================
+// Account & Server
+// ============================================
+
+/** Test connectivity */
+export const ping = async (): Promise<boolean> => {
+  try {
+    await makePublicRequest("/api/v3/ping");
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** Get Binance server time */
+export const getServerTime = async (): Promise<number> => {
+  const data = (await makePublicRequest("/api/v3/time")) as { serverTime: number };
+  return data.serverTime;
+};
+
+/** Get account information (balances) */
+export const getAccountInfo = async (): Promise<{
+  balances: Array<{ asset: string; free: string; locked: string }>;
+}> => {
+  const data = (await makeSignedRequest("GET", "/api/v3/account")) as {
+    balances: Array<{ asset: string; free: string; locked: string }>;
+  };
+  return data;
+};
+
+/** Get balance for a specific asset */
+export const getAssetBalance = async (asset: string): Promise<{ free: number; locked: number }> => {
+  const account = await getAccountInfo();
+  const balance = account.balances.find((b) => b.asset === asset.toUpperCase());
+  return {
+    free: parseFloat(balance?.free || "0"),
+    locked: parseFloat(balance?.locked || "0"),
+  };
+};
+
+// ============================================
+// Convert API
+// ============================================
+
+/** Map DynoPay currency names to Binance asset names */
+const toBinanceAsset = (currency: string): string => {
+  const map: Record<string, string> = {
+    BTC: "BTC",
+    ETH: "ETH",
+    LTC: "LTC",
+    DOGE: "DOGE",
+    TRX: "TRX",
+    BCH: "BCH",
+    SOL: "SOL",
+    XRP: "XRP",
+    POLYGON: "MATIC",  // Binance uses MATIC for Polygon
+    USDT: "USDT",
+    USDC: "USDC",
+    "USDT-TRC20": "USDT",
+    "USDT-ERC20": "USDT",
+    "USDC-ERC20": "USDC",
+    "USDT-POLYGON": "USDT",
+    "RLUSD": "RLUSD",
+    "RLUSD-ERC20": "RLUSD",
+  };
+  return map[currency] || currency;
+};
+
+/** Get a conversion quote (does NOT execute — safe for testing) */
+export const getConvertQuote = async (
+  fromAsset: string,
+  toAsset: string,
+  fromAmount: number
+): Promise<{
+  quoteId: string;
+  ratio: string;
+  inverseRatio: string;
+  validTimestamp: number;
+  toAmount: string;
+  fromAmount: string;
+}> => {
+  const data = (await makeSignedRequest("POST", "/sapi/v1/convert/getQuote", {
+    fromAsset: toBinanceAsset(fromAsset),
+    toAsset: toBinanceAsset(toAsset),
+    fromAmount: fromAmount.toFixed(8),
+    validTime: "30s",
+  })) as {
+    quoteId: string;
+    ratio: string;
+    inverseRatio: string;
+    validTimestamp: number;
+    toAmount: string;
+    fromAmount: string;
+  };
+  return data;
+};
+
+/** Accept a conversion quote (EXECUTES the conversion) */
+export const acceptConvertQuote = async (
+  quoteId: string
+): Promise<{
+  orderId: string;
+  createTime: number;
+  orderStatus: string; // "PROCESS" | "ACCEPT_SUCCESS" | "SUCCESS" | "FAIL"
+}> => {
+  const data = (await makeSignedRequest("POST", "/sapi/v1/convert/acceptQuote", {
+    quoteId,
+  })) as {
+    orderId: string;
+    createTime: number;
+    orderStatus: string;
+  };
+  return data;
+};
+
+/** Check conversion order status */
+export const getConvertOrderStatus = async (
+  orderId: string
+): Promise<{
+  orderId: string;
+  orderStatus: string;
+  fromAsset: string;
+  fromAmount: string;
+  toAsset: string;
+  toAmount: string;
+  ratio: string;
+  inverseRatio: string;
+  createTime: number;
+}> => {
+  const data = (await makeSignedRequest("GET", "/sapi/v1/convert/orderStatus", {
+    orderId,
+  })) as {
+    orderId: string;
+    orderStatus: string;
+    fromAsset: string;
+    fromAmount: string;
+    toAsset: string;
+    toAmount: string;
+    ratio: string;
+    inverseRatio: string;
+    createTime: number;
+  };
+  return data;
+};
+
+// ============================================
+// Withdrawal API
+// ============================================
+
+/** Map settlement chain to Binance network name */
+const toBinanceNetwork = (chain: string): string => {
+  const map: Record<string, string> = {
+    ERC20: "ETH",
+    TRC20: "TRX",
+    POLYGON: "MATIC",
+    BEP20: "BSC",
+    SOL: "SOL",
+    // Binance uses these network names
+  };
+  return map[chain] || chain;
+};
+
+/** Submit a withdrawal request */
+export const submitWithdrawal = async ({
+  coin,
+  address,
+  amount,
+  network,
+  addressTag,
+}: {
+  coin: string; // e.g., "USDT", "USDC"
+  address: string;
+  amount: number;
+  network: string; // e.g., "ERC20", "TRC20"
+  addressTag?: string; // For XRP memo, etc.
+}): Promise<{ id: string }> => {
+  const params: Record<string, string | number | boolean | undefined> = {
+    coin: coin.toUpperCase(),
+    address,
+    amount: amount.toFixed(8),
+    network: toBinanceNetwork(network),
+  };
+  if (addressTag) {
+    params.addressTag = addressTag;
+  }
+
+  const data = (await makeSignedRequest("POST", "/sapi/v1/capital/withdraw/apply", params)) as { id: string };
+  return data;
+};
+
+/** Check withdrawal status */
+export const getWithdrawalHistory = async ({
+  coin,
+  withdrawOrderId,
+  limit = 10,
+}: {
+  coin?: string;
+  withdrawOrderId?: string;
+  limit?: number;
+}): Promise<
+  Array<{
+    id: string;
+    amount: string;
+    transactionFee: string;
+    coin: string;
+    status: number; // 0=Email Sent, 1=Cancelled, 2=Awaiting Approval, 3=Rejected, 4=Processing, 5=Failure, 6=Completed
+    address: string;
+    txId: string;
+    network: string;
+    completeTime: string;
+  }>
+> => {
+  const params: Record<string, string | number | boolean | undefined> = { limit };
+  if (coin) params.coin = coin;
+  if (withdrawOrderId) params.withdrawOrderId = withdrawOrderId;
+
+  const data = (await makeSignedRequest("GET", "/sapi/v1/capital/withdraw/history", params)) as Array<{
+    id: string;
+    amount: string;
+    transactionFee: string;
+    coin: string;
+    status: number;
+    address: string;
+    txId: string;
+    network: string;
+    completeTime: string;
+  }>;
+  return data;
+};
+
+// ============================================
+// Deposit Detection
+// ============================================
+
+/** Get deposit history (to detect when crypto arrives in Binance) */
+export const getDepositHistory = async ({
+  coin,
+  status,
+  startTime,
+  endTime,
+  limit = 100,
+}: {
+  coin?: string;
+  status?: number; // 0=pending, 6=credited, 1=success
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}): Promise<
+  Array<{
+    id: string;
+    amount: string;
+    coin: string;
+    network: string;
+    status: number;
+    address: string;
+    txId: string;
+    insertTime: number;
+    confirmTimes: string;
+  }>
+> => {
+  const params: Record<string, string | number | boolean | undefined> = { limit };
+  if (coin) params.coin = coin;
+  if (status !== undefined) params.status = status;
+  if (startTime) params.startTime = startTime;
+  if (endTime) params.endTime = endTime;
+
+  const data = (await makeSignedRequest("GET", "/sapi/v1/capital/deposit/hisrec", params)) as Array<{
+    id: string;
+    amount: string;
+    coin: string;
+    network: string;
+    status: number;
+    address: string;
+    txId: string;
+    insertTime: number;
+    confirmTimes: string;
+  }>;
+  return data;
+};
+
+/** Get deposit address for a coin */
+export const getDepositAddress = async (
+  coin: string,
+  network?: string
+): Promise<{ address: string; coin: string; tag: string; url: string }> => {
+  const params: Record<string, string | number | boolean | undefined> = {
+    coin: coin.toUpperCase(),
+  };
+  if (network) params.network = toBinanceNetwork(network);
+
+  const data = (await makeSignedRequest("GET", "/sapi/v1/capital/deposit/address", params)) as {
+    address: string;
+    coin: string;
+    tag: string;
+    url: string;
+  };
+  return data;
+};
+
+// ============================================
+// Price Queries
+// ============================================
+
+/** Get current price for a trading pair */
+export const getPrice = async (symbol: string): Promise<number> => {
+  const data = (await makePublicRequest("/api/v3/ticker/price", { symbol })) as { price: string };
+  return parseFloat(data.price);
+};
+
+/** Get all prices */
+export const getAllPrices = async (): Promise<Record<string, number>> => {
+  const data = (await makePublicRequest("/api/v3/ticker/price")) as Array<{ symbol: string; price: string }>;
+  const prices: Record<string, number> = {};
+  for (const item of data) {
+    prices[item.symbol] = parseFloat(item.price);
+  }
+  return prices;
+};
+
+// ============================================
+// Stablecoin Detection
+// ============================================
+
+/** Currencies that are already stablecoins (no conversion needed) */
+export const STABLECOIN_CURRENCIES = [
+  "USDT", "USDC", "RLUSD",
+  "USDT-TRC20", "USDT-ERC20", "USDC-ERC20",
+  "USDT-POLYGON", "RLUSD-ERC20",
+];
+
+/** Check if a currency is already a stablecoin */
+export const isStablecoin = (currency: string): boolean => {
+  return STABLECOIN_CURRENCIES.includes(currency);
+};
+
+/** Volatile currencies that need conversion */
+export const VOLATILE_CURRENCIES = [
+  "BTC", "ETH", "LTC", "DOGE", "TRX", "BCH", "SOL", "XRP", "POLYGON",
+];
+
+export const isVolatileCrypto = (currency: string): boolean => {
+  return VOLATILE_CURRENCIES.includes(currency);
+};
+
+// ============================================
+// Export all
+// ============================================
+
+export default {
+  ping,
+  getServerTime,
+  getAccountInfo,
+  getAssetBalance,
+  getConvertQuote,
+  acceptConvertQuote,
+  getConvertOrderStatus,
+  submitWithdrawal,
+  getWithdrawalHistory,
+  getDepositHistory,
+  getDepositAddress,
+  getPrice,
+  getAllPrices,
+  isStablecoin,
+  isVolatileCrypto,
+  toBinanceAsset,
+  STABLECOIN_CURRENCIES,
+  VOLATILE_CURRENCIES,
+};
