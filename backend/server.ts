@@ -446,6 +446,23 @@ cron.schedule("*/2 * * * *", function () {
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
 setupWeeklySummaryCron();
 
+// Weekly conversion summary email (every Monday at 9:30 AM UTC)
+cron.schedule("30 9 * * 1", async function () {
+  const lockAcquired = await acquireLock("cron:weeklyConversionSummary", 600, 1);
+  if (!lockAcquired) { log("Cron: weeklyConversionSummary skipped (already running)", "info"); return; }
+  try {
+    log("Cron: sendWeeklyConversionSummaries running", "info");
+    const sent = await sendWeeklyConversionSummaries();
+    log(`Cron: Weekly conversion summaries sent: ${sent}`, "info");
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    log(`Cron: Weekly conversion summary failed: ${errMsg}`, "error");
+  } finally {
+    await releaseLock("cron:weeklyConversionSummary");
+  }
+});
+log("Weekly Conversion Summary Cron Job scheduled for every Monday at 9:30 AM UTC", "info");
+
 // Setup wallet reminder cron job (every hour for users without wallets after 24h)
 setupWalletReminderCron();
 
