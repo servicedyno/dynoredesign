@@ -359,8 +359,7 @@ const restFetchKlines = async (asset: string): Promise<KlineCandle[]> => {
   const url = `${BINANCE_REST_BASE}/api/v3/klines?symbol=${symbol}&interval=5m&limit=12`;
 
   try {
-    const resp = await axios.get(url, { timeout: 10000, headers: BINANCE_HEADERS });
-    const candles: KlineCandle[] = resp.data.map((k: unknown[]) => ({
+    const resp = await axios.get(url, { timeout: 10000, headers: BINANCE_HEADERS, ...(wsProxyAgent ? { httpAgent: wsProxyAgent, httpsAgent: wsProxyAgent } : {}) });
       openTime: k[0] as number,
       open: parseFloat(k[1] as string),
       high: parseFloat(k[2] as string),
