@@ -95,7 +95,7 @@ def test_2_user_registration() -> bool:
     
     try:
         # Try to register first
-        status_code, data = make_request("POST", f"{API_BASE}/user/register", data=TEST_USER)
+        status_code, data = make_request("POST", f"{API_BASE}/user/registerUser", data=TEST_USER)
         
         if status_code == 200 or status_code == 201:
             # Registration successful, now login
