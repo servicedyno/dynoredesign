@@ -184,12 +184,24 @@ const connect = () => {
 
 /**
  * Exponential backoff reconnect: 1s, 2s, 4s, 8s, ... capped at 60s.
+ * When geo-blocked: slow retry every 5 minutes to detect when region changes.
  */
 const scheduleReconnect = () => {
   if (reconnectTimer) return;
-  const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 60000);
+
+  let delay: number;
+  if (geoBlocked) {
+    delay = 5 * 60 * 1000; // 5 min for geo-blocked (just probing)
+  } else {
+    delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 60000);
+  }
   reconnectAttempts++;
-  log(`Reconnecting in ${(delay / 1000).toFixed(0)}s (attempt #${reconnectAttempts})...`);
+
+  if (!geoBlocked || reconnectAttempts % 5 === 1) {
+    // Only log every 5th attempt when geo-blocked to reduce noise
+    log(`Reconnecting in ${(delay / 1000).toFixed(0)}s (attempt #${reconnectAttempts}${geoBlocked ? ", geo-blocked" : ""})...`);
+  }
+
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
     connect();
