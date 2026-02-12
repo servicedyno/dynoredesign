@@ -4149,19 +4149,37 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               usdValue = usdConvert && usdConvert[0] ? Number(usdConvert[0].amount) : undefined;
             } catch { usdValue = undefined; }
             
-            await createConversionRecord({
-              transactionId: parseInt(transactionId),
-              companyId: Number(customerData.company_id),
-              userId: Number(customerData.adm_id),
-              sourceCurrency: tempCurrency,
-              sourceAmount: originalUserAmount,
-              sourceAmountUsd: usdValue,
-              targetCurrency: autoConvertTargetCurrency,
-              settlementWalletAddress: autoConvertSettlementAddress,
-              settlementChain: autoConvertSettlementChain,
-              depositTxHash: adminTransferResult.transactionDetails?.txId || undefined,
-              adminWalletAddress: adminWalletAddr,
-            });
+            // FIX: Look up the integer transaction_id from tbl_user_transaction
+            // transactionId here is the blockchain TX hash (hex string) — NOT the DB integer PK
+            // parseInt(blockchainHash) produces a huge scientific notation number that Postgres rejects
+            const txRecordId = tempData.user_tx_id || tempData.unique_tx_id || tempData.payment_id;
+            let dbTransactionId: number | null = null;
+            if (txRecordId) {
+              const txRecord = await userTransactionModel.findOne({
+                where: { id: txRecordId },
+                attributes: ['transaction_id'],
+                transaction,
+              });
+              dbTransactionId = txRecord?.dataValues?.transaction_id ?? null;
+            }
+            
+            if (!dbTransactionId) {
+              console.warn(`[AutoConvert] ⚠️ Could not resolve integer transaction_id for UUID ${txRecordId} — skipping conversion record`);
+            } else {
+              await createConversionRecord({
+                transactionId: dbTransactionId,
+                companyId: Number(customerData.company_id),
+                userId: Number(customerData.adm_id),
+                sourceCurrency: tempCurrency,
+                sourceAmount: originalUserAmount,
+                sourceAmountUsd: usdValue,
+                targetCurrency: autoConvertTargetCurrency,
+                settlementWalletAddress: autoConvertSettlementAddress,
+                settlementChain: autoConvertSettlementChain,
+                depositTxHash: adminTransferResult.transactionDetails?.txId || undefined,
+                adminWalletAddress: adminWalletAddr,
+              });
+            }
 
             console.log(`[AutoConvert] 📝 Conversion record created:
               - TX: ${transactionId}
