@@ -115,10 +115,13 @@ app.use(requestLoggerMiddleware);
 // XSS sanitization middleware — strips malicious HTML/JS from all inputs
 app.use(sanitizeInputMiddleware);
 
-// Static files
+// Static files — served via /api/static prefix so K8s ingress routes to backend (port 8001)
 const uploadsPath = process.env.UPLOAD_PATH || path.join(__dirname, '../uploads');
-app.use(express.static("public"));
+app.use("/api/static", express.static("public"));
+app.use(express.static("public")); // Keep backward compat for internal access
+app.use("/api/static/images", express.static(path.join(uploadsPath, "images")));
 app.use("/images", express.static(path.join(uploadsPath, "images")));
+app.use("/api/static/videos", express.static(path.join(uploadsPath, "videos")));
 app.use("/videos", express.static(path.join(uploadsPath, "videos")));
 
 // Setup Swagger API documentation
