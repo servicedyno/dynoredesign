@@ -682,6 +682,7 @@ const sendPaymentPartialExpiredEmail = async (
     return info;
   } catch (e) {
     console.log("Payment partial expired email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendPaymentPartialExpiredEmail' });
   }
 };
 
