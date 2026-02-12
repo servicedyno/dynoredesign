@@ -900,7 +900,7 @@ const sendRefereeCodeReminderEmail = async (
     console.log(`[Email] Referee reminder (${reminderType}) sent to ${recipientEmail}`);
     return info;
   } catch (e) {
-    console.log("Referee code reminder email error:", e);
+    console.log("Referee code reminder email error:", formatEmailError(e));
   }
 };
 
