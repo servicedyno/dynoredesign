@@ -4128,7 +4128,41 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           - Admin fee retained for sweep: ${adminTransferResult.adminFeeRetained || 0} ${tempCurrency}
           - SmartGas funded: ${adminTransferResult.gasFunded || 0} (TX: ${adminTransferResult.gasFundingTxId || 'N/A'})
           - Is Merchant Pool: ${tempData.is_merchant_pool}
+          - Auto-Convert: ${autoConvertEnabled ? 'YES' : 'NO'}
         `);
+
+        // ============================================
+        // AUTO-CONVERT: Create conversion record for Binance processing
+        // ============================================
+        if (autoConvertEnabled && originalUserAmount > 0) {
+          try {
+            const adminWalletAddr = getAdminWalletAddress(tempCurrency) || "";
+            const usdValue = amountInUSD && amountInUSD[0] ? Number(amountInUSD[0].amount) : undefined;
+            
+            await createConversionRecord({
+              transactionId: parseInt(transactionId),
+              companyId: Number(customerData.company_id),
+              userId: Number(customerData.adm_id),
+              sourceCurrency: tempCurrency,
+              sourceAmount: originalUserAmount,
+              sourceAmountUsd: usdValue,
+              targetCurrency: autoConvertTargetCurrency,
+              settlementWalletAddress: autoConvertSettlementAddress,
+              settlementChain: autoConvertSettlementChain,
+              depositTxHash: adminTransferResult.transactionDetails?.txId || undefined,
+              adminWalletAddress: adminWalletAddr,
+            });
+
+            console.log(`[AutoConvert] 📝 Conversion record created:
+              - TX: ${transactionId}
+              - Source: ${originalUserAmount.toFixed(8)} ${tempCurrency}
+              - Target: ${autoConvertTargetCurrency} on ${autoConvertSettlementChain}
+              - Will be processed by Binance cron`);
+          } catch (convErr) {
+            console.error(`[AutoConvert] ❌ Failed to create conversion record (non-fatal):`, convErr);
+            // Non-fatal: the payment itself succeeded, conversion can be manually triggered
+          }
+        }
 
         // For UTXO chains, admin fee is sent in the same transaction
         // For account-based chains, admin fee is retained for batch sweep
