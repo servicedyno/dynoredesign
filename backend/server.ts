@@ -655,11 +655,21 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
   log(`Unhandled Promise Rejection at: ${promise}, reason: ${reason}`, 'error');
+  captureError(reason, 'unhandled-rejection', {
+    severity: 'critical',
+    extraContext: `Promise: ${String(promise)}`,
+  });
   // Don't exit — log and continue
 });
 
 process.on('uncaughtException', (error: Error) => {
   log(`Uncaught Exception: ${error.message}\n${error.stack}`, 'error');
-  // For uncaught exceptions, exit after logging (Node.js best practice)
-  process.exit(1);
+  captureError(error, 'uncaught', {
+    severity: 'critical',
+    extraContext: 'Process will exit after this error',
+  });
+  // Send digest immediately before exit (best-effort)
+  sendErrorDigest().finally(() => {
+    process.exit(1);
+  });
 });
