@@ -17,8 +17,15 @@
 
 import WebSocket from "ws";
 import axios from "axios";
+import { SocksProxyAgent } from "socks-proxy-agent";
 import { setRedisItemWithTTL, getRedisItem } from "../utils/redisInstance";
 import { captureError } from "./errorMonitoringService";
+
+// SOCKS5 proxy for bypassing geo-blocks (reuses same env var as binanceService)
+const BINANCE_PROXY_URL = process.env.BINANCE_PROXY_URL || "";
+const wsProxyAgent: SocksProxyAgent | undefined = BINANCE_PROXY_URL
+  ? (() => { try { return new SocksProxyAgent(BINANCE_PROXY_URL); } catch { return undefined; } })()
+  : undefined;
 
 const LOG_PREFIX = "[BinanceWS]";
 const log = (msg: string) => console.log(`${LOG_PREFIX} ${msg}`);
