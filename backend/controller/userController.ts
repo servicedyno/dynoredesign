@@ -1095,8 +1095,14 @@ const resetPassword = async (req: express.Request, res: express.Response) => {
     if (newPassword.length < 6) {
       return errorResponseHelper(res, 400, "Password must be at least 6 characters");
     }
+    
+    // Validate password strength (OWASP)
+    const passwordError = validatePasswordStrength(newPassword);
+    if (passwordError) {
+      return errorResponseHelper(res, 400, passwordError);
+    }
 
-    // Hash the provided token to compare with stored hash
+    // Hash the provided token to compare with stored hash (sha256 is fine for tokens)
     const tokenHash = sha256(token).toString();
 
     // Find user with valid token
