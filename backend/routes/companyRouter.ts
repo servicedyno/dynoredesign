@@ -39,4 +39,9 @@ companyRouter.get("/webhook-history/:id", authMiddleware, companyOwnershipMiddle
 companyRouter.get("/webhook-history/:id/detail/:logId", authMiddleware, companyOwnershipMiddleware, companyController.getWebhookDetail);
 companyRouter.get("/webhook-stats/:id", authMiddleware, companyOwnershipMiddleware, companyController.getWebhookStats);
 
+// Auto-Stablecoin Conversion settings
+companyRouter.get("/auto-convert/:id", authMiddleware, companyOwnershipMiddleware, companyController.getAutoConvertSettings);
+companyRouter.put("/auto-convert/:id", authMiddleware, companyOwnershipMiddleware, companyController.updateAutoConvertSettings);
+companyRouter.get("/conversion-history/:id", authMiddleware, companyOwnershipMiddleware, companyController.getConversionHistory);
+
 export default companyRouter;
