@@ -159,4 +159,87 @@ router.get("/binance-info", async (_req: express.Request, res: express.Response)
   });
 });
 
+/**
+ * GET /diagnostics/binance-balances
+ * List all non-zero balances in the Binance account
+ */
+router.get("/binance-balances", async (_req: express.Request, res: express.Response) => {
+  try {
+    const account: any = await binanceService.getAccountInfo();
+    const nonZero = account.balances
+      .filter((b: any) => parseFloat(b.free) > 0 || parseFloat(b.locked) > 0)
+      .map((b: any) => ({
+        asset: b.asset,
+        free: b.free,
+        locked: b.locked,
+        total: (parseFloat(b.free) + parseFloat(b.locked)).toFixed(8),
+      }));
+    res.status(200).json({ success: true, balances: nonZero, count: nonZero.length });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /diagnostics/binance-sell
+ * Execute a market sell order for testing. Body: { asset: "POL", amount: 10.5 }
+ * Sells to USDT via spot market order.
+ */
+router.post("/binance-sell", async (req: express.Request, res: express.Response) => {
+  try {
+    const { asset, amount } = req.body;
+    if (!asset || !amount) {
+      return res.status(400).json({ success: false, error: "Provide 'asset' and 'amount' in request body" });
+    }
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ success: false, error: "Amount must be a positive number" });
+    }
+
+    // Check balance first
+    const balance = await binanceService.getAssetBalance(asset.toUpperCase());
+    if (balance.free < numAmount) {
+      return res.status(400).json({
+        success: false,
+        error: `Insufficient ${asset} balance. Available: ${balance.free}, Requested: ${numAmount}`,
+      });
+    }
+
+    // Execute spot market sell
+    const result = await binanceService.convertViaSpotTrade(asset, "USDT", numAmount);
+
+    res.status(200).json({
+      success: true,
+      order: {
+        orderId: result.orderId,
+        fromAsset: result.fromAsset,
+        toAsset: result.toAsset,
+        fromAmount: result.fromAmount,
+        toAmount: result.toAmount,
+        avgPrice: result.avgPrice,
+        status: result.status,
+      },
+      message: `Sold ${result.fromAmount} ${result.fromAsset} → ${result.toAmount} USDT @ avg price ${result.avgPrice}`,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /diagnostics/binance-orderbook
+ * Get order book depth for a trading pair
+ */
+router.get("/binance-orderbook", async (req: express.Request, res: express.Response) => {
+  try {
+    const symbol = (req.query.symbol as string) || "BTCUSDT";
+    const limit = parseInt(req.query.limit as string) || 5;
+    const data = await binanceService.getOrderBookDepth(symbol, limit);
+    res.status(200).json({ success: true, ...data });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;
