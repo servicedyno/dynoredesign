@@ -6688,3 +6688,34 @@ ports:
           - ✅ Admin diagnostics endpoints for monitoring and testing
           
           CONCLUSION: Error Monitoring Service is fully operational and production-ready. All 6 verification requirements from the review request have been successfully validated. The system automatically captures errors from all backend sources (email, cron, API, webhooks, database, Redis, blockchain) with proper deduplication, sends 15-minute digest emails to admin, and provides immediate alerts for critical errors.
+  - task: "Fix VolatilityMonitor log flooding — batch errors + rate-limit backoff + error monitoring"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/volatilityMonitorService.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          VOLATILITY MONITOR FIX:
+          Before: 10 individual error lines per 60s cycle = 600+ lines/hour
+          After: 1 summary line per cycle + rate-limit backoff (5-15 min)
+          
+          Changes:
+          1. analyzeAsset no longer logs individual errors — rethrows rate-limit errors (418/429/451)
+          2. runMonitorCycle batches all failures into single summary line
+          3. Rate-limit backoff: on 418/429/451, backs off 5-15 min (exponential)
+          4. Only logs every 10th rate-limited cycle to prevent even summary flooding
+          5. All errors captured via captureError → admin digest email
+          6. Removed per-asset logError calls
+          
+          TESTS:
+          TEST 1: Backend healthy — GET http://localhost:8001/health returns 200
+          TEST 2: TypeScript compiles — cd /app/backend && npx tsc --noEmit exits 0
+          TEST 3: Batch logging — grep 'VolatilityMonitor' /var/log/supervisor/backend.out.log should show summary lines like "Failed: BTC, ETH..." not individual "Failed to analyze BTC:" lines
+          TEST 4: Rate-limit backoff — grep 'Rate limited.*Backing off' /var/log/supervisor/backend.out.log should find the backoff message
+          TEST 5: captureError integrated — grep -c 'captureError' /app/backend/services/volatilityMonitorService.ts should be >= 4
+          Base URL: http://localhost:8001
