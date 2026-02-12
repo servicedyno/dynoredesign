@@ -432,6 +432,7 @@ cron.schedule("*/10 * * * *", async function () {
     await merchantPoolService.checkMissedPayments();
   } catch (err) {
     log(`Cron: Missed payments check failed: ${err.message}`, "error");
+    captureError(err, 'cron', { extraContext: 'checkMissedPayments' });
   } finally {
     await releaseLock("cron:checkMissedPayments");
   }
