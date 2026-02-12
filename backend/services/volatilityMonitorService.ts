@@ -150,10 +150,7 @@ const analyzeAsset = async (asset: string): Promise<MarketState | null> => {
       updatedAt: new Date().toISOString(),
     };
   } catch (err: any) {
-    // Don't log on every cycle for minor failures (e.g., symbol not found)
-    if (!err.message?.includes("Invalid symbol")) {
-      logError(`Failed to analyze ${asset}: ${err.message}`);
-    }
+    // Return null — errors are collected and logged in batch by runMonitorCycle
     return null;
   }
 };
