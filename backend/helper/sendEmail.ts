@@ -1027,6 +1027,7 @@ const sendPaymentLinkReminderEmail = async (
     return info;
   } catch (e) {
     console.log("Payment link reminder email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendPaymentLinkReminderEmail' });
   }
 };
 
