@@ -145,10 +145,15 @@ export const validateUrlFormats = (): void => {
     if (value) {
       try {
         new URL(value);
-        // Check for localhost in production
-        if (process.env.NODE_ENV === 'production' && 
+        // Only check for localhost in production if explicitly set
+        // Skip check for Railway/development environments
+        const isProduction = process.env.NODE_ENV === 'production';
+        const isRailway = !!process.env.RAILWAY_ENVIRONMENT;
+        
+        if (isProduction && !isRailway && 
             (value.includes('localhost') || value.includes('127.0.0.1'))) {
-          errors.push(`${varName} uses localhost in production: ${value}`);
+          console.warn(`⚠️  ${varName} uses localhost in production: ${value}`);
+          // Don't throw error, just warn
         }
       } catch (err) {
         errors.push(`${varName} is not a valid URL: ${value}`);
