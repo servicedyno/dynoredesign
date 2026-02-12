@@ -259,7 +259,7 @@ const sendEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Email send error:", e);
+    console.log("Email send error:", formatEmailError(e));
   }
 };
 
