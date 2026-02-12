@@ -921,7 +921,9 @@ const sendPaymentLinkReminderEmail = async (
 ) => {
   try {
     const baseUrl = process.env.FRONTEND_URL || process.env.CHECKOUT_URL || 'https://dynopay.io';
-    const unsubscribeUrl = `${baseUrl}/api/user/unsubscribe-payment-reminders?token=${unsubscribeToken}`;
+    // Unsubscribe route is a backend API endpoint, so use SERVER_URL (not FRONTEND_URL)
+    const backendUrl = process.env.SERVER_URL || baseUrl;
+    const unsubscribeUrl = `${backendUrl}/api/user/unsubscribe-payment-reminders?token=${unsubscribeToken}`;
     
     let subject: string;
     let urgencyMessage: string;
