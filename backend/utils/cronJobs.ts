@@ -251,6 +251,7 @@ export const triggerWeeklySummary = async (userId?: number) => {
 
   } catch (e) {
     console.error("Trigger weekly summary error:", e);
+    captureError(e, 'cron', { extraContext: 'triggerWeeklySummary' });
     throw e;
   }
 };
