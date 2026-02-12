@@ -260,10 +260,8 @@ export const getMarketState = async (currency: string): Promise<MarketState | nu
   // Try Redis first
   try {
     const key = `${REDIS_KEY_PREFIX}:${asset}`;
-    if (redisClient && redisClient.isReady) {
-      const data = await redisClient.get(key);
-      if (data) return JSON.parse(data);
-    }
+    const data = await getRedisItem(key);
+    if (data) return JSON.parse(data as string);
   } catch {
     // Fall through to memory cache
   }
