@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://eth-usdt-flow.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://proxy-connect-lab.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {
