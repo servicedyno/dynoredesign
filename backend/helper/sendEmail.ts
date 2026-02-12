@@ -1196,7 +1196,7 @@ const sendAutoConversionPayoutEmail = async (
     console.log(`[Email] Auto-conversion payout email sent to ${recipientEmail} (conversion #${conversionId})`);
     return info;
   } catch (e) {
-    console.log("Auto-conversion payout email error:", e);
+    console.log("Auto-conversion payout email error:", formatEmailError(e));
   }
 };
 
