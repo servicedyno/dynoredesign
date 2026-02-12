@@ -294,7 +294,8 @@ const generateWallet = async (currency) => {
           index: 0,
         })
       ).key;
-      console.log(`Derived Private Key [Index ${index}]:`, privateKey);
+      // SECURITY: Private keys must never be logged
+      console.log(`Derived address for index ${index}: ${address}`);
     } else if (currency === "ETH") {
       const wallet = await tatumSdk.blockchain.eth.ethGenerateWallet();
       mnemonic = wallet.mnemonic;
@@ -314,7 +315,8 @@ const generateWallet = async (currency) => {
           index: 0,
         })
       ).key;
-      console.log(`Derived Private Key [Index ${index}]:`, privateKey);
+      // SECURITY: Private keys must never be logged
+      console.log(`Derived ETH address for index ${index}: ${address}`);
     } else if (currency === "TRX") {
       const wallet = await tatumSdk.blockchain.tron.generateTronwallet();
       mnemonic = wallet.mnemonic;
