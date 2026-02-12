@@ -427,6 +427,7 @@ export const setupHealthCheckCron = () => {
       await monitoringService.pruneOldHealthChecks();
     } catch (e) {
       log(`Health Check Pruning Error: ${e}`, "error");
+      captureError(e, 'cron', { extraContext: 'pruneOldHealthChecks' });
     }
   });
 
