@@ -172,18 +172,49 @@ const processConversions = async (): Promise<number> => {
         continue;
       }
 
-      // Get conversion quote via spot market
-      log(`📊 Getting spot price: ${sourceAmount} ${fromAsset} → ${toAsset}`);
+      // Get conversion quote via Limit IOC for best price
+      log(`📊 Selling via Limit IOC: ${sourceAmount} ${fromAsset} → ${toAsset}`);
       await record.update({ status: "CONVERTING" });
 
-      // Execute conversion via spot market order (works with standard canTrade permission)
-      const result = await binanceService.convertViaSpotTrade(fromAsset, toAsset, sourceAmount);
-      log(`✅ Spot trade executed: order #${result.orderId}, ${result.fromAmount} ${fromAsset} → ${result.toAmount} ${toAsset} (avg price: ${result.avgPrice})`);
+      // Execute conversion via Limit IOC (best price with instant fill)
+      const result = await binanceService.convertViaLimitIOC(fromAsset, toAsset, sourceAmount);
+      const actualSaleUsd = parseFloat(result.toAmount);
+      const tradeFeeUsd = actualSaleUsd * 0.001; // Binance 0.1% taker fee (already deducted in fill)
+
+      log(`✅ ${result.method} executed: order #${result.orderId}, ${result.fromAmount} ${fromAsset} → ${result.toAmount} ${toAsset} (avg price: ${result.avgPrice}, fill: ${result.fillPercent.toFixed(1)}%)`);
+
+      // Payout calculation: locked rate vs actual sale
+      const lockedMerchantUsd = parseFloat(data.source_amount_usd || data.locked_merchant_usd || "0");
+      const priceMovementPct = lockedMerchantUsd > 0
+        ? ((actualSaleUsd - lockedMerchantUsd) / lockedMerchantUsd) * 100
+        : 0;
+
+      let platformSurplus = 0;
+      let merchantPayoutPreFees = actualSaleUsd;
+
+      if (actualSaleUsd >= lockedMerchantUsd && lockedMerchantUsd > 0) {
+        // Price went up: merchant gets locked amount, platform keeps surplus
+        platformSurplus = actualSaleUsd - lockedMerchantUsd;
+        merchantPayoutPreFees = lockedMerchantUsd;
+        log(`📈 Price went up ${priceMovementPct.toFixed(2)}%: platform surplus $${platformSurplus.toFixed(4)}`);
+      } else if (lockedMerchantUsd > 0) {
+        // Price dropped: merchant absorbs the loss
+        platformSurplus = 0;
+        merchantPayoutPreFees = actualSaleUsd;
+        log(`📉 Price dropped ${priceMovementPct.toFixed(2)}%: merchant absorbs, gets $${merchantPayoutPreFees.toFixed(2)}`);
+      }
 
       await record.update({
         binance_order_id: String(result.orderId),
         conversion_rate: parseFloat(result.avgPrice),
-        target_amount: parseFloat(result.toAmount),
+        target_amount: actualSaleUsd,
+        actual_sale_usd: actualSaleUsd,
+        platform_surplus: platformSurplus,
+        price_movement_pct: priceMovementPct,
+        trade_fee_usd: tradeFeeUsd,
+        ioc_fill_percent: result.fillPercent,
+        sell_method: result.method,
+        merchant_payout_usd: merchantPayoutPreFees, // Will be updated after withdrawal fee deduction
         status: "CONVERTED",
         converted_at: new Date(),
       });
