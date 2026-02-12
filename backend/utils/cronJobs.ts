@@ -4,6 +4,7 @@ import sequelize from "./dbInstance";
 import { createNotification, NOTIFICATION_TYPES } from "../controller";
 import { notificationPreferencesModel, userTransactionModel } from "../models";
 import { cronLogger, log } from "./loggers";
+import { captureError } from "../services/errorMonitoringService";
 // Unused imports removed from top level - dynamically imported where needed
 
 /**
