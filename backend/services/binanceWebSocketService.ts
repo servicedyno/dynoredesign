@@ -362,6 +362,7 @@ const restFetchKlines = async (asset: string): Promise<KlineCandle[]> => {
 
   try {
     const resp = await axios.get(url, { timeout: 10000, headers: BINANCE_HEADERS, ...(wsProxyAgent ? { httpAgent: wsProxyAgent, httpsAgent: wsProxyAgent } : {}) });
+    const candles: KlineCandle[] = resp.data.map((k: unknown[]) => ({
       openTime: k[0] as number,
       open: parseFloat(k[1] as string),
       high: parseFloat(k[2] as string),
