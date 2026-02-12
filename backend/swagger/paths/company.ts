@@ -908,6 +908,244 @@
  *         description: Authentication required
  *       404:
  *         description: Company not found
+ * 
+ * /api/company/auto-convert/{id}:
+ *   get:
+ *     tags:
+ *       - Auto-Stablecoin Conversion
+ *     summary: Get auto-convert settings
+ *     description: |
+ *       Retrieve auto-stablecoin conversion settings for a company.
+ *       
+ *       When enabled, volatile crypto payments (BTC, ETH, SOL, TRX, etc.) are automatically
+ *       converted to the merchant's chosen stablecoin (USDT or USDC) via Binance,
+ *       then withdrawn to the merchant's settlement wallet.
+ *       
+ *       Stablecoin payments (USDT, USDC, RLUSD) are NOT converted — they go directly
+ *       to the merchant's crypto wallet as normal.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Company ID
+ *         example: 38
+ *     responses:
+ *       200:
+ *         description: Auto-convert settings retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     company_id:
+ *                       type: integer
+ *                       example: 38
+ *                     company_name:
+ *                       type: string
+ *                       example: "My Company"
+ *                     auto_convert_enabled:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether auto-conversion is active
+ *                     settlement_currency:
+ *                       type: string
+ *                       nullable: true
+ *                       enum: [USDT, USDC]
+ *                       example: "USDT"
+ *                       description: Target stablecoin for conversion
+ *                     settlement_wallet_address:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+ *                       description: Merchant's stablecoin wallet address
+ *                     settlement_chain:
+ *                       type: string
+ *                       nullable: true
+ *                       enum: [ERC20, TRC20, POLYGON, BEP20, SOL]
+ *                       example: "ERC20"
+ *                       description: Blockchain network for stablecoin withdrawal
+ *                     valid_currencies:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["USDT", "USDC"]
+ *                     valid_chains:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["ERC20", "TRC20", "POLYGON", "BEP20", "SOL"]
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Company not found
+ *   put:
+ *     tags:
+ *       - Auto-Stablecoin Conversion
+ *     summary: Update auto-convert settings
+ *     description: |
+ *       Enable or disable auto-stablecoin conversion for a company.
+ *       
+ *       **When enabled:**
+ *       - Volatile crypto payments (BTC, ETH, SOL, TRX, LTC, DOGE, BCH, XRP, POLYGON)
+ *         are redirected to admin wallet (Binance deposit address)
+ *       - Binance Convert API converts to chosen stablecoin (USDT/USDC)
+ *       - Stablecoin is withdrawn to merchant's settlement wallet
+ *       - Full audit trail maintained in `tbl_stablecoin_conversion`
+ *       
+ *       **When disabled (or for stablecoins):**
+ *       - Payments go directly to merchant's crypto wallet (normal flow)
+ *       
+ *       **Validation:** All 3 fields (settlement_currency, settlement_wallet_address, settlement_chain) 
+ *       are required when enabling auto-convert.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Company ID
+ *         example: 38
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - auto_convert_enabled
+ *             properties:
+ *               auto_convert_enabled:
+ *                 type: boolean
+ *                 description: Enable/disable auto-conversion
+ *                 example: true
+ *               settlement_currency:
+ *                 type: string
+ *                 enum: [USDT, USDC]
+ *                 description: "Target stablecoin (required when enabling)"
+ *                 example: "USDT"
+ *               settlement_wallet_address:
+ *                 type: string
+ *                 description: "Merchant's stablecoin wallet address (required when enabling)"
+ *                 example: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+ *               settlement_chain:
+ *                 type: string
+ *                 enum: [ERC20, TRC20, POLYGON, BEP20, SOL]
+ *                 description: "Blockchain network for withdrawal (required when enabling)"
+ *                 example: "ERC20"
+ *     responses:
+ *       200:
+ *         description: Settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     auto_convert_enabled:
+ *                       type: boolean
+ *                     settlement_currency:
+ *                       type: string
+ *                     settlement_wallet_address:
+ *                       type: string
+ *                     settlement_chain:
+ *                       type: string
+ *       400:
+ *         description: Invalid settlement_currency, missing wallet address, or invalid chain
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Company not found
+ * 
+ * /api/company/conversion-history/{id}:
+ *   get:
+ *     tags:
+ *       - Auto-Stablecoin Conversion
+ *     summary: Get conversion history
+ *     description: |
+ *       Retrieve paginated stablecoin conversion history for a company.
+ *       
+ *       Each record tracks the full lifecycle:
+ *       - `PENDING_DEPOSIT` — Crypto sent to admin wallet (Binance), waiting for deposit credit
+ *       - `DEPOSIT_CREDITED` — Binance credited the deposit
+ *       - `CONVERTING` — Binance Convert quote requested
+ *       - `CONVERTED` — Conversion complete, stablecoin in Binance balance
+ *       - `WITHDRAWING` — Withdrawal to merchant wallet initiated
+ *       - `COMPLETED` — Stablecoin delivered to merchant
+ *       - `FAILED` — Error (retryable)
+ *       
+ *       **Filter by status:** Use `?status=COMPLETED` to see only completed conversions.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Company ID
+ *         example: 38
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Items per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING_DEPOSIT, DEPOSIT_CREDITED, CONVERTING, CONVERTED, WITHDRAWING, COMPLETED, FAILED]
+ *         description: Filter by conversion status
+ *     responses:
+ *       200:
+ *         description: Conversion history retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     conversions:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/StablecoinConversion'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Company not found
  */
 
 export const companyPaths = {};
