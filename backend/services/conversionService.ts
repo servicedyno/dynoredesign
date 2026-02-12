@@ -561,8 +561,165 @@ export const createConversionRecord = async ({
   return record;
 };
 
+// ============================================
+// Weekly Conversion Summary (Cron: Monday 9:30 AM UTC)
+// ============================================
+
+export const sendWeeklyConversionSummaries = async (): Promise<number> => {
+  log("📊 Generating weekly conversion summaries...");
+
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 7);
+
+  // Get all companies that had conversions this week
+  const companiesWithConversions: any[] = await stablecoinConversionModel.findAll({
+    attributes: [
+      "company_id",
+      "user_id",
+      [fn("COUNT", col("conversion_id")), "total_conversions"],
+    ],
+    where: {
+      status: "COMPLETED",
+      completed_at: { [Op.between]: [startDate, endDate] },
+    },
+    group: ["company_id", "user_id"],
+    raw: true,
+  });
+
+  if (companiesWithConversions.length === 0) {
+    log("📊 No conversions this week, skipping summary emails");
+    return 0;
+  }
+
+  let sent = 0;
+
+  for (const entry of companiesWithConversions) {
+    try {
+      const user: any = await userModel.findOne({ where: { id: entry.user_id }, raw: true });
+      const company: any = await companyModel.findOne({ where: { id: entry.company_id }, raw: true });
+
+      if (!user?.email) continue;
+
+      // Get all completed conversions for this company this week
+      const conversions: any[] = await stablecoinConversionModel.findAll({
+        where: {
+          company_id: entry.company_id,
+          status: "COMPLETED",
+          completed_at: { [Op.between]: [startDate, endDate] },
+        },
+        raw: true,
+      });
+
+      // Aggregate stats
+      let totalSourceUsd = 0;
+      let totalPayoutUsd = 0;
+      let totalVolatile = 0;
+      let movementSum = 0;
+      const cryptoMap: Record<string, { count: number; totalAmount: number; totalPayout: number; movementSum: number }> = {};
+      const dailyMap: Record<string, number> = {};
+
+      for (const c of conversions) {
+        const srcUsd = parseFloat(c.source_amount_usd || c.locked_merchant_usd || "0");
+        const payout = parseFloat(c.merchant_payout_usd || c.target_amount || "0");
+        const movement = parseFloat(c.price_movement_pct || "0");
+        const isVol = ["VOLATILE", "DECLINING"].includes(c.market_state_at_sweep || "");
+
+        totalSourceUsd += srcUsd;
+        totalPayoutUsd += payout;
+        movementSum += movement;
+        if (isVol) totalVolatile++;
+
+        // Crypto breakdown
+        const curr = c.source_currency;
+        if (!cryptoMap[curr]) cryptoMap[curr] = { count: 0, totalAmount: 0, totalPayout: 0, movementSum: 0 };
+        cryptoMap[curr].count++;
+        cryptoMap[curr].totalAmount += parseFloat(c.source_amount || "0");
+        cryptoMap[curr].totalPayout += payout;
+        cryptoMap[curr].movementSum += movement;
+
+        // Daily volume
+        const dayKey = new Date(c.completed_at).toISOString().split("T")[0];
+        dailyMap[dayKey] = (dailyMap[dayKey] || 0) + payout;
+      }
+
+      // Build crypto breakdown array
+      const cryptoBreakdown = Object.entries(cryptoMap).map(([currency, data]) => ({
+        currency,
+        count: data.count,
+        totalAmount: data.totalAmount.toFixed(8),
+        totalPayoutUsd: data.totalPayout,
+        avgMovementPct: data.count > 0 ? data.movementSum / data.count : 0,
+      })).sort((a, b) => b.totalPayoutUsd - a.totalPayoutUsd);
+
+      // Build daily volume array (last 7 days)
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const dailyVolume: Array<{ day: string; label: string; payoutUsd: number }> = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(endDate);
+        d.setDate(d.getDate() - i);
+        const dayKey = d.toISOString().split("T")[0];
+        dailyVolume.push({
+          day: dayKey,
+          label: dayNames[d.getDay()],
+          payoutUsd: dailyMap[dayKey] || 0,
+        });
+      }
+
+      // Calculate savings: fetch current prices and compare
+      let totalSavedUsd = 0;
+      for (const c of conversions) {
+        const convRate = parseFloat(c.conversion_rate || "0");
+        const payout = parseFloat(c.merchant_payout_usd || c.target_amount || "0");
+        if (convRate <= 0 || payout <= 0) continue;
+
+        try {
+          const fromAsset = binanceService.default.toBinanceAsset(c.source_currency);
+          const quote = await binanceService.getSpotQuote(fromAsset, "USDT", 1);
+          const currentPrice = parseFloat(quote.price);
+          const priceDiff = ((currentPrice - convRate) / convRate) * 100;
+          if (priceDiff < -0.1) {
+            totalSavedUsd += Math.abs(priceDiff / 100) * payout;
+          }
+        } catch {
+          // Can't fetch price, skip savings calc for this one
+        }
+      }
+
+      const avgMovement = conversions.length > 0 ? movementSum / conversions.length : 0;
+
+      await sendWeeklyConversionSummaryEmail(
+        user.email,
+        user.name || "Merchant",
+        company?.company_name || "Your Company",
+        {
+          periodStart: startDate.toISOString().split("T")[0],
+          periodEnd: endDate.toISOString().split("T")[0],
+          totalConversions: conversions.length,
+          totalSourceUsd,
+          totalPayoutUsd,
+          totalSavedUsd,
+          totalVolatileConversions: totalVolatile,
+          avgPriceMovementPct: avgMovement,
+          cryptoBreakdown,
+          dailyVolume,
+        }
+      );
+
+      log(`📧 Weekly summary sent to ${user.email} (${conversions.length} conversions, $${totalPayoutUsd.toFixed(2)} payout)`);
+      sent++;
+    } catch (err) {
+      logError(`Error sending weekly summary for company #${entry.company_id}`, err);
+    }
+  }
+
+  log(`📊 Weekly summaries sent: ${sent}/${companiesWithConversions.length}`);
+  return sent;
+};
+
 export default {
   processStablecoinConversions,
   getConversionStats,
   createConversionRecord,
+  sendWeeklyConversionSummaries,
 };
