@@ -817,6 +817,7 @@ const sendAdminFeeSweepEmail = async (
     return info;
   } catch (e) {
     console.log("Admin fee sweep email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendAdminFeeSweepEmail' });
   }
 };
 
