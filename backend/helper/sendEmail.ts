@@ -616,7 +616,7 @@ const sendPaymentPartialEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Payment partial email error:", e);
+    console.log("Payment partial email error:", formatEmailError(e));
   }
 };
 
