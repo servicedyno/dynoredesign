@@ -102,8 +102,8 @@ def test_2_user_registration() -> bool:
             login_data = {"email": TEST_USER["email"], "password": TEST_USER["password"]}
             status_code, data = make_request("POST", f"{API_BASE}/user/login", data=login_data)
             
-            if status_code == 200 and "data" in data and "token" in data["data"]:
-                auth_token = data["data"]["token"]
+            if status_code == 200 and "data" in data and "accessToken" in data["data"]:
+                auth_token = data["data"]["accessToken"]
                 return log_test("2 - User Registration", True, f"User registered/logged in successfully")
             else:
                 return log_test("2 - User Registration", False, f"Login failed after registration: {data}")
