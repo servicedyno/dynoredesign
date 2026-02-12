@@ -1402,6 +1402,7 @@ const sendWeeklyConversionSummaryEmail = async (
     return info;
   } catch (e) {
     console.log("Weekly conversion summary email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendWeeklyConversionSummaryEmail' });
   }
 };
 
