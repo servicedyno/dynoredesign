@@ -1408,9 +1408,23 @@ const getAutoConvertSettings = async (
 };
 
 /**
+ * Map settlement_currency + settlement_chain to the wallet_type stored in tbl_user_wallet.
+ * e.g. ("USDT", "TRC20") → "USDT-TRC20"
+ *      ("USDC", "ERC20") → "USDC-ERC20"
+ *      ("USDT", "POLYGON") → "USDT-POLYGON"
+ *      ("USDT", "ERC20") → "USDT-ERC20"
+ */
+const mapSettlementToWalletType = (currency: string, chain: string): string => {
+  return `${currency}-${chain}`;
+};
+
+/**
  * Update auto-convert settings for a company
  * PUT /api/company/auto-convert/:id
- * Body: { auto_convert_enabled, settlement_currency, settlement_wallet_address, settlement_chain }
+ * Body: { auto_convert_enabled, settlement_currency, settlement_chain }
+ *
+ * settlement_wallet_address is auto-resolved from the company's existing wallets.
+ * The merchant must have already added a wallet matching the chosen currency+chain.
  */
 const updateAutoConvertSettings = async (
   req: express.Request,
@@ -1418,7 +1432,7 @@ const updateAutoConvertSettings = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   const { id } = req.params;
-  const { auto_convert_enabled, settlement_currency, settlement_wallet_address, settlement_chain } = req.body;
+  const { auto_convert_enabled, settlement_currency, settlement_chain } = req.body;
 
   try {
     const company = await companyModel.findOne({
@@ -1438,9 +1452,6 @@ const updateAutoConvertSettings = async (
           `settlement_currency must be one of: ${VALID_SETTLEMENT_CURRENCIES.join(", ")}`
         );
       }
-      if (!settlement_wallet_address || settlement_wallet_address.length < 10) {
-        return errorResponseHelper(res, 400, "Valid settlement_wallet_address is required");
-      }
       if (!settlement_chain || !VALID_SETTLEMENT_CHAINS.includes(settlement_chain)) {
         return errorResponseHelper(
           res,
@@ -1448,24 +1459,58 @@ const updateAutoConvertSettings = async (
           `settlement_chain must be one of: ${VALID_SETTLEMENT_CHAINS.join(", ")}`
         );
       }
+
+      // Auto-resolve settlement_wallet_address from company's existing wallets
+      const walletType = mapSettlementToWalletType(settlement_currency, settlement_chain);
+      const existingWallet = await userWalletModel.findOne({
+        where: {
+          company_id: parseInt(id),
+          wallet_type: walletType,
+        },
+        attributes: ["wallet_address"],
+      });
+
+      if (!existingWallet || !existingWallet.dataValues.wallet_address) {
+        return errorResponseHelper(
+          res,
+          400,
+          `No ${walletType} wallet found for this company. Please add a ${walletType} wallet first before enabling auto-conversion.`
+        );
+      }
+
+      const resolvedAddress = existingWallet.dataValues.wallet_address;
+
+      await company.update({
+        auto_convert_enabled: true,
+        settlement_currency,
+        settlement_wallet_address: resolvedAddress,
+        settlement_chain,
+      });
+
+      console.log(
+        `[AutoConvert] Company ${id} settings updated: enabled=true, currency=${settlement_currency}, chain=${settlement_chain}, wallet=${resolvedAddress.substring(0, 12)}...`
+      );
+
+      return successResponseHelper(res, 200, "Auto-convert settings updated", {
+        auto_convert_enabled: true,
+        settlement_currency,
+        settlement_wallet_address: resolvedAddress,
+        settlement_chain,
+      });
     }
 
+    // Disabling auto-convert — just turn it off
     await company.update({
-      auto_convert_enabled: auto_convert_enabled || false,
-      settlement_currency: settlement_currency || null,
-      settlement_wallet_address: settlement_wallet_address || null,
-      settlement_chain: settlement_chain || null,
+      auto_convert_enabled: false,
     });
 
-    console.log(
-      `[AutoConvert] Company ${id} settings updated: enabled=${auto_convert_enabled}, currency=${settlement_currency}, chain=${settlement_chain}`
-    );
+    console.log(`[AutoConvert] Company ${id} auto-convert disabled`);
 
     successResponseHelper(res, 200, "Auto-convert settings updated", {
-      auto_convert_enabled: auto_convert_enabled || false,
-      settlement_currency,
-      settlement_wallet_address,
-      settlement_chain,
+      auto_convert_enabled: false,
+      settlement_currency: company.dataValues.settlement_currency,
+      settlement_wallet_address: company.dataValues.settlement_wallet_address,
+      settlement_chain: company.dataValues.settlement_chain,
     });
   } catch (e) {
     const errorMessage = getErrorMessage(e);
