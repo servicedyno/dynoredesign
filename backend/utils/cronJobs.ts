@@ -250,7 +250,6 @@ export const triggerWeeklySummary = async (userId?: number) => {
     return results;
 
   } catch (e) {
-    console.error("Trigger weekly summary error:", e);
     captureError(e, 'cron', { extraContext: 'triggerWeeklySummary' });
     throw e;
   }
@@ -395,7 +394,6 @@ export const triggerWalletReminder = async (userId?: number) => {
     return results;
 
   } catch (e) {
-    console.error("Trigger wallet reminder error:", e);
     captureError(e, 'cron', { extraContext: 'triggerWalletReminder' });
     throw e;
   }
