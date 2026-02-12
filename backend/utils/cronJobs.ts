@@ -835,6 +835,7 @@ export const setupPaymentLinkReminderCron = () => {
       const err = e as { message?: string };
       log(`Payment Link Reminder Cron Job Error: ${err.message}`, "error");
       cronLogger?.error?.("Payment Link Reminder Cron Error", {}, new Error(err.message));
+      captureError(e, 'cron', { extraContext: 'setupPaymentLinkReminderCron' });
     }
   });
   
