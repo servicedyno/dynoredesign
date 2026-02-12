@@ -1429,5 +1429,187 @@ Wallet address is saved and ready to receive payments!`,
         }
       }
     }
-  }
+  },
+  '/api/wallet/getWalletAddresses': {
+    get: {
+      tags: ['Wallet Address Management'],
+      summary: 'Get all wallet addresses',
+      description: 'Get all configured wallet addresses for the authenticated user.',
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: { description: 'List of wallet addresses', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, data: { type: 'array', items: { $ref: '#/components/schemas/WalletAddress' } } } } } } },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
+  '/api/wallet/addWalletAddress': {
+    post: {
+      tags: ['Wallet Address Management'],
+      summary: 'Add a new wallet address',
+      description: 'Add a new cryptocurrency wallet address for receiving payments. Requires OTP verification.',
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/AddWalletAddressRequest' },
+          },
+        },
+      },
+      responses: {
+        200: { description: 'Wallet address added', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' }, data: { $ref: '#/components/schemas/WalletAddress' } } } } } },
+        400: { description: 'Invalid wallet address or currency' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
+  '/api/wallet/address/send-otp': {
+    post: {
+      tags: ['Wallet Address Management'],
+      summary: 'Send OTP for wallet address edit',
+      description: 'Send OTP to the user email before editing a wallet address.',
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', properties: { address_id: { type: 'integer' } } } } },
+      },
+      responses: {
+        200: { description: 'OTP sent successfully' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
+  '/api/wallet/address/delete/send-otp': {
+    post: {
+      tags: ['Wallet Address Management'],
+      summary: 'Send OTP for wallet address deletion',
+      description: 'Send OTP to verify before deleting a wallet address.',
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', properties: { address_id: { type: 'integer' } } } } },
+      },
+      responses: {
+        200: { description: 'OTP sent' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
+  '/api/wallet/deleteWalletAddress': {
+    post: {
+      tags: ['Wallet Address Management'],
+      summary: 'Delete wallet address',
+      description: 'Delete a wallet address after OTP verification.',
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', required: ['address_id', 'otp'], properties: { address_id: { type: 'integer' }, otp: { type: 'string', example: '123456' } } } } },
+      },
+      responses: {
+        200: { description: 'Wallet address deleted' },
+        400: { description: 'Invalid OTP' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
+  '/api/wallet/sendConfirmationOTP': {
+    post: {
+      tags: ['Transactions'],
+      summary: 'Send confirmation OTP',
+      description: 'Send OTP for transaction confirmation.',
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: { description: 'OTP sent' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
+  '/api/wallet/withdrawAssets': {
+    post: {
+      tags: ['Transactions'],
+      summary: 'Withdraw crypto assets',
+      description: 'Withdraw cryptocurrency from wallet to an external address.',
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['currency', 'amount', 'to_address'],
+              properties: {
+                currency: { type: 'string', example: 'BTC' },
+                amount: { type: 'number', example: 0.01 },
+                to_address: { type: 'string', example: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' },
+                otp: { type: 'string', example: '123456' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: { description: 'Withdrawal initiated', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, data: { type: 'object', properties: { tx_hash: { type: 'string' }, amount: { type: 'number' }, currency: { type: 'string' } } } } } } } },
+        400: { description: 'Insufficient balance or invalid params' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
+  '/api/wallet/exchangeCreate': {
+    post: {
+      tags: ['Transactions'],
+      summary: 'Create currency exchange',
+      description: 'Create a new currency exchange request between two cryptocurrencies.',
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['from_currency', 'to_currency', 'amount'],
+              properties: {
+                from_currency: { type: 'string', example: 'BTC' },
+                to_currency: { type: 'string', example: 'USDT' },
+                amount: { type: 'number', example: 0.1 },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: { description: 'Exchange quote created', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, data: { type: 'object', properties: { exchange_id: { type: 'string' }, from_currency: { type: 'string' }, to_currency: { type: 'string' }, from_amount: { type: 'number' }, to_amount: { type: 'number' }, rate: { type: 'number' }, expires_at: { type: 'string', format: 'date-time' } } } } } } } },
+        400: { description: 'Invalid exchange parameters' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
+  '/api/wallet/confirmExchange': {
+    post: {
+      tags: ['Transactions'],
+      summary: 'Confirm currency exchange',
+      description: 'Confirm and execute a previously created exchange quote.',
+      security: [{ BearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object', required: ['exchange_id'], properties: { exchange_id: { type: 'string' } } } } },
+      },
+      responses: {
+        200: { description: 'Exchange executed', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' }, data: { type: 'object', properties: { from_amount: { type: 'number' }, to_amount: { type: 'number' }, tx_hash: { type: 'string' } } } } } } } },
+        400: { description: 'Exchange expired or invalid' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
+  '/api/wallet/getExchange': {
+    get: {
+      tags: ['Transactions'],
+      summary: 'Get exchange information',
+      description: 'Get available exchange pairs and current rates.',
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: { description: 'Exchange information' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
 };
