@@ -1,254 +1,178 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Security Audit Testing Suite
-Tests 14 OWASP compliance fixes including bcrypt, XSS sanitization, 
-global error handling, graceful shutdown, and more.
+Email Bug Fixes Testing Script
+Tests the 6 verification requirements for email bug fixes in DynoPay backend
 """
 
 import requests
 import subprocess
-import os
 import sys
-from typing import Dict, Any, Tuple
+import re
 
-# Use the correct backend URL from environment
-BASE_URL = "http://localhost:8001"
-
-def log_test(test_name: str, passed: bool, details: str = ""):
-    """Log test results with emoji indicators"""
-    icon = "✅" if passed else "❌"
-    print(f"{icon} TEST {test_name}: {'PASS' if passed else 'FAIL'}")
-    if details:
-        print(f"   {details}")
-    return passed
-
-def run_command(cmd: str, cwd: str = None) -> Tuple[int, str, str]:
-    """Run shell command and return exit code, stdout, stderr"""
+def test_backend_health():
+    """Test 1: GET http://localhost:8001/health — returns 200 with status "healthy" """
     try:
-        result = subprocess.run(
-            cmd, shell=True, cwd=cwd, 
-            capture_output=True, text=True, timeout=30
-        )
-        return result.returncode, result.stdout, result.stderr
-    except subprocess.TimeoutExpired:
-        return 1, "", "Command timed out"
-    except Exception as e:
-        return 1, "", str(e)
-
-def test_health_endpoint() -> bool:
-    """TEST 1: GET /health returns 200 with status "healthy" """
-    try:
-        response = requests.get(f"{BASE_URL}/health", timeout=10)
+        response = requests.get('http://localhost:8001/health', timeout=10)
         if response.status_code == 200:
             data = response.json()
-            if data.get("status") == "healthy":
-                return log_test("1", True, f"Health check passed: {data.get('service', 'N/A')}")
+            if data.get('status') == 'healthy':
+                print("✅ TEST 1 PASSED: Backend health check returns 200 with status 'healthy'")
+                return True
             else:
-                return log_test("1", False, f"Status not healthy: {data}")
+                print(f"❌ TEST 1 FAILED: Backend health status is '{data.get('status')}', expected 'healthy'")
+                return False
         else:
-            return log_test("1", False, f"HTTP {response.status_code}: {response.text}")
+            print(f"❌ TEST 1 FAILED: Backend health returns status code {response.status_code}, expected 200")
+            return False
     except Exception as e:
-        return log_test("1", False, f"Request failed: {str(e)}")
+        print(f"❌ TEST 1 FAILED: Backend health check error: {e}")
+        return False
 
-def test_diagnostics_protected() -> bool:
-    """TEST 2: GET /diagnostics/fee-optimization returns 403 (no auth, diagnostics now protected)"""
+def test_typescript_compilation():
+    """Test 2: TypeScript compilation: cd /app/backend && npx tsc --noEmit — exits 0"""
     try:
-        response = requests.get(f"{BASE_URL}/diagnostics/fee-optimization", timeout=10)
-        if response.status_code == 403:
-            return log_test("2", True, "Diagnostics endpoint properly protected (returns 403 without auth)")
+        result = subprocess.run(['npx', 'tsc', '--noEmit'], 
+                              cwd='/app/backend', 
+                              capture_output=True, 
+                              text=True,
+                              timeout=60)
+        if result.returncode == 0:
+            print("✅ TEST 2 PASSED: TypeScript compilation exits with code 0")
+            return True
         else:
-            return log_test("2", False, f"Expected 403, got {response.status_code}")
+            print(f"❌ TEST 2 FAILED: TypeScript compilation exits with code {result.returncode}")
+            print(f"Stderr: {result.stderr}")
+            return False
     except Exception as e:
-        return log_test("2", False, f"Request failed: {str(e)}")
+        print(f"❌ TEST 2 FAILED: TypeScript compilation error: {e}")
+        return False
 
-def test_correlation_id_header() -> bool:
-    """TEST 3: POST /api/v1/user/login should have X-Request-ID header (correlation ID)"""
+def test_format_email_error_exists():
+    """Test 3: formatEmailError function exists: grep -c 'formatEmailError' should find >= 16 occurrences"""
     try:
-        # Make POST request to login endpoint (it will return error but should have X-Request-ID header)
-        response = requests.post(f"{BASE_URL}/api/v1/user/login", json={}, timeout=10)
-        
-        # Check if X-Request-ID header is present
-        request_id = response.headers.get('X-Request-ID')
-        if request_id:
-            return log_test("3", True, f"X-Request-ID header found: {request_id[:8]}...")
+        result = subprocess.run(['grep', '-c', 'formatEmailError', '/app/backend/helper/sendEmail.ts'], 
+                              capture_output=True, 
+                              text=True)
+        if result.returncode == 0:
+            count = int(result.stdout.strip())
+            if count >= 16:
+                print(f"✅ TEST 3 PASSED: formatEmailError found {count} times (>= 16 required)")
+                return True
+            else:
+                print(f"❌ TEST 3 FAILED: formatEmailError found {count} times (< 16 required)")
+                return False
         else:
-            return log_test("3", False, f"X-Request-ID header not found in response headers: {list(response.headers.keys())}")
+            print(f"❌ TEST 3 FAILED: grep command failed with return code {result.returncode}")
+            return False
     except Exception as e:
-        return log_test("3", False, f"Request failed: {str(e)}")
+        print(f"❌ TEST 3 FAILED: formatEmailError search error: {e}")
+        return False
 
-def test_csp_header() -> bool:
-    """TEST 4: GET /health should have content-security-policy header (CSP directives, not 'false')"""
+def test_no_raw_error_dumps():
+    """Test 4: No raw error dumps left: grep -c 'console.log.*", e)' should return 0"""
     try:
-        response = requests.get(f"{BASE_URL}/health", timeout=10)
-        
-        # Check for CSP header
-        csp_header = response.headers.get('content-security-policy') or response.headers.get('Content-Security-Policy')
-        if csp_header and csp_header.lower() != 'false':
-            return log_test("4", True, f"CSP header found with directives: {csp_header[:50]}...")
+        result = subprocess.run(['grep', '-c', 'console.log.*", e)', '/app/backend/helper/sendEmail.ts'], 
+                              capture_output=True, 
+                              text=True)
+        # When grep finds 0 matches, it returns exit code 1
+        if result.returncode == 1 and result.stdout.strip() == '':
+            print("✅ TEST 4 PASSED: No raw error dumps found (0 occurrences of old pattern)")
+            return True
+        elif result.returncode == 0:
+            count = int(result.stdout.strip())
+            print(f"❌ TEST 4 FAILED: Found {count} raw error dumps (should be 0)")
+            return False
         else:
-            return log_test("4", False, f"CSP header not found or set to 'false'. Headers: {list(response.headers.keys())}")
+            print(f"❌ TEST 4 FAILED: grep command failed with unexpected return code {result.returncode}")
+            return False
     except Exception as e:
-        return log_test("4", False, f"Request failed: {str(e)}")
+        print(f"❌ TEST 4 FAILED: Raw error dump search error: {e}")
+        return False
 
-def test_bcrypt_import_usage() -> bool:
-    """TEST 5: grep 'bcrypt' passwordHelper.ts - should find bcrypt import and usage"""
-    exit_code, stdout, stderr = run_command("grep 'bcrypt' /app/backend/helper/passwordHelper.ts")
-    if exit_code == 0 and stdout:
-        # Count occurrences - should have import, hashSync, compareSync
-        lines = stdout.strip().split('\n')
-        if len(lines) >= 2:  # At least import + usage
-            return log_test("5", True, f"bcrypt found {len(lines)} times: import and usage detected")
+def test_unsubscribe_uses_server_url():
+    """Test 5: Unsubscribe URL uses SERVER_URL: grep 'SERVER_URL' should find the backendUrl variable"""
+    try:
+        result = subprocess.run(['grep', 'SERVER_URL', '/app/backend/helper/sendEmail.ts'], 
+                              capture_output=True, 
+                              text=True)
+        if result.returncode == 0:
+            lines = result.stdout.strip().split('\n')
+            # Look for the backendUrl assignment that uses SERVER_URL
+            for line in lines:
+                if 'backendUrl' in line and 'SERVER_URL' in line:
+                    print("✅ TEST 5 PASSED: Unsubscribe URL uses SERVER_URL (found backendUrl variable)")
+                    return True
+            print("❌ TEST 5 FAILED: SERVER_URL found but not in backendUrl context")
+            print(f"Found: {lines}")
+            return False
         else:
-            return log_test("5", False, f"bcrypt found only {len(lines)} time(s), expected at least 2")
-    else:
-        return log_test("5", False, "bcrypt not found in passwordHelper.ts")
+            print("❌ TEST 5 FAILED: SERVER_URL not found in sendEmail.ts")
+            return False
+    except Exception as e:
+        print(f"❌ TEST 5 FAILED: SERVER_URL search error: {e}")
+        return False
 
-def test_password_functions_usage() -> bool:
-    """TEST 6: grep 'hashPassword|verifyPassword' userController.ts - should find at least 8 occurrences"""
-    exit_code, stdout, stderr = run_command("grep -E 'hashPassword|verifyPassword' /app/backend/controller/userController.ts")
-    if exit_code == 0 and stdout:
-        lines = stdout.strip().split('\n')
-        occurrences = len(lines)
-        if occurrences >= 8:
-            return log_test("6", True, f"Password functions found {occurrences} times (≥8 required)")
+def test_error_formatter_extracts_response():
+    """Test 6: Error formatter extracts response status/data"""
+    try:
+        result = subprocess.run(['grep', 'response.*status\\|response.*data', '/app/backend/helper/sendEmail.ts'], 
+                              capture_output=True, 
+                              text=True)
+        if result.returncode == 0:
+            lines = result.stdout.strip().split('\n')
+            has_status = any('status' in line for line in lines)
+            has_data = any('data' in line for line in lines)
+            if has_status and has_data:
+                print("✅ TEST 6 PASSED: Error formatter extracts both response status and data")
+                return True
+            else:
+                print(f"❌ TEST 6 FAILED: Missing status ({has_status}) or data ({has_data}) extraction")
+                return False
         else:
-            return log_test("6", False, f"Password functions found {occurrences} times, expected ≥8")
-    else:
-        return log_test("6", False, "hashPassword/verifyPassword not found in userController.ts")
-
-def test_sanitize_middleware() -> bool:
-    """TEST 7: grep 'sanitizeInputMiddleware' server.ts - should find middleware import and usage"""
-    exit_code, stdout, stderr = run_command("grep 'sanitizeInputMiddleware' /app/backend/server.ts")
-    if exit_code == 0 and stdout:
-        lines = stdout.strip().split('\n')
-        if len(lines) >= 2:  # Import + usage
-            return log_test("7", True, f"sanitizeInputMiddleware found {len(lines)} times: import and usage")
-        else:
-            return log_test("7", False, f"sanitizeInputMiddleware found {len(lines)} time(s), expected at least 2")
-    else:
-        return log_test("7", False, "sanitizeInputMiddleware not found in server.ts")
-
-def test_request_logger_middleware() -> bool:
-    """TEST 8: grep 'requestLoggerMiddleware' server.ts - should find middleware import and usage"""
-    exit_code, stdout, stderr = run_command("grep 'requestLoggerMiddleware' /app/backend/server.ts")
-    if exit_code == 0 and stdout:
-        lines = stdout.strip().split('\n')
-        if len(lines) >= 2:  # Import + usage
-            return log_test("8", True, f"requestLoggerMiddleware found {len(lines)} times: import and usage")
-        else:
-            return log_test("8", False, f"requestLoggerMiddleware found {len(lines)} time(s), expected at least 2")
-    else:
-        return log_test("8", False, "requestLoggerMiddleware not found in server.ts")
-
-def test_trust_proxy() -> bool:
-    """TEST 9: grep 'trust proxy' server.ts - should find app.set('trust proxy', 1)"""
-    exit_code, stdout, stderr = run_command("grep 'trust proxy' /app/backend/server.ts")
-    if exit_code == 0 and stdout and "trust proxy" in stdout:
-        return log_test("9", True, f"Trust proxy configuration found: {stdout.strip()}")
-    else:
-        return log_test("9", False, "Trust proxy configuration not found in server.ts")
-
-def test_db_pool_config() -> bool:
-    """TEST 10: grep 'pool' dbInstance.ts - should find pool configuration with max, min, idle"""
-    exit_code, stdout, stderr = run_command("grep -A3 -B1 'poolConfig' /app/backend/utils/dbInstance.ts")
-    if exit_code == 0 and stdout:
-        # Check for pool configuration keywords in the poolConfig object
-        pool_content = stdout.lower()
-        if 'max:' in pool_content and 'min:' in pool_content and 'idle:' in pool_content:
-            return log_test("10", True, f"DB pool configuration found with max, min, idle parameters")
-        else:
-            return log_test("10", False, f"Pool config found but missing required parameters. Found: {stdout[:100]}...")
-    else:
-        return log_test("10", False, "DB pool configuration not found in dbInstance.ts")
-
-def test_graceful_shutdown() -> bool:
-    """TEST 11: grep 'gracefulShutdown|SIGTERM|SIGINT' server.ts - should find signal handlers"""
-    exit_code, stdout, stderr = run_command("grep -E 'gracefulShutdown|SIGTERM|SIGINT' /app/backend/server.ts")
-    if exit_code == 0 and stdout:
-        lines = stdout.strip().split('\n')
-        # Should find gracefulShutdown function + SIGTERM + SIGINT handlers
-        if len(lines) >= 3:
-            return log_test("11", True, f"Graceful shutdown handlers found: {len(lines)} patterns")
-        else:
-            return log_test("11", False, f"Partial graceful shutdown found: {len(lines)} patterns, expected ≥3")
-    else:
-        return log_test("11", False, "Graceful shutdown handlers not found in server.ts")
-
-def test_token_expires_headers_removed() -> bool:
-    """TEST 12: grep 'X-Token-Expires' authMiddleware.ts - should return EMPTY (headers removed)"""
-    exit_code, stdout, stderr = run_command("grep 'X-Token-Expires' /app/backend/middleware/authMiddleware.ts")
-    if exit_code != 0 or not stdout.strip():
-        return log_test("12", True, "X-Token-Expires headers successfully removed (no matches found)")
-    else:
-        return log_test("12", False, f"X-Token-Expires headers still present: {stdout.strip()}")
-
-def test_webhook_endpoint_removed() -> bool:
-    """TEST 13: grep 'test-webhook' routes/index.ts - should return EMPTY (endpoint removed)"""
-    exit_code, stdout, stderr = run_command("grep 'test-webhook' /app/backend/routes/index.ts")
-    if exit_code != 0 or not stdout.strip():
-        return log_test("13", True, "test-webhook endpoint successfully removed (no matches found)")
-    else:
-        return log_test("13", False, f"test-webhook endpoint still present: {stdout.strip()}")
-
-def test_password_strength_rules() -> bool:
-    """TEST 14: grep password strength rules in userMiddleware.ts - should find min(8), lowercase, uppercase, digit"""
-    exit_code, stdout, stderr = run_command("grep -E 'min\\(8\\)|pattern.*lowercase|pattern.*uppercase|pattern.*digit' /app/backend/middleware/userMiddleware.ts")
-    if exit_code == 0 and stdout:
-        lines = stdout.strip().split('\n')
-        # Should find multiple password validation rules
-        if len(lines) >= 2:
-            return log_test("14", True, f"Password strength rules found: {len(lines)} validation patterns")
-        else:
-            return log_test("14", False, f"Limited password rules found: {len(lines)} pattern(s), expected multiple")
-    else:
-        return log_test("14", False, "Password strength validation rules not found in userMiddleware.ts")
+            print("❌ TEST 6 FAILED: No response status/data extraction found")
+            return False
+    except Exception as e:
+        print(f"❌ TEST 6 FAILED: Response extraction search error: {e}")
+        return False
 
 def main():
-    """Run all security audit tests and provide summary"""
-    print("🔒 DYNOPAY SECURITY AUDIT VERIFICATION TESTING")
-    print("=" * 65)
-    print(f"Base URL: {BASE_URL}")
+    """Run all email bug fix tests"""
+    print("=== EMAIL BUG FIXES TESTING ===")
+    print("Testing 6 verification requirements for email bug fixes in DynoPay backend")
     print()
     
     tests = [
-        test_health_endpoint,                    # TEST 1
-        test_diagnostics_protected,              # TEST 2  
-        test_correlation_id_header,              # TEST 3
-        test_csp_header,                         # TEST 4
-        test_bcrypt_import_usage,                # TEST 5
-        test_password_functions_usage,           # TEST 6
-        test_sanitize_middleware,                # TEST 7
-        test_request_logger_middleware,          # TEST 8
-        test_trust_proxy,                        # TEST 9
-        test_db_pool_config,                     # TEST 10
-        test_graceful_shutdown,                  # TEST 11
-        test_token_expires_headers_removed,      # TEST 12
-        test_webhook_endpoint_removed,           # TEST 13
-        test_password_strength_rules,            # TEST 14
+        ("Backend Health Check", test_backend_health),
+        ("TypeScript Compilation", test_typescript_compilation), 
+        ("formatEmailError Function Exists", test_format_email_error_exists),
+        ("No Raw Error Dumps", test_no_raw_error_dumps),
+        ("Unsubscribe Uses SERVER_URL", test_unsubscribe_uses_server_url),
+        ("Error Formatter Extracts Response", test_error_formatter_extracts_response)
     ]
     
-    results = []
-    for i, test in enumerate(tests, 1):
+    passed = 0
+    total = len(tests)
+    
+    for test_name, test_func in tests:
+        print(f"Running: {test_name}")
         try:
-            results.append(test())
+            if test_func():
+                passed += 1
+            else:
+                pass  # Error already printed by test function
         except Exception as e:
-            print(f"❌ TEST {i} ERROR: {e}")
-            results.append(False)
+            print(f"❌ {test_name} FAILED: Unexpected error: {e}")
+        print()
     
-    print("\n" + "=" * 65)
-    passed = sum(results)
-    total = len(results)
-    success_rate = (passed / total) * 100
-    
-    print(f"📊 SECURITY AUDIT RESULTS: {passed}/{total} tests passed ({success_rate:.1f}%)")
+    print("=== SUMMARY ===")
+    print(f"Tests passed: {passed}/{total} ({passed/total*100:.1f}%)")
     
     if passed == total:
-        print("🎉 ALL SECURITY AUDIT TESTS PASSED - OWASP compliance verified!")
+        print("🎉 ALL TESTS PASSED: Email bug fixes are working correctly!")
+        return True
     else:
-        print(f"⚠️  {total - passed} tests failed - see details above")
-        print("🔧 Failed tests indicate incomplete security implementations")
-    
-    return passed == total
+        print("⚠️  SOME TESTS FAILED: Email bug fixes need attention")
+        return False
 
 if __name__ == "__main__":
     success = main()
