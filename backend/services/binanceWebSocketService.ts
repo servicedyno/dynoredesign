@@ -317,9 +317,7 @@ const restFetchPrices = async (): Promise<void> => {
   try {
     const symbols = TRACKED_ASSETS.map((a) => `"${a}USDT"`).join(",");
     const url = `${BINANCE_REST_BASE}/api/v3/ticker/price?symbols=[${symbols}]`;
-    const resp = await axios.get(url, { timeout: 10000, headers: BINANCE_HEADERS });
-
-    for (const item of resp.data) {
+    const resp = await axios.get(url, { timeout: 10000, headers: BINANCE_HEADERS, ...(wsProxyAgent ? { httpAgent: wsProxyAgent, httpsAgent: wsProxyAgent } : {}) });
       const asset = (item.symbol as string).replace("USDT", "");
       if (!TRACKED_ASSETS.includes(asset)) continue;
       priceCache[asset] = {
