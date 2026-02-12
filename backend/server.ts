@@ -417,6 +417,7 @@ cron.schedule("0 */2 * * *", function () {
   log("Cron: ensurePoolSubscriptions running", "info");
   merchantPoolService.ensurePoolSubscriptions().catch(err => {
     log(`Cron: Subscription health check failed: ${err.message}`, "error");
+    captureError(err, 'cron', { extraContext: 'ensurePoolSubscriptions' });
   });
 });
 
