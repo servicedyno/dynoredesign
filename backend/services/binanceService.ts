@@ -58,6 +58,7 @@ const makeSignedRequest = async (
   const headers = {
     "X-MBX-APIKEY": BINANCE_API_KEY,
     "Content-Type": "application/x-www-form-urlencoded",
+    "User-Agent": "Mozilla/5.0 (compatible; DynoPay/1.0)",
   };
 
   try {
