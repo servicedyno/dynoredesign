@@ -700,7 +700,20 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
     }
 
     const finalRes = (resData as Array<Record<string, unknown>>).map((x) => {
-      const { wallet_id, ...rest } = x;
+      const {
+        wallet_id,
+        auto_convert_id,
+        auto_convert_status,
+        auto_convert_source_currency,
+        auto_convert_source_amount,
+        auto_convert_source_amount_usd,
+        auto_convert_target_currency,
+        auto_convert_target_amount,
+        auto_convert_settlement_chain,
+        auto_convert_rate,
+        auto_convert_completed_at,
+        ...rest
+      } = x;
       const baseAmount = Number(rest.base_amount || 0);
       const baseCurrency = String(rest.base_currency || '');
 
@@ -721,26 +734,26 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
         display_currency: preferredCurrency,
         amount_display: formatAmountForDisplay(displayAmount, preferredCurrency),
         // Auto-stablecoin conversion indicator
-        auto_converted: !!rest.auto_convert_id,
-        auto_convert: rest.auto_convert_id
+        auto_converted: !!auto_convert_id,
+        auto_convert: auto_convert_id
           ? {
-              conversion_id: rest.auto_convert_id,
-              status: rest.auto_convert_status,
-              source_currency: rest.auto_convert_source_currency,
-              source_amount: rest.auto_convert_source_amount ? Number(rest.auto_convert_source_amount) : null,
-              source_amount_usd: rest.auto_convert_source_amount_usd ? Number(rest.auto_convert_source_amount_usd) : null,
+              conversion_id: auto_convert_id,
+              status: auto_convert_status,
+              source_currency: auto_convert_source_currency,
+              source_amount: auto_convert_source_amount ? Number(auto_convert_source_amount) : null,
+              source_amount_usd: auto_convert_source_amount_usd ? Number(auto_convert_source_amount_usd) : null,
               // Show source amount in base key currency
-              source_amount_display: rest.auto_convert_source_amount && rest.auto_convert_source_currency
-                ? (String(rest.auto_convert_source_currency) === preferredCurrency
-                  ? Number(rest.auto_convert_source_amount)
-                  : Math.round(Number(rest.auto_convert_source_amount) * (conversionRates[String(rest.auto_convert_source_currency)] || 0) * 100) / 100)
+              source_amount_display: auto_convert_source_amount && auto_convert_source_currency
+                ? (String(auto_convert_source_currency) === preferredCurrency
+                  ? Number(auto_convert_source_amount)
+                  : Math.round(Number(auto_convert_source_amount) * (conversionRates[String(auto_convert_source_currency)] || 0) * 100) / 100)
                 : null,
               source_amount_display_currency: preferredCurrency,
-              target_currency: rest.auto_convert_target_currency,
-              target_amount: rest.auto_convert_target_amount ? Number(rest.auto_convert_target_amount) : null,
-              settlement_chain: rest.auto_convert_settlement_chain,
-              conversion_rate: rest.auto_convert_rate ? Number(rest.auto_convert_rate) : null,
-              completed_at: rest.auto_convert_completed_at,
+              target_currency: auto_convert_target_currency,
+              target_amount: auto_convert_target_amount ? Number(auto_convert_target_amount) : null,
+              settlement_chain: auto_convert_settlement_chain,
+              conversion_rate: auto_convert_rate ? Number(auto_convert_rate) : null,
+              completed_at: auto_convert_completed_at,
             }
           : null,
       };
