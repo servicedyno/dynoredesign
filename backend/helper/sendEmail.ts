@@ -1213,6 +1213,7 @@ const sendAutoConversionPayoutEmail = async (
     return info;
   } catch (e) {
     console.log("Auto-conversion payout email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendAutoConversionPayoutEmail' });
   }
 };
 
