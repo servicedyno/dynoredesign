@@ -391,6 +391,21 @@ cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
   }
 });
 
+// Webhook Retry Queue: Process failed webhooks with exponential backoff
+// Runs every 2 minutes to retry webhooks that failed to deliver
+cron.schedule("*/2 * * * *", async function () {
+  try {
+    log("Cron: processWebhookRetryQueue running", "info");
+    const stats = await processWebhookRetryQueue();
+    if (stats.processed > 0) {
+      log(`Cron: Webhook retries - ${stats.succeeded} succeeded, ${stats.failed} failed`, "info");
+    }
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    log(`Cron: Webhook retry queue failed: ${errMsg}`, "error");
+  }
+});
+
 const startServer = async () => {
   log('Connecting to Redis...', 'info');
   await connectRedis();
