@@ -54,15 +54,17 @@ class ApiTester:
             return {"error": f"JSON decode failed: {str(e)}", "content": response.text[:200]}
     
     def test_backend_health(self) -> bool:
-        """TEST 1: Backend healthy — GET /health returns 200 with status 'healthy'"""
+        """TEST 1: Backend healthy — GET /api/status/health returns 200 with status 'healthy'"""
         test_name = "1"
         try:
-            response = self.session.get(f"{self.base_url}/health", timeout=10)
+            # Try the correct health endpoint
+            response = self.session.get(f"{self.base_url}/api/status/health", timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status") == "healthy":
-                    self.log(f"Backend healthy: {data.get('service', 'Unknown service')}", test_name, "PASS")
+                    service_name = data.get('version', 'DynoPay Backend')
+                    self.log(f"Backend healthy: v{service_name}", test_name, "PASS")
                     return True
                 else:
                     self.log(f"Backend not healthy: status={data.get('status')}", test_name, "FAIL")
