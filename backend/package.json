@@ -50,6 +50,7 @@
     "qrcode": "^1.5.4",
     "redis": "^4.6.15",
     "sequelize": "^6.32.1",
+    "socks-proxy-agent": "^8.0.5",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "tronweb": "^6.0.0",
