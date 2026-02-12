@@ -134,7 +134,157 @@ export const getAssetBalance = async (asset: string): Promise<{ free: number; lo
 };
 
 // ============================================
-// Convert API
+// Spot Trading API (works with standard canTrade permission)
+// ============================================
+
+/** Get exchange info for a trading pair (min qty, step size, etc.) */
+export const getExchangeInfo = async (symbol: string): Promise<{
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  stepSize: string;
+  minQty: string;
+  minNotional: string;
+  status: string;
+}> => {
+  const data = (await makePublicRequest("/api/v3/exchangeInfo", { symbol })) as {
+    symbols: Array<{
+      symbol: string;
+      baseAsset: string;
+      quoteAsset: string;
+      status: string;
+      filters: Array<{ filterType: string; stepSize?: string; minQty?: string; minNotional?: string }>;
+    }>;
+  };
+  const symbolInfo = data.symbols[0];
+  if (!symbolInfo) throw new Error(`Symbol ${symbol} not found on Binance`);
+
+  const lotSize = symbolInfo.filters.find((f) => f.filterType === "LOT_SIZE");
+  const notional = symbolInfo.filters.find((f) => f.filterType === "NOTIONAL" || f.filterType === "MIN_NOTIONAL");
+
+  return {
+    symbol: symbolInfo.symbol,
+    baseAsset: symbolInfo.baseAsset,
+    quoteAsset: symbolInfo.quoteAsset,
+    stepSize: lotSize?.stepSize || "0.00000001",
+    minQty: lotSize?.minQty || "0.00000001",
+    minNotional: notional?.minNotional || "10",
+    status: symbolInfo.status,
+  };
+};
+
+/** Round quantity to valid step size */
+const roundToStepSize = (quantity: number, stepSize: string): string => {
+  const step = parseFloat(stepSize);
+  if (step === 0) return quantity.toFixed(8);
+  const precision = stepSize.indexOf("1") - stepSize.indexOf(".");
+  if (precision < 0) return Math.floor(quantity / step) * step + "";
+  const rounded = Math.floor(quantity / step) * step;
+  return rounded.toFixed(Math.max(0, precision));
+};
+
+/** Place a market sell order (convert crypto to stablecoin) */
+export const placeMarketSellOrder = async (
+  symbol: string,
+  quantity: number
+): Promise<{
+  orderId: number;
+  symbol: string;
+  status: string;
+  executedQty: string;
+  cummulativeQuoteQty: string;
+  fills: Array<{ price: string; qty: string; commission: string; commissionAsset: string }>;
+}> => {
+  // Get symbol info for proper quantity formatting
+  const info = await getExchangeInfo(symbol);
+  const roundedQty = roundToStepSize(quantity, info.stepSize);
+
+  console.log(`[Binance] Market SELL ${roundedQty} on ${symbol}`);
+
+  const data = (await makeSignedRequest("POST", "/api/v3/order", {
+    symbol,
+    side: "SELL",
+    type: "MARKET",
+    quantity: roundedQty,
+  })) as {
+    orderId: number;
+    symbol: string;
+    status: string;
+    executedQty: string;
+    cummulativeQuoteQty: string;
+    fills: Array<{ price: string; qty: string; commission: string; commissionAsset: string }>;
+  };
+
+  return data;
+};
+
+/** Convert crypto to stablecoin via spot market order */
+export const convertViaSpotTrade = async (
+  fromAsset: string,
+  toAsset: string,
+  fromAmount: number
+): Promise<{
+  orderId: number;
+  fromAsset: string;
+  toAsset: string;
+  fromAmount: string;
+  toAmount: string;
+  avgPrice: string;
+  status: string;
+}> => {
+  const from = toBinanceAsset(fromAsset);
+  const to = toBinanceAsset(toAsset);
+  const symbol = `${from}${to}`; // e.g., BTCUSDT
+
+  const order = await placeMarketSellOrder(symbol, fromAmount);
+
+  const executedQty = parseFloat(order.executedQty);
+  const quoteQty = parseFloat(order.cummulativeQuoteQty);
+  const avgPrice = executedQty > 0 ? (quoteQty / executedQty).toFixed(8) : "0";
+
+  return {
+    orderId: order.orderId,
+    fromAsset: from,
+    toAsset: to,
+    fromAmount: order.executedQty,
+    toAmount: order.cummulativeQuoteQty,
+    avgPrice,
+    status: order.status,
+  };
+};
+
+/** Get a spot trade price quote (without executing) */
+export const getSpotQuote = async (
+  fromAsset: string,
+  toAsset: string,
+  fromAmount: number
+): Promise<{
+  fromAsset: string;
+  toAsset: string;
+  fromAmount: string;
+  estimatedToAmount: string;
+  price: string;
+  symbol: string;
+}> => {
+  const from = toBinanceAsset(fromAsset);
+  const to = toBinanceAsset(toAsset);
+  const symbol = `${from}${to}`;
+
+  const price = await getPrice(symbol);
+  const estimatedToAmount = (fromAmount * price).toFixed(8);
+
+  return {
+    fromAsset: from,
+    toAsset: to,
+    fromAmount: fromAmount.toFixed(8),
+    estimatedToAmount,
+    price: price.toString(),
+    symbol,
+  };
+};
+
+// ============================================
+// Convert API (requires special Binance approval)
 // ============================================
 
 /** Map DynoPay currency names to Binance asset names */
