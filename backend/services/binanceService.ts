@@ -11,10 +11,12 @@
 
 import crypto from "crypto";
 import axios, { AxiosError } from "axios";
+import { HttpsProxyAgent } from "https-proxy-agent";
 
 const BINANCE_API_KEY = process.env.BINANCE_API_KEY || "";
 const BINANCE_API_SECRET = process.env.BINANCE_API_SECRET || "";
 const BINANCE_BASE_URL = process.env.BINANCE_BASE_URL || "https://api.binance.com";
+const BINANCE_PROXY_URL = process.env.BINANCE_PROXY_URL || ""; // e.g., "http://proxy-server:port"
 
 // ============================================
 // HMAC-SHA256 Signing
@@ -40,8 +42,25 @@ const buildQueryString = (params: Record<string, string | number | boolean | und
 };
 
 // ============================================
-// HTTP Client
+// HTTP Client with Proxy Support
 // ============================================
+
+/**
+ * Get axios config with optional proxy
+ * If BINANCE_PROXY_URL is set, routes Binance API calls through proxy
+ */
+const getAxiosConfig = () => {
+  const config: Record<string, unknown> = {};
+  
+  if (BINANCE_PROXY_URL) {
+    console.log(`[Binance] Using proxy: ${BINANCE_PROXY_URL}`);
+    const agent = new HttpsProxyAgent(BINANCE_PROXY_URL);
+    config.httpsAgent = agent;
+    config.proxy = false; // Disable axios built-in proxy
+  }
+  
+  return config;
+};
 
 const makeSignedRequest = async (
   method: "GET" | "POST" | "DELETE",
@@ -66,6 +85,7 @@ const makeSignedRequest = async (
       url,
       headers,
       timeout: 30000,
+      ...getAxiosConfig(), // Add proxy config
     });
     return response.data;
   } catch (error) {
@@ -85,7 +105,10 @@ const makePublicRequest = async (
   const url = `${BINANCE_BASE_URL}${endpoint}${queryString ? `?${queryString}` : ""}`;
 
   try {
-    const response = await axios.get(url, { timeout: 15000 });
+    const response = await axios.get(url, { 
+      timeout: 15000,
+      ...getAxiosConfig() // Add proxy config
+    });
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ code?: number; msg?: string }>;
