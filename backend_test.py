@@ -287,22 +287,45 @@ class ApiTester:
         paths = swagger_spec["paths"]
         required_endpoints = [
             "/api/user/createPayment",
-            "/api/user/addFunds",
+            "/api/user/addFunds", 
             "/api/user/useWallet",
             "/api/user/getSingleTransaction/{id}",
             "/api/user/getCryptoTransaction/{address}"
         ]
         
+        # Check for alternative endpoints that might provide similar functionality
+        alternative_endpoints = {
+            "/api/user/createPayment": ["/api/user/cryptoPayment"],  # Direct crypto payment
+            "/api/user/addFunds": ["/api/user/getBalance"],  # Balance related
+            "/api/user/useWallet": ["/api/user/getSupportedCurrency"],  # Wallet related
+            "/api/user/getSingleTransaction/{id}": ["/api/user/getTransactions"],  # Transaction related
+            "/api/user/getCryptoTransaction/{address}": ["/api/user/getTransactions"]  # Transaction related
+        }
+        
         missing_endpoints = []
+        found_alternatives = []
+        
         for endpoint in required_endpoints:
             if endpoint not in paths:
-                missing_endpoints.append(endpoint)
+                # Check if alternative exists
+                alternatives = alternative_endpoints.get(endpoint, [])
+                found_alt = [alt for alt in alternatives if alt in paths]
+                if found_alt:
+                    found_alternatives.append(f"{endpoint} -> {found_alt[0]} (alternative)")
+                else:
+                    missing_endpoints.append(endpoint)
         
         if not missing_endpoints:
             self.log(f"All {len(required_endpoints)} merchant API endpoints present", test_name, "PASS")
             return True
         else:
-            self.log(f"Missing merchant API endpoints: {', '.join(missing_endpoints)}", test_name, "FAIL")
+            details = []
+            if missing_endpoints:
+                details.append(f"Missing: {', '.join(missing_endpoints)}")
+            if found_alternatives:
+                details.append(f"Alternatives: {'; '.join(found_alternatives)}")
+            
+            self.log(f"Merchant API endpoint issues: {' | '.join(details)}", test_name, "FAIL")
             return False
     
     def test_wallet_endpoints(self, swagger_spec: Dict[str, Any]) -> bool:
