@@ -20,6 +20,7 @@ import {
   customerModel,
   feesModel,
   userTempAddressModel,
+  companyModel,
 } from "./models";
 // Unused imports removed: currencyConvert, encrypt, sendEmail
 import { getErrorMessage } from "./helper";
