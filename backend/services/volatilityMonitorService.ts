@@ -188,9 +188,8 @@ const maybeAlertAdmin = async (state: MarketState) => {
 const storeState = async (state: MarketState) => {
   try {
     const key = `${REDIS_KEY_PREFIX}:${state.asset}`;
-    const rClient = (redisClient as any).default || redisClient;
-    if (rClient && typeof rClient.set === "function") {
-      await rClient.set(key, JSON.stringify(state), { EX: 120 }); // 2 min TTL
+    if (redisClient && redisClient.isReady) {
+      await redisClient.set(key, JSON.stringify(state), { EX: 120 });
     }
   } catch {
     // Redis may not be available — fail silently, states are in memory too
@@ -239,9 +238,8 @@ export const getMarketState = async (currency: string): Promise<MarketState | nu
   // Try Redis first
   try {
     const key = `${REDIS_KEY_PREFIX}:${asset}`;
-    const rClient = (redisClient as any).default || redisClient;
-    if (rClient && typeof rClient.get === "function") {
-      const data = await rClient.get(key);
+    if (redisClient && redisClient.isReady) {
+      const data = await redisClient.get(key);
       if (data) return JSON.parse(data);
     }
   } catch {
