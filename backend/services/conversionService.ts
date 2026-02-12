@@ -30,6 +30,25 @@ const logError = (msg: string, err?: unknown) => {
 // Phase 1: Check Pending Deposits
 // ============================================
 
+const markExhaustedAsFailed = async (): Promise<number> => {
+  const [affectedCount] = await stablecoinConversionModel.update(
+    {
+      status: "FAILED",
+      error_message: `Exceeded maximum retries (${MAX_RETRIES})`,
+    },
+    {
+      where: {
+        status: { [Op.notIn]: ["COMPLETED", "FAILED"] },
+        retry_count: { [Op.gte]: MAX_RETRIES },
+      },
+    }
+  );
+  if (affectedCount > 0) {
+    logError(`Marked ${affectedCount} exhausted records as FAILED`);
+  }
+  return affectedCount;
+};
+
 const processPendingDeposits = async (): Promise<number> => {
   const pending = await stablecoinConversionModel.findAll({
     where: {
@@ -320,6 +339,9 @@ export const processStablecoinConversions = async (): Promise<{
   completed: number;
 }> => {
   log("🔄 Starting conversion cycle...");
+
+  // First, mark any records that exceeded retries as FAILED
+  await markExhaustedAsFailed();
 
   const depositsChecked = await processPendingDeposits();
   const conversions = await processConversions();
