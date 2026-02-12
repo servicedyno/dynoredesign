@@ -143,24 +143,58 @@ app.use("/api/v1", router);
 
 // Health check endpoint for Railway
 app.get("/health", async (_req: express.Request, res: express.Response) => {
+  const health: Record<string, unknown> = {
+    status: "healthy",
+    service: "Dynopay Backend",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  };
+  
+  let statusCode = 200;
+  
+  // Check PostgreSQL
   try {
     await sequelize.authenticate();
-    res.status(200).json({ 
-      status: "healthy",
-      service: "Dynopay Backend",
-      database: "connected",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime()
-    });
+    health.database = "connected";
   } catch (error) {
-    res.status(503).json({ 
-      status: "unhealthy",
-      service: "Dynopay Backend",
-      database: "disconnected",
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
+    health.database = "disconnected";
+    health.database_error = error.message;
+    statusCode = 503;
   }
+  
+  // Check Redis
+  try {
+    const { getRedisItem } = require('./utils/redisInstance');
+    await getRedisItem('health-check-test');
+    health.redis = "connected";
+  } catch (error) {
+    health.redis = "disconnected";
+    health.redis_error = error.message;
+    statusCode = 503;
+  }
+  
+  // Check Tatum API (non-blocking)
+  try {
+    const { TatumCircuitBreaker } = require('./utils/circuitBreaker');
+    const breakerStats = TatumCircuitBreaker.getStats();
+    health.tatum_api = {
+      operational: TatumCircuitBreaker.isOperational(),
+      circuit_state: breakerStats.state,
+      failures: breakerStats.failures
+    };
+    if (!TatumCircuitBreaker.isOperational()) {
+      health.status = "degraded";
+    }
+  } catch (error) {
+    health.tatum_api = "unknown";
+  }
+  
+  // Overall status
+  if (statusCode !== 200) {
+    health.status = "unhealthy";
+  }
+  
+  res.status(statusCode).json(health);
 });
 
 app.get("/", async (_req: express.Request, res: express.Response) => {
