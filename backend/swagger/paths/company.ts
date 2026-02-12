@@ -970,6 +970,10 @@
  *       
  *       Stablecoin payments (USDT, USDC, RLUSD) are NOT converted — they go directly
  *       to the merchant's crypto wallet as normal.
+ *       
+ *       **`available_settlement_options`** lists all eligible stablecoin wallets the
+ *       company has saved, with a masked preview of each address (`wallet_address_preview`).
+ *       Use this list to present wallet choices when enabling auto-convert.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1014,13 +1018,13 @@
  *                     settlement_wallet_address:
  *                       type: string
  *                       nullable: true
- *                       example: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+ *                       example: "TYASr5UV6HEcXatwdFQfmLVUqQQQRgMjkR"
  *                       description: Merchant's stablecoin wallet address
  *                     settlement_chain:
  *                       type: string
  *                       nullable: true
  *                       enum: [ERC20, TRC20, POLYGON, BEP20, SOL]
- *                       example: "ERC20"
+ *                       example: "TRC20"
  *                       description: Blockchain network for stablecoin withdrawal
  *                     valid_currencies:
  *                       type: array
@@ -1032,6 +1036,28 @@
  *                       items:
  *                         type: string
  *                       example: ["ERC20", "TRC20", "POLYGON", "BEP20", "SOL"]
+ *                     available_settlement_options:
+ *                       type: array
+ *                       description: Eligible stablecoin wallets the company has saved. Use these to present choices when enabling auto-convert.
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           wallet_type:
+ *                             type: string
+ *                             example: "USDT-TRC20"
+ *                           settlement_currency:
+ *                             type: string
+ *                             example: "USDT"
+ *                           settlement_chain:
+ *                             type: string
+ *                             example: "TRC20"
+ *                           wallet_address:
+ *                             type: string
+ *                             example: "TYASr5UV6HEcXatwdFQfmLVUqQQQRgMjkR"
+ *                           wallet_address_preview:
+ *                             type: string
+ *                             description: Masked address showing only last 4 characters
+ *                             example: "****jkR"
  *       401:
  *         description: Authentication required
  *       404:
@@ -1039,9 +1065,28 @@
  *   put:
  *     tags:
  *       - Auto-Stablecoin Conversion
- *     summary: Update auto-convert settings
+ *     summary: Enable or disable auto-convert (two-step wallet selection)
  *     description: |
  *       Enable or disable auto-stablecoin conversion for a company.
+ *       
+ *       ## Two-Step Enable Flow
+ *       
+ *       **Step 1 — Discover available wallets:**
+ *       Send `{ "auto_convert_enabled": true }` without `settlement_currency` or `settlement_chain`.
+ *       - If the company has eligible stablecoin wallets, the API returns them with masked
+ *         address previews (`****AkxR`) for the merchant to choose from.
+ *       - If the company has NO eligible wallets, a `400` error is returned with the message:
+ *         *"Auto-conversion requires a saved stablecoin wallet. Please add a USDT (TRC20/ERC20)
+ *         or USDC (ERC20/Polygon) wallet to your company settings first."*
+ *       
+ *       **Step 2 — Select and enable:**
+ *       Send `{ "auto_convert_enabled": true, "settlement_currency": "USDT", "settlement_chain": "TRC20" }`.
+ *       The API auto-resolves the wallet address from the company's saved wallets and enables auto-conversion.
+ *       
+ *       **Disable:**
+ *       Send `{ "auto_convert_enabled": false }` to turn off auto-conversion.
+ *       
+ *       ---
  *       
  *       **When enabled:**
  *       - Volatile crypto payments (BTC, ETH, SOL, TRX, LTC, DOGE, BCH, XRP, POLYGON)
@@ -1052,9 +1097,6 @@
  *       
  *       **When disabled (or for stablecoins):**
  *       - Payments go directly to merchant's crypto wallet (normal flow)
- *       
- *       **Validation:** All 3 fields (settlement_currency, settlement_wallet_address, settlement_chain) 
- *       are required when enabling auto-convert.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1081,42 +1123,84 @@
  *               settlement_currency:
  *                 type: string
  *                 enum: [USDT, USDC]
- *                 description: "Target stablecoin (required when enabling)"
+ *                 description: "Target stablecoin. Required in Step 2. Omit in Step 1 to discover available wallets."
  *                 example: "USDT"
- *               settlement_wallet_address:
- *                 type: string
- *                 description: "Merchant's stablecoin wallet address (required when enabling)"
- *                 example: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
  *               settlement_chain:
  *                 type: string
  *                 enum: [ERC20, TRC20, POLYGON, BEP20, SOL]
- *                 description: "Blockchain network for withdrawal (required when enabling)"
- *                 example: "ERC20"
+ *                 description: "Blockchain network. Required in Step 2. Omit in Step 1 to discover available wallets."
+ *                 example: "TRC20"
  *     responses:
  *       200:
- *         description: Settings updated successfully
+ *         description: |
+ *           **Three possible 200 responses:**
+ *           
+ *           1. **Step 1 (wallet discovery)** — `action_required: "select_wallet"` + `available_wallets` array
+ *           2. **Step 2 (enabled)** — `auto_convert_enabled: true` + resolved wallet details
+ *           3. **Disabled** — `auto_convert_enabled: false` + previous settings
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     auto_convert_enabled:
- *                       type: boolean
- *                     settlement_currency:
- *                       type: string
- *                     settlement_wallet_address:
- *                       type: string
- *                     settlement_chain:
- *                       type: string
+ *             examples:
+ *               step1_wallet_discovery:
+ *                 summary: "Step 1: Available wallets returned for selection"
+ *                 value:
+ *                   success: true
+ *                   message: "Please select a settlement wallet from the available options below."
+ *                   data:
+ *                     action_required: "select_wallet"
+ *                     available_wallets:
+ *                       - wallet_type: "USDT-TRC20"
+ *                         settlement_currency: "USDT"
+ *                         settlement_chain: "TRC20"
+ *                         wallet_address: "TYASr5UV6HEcXatwdFQfmLVUqQQQRgMjkR"
+ *                         wallet_address_preview: "****jkR"
+ *                       - wallet_type: "USDC-POLYGON"
+ *                         settlement_currency: "USDC"
+ *                         settlement_chain: "POLYGON"
+ *                         wallet_address: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+ *                         wallet_address_preview: "****bD18"
+ *               step2_enabled:
+ *                 summary: "Step 2: Auto-convert enabled with selected wallet"
+ *                 value:
+ *                   success: true
+ *                   message: "Auto-convert enabled successfully"
+ *                   data:
+ *                     auto_convert_enabled: true
+ *                     settlement_currency: "USDT"
+ *                     settlement_wallet_address: "TYASr5UV6HEcXatwdFQfmLVUqQQQRgMjkR"
+ *                     settlement_wallet_preview: "****jkR"
+ *                     settlement_chain: "TRC20"
+ *               disabled:
+ *                 summary: "Auto-convert disabled"
+ *                 value:
+ *                   success: true
+ *                   message: "Auto-convert settings updated"
+ *                   data:
+ *                     auto_convert_enabled: false
+ *                     settlement_currency: "USDT"
+ *                     settlement_wallet_address: "TYASr5UV6HEcXatwdFQfmLVUqQQQRgMjkR"
+ *                     settlement_chain: "TRC20"
  *       400:
- *         description: Invalid settlement_currency, missing wallet address, or invalid chain
+ *         description: |
+ *           **Possible 400 errors:**
+ *           - No eligible stablecoin wallets saved — prompts merchant to add one
+ *           - Invalid `settlement_currency` or `settlement_chain` value
+ *           - Selected currency/chain combo has no matching saved wallet
+ *         content:
+ *           application/json:
+ *             examples:
+ *               no_wallets:
+ *                 summary: "No eligible wallets — merchant must add one first"
+ *                 value:
+ *                   success: false
+ *                   message: "Auto-conversion requires a saved stablecoin wallet. Please add a USDT (TRC20/ERC20) or USDC (ERC20/Polygon) wallet to your company settings first."
+ *                   statusCode: 400
+ *               no_match:
+ *                 summary: "Selected wallet type not found"
+ *                 value:
+ *                   success: false
+ *                   message: "No USDC-POLYGON wallet found for this company. Available options: USDT-TRC20, USDT-ERC20"
+ *                   statusCode: 400
  *       401:
  *         description: Authentication required
  *       404:
