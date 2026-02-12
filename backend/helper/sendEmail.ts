@@ -306,7 +306,7 @@ const sendPaymentReceivedEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Payment received email error:", e);
+    console.log("Payment received email error:", formatEmailError(e));
   }
 };
 
