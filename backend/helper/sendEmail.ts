@@ -455,7 +455,7 @@ const sendSecurityAlertEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Security alert email error:", e);
+    console.log("Security alert email error:", formatEmailError(e));
   }
 };
 
