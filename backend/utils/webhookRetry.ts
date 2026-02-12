@@ -5,7 +5,7 @@
  */
 
 import axios, { AxiosError } from 'axios';
-import { setRedisItem, getRedisItem, deleteRedisItem } from './redisInstance';
+import { setRedisItem, getRedisItem, deleteRedisItem, setRedisTTL } from './redisInstance';
 
 interface WebhookPayload {
   url: string;
@@ -58,7 +58,8 @@ const storeFailedWebhook = async (
   };
   
   // Store with TTL of 24 hours
-  await setRedisItem(retryKey, retryData, 86400);
+  await setRedisItem(retryKey, retryData);
+  await setRedisTTL(retryKey, 86400);
   
   // Add to retry queue index
   const queueKey = 'webhook:retry:queue';
@@ -68,7 +69,8 @@ const storeFailedWebhook = async (
     scheduledFor: retryData.scheduledFor,
     webhookId: webhookData.webhookId
   });
-  await setRedisItem(queueKey, queueData, 86400);
+  await setRedisItem(queueKey, queueData);
+  await setRedisTTL(queueKey, 86400);
 };
 
 /**
@@ -87,7 +89,8 @@ const moveToDeadLetterQueue = async (
   };
   
   // Store in DLQ with 7 day TTL for manual review
-  await setRedisItem(dlqKey, dlqData, 604800);
+  await setRedisItem(dlqKey, dlqData);
+  await setRedisTTL(dlqKey, 604800);
   
   // Log to database
   try {
@@ -234,7 +237,8 @@ export const processWebhookRetryQueue = async (): Promise<{
     }
     
     // Update queue
-    await setRedisItem(queueKey, queueData, 86400);
+    await setRedisItem(queueKey, queueData);
+    await setRedisTTL(queueKey, 86400);
     
     if (stats.processed > 0) {
       console.log(
