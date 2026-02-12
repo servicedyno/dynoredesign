@@ -461,6 +461,7 @@ const sendSecurityAlertEmail = async (
     return info;
   } catch (e) {
     console.log("Security alert email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendSecurityAlertEmail' });
   }
 };
 
