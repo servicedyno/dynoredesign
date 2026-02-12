@@ -91,16 +91,16 @@ const stablecoinConversionModel = sequelize.define(
       comment: "Admin wallet address where crypto was sent",
     },
 
-    // Binance Convert
+    // Binance Spot Trade
     binance_quote_id: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      comment: "Binance Convert quote ID",
+      comment: "Legacy: Binance Convert quote ID (no longer used)",
     },
     binance_order_id: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      comment: "Binance Convert order ID after acceptQuote",
+      comment: "Binance spot order ID",
     },
     conversion_rate: {
       type: DataTypes.DECIMAL(20, 8),
@@ -110,7 +110,79 @@ const stablecoinConversionModel = sequelize.define(
     conversion_fee: {
       type: DataTypes.DECIMAL(20, 8),
       allowNull: true,
-      comment: "Fee charged by Binance (spread)",
+      comment: "Fee charged by Binance (spread/commission)",
+    },
+
+    // Rate lock (locked at payment time)
+    locked_merchant_usd: {
+      type: DataTypes.DECIMAL(20, 2),
+      allowNull: true,
+      comment: "Merchant's expected USD payout locked at payment time",
+    },
+    locked_exchange_rate: {
+      type: DataTypes.DECIMAL(20, 8),
+      allowNull: true,
+      comment: "Exchange rate at time of payment (e.g., 67880.40 for BTC/USD)",
+    },
+    locked_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: "When the merchant rate was locked",
+    },
+
+    // Actual sale results
+    actual_sale_usd: {
+      type: DataTypes.DECIMAL(20, 2),
+      allowNull: true,
+      comment: "What the crypto actually sold for in USDT on Binance",
+    },
+    platform_surplus: {
+      type: DataTypes.DECIMAL(20, 4),
+      allowNull: true,
+      defaultValue: 0,
+      comment: "Profit from price increase (0 if price dropped)",
+    },
+    price_movement_pct: {
+      type: DataTypes.DECIMAL(10, 4),
+      allowNull: true,
+      comment: "% price change from locked rate to actual sale",
+    },
+    merchant_payout_usd: {
+      type: DataTypes.DECIMAL(20, 2),
+      allowNull: true,
+      comment: "Final USDT amount sent to merchant wallet",
+    },
+
+    // Adaptive fee tracking
+    fee_tier_used: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: "Sweep fee tier: slow/medium/fast/fastest",
+    },
+    market_state_at_sweep: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: "Market volatility state when sweep was initiated",
+    },
+    sweep_fee_usd: {
+      type: DataTypes.DECIMAL(20, 4),
+      allowNull: true,
+      comment: "Blockchain fee for sweep in USD",
+    },
+    trade_fee_usd: {
+      type: DataTypes.DECIMAL(20, 4),
+      allowNull: true,
+      comment: "Binance trading fee in USD",
+    },
+    ioc_fill_percent: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+      comment: "% of Limit IOC order that was filled",
+    },
+    sell_method: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
+      comment: "LIMIT_IOC, LIMIT_IOC+MARKET_FALLBACK, or MARKET",
     },
 
     // Binance Withdrawal
