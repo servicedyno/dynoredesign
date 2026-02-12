@@ -771,7 +771,9 @@ router.get("/getTransactions", legacyApiAuthMiddleware, async (req, res) => {
         sc.conversion_rate as auto_convert_rate,
         sc.completed_at as auto_convert_completed_at
        FROM tbl_customer_transaction ct
-       LEFT JOIN tbl_user_transaction ut ON ut.customer_id = ct.customer_id AND ut.base_amount = ct.base_amount
+       LEFT JOIN tbl_user_transaction ut ON ut.customer_id = ct.customer_id
+         AND ut.base_amount = ct.base_amount
+         AND ut."createdAt" BETWEEN ct."createdAt" - INTERVAL '5 minutes' AND ct."createdAt" + INTERVAL '5 minutes'
        LEFT JOIN tbl_stablecoin_conversion sc ON sc.transaction_id = ut.transaction_id
        WHERE ct.customer_id = (SELECT customer_id FROM tbl_customer WHERE id = $1)
        ORDER BY ct."createdAt" DESC
@@ -783,25 +785,40 @@ router.get("/getTransactions", legacyApiAuthMiddleware, async (req, res) => {
     );
 
     // Map transactions with auto-convert data and base currency display
-    const data = transactions.map((tx) => ({
-      ...tx,
-      display_currency: baseCurrency,
-      auto_converted: !!tx.auto_convert_id,
-      auto_convert: tx.auto_convert_id
-        ? {
-            conversion_id: tx.auto_convert_id,
-            status: tx.auto_convert_status,
-            source_currency: tx.auto_convert_source_currency,
-            source_amount: tx.auto_convert_source_amount ? Number(tx.auto_convert_source_amount) : null,
-            source_amount_usd: tx.auto_convert_source_amount_usd ? Number(tx.auto_convert_source_amount_usd) : null,
-            target_currency: tx.auto_convert_target_currency,
-            target_amount: tx.auto_convert_target_amount ? Number(tx.auto_convert_target_amount) : null,
-            settlement_chain: tx.auto_convert_settlement_chain,
-            conversion_rate: tx.auto_convert_rate ? Number(tx.auto_convert_rate) : null,
-            completed_at: tx.auto_convert_completed_at,
-          }
-        : null,
-    }));
+    const data = transactions.map((tx) => {
+      const {
+        auto_convert_id,
+        auto_convert_status,
+        auto_convert_source_currency,
+        auto_convert_source_amount,
+        auto_convert_source_amount_usd,
+        auto_convert_target_currency,
+        auto_convert_target_amount,
+        auto_convert_settlement_chain,
+        auto_convert_rate,
+        auto_convert_completed_at,
+        ...rest
+      } = tx;
+      return {
+        ...rest,
+        display_currency: baseCurrency,
+        auto_converted: !!auto_convert_id,
+        auto_convert: auto_convert_id
+          ? {
+              conversion_id: auto_convert_id,
+              status: auto_convert_status,
+              source_currency: auto_convert_source_currency,
+              source_amount: auto_convert_source_amount ? Number(auto_convert_source_amount) : null,
+              source_amount_usd: auto_convert_source_amount_usd ? Number(auto_convert_source_amount_usd) : null,
+              target_currency: auto_convert_target_currency,
+              target_amount: auto_convert_target_amount ? Number(auto_convert_target_amount) : null,
+              settlement_chain: auto_convert_settlement_chain,
+              conversion_rate: auto_convert_rate ? Number(auto_convert_rate) : null,
+              completed_at: auto_convert_completed_at,
+            }
+          : null,
+      };
+    });
     
     return res.status(200).json({
       success: true,
