@@ -1362,6 +1362,35 @@ const VALID_SETTLEMENT_CURRENCIES = ["USDT", "USDC"];
 const VALID_SETTLEMENT_CHAINS = ["ERC20", "TRC20", "POLYGON", "BEP20", "SOL"];
 
 /**
+ * Helper: fetch eligible stablecoin wallets for a company, formatted with preview addresses
+ */
+const getEligibleStablecoinWallets = async (companyId: number) => {
+  const stablecoinWalletTypes = VALID_SETTLEMENT_CURRENCIES.flatMap((currency) =>
+    VALID_SETTLEMENT_CHAINS.map((chain) => `${currency}-${chain}`)
+  );
+
+  const companyWallets = await userWalletModel.findAll({
+    where: {
+      company_id: companyId,
+      wallet_type: stablecoinWalletTypes,
+    },
+    attributes: ["wallet_type", "wallet_address"],
+  });
+
+  return companyWallets.map((w: { dataValues: { wallet_type: string; wallet_address: string } }) => {
+    const parts = w.dataValues.wallet_type.split("-");
+    const addr = w.dataValues.wallet_address || "";
+    return {
+      wallet_type: w.dataValues.wallet_type,
+      settlement_currency: parts[0],
+      settlement_chain: parts.slice(1).join("-"),
+      wallet_address: addr,
+      wallet_address_preview: addr.length >= 4 ? `****${addr.slice(-4)}` : addr,
+    };
+  });
+};
+
+/**
  * Get auto-convert settings for a company
  * GET /api/company/auto-convert/:id
  */
@@ -1389,29 +1418,7 @@ const getAutoConvertSettings = async (
       return errorResponseHelper(res, 404, "Company not found");
     }
 
-    // Fetch all stablecoin wallets the company has configured
-    // These are the only valid settlement options
-    const stablecoinWalletTypes = VALID_SETTLEMENT_CURRENCIES.flatMap((currency) =>
-      VALID_SETTLEMENT_CHAINS.map((chain) => `${currency}-${chain}`)
-    );
-
-    const companyWallets = await userWalletModel.findAll({
-      where: {
-        company_id: parseInt(id),
-        wallet_type: stablecoinWalletTypes,
-      },
-      attributes: ["wallet_type", "wallet_address"],
-    });
-
-    const availableOptions = companyWallets.map((w: { dataValues: { wallet_type: string; wallet_address: string } }) => {
-      const parts = w.dataValues.wallet_type.split("-");
-      return {
-        wallet_type: w.dataValues.wallet_type,
-        settlement_currency: parts[0],     // e.g., "USDT"
-        settlement_chain: parts.slice(1).join("-"),  // e.g., "TRC20" or "ERC20"
-        wallet_address: w.dataValues.wallet_address,
-      };
-    });
+    const availableOptions = await getEligibleStablecoinWallets(parseInt(id));
 
     const data = company.dataValues;
     successResponseHelper(res, 200, "Auto-convert settings retrieved", {
