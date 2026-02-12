@@ -448,6 +448,7 @@ export const isConnected = (): boolean => {
  */
 export const getStatus = (): {
   connected: boolean;
+  geoBlocked: boolean;
   lastMessageAge: number;
   trackedAssets: number;
   cachedPrices: number;
@@ -458,6 +459,7 @@ export const getStatus = (): {
 } => {
   return {
     connected: isConnected(),
+    geoBlocked,
     lastMessageAge: lastMessageTime > 0 ? Date.now() - lastMessageTime : -1,
     trackedAssets: TRACKED_ASSETS.length,
     cachedPrices: Object.keys(priceCache).length,
