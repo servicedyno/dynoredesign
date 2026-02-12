@@ -27,12 +27,11 @@ const formatAmountWithCurrency = (amount: number, currency: string = 'USD'): str
   return `${symbol}${amount.toFixed(2)} ${currency}`;
 };
 
-// Use direct CDN/public URL for email logo (more reliable than self-hosted)
-const DYNOPAY_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Icons/home/dynopay-whiteLogo.svg";
+// Public CDN-hosted PNG logo for maximum email client compatibility
+// PNG format is supported by all major email clients (Gmail, Outlook, Apple Mail)
+const DYNOPAY_LOGO_URL = "https://files.catbox.moe/9wq2et.png";
 
 const getDynopayLogoUrl = () => {
-  // Always use the GitHub CDN URL - most reliable for emails
-  // Email clients need publicly accessible URLs
   return DYNOPAY_LOGO_URL;
 };
 
