@@ -50,32 +50,9 @@ const authMiddleware = async (
         return errorResponseHelper(res, 401, "User account does not exist. Please login again.");
       }
       
-      // Calculate token expiry info
-      const now = Math.floor(Date.now() / 1000);
-      const expiresAt = decoded.exp || 0;
-      const expiresIn = expiresAt - now;
-      const expiresInDays = Math.floor(expiresIn / 86400);
-      
-      // Add token metadata to response headers
-      res.setHeader('X-Token-Type', decoded.type || 'user_token');
-      res.setHeader('X-Token-Expires-At', new Date(expiresAt * 1000).toISOString());
-      res.setHeader('X-Token-Expires-In-Seconds', expiresIn.toString());
-      res.setHeader('X-Token-Expires-In-Days', expiresInDays.toString());
-      
-      // Warn if token expires within 30 days
-      if (expiresInDays <= 30 && expiresInDays > 0) {
-        res.setHeader('X-Token-Warning', `Token expires in ${expiresInDays} days. Consider regenerating.`);
-      }
-      
       // Store token in res.locals for use in controllers
       res.locals.token = token;
       res.locals.user = decoded;
-      res.locals.tokenExpiry = {
-        expires_at: new Date(expiresAt * 1000).toISOString(),
-        expires_in_seconds: expiresIn,
-        expires_in_days: expiresInDays,
-        token_type: decoded.type || 'user_token',
-      };
       
       next();
     } catch (err: unknown) {
