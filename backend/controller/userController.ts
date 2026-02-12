@@ -1642,9 +1642,8 @@ const removePhone = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 404, "User not found");
     }
     
-    // Verify password
-    const hashedPassword = sha256(password).toString();
-    if (user.dataValues.password !== hashedPassword) {
+    // Verify password using bcrypt (with SHA-256 migration)
+    if (!(await verifyPassword(password, user.dataValues.password, userData.user_id))) {
       return errorResponseHelper(res, 401, "Invalid password");
     }
     
