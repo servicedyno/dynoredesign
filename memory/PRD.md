@@ -84,3 +84,17 @@ Full-stack cryptocurrency payment gateway (DynoPay) with Node.js/TypeScript back
 - `backend/services/binanceService.ts` - Spot trading + Limit IOC
 - `backend/routes/diagnosticsRouter.ts` - Test/preview endpoints
 - `backend/server.ts` - Cron jobs + route registration
+
+### Session 10 (Feb 12, 2026) - Auto-Conversion Wallet Selection Flow
+- **Improved `updateAutoConvertSettings`** in `backend/controller/companyController.ts`:
+  - Two-step enable flow: Step 1 returns eligible stablecoin wallets with last 4 digits for selection; Step 2 enables with chosen wallet
+  - Returns 400 error with clear message when no eligible stablecoin wallets exist
+  - Invalid selection returns available options in error message
+- **Improved `getAutoConvertSettings`**: Now includes `wallet_address_preview` (masked last 4 digits) in available settlement options
+- **Extracted `getEligibleStablecoinWallets` helper** for reuse across GET and PUT endpoints
+
+## Pending/Backlog
+- P1: End-to-end auto-conversion test on Railway (blocked on deployment)
+- P2: Brevo API ERR_BAD_REQUEST investigation
+- P2: Consolidate error handling (captureError vs console.log duplication)
+
