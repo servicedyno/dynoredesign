@@ -784,5 +784,19 @@ export const apiKeyPaths = {
         404: { description: 'API key not found' }
       }
     }
-  }
+  },
+  '/api/userApi/availableCurrencies/{company_id}': {
+    get: {
+      tags: ['API Keys'],
+      summary: 'Get available currencies for company',
+      description: 'Get the list of supported cryptocurrencies that the company has wallets configured for. Used when setting up API key currency restrictions.',
+      security: [{ BearerAuth: [] }],
+      parameters: [{ name: 'company_id', in: 'path', required: true, schema: { type: 'integer' }, description: 'Company ID' }],
+      responses: {
+        200: { description: 'Available currencies list', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, data: { type: 'array', items: { type: 'object', properties: { currency: { type: 'string', example: 'BTC' }, name: { type: 'string', example: 'Bitcoin' }, enabled: { type: 'boolean' } } } } } } } } },
+        404: { description: 'Company not found' },
+        401: { description: 'Unauthorized' },
+      },
+    },
+  },
 };
