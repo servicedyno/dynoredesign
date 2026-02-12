@@ -32,7 +32,14 @@ const PROFILE_CACHE_TTL = 60;
 const registerUser = async (req: express.Request, res: express.Response) => {
   try {
     const { name, email, password, referral_code } = req.body;
-    const newPassword = sha256(password).toString();
+    
+    // Validate password strength
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return errorResponseHelper(res, 400, passwordError);
+    }
+    
+    const newPassword = hashPassword(password);
     const isExists = await userModel
       .findOne({
         where: {
