@@ -1,4 +1,5 @@
 import mailTransporter from "../utils/mailTransporter";
+import { captureError } from "../services/errorMonitoringService";
 
 /**
  * Safely extract error details for logging without dumping entire Axios objects.
