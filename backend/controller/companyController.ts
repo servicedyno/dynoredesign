@@ -717,6 +717,19 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
         display_amount: displayAmount,
         display_currency: preferredCurrency,
         amount_display: formatAmountForDisplay(displayAmount, preferredCurrency),
+        // Auto-stablecoin conversion indicator
+        auto_converted: !!rest.auto_convert_id,
+        auto_convert: rest.auto_convert_id
+          ? {
+              conversion_id: rest.auto_convert_id,
+              status: rest.auto_convert_status,
+              target_currency: rest.auto_convert_target_currency,
+              target_amount: rest.auto_convert_target_amount ? Number(rest.auto_convert_target_amount) : null,
+              settlement_chain: rest.auto_convert_settlement_chain,
+              conversion_rate: rest.auto_convert_rate ? Number(rest.auto_convert_rate) : null,
+              completed_at: rest.auto_convert_completed_at,
+            }
+          : null,
       };
     });
 
