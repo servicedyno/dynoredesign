@@ -414,7 +414,7 @@ const sendWeeklySummaryEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Weekly summary email error:", e);
+    console.log("Weekly summary email error:", formatEmailError(e));
   }
 };
 
