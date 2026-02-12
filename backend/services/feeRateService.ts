@@ -38,9 +38,8 @@ const cacheRates = async (chain: string, rates: FeeRates) => {
   memoryCache[chain] = rates;
   try {
     const key = `${REDIS_KEY_PREFIX}:${chain}`;
-    const rClient = (redisClient as any).default || redisClient;
-    if (rClient && typeof rClient.set === "function") {
-      await rClient.set(key, JSON.stringify(rates), { EX: CACHE_TTL });
+    if (redisClient && redisClient.isReady) {
+      await redisClient.set(key, JSON.stringify(rates), { EX: CACHE_TTL });
     }
   } catch {
     // Redis unavailable, memory cache is fine
@@ -53,9 +52,8 @@ const cacheRates = async (chain: string, rates: FeeRates) => {
 const getCachedRates = async (chain: string): Promise<FeeRates | null> => {
   try {
     const key = `${REDIS_KEY_PREFIX}:${chain}`;
-    const rClient = (redisClient as any).default || redisClient;
-    if (rClient && typeof rClient.get === "function") {
-      const data = await rClient.get(key);
+    if (redisClient && redisClient.isReady) {
+      const data = await redisClient.get(key);
       if (data) return JSON.parse(data);
     }
   } catch {
