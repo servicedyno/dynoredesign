@@ -352,6 +352,7 @@ const sendTransactionConfirmedEmail = async (
     return info;
   } catch (e) {
     console.log("Transaction confirmed email error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendTransactionConfirmedEmail' });
   }
 };
 
