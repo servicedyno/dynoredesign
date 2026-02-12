@@ -83,6 +83,9 @@ import {
 import * as merchantPoolService from "../services/merchantPoolService";
 import { callMerchantWebhook } from "../webhooks";
 import { isTagBasedChain, getCryptoRedisKey } from "../services/merchantPool/merchantPoolConfig";
+import { isStablecoin, isVolatileCrypto } from "../services/binanceService";
+import { createConversionRecord } from "../services/conversionService";
+import { stablecoinConversionModel } from "../models";
 
 // ============================================
 // CENTRALIZED TIMING CONFIGURATION
