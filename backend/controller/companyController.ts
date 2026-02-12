@@ -1680,7 +1680,7 @@ const getConversionHistory = async (
 };
 
 // Get single conversion detail by conversionId
-const getConversionDetail = async (req: Request, res: Response) => {
+const getConversionDetail = async (req: express.Request, res: express.Response) => {
   try {
     const conversionId = parseInt(req.params.conversionId);
     if (isNaN(conversionId)) {
@@ -1706,7 +1706,7 @@ const getConversionDetail = async (req: Request, res: Response) => {
 };
 
 // Retry a failed conversion
-const retryConversion = async (req: Request, res: Response) => {
+const retryConversion = async (req: express.Request, res: express.Response) => {
   try {
     const conversionId = parseInt(req.params.conversionId);
     if (isNaN(conversionId)) {

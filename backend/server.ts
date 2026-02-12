@@ -201,7 +201,7 @@ app.get("/health", async (_req: express.Request, res: express.Response) => {
   // Check Binance WebSocket
   try {
     const wsStatus = getWsStatus();
-    health.binance_websocket = {
+    const wsInfo: Record<string, unknown> = {
       connected: wsStatus.connected,
       geo_blocked: wsStatus.geoBlocked,
       cached_prices: wsStatus.cachedPrices,
@@ -210,8 +210,9 @@ app.get("/health", async (_req: express.Request, res: express.Response) => {
       rest_fallback_failures: wsStatus.restFallbackFailures,
     };
     if (wsStatus.geoBlocked) {
-      health.binance_websocket.note = "Binance API geo-blocked from this server region. Deploy to a non-US server for full functionality.";
+      wsInfo.note = "Binance API geo-blocked from this server region. Deploy to a non-US server for full functionality.";
     }
+    health.binance_websocket = wsInfo;
     if (!wsStatus.connected && wsStatus.lastMessageAge > 5 * 60 * 1000) {
       health.status = "degraded";
     }
