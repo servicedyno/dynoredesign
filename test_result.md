@@ -6572,3 +6572,50 @@ ports:
           5. ✅ TypeScript compilation clean - no syntax or type errors
           
           CONCLUSION: All 3 email system bugs have been successfully fixed and verified. The formatEmailError helper prevents log flooding, unsubscribe URLs use correct SERVER_URL, and Brevo errors will be clearly visible. Email system is production-ready.
+  - task: "Error Monitoring Service — Auto-capture all errors + admin email digest every 15 min + immediate critical alerts"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/errorMonitoringService.ts"
+      - "/app/backend/server.ts"
+      - "/app/backend/helper/sendEmail.ts"
+      - "/app/backend/utils/cronJobs.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          ERROR MONITORING SYSTEM IMPLEMENTATION:
+          
+          1. Created errorMonitoringService.ts:
+             - captureError(error, component, options) — captures any error with context
+             - Smart fingerprinting for deduplication (normalizes IDs/numbers)
+             - 15-min digest timer groups errors by fingerprint, sorted by severity
+             - Immediate email alerts for critical errors (uncaught exceptions)
+             - Beautiful HTML digest email with severity badges, counts, stack traces
+             - Buffer capped at 500 to prevent memory issues
+             - Diagnostics endpoints: GET/POST /diagnostics/error-monitor
+          
+          2. Integration points (all auto-capture):
+             - All 15 sendEmail.ts catch blocks → captureError('email')
+             - All cron job catch blocks → captureError('cron')
+             - Express global error handler → captureError('api')
+             - process.on('uncaughtException') → captureError('uncaught') + immediate alert
+             - process.on('unhandledRejection') → captureError('unhandled-rejection') + immediate alert
+             - Graceful shutdown flushes pending digest before exit
+          
+          3. Admin Endpoints:
+             - GET /diagnostics/error-monitor — view stats (buffered count, total, last sent)
+             - POST /diagnostics/error-monitor/flush — force send digest now
+             - POST /diagnostics/error-monitor/test — capture a test error
+          
+          TESTS:
+          TEST 1: Backend healthy — GET http://localhost:8001/health returns 200
+          TEST 2: TypeScript compiles — cd /app/backend && npx tsc --noEmit exits 0
+          TEST 3: Error monitor started — grep 'ErrorMonitor.*Started' /var/log/supervisor/backend.out.log finds the startup log
+          TEST 4: captureError used — grep -c 'captureError' /app/backend/helper/sendEmail.ts >= 15; grep -c 'captureError' /app/backend/utils/cronJobs.ts >= 6; grep -c 'captureError' /app/backend/server.ts >= 8
+          TEST 5: Service file exists — ls /app/backend/services/errorMonitoringService.ts succeeds
+          TEST 6: Diagnostics endpoints exist — grep 'error-monitor' /app/backend/server.ts finds 3 routes
+          Base URL: http://localhost:8001
