@@ -679,6 +679,14 @@ const gracefulShutdown = async (signal: string) => {
   log(`Received ${signal}. Starting graceful shutdown...`, 'warn');
   
   try {
+    // Flush any pending error digests before shutting down
+    stopErrorMonitoring();
+    await sendErrorDigest();
+  } catch (err) {
+    log(`Error flushing error digest: ${err}`, 'error');
+  }
+
+  try {
     // Close database connection
     await sequelize.close();
     log('Database connection closed.', 'info');
