@@ -348,7 +348,7 @@ const sendTransactionConfirmedEmail = async (
     });
     return info;
   } catch (e) {
-    console.log("Transaction confirmed email error:", e);
+    console.log("Transaction confirmed email error:", formatEmailError(e));
   }
 };
 
