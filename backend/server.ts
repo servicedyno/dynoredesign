@@ -400,6 +400,14 @@ const startServer = async () => {
     await userModel.sync(syncOptions);
     log('User model synced with referral columns.', 'info');
     
+    // Sync stablecoin conversion model
+    await stablecoinConversionModel.sync(syncOptions);
+    log('Stablecoin conversion table synced.', 'info');
+    
+    // Sync company model (for auto-convert fields)
+    await companyModel.sync(syncOptions);
+    log('Company model synced with auto-convert fields.', 'info');
+    
     // Validate Merchant Pool Configuration (CRITICAL STARTUP CHECK)
     // Can be disabled with SKIP_MERCHANT_POOL_VALIDATION=true for testing/development
     const skipValidation = process.env.SKIP_MERCHANT_POOL_VALIDATION === 'true';
