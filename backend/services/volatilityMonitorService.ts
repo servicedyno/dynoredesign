@@ -350,7 +350,10 @@ export const startVolatilityMonitor = () => {
         log(`⚠️ Declining assets: ${declining.map((r) => `${r.asset}(${r.roc30m.toFixed(2)}%)`).join(", ")}`);
       }
     })
-    .catch((err) => logError(`Initial scan failed: ${err.message}`));
+    .catch((err: any) => {
+      log(`❌ Initial scan failed: ${err.message}`);
+      captureError(err, 'blockchain', { extraContext: 'VolatilityMonitor initial scan' });
+    });
 
   // Schedule recurring runs
   monitorInterval = setInterval(async () => {
