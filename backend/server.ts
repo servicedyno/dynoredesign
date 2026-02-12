@@ -389,6 +389,7 @@ cron.schedule("*/2 * * * *", async function () {
     await merchantPoolService.performScheduledSweeps();
   } catch (err) {
     log(`Cron: Sweep failed, will retry next cycle: ${err.message}`, "error");
+    captureError(err, 'cron', { extraContext: 'performScheduledSweeps' });
   } finally {
     await releaseLock("cron:performScheduledSweeps");
   }
