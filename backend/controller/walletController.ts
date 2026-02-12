@@ -552,9 +552,22 @@ const getAllTransactions = async (
         transaction_id_display: x.id || `TX${x.transaction_id}`,
         crypto: x.crypto_currency || x.base_currency,
         amount: x.base_amount,
-        usd_value: x.base_currency === 'USD' ? x.base_amount : null, // Could add conversion logic here
+        usd_value: x.base_currency === 'USD' ? x.base_amount : null,
         date_time: x.createdAt,
-        status: x.status
+        status: x.status,
+        // Auto-stablecoin conversion indicator
+        auto_converted: !!x.auto_convert_id,
+        auto_convert: x.auto_convert_id
+          ? {
+              conversion_id: x.auto_convert_id,
+              status: x.auto_convert_status,
+              target_currency: x.auto_convert_target_currency,
+              target_amount: x.auto_convert_target_amount ? Number(x.auto_convert_target_amount) : null,
+              settlement_chain: x.auto_convert_settlement_chain,
+              conversion_rate: x.auto_convert_rate ? Number(x.auto_convert_rate) : null,
+              completed_at: x.auto_convert_completed_at,
+            }
+          : null,
       };
     });
 
