@@ -381,6 +381,13 @@ const monitorWithdrawals = async (): Promise<number> => {
           completed_at: new Date(),
         });
         completed++;
+
+        // Send auto-conversion payout email to merchant
+        try {
+          await sendConversionPayoutNotification(data, match.txId);
+        } catch (emailErr) {
+          logError(`Failed to send payout email for conversion #${data.conversion_id}`, emailErr);
+        }
       } else if (match.status === 1 || match.status === 3 || match.status === 5) {
         // Cancelled, Rejected, or Failed
         logError(`Withdrawal failed for conversion #${data.conversion_id}: status=${match.status}`);
