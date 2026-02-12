@@ -5,8 +5,23 @@
 
 import express from "express";
 import * as binanceService from "../services/binanceService";
+import { dynoPayEmailTemplate } from "../helper/sendEmail";
 
 const router = express.Router();
+
+/**
+ * GET /diagnostics/email-preview
+ * Preview the email template to verify logo rendering
+ */
+router.get("/email-preview", async (_req: express.Request, res: express.Response) => {
+  const html = dynoPayEmailTemplate(
+    "Test User",
+    "<p>This is a test email to verify the logo renders correctly.</p><p>If you can see the DynoPay logo in the header and footer, the fix is working.</p>",
+    "Email Logo Test"
+  );
+  res.setHeader("Content-Type", "text/html");
+  res.send(html);
+});
 
 /**
  * GET /diagnostics/binance-ping
