@@ -753,19 +753,22 @@ const changePassword = async (req: express.Request, res: express.Response) => {
   try {
     const { oldPassword, newPassword } = req.body;
     const userData = jwt.decode(res.locals.token) as IUserType;
-    const password = oldPassword ? sha256(oldPassword).toString() : null;
+    
+    // Validate new password strength
+    const passwordError = validatePasswordStrength(newPassword);
+    if (passwordError) {
+      return errorResponseHelper(res, 400, passwordError);
+    }
 
-    const isExists = await userModel
-      .findOne({
-        where: {
-          password: password,
-          user_id: userData.user_id,
-        },
-      })
-      .then((token) => token !== null)
-      .then((isExists) => isExists);
-    if (isExists) {
-      const newPass = sha256(newPassword).toString();
+    // Find user and verify old password using bcrypt (with SHA-256 migration)
+    const user = await userModel.findOne({ where: { user_id: userData.user_id } });
+    if (!user) {
+      return errorResponseHelper(res, 401, "User not found");
+    }
+    
+    const isOldPasswordValid = await verifyPassword(oldPassword, user.dataValues.password, userData.user_id);
+    if (isOldPasswordValid) {
+      const newPass = hashPassword(newPassword);
       await userModel.update(
         { password: newPass },
         {
