@@ -77,19 +77,43 @@ log(`Railway Environment: ${process.env.RAILWAY_ENVIRONMENT || 'not detected'}`,
 const app = express();
 const port = process.env.PORT || 3300;
 
-// CORS Configuration - Allow all origins for testing
+// Trust proxy — required behind K8s/Nginx so req.ip returns real client IP (critical for rate limiters)
+app.set('trust proxy', 1);
+
+// CORS Configuration — env-configurable, defaults to permissive for merchant API compatibility
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : null; // null = allow all (backward compat for merchant API integrations)
 app.use(cors({
-  origin: '*',
-  credentials: false, // Must be false when origin is '*'
+  origin: allowedOrigins || '*',
+  credentials: !!allowedOrigins, // Only allow credentials when origins are restricted
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-Requested-With', 'Accept', 'Origin']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-Requested-With', 'Accept', 'Origin', 'X-Request-ID']
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(helmet({
-  contentSecurityPolicy: false, // Required for Swagger UI
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+      imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net", "https://swagger-ui.netlify.app"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Required for Swagger UI assets
 }));
 app.options("*", cors());
+
+// Request-level logging middleware (response time, correlation ID, method/url/status)
+app.use(requestLoggerMiddleware);
+
+// XSS sanitization middleware — strips malicious HTML/JS from all inputs
+app.use(sanitizeInputMiddleware);
 
 // Static files
 const uploadsPath = process.env.UPLOAD_PATH || path.join(__dirname, '../uploads');
