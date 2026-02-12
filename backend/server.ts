@@ -199,6 +199,26 @@ app.post("/diagnostics/migrate-webhook-urls", adminAuthMiddleware, async (req: e
   }
 });
 
+// Diagnostics: Stablecoin conversion stats and manual trigger
+app.get("/diagnostics/conversion-stats", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const stats = await getConversionStats();
+    res.status(200).json({ success: true, ...stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+app.post("/diagnostics/trigger-conversion", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    log("Admin triggered manual stablecoin conversion cycle", "info");
+    const result = await processStablecoinConversions();
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
 // OPTIMIZED: Reduced from */30 to every 2h — legacy system, rarely has pending addresses
 cron.schedule("0 */2 * * *", function () {
   log("Cron: USDT check running", "info");
