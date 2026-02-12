@@ -5,7 +5,7 @@
 
 import express from "express";
 import * as binanceService from "../services/binanceService";
-import { dynoPayEmailTemplate, sendAutoConversionPayoutEmail } from "../helper/sendEmail";
+import { dynoPayEmailTemplate } from "../helper/sendEmail";
 
 const router = express.Router();
 
