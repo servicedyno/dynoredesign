@@ -7216,3 +7216,38 @@ ports:
           TEST 8: Swagger spec still works — GET /api/docs.json should return valid spec with 197+ paths
           
           Base URL: http://localhost:8001
+
+  - task: "SOCKS5 Proxy Setup: Route Binance Traffic Through German VPS"
+    implemented: true
+    working: true
+    files:
+      - "/app/backend/services/binanceService.ts"
+      - "/app/backend/services/binanceWebSocketService.ts"
+      - "/app/backend/.env"
+      - "/app/backend/scripts/ssh-tunnel-keepalive.sh"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          SOCKS5 PROXY FOR BINANCE API — BYPASSES US GEO-BLOCK:
+          
+          1. SSH SOCKS5 tunnel: localhost:1080 → Vultr German VPS (95.179.167.16)
+          2. binanceService.ts: Added SocksProxyAgent for all signed + public REST requests
+          3. binanceWebSocketService.ts: Added SocksProxyAgent for WebSocket + REST fallback
+          4. .env: Added BINANCE_PROXY_URL=socks5://127.0.0.1:1080
+          5. ssh-tunnel-keepalive.sh: Background script checks tunnel every 30s, auto-reconnects
+          6. Package: Added socks-proxy-agent@^8.0.5 to dependencies
+          
+          VERIFICATION RESULTS:
+          ✅ Direct Binance from pod: BLOCKED (US geo-restriction)
+          ✅ Via SOCKS5 proxy: WORKING (BTC price: $65,841)
+          ✅ Binance WS Connected: true
+          ✅ Geo-Blocked: false  
+          ✅ Live Prices: 10 assets streaming
+          ✅ Last message age: ~200ms (real-time)
+          ✅ TypeScript compilation: clean
+          ✅ Backend health: all services operational
+
