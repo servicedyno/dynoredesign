@@ -257,7 +257,11 @@ const registerPhoneStep2 = async (req: express.Request, res: express.Response) =
     }
     
     // OTP verified, now create user account
-    const newPassword = sha256(password).toString();
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return errorResponseHelper(res, 400, passwordError);
+    }
+    const newPassword = hashPassword(password);
     
     // Double-check mobile doesn't exist
     const mobileExists = await userModel.findOne({
