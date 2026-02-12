@@ -17,16 +17,15 @@ import sys
 import json
 from typing import Dict, Any, Tuple, Optional
 
-# Use the backend URL from frontend .env
-BASE_URL = "https://build-init.preview.emergentagent.com"
+# Use the correct backend URL for testing
+BASE_URL = "http://localhost:8001"
 API_BASE = f"{BASE_URL}/api"
 
 # Test user credentials
 TEST_USER = {
     "email": "autoconvert.test@dynopay.com",
     "password": "AutoConvert2024!",
-    "first_name": "Auto",
-    "last_name": "Convert"
+    "name": "Auto Convert Test User"
 }
 
 # Global variables to store test data
