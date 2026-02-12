@@ -261,6 +261,7 @@ const sendEmail = async (
     return info;
   } catch (e) {
     console.log("Email send error:", formatEmailError(e));
+    captureError(e, 'email', { extraContext: 'sendEmail (generic)' });
   }
 };
 
