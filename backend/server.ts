@@ -30,6 +30,8 @@ import sequelize from "./utils/dbInstance";
 import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron, setupRefereeCodeReminderCron, setupPaymentLinkReminderCron } from "./utils/cronJobs";
 import { getOptimizationDiagnostics } from "./services/tronEnergyService";
 import { migrateWebhookUrls } from "./services/migrateWebhookUrls";
+import { processStablecoinConversions, getConversionStats } from "./services/conversionService";
+import stablecoinConversionModel from "./models/stablecoinConversionModel";
 
 // Load environment variables
 dotenv.config();
