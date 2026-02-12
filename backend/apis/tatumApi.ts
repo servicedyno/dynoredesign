@@ -337,7 +337,8 @@ const generateWallet = async (currency) => {
           index: 0,
         })
       ).key;
-      console.log(`Derived Private Key [Index ${index}]:`, privateKey);
+      // SECURITY: Private keys must never be logged
+      console.log(`Derived address for index ${index}`);
     } else if (currency === "DOGE") {
       const wallet = await tatumSdk.blockchain.doge.dogeGenerateWallet();
       mnemonic = wallet.mnemonic;
@@ -358,7 +359,8 @@ const generateWallet = async (currency) => {
           index: 0,
         })
       ).key;
-      console.log(`Derived Private Key [Index ${index}]:`, privateKey);
+      // SECURITY: Private keys must never be logged
+      console.log(`Derived address for index ${index}`);
     } else if (currency === "LTC") {
       const wallet = await tatumSdk.blockchain.ltc.ltcGenerateWallet();
       mnemonic = wallet.mnemonic;
@@ -378,7 +380,8 @@ const generateWallet = async (currency) => {
           index: 0,
         })
       ).key;
-      console.log(`Derived Private Key [Index ${index}]:`, privateKey);
+      // SECURITY: Private keys must never be logged
+      console.log(`Derived address for index ${index}`);
     } else if (currency === "BSC") {
       const wallet = await tatumSdk.blockchain.bsc.bscGenerateWallet();
       mnemonic = wallet.mnemonic;
@@ -398,7 +401,8 @@ const generateWallet = async (currency) => {
           index: 0,
         })
       ).key;
-      console.log(`Derived Private Key [Index ${index}]:`, privateKey);
+      // SECURITY: Private keys must never be logged
+      console.log(`Derived address for index ${index}`);
     } else if (currency === "BCH") {
       const wallet = await tatumSdk.blockchain.bcash.bchGenerateWallet();
       mnemonic = wallet.mnemonic;
@@ -419,7 +423,8 @@ const generateWallet = async (currency) => {
           index: 0,
         })
       ).key;
-      console.log(`Derived Private Key [Index ${index}]:`, privateKey);
+      // SECURITY: Private keys must never be logged
+      console.log(`Derived address for index ${index}`);
     } else if (currency === "SOL") {
       // Solana: Non-HD — each wallet is a unique keypair
       const wallet = await tatumSdk.blockchain.solana.solanaGenerateWallet();
@@ -456,7 +461,8 @@ const generateWallet = async (currency) => {
           index: 0,
         })
       ).key;
-      console.log(`Derived Private Key [Index ${index}]:`, privateKey);
+      // SECURITY: Private keys must never be logged
+      console.log(`Derived address for index ${index}`);
     }
     return {
       mnemonic,
