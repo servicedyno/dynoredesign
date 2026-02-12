@@ -134,6 +134,162 @@ export const getAssetBalance = async (asset: string): Promise<{ free: number; lo
 };
 
 // ============================================
+// Order Book & Limit IOC
+// ============================================
+
+/** Get order book depth for a trading pair */
+export const getOrderBookDepth = async (
+  symbol: string,
+  limit: number = 5
+): Promise<{
+  symbol: string;
+  bestBid: string;
+  bestBidQty: string;
+  bestAsk: string;
+  bestAskQty: string;
+  spread: string;
+  bids: Array<{ price: string; quantity: string }>;
+  asks: Array<{ price: string; quantity: string }>;
+}> => {
+  const data = (await makePublicRequest("/api/v3/depth", { symbol, limit })) as {
+    bids: Array<[string, string]>;
+    asks: Array<[string, string]>;
+  };
+
+  return {
+    symbol,
+    bestBid: data.bids[0]?.[0] || "0",
+    bestBidQty: data.bids[0]?.[1] || "0",
+    bestAsk: data.asks[0]?.[0] || "0",
+    bestAskQty: data.asks[0]?.[1] || "0",
+    spread: data.bids[0] && data.asks[0]
+      ? (parseFloat(data.asks[0][0]) - parseFloat(data.bids[0][0])).toFixed(8)
+      : "0",
+    bids: data.bids.map(([price, quantity]) => ({ price, quantity })),
+    asks: data.asks.map(([price, quantity]) => ({ price, quantity })),
+  };
+};
+
+/** Place a Limit IOC sell order (instant fill at best available price, no worse than limit) */
+export const placeLimitIOCSell = async (
+  symbol: string,
+  quantity: number,
+  price: string
+): Promise<{
+  orderId: number;
+  symbol: string;
+  status: string;
+  executedQty: string;
+  cummulativeQuoteQty: string;
+  fills: Array<{ price: string; qty: string; commission: string; commissionAsset: string }>;
+}> => {
+  const info = await getExchangeInfo(symbol);
+  const roundedQty = roundToStepSize(quantity, info.stepSize);
+
+  // Round price to tick size (get from PRICE_FILTER)
+  const priceFilterData = (await makePublicRequest("/api/v3/exchangeInfo", { symbol })) as {
+    symbols: Array<{ filters: Array<{ filterType: string; tickSize?: string }> }>;
+  };
+  const priceFilter = priceFilterData.symbols[0]?.filters.find((f) => f.filterType === "PRICE_FILTER");
+  const tickSize = priceFilter?.tickSize || "0.01";
+  const roundedPrice = roundToStepSize(parseFloat(price), tickSize);
+
+  console.log(`[Binance] Limit IOC SELL ${roundedQty} ${symbol} @ ${roundedPrice}`);
+
+  const data = (await makeSignedRequest("POST", "/api/v3/order", {
+    symbol,
+    side: "SELL",
+    type: "LIMIT",
+    timeInForce: "IOC",
+    quantity: roundedQty,
+    price: roundedPrice,
+  })) as {
+    orderId: number;
+    symbol: string;
+    status: string;
+    executedQty: string;
+    cummulativeQuoteQty: string;
+    fills: Array<{ price: string; qty: string; commission: string; commissionAsset: string }>;
+  };
+
+  return data;
+};
+
+/** Convert crypto to stablecoin via Limit IOC for best price, with market order fallback */
+export const convertViaLimitIOC = async (
+  fromAsset: string,
+  toAsset: string,
+  fromAmount: number
+): Promise<{
+  orderId: number;
+  fromAsset: string;
+  toAsset: string;
+  fromAmount: string;
+  toAmount: string;
+  avgPrice: string;
+  status: string;
+  method: string;
+  fillPercent: number;
+}> => {
+  const from = toBinanceAsset(fromAsset);
+  const to = toBinanceAsset(toAsset);
+  const symbol = `${from}${to}`;
+
+  // Step 1: Check order book for best bid
+  const orderBook = await getOrderBookDepth(symbol, 5);
+  const bestBid = orderBook.bestBid;
+
+  console.log(`[Binance] Converting ${fromAmount} ${from} → ${to} via Limit IOC @ best bid ${bestBid}`);
+
+  // Step 2: Place Limit IOC at best bid
+  const order = await placeLimitIOCSell(symbol, fromAmount, bestBid);
+  const executedQty = parseFloat(order.executedQty);
+  const fillPercent = fromAmount > 0 ? (executedQty / fromAmount) * 100 : 0;
+
+  // Step 3: If less than 95% filled, try market order for remainder
+  if (fillPercent < 95 && fromAmount - executedQty > 0.000001) {
+    console.log(`[Binance] IOC filled ${fillPercent.toFixed(1)}%, using market order for remainder`);
+    const remaining = fromAmount - executedQty;
+    try {
+      const marketOrder = await placeMarketSellOrder(symbol, remaining);
+      const totalExecuted = executedQty + parseFloat(marketOrder.executedQty);
+      const totalQuote = parseFloat(order.cummulativeQuoteQty) + parseFloat(marketOrder.cummulativeQuoteQty);
+      const avgPrice = totalExecuted > 0 ? (totalQuote / totalExecuted).toFixed(8) : "0";
+
+      return {
+        orderId: order.orderId,
+        fromAsset: from,
+        toAsset: to,
+        fromAmount: totalExecuted.toFixed(8),
+        toAmount: totalQuote.toFixed(8),
+        avgPrice,
+        status: "FILLED",
+        method: "LIMIT_IOC+MARKET_FALLBACK",
+        fillPercent: 100,
+      };
+    } catch (err) {
+      console.error(`[Binance] Market fallback failed:`, err);
+      // Return partial fill from IOC
+    }
+  }
+
+  const quoteQty = parseFloat(order.cummulativeQuoteQty);
+  const avgPrice = executedQty > 0 ? (quoteQty / executedQty).toFixed(8) : "0";
+
+  return {
+    orderId: order.orderId,
+    fromAsset: from,
+    toAsset: to,
+    fromAmount: order.executedQty,
+    toAmount: order.cummulativeQuoteQty,
+    avgPrice,
+    status: order.status,
+    method: "LIMIT_IOC",
+    fillPercent,
+  };
+};
+
+// ============================================
 // Spot Trading API (works with standard canTrade permission)
 // ============================================
 
