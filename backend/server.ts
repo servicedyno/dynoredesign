@@ -587,6 +587,9 @@ const startServer = async () => {
       log(`Initial rate cache population failed: ${err.message}`, "error");
     });
 
+    // Start volatility monitor (checks price movement every 60s for adaptive sweep fees)
+    startVolatilityMonitor();
+
     // Migrate stale webhook URLs from previous deployments (runs once on startup)
     migrateWebhookUrls()
       .then(stats => {
