@@ -1484,14 +1484,68 @@ const updateAutoConvertSettings = async (
 
     // --- Disabling auto-convert ---
     if (!auto_convert_enabled) {
+      const wasEnabled = company.dataValues.auto_convert_enabled;
       await company.update({ auto_convert_enabled: false });
-      console.log(`[AutoConvert] Company ${id} auto-convert disabled`);
-      return successResponseHelper(res, 200, "Auto-convert settings updated", {
-        auto_convert_enabled: false,
-        settlement_currency: company.dataValues.settlement_currency,
-        settlement_wallet_address: company.dataValues.settlement_wallet_address,
-        settlement_chain: company.dataValues.settlement_chain,
+      console.log(`[AutoConvert] Company ${id} auto-convert disabled (was ${wasEnabled ? "enabled" : "already disabled"})`);
+
+      // Check wallet readiness: which volatile crypto currencies does the merchant
+      // have direct wallets for? Without these, incoming payments in that currency
+      // will fail because there is no destination address.
+      const volatileCurrencies = ["BTC", "ETH", "LTC", "DOGE", "TRX", "BCH", "SOL", "XRP"];
+      const merchantWallets = await userWalletModel.findAll({
+        where: {
+          company_id: parseInt(id),
+          wallet_type: volatileCurrencies,
+        },
+        attributes: ["wallet_type", "wallet_address"],
       });
+
+      const walletMap: Record<string, boolean> = {};
+      for (const c of volatileCurrencies) {
+        walletMap[c] = false;
+      }
+      const configuredWallets: string[] = [];
+      for (const w of merchantWallets) {
+        const wt = (w as { dataValues: { wallet_type: string; wallet_address: string } }).dataValues.wallet_type;
+        const addr = (w as { dataValues: { wallet_type: string; wallet_address: string } }).dataValues.wallet_address;
+        if (addr && addr.length > 5) {
+          walletMap[wt] = true;
+          configuredWallets.push(wt);
+        }
+      }
+
+      const missingWallets = volatileCurrencies.filter((c) => !walletMap[c]);
+      const hasAllWallets = missingWallets.length === 0;
+
+      let warning: string | null = null;
+      if (!hasAllWallets && missingWallets.length > 0) {
+        warning =
+          `Auto-conversion disabled. Payments will now be forwarded directly to your saved merchant wallets. ` +
+          `Warning: You do not have wallets configured for: ${missingWallets.join(", ")}. ` +
+          `Payments in these currencies will fail until you add wallet addresses for them.`;
+      }
+
+      return successResponseHelper(
+        res,
+        200,
+        warning || "Auto-conversion disabled. Payments will be forwarded directly to your saved merchant wallets.",
+        {
+          auto_convert_enabled: false,
+          forwarding_mode: "direct_to_merchant_wallets",
+          previous_settlement: wasEnabled
+            ? {
+                currency: company.dataValues.settlement_currency,
+                chain: company.dataValues.settlement_chain,
+              }
+            : null,
+          wallet_readiness: {
+            all_configured: hasAllWallets,
+            configured_wallets: configuredWallets,
+            missing_wallets: missingWallets,
+            total_volatile_currencies: volatileCurrencies.length,
+          },
+        }
+      );
     }
 
     // --- Enabling: fetch eligible wallets ---
