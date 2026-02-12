@@ -165,8 +165,8 @@ app.get("/", async (_req: express.Request, res: express.Response) => {
   });
 });
 
-// ─── Fee Optimization Diagnostics ────────────────────────────────────────────
-app.get("/diagnostics/fee-optimization", async (req: express.Request, res: express.Response) => {
+// ─── Fee Optimization Diagnostics (Admin-protected) ──────────────────────────
+app.get("/diagnostics/fee-optimization", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const testAddress = req.query.address as string | undefined;
     const diagnostics = await getOptimizationDiagnostics(testAddress);
