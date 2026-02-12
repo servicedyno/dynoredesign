@@ -37,7 +37,6 @@
     "fast-crc32c": "^2.0.0",
     "flutterwave-node-v3": "^1.3.0",
     "helmet": "^7.0.0",
-    "https-proxy-agent": "^7.0.6",
     "ioredis": "^5.9.2",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.1",
