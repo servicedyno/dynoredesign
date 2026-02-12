@@ -26,8 +26,8 @@ const authMiddleware = async (
       // Verify token synchronously or using promisified version
       const decoded = jwt.verify(token, tokenSecret) as IUserType & { exp?: number; iat?: number; type?: string };
       
-      // Debug logging
-      console.log("Auth Middleware - Decoded token:", JSON.stringify(decoded).substring(0, 200));
+      // Debug logging (redacted — no sensitive data)
+      // console.log("Auth Middleware - Token validated for user_id:", decoded.user_id);
       
       // Check token type - customer tokens have 'id', user tokens have 'user_id'
       if (decoded.id && !decoded.user_id) {
