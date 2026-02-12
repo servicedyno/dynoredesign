@@ -43,8 +43,8 @@ class AutoConvertTester:
         """TEST 1: Backend healthy — GET /health should return 200 with status "healthy"""
         test_name = "1"
         try:
-            # Test the exact endpoint from review request
-            response = self.session.get(f"{self.base_url}/health", timeout=10)
+            # Test the actual working health endpoint
+            response = self.session.get(f"{self.base_url}/api/status/health", timeout=10)
             
             if response.status_code == 200:
                 try:
