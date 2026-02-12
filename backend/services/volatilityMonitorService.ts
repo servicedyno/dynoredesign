@@ -11,7 +11,6 @@
 
 import axios from "axios";
 import { redis as redisClient } from "../utils/redisInstance";
-import { sendAdminLowBalanceAlert } from "../helper/sendEmail";
 
 const LOG_PREFIX = "[VolatilityMonitor]";
 const log = (msg: string) => console.log(`${LOG_PREFIX} ${msg}`);
