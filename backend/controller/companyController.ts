@@ -726,6 +726,9 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
           ? {
               conversion_id: rest.auto_convert_id,
               status: rest.auto_convert_status,
+              source_currency: rest.auto_convert_source_currency,
+              source_amount: rest.auto_convert_source_amount ? Number(rest.auto_convert_source_amount) : null,
+              source_amount_usd: rest.auto_convert_source_amount_usd ? Number(rest.auto_convert_source_amount_usd) : null,
               target_currency: rest.auto_convert_target_currency,
               target_amount: rest.auto_convert_target_amount ? Number(rest.auto_convert_target_amount) : null,
               settlement_chain: rest.auto_convert_settlement_chain,
