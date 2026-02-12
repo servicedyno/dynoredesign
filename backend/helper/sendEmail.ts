@@ -1384,7 +1384,7 @@ const sendWeeklyConversionSummaryEmail = async (
     console.log(`[Email] Weekly conversion summary sent to ${recipientEmail} (${totalConversions} conversions)`);
     return info;
   } catch (e) {
-    console.log("Weekly conversion summary email error:", e);
+    console.log("Weekly conversion summary email error:", formatEmailError(e));
   }
 };
 
