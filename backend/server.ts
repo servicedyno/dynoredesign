@@ -42,6 +42,7 @@ import { processStablecoinConversions, getConversionStats, sendWeeklyConversionS
 import stablecoinConversionModel from "./models/stablecoinConversionModel";
 import { processWebhookRetryQueue } from "./utils/webhookRetry";
 import { startVolatilityMonitor, getAllMarketStates, runMonitorCycle } from "./services/volatilityMonitorService";
+import { startBinanceWebSocket, getStatus as getWsStatus } from "./services/binanceWebSocketService";
 import { getAllFeeRates, getFeeRates } from "./services/feeRateService";
 import { captureError, startErrorMonitoring, stopErrorMonitoring, getMonitoringStats, flushErrorDigest, sendErrorDigest } from "./services/errorMonitoringService";
 
