@@ -336,15 +336,21 @@ const login = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 400, "Email and password are required");
     }
     
-    const newPassword = sha256(password).toString();
+    const newPassword_unused = null; // Legacy sha256 removed — bcrypt used via verifyPassword
+    
+    // Step 1: Find user by email only (bcrypt hashes can't be queried directly)
     const userData = await userModel.findOne({
       where: {
         email: email.toLowerCase(),
-        password: newPassword,
       },
     });
     
-    if (!userData) {
+    // Step 2: Verify password using bcrypt (with transparent SHA-256 migration)
+    const isPasswordValid = userData
+      ? await verifyPassword(password, userData.dataValues.password, userData.dataValues.user_id)
+      : false;
+    
+    if (!userData || !isPasswordValid) {
       // Track failed login attempt
       const rawIp = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
       const ipAddress = rawIp.split(',')[0].trim().substring(0, 45); // Get first IP and limit length
