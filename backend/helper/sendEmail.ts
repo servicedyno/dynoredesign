@@ -27,15 +27,13 @@ const formatAmountWithCurrency = (amount: number, currency: string = 'USD'): str
   return `${symbol}${amount.toFixed(2)} ${currency}`;
 };
 
-// Use PNG version for email compatibility (SVG clip-path not supported by Gmail)
-const DYNOPAY_WHITE_LOGO_SVG = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Icons/home/dynopay-whiteLogo.svg";
+// Use direct CDN/public URL for email logo (more reliable than self-hosted)
+const DYNOPAY_LOGO_URL = "https://raw.githubusercontent.com/Moxxcompany/DynoFrontend/dharmik-new-design/assets/Icons/home/dynopay-whiteLogo.svg";
+
 const getDynopayLogoUrl = () => {
-  const serverUrl = process.env.SERVER_URL;
-  if (serverUrl) {
-    // Use /api/static prefix so K8s ingress routes to backend (port 8001) instead of frontend
-    return `${serverUrl}/api/static/dynopay-white-logo.png`;
-  }
-  return DYNOPAY_WHITE_LOGO_SVG;
+  // Always use the GitHub CDN URL - most reliable for emails
+  // Email clients need publicly accessible URLs
+  return DYNOPAY_LOGO_URL;
 };
 
 const dynoPayEmailTemplate = (
