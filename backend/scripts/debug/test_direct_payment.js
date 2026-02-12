@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://binance-spot-trade.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://setup-deps-8.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {
