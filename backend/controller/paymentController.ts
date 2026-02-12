@@ -4652,15 +4652,21 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           const paymentDateTime = new Date();
           const paymentDateStr = paymentDateTime.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
           const paymentTimeStr = paymentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          
+          // When auto-convert is ON, show the original merchant amount (before redirect to admin)
+          // Merchant will receive USDT equivalent, not 0 ETH
+          const emailAmount = autoConvertEnabled ? originalUserAmount.toString() : userAmountToSend.toString();
+          const emailCurrency = autoConvertEnabled ? `${tempCurrency} (converting to ${autoConvertTargetCurrency})` : tempCurrency;
+          
           await sendPaymentReceivedEmail(
             userData?.email,
             userData?.name,
-            userAmountToSend.toString(),  // amount
-            tempCurrency,                 // currency
-            companyName,                  // companyName
-            transactionId,                // transactionId
-            paymentDateStr,               // date
-            paymentTimeStr                // time
+            emailAmount,             // original merchant amount (not 0)
+            emailCurrency,           // e.g., "ETH (converting to USDT)"
+            companyName,             // companyName
+            transactionId,           // transactionId
+            paymentDateStr,          // date
+            paymentTimeStr           // time
           );
         }
 
