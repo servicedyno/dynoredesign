@@ -452,15 +452,13 @@ let redisSyncTimer: NodeJS.Timeout | null = null;
 
 const syncToRedis = async () => {
   try {
-    if (!redisClient || !redisClient.isReady) return;
-
     // Sync prices
     const priceData = JSON.stringify(priceCache);
-    await redisClient.set(REDIS_PRICE_KEY, priceData, { EX: 300 });
+    await setRedisItemWithTTL(REDIS_PRICE_KEY, priceData, 300);
 
     // Sync klines (per asset, with shorter TTL)
     for (const [asset, candles] of Object.entries(klineCache)) {
-      await redisClient.set(`${REDIS_KLINE_PREFIX}${asset}`, JSON.stringify(candles), { EX: 120 });
+      await setRedisItemWithTTL(`${REDIS_KLINE_PREFIX}${asset}`, JSON.stringify(candles), 120);
     }
   } catch {
     // Redis sync is best-effort
