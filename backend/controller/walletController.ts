@@ -548,7 +548,20 @@ const getAllTransactions = async (
     );
 
     const customer_data = tempData.map((x: Record<string, unknown>) => {
-      const { wallet_id, ...rest } = x;
+      const {
+        wallet_id,
+        auto_convert_id,
+        auto_convert_status,
+        auto_convert_source_currency,
+        auto_convert_source_amount,
+        auto_convert_source_amount_usd,
+        auto_convert_target_currency,
+        auto_convert_target_amount,
+        auto_convert_settlement_chain,
+        auto_convert_rate,
+        auto_convert_completed_at,
+        ...rest
+      } = x;
       return {
         ...rest,
         // Format for UI
@@ -559,19 +572,19 @@ const getAllTransactions = async (
         date_time: x.createdAt,
         status: x.status,
         // Auto-stablecoin conversion indicator
-        auto_converted: !!x.auto_convert_id,
-        auto_convert: x.auto_convert_id
+        auto_converted: !!auto_convert_id,
+        auto_convert: auto_convert_id
           ? {
-              conversion_id: x.auto_convert_id,
-              status: x.auto_convert_status,
-              source_currency: x.auto_convert_source_currency,
-              source_amount: x.auto_convert_source_amount ? Number(x.auto_convert_source_amount) : null,
-              source_amount_usd: x.auto_convert_source_amount_usd ? Number(x.auto_convert_source_amount_usd) : null,
-              target_currency: x.auto_convert_target_currency,
-              target_amount: x.auto_convert_target_amount ? Number(x.auto_convert_target_amount) : null,
-              settlement_chain: x.auto_convert_settlement_chain,
-              conversion_rate: x.auto_convert_rate ? Number(x.auto_convert_rate) : null,
-              completed_at: x.auto_convert_completed_at,
+              conversion_id: auto_convert_id,
+              status: auto_convert_status,
+              source_currency: auto_convert_source_currency,
+              source_amount: auto_convert_source_amount ? Number(auto_convert_source_amount) : null,
+              source_amount_usd: auto_convert_source_amount_usd ? Number(auto_convert_source_amount_usd) : null,
+              target_currency: auto_convert_target_currency,
+              target_amount: auto_convert_target_amount ? Number(auto_convert_target_amount) : null,
+              settlement_chain: auto_convert_settlement_chain,
+              conversion_rate: auto_convert_rate ? Number(auto_convert_rate) : null,
+              completed_at: auto_convert_completed_at,
             }
           : null,
       };
