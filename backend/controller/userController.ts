@@ -14,6 +14,7 @@ import notificationModel from "../models/notificationModel";
 import notificationPreferencesModel from "../models/notificationPreferencesModel";
 import kycModel from "../models/kycModel";
 import sha256 from "crypto-js/sha256";
+import { hashPassword, verifyPassword, validatePasswordStrength } from "../helper/passwordHelper";
 import crypto from "crypto";
 import sequelize from "../utils/dbInstance";
 import { QueryTypes, Op } from "sequelize";
