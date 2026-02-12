@@ -75,12 +75,18 @@ const processPendingDeposits = async (): Promise<number> => {
         startTime: new Date(data.createdAt).getTime() - 3600000, // 1h before creation
       });
 
-      // Find matching deposit by TX hash or amount
+      // Find matching deposit — prefer TX hash match, fallback to amount + time window
+      const createdAtMs = new Date(data.createdAt).getTime();
       const matchingDeposit = deposits.find(
-        (d) =>
-          (data.deposit_tx_hash && d.txId === data.deposit_tx_hash) ||
-          (Math.abs(parseFloat(d.amount) - parseFloat(data.source_amount)) < 0.00001 &&
-            d.coin === binanceAsset)
+        (d) => {
+          // Primary: exact TX hash match
+          if (data.deposit_tx_hash && d.txId === data.deposit_tx_hash) return true;
+          // Fallback: amount + coin + time window (deposit must be after record creation)
+          if (d.coin === binanceAsset && d.insertTime >= createdAtMs - 60000) {
+            return Math.abs(parseFloat(d.amount) - parseFloat(data.source_amount)) < 0.00001;
+          }
+          return false;
+        }
       );
 
       if (matchingDeposit) {
