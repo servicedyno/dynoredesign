@@ -131,6 +131,7 @@ const connect = () => {
   ws.on("open", () => {
     isConnecting = false;
     reconnectAttempts = 0;
+    geoBlocked = false; // Connection succeeded — not geo-blocked
     lastMessageTime = Date.now();
     log(`✅ Connected — tracking ${TRACKED_ASSETS.length} assets`);
 
