@@ -150,7 +150,14 @@ const analyzeAsset = async (asset: string): Promise<MarketState | null> => {
       updatedAt: new Date().toISOString(),
     };
   } catch (err: any) {
-    // Return null — errors are collected and logged in batch by runMonitorCycle
+    // Re-throw rate-limit/geo-block errors so runMonitorCycle can detect and backoff
+    const status = err?.response?.status || 0;
+    const msg = err?.message || "";
+    if (status === 418 || status === 429 || status === 451 ||
+        msg.includes("418") || msg.includes("429") || msg.includes("451")) {
+      throw err; // Let Promise.allSettled see this as "rejected"
+    }
+    // Other errors: return null silently (errors batched by runMonitorCycle)
     return null;
   }
 };
