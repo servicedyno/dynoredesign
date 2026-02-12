@@ -14,10 +14,11 @@
 import stablecoinConversionModel from "../models/stablecoinConversionModel";
 import * as binanceService from "./binanceService";
 import { getMarketState, getRecommendedFeeTier } from "./volatilityMonitorService";
-import { Op } from "sequelize";
+import { Op, fn, col, literal } from "sequelize";
+import sequelize from "../utils/dbInstance";
 import userModel from "../models/userModels/userModel";
 import companyModel from "../models/companyModels/companyModel";
-import { sendAutoConversionPayoutEmail } from "../helper/sendEmail";
+import { sendAutoConversionPayoutEmail, sendWeeklyConversionSummaryEmail } from "../helper/sendEmail";
 
 const MAX_RETRIES = 5;
 const LOG_PREFIX = "[StablecoinConvert]";
