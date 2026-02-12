@@ -5,6 +5,9 @@ import helmet from "helmet";
 import path from "path";
 import router from "./routes";
 import { setupSwagger } from "./swagger";
+import sanitizeInputMiddleware from "./middleware/sanitizeInput";
+import requestLoggerMiddleware from "./middleware/requestLogger";
+import adminAuthMiddleware from "./middleware/adminAuthMiddleware";
 
 // Redis imports - only used ones
 import { connectRedis, acquireLock, releaseLock } from "./utils/redisInstance";
