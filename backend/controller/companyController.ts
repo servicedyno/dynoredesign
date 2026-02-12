@@ -7,10 +7,10 @@ import {
 import { formatAmountForDisplay, getCurrencyInfo, COMPANY_CURRENCY_QUERY, convertToFiat, getCompanyBaseCurrency } from "../utils/currencyUtils";
 import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
-import { companyModel, userModel } from "../models";
+import { companyModel, userModel, stablecoinConversionModel } from "../models";
 import { companyLogger } from "../utils/loggers";
 import sequelize from "../utils/dbInstance";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Op } from "sequelize";
 import { sendCompanyProfileCreatedEmail, sendCompanyContactWelcomeEmail, sendCompanyProfileUpdatedEmail } from "../services/emailService";
 import { deleteRedisItem } from "../utils/redisInstance";
 
