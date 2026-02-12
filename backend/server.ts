@@ -41,7 +41,6 @@ import { migrateWebhookUrls } from "./services/migrateWebhookUrls";
 import { processStablecoinConversions, getConversionStats } from "./services/conversionService";
 import stablecoinConversionModel from "./models/stablecoinConversionModel";
 import { processWebhookRetryQueue } from "./utils/webhookRetry";
-import binanceRelayRouter from "./routes/binanceRelayRouter";
 
 // ============================================
 // RAILWAY LOGGING FIX: Disable output buffering
@@ -141,9 +140,6 @@ setupSwagger(app);
 // New integrations can use /api/v1/... for explicit versioning
 app.use("/api", router);
 app.use("/api/v1", router);
-
-// Binance relay endpoint (can be on separate Railway deployment)
-app.use("/api", binanceRelayRouter);
 
 // Health check endpoint for Railway
 app.get("/health", async (_req: express.Request, res: express.Response) => {
