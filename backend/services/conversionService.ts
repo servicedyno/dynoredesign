@@ -469,8 +469,41 @@ export const processStablecoinConversions = async (): Promise<{
   conversions: number;
   withdrawals: number;
   completed: number;
+  skipped_reason?: string;
 }> => {
   log("🔄 Starting conversion cycle...");
+
+  // ── Binance Availability Guard ──
+  // Before making any signed Binance API calls, check if Binance is reachable.
+  // If the WebSocket is disconnected AND the last data is older than 5 minutes,
+  // the Binance API is likely unreachable from this server (geo-block, outage, etc.).
+  // In that case, skip the expensive phases (convert, withdraw) but still check deposits
+  // (which uses Binance REST — we want to detect when it comes back).
+  const wsStatus = getBinanceWsStatus();
+  const binanceReachable = wsStatus.connected || (wsStatus.lastMessageAge >= 0 && wsStatus.lastMessageAge < 5 * 60 * 1000);
+
+  if (!binanceReachable) {
+    log(`⚠️ Binance appears unreachable (WS connected: ${wsStatus.connected}, last msg: ${wsStatus.lastMessageAge > 0 ? Math.round(wsStatus.lastMessageAge / 1000) + 's ago' : 'never'}). Skipping conversion/withdrawal phases — will retry next cycle.`);
+
+    // Still mark exhausted records to prevent infinite loops
+    await markExhaustedAsFailed();
+
+    // Attempt deposit check as a connectivity probe
+    let depositsChecked = 0;
+    try {
+      depositsChecked = await processPendingDeposits();
+    } catch (err) {
+      logError("Deposit check failed (Binance unreachable)", err);
+    }
+
+    return {
+      depositsChecked,
+      conversions: 0,
+      withdrawals: 0,
+      completed: 0,
+      skipped_reason: "binance_unreachable",
+    };
+  }
 
   // First, mark any records that exceeded retries as FAILED
   await markExhaustedAsFailed();
