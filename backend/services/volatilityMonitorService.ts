@@ -11,10 +11,10 @@
 
 import axios from "axios";
 import { redis as redisClient } from "../utils/redisInstance";
+import { captureError } from "./errorMonitoringService";
 
 const LOG_PREFIX = "[VolatilityMonitor]";
 const log = (msg: string) => console.log(`${LOG_PREFIX} ${msg}`);
-const logError = (msg: string) => console.error(`${LOG_PREFIX} ❌ ${msg}`);
 
 // Binance public API (no auth, works from any region)
 const BINANCE_PUBLIC_URL = process.env.BINANCE_BASE_URL || "https://api.binance.com";
@@ -43,6 +43,12 @@ const STATE_TO_FEE_TIER: Record<string, string> = {
 // Alert cooldown: max 1 alert per crypto per 30 minutes
 const alertCooldowns: Record<string, number> = {};
 const ALERT_COOLDOWN_MS = 30 * 60 * 1000;
+
+// Rate-limit backoff: skip cycles when API returns 418/429
+let rateLimitBackoffUntil = 0;
+const RATE_LIMIT_BACKOFF_MS = 5 * 60 * 1000; // Back off for 5 minutes on rate limit
+let consecutiveRateLimitCycles = 0;
+const MAX_RATE_LIMIT_LOG_FREQUENCY = 10; // Only log every 10th rate-limited cycle
 
 // Redis key prefix
 const REDIS_KEY_PREFIX = "dynopay:v1:volatility";
