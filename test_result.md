@@ -6951,3 +6951,34 @@ ports:
           - Recommendation: Update documentation to include the specific endpoint names if required for API compatibility
           
           CONCLUSION: Swagger API Documentation Overhaul is 90% successful and production-ready. The comprehensive API documentation with 192 endpoints provides complete coverage of DynoPay functionality. All core features tested successfully. One minor documentation gap exists where specific merchant API endpoint names are missing but functional alternatives are available.
+  - task: "Auto-Conversion Disable Flow Enhancement"
+    implemented: true
+    working: pending_test
+    files:
+      - "/app/backend/controller/companyController.ts"
+      - "/app/backend/swagger/paths/company.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Enhanced the auto-conversion disable flow:
+          1. PUT /api/company/auto-convert/{id} with { auto_convert_enabled: false } now:
+             - Checks merchant wallet readiness for all volatile crypto currencies (BTC, ETH, LTC, DOGE, TRX, BCH, SOL, XRP)
+             - Returns wallet_readiness object with configured_wallets and missing_wallets
+             - Warns if merchant lacks wallets for some currencies
+             - Returns forwarding_mode: "direct_to_merchant_wallets"
+             - Shows previous_settlement info if was previously enabled
+          2. Updated Swagger docs with new response schema including wallet_readiness
+          3. Normal forwarding to merchant wallets already worked in the payment flow when auto_convert_enabled is false
+          
+          TESTS TO RUN:
+          TEST 1: Backend healthy — GET http://localhost:8001/health returns 200
+          TEST 2: Disable endpoint accessible — PUT /api/company/auto-convert/1 with { auto_convert_enabled: false } returns 401 (auth required)
+          TEST 3: Swagger spec updated — GET /api/docs.json → /api/company/auto-convert/{id} PUT description contains "wallet_readiness"
+          TEST 4: Enable endpoint accessible — PUT /api/company/auto-convert/1 with { auto_convert_enabled: true, settlement_currency: "USDT", settlement_chain: "ERC20" } returns 401 (auth required)
+          TEST 5: Verify in swagger spec that PUT response includes wallet_readiness schema
+          
+          Base URL: http://localhost:8001
