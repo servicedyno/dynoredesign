@@ -4594,7 +4594,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
                 console.error(`[cryptoVerification] Failed URL: ${webhookResult.url}`);
               }
             }
-            console.log(`[cryptoVerification] Webhook payload: merchant_amount=${userAmountToSend}, total_fee=${adminAmountToSend}, fee_payer=${enhancedWebhookPayload.fee_payer}`);
+            console.log(`[cryptoVerification] Webhook payload: merchant_amount=${autoConvertEnabled ? originalUserAmount : userAmountToSend}, total_fee=${autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend}, fee_payer=${enhancedWebhookPayload.fee_payer}${autoConvertEnabled ? `, auto_convert=${autoConvertTargetCurrency}` : ''}`);
           } catch (webhookError) {
             console.error("[cryptoVerification] Merchant webhook failed:", webhookError.message);
             // Don't fail the transaction if webhook fails
