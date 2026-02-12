@@ -1423,16 +1423,12 @@ const changeEmail = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 400, "Invalid email format");
     }
     
-    // Verify password
-    const hashedPassword = sha256(password).toString();
+    // Verify password using bcrypt (with SHA-256 migration)
     const user = await userModel.findOne({
-      where: {
-        user_id: userData.user_id,
-        password: hashedPassword
-      }
+      where: { user_id: userData.user_id }
     });
     
-    if (!user) {
+    if (!user || !(await verifyPassword(password, user.dataValues.password, userData.user_id))) {
       return errorResponseHelper(res, 401, "Invalid password");
     }
     
