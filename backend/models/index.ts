@@ -113,4 +113,6 @@ export {
   TOKEN_CHAINS,
   GAS_TOKEN_MAPPING,
   NON_HD_CHAINS,
+  // Stablecoin Conversion
+  stablecoinConversionModel,
 };
