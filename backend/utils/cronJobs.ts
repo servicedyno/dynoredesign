@@ -415,6 +415,7 @@ export const setupHealthCheckCron = () => {
       await monitoringService.runHealthChecks();
     } catch (e) {
       log(`Health Check Cron Job Error: ${e}`, "error");
+      captureError(e, 'cron', { extraContext: 'setupHealthCheckCron' });
     }
   });
 
