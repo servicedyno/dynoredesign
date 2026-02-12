@@ -127,6 +127,7 @@ const connect = () => {
     ws = new WebSocket(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; DynoPay/1.0)" },
       handshakeTimeout: 15000,
+      ...(wsProxyAgent ? { agent: wsProxyAgent } : {}),
     });
   } catch (err) {
     log(`❌ WebSocket constructor error: ${(err as Error).message}`);
