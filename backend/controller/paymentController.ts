@@ -3183,7 +3183,7 @@ const settleCryptoTransaction = async ({
 
       } else {
         // Account-based chains (ETH, TRX, BSC, SOL, XRP, POLYGON): Single transfer to merchant only
-        // Gas comes from fee portion (tier-based: 2% + fixed + buffer)
+        // Gas comes from fee portion (tier-based: 1.5% + fixed)
         // Admin fee stays in temp address for batch sweep later
         fees = await tatumApi.feeEstimation(
           currency,
