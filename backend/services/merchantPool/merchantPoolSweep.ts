@@ -33,6 +33,7 @@ import {
   withRetry,
   Op,
 } from "./merchantPoolConfig";
+import { directEvmSweep, isDirectEvmSupported } from "./directEvmTransfer";
 import sequelize from "../../utils/dbInstance";
 
 /**
