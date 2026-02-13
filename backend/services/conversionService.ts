@@ -409,12 +409,16 @@ const monitorWithdrawals = async (): Promise<number> => {
       if (!match) continue;
 
       if (match.status === 6) {
-        // Completed
-        log(`🎉 Withdrawal complete for conversion #${data.conversion_id}: TX ${match.txId}`);
+        // Completed - record actual fee and calculate net payout
+        const actualFee = parseFloat(match.transactionFee);
+        const submittedAmount = parseFloat(data.merchant_payout_usd || data.target_amount || "0");
+        const netPayout = submittedAmount - actualFee;
+        log(`🎉 Withdrawal complete for conversion #${data.conversion_id}: TX ${match.txId} (submitted: $${submittedAmount.toFixed(2)}, fee: $${actualFee.toFixed(2)}, net: $${netPayout.toFixed(2)})`);
         await record.update({
           status: "COMPLETED",
           withdrawal_tx_hash: match.txId,
-          withdrawal_fee: parseFloat(match.transactionFee),
+          withdrawal_fee: actualFee,
+          merchant_payout_usd: netPayout, // Actual amount merchant received
           completed_at: new Date(),
         });
         completed++;
