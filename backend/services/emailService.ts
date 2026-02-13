@@ -1125,30 +1125,24 @@ export const sendApiKeyCreatedEmail = async (
   time: string
 ) => {
   try {
-    const subject = `🔑 API key ${action} - ${keyType} environment`;
+    const subject = `API key ${action} - ${keyType} environment`;
     const actionText = action === 'created' ? 'created' : 'regenerated';
     
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Your <strong>${keyType}</strong> API key has been ${actionText}.</p>
-    <div class="highlight-box">
-      <p><strong>API Key Details:</strong></p>
-      <p>Environment: ${keyType === 'production' ? '🔴 Production' : '🟡 Development'}<br />
-      Key Preview: ${keyPreview}...<br />
-      ${action === 'regenerated' ? 'Note: Your old key is now invalid<br />' : ''}
-      Date: ${date} at ${time}</p>
-    </div>
-    ${keyType === 'production' ? `<p class="message" style="color: #ef4444;"><strong>⚠️ Important:</strong> This is a production key. Keep it secure and never share it publicly.</p>` : ''}
-    <p class="message"><strong>Didn't do this?</strong><br />
-    If you didn't ${action === 'created' ? 'create' : 'regenerate'} this API key, please secure your account immediately.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your <strong>${keyType}</strong> API key has been ${actionText}.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Environment', keyType === 'production' ? statusBadge('Production', 'error') : statusBadge('Development', 'pending'))}
+        ${dataRow('Key Preview', `<span style="font-family: monospace; font-size: 13px;">${keyPreview}...</span>`)}
+        ${action === 'regenerated' ? dataRow('Note', 'Your old key is now invalid') : ''}
+        ${dataRow('Date', `${date} at ${time}`, true)}
+      </table>
+    `)}
+    ${keyType === 'production' ? p(`<strong>Important:</strong> This is a production key. Keep it secure and never share it publicly.`, `color: #991b1b;`) : ''}
+    ${p(`<strong>Didn't do this?</strong><br />If you didn't ${action === 'created' ? 'create' : 'regenerate'} this API key, please secure your account immediately.`)}`;
 
     const html = dynoPayEmailTemplate("API Key Update", content, true, "View API Keys", "https://dynopay.com/dashboard/api-keys");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
+    await mailTransporter({ to: email, name, subject, body: html });
     
     console.log(`[Email] API key ${action} notification sent to ${email} for ${keyType} environment`);
   } catch (e) {
