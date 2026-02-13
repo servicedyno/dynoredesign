@@ -1,93 +1,75 @@
 # DynoPay - Crypto Payment Gateway PRD
 
 ## Original Problem Statement
-Full-stack cryptocurrency payment gateway (DynoPay) with Node.js/TypeScript backend, React frontend, PostgreSQL + Redis databases. Integrated with Tatum (crypto ops), Binance (currency conversion), and Brevo (transactional emails). Deployed on Railway.
+Crypto payment processing system requiring:
+1. Bug fixes (double withdrawal fee, deposit_tx_hash population)
+2. Auto-conversion flow optimization
+3. Fee structure refactoring (1.5% + $1.00 tier-based fixed fee)
+4. Professional email template redesign
+5. Consistent gas fee deduction across all chains
 
-## Architecture
-- **Backend**: Node.js/TypeScript + Express, running on Railway (port 3300)
-- **Frontend**: React.js
-- **Database**: PostgreSQL (Sequelize ORM) + Redis (caching/locks)
-- **Emergent Pod**: Python/uvicorn proxy on 8001 -> Node.js on 3300
-- **3rd Party**: Tatum, Binance, Brevo (Sendinblue), Blockstream, Blocknative
-- **Production URL**: https://api.dynopay.com
-
-## Fee Structure (Updated Feb 13, 2026)
-**Formula**: `Fee = 1.5% + tier fixed fee + dynamic gas (at settlement)`
-
-| Tier | Range | Fixed Fee |
-|------|-------|-----------|
-| 1 | $1–$100 | $1.00 |
-| 2 | $101–$500 | $1.00 |
-| 3 | $501–$1000 | $1.00 |
-| 4 | $1001+ (unlimited) | $1.00 |
-
-- Buffer completely removed from code and .env
-- Gas costs: UTXO deducted from merchant, account-based chains from admin portion (pending change to deduct from merchant)
-- Admin can adjust per-tier fixed fees independently
-
-## Auto-Convert Pipeline (Optimized Feb 13, 2026)
-- Immediate sweep trigger after auto-convert payment (0 delay, was 3-5 min)
-- Conversion cron: every 2 min (was 5 min)
-- Non-auto-convert: unchanged (time:3 native, threshold tokens, batch UTXO)
+## Core Architecture
+- **Backend**: Node.js / TypeScript
+- **Database**: PostgreSQL
+- **Proxy**: SSH SOCKS5 Tunneling with autossh
+- **3rd Party APIs**: Binance (conversion), Tatum (webhooks/gas estimation), Brevo (email)
 
 ## What's Been Implemented
 
-### Sessions 1-10 (Feb 12, 2026)
-- Full codebase analysis, security audit, security improvements
-- Binance Convert API -> Spot Market Orders
-- Adaptive Conversion System (volatility monitor, fee rate service, Limit IOC)
-- Auto-conversion payout email template
-- Auto-Convert wallet selection flow improvements
-- Brevo fix + error logging consolidation
+### Session 1-3: Core Fixes
+- Double withdrawal fee bug fixed and verified
+- Auto-conversion speed optimized (~8min faster)
+- Fee structure refactored: 1.5% + $1.00 tier-based fixed fee
+- Buffer logic removed from codebase
 
-### Session 11 (Feb 12-13, 2026)
-- SOCKS5 proxy tunnel for Binance connectivity
-- Fixed notification logic, permissive Tatum webhook validation
-- Removed double withdrawal fee deduction
-- Reworked deposit_tx_hash auto-population
-- Two end-to-end test payments completed
+### Session 4 (Current - Feb 13, 2026): Email Template Redesign
+- **Created shared email template system** (`utils/emailTemplate.ts`)
+  - Professional base template with dark mode support, mobile responsive
+  - Reusable components: `infoBox`, `dataRow`, `statusBadge`, `p`, `otpBlock`
+  - Navy branded header with Dynopay logo
+  - Dark footer with social links
+- **Updated `services/emailService.ts`** - All 30+ templates redesigned:
+  - Welcome, Company Profile, Wallet OTP, Email Verification OTP
+  - Login OTP, Forgot Password OTP, Password Changed
+  - KYC Required/Approved/Rejected/Started/Resubmission
+  - Payment Received, Payment Link Created, Payment Expiring
+  - Customer Payment Confirmation, Payment Failed
+  - Security Alert, New Device Login, Failed Login Attempts
+  - API Key Created, Wallet Verified/Deleted/Update
+  - Weekly Summary, Large Transaction Alert
+  - Subscription Created/Cancelled/Payment Failed
+  - Invoice Generated
+- **Updated `helper/sendEmail.ts`** - All templates redesigned:
+  - Payment Received, Transaction Confirmed, Admin Fee Received
+  - All emoji references removed from subjects/content
+- **Added email preview gallery** at `/api/diagnostics/email-preview`
+  - 5 preview templates: payment, otp, security, welcome, admin
+  - Template switching via query parameter
 
-### Session 12 (Feb 13, 2026)
-- **Auto-convert speed optimization**: immediate sweep + 2-min cron
-- **Fee structure overhaul**: 3-component → 2-component (1.5% + $1 fixed)
-- Buffer removed from: feeConfigUtils.ts, controller/index.ts, paymentController.ts, invoiceController.ts, types/index.ts, merchantPoolSweep.ts
-- DB models kept for backwards compat (old records retain buffer values)
+## Pending Tasks
 
-## Volatile Currencies (subject to auto-conversion)
-BTC, ETH, LTC, DOGE, TRX, BCH, SOL, XRP, POLYGON
+### P0: Verify deposit_tx_hash Fix (TESTING PENDING)
+- Code fix in `services/addressService.ts` needs end-to-end verification
+- Requires live blockchain transaction to test
 
-## Key Environment Config
-- `TRANSACTION_FEE_PERCENT=1.5`
-- `FEE_TIER_*_FIXED=1.00` (all tiers), `FEE_TIER_*_BUFFER` removed
-- `FEE_TIER_4_MAX=` (empty = unlimited)
-- `BINANCE_CONVERT_INTERVAL_MINUTES=2`
-- `BINANCE_PROXY_URL=socks5://127.0.0.1:1080`
+### P1: Implement Consistent Gas Fee Deduction (NOT STARTED)
+- Native/Token chains currently have platform paying gas
+- Must modify `paymentController.ts` to deduct gas from merchant payout
+- Impacts profitability
 
-## Prioritized Backlog
-
-### P0 - Next
-- [ ] Implement dynamic gas fee deduction from merchant payout (account-based chains)
-- [ ] Run live test payment with new fee structure
-
-### P1
-- [ ] Create persistent autossh tunnel
-- [ ] Deploy changes to Railway production
-
-### P2 - Future
-- [ ] Refactor monolithic paymentController.ts (~4600 lines)
-- [ ] Admin panel UI for tier fee management
-- [ ] Refactor addressService.ts sweep logic
+## Future/Backlog
+- Refactor monolithic `paymentController.ts`
+- Create persistent `autossh` tunnel service for Binance proxy
+- Pre-existing TS error in `paymentController.ts` line 1115 (`transactionFeePercent` variable)
 
 ## Key Files
-- `backend/controller/paymentController.ts` - Payment flow + fee calc + auto-convert + immediate sweep
-- `backend/controller/index.ts` - calculateTransactionFees (buffer removed)
-- `backend/utils/feeConfigUtils.ts` - Fee tier config (buffer removed)
-- `backend/types/index.ts` - FeeTier/FeeCalculationResult types (buffer removed)
-- `backend/services/conversionService.ts` - Conversion pipeline (4 phases)
-- `backend/services/binanceService.ts` - Spot trading, withdrawal
-- `backend/services/merchantPool/merchantPoolSweep.ts` - Sweep logic
+- `utils/emailTemplate.ts` - Shared email base template & components
+- `services/emailService.ts` - 30+ merchant/user email templates
+- `helper/sendEmail.ts` - Payment/admin email templates
+- `routes/diagnosticsRouter.ts` - Email preview endpoint
+- `controller/paymentController.ts` - Payment logic (needs gas fee fix)
+- `services/addressService.ts` - deposit_tx_hash fix (needs verification)
 
-## Credentials
-- Admin: moxxcompany@gmail.com (DB id: 2)
-- Test user: richard@dyno.pt (DB user_id: 28)
+## Test Credentials
+- User: richard@dyno.pt (DB user_id: 28)
 - VPS: 95.179.167.16 root / E9o,RRotPdX_d7fC
