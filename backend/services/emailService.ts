@@ -644,27 +644,18 @@ export const sendKYCRejectedEmail = async (
 ) => {
   try {
     const subject = "Verification unsuccessful";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">We were unable to verify your identity at this time.</p>
-    <div class="highlight-box" style="border-left-color: #f47323;">
-      <p><strong>Reason:</strong></p>
-      <p>${rejectionReason}</p>
-    </div>
-    <p class="message">Don't worry! You can resubmit your verification documents. Make sure to:</p>
-    <p class="message">✓ Use clear, high-quality images<br />
-    ✓ Ensure all information is visible<br />
-    ✓ Match the name on your Dynopay account</p>
-    <p class="message">If you need help, our support team is here for you.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`We were unable to verify your identity at this time.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #991b1b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Reason</p>
+      <p style="margin: 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${rejectionReason}</p>
+    `, '#ef4444')}
+    ${p(`You can resubmit your verification documents. Please ensure:`)}
+    ${p(`1. Use clear, high-quality images<br />2. All information is visible<br />3. Name matches your Dynopay account`)}
+    ${p(`If you need help, our support team is here for you.`)}`;
 
     const html = dynoPayEmailTemplate("Verification Unsuccessful", content, true, "Resubmit Documents", "https://dynopay.com/dashboard/kyc");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`KYC rejected email sent to ${email}`);
   } catch (e) {
     console.error("KYC rejected email error:", e);
