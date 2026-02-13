@@ -68,8 +68,18 @@ Crypto payment processing system requiring:
 ## Future/Backlog
 - Corrective ETH transfer script (`scripts/corrective_transfer.ts`) ready to execute when needed
 - Refactor monolithic `paymentController.ts`
-- Create persistent `autossh` tunnel service for Binance proxy
+- ✅ COMPLETED: Create persistent `autossh` tunnel service for Binance proxy (Feb 13, 2026)
 - Pre-existing TS error in `paymentController.ts` line 1115
+
+## Recent Updates (Feb 13, 2026)
+
+### Binance Proxy - OPERATIONAL ✅
+- Installed sshpass and autossh packages
+- Created persistent SOCKS5 tunnel to German VPS (95.179.167.16)
+- Configured supervisor service for auto-start and auto-reconnect
+- Binance WebSocket now connected and streaming live prices
+- Auto-conversion service fully operational
+- See `/app/BINANCE_PROXY_SETUP.md` for complete documentation
 
 ## Key Files
 - `services/merchantPool/directEvmTransfer.ts` - Direct EVM sweep via ethers.js (NEW)
