@@ -7452,3 +7452,63 @@ ports:
           - ✅ UTXO CHAINS: No change required (single transaction handles both outputs)
           
           CONCLUSION: Sweep Gas Deduction Fix is fully operational and production-ready. All 6 verification requirements from the review request have been successfully validated. The system now correctly deducts both merchant transfer gas and estimated admin fee sweep gas from merchant payouts, ensuring gas wallet sustainability while maintaining accurate fee calculations across all supported chains.
+  - task: "Binance proxy auto-detection + PG connection stability fix"
+    implemented: true
+    working: true
+    files:
+      - "/app/backend/services/binanceService.ts"
+      - "/app/backend/services/binanceWebSocketService.ts"
+      - "/app/backend/server.ts"
+      - "/app/backend/utils/dbInstance.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          TWO FIXES IMPLEMENTED:
+          
+          FIX 1: Binance Smart Proxy Auto-Detection
+          - PROBLEM: BINANCE_PROXY_URL=socks5://127.0.0.1:1080 is hardcoded in .env.
+            When deployed to non-US, proxy adds latency or fails (tunnel not available).
+          - FIX: detectBinanceAccess() runs on startup:
+            1. Tests DIRECT connectivity to Binance /api/v3/ping (no proxy)
+            2. If direct works → proxy DISABLED (non-US deployment)
+            3. If 451/403 geo-block → tests proxy → proxy ENABLED only if proxy works
+          - getEffectiveProxyAgent() returns proxy only when proxyNeeded=true
+          - binanceWebSocketService.ts and binanceService.ts both use getEffectiveProxyAgent()
+          - detectBinanceAccess() is called BEFORE startBinanceWebSocket() in server.ts
+          
+          FIX 2: PostgreSQL "Connection terminated unexpectedly"
+          - PROBLEM: releaseExpiredReservations cron gets "Connection terminated unexpectedly"
+            because Railway PG proxy drops idle TCP connections.
+          - FIX in dbInstance.ts:
+            1. Added dialectOptions.keepAlive=true + keepAliveInitialDelayMillis=10000
+            2. Added statement_timeout and idle_in_transaction_session_timeout (30s)
+            3. Added retry config (max 3 retries on transient errors)
+            4. SSL auto-detection for Railway URLs
+          - FIX in server.ts cron:
+            1. releaseExpiredReservations cron now retries once on transient DB errors
+            2. Catches "Connection terminated", "ECONNRESET", "ETIMEDOUT" → waits 5s → retries
+          
+          VERIFY:
+          TEST 1: Backend healthy - GET http://localhost:8001/health returns 200
+          TEST 2: TypeScript compiles clean - cd /app/backend && npx tsc --noEmit
+          TEST 3: detectBinanceAccess export exists
+            grep 'export const detectBinanceAccess' /app/backend/services/binanceService.ts
+          TEST 4: getEffectiveProxyAgent export exists
+            grep 'export const getEffectiveProxyAgent' /app/backend/services/binanceService.ts
+          TEST 5: WebSocket uses getEffectiveProxyAgent (not wsProxyAgent)
+            grep 'getEffectiveProxyAgent' /app/backend/services/binanceWebSocketService.ts should find occurrences
+            grep 'wsProxyAgent' /app/backend/services/binanceWebSocketService.ts should return EMPTY
+          TEST 6: server.ts calls detectBinanceAccess before startBinanceWebSocket
+            grep 'detectBinanceAccess' /app/backend/server.ts should find import + call
+          TEST 7: dbInstance.ts has keepAlive
+            grep 'keepAlive' /app/backend/utils/dbInstance.ts should find keepAlive: true
+          TEST 8: dbInstance.ts has retry config
+            grep 'retry' /app/backend/utils/dbInstance.ts should find retry: retryConfig
+          TEST 9: Cron has retry logic for connection errors
+            grep 'Connection terminated' /app/backend/server.ts should find the retry condition
+          
+          Base URL: http://localhost:8001
