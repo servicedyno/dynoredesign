@@ -183,26 +183,20 @@ export const sendCompanyProfileUpdatedEmail = async (
   try {
     const subject = "Company Profile Updated Successfully";
     const fieldsList = updatedFields.length > 0 
-      ? `<ul>${updatedFields.map(field => `<li>${field}</li>`).join('')}</ul>`
-      : '<p>General profile information</p>';
+      ? updatedFields.map(field => dataRow(field, statusBadge('Updated', 'info'))).join('')
+      : dataRow('General', statusBadge('Updated', 'info'), true);
     
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Your company profile for <strong>${companyName}</strong> has been updated successfully. ✅</p>
-    <div class="highlight-box">
-      <p><strong>Updated Information:</strong></p>
-      ${fieldsList}
-    </div>
-    <p class="message">If you didn't make these changes, please contact our support team immediately.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your company profile for <strong>${companyName}</strong> has been updated successfully.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${fieldsList}
+      </table>
+    `, '#22c55e')}
+    ${p(`If you didn't make these changes, please contact our support team immediately.`)}`;
 
     const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", "https://dynopay.com/dashboard/company");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Company profile updated email sent to ${email}`);
   } catch (e) {
     console.error("Company profile updated email error:", e);
