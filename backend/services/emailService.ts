@@ -131,53 +131,35 @@ export const sendUserProfileUpdatedEmail = async (
     const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     
     const fieldsList = updatedFields.length > 0 
-      ? `<ul>${updatedFields.map(field => `<li>${field}</li>`).join('')}</ul>`
-      : '<p>General profile information</p>';
+      ? updatedFields.map(field => dataRow(field, statusBadge('Updated', 'info'))).join('')
+      : dataRow('General', statusBadge('Updated', 'info'), true);
     
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Your account profile has been updated successfully. ✅</p>
-    <div class="highlight-box">
-      <p><strong>Updated Information:</strong></p>
-      ${fieldsList}
-      <p style="margin-top: 15px; font-size: 12px; color: #666;">
-        <strong>Date:</strong> ${date}<br/>
-        <strong>Time:</strong> ${time}
-      </p>
-    </div>
-    <p class="message" style="color: #e74c3c;"><strong>⚠️ Security Notice:</strong> If you didn't make these changes, please reset your password immediately and contact our support team.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your account profile has been updated successfully.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${fieldsList}
+        ${dataRow('Date', `${date} at ${time}`, true)}
+      </table>
+    `, '#22c55e')}
+    ${p(`<strong>Security Notice:</strong> If you didn't make these changes, please reset your password immediately and contact our support team.`, `color: #991b1b;`)}`;
 
     const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", "https://dynopay.com/dashboard/profile");
+    await mailTransporter({ to: email, name, subject, body: html });
     
-    // Send to current email
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
-    // If email was changed, also notify the old email
     if (oldEmail && oldEmail !== email) {
-      const oldEmailContent = `<p class="message">Hey ${name},</p>
-      <p class="message">Your account email has been changed from <strong>${oldEmail}</strong> to <strong>${email}</strong>.</p>
-      <div class="highlight-box" style="background-color: #fff3cd; border-color: #ffc107;">
-        <p><strong>⚠️ Important:</strong></p>
-        <p>If you did not make this change, your account may be compromised. Please contact our support team immediately.</p>
-        <p style="margin-top: 15px; font-size: 12px; color: #666;">
-          <strong>Date:</strong> ${date}<br/>
-          <strong>Time:</strong> ${time}
-        </p>
-      </div>`;
+      const oldEmailContent = `${p(`Hey ${name},`)}
+      ${p(`Your account email has been changed from <strong>${oldEmail}</strong> to <strong>${email}</strong>.`)}
+      ${infoBox(`
+        <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #991b1b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Important</p>
+        <p style="margin: 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">If you did not make this change, your account may be compromised. Please contact our support team immediately.</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 12px;">
+          ${dataRow('Date', `${date} at ${time}`, true)}
+        </table>
+      `, '#ef4444')}`;
 
       const oldEmailHtml = dynoPayEmailTemplate("Email Address Changed", oldEmailContent, true, "Contact Support", "https://dynopay.com/support");
-      
-      await mailTransporter({
-        to: oldEmail,
-        name,
-        subject: "Your Dynopay Email Address Has Been Changed",
-        body: oldEmailHtml,
-      });
-      
+      await mailTransporter({ to: oldEmail, name, subject: "Your Dynopay Email Address Has Been Changed", body: oldEmailHtml });
       console.log(`[ProfileUpdate] Email change notification sent to old email: ${oldEmail}`);
     }
     
