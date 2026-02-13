@@ -4331,12 +4331,30 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           if (autoConvertEnabled) {
             const sweepAddressId = tempAddressData.temp_address_id;
             console.log(`[AutoConvert] Triggering immediate sweep for address ID ${sweepAddressId} (${tempCurrency})`);
-            // Fire-and-forget: don't block the payment response
-            merchantPoolService.sweepPoolAddress(sweepAddressId).then(() => {
-              console.log(`[AutoConvert] Immediate sweep completed for address ID ${sweepAddressId}`);
-            }).catch((sweepErr: unknown) => {
-              console.warn(`[AutoConvert] Immediate sweep failed (will be retried by cron):`, sweepErr instanceof Error ? sweepErr.message : sweepErr);
-            });
+
+            // For token chains (USDT-ERC20, USDC-ERC20, etc.), releaseAddress() sets status
+            // to AVAILABLE, but sweepPoolAddress() requires IN_USE. Transition status before sweep.
+            const tokenChains = ['USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'RLUSD', 'USDT-POLYGON', 'RLUSD-ERC20'];
+            if (tokenChains.includes(tempCurrency)) {
+              try {
+                await merchantTempAddressModel.update(
+                  { status: "IN_USE" },
+                  { where: { temp_address_id: sweepAddressId } }
+                );
+              } catch (statusErr: unknown) {
+                console.warn(`[AutoConvert] Failed to set IN_USE before sweep:`, statusErr instanceof Error ? statusErr.message : statusErr);
+              }
+            }
+
+            // Delay sweep by 15s to allow the incoming TX to be included in a block.
+            // ETH block time ~12s, Polygon ~2s — 15s is a safe margin.
+            setTimeout(() => {
+              merchantPoolService.sweepPoolAddress(sweepAddressId).then(() => {
+                console.log(`[AutoConvert] Immediate sweep completed for address ID ${sweepAddressId}`);
+              }).catch((sweepErr: unknown) => {
+                console.warn(`[AutoConvert] Immediate sweep failed (will be retried by cron):`, sweepErr instanceof Error ? sweepErr.message : sweepErr);
+              });
+            }, 15000);
           }
           
         } else {
