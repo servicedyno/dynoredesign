@@ -3160,6 +3160,8 @@ const settleCryptoTransaction = async ({
       );
 
       totalBlockchainFee = Number(fees?.fast ?? 0);
+      // Record the total gas deduction (transfer + sweep) for accounting
+      console.log(`[settleCryptoTransaction] Token ${currency}: totalBlockchainFee (native gas) = ${totalBlockchainFee}, totalGasDeductionFromMerchant (USD) = $${totalGasDeductionToken.toFixed(4)} (includes sweep gas)`);
 
     } else {
       // Native currency transfers
