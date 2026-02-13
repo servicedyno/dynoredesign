@@ -1,256 +1,145 @@
-<analysis>**original_problem_statement**: The initial request was to set up and install necessary dependencies. This evolved into a comprehensive analysis of the codebase to ensure the API documentation was accurate and complete, particularly for frontend integration and auto-conversion features. The user then requested the implementation of a feature to disable auto-conversion, followed by a task to resolve a Binance API rate-limiting issue by switching to WebSockets. The final and current request is to create a specific payment flow to test the auto-conversion feature.
+<analysis>**original_problem_statement**:
+The initial request was to fix critical bugs in a crypto payment processing system, including a double withdrawal fee and a failure in the auto-conversion flow ( not being populated). This session focused on verifying those fixes, optimizing the payment processing speed, completely refactoring the merchant fee structure, and has now moved on to a request to redesign all user-facing email templates for a more professional look.
 
 PRODUCT REQUIREMENTS:
-1.  Analyze and fix the API documentation (Swagger) for accuracy and completeness.
-2.  Implement endpoints to view and retry individual auto-conversions.
-3.  Ensure a safe 'turn-off' mechanism for auto-conversion that verifies merchant wallet readiness.
-4.  Replace the Binance REST API polling for price data with a WebSocket stream to prevent rate-limiting issues.
-5.  Test the end-to-end auto-conversion flow by creating a 0 ETH payment for a specific merchant, converting it to USDT TRC20.
+1.  Ensure the end-to-end payment auto-conversion flow is reliable and fully automated.
+2.  Optimize the speed of the auto-conversion process to reduce delays for merchants.
+3.  Implement a new, simpler, and more transparent fee structure for merchants.
+4.  Redesign all email communications (merchant notifications, admin alerts) to be professional, branded, and visually appealing.
+5.  Ensure the proxy connection to Binance is stable and persistent.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is a full-stack application with a React frontend and a FastAPI/Node.js backend. The environment is fully set up with all dependencies installed.
-
-The agent has completed a major overhaul of the backend:
-1.  **API Documentation:** The Swagger documentation has been thoroughly analyzed and corrected. All endpoints now have accurate HTTP methods, descriptions, and schemas.
-2.  **Auto-Conversion:** New endpoints ( and ) have been added. The logic to disable auto-conversion () has been enhanced with a safety check to ensure merchants have wallets for volatile currencies before the feature can be turned off.
-3.  **Binance WebSocket Integration:** The price monitoring service () has been refactored to use a new WebSocket service () for live price data from Binance. This resolves the previous API rate-limiting errors. The system includes graceful handling for geo-blocking and a dedicated health-check endpoint ().
+The application is a Node.js/TypeScript backend for processing crypto payments.
+- The double withdrawal fee bug has been fixed and verified.
+- The auto-conversion process has been sped up by ~8 minutes by implementing an immediate sweep of funds to Binance (for auto-convert payments only) and reducing the conversion cron job interval to 2 minutes.
+- The entire fee structure has been refactored. The confusing  percentage has been eliminated from the codebase. The new fee is .
+- **CRITICAL**: The logic for deducting gas fees remains inconsistent. UTXO chains deduct gas from the merchant, but Native/Token chains have gas paid by the platform. The code changes to make the merchant pay for gas on all chains were discussed but **not implemented**.
 
 **Last working item**:
--   **Last item agent was working**: The agent was about to begin the user's request to create a 0 ETH payment for the merchant  (company ) and ensure the company settings are configured to auto-convert the funds to USDT (TRC20).
+-   **Last item agent was working**: The agent had just started discovery for a new user request to redesign all application email templates. The user provided an example of a clean, branded email and wants all communications (merchant notifications, admin alerts) to follow a similar professional style. The agent was identifying the existing email templates and services.
 -   **Status**: NOT STARTED
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?**: Manual testing by . The agent will need to perform a sequence of API calls: authenticate, update company settings for auto-conversion, create the payment, and then retrieve the generated ETH deposit address.
+-   **Which testing method agent to use?**: Manual testing. After implementing new templates, the agent will need to trigger various events (e.g., a new payment) and check the resulting email sent via the email service (Brevo). Screenshots of the received emails would be ideal for verification.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-There are no outstanding technical issues or bugs. The only pending item is the user-requested task.
+-   **Issue 1: Verify automatic fix for  population (P0)**
+    -   **Description**: A critical bug from the previous session where the sweep transaction hash was not automatically linked to the stablecoin conversion record, blocking the automated flow. A code fix was implemented in , but its success has not been verified in a clean, end-to-end test. The last test was manually patched.
+    -   **Attempted fixes**: The code was changed to look up the pending conversion using the address's .
+    -   **Next debug checklist**:
+        1.  Create a new test payment with auto-conversion enabled from scratch.
+        2.  Allow the payment to proceed through the entire lifecycle without any manual database intervention.
+        3.  After the on-chain sweep completes, query the  table to confirm the  field was populated automatically.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is the final validation step to ensure the core auto-conversion pipeline is fully automated and reliable.
+    -   **Status**: TESTING PENDING
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Blocked on other issue**: None
 
 **In progress Task List**:
-
--   **Task 1**: Create a 0 ETH payment with auto-conversion to USDT (TRC20). (P0)
-    -   **Where to resume**: This task needs to be started from the beginning. The agent should formulate a plan to use API calls () to:
-        1.  Authenticate to get a token.
-        2.  Use the token to enable auto-conversion for the  company, setting the target to USDT on the TRC20 network.
-        3.  Create a new 0 payment request for ETH.
-        4.  Extract and share the resulting ETH deposit address from the API response.
-    -   **What will be achieved with this?**: This will serve as an end-to-end test of the payment creation and auto-conversion flow.
-    -   **Status**: NOT STARTED
-    -   **Should Test frontend/backend/both after fix?**: Backend
-    -   **Blocked on something**: None
-
-**Upcoming and Future Tasks**
-There are no other upcoming or future tasks defined by the user at this time.
-
-**Completed work in this session**
--   **Environment Setup**: Installed all npm <command>
-
-Usage:
-
-npm install        install all the dependencies in your project
-npm install <foo>  add the <foo> dependency to your project
-npm test           run this project's tests
-npm run <foo>      run the script named <foo>
-npm <command> -h   quick help on <command>
-npm -l             display usage info for all commands
-npm help <term>    search for help on <term>
-npm help npm       more involved overview
-
-All commands:
-
-    access, adduser, audit, bugs, cache, ci, completion,
-    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
-    edit, exec, explain, explore, find-dupes, fund, get, help,
-    help-search, hook, init, install, install-ci-test,
-    install-test, link, ll, login, logout, ls, org, outdated,
-    owner, pack, ping, pkg, prefix, profile, prune, publish,
-    query, rebuild, repo, restart, root, run-script, sbom,
-    search, set, shrinkwrap, star, stars, start, stop, team,
-    test, token, uninstall, unpublish, unstar, update, version,
-    view, whoami
-
-Specify configs in the ini-formatted file:
-    /root/.npmrc
-or on the command line via: npm <command> --key=value
-
-More configuration info: npm help config
-Configuration fields: npm help 7 config
-
-npm@10.8.2 /usr/lib/node_modules/npm (frontend) and 
-Usage:   
-  pip <command> [options]
-
-Commands:
-  install                     Install packages.
-  lock                        Generate a lock file.
-  download                    Download packages.
-  uninstall                   Uninstall packages.
-  freeze                      Output installed packages in requirements format.
-  inspect                     Inspect the python environment.
-  list                        List installed packages.
-  show                        Show information about installed packages.
-  check                       Verify installed packages have compatible 
-dependencies.
-  config                      Manage local and global configuration.
-  search                      Search PyPI for packages.
-  cache                       Inspect and manage pip's wheel cache.
-  index                       Inspect information available from package 
-indexes.
-  wheel                       Build wheels from your requirements.
-  hash                        Compute hashes of package archives.
-  completion                  A helper command used for command completion.
-  debug                       Show information useful for debugging.
-  help                        Show help for commands.
-
-General Options:
-  -h, --help                  Show help.
-  --debug                     Let unhandled exceptions propagate outside the
-                              main subroutine, instead of logging them to
-                              stderr.
-  --isolated                  Run pip in an isolated mode, ignoring
-                              environment variables and user configuration.
-  --require-virtualenv        Allow pip to only run in a virtual environment;
-                              exit with an error otherwise.
-  --python <python>           Run pip with the specified Python interpreter.
-  -v, --verbose               Give more output. Option is additive, and can be
-                              used up to 3 times.
-  -V, --version               Show version and exit.
-  -q, --quiet                 Give less output. Option is additive, and can be
-                              used up to 3 times (corresponding to WARNING,
-                              ERROR, and CRITICAL logging levels).
-  --log <path>                Path to a verbose appending log.
-  --no-input                  Disable prompting for input.
-  --keyring-provider <keyring_provider>
-                              Enable the credential lookup via the keyring
-                              library if user input is allowed. Specify which
-                              mechanism to use [auto, disabled, import,
-                              subprocess]. (default: auto)
-  --proxy <proxy>             Specify a proxy in the form
-                              scheme://[user:passwd@]proxy.server:port.
-  --retries <retries>         Maximum attempts to establish a new HTTP
-                              connection. (default: 5)
-  --timeout <sec>             Set the socket timeout (default 15 seconds).
-  --exists-action <action>    Default action when a path already exists:
-                              (s)witch, (i)gnore, (w)ipe, (b)ackup, (a)bort.
-  --trusted-host <hostname>   Mark this host or host:port pair as trusted,
-                              even though it does not have valid or any HTTPS.
-  --cert <path>               Path to PEM-encoded CA certificate bundle. If
-                              provided, overrides the default. See 'SSL
-                              Certificate Verification' in pip documentation
-                              for more information.
-  --client-cert <path>        Path to SSL client certificate, a single file
-                              containing the private key and the certificate
-                              in PEM format.
-  --cache-dir <dir>           Store the cache data in <dir>.
-  --no-cache-dir              Disable the cache.
-  --disable-pip-version-check
-                              Don't periodically check PyPI to determine
-                              whether a new version of pip is available for
-                              download. Implied with --no-
-                              index.
-  --no-color                  Suppress colored output.
-  --use-feature <feature>     Enable new functionality, that may be backward
-                              incompatible.
-  --use-deprecated <feature>  Enable deprecated functionality, that will be
-                              removed in the future.
-  --resume-retries <resume_retries>
-                              Maximum attempts to resume or restart an
-                              incomplete download. (default: 5) (backend) dependencies.
--   **API Documentation Overhaul**:
-    -   Corrected HTTP methods and removed duplicates in Swagger files (, , ).
-    -   Added previously undocumented wallet and API key endpoints to Swagger.
--   **Auto-Conversion Feature Enhancements**:
-    -   **New Endpoint**: Added  to fetch single conversion details in .
-    -   **New Endpoint**: Added  to retry failed conversions in .
-    -   **Safety Feature**: Implemented a wallet readiness check in the  endpoint to prevent disabling auto-conversion if no fallback wallets are configured ().
--   **Binance API Refactor (WebSocket Migration)**:
-    -   **New Service**: Created  to manage a persistent WebSocket connection to Binance for live price feeds.
-    -   **Refactor**: Updated  to consume data from the new WebSocket service, eliminating REST API polling and rate-limit errors.
-    -   **Resilience**: Added geo-block detection and graceful backoff logic to the WebSocket service.
-    -   **Health Check**: Created a new endpoint  to expose the WebSocket connection status.
--   **Code Refactoring**:
-    -   Centralized Redis client access by creating a new helper file .
-
-**Earlier issues found/mentioned but not fixed**
 None.
 
+**Upcoming and Future Tasks**
+-   **Upcoming Tasks**:
+    -   **P0: Implement redesigned email templates.** This involves creating new HTML/CSS for the email bodies in  and potentially updating  to handle new template variables. The goal is a professional, branded look with the company logo.
+    -   **P1: Implement consistent gas fee deduction.** The code in  (specifically the  part within ) must be modified so that for Native (ETH, TRX, etc.) and Token (USDT-ERC20, etc.) chains, the estimated gas fee is deducted from the merchant's payout, just as it is for UTXO chains. This is a critical financial fix.
+
+-   **Future Tasks**:
+    -   Refactor the monolithic  file.
+    -   Create a persistent  tunnel service to ensure the Binance proxy connection is stable across restarts.
+
+**Completed work in this session**
+-   **Bug Fix Verified**: The double withdrawal fee bug was confirmed fixed by analyzing a completed test transaction.
+-   **Performance Optimization**: The auto-conversion payment lifecycle was sped up by ~8 minutes by implementing an immediate sweep to Binance and reducing the conversion cron interval. Changes were made in  and .
+-   **Fee Structure Refactor**: The entire merchant fee system was overhauled. The complex and confusing  fee was eliminated. The new structure is a simpler . This involved removing all  logic from , , and , and updating .
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Inconsistent Gas Fee Deduction**
+    -   **Debug checklist**: Review  in . For Native and Token chain types, the gas fee is currently paid by the platform. This logic needs to be changed to deduct the estimated gas fee from the , mirroring the existing logic for UTXO chains.
+    -   **Why to solve this issue and what will be achieved with this?**: To prevent the platform from losing money by covering merchant gas fees on most chains. This makes the business model sustainable and the fee structure transparent.
+    -   **Should Test frontend/backend/both after fix**: Backend
+    -   **Is recurring issue?**: N
+
 **Known issue recurrence from previous fork**
-N/A
+-   **Issue recurrence in previous fork**: The SSH tunnel for the proxy is not persistent. The agent had to re-establish it manually at the start of the session.
+-   **Recurrence count**: 2
+-   **Status**: NOT STARTED (The tunnel is running manually, but no persistent solution has been implemented).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend**: FastAPI (Python), Node.js/TypeScript (for background services)
--   **Frontend**: React
--   **Database**: MongoDB
--   **Real-time Data**: WebSockets for Binance price streams
--   **API Documentation**: Swagger/OpenAPI
--   **Caching/State Management**: Redis
+-   **Backend**: Node.js / TypeScript
+-   **Database**: PostgreSQL
+-   **Proxy**: SSH SOCKS5 Tunneling with .
+-   **3rd Party APIs**: Binance (conversion), Tatum (webhooks/gas estimation), Brevo (email).
 
 **key DB schema**
--   **stablecoinConversions**: 
--   **companies**: 
--   **wallets**: 
+-   **tbl_stablecoin_conversion**:  is the field for the unverified bug fix.
+-   **tbl_address_pool**: Contains merchant/user data used in payment processing logic.
 
 **changes in tech stack**
--   Added  library to the backend () to support WebSocket integration.
+None.
 
 **All files of reference**
--   : **New file.** Manages the WebSocket connection to Binance.
--   : Refactored to use WebSocket data, removing REST API polling.
--   : Updated with new endpoints and logic for auto-conversion management.
--   : **New file.** Centralizes the Redis client instance for shared use.
--   : Modified to include the new WebSocket health check route.
--   : Updated with the  dependency.
+-   : Contains the main payment logic, speed optimizations, and fee calculations.
+-   : Where the fee tier structure is defined and parsed.
+-   : Contains the core  utility function.
+-   : Defines the fee percentages, fixed fees, and cron intervals.
+-   : Contains the unverified fix for the  bug.
+-   : Directory containing the  email templates that need to be redesigned.
+-   : The service that sends emails using the templates.
+
+**Areas that need refactoring**:
+-    is still a very large and complex file that handles too many responsibilities.
 
 **key api endpoints**
--   : Creates a new payment request.
--   : Enables/disables auto-conversion for a company.
--   : Fetches details of a specific conversion.
--   : Retries a failed conversion.
--   : Returns the status of the Binance WebSocket connection.
+-   : Used to initiate payments.
+-   : The endpoint for Tatum webhooks that drives the payment lifecycle.
 
 **Critical Info for New Agent**
--   **Binance Geo-Blocking**: The current test environment is in a US data center, which causes Binance to return a 451 Unavailable for Legal Reasons error. The  is designed to handle this: it detects the geo-block, logs an informative message, and switches to a long-poll reconnect strategy. This is expected behavior and not a bug.
--   **Credentials for Next Task**: The next task requires using the following credentials:
-    -   API Server: 
-    -   Company: 
-    -   Merchant: 
+-   The immediate next task is to **redesign email templates**. This is a user-facing UI/UX task.
+-   **CRITICAL PENDING TASK**: The logic for deducting gas fees is inconsistent. The code changes to make the merchant pay for gas on **all** chains were planned but **never implemented**. This is a high-priority technical debt item that affects profitability.
+-   The P0 bug fix for  in  still needs to be verified with a fresh end-to-end test.
+-   The Binance connection requires the SOCKS5 proxy tunnel to be active. It is not persistent and may need to be started manually.
 
 **documents and test reports created in this job**
--   : This file was read and updated during the session.
+None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **user**:  - **PENDING**
-2.  **user**:  - **Completed**.
-3.  **user**:  - **Completed**.
-4.  **user**:  - **Completed**. Logic was analyzed and improved.
-5.  **user**:  - **Completed**.
-6.  **agent**:  - **Completed**.
-7.  **agent**:  - **Completed**.
-8.  **agent**:  - **Completed**.
-9.  **user**:  - **Completed**.
-10. **agent**:  - **Completed**.
+1.  **yes** - User approved the final fee structure implementation plan.
+2.  **Yes** - User approved the plan to use an empty value for an unlimited tier max.
+3.  **But we also have 0 in tier 1 as MIN, that looks confusing** - User pointed out a confusing convention in the proposed  file.
+4.  **Confirm your understanding... and we should remove the buffer from code** - User approved the fee structure and explicitly requested the  logic be removed from the code, not just zeroed out.
+5.  **Yes and keep all fixed fee  for all tiers for now. Confirm your understanding** - User finalized the decision on the fixed fee amount.
+6.  **I think the tier fixed should be working instead... Confirm your understanding** - User clarified they want per-tier fixed fees, not a single global one.
+7.  **Okay we need to add a fixed fee of  configurable... Confirm your understanding...** - User introduced the requirement for a fixed fee component.
+8.  **Okay how would admin gets its fee in autoconversion amd non autoconversion situation ?** - User asked for clarification on how admin revenue is collected under the new fee model.
+9.  **Can we have clean emails like this for merchants...** - User initiated the new task of redesigning email templates, providing a visual example.
+10. **All our emails are priority along with alerts to admin...** - User confirmed the high priority of the email redesign task.
 
 **Project Health Check:**
--   **Broken**: None.
--   **Mocked**: The Binance WebSocket connection is gracefully handled in the geo-blocked test environment. The service correctly identifies the block and backs off, which is the desired behavior. The application logic that depends on it is robust to the absence of live data.
+-   **Broken**: The gas fee logic is inconsistent and financially unsound for the platform, as it covers merchant gas fees on most non-UTXO chains. The core automation flow ( fix) is not fully verified.
 
 **3rd Party Integrations**
--   **Binance**: Used for live cryptocurrency price data via WebSocket streams.
+-   **Binance**: Live currency conversion.
+-   **Tatum**: Blockchain webhooks, gas estimation, and exchange rates.
+-   **Brevo**: Transactional emails.
+-   **Vultr VPS**: SSH proxy host.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES,  was run after the WebSocket implementation.
+-   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None.
--   **Known regressions**: None.
+-   **Test files created**: None
+-   **Known regressions**: None
 
 **Credentials to test flow:**
--   **Company**: 
--   **Merchant**: 
--   **API Server**: 
+-   Located in . User is .
+-   Proxy VPS credentials are in the chat history if needed.
 
 **What agent forgot to execute**
-The agent has not forgotten any tasks. The next step is to execute the latest user request, which is queued up as the highest priority task.</analysis>
+-   **CRITICAL**: The agent did not implement the code changes to make gas fee deduction consistent across all chains. It was discussed and planned, but the agent moved on after changing only the  fee structure. The logic in  for Native/Token chains still has the platform paying for gas.
+-   The agent did not perform a clean end-to-end test to verify the  bug fix.
+-   The agent did not implement a persistent  solution for the Binance proxy tunnel.</analysis>
