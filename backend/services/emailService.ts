@@ -451,20 +451,13 @@ export const sendLoginOTPEmail = async (
 ) => {
   try {
     const subject = "Your login code";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Here's your one-time login code for Dynopay:</p>
-    <div class="otp-code">${otpCode}</div>
-    <p class="message">This code expires in 10 minutes. If you didn't request this code, please secure your account immediately.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Here's your one-time login code for Dynopay:`)}
+    ${otpBlock(otpCode)}
+    ${p(`This code expires in 10 minutes. If you didn't request this code, please secure your account immediately.`)}`;
 
     const html = dynoPayEmailTemplate("Your Login Code", content);
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Login OTP email sent to ${email}`);
   } catch (e) {
     console.error("Login OTP email error:", e);
