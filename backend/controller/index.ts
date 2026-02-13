@@ -199,7 +199,6 @@ export const calculateTransactionFeesWithDiscount = async (
     min_amount: number;
     max_amount: number | null;
     fixed_fee: number;
-    blockchain_buffer_percent: number;
     id?: number;
   }
   const tiers = (config.tiers || []) as FeeTierDiscount[];
@@ -227,7 +226,7 @@ export const calculateTransactionFeesWithDiscount = async (
   const discountInfo = await getDiscountedTransactionFee(userId);
   const discountPercent = discountInfo.discount_percent || 0;
 
-  // Calculate fees directly in native currency
+  // Calculate fees: platform % + tier fixed fee
   const fixedFee = effectiveTierDiscount.fixed_fee;
   const baseTransactionFeePercent = config.transaction_fee_percent;
   
@@ -237,17 +236,14 @@ export const calculateTransactionFeesWithDiscount = async (
     : baseTransactionFeePercent;
   
   const transactionFee = (amount * discountedFeePercent) / 100;
-  const blockchainBuffer =
-    (amount * effectiveTierDiscount.blockchain_buffer_percent) / 100;
 
-  const totalDeduction = fixedFee + transactionFee + blockchainBuffer;
+  const totalDeduction = fixedFee + transactionFee;
   const userReceives = amount - totalDeduction;
 
   return {
     fixedFee,
     transactionFee,
     transactionFeeOriginal: (amount * baseTransactionFeePercent) / 100,
-    blockchainBuffer,
     totalDeduction,
     userReceives,
     tierId: effectiveTierDiscount.id ?? 0,
