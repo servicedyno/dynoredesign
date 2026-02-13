@@ -281,12 +281,9 @@ const processWithdrawals = async (): Promise<number> => {
       const network = data.settlement_chain;
 
       // Use merchant_payout_usd (from payout calculation) as the withdrawal amount
-      // This already accounts for: platform surplus deduction, but not withdrawal fee
+      // Do NOT pre-deduct withdrawal fee — Binance deducts it from the amount automatically
       const merchantPayout = parseFloat(data.merchant_payout_usd || data.target_amount || "0");
-
-      // Estimate Binance withdrawal fee based on network
-      const withdrawalFeeEstimate = getWithdrawalFeeEstimate(network);
-      const withdrawalAmount = Math.max(0, merchantPayout - withdrawalFeeEstimate);
+      const withdrawalAmount = merchantPayout;
 
       if (withdrawalAmount <= 0) {
         log(`⚠️ Withdrawal amount too small for conversion #${data.conversion_id}: payout $${merchantPayout}, fee $${withdrawalFeeEstimate}`);
