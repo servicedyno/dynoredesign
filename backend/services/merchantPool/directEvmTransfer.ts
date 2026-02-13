@@ -193,7 +193,20 @@ export async function directEvmSweep(params: {
         );
       } else {
         const feeData = await provider.getFeeData();
-        gasPrice = feeData.gasPrice || ethers.parseUnits("2", "gwei");
+        // If feeData.gasPrice is null, fetch current network gas price
+        if (!feeData.gasPrice) {
+          const currentGasPrice = await provider.send("eth_gasPrice", []);
+          gasPrice = BigInt(currentGasPrice);
+          console.log(`${LOG_PREFIX} Using network gas price: ${ethers.formatUnits(gasPrice, "gwei")} Gwei`);
+        } else {
+          gasPrice = feeData.gasPrice;
+        }
+        
+        // If still null or zero, use a reasonable default (0.5 Gwei for modern Ethereum)
+        if (!gasPrice || gasPrice === 0n) {
+          gasPrice = ethers.parseUnits("0.5", "gwei");
+          console.warn(`${LOG_PREFIX} Could not fetch gas price, using fallback: 0.5 Gwei`);
+        }
       }
 
       // Cap gas price to prevent overpaying during spikes
