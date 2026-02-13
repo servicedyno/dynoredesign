@@ -117,11 +117,9 @@ export const baseEmailTemplate = (
     <tr>
       <td align="center" style="padding: 32px 16px;">
         <table role="presentation" class="outer card" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
-          <!-- Accent bar -->
-          <tr><td class="hdr-bar" style="background-color: #0d1f5c; height: 4px; font-size: 0; line-height: 0;">&nbsp;</td></tr>
-          <!-- Header -->
+          <!-- Accent bar + Logo Header -->
           <tr>
-            <td class="hdr" style="padding: 28px 32px 20px 32px; text-align: center;">
+            <td class="hdr hdr-bar" style="background-color: #0d1f5c; padding: 24px 32px; text-align: center;">
               <a href="https://dynopay.com" style="text-decoration: none;">
                 <img src="${LOGO_URL}" alt="Dynopay" width="120" height="40" style="display: inline-block; max-width: 120px; height: auto;" />
               </a>
