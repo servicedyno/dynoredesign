@@ -484,23 +484,17 @@ export const sendPasswordChangedEmail = async (
 ) => {
   try {
     const subject = "Password updated successfully";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Your Dynopay password has been successfully updated. ✅</p>
-    <div class="highlight-box">
-      <p><strong>Change Details:</strong></p>
-      <p>Date: ${date} at ${time}</p>
-    </div>
-    <p class="message">⚠️ If you didn't make this change, please contact our support team immediately to secure your account.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your Dynopay password has been successfully updated.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Date', `${date} at ${time}`, true)}
+      </table>
+    `, '#22c55e')}
+    ${p(`<strong>Security Notice:</strong> If you didn't make this change, please contact our support team immediately to secure your account.`, `color: #991b1b;`)}`;
 
     const html = dynoPayEmailTemplate("Password Updated", content, true, "View Account Settings", "https://dynopay.com/dashboard/settings");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Password changed email sent to ${email}`);
   } catch (e) {
     console.error("Password changed email error:", e);
