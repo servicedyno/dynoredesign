@@ -855,27 +855,17 @@ export const sendKYCResubmissionRequiredEmail = async (
 ) => {
   try {
     const subject = "Additional information needed for verification";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">We need a bit more information to complete your identity verification. 📝</p>
-    <div class="highlight-box" style="border-left-color: #f59e0b;">
-      <p><strong>Reason:</strong></p>
-      <p>${reason}</p>
-    </div>
-    <p class="message">Don't worry, this is a common request. To continue, please:</p>
-    <p class="message">1. Ensure your documents are clear and all text is readable<br />
-    2. Make sure the name matches your Dynopay account<br />
-    3. Use documents that are not expired</p>
-    <p class="message">Click below to resubmit your verification documents:</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`We need a bit more information to complete your identity verification.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #92400e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Reason</p>
+      <p style="margin: 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${reason}</p>
+    `, '#f59e0b')}
+    ${p(`This is a common request. To continue, please:`)}
+    ${p(`1. Ensure your documents are clear and all text is readable<br />2. Make sure the name matches your Dynopay account<br />3. Use documents that are not expired`)}`;
 
     const html = dynoPayEmailTemplate("Resubmission Required", content, true, "Resubmit Documents", "https://dynopay.com/dashboard/kyc");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`KYC resubmission required email sent to ${email}`);
   } catch (e) {
     console.error("KYC resubmission required email error:", e);
