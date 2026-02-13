@@ -563,17 +563,24 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       console.log(`[MerchantPool] 🎉 Sweep recorded: ${amountToSend} ${walletType} → admin wallet`);
       console.log(`[MerchantPool]    Status set to: AVAILABLE`);
 
-      // Update stablecoin conversion record with sweep TX hash so deposit detection can match it
+      // Update stablecoin conversion record with sweep TX hash so Binance deposit detection can match
       try {
-        const lastPaymentContext = poolAddress.dataValues.last_payment_context;
-        const paymentId = lastPaymentContext?.payment_id || lastPaymentContext?.transaction_id;
-        if (paymentId) {
+        const currentPaymentId = poolAddress.dataValues.current_payment_id;
+        const currentCompanyId = poolAddress.dataValues.current_company_id;
+        if (currentPaymentId || currentCompanyId) {
+          const whereClause: Record<string, unknown> = { 
+            status: "PENDING_DEPOSIT", 
+            deposit_tx_hash: null 
+          };
+          if (currentPaymentId) whereClause.transaction_id = currentPaymentId;
+          else if (currentCompanyId) whereClause.company_id = currentCompanyId;
+          
           const [updatedCount] = await stablecoinConversionModel.update(
             { deposit_tx_hash: sweepTxId },
-            { where: { transaction_id: paymentId, status: "PENDING_DEPOSIT", deposit_tx_hash: null } }
+            { where: whereClause }
           );
           if (updatedCount > 0) {
-            console.log(`[MerchantPool]    Updated stablecoin conversion deposit_tx_hash for payment ${paymentId}`);
+            console.log(`[MerchantPool]    Updated stablecoin conversion deposit_tx_hash: ${sweepTxId.substring(0, 16)}...`);
           }
         }
       } catch (convErr) {
