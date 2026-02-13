@@ -1370,52 +1370,39 @@ export const sendSubscriptionPaymentFailedEmail = async (
     const displayName = customerName || customerEmail.split('@')[0];
     
     // Email to Customer
-    const customerSubject = `⚠️ Payment failed for ${planName}`;
-    const customerContent = `<p class="message">Hey ${displayName},</p>
-    <p class="message">We were unable to process your subscription payment for <strong>${planName}</strong> from <strong>${companyName}</strong>.</p>
-    <div class="highlight-box" style="border-left-color: #ef4444;">
-      <p><strong>Payment Issue:</strong></p>
-      <p>Amount: ${amount} ${currency}<br />
-      Reason: ${failureReason}<br />
-      ${retryDate ? `Next Retry: ${retryDate}` : ''}</p>
-    </div>
-    <p class="message">To keep your subscription active, please:</p>
-    <p class="message">1. Update your payment method<br />
-    2. Ensure sufficient funds are available<br />
-    3. Contact your bank if the issue persists</p>
-    <p class="message">⚠️ Your subscription may be cancelled if payment is not received.</p>`;
+    const customerSubject = `Payment failed for ${planName}`;
+    const customerContent = `${p(`Hey ${displayName},`)}
+    ${p(`We were unable to process your subscription payment for <strong>${planName}</strong> from <strong>${companyName}</strong>.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Amount', `${amount} ${currency}`)}
+        ${dataRow('Reason', failureReason)}
+        ${retryDate ? dataRow('Next Retry', retryDate, true) : ''}
+      </table>
+    `, '#ef4444')}
+    ${p(`To keep your subscription active, please:<br />1. Update your payment method<br />2. Ensure sufficient funds are available<br />3. Contact your bank if the issue persists`)}
+    ${p(`Your subscription may be cancelled if payment is not received.`, `color: #991b1b;`)}`;
 
     const customerHtml = dynoPayEmailTemplate("Payment Failed", customerContent, true, "Update Payment", "https://dynopay.com/dashboard/subscriptions");
-    
-    await mailTransporter({
-      to: customerEmail,
-      name: displayName,
-      subject: customerSubject,
-      body: customerHtml,
-    });
+    await mailTransporter({ to: customerEmail, name: displayName, subject: customerSubject, body: customerHtml });
     
     // Email to Merchant
     const merchantSubject = `Subscription payment failed - ${displayName}`;
-    const merchantContent = `<p class="message">Hey ${merchantName},</p>
-    <p class="message">A subscription payment has failed for <strong>${planName}</strong>.</p>
-    <div class="highlight-box" style="border-left-color: #f59e0b;">
-      <p><strong>Payment Failure:</strong></p>
-      <p>Customer: ${customerEmail}<br />
-      Plan: ${planName}<br />
-      Amount: ${amount} ${currency}<br />
-      Reason: ${failureReason}<br />
-      ${retryDate ? `Retry Scheduled: ${retryDate}` : ''}</p>
-    </div>
-    <p class="message">The customer has been notified to update their payment method.</p>`;
+    const merchantContent = `${p(`Hey ${merchantName},`)}
+    ${p(`A subscription payment has failed for <strong>${planName}</strong>.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Customer', customerEmail)}
+        ${dataRow('Plan', planName)}
+        ${dataRow('Amount', `${amount} ${currency}`)}
+        ${dataRow('Reason', failureReason)}
+        ${retryDate ? dataRow('Retry Scheduled', retryDate, true) : ''}
+      </table>
+    `, '#f59e0b')}
+    ${p(`The customer has been notified to update their payment method.`)}`;
 
     const merchantHtml = dynoPayEmailTemplate("Subscription Payment Failed", merchantContent, true, "View Subscription", "https://dynopay.com/dashboard/subscriptions");
-    
-    await mailTransporter({
-      to: merchantEmail,
-      name: merchantName,
-      subject: merchantSubject,
-      body: merchantHtml,
-    });
+    await mailTransporter({ to: merchantEmail, name: merchantName, subject: merchantSubject, body: merchantHtml });
     
     console.log(`[Email] Subscription payment failed notifications sent for ${planName}`);
   } catch (e) {
