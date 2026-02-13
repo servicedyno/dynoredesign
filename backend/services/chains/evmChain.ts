@@ -34,15 +34,24 @@ export const calculateEvmGasFee = (
   const gasPrice = Math.max(minGas, Math.min(maxGas, Math.ceil(rawGasPrice)));
   const bufferedGasPrice = Math.ceil(gasPrice * bufferMultiplier + priorityTip);
 
+  // For native transfers (ETH, POL): gasLimit is always fixed (21000 for simple transfer).
+  // Speed tiers vary gasPrice buffer, NOT gasLimit — reducing gasLimit below 21000 causes
+  // "intrinsic gas too low" on-chain failures.
+  // For token transfers (ERC20): gasLimit comes from SDK estimate and stays as-is.
+  const effectiveGasLimit = isToken ? gasLimit : Math.max(gasLimit, 21000);
+
   const result: { fast: string; medium?: string; slow?: string; gasPrice: number; gasLimit: number } = {
-    fast: Number(Number((bufferedGasPrice * gasLimit) / 1e9)).toFixed(8),
-    gasPrice,
-    gasLimit: isToken ? gasLimit : Math.floor((gasLimit * 25) / 100),
+    fast: Number(Number((bufferedGasPrice * effectiveGasLimit) / 1e9)).toFixed(8),
+    gasPrice: bufferedGasPrice,
+    gasLimit: effectiveGasLimit,
   };
 
   if (!isToken) {
-    result.medium = Number(Number((bufferedGasPrice * ((gasLimit * 50) / 100)) / 1e9)).toFixed(8);
-    result.slow = Number(Number((bufferedGasPrice * ((gasLimit * 25) / 100)) / 1e9)).toFixed(8);
+    // Speed tiers: vary gas price buffer (not gas limit) for native transfers
+    const mediumGasPrice = Math.ceil(gasPrice * 1.0 + priorityTip * 0.5); // Base price + half tip
+    const slowGasPrice = Math.ceil(gasPrice * 0.9); // 10% below market, no tip
+    result.medium = Number(Number((mediumGasPrice * effectiveGasLimit) / 1e9)).toFixed(8);
+    result.slow = Number(Number((slowGasPrice * effectiveGasLimit) / 1e9)).toFixed(8);
   }
 
   return result;
