@@ -518,9 +518,62 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
 
     const sweepTxId = sweepResult?.txId;
 
-    console.log(`[MerchantPool] ✅ Blockchain sweep successful: ${sweepTxId}`);
+    console.log(`[MerchantPool] 📡 Sweep TX broadcast: ${sweepTxId}`);
 
-    // Fetch actual on-chain gas cost
+    // CRITICAL: Verify the sweep TX is actually confirmed on-chain before marking as completed.
+    // Without this, ghost TXs (broadcast but never mined, e.g., due to low gas price behind
+    // a geo-proxy) would be marked "completed" while funds remain in the temp address.
+    let sweepConfirmed = false;
+    if (sweepTxId) {
+      console.log(`[MerchantPool] ⏳ Waiting for sweep TX confirmation on-chain...`);
+      try {
+        const confirmation = await tatumApi.waitForTransactionConfirmation(
+          sweepTxId,
+          walletType,
+          90000  // 90s timeout — ETH block time ~12s, gives ~7 blocks
+        );
+        if (confirmation.confirmed) {
+          sweepConfirmed = true;
+          console.log(`[MerchantPool] ✅ Sweep TX confirmed in block ${confirmation.blockNumber}`);
+        } else {
+          console.error(`[MerchantPool] ❌ Sweep TX NOT confirmed within timeout — ghost TX detected`);
+        }
+      } catch (confirmErr: unknown) {
+        console.error(`[MerchantPool] ❌ Sweep TX confirmation check failed:`, confirmErr instanceof Error ? confirmErr.message : confirmErr);
+      }
+    }
+
+    // If TX was NOT confirmed on-chain, revert status to IN_USE so the cron can retry
+    if (!sweepConfirmed) {
+      console.warn(`[MerchantPool] 🔄 Reverting address ${poolAddress.dataValues.wallet_address} to IN_USE for retry`);
+      await poolAddress.update({
+        status: "IN_USE",
+      });
+      
+      // Record the failed sweep for audit
+      await merchantPoolSweepModel.create({
+        temp_address_id: tempAddressId,
+        owner_user_id: poolAddress.dataValues.owner_user_id,
+        wallet_type: walletType,
+        amount_swept: amountToSend,
+        gas_funded: gasFunding.amount || 0,
+        gas_used: 0,
+        sweep_tx_id: sweepTxId,
+        gas_funding_tx_id: gasFunding.txId || null,
+        admin_wallet: adminWallet,
+        status: "failed_unconfirmed",
+        error_message: "TX broadcast but not confirmed on-chain (ghost TX)",
+      });
+      
+      return {
+        success: false,
+        txId: sweepTxId,
+        reason: "TX not confirmed on-chain",
+        message: "Sweep TX was broadcast but not mined. Address kept IN_USE for retry.",
+      };
+    }
+
+    // Fetch actual on-chain gas cost (TX is confirmed, so this should succeed)
     let actualGasUsed = isAccountChain ? (actualBalance - amountToSend) : 0;
     if (sweepTxId) {
       try {
