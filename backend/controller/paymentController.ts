@@ -3218,8 +3218,10 @@ const settleCryptoTransaction = async ({
 
       } else {
         // Account-based chains (ETH, TRX, BSC, SOL, XRP, POLYGON): Single transfer to merchant only
-        // Gas is deducted from merchant payout (consistent with UTXO chains)
-        // Admin fee stays in temp address for batch sweep later
+        // TWO gas costs deducted from merchant:
+        //   (1) Merchant transfer gas — gas to send merchant their crypto
+        //   (2) Estimated sweep gas — gas for later admin fee sweep from temp address
+        // This prevents: sweep gas eroding the admin fee (reducing platform revenue)
         fees = await tatumApi.feeEstimation(
           currency,
           fromAddress,
@@ -3228,17 +3230,19 @@ const settleCryptoTransaction = async ({
         );
 
         // Use `fast` tier for gas deduction — this is the actual gas cost the transaction will incur.
-        // `slow` on EVM chains uses reduced gasPrice buffer and is NOT safe for deduction
-        // (would under-deduct, causing the platform to absorb the difference).
-        const gasFee = Number(fees?.fast ?? fees?.slow ?? 0);
-        // Deduct gas fee from merchant payout — merchant pays for gas (consistent with UTXO)
-        merchantSendAmount = Number((Number(userAmount) - gasFee).toFixed(8));
+        const merchantTransferGas = Number(fees?.fast ?? fees?.slow ?? 0);
+        // Sweep gas estimate: same chain, same type of native transfer → approximately same gas
+        const estimatedSweepGas = merchantTransferGas;
+        const totalGasDeduction = merchantTransferGas + estimatedSweepGas;
+
+        // Deduct both gas costs from merchant payout — merchant pays for gas (consistent with UTXO)
+        merchantSendAmount = Number((Number(userAmount) - totalGasDeduction).toFixed(8));
 
         if (merchantSendAmount <= 0) {
-          throw new Error(`Merchant amount after gas deduction is non-positive. Amount: ${userAmount}, Gas: ${gasFee}`);
+          throw new Error(`Merchant amount after gas deduction is non-positive. Amount: ${userAmount}, TransferGas: ${merchantTransferGas}, SweepGas: ${estimatedSweepGas}`);
         }
 
-        console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (gas ${gasFee} deducted from merchant)`);
+        console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (transfer gas ${merchantTransferGas} + sweep gas ${estimatedSweepGas} = ${totalGasDeduction} deducted from merchant)`);
 
         // Retry merchant transfer for account chains (ETH, TRX, SOL, XRP, POLYGON)
         merchantTransactionDetails = await withRetry(
@@ -3254,7 +3258,8 @@ const settleCryptoTransaction = async ({
           `Account chain merchant transfer (${currency})`
         );
 
-        totalBlockchainFee = gasFee;
+        totalBlockchainFee = totalGasDeduction;
+        console.log(`[settleCryptoTransaction] Account chain ${currency}: totalBlockchainFee = ${totalBlockchainFee} (includes sweep gas estimate)`);
       }
     }
 
