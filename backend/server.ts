@@ -668,8 +668,15 @@ const startServer = async () => {
       log(`Initial rate cache population failed: ${err.message}`, "error");
     });
 
-    // Start Binance WebSocket price stream (replaces REST polling for live prices)
-    startBinanceWebSocket();
+    // Detect Binance access mode (direct vs proxy) BEFORE starting WebSocket
+    // Non-US deployments get direct access (no proxy overhead)
+    detectBinanceAccess().then(() => {
+      // Start Binance WebSocket price stream (replaces REST polling for live prices)
+      startBinanceWebSocket();
+    }).catch(err => {
+      log(`Binance access detection failed: ${err.message}, starting WebSocket anyway`, "error");
+      startBinanceWebSocket();
+    });
 
     // Start volatility monitor (now reads from WebSocket cache — zero REST calls)
     startVolatilityMonitor();
