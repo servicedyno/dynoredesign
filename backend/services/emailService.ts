@@ -277,24 +277,19 @@ export const sendWalletVerifiedEmail = async (
 ) => {
   try {
     const subject = "Payout wallet active";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Excellent! Your payout wallet has been verified and is now active. ✅</p>
-    <div class="highlight-box">
-      <p><strong>Wallet Details:</strong></p>
-      <p>Address: ${walletAddressMasked}<br />
-      Network: ${network}</p>
-    </div>
-    <p class="message">All payments you receive will be automatically forwarded to this wallet. You're all set to start accepting crypto payments!</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your payout wallet has been verified and is now active.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Address', walletAddressMasked)}
+        ${dataRow('Network', network)}
+        ${dataRow('Status', statusBadge('Active', 'success'), true)}
+      </table>
+    `, '#22c55e')}
+    ${p(`All payments you receive will be automatically forwarded to this wallet. You're all set to start accepting crypto payments.`)}`;
 
     const html = dynoPayEmailTemplate("Wallet Active", content, true, "View Dashboard", "https://dynopay.com/dashboard");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Wallet verified email sent to ${email}`);
   } catch (e) {
     console.error("Wallet verified email error:", e);
