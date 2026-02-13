@@ -406,7 +406,7 @@ import * as merchantPoolService from "./services/merchantPoolService";
 // Handles both threshold-based ($30 USD) and time-based (3 min for ETH/TRX) sweeps
 // OPTIMIZED: Reduced from 1 min to 2 min — sweeps still trigger within time thresholds
 cron.schedule("*/2 * * * *", async function () {
-  const lockAcquired = await acquireLock("cron:performScheduledSweeps", 50, 1);
+  const lockAcquired = await acquireLock("cron:performScheduledSweeps", 180, 1);
   if (!lockAcquired) { log("Cron: performScheduledSweeps skipped (already running)", "info"); return; }
   try {
     log("Cron: performMerchantPoolScheduledSweeps running", "info");
