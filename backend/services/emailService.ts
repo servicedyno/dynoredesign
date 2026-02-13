@@ -706,33 +706,20 @@ export const sendInvoiceGeneratedEmail = async (
     const currencySymbol = getCurrencySymbol(currency);
     
     const subject = `Invoice ${invoiceData.invoice_number} - Dynopay`;
-    const content = `<p class="message">Hello ${name},</p>
-    <p class="message">Your invoice has been successfully generated for transaction #${invoiceData.transaction_id}.</p>
-    <div class="highlight-box">
-      <p><strong>Invoice Details:</strong></p>
-      <p>
-        <strong>Invoice Number:</strong> ${invoiceData.invoice_number}<br />
-        <strong>Transaction ID:</strong> ${invoiceData.transaction_id}<br />
-        <strong>Total Amount:</strong> ${currencySymbol}${amount.toFixed(2)} ${currency}<br />
-        <strong>Invoice Date:</strong> ${new Date(invoiceData.invoice_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
-      </p>
-    </div>
-    <p class="message">You can view and download your invoice using the button below.</p>`;
+    const content = `${p(`Hello ${name},`)}
+    ${p(`Your invoice has been successfully generated for transaction #${invoiceData.transaction_id}.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Invoice Number', invoiceData.invoice_number)}
+        ${dataRow('Transaction ID', `<span style="font-family: monospace; font-size: 13px;">${invoiceData.transaction_id}</span>`)}
+        ${dataRow('Total Amount', `<strong>${currencySymbol}${amount.toFixed(2)} ${currency}</strong>`)}
+        ${dataRow('Invoice Date', new Date(invoiceData.invoice_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }), true)}
+      </table>
+    `)}
+    ${p(`You can view and download your invoice using the button below.`)}`;
 
-    const html = dynoPayEmailTemplate(
-      "Invoice Generated",
-      content,
-      true,
-      "View Invoice",
-      invoiceData.invoice_url
-    );
-
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
+    const html = dynoPayEmailTemplate("Invoice Generated", content, true, "View Invoice", invoiceData.invoice_url);
+    await mailTransporter({ to: email, name, subject, body: html });
 
     console.log(`Invoice email sent to ${email} for invoice ${invoiceData.invoice_number}`);
   } catch (error) {
