@@ -372,23 +372,16 @@ export const sendAddWalletReminderEmail = async (
 ) => {
   try {
     const subject = "You're almost ready to accept payments";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">You're so close! Your <strong>${companyName}</strong> profile is set up, but you haven't added a payout wallet yet.</p>
-    <div class="highlight-box">
-      <p><strong>Why add a wallet?</strong></p>
-      <p>Without a wallet, you can't receive payments. It takes less than 2 minutes to set up!</p>
-    </div>
-    <p class="message">Add your wallet now and start accepting crypto payments today.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`You're so close! Your <strong>${companyName}</strong> profile is set up, but you haven't added a payout wallet yet.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #0d1f5c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Why add a wallet?</p>
+      <p style="margin: 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Without a wallet, you can't receive payments. It takes less than 2 minutes to set up.</p>
+    `)}
+    ${p(`Add your wallet now and start accepting crypto payments today.`)}`;
 
     const html = dynoPayEmailTemplate("Add Your Wallet", content, true, "Add Wallet Now", "https://dynopay.com/dashboard/wallets");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Add wallet reminder email sent to ${email}`);
   } catch (e) {
     console.error("Add wallet reminder email error:", e);
