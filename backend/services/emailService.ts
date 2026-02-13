@@ -721,33 +721,22 @@ export const sendSecurityAlertEmail = async (
   time: string
 ) => {
   try {
-    const subject = "🔒 Security alert on your account";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">We detected unusual activity on your Dynopay account.</p>
-    <div class="highlight-box" style="border-left-color: #f47323;">
-      <p><strong>⚠️ Alert Details:</strong></p>
-      <p>Type: ${alertType}<br />
-      Date: ${date} at ${time}<br />
-      Details: ${details}</p>
-    </div>
-    <p class="message"><strong>Was this you?</strong><br />
-    If you recognize this activity, you can ignore this message.</p>
-    <p class="message"><strong>Didn't perform this action?</strong><br />
-    Please secure your account immediately by:</p>
-    <p class="message">1. Changing your password<br />
-    2. Reviewing your recent activity<br />
-    3. Contacting our support team</p>
-    <p class="message">Your security is our top priority.</p>`;
+    const subject = "Security alert on your account";
+    const content = `${p(`Hey ${name},`)}
+    ${p(`We detected unusual activity on your Dynopay account.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #991b1b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Alert Details</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Type', alertType)}
+        ${dataRow('Date', `${date} at ${time}`)}
+        ${dataRow('Details', details, true)}
+      </table>
+    `, '#ef4444')}
+    ${p(`<strong>Was this you?</strong><br />If you recognize this activity, you can ignore this message.`)}
+    ${p(`<strong>Didn't perform this action?</strong><br />Please secure your account immediately by:<br />1. Changing your password<br />2. Reviewing your recent activity<br />3. Contacting our support team`)}`;
 
     const html = dynoPayEmailTemplate("Security Alert", content, true, "Secure My Account", "https://dynopay.com/dashboard/security");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Security alert email sent to ${email}`);
   } catch (e) {
     console.error("Security alert email error:", e);
