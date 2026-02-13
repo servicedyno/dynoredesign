@@ -456,7 +456,7 @@ const getData = async (req: express.Request, res: express.Response) => {
     }
     
     // Get fee configuration (internal calculation - not exposed to public)
-    const transactionFeePercent = Number(process.env.TRANSACTION_FEE_PERCENT) || 2.0;
+    const transactionFeePercent = Number(process.env.TRANSACTION_FEE_PERCENT) || 1.5;
     const feeTiers = (await import("../utils/feeConfigUtils")).getFeeTiers();
     const amount = Number(item.base_amount || item.amount || 0);
     
