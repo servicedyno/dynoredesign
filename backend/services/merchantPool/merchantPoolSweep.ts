@@ -563,6 +563,23 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       console.log(`[MerchantPool] 🎉 Sweep recorded: ${amountToSend} ${walletType} → admin wallet`);
       console.log(`[MerchantPool]    Status set to: AVAILABLE`);
 
+      // Update stablecoin conversion record with sweep TX hash so deposit detection can match it
+      try {
+        const lastPaymentContext = poolAddress.dataValues.last_payment_context;
+        const paymentId = lastPaymentContext?.payment_id || lastPaymentContext?.transaction_id;
+        if (paymentId) {
+          const [updatedCount] = await stablecoinConversionModel.update(
+            { deposit_tx_hash: sweepTxId },
+            { where: { transaction_id: paymentId, status: "PENDING_DEPOSIT", deposit_tx_hash: null } }
+          );
+          if (updatedCount > 0) {
+            console.log(`[MerchantPool]    Updated stablecoin conversion deposit_tx_hash for payment ${paymentId}`);
+          }
+        }
+      } catch (convErr) {
+        console.warn(`[MerchantPool]    Could not update conversion deposit_tx_hash:`, convErr instanceof Error ? convErr.message : convErr);
+      }
+
       try {
         const subResult = await tatumApi.createSubscription(
           poolAddress.dataValues.wallet_address,
