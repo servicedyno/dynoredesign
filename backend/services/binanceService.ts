@@ -20,8 +20,13 @@ const BINANCE_BASE_URL = process.env.BINANCE_BASE_URL || "https://api.binance.co
 const BINANCE_PROXY_URL = process.env.BINANCE_PROXY_URL || ""; // e.g., socks5://127.0.0.1:1080
 
 // ============================================
-// SOCKS5 Proxy Agent (for bypassing geo-blocks)
+// Smart Proxy: Auto-detect if proxy is needed
 // ============================================
+// When BINANCE_PROXY_URL is configured, we don't blindly use it.
+// Instead, we first test DIRECT connectivity to Binance:
+//   - Direct works   → non-US deployment → skip proxy (lower latency)
+//   - Direct blocked → US deployment     → use proxy
+// This allows the same .env to work across US and non-US deployments.
 
 const getBinanceProxyAgent = (): SocksProxyAgent | undefined => {
   if (!BINANCE_PROXY_URL) return undefined;
@@ -34,11 +39,67 @@ const getBinanceProxyAgent = (): SocksProxyAgent | undefined => {
 };
 
 const proxyAgent = getBinanceProxyAgent();
-if (proxyAgent) {
-  console.log(`[Binance] SOCKS5 proxy enabled: ${BINANCE_PROXY_URL}`);
-} else if (BINANCE_PROXY_URL) {
-  console.warn(`[Binance] Proxy URL set but agent creation failed: ${BINANCE_PROXY_URL}`);
-}
+
+/** Whether the proxy is actually needed (determined by detectBinanceAccess) */
+let proxyNeeded: boolean | null = null; // null = not yet detected
+
+/**
+ * Get the effective proxy agent: returns the agent only if proxy is actually needed.
+ * Before detection completes, returns undefined (optimistic direct access).
+ */
+export const getEffectiveProxyAgent = (): SocksProxyAgent | undefined => {
+  if (proxyNeeded === true && proxyAgent) return proxyAgent;
+  return undefined;
+};
+
+/**
+ * Auto-detect whether Binance API is directly accessible from this server.
+ * Runs once on startup. Result is cached for the lifetime of the process.
+ */
+export const detectBinanceAccess = async (): Promise<void> => {
+  if (proxyNeeded !== null) return; // Already detected
+
+  const directUrl = `${BINANCE_BASE_URL}/api/v3/ping`;
+  try {
+    // Test direct access (no proxy) with a short timeout
+    await axios.get(directUrl, {
+      timeout: 8000,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; DynoPay/1.0)" },
+      // Explicitly NO proxy agent
+    });
+    proxyNeeded = false;
+    console.log(`[Binance] ✅ Direct access OK — non-US deployment detected. Proxy DISABLED (lower latency).`);
+  } catch (err) {
+    const axiosErr = err as AxiosError;
+    const status = axiosErr.response?.status;
+    if (status === 451 || status === 403) {
+      // Geo-blocked — need proxy
+      if (proxyAgent) {
+        // Verify proxy actually works
+        try {
+          await axios.get(directUrl, {
+            timeout: 10000,
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; DynoPay/1.0)" },
+            httpAgent: proxyAgent,
+            httpsAgent: proxyAgent,
+          });
+          proxyNeeded = true;
+          console.log(`[Binance] 🌍 Geo-blocked (HTTP ${status}) — US deployment detected. Proxy ENABLED: ${BINANCE_PROXY_URL}`);
+        } catch (proxyErr) {
+          proxyNeeded = false;
+          console.warn(`[Binance] 🌍 Geo-blocked but proxy also failed. Proxy DISABLED. Will use REST fallbacks.`);
+        }
+      } else {
+        proxyNeeded = false;
+        console.warn(`[Binance] 🌍 Geo-blocked (HTTP ${status}) but no proxy configured. Will use REST fallbacks.`);
+      }
+    } else {
+      // Network error or other issue — try without proxy first
+      proxyNeeded = false;
+      console.warn(`[Binance] ⚠️ Direct ping failed (${axiosErr.message}), defaulting to no proxy. Will retry detection on next connect.`);
+    }
+  }
+};
 
 // ============================================
 // HMAC-SHA256 Signing
