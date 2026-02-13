@@ -565,19 +565,21 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
 
       // Update stablecoin conversion record with sweep TX hash so Binance deposit detection can match
       try {
-        const currentPaymentId = poolAddress.dataValues.current_payment_id;
-        const currentCompanyId = poolAddress.dataValues.current_company_id;
-        if (currentPaymentId || currentCompanyId) {
-          const whereClause: Record<string, unknown> = { 
-            status: "PENDING_DEPOSIT", 
-            deposit_tx_hash: null 
-          };
-          if (currentPaymentId) whereClause.transaction_id = currentPaymentId;
-          else if (currentCompanyId) whereClause.company_id = currentCompanyId;
-          
+        const ownerUserId = poolAddress.dataValues.owner_user_id;
+        // Map wallet type to source currency (ETH, BTC, TRX, etc.)
+        const sourceCurrency = walletType.toUpperCase();
+        if (ownerUserId) {
+          const { Op } = require("sequelize");
           const [updatedCount] = await stablecoinConversionModel.update(
             { deposit_tx_hash: sweepTxId },
-            { where: whereClause }
+            { 
+              where: { 
+                user_id: ownerUserId,
+                source_currency: sourceCurrency,
+                status: "PENDING_DEPOSIT", 
+                deposit_tx_hash: { [Op.or]: [null, ""] },
+              } 
+            }
           );
           if (updatedCount > 0) {
             console.log(`[MerchantPool]    Updated stablecoin conversion deposit_tx_hash: ${sweepTxId.substring(0, 16)}...`);
