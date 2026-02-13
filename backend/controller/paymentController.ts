@@ -3183,7 +3183,7 @@ const settleCryptoTransaction = async ({
 
       } else {
         // Account-based chains (ETH, TRX, BSC, SOL, XRP, POLYGON): Single transfer to merchant only
-        // Gas comes from fee portion (tier-based: 1.5% + fixed)
+        // Gas is deducted from merchant payout (consistent with UTXO chains)
         // Admin fee stays in temp address for batch sweep later
         fees = await tatumApi.feeEstimation(
           currency,
@@ -3193,17 +3193,14 @@ const settleCryptoTransaction = async ({
         );
 
         const gasFee = Number(fees?.slow ?? fees?.fast ?? 0);
-        // Merchant gets FULL amount - gas is paid from admin's portion (remaining balance)
-        merchantSendAmount = Number(Number(userAmount).toFixed(8));
+        // Deduct gas fee from merchant payout — merchant pays for gas (consistent with UTXO)
+        merchantSendAmount = Number((Number(userAmount) - gasFee).toFixed(8));
 
-        // Verify there's enough in admin portion to cover gas
-        const adminPortion = Number(receivedAmount);
-        if (adminPortion < gasFee) {
-          throw new Error(`Admin portion insufficient for gas. Admin: ${adminPortion}, Gas: ${gasFee}`);
+        if (merchantSendAmount <= 0) {
+          throw new Error(`Merchant amount after gas deduction is non-positive. Amount: ${userAmount}, Gas: ${gasFee}`);
         }
 
-        console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets FULL ${merchantSendAmount} ${currency}`);
-        console.log(`[settleCryptoTransaction] Gas (${gasFee} ${currency}) paid from admin's ${adminPortion} ${currency}`);
+        console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (gas ${gasFee} deducted from merchant)`);
 
         // Retry merchant transfer for account chains (ETH, TRX, SOL, XRP, POLYGON)
         merchantTransactionDetails = await withRetry(
