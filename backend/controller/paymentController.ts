@@ -4894,10 +4894,9 @@ const getCurrencyRates = async (
               
               const fixedFee = Number(feeResult.fixedFee) || 0;
               const transactionFee = Number(feeResult.transactionFee) || 0;
-              const blockchainBuffer = Number(feeResult.blockchainBuffer) || 0;
               const networkFeeUSD = Number(networkFee.feeInUSD) || 0;
               
-              const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
+              const totalFeesUSD = fixedFee + transactionFee + networkFeeUSD;
               const taxAmountNum = Number(tax_amount) || 0;
               
               // Round all amounts to 2 decimal places for consistency
