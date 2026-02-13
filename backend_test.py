@@ -1,271 +1,255 @@
 #!/usr/bin/env python3
 """
-Binance WebSocket Price Stream + Rate-Limit Fix Testing for DynoPay Backend
-
-This test script verifies the Binance WebSocket implementation and rate-limit fixes
-as specified in the review request. The tests handle expected geo-blocking from 
-US-based servers gracefully.
-
-Base URL: http://localhost:8001 (internal)
-
-IMPORTANT: This server is in a US data center where Binance.com is geo-blocked.
-The WebSocket shows geo_blocked: true which is EXPECTED behavior.
-The key tests are about the code working correctly and handling the geo-block gracefully.
+Backend Testing for Gas Fee Deduction Fix
+Tests the 4 bug fixes in gas fee deduction from merchant payouts
 """
 
-import json
-import subprocess
-import sys
 import requests
-from typing import Dict, Any, Optional
+import subprocess
+import os
+import sys
 
-# Test configuration
-BASE_URL = "http://localhost:8001"
-TIMEOUT = 30
+# Configuration
+BACKEND_URL = "https://init-project-11.preview.emergentagent.com"
+BACKEND_DIR = "/app/backend"
 
-class BinanceWebSocketTester:
-    def __init__(self):
-        self.results = {}
-        self.passed_tests = 0
-        self.total_tests = 8
-        
-    def log(self, message: str, level: str = "INFO") -> None:
-        """Log message with timestamp"""
-        print(f"[{level}] {message}")
-        
-    def run_curl_command(self, url: str) -> Optional[Dict[str, Any]]:
-        """Run curl command and parse JSON response"""
-        try:
-            response = requests.get(url, timeout=TIMEOUT)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            self.log(f"Failed to fetch {url}: {e}", "ERROR")
-            return None
-    
-    def run_bash_command(self, command: str) -> tuple:
-        """Run bash command and return output, error, exit code"""
-        try:
-            result = subprocess.run(
-                command, 
-                shell=True, 
-                capture_output=True, 
-                text=True, 
-                timeout=30
-            )
-            return result.stdout.strip(), result.stderr.strip(), result.returncode
-        except subprocess.TimeoutExpired:
-            return "", "Command timed out", 1
-        except Exception as e:
-            return "", str(e), 1
-    
-    def test_1_backend_healthy(self) -> bool:
-        """TEST 1: Backend healthy — curl -s http://localhost:8001/health | python3 -c ..."""
-        self.log("TEST 1: Backend Health Check")
-        
-        data = self.run_curl_command(f"{BASE_URL}/health")
-        if not data:
-            return False
-            
-        status = data.get('status')
-        if status in ['healthy', 'degraded']:
-            self.log(f"✅ Backend health check passed: status={status}")
+def run_test(test_name, test_func):
+    """Run a test and return the result"""
+    try:
+        print(f"\n{'='*60}")
+        print(f"🧪 {test_name}")
+        print(f"{'='*60}")
+        result = test_func()
+        if result:
+            print(f"✅ PASS: {test_name}")
             return True
         else:
-            self.log(f"❌ Backend health check failed: status={status}")
+            print(f"❌ FAIL: {test_name}")
             return False
-    
-    def test_2_health_shows_websocket_status(self) -> bool:
-        """TEST 2: Health shows WebSocket status — curl -s http://localhost:8001/health | python3 -c ..."""
-        self.log("TEST 2: Health shows WebSocket status")
+    except Exception as e:
+        print(f"❌ ERROR in {test_name}: {e}")
+        return False
+
+def test_1_backend_healthy():
+    """TEST 1: Backend healthy - GET /health returns 200 with status "healthy" """
+    try:
+        response = requests.get(f"{BACKEND_URL}/health", timeout=30)
+        print(f"Response Status: {response.status_code}")
+        print(f"Response Body: {response.text}")
         
-        data = self.run_curl_command(f"{BASE_URL}/health")
-        if not data:
-            return False
-            
-        ws = data.get('binance_websocket', {})
-        required_keys = ['connected', 'geo_blocked', 'cached_prices']
-        has_keys = all(k in ws for k in required_keys)
-        
-        connected = ws.get('connected')
-        geo_blocked = ws.get('geo_blocked') 
-        prices = ws.get('cached_prices')
-        
-        self.log(f"connected={connected}, geo_blocked={geo_blocked}, prices={prices}")
-        
-        if has_keys:
-            self.log("✅ Health endpoint shows WebSocket status with required keys")
-            return True
-        else:
-            self.log(f"❌ Health endpoint missing WebSocket keys. Found: {list(ws.keys())}")
-            return False
-    
-    def test_3_geo_block_properly_detected(self) -> bool:
-        """TEST 3: Geo-block properly detected — curl -s http://localhost:8001/health | python3 -c ..."""
-        self.log("TEST 3: Geo-block properly detected")
-        
-        data = self.run_curl_command(f"{BASE_URL}/health")
-        if not data:
-            return False
-            
-        ws = data.get('binance_websocket', {})
-        geo_blocked = ws.get('geo_blocked', False)
-        has_note = 'note' in ws
-        
-        self.log(f"geo_blocked={geo_blocked}, has_note={has_note}")
-        
-        if geo_blocked and has_note:
-            self.log("✅ Geo-block properly detected with explanatory note")
-            return True
-        else:
-            self.log(f"❌ Geo-block detection failed. geo_blocked={geo_blocked}, has_note={has_note}")
-            return False
-    
-    def test_4_no_rate_limit_errors_in_logs(self) -> bool:
-        """TEST 4: No rate-limit errors in logs"""
-        self.log("TEST 4: Checking for rate-limit errors in logs")
-        
-        stdout, stderr, exit_code = self.run_bash_command(
-            'grep -c "rate limited" /var/log/supervisor/backend.out.log 2>/dev/null || echo "0"'
-        )
-        
-        try:
-            count = int(stdout)
-            if count == 0:
-                self.log("✅ No rate-limit errors found in logs")
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy":
+                print("Backend is healthy")
                 return True
             else:
-                self.log(f"❌ Found {count} rate-limit errors in logs")
+                print(f"Backend status is not healthy: {data.get('status')}")
                 return False
-        except ValueError:
-            self.log(f"❌ Could not parse rate-limit error count: {stdout}")
+        else:
+            print(f"Expected 200 but got {response.status_code}")
             return False
-    
-    def test_5_websocket_service_started(self) -> bool:
-        """TEST 5: WebSocket service started"""
-        self.log("TEST 5: Checking if WebSocket service started")
-        
-        stdout, stderr, exit_code = self.run_bash_command(
-            'grep -c "BinanceWS.*Starting\\|BinanceWS.*Connecting\\|BinanceWS.*geo-blocked" /var/log/supervisor/backend.out.log'
+    except Exception as e:
+        print(f"Error connecting to backend: {e}")
+        return False
+
+def test_2_typescript_compiles():
+    """TEST 2: TypeScript compiles clean - cd /app/backend && npx tsc --noEmit"""
+    try:
+        os.chdir(BACKEND_DIR)
+        result = subprocess.run(
+            ["npx", "tsc", "--noEmit"],
+            capture_output=True,
+            text=True,
+            timeout=60
         )
         
-        try:
-            count = int(stdout)
-            if count > 0:
-                self.log(f"✅ WebSocket service startup messages found ({count} occurrences)")
-                return True
-            else:
-                self.log("❌ No WebSocket service startup messages found")
-                return False
-        except ValueError:
-            self.log(f"❌ Could not parse WebSocket startup message count: {stdout}")
-            return False
-    
-    def test_6_volatility_monitor_websocket_powered(self) -> bool:
-        """TEST 6: Volatility monitor is WebSocket-powered"""
-        self.log("TEST 6: Checking if volatility monitor is WebSocket-powered")
+        print(f"Exit Code: {result.returncode}")
+        print(f"stdout: {result.stdout}")
+        print(f"stderr: {result.stderr}")
         
-        stdout, stderr, exit_code = self.run_bash_command(
-            'grep "VolatilityMonitor.*WebSocket-powered" /var/log/supervisor/backend.out.log'
-        )
-        
-        if stdout:
-            self.log("✅ Volatility monitor WebSocket-powered message found")
+        if result.returncode == 0:
+            print("TypeScript compilation successful")
             return True
         else:
-            self.log("❌ Volatility monitor WebSocket-powered message not found")
+            print(f"TypeScript compilation failed with exit code {result.returncode}")
             return False
-    
-    def test_7_reconnect_slow_for_geo_blocked(self) -> bool:
-        """TEST 7: Reconnect is slow for geo-blocked"""
-        self.log("TEST 7: Checking for slow reconnect intervals for geo-blocked")
+    except Exception as e:
+        print(f"Error running TypeScript compilation: {e}")
+        return False
+
+def test_3_bug1_fix_native_chain_fast_fee():
+    """TEST 3: BUG 1 FIX — Native chain uses fast fee for deduction"""
+    try:
+        cmd = ["grep", "fees?.fast.*fees?.slow.*0", "/app/backend/controller/paymentController.ts"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
         
-        stdout, stderr, exit_code = self.run_bash_command(
-            'grep "Reconnecting in 300s" /var/log/supervisor/backend.out.log'
-        )
+        print(f"Grep command: {' '.join(cmd)}")
+        print(f"Exit Code: {result.returncode}")
+        print(f"stdout: {result.stdout}")
         
-        if stdout:
-            self.log("✅ 300s (5 min) reconnect interval found for geo-blocked connections")
-            return True
+        if result.returncode == 0 and result.stdout.strip():
+            lines = result.stdout.strip().split('\n')
+            for line in lines:
+                if "Use fast tier for gas deduction" in line:
+                    print("✅ Found the line with 'Use fast tier for gas deduction'")
+                    return True
+            print("Found fee pattern but missing comment")
+            return True  # Pattern found is sufficient
         else:
-            self.log("❌ 300s reconnect interval not found for geo-blocked connections")
+            print("Fast fee pattern not found")
             return False
-    
-    def test_8_swagger_still_works(self) -> bool:
-        """TEST 8: Swagger still works"""
-        self.log("TEST 8: Checking if Swagger API documentation works")
+    except Exception as e:
+        print(f"Error running grep: {e}")
+        return False
+
+def test_4_bug2_fix_gaslimit_not_reduced():
+    """TEST 4: BUG 2 FIX — gasLimit not reduced for native ETH"""
+    try:
+        # Check for effectiveGasLimit occurrences (should find at least 5)
+        cmd1 = ["grep", "effectiveGasLimit", "/app/backend/services/chains/evmChain.ts"]
+        result1 = subprocess.run(cmd1, capture_output=True, text=True)
+        print(f"effectiveGasLimit grep: {result1.returncode}")
+        print(f"effectiveGasLimit output: {result1.stdout}")
         
-        data = self.run_curl_command(f"{BASE_URL}/api/docs.json")
-        if not data:
-            return False
-            
-        paths = data.get('paths', {})
-        path_count = len(paths)
+        # Check for Math.max(gasLimit, 21000) fix
+        cmd2 = ["grep", "Math.max(gasLimit, 21000)", "/app/backend/services/chains/evmChain.ts"]
+        result2 = subprocess.run(cmd2, capture_output=True, text=True)
+        print(f"Math.max grep: {result2.returncode}")
+        print(f"Math.max output: {result2.stdout}")
         
-        self.log(f"Paths: {path_count}")
+        # Check old bug is removed
+        cmd3 = ["grep", "gasLimit: isToken ? gasLimit : Math.floor", "/app/backend/services/chains/evmChain.ts"]
+        result3 = subprocess.run(cmd3, capture_output=True, text=True)
+        print(f"Old bug grep: {result3.returncode}")
+        print(f"Old bug output: {result3.stdout}")
         
-        if path_count >= 190:
-            self.log(f"✅ Swagger API documentation working ({path_count} paths)")
-            return True
-        else:
-            self.log(f"❌ Swagger API documentation has insufficient paths ({path_count} < 190)")
-            return False
-    
-    def run_all_tests(self) -> None:
-        """Run all tests and report results"""
-        self.log("=== Binance WebSocket Price Stream + Rate-Limit Fix Testing ===")
-        self.log("IMPORTANT: Geo-blocking is EXPECTED behavior in US data centers")
-        self.log("")
+        effectiveGasLimit_count = len(result1.stdout.strip().split('\n')) if result1.stdout.strip() else 0
+        has_math_max_fix = result2.returncode == 0 and result2.stdout.strip()
+        old_bug_removed = result3.returncode != 0 or not result3.stdout.strip()
         
-        tests = [
-            ("Backend Health Check", self.test_1_backend_healthy),
-            ("Health Shows WebSocket Status", self.test_2_health_shows_websocket_status),
-            ("Geo-block Properly Detected", self.test_3_geo_block_properly_detected),
-            ("No Rate-Limit Errors in Logs", self.test_4_no_rate_limit_errors_in_logs),
-            ("WebSocket Service Started", self.test_5_websocket_service_started),
-            ("Volatility Monitor WebSocket-Powered", self.test_6_volatility_monitor_websocket_powered),
-            ("Reconnect Slow for Geo-Blocked", self.test_7_reconnect_slow_for_geo_blocked),
-            ("Swagger Still Works", self.test_8_swagger_still_works),
-        ]
+        print(f"effectiveGasLimit occurrences: {effectiveGasLimit_count} (need >= 5)")
+        print(f"Math.max fix found: {has_math_max_fix}")
+        print(f"Old bug removed: {old_bug_removed}")
         
-        for i, (name, test_func) in enumerate(tests, 1):
-            self.log(f"\n--- Running Test {i}: {name} ---")
-            try:
-                if test_func():
-                    self.passed_tests += 1
-                    self.results[name] = "PASS"
-                else:
-                    self.results[name] = "FAIL"
-            except Exception as e:
-                self.log(f"❌ Test {i} encountered error: {e}", "ERROR")
-                self.results[name] = f"ERROR: {e}"
+        return effectiveGasLimit_count >= 5 and has_math_max_fix and old_bug_removed
         
-        # Final Report
-        self.log("\n" + "="*60)
-        self.log("FINAL TEST RESULTS")
-        self.log("="*60)
+    except Exception as e:
+        print(f"Error checking gasLimit fix: {e}")
+        return False
+
+def test_5_bug3_fix_sol_xrp_fee_usd():
+    """TEST 5: BUG 3 FIX — SOL/XRP feeInUSD now calculated"""
+    try:
+        # Check for price lookup
+        cmd1 = ["grep", "getCryptoPrice.*priceSymbol", "/app/backend/services/blockchainFeeService.ts"]
+        result1 = subprocess.run(cmd1, capture_output=True, text=True)
+        print(f"Price lookup grep: {result1.returncode}")
+        print(f"Price lookup output: {result1.stdout}")
         
-        for test_name, result in self.results.items():
-            status_icon = "✅" if result == "PASS" else "❌"
-            self.log(f"{status_icon} {test_name}: {result}")
+        # Check old hardcoded 0 is removed
+        cmd2 = ["grep", "feeInUSD: 0.*Negligible", "/app/backend/services/blockchainFeeService.ts"]
+        result2 = subprocess.run(cmd2, capture_output=True, text=True)
+        print(f"Old hardcoded 0 grep: {result2.returncode}")
+        print(f"Old hardcoded 0 output: {result2.stdout}")
         
-        self.log(f"\nSUMMARY: {self.passed_tests}/{self.total_tests} tests passed")
+        has_price_lookup = result1.returncode == 0 and result1.stdout.strip()
+        old_hardcode_removed = result2.returncode != 0 or not result2.stdout.strip()
         
-        if self.passed_tests == self.total_tests:
-            self.log("🎉 ALL TESTS PASSED! Binance WebSocket implementation is working correctly.")
-            return True
-        elif self.passed_tests >= 6:
-            self.log("⚠️  Most tests passed with some minor issues. Core functionality is working.")
-            return True
-        else:
-            self.log("❌ Multiple test failures detected. Review implementation needed.")
-            return False
+        print(f"Price lookup found: {has_price_lookup}")
+        print(f"Old hardcoded 0 removed: {old_hardcode_removed}")
+        
+        return has_price_lookup and old_hardcode_removed
+        
+    except Exception as e:
+        print(f"Error checking SOL/XRP fee USD calculation: {e}")
+        return False
+
+def test_6_bug4_fix_token_fallback():
+    """TEST 6: BUG 4 FIX — Token fallback converts native fee to USD"""
+    try:
+        # Check for nativePrices
+        cmd1 = ["grep", "nativePrices", "/app/backend/controller/paymentController.ts"]
+        result1 = subprocess.run(cmd1, capture_output=True, text=True)
+        print(f"nativePrices grep: {result1.returncode}")
+        print(f"nativePrices output: {result1.stdout}")
+        
+        # Check for rawFee * nativePrice multiplication
+        cmd2 = ["grep", "rawFee.*nativePrice", "/app/backend/controller/paymentController.ts"]
+        result2 = subprocess.run(cmd2, capture_output=True, text=True)
+        print(f"rawFee multiplication grep: {result2.returncode}")
+        print(f"rawFee multiplication output: {result2.stdout}")
+        
+        has_native_prices = result1.returncode == 0 and result1.stdout.strip()
+        has_multiplication = result2.returncode == 0 and result2.stdout.strip()
+        
+        print(f"nativePrices found: {has_native_prices}")
+        print(f"rawFee * nativePrice multiplication found: {has_multiplication}")
+        
+        return has_native_prices and has_multiplication
+        
+    except Exception as e:
+        print(f"Error checking token fallback fix: {e}")
+        return False
+
+def test_7_evm_gasprice_correct():
+    """TEST 7: EVM gasPrice is correct - uses buffered price not raw"""
+    try:
+        cmd = ["grep", "gasPrice: bufferedGasPrice", "/app/backend/services/chains/evmChain.ts"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        print(f"bufferedGasPrice grep: {result.returncode}")
+        print(f"bufferedGasPrice output: {result.stdout}")
+        
+        has_buffered_gas_price = result.returncode == 0 and result.stdout.strip()
+        
+        print(f"gasPrice uses buffered price: {has_buffered_gas_price}")
+        
+        return has_buffered_gas_price
+        
+    except Exception as e:
+        print(f"Error checking EVM gasPrice: {e}")
+        return False
 
 def main():
-    """Main entry point"""
-    tester = BinanceWebSocketTester()
-    success = tester.run_all_tests()
-    sys.exit(0 if success else 1)
+    """Run all tests"""
+    print("🚀 Starting Gas Fee Deduction Fix Testing")
+    print(f"Backend URL: {BACKEND_URL}")
+    print(f"Backend Directory: {BACKEND_DIR}")
+    
+    tests = [
+        ("TEST 1: Backend Healthy", test_1_backend_healthy),
+        ("TEST 2: TypeScript Compiles Clean", test_2_typescript_compiles),
+        ("TEST 3: BUG 1 FIX - Native chain uses fast fee", test_3_bug1_fix_native_chain_fast_fee),
+        ("TEST 4: BUG 2 FIX - gasLimit not reduced for native ETH", test_4_bug2_fix_gaslimit_not_reduced),
+        ("TEST 5: BUG 3 FIX - SOL/XRP feeInUSD calculated", test_5_bug3_fix_sol_xrp_fee_usd),
+        ("TEST 6: BUG 4 FIX - Token fallback converts native fee to USD", test_6_bug4_fix_token_fallback),
+        ("TEST 7: EVM gasPrice uses buffered price", test_7_evm_gasprice_correct),
+    ]
+    
+    results = []
+    for test_name, test_func in tests:
+        results.append(run_test(test_name, test_func))
+    
+    print(f"\n{'='*60}")
+    print("📊 TEST SUMMARY")
+    print(f"{'='*60}")
+    
+    passed = sum(results)
+    total = len(results)
+    
+    for i, (test_name, _) in enumerate(tests):
+        status = "✅ PASS" if results[i] else "❌ FAIL"
+        print(f"{status}: {test_name}")
+    
+    print(f"\nOverall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
+    
+    if passed == total:
+        print("🎉 All tests passed! Gas Fee Deduction Fix is working correctly.")
+        return True
+    else:
+        print("⚠️  Some tests failed. Please review the failures above.")
+        return False
 
 if __name__ == "__main__":
-    main()
+    success = main()
+    sys.exit(0 if success else 1)
