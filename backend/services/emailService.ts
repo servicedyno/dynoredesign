@@ -29,27 +29,23 @@ export const sendWelcomeEmail = async (
   name: string
 ) => {
   try {
-    const subject = "Welcome to Dynopay — Let's get you paid";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Welcome to Dynopay! We're excited to have you on board. 🎉</p>
-    <p class="message">Dynopay makes accepting crypto payments simple, secure, and fast. Whether you're a freelancer, business owner, or developer, we've got you covered.</p>
-    <div class="highlight-box">
-      <p><strong>Here's what you can do next:</strong></p>
-      <p>✓ Complete your company profile<br />
-      ✓ Add your payout wallet<br />
-      ✓ Start accepting payments</p>
-    </div>
-    <p class="message">If you have any questions, our support team is here to help!</p>`;
+    const subject = "Welcome to Dynopay - Let's get you paid";
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Welcome to Dynopay! We're excited to have you on board.`)}
+    ${p(`Dynopay makes accepting crypto payments simple, secure, and fast. Whether you're a freelancer, business owner, or developer, we've got you covered.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #0d1f5c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;"><strong>Here's what you can do next:</strong></p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">1. Complete your company profile</td></tr>
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">2. Add your payout wallet</td></tr>
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">3. Start accepting payments</td></tr>
+      </table>
+    `)}
+    ${p(`If you have any questions, our support team is here to help.`)}`;
 
     const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Get Started", "https://dynopay.com/dashboard");
     
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Welcome email sent to ${email}`);
   } catch (e) {
     console.error("Welcome email error:", e);
