@@ -1250,45 +1250,35 @@ export const sendSubscriptionCreatedEmail = async (
     
     // Email to Customer
     const customerSubject = `Subscription confirmed - ${planName}`;
-    const customerContent = `<p class="message">Hey ${displayName},</p>
-    <p class="message">Your subscription to <strong>${planName}</strong> from <strong>${companyName}</strong> is now active! 🎉</p>
-    <div class="highlight-box">
-      <p><strong>Subscription Details:</strong></p>
-      <p>Plan: ${planName}<br />
-      Amount: ${amount} ${currency} / ${interval}<br />
-      Next Billing: ${nextBillingDate}</p>
-    </div>
-    <p class="message">You'll be charged automatically on each billing date. You can manage or cancel your subscription anytime.</p>`;
+    const customerContent = `${p(`Hey ${displayName},`)}
+    ${p(`Your subscription to <strong>${planName}</strong> from <strong>${companyName}</strong> is now active.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Plan', planName)}
+        ${dataRow('Amount', `<strong>${amount} ${currency} / ${interval}</strong>`)}
+        ${dataRow('Next Billing', nextBillingDate, true)}
+      </table>
+    `, '#22c55e')}
+    ${p(`You'll be charged automatically on each billing date. You can manage or cancel your subscription anytime.`)}`;
 
     const customerHtml = dynoPayEmailTemplate("Subscription Active", customerContent);
-    
-    await mailTransporter({
-      to: customerEmail,
-      name: displayName,
-      subject: customerSubject,
-      body: customerHtml,
-    });
+    await mailTransporter({ to: customerEmail, name: displayName, subject: customerSubject, body: customerHtml });
     
     // Email to Merchant
     const merchantSubject = `New subscriber - ${planName}`;
-    const merchantContent = `<p class="message">Hey ${merchantName},</p>
-    <p class="message">Great news! You have a new subscriber for <strong>${planName}</strong>. 🎉</p>
-    <div class="highlight-box">
-      <p><strong>Subscription Details:</strong></p>
-      <p>Customer: ${customerEmail}<br />
-      Plan: ${planName}<br />
-      Revenue: ${amount} ${currency} / ${interval}<br />
-      Next Billing: ${nextBillingDate}</p>
-    </div>`;
+    const merchantContent = `${p(`Hey ${merchantName},`)}
+    ${p(`You have a new subscriber for <strong>${planName}</strong>.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Customer', customerEmail)}
+        ${dataRow('Plan', planName)}
+        ${dataRow('Revenue', `<strong>${amount} ${currency} / ${interval}</strong>`)}
+        ${dataRow('Next Billing', nextBillingDate, true)}
+      </table>
+    `, '#22c55e')}`;
 
     const merchantHtml = dynoPayEmailTemplate("New Subscription", merchantContent, true, "View Subscriptions", "https://dynopay.com/dashboard/subscriptions");
-    
-    await mailTransporter({
-      to: merchantEmail,
-      name: merchantName,
-      subject: merchantSubject,
-      body: merchantHtml,
-    });
+    await mailTransporter({ to: merchantEmail, name: merchantName, subject: merchantSubject, body: merchantHtml });
     
     console.log(`[Email] Subscription created notifications sent for ${planName}`);
   } catch (e) {
