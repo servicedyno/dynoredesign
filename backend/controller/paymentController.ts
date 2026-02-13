@@ -1112,7 +1112,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             
             console.log(`[addPayment] Fee calculation:
               - Base USD: $${baseAmountUSD}
-              - Fee breakdown: ${transactionFeePercent}%=$${transactionFee.toFixed(2)} + Fixed=$${fixedFee.toFixed(2)}
+              - Fee breakdown: $${transactionFee.toFixed(2)} (pct) + $${fixedFee.toFixed(2)} (fixed)
               - Total fee: $${totalDeduction.toFixed(2)} (${(feePercentage * 100).toFixed(2)}%)
               - Fee payer: ${fee_payer}`);
           } catch (feeError) {
