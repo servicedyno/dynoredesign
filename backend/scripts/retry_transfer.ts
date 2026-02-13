@@ -1,5 +1,5 @@
 /**
- * Retry ETH transfer with correct network gas price
+ * Retry ETH transfer with corrected gas buffer
  */
 import dotenv from "dotenv";
 dotenv.config();
@@ -33,30 +33,18 @@ async function main() {
   const ethBalance = parseFloat(balResp.data.balance);
   console.log(`Balance: ${ethBalance} ETH`);
 
-  // Step 2: Get REAL gas estimate from network
-  const gasResp = await axios.post(
-    "https://api.tatum.io/v3/ethereum/gas",
-    { from: FROM, to: TO, amount: "0.005" },
-    { headers: { "x-api-key": TATUM_KEY, "Content-Type": "application/json" } }
-  );
+  // Step 2: Tatum enforces minimum 1 Gwei internally, so use 1 Gwei for calculation
+  // For simple ETH transfer: gasLimit = 21000
+  const gasPriceGwei = 1; // Tatum minimum
+  const gasLimit = 21000;
+  const gasFeeETH = (gasPriceGwei * 1e9 * gasLimit) / 1e18; // = 0.000021 ETH
+  console.log(`Gas fee (1 Gwei * 21000): ${gasFeeETH} ETH`);
 
-  const gasData = gasResp.data;
-  console.log("Network gas data:", JSON.stringify(gasData));
-
-  // Use 'standard' priority gas price, converted from wei to Gwei
-  const gasPriceWei = parseInt(gasData.estimations?.standard || gasData.gasPrice);
-  const gasPriceGwei = gasPriceWei / 1e9;
-  const gasLimit = 21000; // Simple ETH transfer
-  const gasFeeETH = (gasPriceWei * gasLimit) / 1e18;
-
-  console.log(`Gas price: ${gasPriceGwei} Gwei`);
-  console.log(`Gas limit: ${gasLimit}`);
-  console.log(`Est gas fee: ${gasFeeETH} ETH`);
-
-  let amountToSend = ethBalance - gasFeeETH;
-  // Add small safety buffer and round down
+  // Extra safety buffer of 10%
+  const safeGasFee = gasFeeETH * 1.1;
+  let amountToSend = ethBalance - safeGasFee;
   amountToSend = Math.floor(amountToSend * 1e8) / 1e8;
-  console.log(`Amount to send: ${amountToSend} ETH`);
+  console.log(`Amount to send: ${ethBalance} - ${safeGasFee.toFixed(10)} = ${amountToSend} ETH`);
 
   if (amountToSend <= 0) {
     console.error("Not enough balance after gas!");
@@ -74,7 +62,7 @@ async function main() {
   );
   console.log("Private key decrypted.");
 
-  // Step 4: Transfer
+  // Step 4: Transfer with gasPrice = 1 Gwei (Tatum minimum)
   console.log("\nExecuting transfer...");
   const result = await tatumApi.assetToOtherAddress({
     currency: "ETH",
