@@ -497,85 +497,59 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       console.log(`[MerchantPool] Account chain sweep: ${actualBalance} - ${gasFee} (gas)${reserveLog} = ${amountToSend} ${walletType}`);
     }
 
-    // Use Tatum SDK for ALL chains (ETH, TRX, XRP, BTC, POLYGON, etc.)
-    // This is the same method used for regular payment distributions and is proven reliable
+    // Sweep strategy: Use direct ethers.js for EVM chains (ETH, POLYGON) to avoid
+    // Tatum SDK ghost TX issue (SDK returns TX hash but never broadcasts to network).
+    // For non-EVM chains (TRX, XRP, BTC, etc.), continue using Tatum SDK.
     let sweepTxId: string | undefined;
 
-    console.log(`[MerchantPool] Using Tatum SDK sweep for ${walletType}`);
-    const sweepResult = await withRetry(
-      async () => {
-        const result = await tatumApi.assetToOtherAddress({
-          currency: walletType,
-          fromAddress: poolAddress.dataValues.wallet_address,
-          toAddress: adminWallet,
-          privateKey,
-          amount: amountToSend.toString(),
-          fee: feeData,
-        });
-        if (!result?.txId) {
-          throw new Error("Sweep transaction failed - no txId returned");
-        }
-        return result;
-      },
-      `Sweep transfer for ${poolAddress.dataValues.wallet_address}`,
-      POOL_CONFIG.MAX_RETRIES,
-      POOL_CONFIG.SWEEP_RETRY_DELAY_MS
-    );
-    sweepTxId = sweepResult?.txId;
-
-    console.log(`[MerchantPool] 📡 Sweep TX broadcast: ${sweepTxId}`);
-
-    // CRITICAL: Verify the sweep TX is actually confirmed on-chain before marking as completed.
-    // Without this, ghost TXs (broadcast but never mined, e.g., due to low gas price behind
-    // a geo-proxy) would be marked "completed" while funds remain in the temp address.
-    let sweepConfirmed = false;
-    if (sweepTxId) {
-      console.log(`[MerchantPool] ⏳ Waiting for sweep TX confirmation on-chain...`);
-      try {
-        const confirmation = await tatumApi.waitForTransactionConfirmation(
-          sweepTxId,
-          walletType,
-          90000  // 90s timeout — ETH block time ~12s, gives ~7 blocks
-        );
-        if (confirmation.confirmed) {
-          sweepConfirmed = true;
-          console.log(`[MerchantPool] ✅ Sweep TX confirmed in block ${confirmation.blockNumber}`);
-        } else {
-          console.error(`[MerchantPool] ❌ Sweep TX NOT confirmed within timeout — ghost TX detected`);
-        }
-      } catch (confirmErr: unknown) {
-        console.error(`[MerchantPool] ❌ Sweep TX confirmation check failed:`, confirmErr instanceof Error ? confirmErr.message : confirmErr);
-      }
+    if (isDirectEvmSupported(walletType)) {
+      // DIRECT EVM SWEEP: ethers.js signs locally + broadcasts via eth_sendRawTransaction
+      // The TX hash is real — sendTransaction() throws if the RPC node rejects the TX
+      console.log(`[MerchantPool] Using direct EVM sweep for ${walletType}`);
+      const evmResult = await withRetry(
+        async () => {
+          return await directEvmSweep({
+            fromAddress: poolAddress.dataValues.wallet_address,
+            toAddress: adminWallet,
+            privateKey,
+            walletType,
+            amount: amountToSend,
+          });
+        },
+        `Direct EVM sweep for ${poolAddress.dataValues.wallet_address}`,
+        POOL_CONFIG.MAX_RETRIES,
+        POOL_CONFIG.SWEEP_RETRY_DELAY_MS
+      );
+      sweepTxId = evmResult?.txHash;
+      console.log(`[MerchantPool] ✅ Direct EVM sweep broadcast: ${sweepTxId} (nonce: ${evmResult?.nonce}, gas: ${evmResult?.gasPriceGwei} Gwei)`);
+    } else {
+      // NON-EVM CHAINS: Use Tatum SDK (proven reliable for TRX, XRP, BTC, LTC, DOGE, etc.)
+      console.log(`[MerchantPool] Using Tatum SDK sweep for ${walletType}`);
+      const sweepResult = await withRetry(
+        async () => {
+          const result = await tatumApi.assetToOtherAddress({
+            currency: walletType,
+            fromAddress: poolAddress.dataValues.wallet_address,
+            toAddress: adminWallet,
+            privateKey,
+            amount: amountToSend.toString(),
+            fee: feeData,
+          });
+          if (!result?.txId) {
+            throw new Error("Sweep transaction failed - no txId returned");
+          }
+          return result;
+        },
+        `Sweep transfer for ${poolAddress.dataValues.wallet_address}`,
+        POOL_CONFIG.MAX_RETRIES,
+        POOL_CONFIG.SWEEP_RETRY_DELAY_MS
+      );
+      sweepTxId = sweepResult?.txId;
+      console.log(`[MerchantPool] ✅ Tatum SDK sweep broadcast: ${sweepTxId}`);
     }
 
-    // If TX was NOT confirmed on-chain, revert status to IN_USE so the cron can retry
-    if (!sweepConfirmed) {
-      console.warn(`[MerchantPool] 🔄 Reverting address ${poolAddress.dataValues.wallet_address} to IN_USE for retry`);
-      await poolAddress.update({
-        status: "IN_USE",
-      });
-      
-      // Record the failed sweep for audit
-      await merchantPoolSweepModel.create({
-        temp_address_id: tempAddressId,
-        owner_user_id: poolAddress.dataValues.owner_user_id,
-        wallet_type: walletType,
-        amount_swept: amountToSend,
-        gas_funded: gasFunding.amount || 0,
-        gas_used: 0,
-        sweep_tx_id: sweepTxId,
-        gas_funding_tx_id: gasFunding.txId || null,
-        admin_wallet: adminWallet,
-        status: "failed",
-        error_message: "TX broadcast but not confirmed on-chain (ghost TX)",
-      });
-      
-      return {
-        success: false,
-        txId: sweepTxId,
-        reason: "TX not confirmed on-chain",
-        message: "Sweep TX was broadcast but not mined. Address kept IN_USE for retry.",
-      };
+    if (!sweepTxId) {
+      throw new Error("Sweep transaction failed - no txId/txHash returned");
     }
 
     // Fetch actual on-chain gas cost (TX is confirmed, so this should succeed)
