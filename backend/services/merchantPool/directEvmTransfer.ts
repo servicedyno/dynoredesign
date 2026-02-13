@@ -88,15 +88,16 @@ function getRpcUrls(chain: "ETH" | "POLYGON"): string[] {
 
   if (chain === "POLYGON") {
     const urls = [];
-    if (tatumKey) urls.push(`https://api.tatum.io/v3/polygon/web3/${tatumKey}`);
     urls.push("https://polygon-rpc.com");
+    if (tatumKey) urls.push(`https://api.tatum.io/v3/polygon/web3/${tatumKey}`);
     return urls;
   }
 
-  // Ethereum
+  // Ethereum - Use public RPC first for better reliability
   const urls = [];
-  if (tatumKey) urls.push(`https://api.tatum.io/v3/ethereum/web3/${tatumKey}`);
   urls.push("https://eth.llamarpc.com");
+  urls.push("https://ethereum-rpc.publicnode.com");
+  if (tatumKey) urls.push(`https://api.tatum.io/v3/ethereum/web3/${tatumKey}`);
   return urls;
 }
 
