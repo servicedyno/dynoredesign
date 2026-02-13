@@ -121,7 +121,6 @@ export const getBlockchainConfig = async (blockchain: string) => {
         min_amount: t.min,
         max_amount: t.max,
         fixed_fee: t.fixed,
-        blockchain_buffer_percent: t.buffer
       }))
     };
   }
