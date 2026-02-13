@@ -584,27 +584,22 @@ export const sendKYCRequiredEmail = async (
   try {
     const currencySymbol = getCurrencySymbol(currency);
     const thresholdAmount = currency === 'USD' ? '5,000' : '5,000 USD equivalent';
-    const subject = `Verification required — ${currencySymbol}${thresholdAmount} volume reached`;
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Congratulations on reaching <strong>${currencySymbol}${totalVolume} ${currency}</strong> in transaction volume! 🎉</p>
-    <p class="message">To continue accepting payments above ${currencySymbol}${thresholdAmount}, we need to verify your identity. This is a regulatory requirement and helps us keep Dynopay secure.</p>
-    <div class="highlight-box">
-      <p><strong>What you need:</strong></p>
-      <p>✓ Government-issued ID<br />
-      ✓ Proof of address (utility bill, bank statement)<br />
-      ✓ 5 minutes of your time</p>
-    </div>
-    <p class="message">Complete your verification now to keep accepting payments without interruption.</p>`;
+    const subject = `Verification required - ${currencySymbol}${thresholdAmount} volume reached`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Congratulations on reaching <strong>${currencySymbol}${totalVolume} ${currency}</strong> in transaction volume!`)}
+    ${p(`To continue accepting payments above ${currencySymbol}${thresholdAmount}, we need to verify your identity. This is a regulatory requirement and helps us keep Dynopay secure.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #0d1f5c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">What you need:</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">1. Government-issued ID</td></tr>
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">2. Proof of address (utility bill, bank statement)</td></tr>
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">3. About 5 minutes of your time</td></tr>
+      </table>
+    `)}
+    ${p(`Complete your verification now to keep accepting payments without interruption.`)}`;
 
     const html = dynoPayEmailTemplate("Verification Required", content, true, "Start Verification", "https://dynopay.com/dashboard/kyc");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`KYC required email sent to ${email}`);
   } catch (e) {
     console.error("KYC required email error:", e);
