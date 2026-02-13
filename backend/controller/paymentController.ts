@@ -4185,7 +4185,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               - TX: ${transactionId}
               - Source: ${originalUserAmount.toFixed(8)} ${tempCurrency}
               - Target: ${autoConvertTargetCurrency} on ${autoConvertSettlementChain}
-              - Will be processed by Binance cron`);
+              - Immediate sweep will be triggered after address release`);
           } catch (convErr) {
             console.error(`[AutoConvert] ❌ Failed to create conversion record (non-fatal):`, convErr);
             // Non-fatal: the payment itself succeeded, conversion can be manually triggered
