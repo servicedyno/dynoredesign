@@ -91,27 +91,22 @@ export const sendCompanyContactWelcomeEmail = async (
   accountHolderName: string
 ) => {
   try {
-    const subject = `Welcome to Dynopay — ${companyName} is now registered`;
-    const content = `<p class="message">Hello,</p>
-    <p class="message">Great news! <strong>${companyName}</strong> has been registered on Dynopay by ${accountHolderName}. 🎉</p>
-    <p class="message">Dynopay is a secure crypto payment gateway that enables businesses to accept cryptocurrency payments easily and safely.</p>
-    <div class="highlight-box">
-      <p><strong>What this means for you:</strong></p>
-      <p>✓ Your company can now accept crypto payments<br />
-      ✓ Fast and secure transactions<br />
-      ✓ Real-time payment notifications</p>
-    </div>
-    <p class="message">If you have any questions about this registration or need assistance, please contact our support team or reach out to ${accountHolderName}.</p>`;
+    const subject = `Welcome to Dynopay - ${companyName} is now registered`;
+    const content = `${p(`Hello,`)}
+    ${p(`<strong>${companyName}</strong> has been registered on Dynopay by ${accountHolderName}.`)}
+    ${p(`Dynopay is a secure crypto payment gateway that enables businesses to accept cryptocurrency payments easily and safely.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #0d1f5c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">What this means for you:</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">1. Your company can now accept crypto payments</td></tr>
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">2. Fast and secure transactions</td></tr>
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">3. Real-time payment notifications</td></tr>
+      </table>
+    `)}
+    ${p(`If you have any questions about this registration, please contact our support team or reach out to ${accountHolderName}.`)}`;
 
     const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Learn More", "https://dynopay.com");
-    
-    await mailTransporter({
-      to: companyContactEmail,
-      name: companyName,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: companyContactEmail, name: companyName, subject, body: html });
     console.log(`Company contact welcome email sent to ${companyContactEmail}`);
   } catch (e) {
     console.error("Company contact welcome email error:", e);
