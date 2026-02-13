@@ -7,12 +7,15 @@ Crypto payment processing system requiring:
 3. Fee structure refactoring (1.5% + $1.00 tier-based fixed fee)
 4. Professional email template redesign
 5. Consistent gas fee deduction across all chains
+6. Reliable automated sweep mechanism (eliminate "ghost transaction" bugs)
+7. Instant sweep trigger for auto-conversion payments
 
 ## Core Architecture
 - **Backend**: Node.js / TypeScript
-- **Database**: PostgreSQL
-- **Proxy**: SSH SOCKS5 Tunneling with autossh
+- **Database**: PostgreSQL (Sequelize ORM)
+- **Proxy**: SSH SOCKS5 Tunneling with autossh (for Binance)
 - **3rd Party APIs**: Binance (conversion), Tatum (webhooks/gas estimation), Brevo (email)
+- **Blockchain**: ethers.js v6 (direct EVM transfers), Tatum SDK (non-EVM chains)
 
 ## What's Been Implemented
 
@@ -22,29 +25,35 @@ Crypto payment processing system requiring:
 - Fee structure refactored: 1.5% + $1.00 tier-based fixed fee
 - Buffer logic removed from codebase
 
-### Session 4 (Current - Feb 13, 2026): Email Template Redesign
-- **Created shared email template system** (`utils/emailTemplate.ts`)
-  - Professional base template with dark mode support, mobile responsive
-  - Reusable components: `infoBox`, `dataRow`, `statusBadge`, `p`, `otpBlock`
-  - Navy branded header with Dynopay logo
-  - Dark footer with social links
-- **Updated `services/emailService.ts`** - All 30+ templates redesigned:
-  - Welcome, Company Profile, Wallet OTP, Email Verification OTP
-  - Login OTP, Forgot Password OTP, Password Changed
-  - KYC Required/Approved/Rejected/Started/Resubmission
-  - Payment Received, Payment Link Created, Payment Expiring
-  - Customer Payment Confirmation, Payment Failed
-  - Security Alert, New Device Login, Failed Login Attempts
-  - API Key Created, Wallet Verified/Deleted/Update
-  - Weekly Summary, Large Transaction Alert
-  - Subscription Created/Cancelled/Payment Failed
-  - Invoice Generated
-- **Updated `helper/sendEmail.ts`** - All templates redesigned:
-  - Payment Received, Transaction Confirmed, Admin Fee Received
-  - All emoji references removed from subjects/content
-- **Added email preview gallery** at `/api/diagnostics/email-preview`
-  - 5 preview templates: payment, otp, security, welcome, admin
-  - Template switching via query parameter
+### Session 4: Email Template Redesign
+- Created shared email template system (`utils/emailTemplate.ts`)
+- Updated all 30+ templates in `services/emailService.ts` and `helper/sendEmail.ts`
+- Added email preview gallery at `/api/diagnostics/email-preview`
+
+### Session 5 (Current - Feb 13, 2026): Ghost TX Fix & Instant Sweep
+
+#### P1: Ghost Transaction Bug Fix (COMPLETE)
+- **Created** `services/merchantPool/directEvmTransfer.ts` — direct ethers.js-based EVM transfer module
+  - Builds, signs, and broadcasts transactions locally via JSON-RPC
+  - TX hash is deterministic (computed from signed bytes) — eliminates ghost TXs entirely
+  - Multi-RPC fallback (Tatum primary, public RPC fallback)
+  - Supports: ETH, USDT-ERC20, USDC-ERC20, RLUSD-ERC20, POLYGON, USDT-POLYGON
+  - Non-retryable error detection (insufficient funds, nonce too low)
+  - Gas price cap to prevent overpaying during fee spikes
+- **Modified** `services/merchantPool/merchantPoolSweep.ts`
+  - `sweepPoolAddress()` now uses `directEvmSweep()` for EVM chains
+  - Non-EVM chains (TRX, XRP, BTC, LTC, DOGE, BCH) still use Tatum SDK path
+  - Retry logic preserved for both paths
+  - Post-broadcast confirmation check retained as safety net
+- **Unit tests**: 19/19 passed (`tests/test_direct_evm_transfer.ts`)
+
+#### P2: Instant Sweep for Auto-Convert (COMPLETE)
+- **Fixed** token chain status bug in `controller/paymentController.ts`
+  - `releaseAddress()` sets token chains to AVAILABLE, but `sweepPoolAddress()` requires IN_USE
+  - Added status transition to IN_USE before triggering instant sweep for token chains
+- **Added** 15-second delay before instant sweep to allow incoming TX block confirmation
+  - ETH block time ~12s, Polygon ~2s — 15s provides safe margin
+- Auto-convert payments now sweep immediately after block confirmation (no more waiting for 2-min cron)
 
 ## Pending Tasks
 
@@ -55,21 +64,22 @@ Crypto payment processing system requiring:
 ### P1: Implement Consistent Gas Fee Deduction (NOT STARTED)
 - Native/Token chains currently have platform paying gas
 - Must modify `paymentController.ts` to deduct gas from merchant payout
-- Impacts profitability
 
 ## Future/Backlog
+- Corrective ETH transfer script (`scripts/corrective_transfer.ts`) ready to execute when needed
 - Refactor monolithic `paymentController.ts`
 - Create persistent `autossh` tunnel service for Binance proxy
-- Pre-existing TS error in `paymentController.ts` line 1115 (`transactionFeePercent` variable)
+- Pre-existing TS error in `paymentController.ts` line 1115
 
 ## Key Files
-- `utils/emailTemplate.ts` - Shared email base template & components
-- `services/emailService.ts` - 30+ merchant/user email templates
-- `helper/sendEmail.ts` - Payment/admin email templates
-- `routes/diagnosticsRouter.ts` - Email preview endpoint
-- `controller/paymentController.ts` - Payment logic (needs gas fee fix)
-- `services/addressService.ts` - deposit_tx_hash fix (needs verification)
+- `services/merchantPool/directEvmTransfer.ts` - Direct EVM sweep via ethers.js (NEW)
+- `services/merchantPool/merchantPoolSweep.ts` - Sweep logic (MODIFIED for P1)
+- `controller/paymentController.ts` - Auto-convert instant sweep (MODIFIED for P2)
+- `tests/test_direct_evm_transfer.ts` - Unit tests for direct EVM transfer
+- `utils/emailTemplate.ts` - Shared email base template
+- `services/emailService.ts` - Email templates
+- `scripts/corrective_transfer.ts` - Manual corrective transfer script
 
 ## Test Credentials
-- User: richard@dyno.pt (DB user_id: 28)
+- User: richard@dyno.pt / Katiekendra123@
 - VPS: 95.179.167.16 root / E9o,RRotPdX_d7fC
