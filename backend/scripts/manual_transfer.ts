@@ -32,8 +32,8 @@ async function main() {
 
   // Step 1: Get on-chain balance
   console.log("Step 1: Checking on-chain balance...");
-  const balance = await tatumApi.getBalance(FROM_ADDRESS, CURRENCY);
-  const ethBalance = parseFloat(balance?.balance || "0");
+  const balanceData = await tatumApi.getAddressBalance(FROM_ADDRESS, CURRENCY);
+  const ethBalance = parseFloat(balanceData?.balance || "0");
   console.log(`Balance: ${ethBalance} ETH`);
 
   if (ethBalance <= 0) {
