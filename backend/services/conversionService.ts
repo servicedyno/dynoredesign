@@ -306,7 +306,7 @@ const processWithdrawals = async (): Promise<number> => {
         continue;
       }
 
-      log(`💸 Withdrawing ${withdrawalAmount.toFixed(2)} ${coin} (${network}) to ${address.substring(0, 10)}... (payout: $${merchantPayout.toFixed(2)}, w/fee: $${withdrawalFeeEstimate})`);
+      log(`Withdrawing ${withdrawalAmount.toFixed(2)} ${coin} (${network}) to ${address.substring(0, 10)}... (full payout, Binance deducts fee)`);
       await record.update({ status: "WITHDRAWING" });
 
       const withdrawal = await binanceService.submitWithdrawal({
@@ -316,11 +316,11 @@ const processWithdrawals = async (): Promise<number> => {
         network,
       });
 
-      log(`✅ Withdrawal initiated: ID ${withdrawal.id}`);
+      log(`Withdrawal initiated: ID ${withdrawal.id}`);
       await record.update({
         withdrawal_id: withdrawal.id,
-        withdrawal_fee: withdrawalFeeEstimate,
-        merchant_payout_usd: withdrawalAmount, // Final amount after all fees
+        withdrawal_fee: 0, // Will be updated with actual Binance fee in completion check
+        merchant_payout_usd: withdrawalAmount, // Amount submitted (merchant gets this minus Binance fee)
         withdrawn_at: new Date(),
       });
 
