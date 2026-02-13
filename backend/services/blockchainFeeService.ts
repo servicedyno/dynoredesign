@@ -396,17 +396,30 @@ export const getBlockchainNetworkFee = async (
 
   // Account-based chains with fixed/minimal fees
   if (['SOL', 'XRP', 'RLUSD'].includes(normalizedChain)) {
-    // SOL, XRP, RLUSD have very low fixed fees
-    const fixedFees: Record<string, { fee: number; symbol: string }> = {
-      'SOL': { fee: 0.000005, symbol: 'SOL' },
-      'XRP': { fee: 0.000012, symbol: 'XRP' },
-      'RLUSD': { fee: 0.000012, symbol: 'XRP' },
+    // SOL, XRP, RLUSD have very low fixed fees but we still calculate feeInUSD
+    // to ensure gas deduction is accurate (SOL @ $170 → ~$0.00085 per tx adds up)
+    const fixedFees: Record<string, { fee: number; symbol: string; priceSymbol: string }> = {
+      'SOL': { fee: 0.000005, symbol: 'SOL', priceSymbol: 'SOL' },
+      'XRP': { fee: 0.000012, symbol: 'XRP', priceSymbol: 'XRP' },
+      'RLUSD': { fee: 0.000012, symbol: 'XRP', priceSymbol: 'XRP' },
     };
-    const feeInfo = fixedFees[normalizedChain] || { fee: 0, symbol: normalizedChain };
+    const feeInfo = fixedFees[normalizedChain] || { fee: 0, symbol: normalizedChain, priceSymbol: normalizedChain };
+    
+    // Calculate actual USD value instead of hardcoding 0
+    let feeInUSD = 0;
+    try {
+      // Use fallback prices for SOL/XRP since CoinGecko may rate-limit
+      const fallbackPrices: Record<string, number> = { 'SOL': 170, 'XRP': 2.5 };
+      const nativePrice = await getCryptoPrice(feeInfo.priceSymbol).catch(() => fallbackPrices[feeInfo.priceSymbol] || 0);
+      feeInUSD = feeInfo.fee * nativePrice;
+    } catch {
+      feeInUSD = 0; // Truly negligible fallback
+    }
+    
     return {
       chain: normalizedChain,
       feeInNative: feeInfo.fee,
-      feeInUSD: 0, // Negligible, will be calculated if needed
+      feeInUSD,
       nativeSymbol: feeInfo.symbol,
       speed,
       timestamp: Date.now(),
