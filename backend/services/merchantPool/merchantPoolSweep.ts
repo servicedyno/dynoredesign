@@ -8,6 +8,7 @@ import {
   merchantTempAddressModel,
   merchantPoolSweepModel,
   merchantPoolTransactionModel,
+  stablecoinConversionModel,
   GAS_TOKEN_MAPPING,
   ACCOUNT_CHAINS,
 } from "../../models";
