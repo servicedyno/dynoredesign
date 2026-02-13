@@ -960,33 +960,21 @@ export const sendNewDeviceLoginEmail = async (
     
     const locationDisplay = location || 'Unknown location';
     
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">We noticed a new login to your Dynopay account from a different location.</p>
-    <div class="highlight-box">
-      <p><strong>📍 Login Details:</strong></p>
-      <p>
-        <strong>Location:</strong> ${locationDisplay}<br />
-        <strong>Device:</strong> ${deviceInfo}<br />
-        <strong>IP Address:</strong> ${ipAddress}<br />
-        <strong>Date:</strong> ${date} at ${time}
-      </p>
-    </div>
-    <p class="message"><strong>Was this you?</strong><br />
-    If you recognize this login, you can safely ignore this message.</p>
-    <p class="message"><strong>Didn't log in?</strong><br />
-    If you don't recognize this activity, please take action immediately:</p>
-    <p class="message">1. Change your password immediately<br />
-    2. Review your recent account activity<br />
-    3. Contact our support team</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`We noticed a new login to your Dynopay account from a different location.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Location', locationDisplay)}
+        ${dataRow('Device', deviceInfo)}
+        ${dataRow('IP Address', `<span style="font-family: monospace; font-size: 13px;">${ipAddress}</span>`)}
+        ${dataRow('Date', `${date} at ${time}`, true)}
+      </table>
+    `)}
+    ${p(`<strong>Was this you?</strong><br />If you recognize this login, you can safely ignore this message.`)}
+    ${p(`<strong>Didn't log in?</strong><br />Please change your password immediately and review your recent account activity.`)}`;
 
     const html = dynoPayEmailTemplate("New Login Detected", content, true, "Secure My Account", "https://dynopay.com/dashboard/settings");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
+    await mailTransporter({ to: email, name, subject, body: html });
     
     console.log(`[Email] New device login alert sent to ${email} from ${locationDisplay} (${ipAddress})`);
   } catch (e) {
