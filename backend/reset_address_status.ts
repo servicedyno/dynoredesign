@@ -13,7 +13,9 @@ async function resetAddress() {
     );
     
     console.log('Address status reset to IN_USE');
-    console.log('Updated record:', JSON.stringify(result[0][0], null, 2));
+    if (result && result[0] && result[0][0]) {
+      console.log('Updated record:', JSON.stringify(result[0][0], null, 2));
+    }
     
     process.exit(0);
   } catch (error) {
