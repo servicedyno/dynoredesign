@@ -1166,26 +1166,20 @@ export const sendWalletDeletedEmail = async (
   try {
     const subject = "Wallet removed from your account";
     
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">A wallet has been removed from your Dynopay account.</p>
-    <div class="highlight-box">
-      <p><strong>Removed Wallet:</strong></p>
-      <p>Address: ${walletAddressMasked}<br />
-      Network: ${network}<br />
-      Removed: ${date} at ${time}</p>
-    </div>
-    <p class="message">⚠️ Payments will no longer be forwarded to this wallet.</p>
-    <p class="message"><strong>Didn't do this?</strong><br />
-    If you didn't remove this wallet, please secure your account immediately and contact support.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`A wallet has been removed from your Dynopay account.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Address', walletAddressMasked)}
+        ${dataRow('Network', network)}
+        ${dataRow('Removed', `${date} at ${time}`, true)}
+      </table>
+    `, '#ef4444')}
+    ${p(`Payments will no longer be forwarded to this wallet.`)}
+    ${p(`<strong>Didn't do this?</strong><br />If you didn't remove this wallet, please secure your account immediately and contact support.`)}`;
 
     const html = dynoPayEmailTemplate("Wallet Removed", content, true, "Manage Wallets", "https://dynopay.com/dashboard/wallets");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
+    await mailTransporter({ to: email, name, subject, body: html });
     
     console.log(`[Email] Wallet deleted notification sent to ${email} for ${network}`);
   } catch (e) {
