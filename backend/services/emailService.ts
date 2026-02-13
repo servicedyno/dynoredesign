@@ -427,20 +427,13 @@ export const sendEmailVerificationOTPEmail = async (
 ) => {
   try {
     const subject = "Verify your email";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Please verify your email address to complete your Dynopay registration. Enter this code in the verification page:</p>
-    <div class="otp-code">${otpCode}</div>
-    <p class="message">This code expires in 10 minutes. If you didn't create a Dynopay account, please ignore this email.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Please verify your email address to complete your Dynopay registration. Enter this code in the verification page:`)}
+    ${otpBlock(otpCode)}
+    ${p(`This code expires in 10 minutes. If you didn't create a Dynopay account, please ignore this email.`)}`;
 
     const html = dynoPayEmailTemplate("Verify Your Email", content);
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Email verification OTP sent to ${email}`);
   } catch (e) {
     console.error("Email verification OTP email error:", e);
