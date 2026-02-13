@@ -823,26 +823,20 @@ export const sendKYCStartedEmail = async (
 ) => {
   try {
     const subject = "Complete your identity verification";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Your identity verification session has been created. Please complete the verification to continue using Dynopay without restrictions. 📋</p>
-    <div class="highlight-box">
-      <p><strong>What you'll need:</strong></p>
-      <p>✓ Government-issued ID (passport, driver's license, or national ID)<br />
-      ✓ Proof of address (utility bill or bank statement from last 3 months)<br />
-      ✓ A few minutes to complete a selfie verification</p>
-    </div>
-    <p class="message">The verification typically takes 5-10 minutes to complete and is reviewed within 24-48 hours.</p>
-    <p class="message">Click the button below to continue your verification:</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your identity verification session has been created. Please complete the verification to continue using Dynopay without restrictions.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #0d1f5c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">What you'll need:</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">1. Government-issued ID</td></tr>
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">2. Proof of address (last 3 months)</td></tr>
+        <tr><td style="padding: 4px 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">3. A few minutes for selfie verification</td></tr>
+      </table>
+    `)}
+    ${p(`The verification typically takes 5-10 minutes to complete and is reviewed within 24-48 hours.`)}`;
 
     const html = dynoPayEmailTemplate("Identity Verification", content, true, "Complete Verification", verificationUrl);
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`KYC started email sent to ${email}`);
   } catch (e) {
     console.error("KYC started email error:", e);
