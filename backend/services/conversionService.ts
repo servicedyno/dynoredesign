@@ -77,11 +77,13 @@ const processPendingDeposits = async (): Promise<number> => {
     try {
       // Check Binance deposit history for this TX
       const binanceAsset = binanceService.default.toBinanceAsset(data.source_currency);
+      log(`[DEBUG] Checking deposit for #${data.conversion_id}: asset=${binanceAsset}, tx=${data.deposit_tx_hash?.substring(0, 16)}..., amount=${data.source_amount}`);
       const deposits = await binanceService.getDepositHistory({
         coin: binanceAsset,
         status: 1, // success
         startTime: new Date(data.createdAt).getTime() - 3600000, // 1h before creation
       });
+      log(`[DEBUG] Binance returned ${deposits.length} confirmed deposits for ${binanceAsset}`);
 
       // Find matching deposit — prefer TX hash match, fallback to amount + time window
       const createdAtMs = new Date(data.createdAt).getTime();
