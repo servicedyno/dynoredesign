@@ -615,25 +615,18 @@ export const sendKYCApprovedEmail = async (
   name: string
 ) => {
   try {
-    const subject = "Verification approved — You're all set";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Great news! Your identity verification has been approved. ✅</p>
-    <p class="message">You can now accept payments without limits and access all Dynopay features.</p>
-    <div class="highlight-box">
-      <p><strong>What's next?</strong></p>
-      <p>Your account is fully verified. Keep growing your business with Dynopay!</p>
-    </div>
-    <p class="message">Thank you for completing the verification process.</p>`;
+    const subject = "Verification approved - You're all set";
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your identity verification has been approved.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Status', statusBadge('Approved', 'success'), true)}
+      </table>
+    `, '#22c55e')}
+    ${p(`You can now accept payments without limits and access all Dynopay features. Keep growing your business with Dynopay!`)}`;
 
     const html = dynoPayEmailTemplate("Verification Approved", content, true, "View Dashboard", "https://dynopay.com/dashboard");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`KYC approved email sent to ${email}`);
   } catch (e) {
     console.error("KYC approved email error:", e);
