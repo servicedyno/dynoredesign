@@ -1329,24 +1329,19 @@ export const sendSubscriptionCancelledEmail = async (
     
     // Email to Merchant
     const merchantSubject = `Subscription cancelled - ${displayName}`;
-    const merchantContent = `<p class="message">Hey ${merchantName},</p>
-    <p class="message">A subscription to <strong>${planName}</strong> has been cancelled.</p>
-    <div class="highlight-box">
-      <p><strong>Cancellation Details:</strong></p>
-      <p>Customer: ${customerEmail}<br />
-      Plan: ${planName}<br />
-      Effective: ${effectiveDate}<br />
-      Cancelled by: ${cancelledBy === 'customer' ? 'Customer' : 'You'}</p>
-    </div>`;
+    const merchantContent = `${p(`Hey ${merchantName},`)}
+    ${p(`A subscription to <strong>${planName}</strong> has been cancelled.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Customer', customerEmail)}
+        ${dataRow('Plan', planName)}
+        ${dataRow('Effective', effectiveDate)}
+        ${dataRow('Cancelled by', cancelledBy === 'customer' ? 'Customer' : 'You', true)}
+      </table>
+    `, '#f59e0b')}`;
 
     const merchantHtml = dynoPayEmailTemplate("Subscription Cancelled", merchantContent, true, "View Subscriptions", "https://dynopay.com/dashboard/subscriptions");
-    
-    await mailTransporter({
-      to: merchantEmail,
-      name: merchantName,
-      subject: merchantSubject,
-      body: merchantHtml,
-    });
+    await mailTransporter({ to: merchantEmail, name: merchantName, subject: merchantSubject, body: merchantHtml });
     
     console.log(`[Email] Subscription cancelled notifications sent for ${planName}`);
   } catch (e) {
