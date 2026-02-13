@@ -63,24 +63,17 @@ export const sendCompanyProfileCreatedEmail = async (
   companyName: string
 ) => {
   try {
-    const subject = "Profile complete — One step left";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Great job! Your company profile for <strong>${companyName}</strong> is now complete. 🎯</p>
-    <p class="message">You're almost ready to start accepting payments. The last step is to add your payout wallet address.</p>
-    <div class="highlight-box">
-      <p><strong>Why add a wallet?</strong></p>
-      <p>Your wallet is where we'll send the crypto payments you receive. It's quick and secure!</p>
-    </div>`;
+    const subject = "Profile complete - One step left";
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Great job! Your company profile for <strong>${companyName}</strong> is now complete.`)}
+    ${p(`You're almost ready to start accepting payments. The last step is to add your payout wallet address.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #0d1f5c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Why add a wallet?</p>
+      <p style="margin: 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Your wallet is where we'll send the crypto payments you receive. It's quick and secure.</p>
+    `)}`;
 
     const html = dynoPayEmailTemplate("Profile Complete", content, true, "Add Wallet", "https://dynopay.com/dashboard/wallets");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Company profile created email sent to ${email}`);
   } catch (e) {
     console.error("Company profile created email error:", e);
