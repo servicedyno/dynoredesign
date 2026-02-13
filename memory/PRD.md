@@ -13,101 +13,73 @@ Full-stack cryptocurrency payment gateway (DynoPay) with Node.js/TypeScript back
 
 ## What's Been Implemented
 
-### Session 1
-- Full codebase analysis and security audit
-- Security improvements: envValidator, destinationTagValidator, circuitBreaker, webhookRetry, securityLogger
-- Railway deployment troubleshooting
-- Binance diagnostic endpoints
+### Sessions 1-5 (Feb 12, 2026)
+- Full codebase analysis, security audit, security improvements
+- Fixed broken email logo, Binance Convert API -> Spot Market Orders
+- Adaptive Conversion System (volatility monitor, fee rate service, Limit IOC)
+- Live testing: POL sale verified on Binance
+- Auto-conversion payout email template
 
-### Session 2 (Feb 12, 2026)
-- Fixed broken email logo (SVG -> hosted PNG)
-- Fixed Binance Convert API -> Spot Market Orders
-- Added exchange info, spot quote diagnostic endpoints
+### Session 10 (Feb 12, 2026)
+- Auto-Convert wallet selection flow improvements
+- Brevo fix + error logging consolidation
 
-### Session 3 (Feb 12, 2026) - Adaptive Conversion System
-- Volatility Monitor (volatilityMonitorService.ts): 10 crypto assets, ROC-based classification
-- Fee Rate Service (feeRateService.ts): Live BTC/ETH fees, Redis-cached
-- Limit IOC Sell Logic in binanceService.ts
-- New Payout Logic in conversionService.ts (merchant absorbs drops)
-- Extended stablecoinConversions model
-- Cron Integration + Diagnostic Endpoints
+### Session 11 (Feb 12-13, 2026) - Proxy & Auto-Conversion Debugging
+- SOCKS5 proxy tunnel to German VPS for Binance connectivity
+- Fixed notification logic (merchant emails showing correct amounts)
+- Permissive Tatum webhook validation middleware
+- Removed double withdrawal fee deduction in binanceService.ts
+- Reworked deposit_tx_hash auto-population in merchantPoolSweep.ts
+- Two end-to-end test payments completed successfully
 
-### Session 4 (Feb 12, 2026) - Live Testing & Verification
-- POL Sale Verified: 77.30 POL -> 7.258 USDT (Order #1001683800, FILLED)
-- Volatility Monitor, Fee Rate Service, Spot Quotes all verified on Railway
+### Session 12 (Feb 13, 2026) - Auto-Convert Pipeline Speed Optimization
+- **Immediate sweep trigger**: `paymentController.ts` fires `sweepPoolAddress()` right after address release for auto-convert payments (fire-and-forget). Applies to ALL volatile currencies.
+- **Conversion cron interval**: Reduced from 5 min → 2 min (`BINANCE_CONVERT_INTERVAL_MINUTES=2`)
+- **Sweep fallback timers**: All volatile native chains (TRX, ETH, SOL, XRP, POLYGON) reduced from `time:3` → `time:1`. Stablecoin configs untouched.
+- Expected improvement: Pipeline from ~15-20 min → ~4-7 min (dominated by Binance deposit confirmation)
 
-### Session 5 (Feb 12, 2026) - Auto-Conversion Payout Email
-- **New email template**: `sendAutoConversionPayoutEmail` in `helper/sendEmail.ts`
-  - Shows crypto received + stablecoin payout side-by-side
-  - Compares conversion price vs current live price (savings calculation)
-  - Conditional design: visual volatility bar + savings block when VOLATILE/DECLINING, text-focused when STABLE
-  - Full conversion details table (rate, market state, date, TX hash, conversion ID)
-- **Integration**: Email auto-sent when withdrawal completes in `conversionService.ts` `monitorWithdrawals()`
-  - Fetches merchant user/company info from DB
-  - Gets current live price from Binance for savings calculation
-- **Preview endpoint**: `GET /api/diagnostics/conversion-email-preview?volatile=true|false`
-- Files changed: `helper/sendEmail.ts`, `services/conversionService.ts`, `routes/diagnosticsRouter.ts`
+## Volatile Currencies (subject to auto-conversion)
+BTC, ETH, LTC, DOGE, TRX, BCH, SOL, XRP, POLYGON
+
+## Stablecoin Currencies (no conversion needed)
+USDT, USDC, RLUSD, USDT-TRC20, USDT-ERC20, USDC-ERC20, USDT-POLYGON, RLUSD-ERC20
+
+## Key Environment Config
+- `BINANCE_CONVERT_INTERVAL_MINUTES=2` (conversion cron)
+- `ETH_SWEEP=time:1`, `TRX_SWEEP=time:1`, `SOL_SWEEP=time:1`, `XRP_SWEEP=time:1`, `POLYGON_SWEEP=time:1`
+- `BINANCE_PROXY_URL=socks5://127.0.0.1:1080`
 
 ## Prioritized Backlog
 
-### P0 - Completed
-- [x] Fix broken email logo
-- [x] Fix Binance Convert API -> Spot Trading
-- [x] Implement Adaptive Conversion System
-- [x] Test POL sale on live Binance
-- [x] Test Volatility Monitor & Fee Rate Service
-- [x] Auto-conversion payout email with conditional design
+### P0 - Needs Verification
+- [ ] Run live auto-convert test to verify immediate sweep works end-to-end
+- [ ] Verify deposit_tx_hash auto-population on clean (non-patched) test
 
 ### P1 - Next
-- [ ] Deploy new email code to Railway and test with real conversion
-- [ ] End-to-end test of full conversion pipeline (trigger-conversion with admin auth)
+- [ ] Create persistent autossh tunnel (current tunnel is manual, dies on restart)
+- [ ] Deploy all changes to Railway production
 
 ### P2 - Future
-- [ ] Refactor large controller files (see /app/CONTROLLER_REFACTORING_PLAN.md)
-- [ ] Migrate email logo to permanent CDN (S3/CloudFront)
-
-## Key Diagnostic Endpoints (Production)
-- `POST /api/diagnostics/binance-sell` - Sell crypto asset
-- `GET /api/diagnostics/binance-balances` - Non-zero Binance balances
-- `GET /api/diagnostics/binance-quote` - Spot quote
-- `GET /diagnostics/volatility` - Market states
-- `POST /diagnostics/volatility-refresh` - Force refresh
-- `GET /diagnostics/fee-rates?chain=BTC` - Live blockchain fees
-- `GET /api/diagnostics/conversion-email-preview?volatile=true` - Email preview
-- `POST /diagnostics/trigger-conversion` - Manual conversion (admin auth)
+- [ ] Refactor monolithic paymentController.ts (~4600 lines)
+- [ ] Refactor addressService.ts sweep logic
+- [ ] Migrate email logo to permanent CDN
 
 ## Key Files
-- `backend/helper/sendEmail.ts` - All email templates including auto-conversion payout
-- `backend/services/conversionService.ts` - Conversion pipeline + email trigger
-- `backend/services/volatilityMonitorService.ts` - Market state detection
-- `backend/services/feeRateService.ts` - Live blockchain fee fetching
-- `backend/services/binanceService.ts` - Spot trading + Limit IOC
-- `backend/routes/diagnosticsRouter.ts` - Test/preview endpoints
+- `backend/controller/paymentController.ts` - Payment flow + auto-convert + immediate sweep trigger
+- `backend/services/conversionService.ts` - Conversion pipeline (4 phases)
+- `backend/services/binanceService.ts` - Spot trading, withdrawal, Binance API
+- `backend/services/merchantPool/merchantPoolSweep.ts` - Sweep logic + deposit_tx_hash update
+- `backend/services/merchantPool/merchantPoolConfig.ts` - Sweep config parsing
 - `backend/server.ts` - Cron jobs + route registration
+- `backend/middleware/validateTatum.ts` - Webhook auth (permissive mode)
 
-### Session 10 (Feb 12, 2026) - Auto-Conversion Wallet Selection Flow
-- **Improved `updateAutoConvertSettings`** in `backend/controller/companyController.ts`:
-  - Two-step enable flow: Step 1 returns eligible stablecoin wallets with last 4 digits for selection; Step 2 enables with chosen wallet
-  - Returns 400 error with clear message when no eligible stablecoin wallets exist
-  - Invalid selection returns available options in error message
-- **Improved `getAutoConvertSettings`**: Now includes `wallet_address_preview` (masked last 4 digits) in available settlement options
-- **Extracted `getEligibleStablecoinWallets` helper** for reuse across GET and PUT endpoints
+## Key Diagnostic Endpoints
+- `GET /api/diagnostics/binance-balances` - Non-zero Binance balances
+- `GET /api/diagnostics/binance-quote` - Spot quote
+- `POST /diagnostics/trigger-conversion` - Manual conversion (admin auth)
+- `GET /diagnostics/volatility` - Market states
 
-## Pending/Backlog
-- P1: End-to-end auto-conversion test on Railway (blocked on deployment)
-
-### Session 10b (Feb 12, 2026) - Brevo Fix + Error Logging Consolidation
-- **Brevo ERR_BAD_REQUEST fix** in `backend/utils/mailTransporter.ts`:
-  - Added input validation (email format, empty subject/body) before hitting Brevo API
-  - Added 15s timeout to prevent hung requests
-  - Capped `textContent` at 50K chars to prevent oversized payloads
-  - Wrapped Brevo API call in try/catch with `captureError` including payload size for diagnostics
-- **Consolidated error logging** across the codebase:
-  - `captureError` now logs a structured one-liner (`[ErrorMonitor] [COMPONENT] message | code | status | ctx`) at warn/error level
-  - Removed all 15 duplicate `console.log(...formatEmailError(e))` lines from `sendEmail.ts`
-  - Removed 2 duplicate `console.error` lines from `cronJobs.ts`
-  - Deleted unused `formatEmailError` helper function
-  - All error paths now go through a single `captureError` → log + buffer + optional alert pipeline
-
-- P3: Refactor error handling consolidation further if needed
-
+## Credentials
+- Admin: moxxcompany@gmail.com (DB id: 2)
+- Test user: richard@dyno.pt (DB user_id: 28)
+- VPS: 95.179.167.16 root / E9o,RRotPdX_d7fC
