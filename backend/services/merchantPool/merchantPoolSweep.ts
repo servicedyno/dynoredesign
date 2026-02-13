@@ -589,7 +589,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         sweep_tx_id: sweepTxId,
         gas_funding_tx_id: gasFunding.txId || null,
         admin_wallet: adminWallet,
-        status: "failed_unconfirmed",
+        status: "failed",
         error_message: "TX broadcast but not confirmed on-chain (ghost TX)",
       });
       
