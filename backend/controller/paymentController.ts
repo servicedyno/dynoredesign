@@ -7564,17 +7564,14 @@ const getConfiguredCurrenciesForCheckout = async (
     if (feeInfo.fee_payer === 'customer' && transactionAmount > 0) {
       const feeTiers = (await import("../utils/feeConfigUtils")).getFeeTiers();
       let fixedFee = 0;
-      let blockchainBuffer = 0;
       for (const tier of feeTiers) {
         if (transactionAmount >= tier.min && (tier.max === null || transactionAmount <= tier.max)) {
           fixedFee = tier.fixed;
-          blockchainBuffer = tier.buffer || 0;
           break;
         }
       }
       const percentageFee = transactionAmount * (feeInfo.transaction_fee_percent / 100);
-      const bufferFee = transactionAmount * (blockchainBuffer / 100);
-      totalProcessingFee = percentageFee + fixedFee + bufferFee;
+      totalProcessingFee = percentageFee + fixedFee;
     }
     
     const response: Record<string, unknown> = {

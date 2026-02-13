@@ -257,7 +257,7 @@ interface ProfitabilityResult {
 const checkSweepProfitability = async (
   walletType: string,
   balance: number,
-  feeData: { fixedFee: number; transactionFee: number; blockchainBuffer: number; totalDeduction: number; gasPrice?: string; gasLimit?: string; fee?: string; slow?: string; fast?: string | number } | number
+  feeData: { fixedFee: number; transactionFee: number; totalDeduction: number; gasPrice?: string; gasLimit?: string; fee?: string; slow?: string; fast?: string | number } | number
 ): Promise<ProfitabilityResult> => {
   try {
     // Extract estimated gas fee from feeData (in gas token units: TRX or ETH)

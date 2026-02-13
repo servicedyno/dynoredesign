@@ -323,13 +323,11 @@ export interface FeeTier {
   min: number;
   max: number | null;
   fixed: number;
-  buffer: number;
 }
 
 export interface FeeCalculationResult {
   fixedFee: number;
   transactionFee: number;
-  blockchainBuffer: number;
   totalDeduction: number;
   minForwarding: number;
 }

@@ -117,12 +117,10 @@ export const autoGenerateInvoice = async (
     // Find applicable fee tier based on amount
     const amount = baseAmount;
     let fixedFee = 0;
-    let bufferPercent = 0.5; // Default fallback
 
     for (const tier of feeTiers) {
       if (amount >= tier.min && (tier.max === null || amount <= tier.max)) {
         fixedFee = tier.fixed;
-        bufferPercent = tier.buffer || 0.5;
         break;
       }
     }
@@ -209,7 +207,7 @@ export const autoGenerateInvoice = async (
       vat_amount: displayVatAmount,
       fixed_fee: displayFixedFee,
       transaction_fee_percent: transactionFeePercent,
-      blockchain_buffer_percent: bufferPercent,
+      blockchain_buffer_percent: 0,
       total_usd: totalAmount,
       total_crypto: totalAmount,
       crypto_currency: preferredCurrency,
