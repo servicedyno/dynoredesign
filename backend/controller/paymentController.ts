@@ -4289,6 +4289,20 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             merchantTxId: adminTransferResult.transactionDetails?.txId,
             status: "completed",
           });
+
+          // AUTO-CONVERT OPTIMIZATION: Trigger immediate sweep instead of waiting for cron
+          // This eliminates the 3-5 min delay (ETH_SWEEP=time:3 + 2-min cron interval)
+          // Only for auto-convert payments where ALL crypto goes to admin wallet (Binance)
+          if (autoConvertEnabled) {
+            const sweepAddressId = tempAddressData.temp_address_id;
+            console.log(`[AutoConvert] Triggering immediate sweep for address ID ${sweepAddressId} (${tempCurrency})`);
+            // Fire-and-forget: don't block the payment response
+            merchantPoolService.sweepPoolAddress(sweepAddressId).then(() => {
+              console.log(`[AutoConvert] Immediate sweep completed for address ID ${sweepAddressId}`);
+            }).catch((sweepErr: unknown) => {
+              console.warn(`[AutoConvert] Immediate sweep failed (will be retried by cron):`, sweepErr instanceof Error ? sweepErr.message : sweepErr);
+            });
+          }
           
         } else {
           // LEGACY: Update userTempAddressModel
