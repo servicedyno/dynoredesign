@@ -746,7 +746,7 @@ const sendPaymentLinkReminderEmail = async (
         subject = expiresAt 
           ? `Payment expires soon - ${companyName}`
           : `Final reminder: Payment pending - ${companyName}`;
-        headerText = expiresAt ? "⚠️ Expiring Soon!" : "Final Reminder";
+        headerText = expiresAt ? "Expiring Soon!" : "Final Reminder";
         urgencyMessage = expiresAt
           ? `<strong style="color: #dc2626;">URGENT:</strong> Your payment link expires in <strong>${timeRemaining}</strong>. Please complete your payment now to avoid missing the deadline.`
           : `This is a final reminder about your pending payment. Please complete it soon or contact ${companyName} if you have questions.`;
