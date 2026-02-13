@@ -420,11 +420,26 @@ cron.schedule("*/2 * * * *", async function () {
 });
 
 // Merchant Pool: Release expired reservations every 2 minutes
+// Retry once on transient DB errors (Railway PG proxy can drop connections)
 cron.schedule("*/2 * * * *", function () {
   log("Cron: releaseMerchantPoolExpiredReservations running", "info");
-  merchantPoolService.releaseExpiredReservations().catch(err => {
-    log(`Cron: Release expired failed, will retry next cycle: ${err.message}`, "error");
-    captureError(err, 'cron', { extraContext: 'releaseExpiredReservations' });
+  merchantPoolService.releaseExpiredReservations().catch(async (err) => {
+    const errMsg = err.message || '';
+    // Retry once for transient connection errors
+    if (errMsg.includes('Connection terminated') || errMsg.includes('ECONNRESET') || errMsg.includes('ETIMEDOUT')) {
+      log(`Cron: Release expired hit transient DB error (${errMsg}), retrying in 5s...`, "error");
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      try {
+        await merchantPoolService.releaseExpiredReservations();
+        log("Cron: Release expired retry succeeded", "info");
+      } catch (retryErr) {
+        log(`Cron: Release expired retry also failed: ${(retryErr as Error).message}`, "error");
+        captureError(retryErr as Error, 'cron', { extraContext: 'releaseExpiredReservations_retry' });
+      }
+    } else {
+      log(`Cron: Release expired failed, will retry next cycle: ${errMsg}`, "error");
+      captureError(err, 'cron', { extraContext: 'releaseExpiredReservations' });
+    }
   });
 });
 
