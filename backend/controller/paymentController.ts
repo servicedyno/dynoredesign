@@ -3212,7 +3212,10 @@ const settleCryptoTransaction = async ({
           Number(userAmount)
         );
 
-        const gasFee = Number(fees?.slow ?? fees?.fast ?? 0);
+        // Use `fast` tier for gas deduction — this is the actual gas cost the transaction will incur.
+        // `slow` on EVM chains uses reduced gasPrice buffer and is NOT safe for deduction
+        // (would under-deduct, causing the platform to absorb the difference).
+        const gasFee = Number(fees?.fast ?? fees?.slow ?? 0);
         // Deduct gas fee from merchant payout — merchant pays for gas (consistent with UTXO)
         merchantSendAmount = Number((Number(userAmount) - gasFee).toFixed(8));
 
