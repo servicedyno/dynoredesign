@@ -889,27 +889,21 @@ export const sendPaymentExpiringEmail = async (
 ) => {
   try {
     const displayName = customerName || customerEmail.split('@')[0];
-    const subject = `⏰ Payment link expires ${expiresIn} - ${amount} ${currency}`;
+    const subject = `Payment link expires ${expiresIn} - ${amount} ${currency}`;
     
-    const content = `<p class="message">Hey ${displayName},</p>
-    <p class="message">This is a friendly reminder that your payment link from <strong>${companyName}</strong> will expire <strong>${expiresIn}</strong>.</p>
-    <div class="highlight-box" style="border-left-color: #f59e0b;">
-      <p><strong>Payment Details:</strong></p>
-      <p>Amount: <strong>${amount} ${currency}</strong><br />
-      ${description ? `Description: ${description}<br />` : ''}
-      Expires: ${expiresIn}</p>
-    </div>
-    <p class="message">Complete your payment now to avoid missing this deadline.</p>`;
+    const content = `${p(`Hey ${displayName},`)}
+    ${p(`This is a friendly reminder that your payment link from <strong>${companyName}</strong> will expire <strong>${expiresIn}</strong>.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Amount', `<strong>${amount} ${currency}</strong>`)}
+        ${description ? dataRow('Description', description) : ''}
+        ${dataRow('Expires', statusBadge(expiresIn, 'pending'), true)}
+      </table>
+    `, '#f59e0b')}
+    ${p(`Complete your payment now to avoid missing this deadline.`)}`;
 
     const html = dynoPayEmailTemplate("Payment Expiring Soon", content, true, "Pay Now", paymentLink);
-    
-    await mailTransporter({
-      to: customerEmail,
-      name: displayName,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: customerEmail, name: displayName, subject, body: html });
     console.log(`[Email] Payment expiring reminder sent to ${customerEmail} - expires ${expiresIn}`);
   } catch (e) {
     console.error("Payment expiring email error:", e);
