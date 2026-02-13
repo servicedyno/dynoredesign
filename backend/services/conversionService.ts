@@ -120,6 +120,7 @@ const processPendingDeposits = async (): Promise<number> => {
         } else {
           // Increment retry counter if deposit not found at all after some time
           const ageMinutes = (Date.now() - new Date(data.createdAt).getTime()) / 60000;
+          log(`[DEBUG] No deposit found for #${data.conversion_id}, age=${ageMinutes.toFixed(1)}min, pendingDeposits=${pendingDeposits.length}`);
           if (ageMinutes > 30) {
             await record.update({
               retry_count: data.retry_count + 1,
