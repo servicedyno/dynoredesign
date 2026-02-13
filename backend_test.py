@@ -33,7 +33,7 @@ def run_test(test_name, test_func):
 def test_1_backend_healthy():
     """TEST 1: Backend healthy - GET /health returns 200 with status "healthy" """
     try:
-        response = requests.get(f"{BACKEND_URL}/health", timeout=30)
+        response = requests.get(f"{BACKEND_URL}/api/status/health", timeout=30)
         print(f"Response Status: {response.status_code}")
         print(f"Response Body: {response.text}")
         
