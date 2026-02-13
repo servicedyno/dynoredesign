@@ -676,27 +676,21 @@ export const sendWeeklySummaryEmail = async (
   try {
     const currencySymbol = getCurrencySymbol(baseCurrency);
     const subject = "Your weekly Dynopay summary";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Here's your weekly activity summary for ${periodStart} to ${periodEnd}:</p>
-    <div class="highlight-box">
-      <p><strong>📊 This Week's Stats:</strong></p>
-      <p>Total Transactions: <strong>${transactionCount}</strong><br />
-      Total Volume: <strong>${currencySymbol}${totalVolume} ${baseCurrency}</strong><br />
-      Completed: ${completedCount}<br />
-      Pending: ${pendingCount}<br />
-      Top Currency: ${topCurrency}</p>
-    </div>
-    <p class="message">Keep up the great work! Log in to your dashboard for detailed analytics and insights.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Here's your weekly activity summary for <strong>${periodStart}</strong> to <strong>${periodEnd}</strong>:`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Total Transactions', `<strong>${transactionCount}</strong>`)}
+        ${dataRow('Total Volume', `<strong>${currencySymbol}${totalVolume} ${baseCurrency}</strong>`)}
+        ${dataRow('Completed', statusBadge(String(completedCount), 'success'))}
+        ${dataRow('Pending', statusBadge(String(pendingCount), 'pending'))}
+        ${dataRow('Top Currency', topCurrency, true)}
+      </table>
+    `)}
+    ${p(`Keep up the great work! Log in to your dashboard for detailed analytics and insights.`)}`;
 
     const html = dynoPayEmailTemplate("Your Weekly Summary", content, true, "View Full Analytics", "https://dynopay.com/dashboard/analytics");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Weekly summary email sent to ${email}`);
   } catch (e) {
     console.error("Weekly summary email error:", e);
