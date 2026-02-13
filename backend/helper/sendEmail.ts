@@ -460,7 +460,7 @@ const sendAdminFeeReceivedEmail = async (
   totalAmount: string
 ) => {
   try {
-    const subject = `Platform Fee Received — ${feeAmount} ${currency}`;
+    const subject = `Platform Fee Received - ${feeAmount} ${currency}`;
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -470,54 +470,44 @@ const sendAdminFeeReceivedEmail = async (
     const totalAmountNum = parseFloat(totalAmount);
     const isUnderThreshold = merchantAmountNum === 0 && feeAmountNum === totalAmountNum;
     
-    let detailRows: string;
+    let detailContent: string;
     let noticeBlock = '';
     
     if (isUnderThreshold) {
-      detailRows = `
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Total Received</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${feeAmount} ${currency}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Status</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;"><span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">Under Threshold</span></td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Merchant Received</td><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${merchantAmount} ${currency}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Platform Received</td><td style="padding: 8px 0; color: #166534; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${feeAmount} ${currency} (100%)</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Date</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${dateStr} at ${timeStr}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Company</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${companyName}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${transactionId}</td></tr>`;
-      noticeBlock = `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 0 0 24px 0;">
-        <tr><td style="padding: 16px 20px;">
-          <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5; font-family: 'Inter', Arial, sans-serif;"><strong>Under Threshold:</strong> This payment was below the minimum forwarding threshold. All funds have been credited to the admin ${currency} wallet.</p>
-        </td></tr>
-      </table>`;
+      detailContent = `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${dataRow('Total Received', `<strong>${feeAmount} ${currency}</strong>`)}
+          ${dataRow('Status', statusBadge('Under Threshold', 'pending'))}
+          ${dataRow('Merchant Received', `${merchantAmount} ${currency}`)}
+          ${dataRow('Platform Received', `<strong>${feeAmount} ${currency} (100%)</strong>`)}
+          ${dataRow('Date', `${dateStr} at ${timeStr}`)}
+          ${dataRow('Company', companyName)}
+          ${dataRow('Transaction ID', `<span style="font-family: monospace; font-size: 13px;">${transactionId}</span>`, true)}
+        </table>`;
+      noticeBlock = infoBox(`
+        <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;"><strong>Under Threshold:</strong> This payment was below the minimum forwarding threshold. All funds have been credited to the admin ${currency} wallet.</p>
+      `, '#f59e0b');
     } else {
-      detailRows = `
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Platform Fee</td><td style="padding: 8px 0; color: #166534; font-size: 16px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${feeAmount} ${currency}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Status</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;"><span style="background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">Processed</span></td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Merchant Net</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${merchantAmount} ${currency}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Total Processed</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${totalAmount} ${currency}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Date</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${dateStr} at ${timeStr}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Company</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${companyName}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${transactionId}</td></tr>`;
+      detailContent = `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${dataRow('Platform Fee', `<strong>${feeAmount} ${currency}</strong>`)}
+          ${dataRow('Status', statusBadge('Processed', 'success'))}
+          ${dataRow('Merchant Net', `${merchantAmount} ${currency}`)}
+          ${dataRow('Total Processed', `${totalAmount} ${currency}`)}
+          ${dataRow('Date', `${dateStr} at ${timeStr}`)}
+          ${dataRow('Company', companyName)}
+          ${dataRow('Transaction ID', `<span style="font-family: monospace; font-size: 13px;">${transactionId}</span>`, true)}
+        </table>`;
     }
     
     const htmlContent = `
-      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">Platform fee received from <strong style="color: #1a1a2e;">${companyName}</strong>.</p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #22c55e; margin: 24px 0;">
-        <tr><td style="padding: 20px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            ${detailRows}
-          </table>
-        </td></tr>
-      </table>
+      ${p(`Platform fee received from <strong>${companyName}</strong>.`)}
+      ${infoBox(detailContent, '#22c55e')}
       ${noticeBlock}
-      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">The fee has been credited to the admin ${currency} wallet. You can view the full transaction details in the Dynopay admin dashboard.</p>`;
+      ${p(`The fee has been credited to the admin ${currency} wallet.`)}`;
 
     const htmlBody = dynoPayEmailTemplate(name, htmlContent, "Platform Fee Received");
-    const info = await mailTransporter({
-      to: recipientEmail,
-      name,
-      subject,
-      body: htmlBody,
-    });
+    const info = await mailTransporter({ to: recipientEmail, name, subject, body: htmlBody });
     return info;
   } catch (e) {
     captureError(e, 'email', { extraContext: 'sendAdminFeeReceivedEmail' });
