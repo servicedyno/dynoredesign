@@ -744,7 +744,7 @@ const sendPaymentLinkReminderEmail = async (
         break;
       case 'final':
         subject = expiresAt 
-          ? `⚠️ Payment expires soon - ${companyName}`
+          ? `Payment expires soon - ${companyName}`
           : `Final reminder: Payment pending - ${companyName}`;
         headerText = expiresAt ? "⚠️ Expiring Soon!" : "Final Reminder";
         urgencyMessage = expiresAt
