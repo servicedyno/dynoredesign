@@ -1087,9 +1087,9 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           }
           
           // Calculate fees using tier-based structure
-          // Fee = 2% transaction fee + fixed fee (tier-based) + buffer (tier-based)
+          // Fee = 1.5% transaction fee + fixed fee (tier-based)
           try {
-            const { totalDeduction, fixedFee, transactionFee, blockchainBuffer } = await calculateTransactionFees(
+            const { totalDeduction, fixedFee, transactionFee } = await calculateTransactionFees(
               value.currency,
               baseAmountUSD  // Fee calculation based on USD amount
             );
@@ -1112,7 +1112,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             
             console.log(`[addPayment] Fee calculation:
               - Base USD: $${baseAmountUSD}
-              - Fee breakdown: 2%=$${transactionFee.toFixed(2)} + Fixed=$${fixedFee.toFixed(2)} + Buffer=$${blockchainBuffer.toFixed(2)}
+              - Fee breakdown: ${transactionFeePercent}%=$${transactionFee.toFixed(2)} + Fixed=$${fixedFee.toFixed(2)}
               - Total fee: $${totalDeduction.toFixed(2)} (${(feePercentage * 100).toFixed(2)}%)
               - Fee payer: ${fee_payer}`);
           } catch (feeError) {
