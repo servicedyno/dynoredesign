@@ -140,7 +140,6 @@ export const calculateTransactionFees = async (
     min_amount: number;
     max_amount: number | null;
     fixed_fee: number;
-    blockchain_buffer_percent: number;
     id?: number;
   }
   const tiers = (config.tiers || []) as FeeTier[];
@@ -165,19 +164,16 @@ export const calculateTransactionFees = async (
     throw new Error(`No fee tier found for amount ${amount}`);
   }
 
-  // Calculate fees directly in native currency
+  // Calculate fees: platform % + tier fixed fee
   const fixedFee = effectiveTier.fixed_fee;
   const transactionFee = (amount * config.transaction_fee_percent) / 100;
-  const blockchainBuffer =
-    (amount * effectiveTier.blockchain_buffer_percent) / 100;
 
-  const totalDeduction = fixedFee + transactionFee + blockchainBuffer;
+  const totalDeduction = fixedFee + transactionFee;
   const userReceives = amount - totalDeduction;
 
   return {
     fixedFee,
     transactionFee,
-    blockchainBuffer,
     totalDeduction,
     userReceives,
     tierId: effectiveTier.id ?? 0,
