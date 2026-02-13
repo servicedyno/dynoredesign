@@ -1054,67 +1054,55 @@ export const sendPaymentFailedEmail = async (
     
     const reasonMessage = reasonMessages[reason];
     const subject = reason === 'underpaid' 
-      ? `⚠️ Underpayment detected - ${paidAmount} of ${amount} ${currency} received`
+      ? `Underpayment detected - ${paidAmount} of ${amount} ${currency} received`
       : `Payment unsuccessful - ${companyName}`;
     
     // Email to Customer
-    const customerContent = `<p class="message">Hey ${displayName},</p>
-    <p class="message">Unfortunately, your payment to <strong>${companyName}</strong> was not completed.</p>
-    <div class="highlight-box" style="border-left-color: #ef4444;">
-      <p><strong>Issue:</strong></p>
-      <p>${reasonMessage}</p>
-    </div>
-    <div class="highlight-box">
-      <p><strong>Payment Details:</strong></p>
-      <p>Amount: ${amount} ${currency}<br />
-      ${paidAmount ? `Amount Received: ${paidAmount} ${currency}<br />` : ''}
-      Transaction ID: ${transactionId}</p>
-    </div>
-    ${reason === 'underpaid' ? `<p class="message">Please contact <strong>${companyName}</strong> to resolve this underpayment or request a refund.</p>` : ''}
-    ${reason === 'expired' || reason === 'timeout' ? `<p class="message">Please contact <strong>${companyName}</strong> if you still wish to complete this payment.</p>` : ''}`;
+    const customerContent = `${p(`Hey ${displayName},`)}
+    ${p(`Unfortunately, your payment to <strong>${companyName}</strong> was not completed.`)}
+    ${infoBox(`
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #991b1b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Issue</p>
+      <p style="margin: 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${reasonMessage}</p>
+    `, '#ef4444')}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Amount', `${amount} ${currency}`)}
+        ${paidAmount ? dataRow('Amount Received', `${paidAmount} ${currency}`) : ''}
+        ${dataRow('Transaction ID', `<span style="font-family: monospace; font-size: 13px;">${transactionId}</span>`, true)}
+      </table>
+    `)}
+    ${reason === 'underpaid' ? p(`Please contact <strong>${companyName}</strong> to resolve this underpayment or request a refund.`) : ''}
+    ${reason === 'expired' || reason === 'timeout' ? p(`Please contact <strong>${companyName}</strong> if you still wish to complete this payment.`) : ''}`;
 
     const customerHtml = dynoPayEmailTemplate("Payment Unsuccessful", customerContent);
-    
-    await mailTransporter({
-      to: customerEmail,
-      name: displayName,
-      subject,
-      body: customerHtml,
-    });
-    
+    await mailTransporter({ to: customerEmail, name: displayName, subject, body: customerHtml });
     console.log(`[Email] Payment failed notification sent to customer ${customerEmail} - reason: ${reason}`);
     
     // Email to Merchant (if provided)
     if (merchantEmail) {
       const merchantDisplayName = merchantName || 'Merchant';
       const merchantSubject = reason === 'underpaid'
-        ? `⚠️ Underpayment received - ${paidAmount} of ${amount} ${currency}`
+        ? `Underpayment received - ${paidAmount} of ${amount} ${currency}`
         : `Payment failed - ${transactionId}`;
       
-      const merchantContent = `<p class="message">Hey ${merchantDisplayName},</p>
-      <p class="message">A payment from <strong>${displayName}</strong> was not completed.</p>
-      <div class="highlight-box" style="border-left-color: #f59e0b;">
-        <p><strong>Issue:</strong></p>
-        <p>${reasonMessage}</p>
-      </div>
-      <div class="highlight-box">
-        <p><strong>Payment Details:</strong></p>
-        <p>Customer: ${customerEmail}<br />
-        Amount: ${amount} ${currency}<br />
-        ${paidAmount ? `Amount Received: ${paidAmount} ${currency}<br />` : ''}
-        Transaction ID: ${transactionId}</p>
-      </div>
-      ${reason === 'underpaid' ? `<p class="message">The customer has been notified. You may need to issue a partial refund or request the remaining amount.</p>` : ''}`;
+      const merchantContent = `${p(`Hey ${merchantDisplayName},`)}
+      ${p(`A payment from <strong>${displayName}</strong> was not completed.`)}
+      ${infoBox(`
+        <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #92400e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Issue</p>
+        <p style="margin: 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${reasonMessage}</p>
+      `, '#f59e0b')}
+      ${infoBox(`
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${dataRow('Customer', customerEmail)}
+          ${dataRow('Amount', `${amount} ${currency}`)}
+          ${paidAmount ? dataRow('Amount Received', `${paidAmount} ${currency}`) : ''}
+          ${dataRow('Transaction ID', `<span style="font-family: monospace; font-size: 13px;">${transactionId}</span>`, true)}
+        </table>
+      `)}
+      ${reason === 'underpaid' ? p(`The customer has been notified. You may need to issue a partial refund or request the remaining amount.`) : ''}`;
 
       const merchantHtml = dynoPayEmailTemplate("Payment Alert", merchantContent, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
-      
-      await mailTransporter({
-        to: merchantEmail,
-        name: merchantDisplayName,
-        subject: merchantSubject,
-        body: merchantHtml,
-      });
-      
+      await mailTransporter({ to: merchantEmail, name: merchantDisplayName, subject: merchantSubject, body: merchantHtml });
       console.log(`[Email] Payment failed notification sent to merchant ${merchantEmail} - reason: ${reason}`);
     }
   } catch (e) {
