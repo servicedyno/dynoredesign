@@ -3066,7 +3066,7 @@ const settleCryptoTransaction = async ({
       );
 
       // Deduct gas cost from merchant's token payout (consistent with UTXO/native chains)
-      // Gas is in native currency (ETH/TRX), so convert to USD equivalent for stablecoin deduction
+      // Gas is in native currency (ETH/TRX/XRP/POL), so convert to USD equivalent for stablecoin deduction
       let gasDeductionInToken = 0;
       try {
         const networkFee = await getBlockchainNetworkFee(currency);
@@ -3074,10 +3074,18 @@ const settleCryptoTransaction = async ({
         // For non-USD stablecoins, feeInUSD is still the right approximation since USDT/USDC ≈ $1
         console.log(`[settleCryptoTransaction] Token ${currency}: Gas fee ≈ $${gasDeductionInToken.toFixed(4)} USD (deducted from merchant token payout)`);
       } catch (feeErr) {
-        // Fallback: use the raw native fee estimate as a rough deduction
+        // Fallback: convert raw native fee to USD using price lookup
+        // Raw fee is in native currency (e.g., 0.0005 ETH) — must convert to USD, NOT use directly as token amount
         const rawFee = Number(fees?.fast ?? fees?.slow ?? 0);
-        gasDeductionInToken = rawFee;
-        console.warn(`[settleCryptoTransaction] Token ${currency}: Failed to get USD gas fee, using raw estimate ${rawFee} as deduction`);
+        try {
+          const nativePrices: Record<string, number> = { ETH: 2300, TRX: 0.25, XRP: 2.5, POLYGON: 0.5 };
+          const nativePrice = nativePrices[wallet_type] || 1;
+          gasDeductionInToken = rawFee * nativePrice;
+          console.warn(`[settleCryptoTransaction] Token ${currency}: Fallback gas deduction: ${rawFee} ${wallet_type} × $${nativePrice} = $${gasDeductionInToken.toFixed(4)} USD`);
+        } catch {
+          gasDeductionInToken = rawFee; // Last resort
+          console.warn(`[settleCryptoTransaction] Token ${currency}: Using raw native fee ${rawFee} as token deduction (price lookup failed)`);
+        }
       }
 
       merchantSendAmount = Number((Number(userAmount) - gasDeductionInToken).toFixed(6));
