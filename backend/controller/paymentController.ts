@@ -1722,9 +1722,9 @@ const createCryptoPayment = async (
           - Tax crypto: ${tax_amount_crypto} ${requestedCurrency}
           - Exchange rate: 1 ${baseCurrency} = ${exchange_rate} ${requestedCurrency}`);
         
-        // Calculate fees using tier-based structure: 2% + fixed + buffer
+        // Calculate fees using tier-based structure: 1.5% + fixed
         // IMPORTANT: Use USD amount for fee tier selection (tiers are defined in USD)
-        const { totalDeduction, fixedFee, transactionFee, blockchainBuffer } = await calculateTransactionFees(
+        const { totalDeduction, fixedFee, transactionFee } = await calculateTransactionFees(
           requestedCurrency,
           baseAmountUSD  // Fee calculation based on USD amount (ensures correct tier)
         );
@@ -1735,7 +1735,7 @@ const createCryptoPayment = async (
         console.log(`[createCryptoPayment] Fee calculation (USD-based for tier accuracy):
           - Base original: ${baseAmountOriginal} ${baseCurrency}
           - Base USD: $${baseAmountUSD.toFixed(2)}
-          - Fee breakdown: 2%=$${transactionFee.toFixed(2)} + Fixed=$${fixedFee.toFixed(2)} + Buffer=$${blockchainBuffer.toFixed(2)}
+          - Fee breakdown: 1.5%=$${transactionFee.toFixed(2)} + Fixed=$${fixedFee.toFixed(2)}
           - Total fee: $${totalDeduction.toFixed(2)} (${(feePercentage * 100).toFixed(2)}% of base)`);
         
         // TAX HANDLING IN FEE CALCULATION:
