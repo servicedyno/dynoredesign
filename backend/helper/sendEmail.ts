@@ -617,7 +617,7 @@ const sendRefereeCodeReminderEmail = async (
         ctaText = "Claim Your Discount";
         break;
       case 'week2':
-        subject = "Your 50% discount is waiting - Dynopay 💰";
+        subject = "Your 50% discount is waiting - Dynopay";
         urgencyMessage = `Your exclusive <strong>${discountPercent}% discount</strong> is still available! Only <strong>${daysRemaining} days</strong> remaining.`;
         ctaText = "Start Saving Today";
         break;
