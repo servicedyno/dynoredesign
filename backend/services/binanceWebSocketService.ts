@@ -316,7 +316,7 @@ const restFetchPrices = async (): Promise<void> => {
   try {
     const symbols = TRACKED_ASSETS.map((a) => `"${a}USDT"`).join(",");
     const url = `${BINANCE_REST_BASE}/api/v3/ticker/price?symbols=[${symbols}]`;
-    const resp = await axios.get(url, { timeout: 10000, headers: BINANCE_HEADERS, ...(wsProxyAgent ? { httpAgent: wsProxyAgent, httpsAgent: wsProxyAgent } : {}) });
+    const resp = await axios.get(url, { timeout: 10000, headers: BINANCE_HEADERS, ...(() => { const agent = getEffectiveProxyAgent(); return agent ? { httpAgent: agent, httpsAgent: agent } : {}; })() });
 
     for (const item of resp.data) {
       const asset = (item.symbol as string).replace("USDT", "");
@@ -360,7 +360,7 @@ const restFetchKlines = async (asset: string): Promise<KlineCandle[]> => {
   const url = `${BINANCE_REST_BASE}/api/v3/klines?symbol=${symbol}&interval=5m&limit=12`;
 
   try {
-    const resp = await axios.get(url, { timeout: 10000, headers: BINANCE_HEADERS, ...(wsProxyAgent ? { httpAgent: wsProxyAgent, httpsAgent: wsProxyAgent } : {}) });
+    const resp = await axios.get(url, { timeout: 10000, headers: BINANCE_HEADERS, ...(() => { const agent = getEffectiveProxyAgent(); return agent ? { httpAgent: agent, httpsAgent: agent } : {}; })() });
     const candles: KlineCandle[] = resp.data.map((k: unknown[]) => ({
       openTime: k[0] as number,
       open: parseFloat(k[1] as string),
