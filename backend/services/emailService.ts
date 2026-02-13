@@ -475,20 +475,13 @@ export const sendForgotPasswordOTPEmail = async (
 ) => {
   try {
     const subject = "Password reset code";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">You requested to reset your Dynopay password. Use this code to continue:</p>
-    <div class="otp-code">${otpCode}</div>
-    <p class="message">This code expires in 10 minutes. If you didn't request a password reset, please ignore this email and your password will remain unchanged.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`You requested to reset your Dynopay password. Use this code to continue:`)}
+    ${otpBlock(otpCode)}
+    ${p(`This code expires in 10 minutes. If you didn't request a password reset, please ignore this email and your password will remain unchanged.`)}`;
 
     const html = dynoPayEmailTemplate("Reset Your Password", content);
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Forgot password OTP email sent to ${email}`);
   } catch (e) {
     console.error("Forgot password OTP email error:", e);
