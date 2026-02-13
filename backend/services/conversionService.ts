@@ -621,8 +621,8 @@ export const sendWeeklyConversionSummaries = async (): Promise<number> => {
 
   for (const entry of companiesWithConversions) {
     try {
-      const user: any = await userModel.findOne({ where: { id: entry.user_id }, raw: true });
-      const company: any = await companyModel.findOne({ where: { id: entry.company_id }, raw: true });
+      const user: any = await userModel.findOne({ where: { user_id: entry.user_id }, raw: true });
+      const company: any = await companyModel.findOne({ where: { company_id: entry.company_id }, raw: true });
 
       if (!user?.email) continue;
 
