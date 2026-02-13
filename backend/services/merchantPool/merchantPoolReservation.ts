@@ -435,7 +435,9 @@ export const releaseAddress = async (
   if (isUTXO) {
     newStatus = "AVAILABLE";
   } else if (isToken) {
-    newStatus = "AVAILABLE";
+    // For token chains: if there's an admin fee balance, keep as IN_USE for sweeping
+    // If no balance, mark AVAILABLE for reuse
+    newStatus = newAdminBalance > 0 ? "IN_USE" : "AVAILABLE";
   } else {
     newStatus = newAdminBalance > 0 ? "IN_USE" : "AVAILABLE";
   }
