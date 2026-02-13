@@ -7251,3 +7251,64 @@ ports:
           ✅ TypeScript compilation: clean
           ✅ Backend health: all services operational
 
+  - task: "Gas Fee Deduction Fix: Complete fix for Native + Token chain gas deductions from merchant payout"
+    implemented: true
+    working: true
+    files:
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/services/chains/evmChain.ts"
+      - "/app/backend/services/blockchainFeeService.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          4 BUGS FIXED in gas fee deduction from merchant payout:
+          
+          BUG 1 (HIGH): settleCryptoTransaction native account chains used fees?.slow (25% of actual gas for ETH)
+          FIX: Changed to fees?.fast ?? fees?.slow ?? 0 — deducts actual gas cost from merchant
+          FILE: paymentController.ts line ~3226
+          
+          BUG 2 (HIGH): calculateEvmGasFee reduced gasLimit to 25% for native ETH transfers (5250 vs 21000)
+          FIX: Use Math.max(gasLimit, 21000) for non-token — ensures standard ETH transfer gasLimit
+          Also fixed slow/medium tiers to vary gasPrice buffer instead of gasLimit
+          FILE: evmChain.ts lines 37-55
+          
+          BUG 3 (MEDIUM): getBlockchainNetworkFee returned feeInUSD=0 for SOL/XRP/RLUSD
+          FIX: Now calculates actual USD value using getCryptoPrice lookup
+          FILE: blockchainFeeService.ts lines 398-423
+          
+          BUG 4 (LOW): Token branch fallback used raw native fee (e.g., 0.0005 ETH) as token deduction
+          FIX: Converts native fee to USD using price lookup before deducting from stablecoin payout
+          FILE: paymentController.ts lines 3076-3087
+          
+          VERIFY THESE TESTS:
+          
+          TEST 1: Backend healthy
+          - GET http://localhost:8001/health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - cd /app/backend && npx tsc --noEmit — exit code 0
+          
+          TEST 3: BUG 1 FIX — Native chain uses fast fee for deduction
+          - grep 'fees?.fast.*fees?.slow.*0' /app/backend/controller/paymentController.ts should find the line with "Use `fast` tier for gas deduction"
+          
+          TEST 4: BUG 2 FIX — gasLimit not reduced for native ETH
+          - grep 'effectiveGasLimit' /app/backend/services/chains/evmChain.ts should find at least 5 occurrences
+          - grep 'Math.max(gasLimit, 21000)' /app/backend/services/chains/evmChain.ts should find the fix
+          - grep 'gasLimit: isToken ? gasLimit : Math.floor' /app/backend/services/chains/evmChain.ts should return EMPTY (old bug removed)
+          
+          TEST 5: BUG 3 FIX — SOL/XRP feeInUSD now calculated
+          - grep 'getCryptoPrice.*priceSymbol' /app/backend/services/blockchainFeeService.ts should find the price lookup
+          - grep 'feeInUSD: 0.*Negligible' /app/backend/services/blockchainFeeService.ts should return EMPTY (old hardcoded 0 removed)
+          
+          TEST 6: BUG 4 FIX — Token fallback converts native fee to USD
+          - grep 'nativePrices' /app/backend/controller/paymentController.ts should find fallback price map
+          - grep 'rawFee.*nativePrice' /app/backend/controller/paymentController.ts should find the multiplication
+          
+          TEST 7: EVM gasPrice is correct
+          - grep 'gasPrice: bufferedGasPrice' /app/backend/services/chains/evmChain.ts should find that gasPrice on result uses buffered price (not raw)
+          
+          Base URL: http://localhost:8001
