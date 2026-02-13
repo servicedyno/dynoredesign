@@ -356,26 +356,21 @@ export const sendPaymentReceivedEmail = async (
   time: string
 ) => {
   try {
-    const subject = `Payment received — ${amount} ${currency}`;
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Great news! Your company <strong>${companyName}</strong> has received a payment. 💰</p>
-    <div class="highlight-box">
-      <p><strong>Payment Details:</strong></p>
-      <p>Amount: <strong>${amount} ${currency}</strong><br />
-      Date: ${date} at ${time}<br />
-      Transaction ID: ${transactionId}</p>
-    </div>
-    <p class="message">The funds have been forwarded to your payout wallet. You can view the full transaction details in your dashboard.</p>`;
+    const subject = `Payment received - ${amount} ${currency}`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Great news! Your company <strong>${companyName}</strong> has received a payment.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Amount', `<strong>${amount} ${currency}</strong>`)}
+        ${dataRow('Status', statusBadge('Received', 'success'))}
+        ${dataRow('Date', `${date} at ${time}`)}
+        ${dataRow('Transaction ID', `<span style="font-size: 12px; font-family: monospace;">${transactionId}</span>`, true)}
+      </table>
+    `, '#22c55e')}
+    ${p(`The funds have been forwarded to your payout wallet. You can view the full transaction details in your dashboard.`)}`;
 
     const html = dynoPayEmailTemplate("Payment Received", content, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Payment received email sent to ${email}`);
   } catch (e) {
     console.error("Payment received email error:", e);
