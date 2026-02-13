@@ -785,37 +785,25 @@ export const sendCustomerPaymentConfirmationEmail = async (
       // Continue without PDF attachment
     }
     
-    const content = `<p class="message">Hey ${displayName},</p>
-    <p class="message">Your payment to <strong>${companyName}</strong> has been successfully processed. 🎉</p>
-    <div class="receipt-box">
-      <strong>✓ Payment Complete</strong>
-    </div>
-    <div class="highlight-box">
-      <p><strong>Payment Details:</strong></p>
-      <p>
-        <strong>Amount Paid:</strong> ${amount} ${currency}<br />
-        ${cryptoAmount && cryptoCurrency ? `<strong>Crypto Amount:</strong> ${cryptoAmount} ${cryptoCurrency}<br />` : ''}
-        ${description ? `<strong>Description:</strong> ${description}<br />` : ''}
-        <strong>Transaction ID:</strong> ${transactionId}<br />
-        ${transactionReference ? `<strong>Reference:</strong> ${transactionReference}<br />` : ''}
-        <strong>Date:</strong> ${date} at ${time}
-      </p>
-    </div>
-    ${pdfAttachment ? `<p class="message"><strong>📎 PDF Receipt Attached</strong><br />A detailed receipt is attached to this email for your records.</p>` : ''}
-    <p class="message">If you have any questions about this payment, please contact <strong>${companyName}</strong> directly.</p>
-    <p class="message" style="font-size: 13px; color: #6b7280; margin-top: 24px;">
-      This payment was processed securely through Dynopay, a trusted crypto payment gateway.
-    </p>`;
+    const content = `${p(`Hey ${displayName},`)}
+    ${p(`Your payment to <strong>${companyName}</strong> has been successfully processed.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Status', statusBadge('Complete', 'success'))}
+        ${dataRow('Amount Paid', `<strong>${amount} ${currency}</strong>`)}
+        ${cryptoAmount && cryptoCurrency ? dataRow('Crypto Amount', `${cryptoAmount} ${cryptoCurrency}`) : ''}
+        ${description ? dataRow('Description', description) : ''}
+        ${dataRow('Transaction ID', `<span style="font-family: monospace; font-size: 13px;">${transactionId}</span>`)}
+        ${transactionReference ? dataRow('Reference', transactionReference) : ''}
+        ${dataRow('Date', `${date} at ${time}`, true)}
+      </table>
+    `, '#22c55e')}
+    ${pdfAttachment ? p(`<strong>PDF Receipt Attached</strong> - A detailed receipt is attached to this email for your records.`) : ''}
+    ${p(`If you have any questions about this payment, please contact <strong>${companyName}</strong> directly.`)}
+    ${p(`<span style="font-size: 13px; color: #6b7280;">This payment was processed securely through Dynopay, a trusted crypto payment gateway.</span>`)}`;
 
     const html = dynoPayEmailTemplate("Payment Successful", content);
-    
-    await mailTransporter({
-      to: customerEmail,
-      name: displayName,
-      subject,
-      body: html,
-      attachments: pdfAttachment ? [pdfAttachment] : undefined,
-    });
+    await mailTransporter({ to: customerEmail, name: displayName, subject, body: html, attachments: pdfAttachment ? [pdfAttachment] : undefined });
     
     console.log(`[Email] Customer payment confirmation sent to ${customerEmail} for ${amount} ${currency}${pdfAttachment ? ' with PDF receipt' : ''}`);
   } catch (e) {
