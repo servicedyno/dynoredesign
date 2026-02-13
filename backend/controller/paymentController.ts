@@ -460,21 +460,18 @@ const getData = async (req: express.Request, res: express.Response) => {
     const feeTiers = (await import("../utils/feeConfigUtils")).getFeeTiers();
     const amount = Number(item.base_amount || item.amount || 0);
     
-    // Find applicable fee tier based on amount (includes fixed fee and blockchain buffer)
+    // Find applicable fee tier based on amount
     let fixedFee = 0;
-    let blockchainBuffer = 0;
     for (const tier of feeTiers) {
       if (amount >= tier.min && (tier.max === null || amount <= tier.max)) {
         fixedFee = tier.fixed;
-        blockchainBuffer = tier.buffer || 0;
         break;
       }
     }
     
     // Calculate total processing fee (internal - details not exposed)
-    // Total fees = transaction fee % + fixed fee + blockchain buffer % + network fee
+    // Total fees = transaction fee % + fixed fee + network fee
     const feeAmountPercent = (amount * transactionFeePercent) / 100;
-    const bufferAmount = (amount * blockchainBuffer) / 100;
     
     // Include blockchain network fee for consistency with getCurrencyRates
     let networkFeeUSD = 0;
@@ -485,7 +482,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       console.log('[getData] Could not fetch network fee, using 0');
     }
     
-    const totalProcessingFee = parseFloat((feeAmountPercent + fixedFee + bufferAmount + networkFeeUSD).toFixed(2));
+    const totalProcessingFee = parseFloat((feeAmountPercent + fixedFee + networkFeeUSD).toFixed(2));
     // totalWithFees calculated but not used - kept for reference
     
     // Calculate expiry countdown
