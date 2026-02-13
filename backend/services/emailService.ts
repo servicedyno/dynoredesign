@@ -1204,31 +1204,23 @@ export const sendLargeTransactionAlertEmail = async (
   companyName: string
 ) => {
   try {
-    const subject = `💰 Large payment received - ${amount} ${currency}`;
+    const subject = `Large payment received - ${amount} ${currency}`;
     
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Great news! <strong>${companyName}</strong> received a large payment that may require your attention.</p>
-    <div class="highlight-box" style="border-left-color: #10b981;">
-      <p><strong>💰 Payment Details:</strong></p>
-      <p>Amount: <strong>${amount} ${currency}</strong><br />
-      Crypto: ${cryptoAmount} ${cryptoCurrency}<br />
-      ${customerEmail ? `Customer: ${customerEmail}<br />` : ''}
-      Transaction ID: ${transactionId}</p>
-    </div>
-    <p class="message">This payment has been automatically processed and forwarded to your wallet.</p>
-    <p class="message">For large transactions, we recommend:</p>
-    <p class="message">✓ Verify the transaction in your dashboard<br />
-    ✓ Confirm product/service delivery to customer<br />
-    ✓ Keep records for accounting purposes</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`<strong>${companyName}</strong> received a large payment that may require your attention.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Amount', `<strong>${amount} ${currency}</strong>`)}
+        ${dataRow('Crypto', `${cryptoAmount} ${cryptoCurrency}`)}
+        ${customerEmail ? dataRow('Customer', customerEmail) : ''}
+        ${dataRow('Transaction ID', `<span style="font-family: monospace; font-size: 13px;">${transactionId}</span>`, true)}
+      </table>
+    `, '#22c55e')}
+    ${p(`This payment has been automatically processed and forwarded to your wallet.`)}
+    ${p(`For large transactions, we recommend:<br />1. Verify the transaction in your dashboard<br />2. Confirm product/service delivery to customer<br />3. Keep records for accounting purposes`)}`;
 
     const html = dynoPayEmailTemplate("Large Payment Received", content, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
+    await mailTransporter({ to: email, name, subject, body: html });
     
     console.log(`[Email] Large transaction alert sent to ${email} - ${amount} ${currency}`);
   } catch (e) {
