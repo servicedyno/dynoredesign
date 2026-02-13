@@ -34,7 +34,12 @@ Full-stack crypto payment gateway (Node.js/TypeScript backend, React frontend, P
 - EVM chains: ethers.js direct RPC (LlamaRPC → publicnode → Tatum as fallback)
 - Non-EVM chains (TRX, XRP, BTC, etc.): Continue using Tatum SDK (proven reliable)
 
+## Session 2 - Binance Proxy (Feb 13, 2026)
+- Re-established SOCKS5 proxy tunnel to German VPS (95.179.167.16) via sshpass+ssh
+- Added supervisor-managed `binance-proxy` service for persistence across restarts
+- Binance geo-block detection working: auto-detects 451 → enables proxy
+- BinanceWS connected, tracking 10 assets; stablecoin conversion cron running
+
 ## Backlog
 - P1: Consolidate redundant sweep logic (clean up dead Tatum SDK EVM paths)
-- P2: Binance WebSocket 451 error (geo-blocking, needs proxy investigation)
 - P2: Monitor sweep reliability over time
