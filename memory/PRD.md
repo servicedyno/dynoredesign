@@ -11,73 +11,81 @@ Full-stack cryptocurrency payment gateway (DynoPay) with Node.js/TypeScript back
 - **3rd Party**: Tatum, Binance, Brevo (Sendinblue), Blockstream, Blocknative
 - **Production URL**: https://api.dynopay.com
 
+## Fee Structure (Updated Feb 13, 2026)
+**Formula**: `Fee = 1.5% + tier fixed fee + dynamic gas (at settlement)`
+
+| Tier | Range | Fixed Fee |
+|------|-------|-----------|
+| 1 | $1–$100 | $1.00 |
+| 2 | $101–$500 | $1.00 |
+| 3 | $501–$1000 | $1.00 |
+| 4 | $1001+ (unlimited) | $1.00 |
+
+- Buffer completely removed from code and .env
+- Gas costs: UTXO deducted from merchant, account-based chains from admin portion (pending change to deduct from merchant)
+- Admin can adjust per-tier fixed fees independently
+
+## Auto-Convert Pipeline (Optimized Feb 13, 2026)
+- Immediate sweep trigger after auto-convert payment (0 delay, was 3-5 min)
+- Conversion cron: every 2 min (was 5 min)
+- Non-auto-convert: unchanged (time:3 native, threshold tokens, batch UTXO)
+
 ## What's Been Implemented
 
-### Sessions 1-5 (Feb 12, 2026)
+### Sessions 1-10 (Feb 12, 2026)
 - Full codebase analysis, security audit, security improvements
-- Fixed broken email logo, Binance Convert API -> Spot Market Orders
+- Binance Convert API -> Spot Market Orders
 - Adaptive Conversion System (volatility monitor, fee rate service, Limit IOC)
-- Live testing: POL sale verified on Binance
 - Auto-conversion payout email template
-
-### Session 10 (Feb 12, 2026)
 - Auto-Convert wallet selection flow improvements
 - Brevo fix + error logging consolidation
 
-### Session 11 (Feb 12-13, 2026) - Proxy & Auto-Conversion Debugging
-- SOCKS5 proxy tunnel to German VPS for Binance connectivity
-- Fixed notification logic (merchant emails showing correct amounts)
-- Permissive Tatum webhook validation middleware
-- Removed double withdrawal fee deduction in binanceService.ts
-- Reworked deposit_tx_hash auto-population in merchantPoolSweep.ts
-- Two end-to-end test payments completed successfully
+### Session 11 (Feb 12-13, 2026)
+- SOCKS5 proxy tunnel for Binance connectivity
+- Fixed notification logic, permissive Tatum webhook validation
+- Removed double withdrawal fee deduction
+- Reworked deposit_tx_hash auto-population
+- Two end-to-end test payments completed
 
-### Session 12 (Feb 13, 2026) - Auto-Convert Pipeline Speed Optimization
-- **Immediate sweep trigger**: `paymentController.ts` fires `sweepPoolAddress()` right after address release for auto-convert payments (fire-and-forget). Applies to ALL volatile currencies.
-- **Conversion cron interval**: Reduced from 5 min → 2 min (`BINANCE_CONVERT_INTERVAL_MINUTES=2`)
-- **Sweep fallback timers**: All volatile native chains (TRX, ETH, SOL, XRP, POLYGON) reduced from `time:3` → `time:1`. Stablecoin configs untouched.
-- Expected improvement: Pipeline from ~15-20 min → ~4-7 min (dominated by Binance deposit confirmation)
+### Session 12 (Feb 13, 2026)
+- **Auto-convert speed optimization**: immediate sweep + 2-min cron
+- **Fee structure overhaul**: 3-component → 2-component (1.5% + $1 fixed)
+- Buffer removed from: feeConfigUtils.ts, controller/index.ts, paymentController.ts, invoiceController.ts, types/index.ts, merchantPoolSweep.ts
+- DB models kept for backwards compat (old records retain buffer values)
 
 ## Volatile Currencies (subject to auto-conversion)
 BTC, ETH, LTC, DOGE, TRX, BCH, SOL, XRP, POLYGON
 
-## Stablecoin Currencies (no conversion needed)
-USDT, USDC, RLUSD, USDT-TRC20, USDT-ERC20, USDC-ERC20, USDT-POLYGON, RLUSD-ERC20
-
 ## Key Environment Config
-- `BINANCE_CONVERT_INTERVAL_MINUTES=2` (conversion cron)
-- `ETH_SWEEP=time:1`, `TRX_SWEEP=time:1`, `SOL_SWEEP=time:1`, `XRP_SWEEP=time:1`, `POLYGON_SWEEP=time:1`
+- `TRANSACTION_FEE_PERCENT=1.5`
+- `FEE_TIER_*_FIXED=1.00` (all tiers), `FEE_TIER_*_BUFFER` removed
+- `FEE_TIER_4_MAX=` (empty = unlimited)
+- `BINANCE_CONVERT_INTERVAL_MINUTES=2`
 - `BINANCE_PROXY_URL=socks5://127.0.0.1:1080`
 
 ## Prioritized Backlog
 
-### P0 - Needs Verification
-- [ ] Run live auto-convert test to verify immediate sweep works end-to-end
-- [ ] Verify deposit_tx_hash auto-population on clean (non-patched) test
+### P0 - Next
+- [ ] Implement dynamic gas fee deduction from merchant payout (account-based chains)
+- [ ] Run live test payment with new fee structure
 
-### P1 - Next
-- [ ] Create persistent autossh tunnel (current tunnel is manual, dies on restart)
-- [ ] Deploy all changes to Railway production
+### P1
+- [ ] Create persistent autossh tunnel
+- [ ] Deploy changes to Railway production
 
 ### P2 - Future
 - [ ] Refactor monolithic paymentController.ts (~4600 lines)
+- [ ] Admin panel UI for tier fee management
 - [ ] Refactor addressService.ts sweep logic
-- [ ] Migrate email logo to permanent CDN
 
 ## Key Files
-- `backend/controller/paymentController.ts` - Payment flow + auto-convert + immediate sweep trigger
+- `backend/controller/paymentController.ts` - Payment flow + fee calc + auto-convert + immediate sweep
+- `backend/controller/index.ts` - calculateTransactionFees (buffer removed)
+- `backend/utils/feeConfigUtils.ts` - Fee tier config (buffer removed)
+- `backend/types/index.ts` - FeeTier/FeeCalculationResult types (buffer removed)
 - `backend/services/conversionService.ts` - Conversion pipeline (4 phases)
-- `backend/services/binanceService.ts` - Spot trading, withdrawal, Binance API
-- `backend/services/merchantPool/merchantPoolSweep.ts` - Sweep logic + deposit_tx_hash update
-- `backend/services/merchantPool/merchantPoolConfig.ts` - Sweep config parsing
-- `backend/server.ts` - Cron jobs + route registration
-- `backend/middleware/validateTatum.ts` - Webhook auth (permissive mode)
-
-## Key Diagnostic Endpoints
-- `GET /api/diagnostics/binance-balances` - Non-zero Binance balances
-- `GET /api/diagnostics/binance-quote` - Spot quote
-- `POST /diagnostics/trigger-conversion` - Manual conversion (admin auth)
-- `GET /diagnostics/volatility` - Market states
+- `backend/services/binanceService.ts` - Spot trading, withdrawal
+- `backend/services/merchantPool/merchantPoolSweep.ts` - Sweep logic
 
 ## Credentials
 - Admin: moxxcompany@gmail.com (DB id: 2)
