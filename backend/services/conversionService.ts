@@ -336,8 +336,8 @@ const processWithdrawals = async (): Promise<number> => {
 
 const sendConversionPayoutNotification = async (data: any, withdrawalTxHash: string) => {
   // Fetch merchant user and company info
-  const user: any = await userModel.findOne({ where: { id: data.user_id }, raw: true });
-  const company: any = await companyModel.findOne({ where: { id: data.company_id }, raw: true });
+  const user: any = await userModel.findOne({ where: { user_id: data.user_id }, raw: true });
+  const company: any = await companyModel.findOne({ where: { company_id: data.company_id }, raw: true });
 
   if (!user?.email) {
     log(`⚠️ No email found for user #${data.user_id}, skipping payout notification`);
