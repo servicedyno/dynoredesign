@@ -4962,11 +4962,10 @@ const getCurrencyRates = async (
             // Ensure all fee values are valid numbers (protection against NaN/undefined)
             const fixedFee = Number(feeResult.fixedFee) || 0;
             const transactionFee = Number(feeResult.transactionFee) || 0;
-            const blockchainBuffer = Number(feeResult.blockchainBuffer) || 0;
             const networkFeeUSD = Number(networkFee.feeInUSD) || 0;
             
             // Calculate totals including tax - round USD amounts to 2 decimals for consistency
-            const totalFeesUSD = fixedFee + transactionFee + blockchainBuffer + networkFeeUSD;
+            const totalFeesUSD = fixedFee + transactionFee + networkFeeUSD;
             const roundedTotalFeesUSD = parseFloat(totalFeesUSD.toFixed(2));
             const taxAmountNum = Number(tax_amount) || 0;
             const totalAmountUSD = amountUSD + roundedTotalFeesUSD + taxAmountNum;
