@@ -310,26 +310,20 @@ export const sendWalletUpdateOTPEmail = async (
 ) => {
   try {
     const subject = "Confirm wallet update";
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">You're updating your payout wallet. Please verify this change with the OTP code below:</p>
-    <div class="otp-code">${otpCode}</div>
-    <div class="highlight-box">
-      <p><strong>Wallet Change:</strong></p>
-      <p>Old: ${oldWalletMasked}<br />
-      New: ${newWalletMasked}<br />
-      Network: ${network}</p>
-    </div>
-    <p class="message">⚠️ This code expires in 10 minutes. If you didn't request this change, please secure your account immediately.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`You're updating your payout wallet. Please verify this change with the code below:`)}
+    ${otpBlock(otpCode)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Current', oldWalletMasked)}
+        ${dataRow('New', newWalletMasked)}
+        ${dataRow('Network', network, true)}
+      </table>
+    `)}
+    ${p(`This code expires in 10 minutes. If you didn't request this change, please secure your account immediately.`, `color: #991b1b;`)}`;
 
     const html = dynoPayEmailTemplate("Confirm Wallet Update", content);
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
-    
+    await mailTransporter({ to: email, name, subject, body: html });
     console.log(`Wallet update OTP email sent to ${email}`);
   } catch (e) {
     console.error("Wallet update OTP email error:", e);
