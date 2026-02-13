@@ -1,5 +1,6 @@
 import mailTransporter from "../utils/mailTransporter";
 import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService";
+import { baseEmailTemplate, getCurrencySymbol, infoBox, dataRow, statusBadge, p, otpBlock } from "../utils/emailTemplate";
 
 /**
  * Dynopay Email Service - Phase 9
