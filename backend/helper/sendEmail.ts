@@ -627,7 +627,7 @@ const sendRefereeCodeReminderEmail = async (
         ctaText = "Don't Miss Out";
         break;
       case 'final':
-        subject = "⚠️ LAST CHANCE: Your Dynopay discount expires in 3 days!";
+        subject = "LAST CHANCE: Your Dynopay discount expires in 3 days!";
         urgencyMessage = `<strong style="color: #dc2626;">FINAL REMINDER:</strong> Your exclusive ${discountPercent}% discount expires in just <strong>${daysRemaining} days</strong>. This is your last chance!`;
         ctaText = "Claim Now Before It's Gone";
         break;
