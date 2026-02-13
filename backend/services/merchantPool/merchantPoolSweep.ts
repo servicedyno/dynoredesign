@@ -497,54 +497,31 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       console.log(`[MerchantPool] Account chain sweep: ${actualBalance} - ${gasFee} (gas)${reserveLog} = ${amountToSend} ${walletType}`);
     }
 
-    // Choose sweep method: direct ethers.js for EVM chains (eliminates ghost TXs),
-    // Tatum SDK for non-EVM chains (TRX, XRP, BTC, etc.)
+    // Use Tatum SDK for ALL chains (ETH, TRX, XRP, BTC, POLYGON, etc.)
+    // This is the same method used for regular payment distributions and is proven reliable
     let sweepTxId: string | undefined;
 
-    if (isDirectEvmSupported(walletType)) {
-      // DIRECT EVM SWEEP: Build, sign, and broadcast via ethers.js
-      // TX hash is deterministic (computed from signed bytes) — no ghost TXs possible
-      console.log(`[MerchantPool] Using direct EVM sweep for ${walletType}`);
-      const directResult = await withRetry(
-        async () => {
-          return await directEvmSweep({
-            fromAddress: poolAddress.dataValues.wallet_address,
-            toAddress: adminWallet,
-            privateKey,
-            walletType,
-            amount: amountToSend,
-            gasPriceGwei: parseFloat(feeData?.gasPrice) || undefined,
-            gasLimit: parseInt(feeData?.gasLimit) || undefined,
-          });
-        },
-        `Direct EVM sweep for ${poolAddress.dataValues.wallet_address}`,
-        POOL_CONFIG.MAX_RETRIES,
-        POOL_CONFIG.SWEEP_RETRY_DELAY_MS
-      );
-      sweepTxId = directResult.txHash;
-    } else {
-      // NON-EVM SWEEP: Use Tatum SDK (TRX, XRP, BTC, LTC, DOGE, etc.)
-      const sweepResult = await withRetry(
-        async () => {
-          const result = await tatumApi.assetToOtherAddress({
-            currency: walletType,
-            fromAddress: poolAddress.dataValues.wallet_address,
-            toAddress: adminWallet,
-            privateKey,
-            amount: amountToSend.toString(),
-            fee: feeData,
-          });
-          if (!result?.txId) {
-            throw new Error("Sweep transaction failed - no txId returned");
-          }
-          return result;
-        },
-        `Sweep transfer for ${poolAddress.dataValues.wallet_address}`,
-        POOL_CONFIG.MAX_RETRIES,
-        POOL_CONFIG.SWEEP_RETRY_DELAY_MS
-      );
-      sweepTxId = sweepResult?.txId;
-    }
+    console.log(`[MerchantPool] Using Tatum SDK sweep for ${walletType}`);
+    const sweepResult = await withRetry(
+      async () => {
+        const result = await tatumApi.assetToOtherAddress({
+          currency: walletType,
+          fromAddress: poolAddress.dataValues.wallet_address,
+          toAddress: adminWallet,
+          privateKey,
+          amount: amountToSend.toString(),
+          fee: feeData,
+        });
+        if (!result?.txId) {
+          throw new Error("Sweep transaction failed - no txId returned");
+        }
+        return result;
+      },
+      `Sweep transfer for ${poolAddress.dataValues.wallet_address}`,
+      POOL_CONFIG.MAX_RETRIES,
+      POOL_CONFIG.SWEEP_RETRY_DELAY_MS
+    );
+    sweepTxId = sweepResult?.txId;
 
     console.log(`[MerchantPool] 📡 Sweep TX broadcast: ${sweepTxId}`);
 
