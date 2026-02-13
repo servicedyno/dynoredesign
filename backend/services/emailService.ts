@@ -1306,16 +1306,17 @@ export const sendSubscriptionCancelledEmail = async (
     
     // Email to Customer
     const customerSubject = `Subscription cancelled - ${planName}`;
-    const customerContent = `<p class="message">Hey ${displayName},</p>
-    <p class="message">Your subscription to <strong>${planName}</strong> from <strong>${companyName}</strong> has been cancelled.</p>
-    <div class="highlight-box">
-      <p><strong>Cancellation Details:</strong></p>
-      <p>Plan: ${planName}<br />
-      Effective: ${effectiveDate}<br />
-      Cancelled by: ${cancelledBy === 'customer' ? 'You' : companyName}</p>
-    </div>
-    <p class="message">You will continue to have access until ${effectiveDate}. After that, no further charges will be made.</p>
-    <p class="message">We're sorry to see you go! If you change your mind, you can always resubscribe.</p>`;
+    const customerContent = `${p(`Hey ${displayName},`)}
+    ${p(`Your subscription to <strong>${planName}</strong> from <strong>${companyName}</strong> has been cancelled.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Plan', planName)}
+        ${dataRow('Effective', effectiveDate)}
+        ${dataRow('Cancelled by', cancelledBy === 'customer' ? 'You' : companyName, true)}
+      </table>
+    `, '#f59e0b')}
+    ${p(`You will continue to have access until ${effectiveDate}. After that, no further charges will be made.`)}
+    ${p(`If you change your mind, you can always resubscribe.`)}`;
 
     const customerHtml = dynoPayEmailTemplate("Subscription Cancelled", customerContent);
     
