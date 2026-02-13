@@ -893,10 +893,7 @@ export const sweepByTime = async (): Promise<number> => {
       
       const sweepConfig = getSweepConfig(walletType);
       
-      console.log(`[MerchantPool] [DEBUG] sweepByTime: ${address.dataValues.wallet_address} (${walletType}), sweepConfig=${JSON.stringify(sweepConfig)}, lastPayout=${lastPayout.toISOString()}`);
-      
       if (sweepConfig.mode !== "time") {
-        console.log(`[MerchantPool] [DEBUG] Skipping ${walletType} — mode is "${sweepConfig.mode}", not "time"`);
         continue;
       }
       
@@ -905,8 +902,6 @@ export const sweepByTime = async (): Promise<number> => {
       timeThreshold.setMinutes(timeThreshold.getMinutes() - timeThresholdMinutes);
       
       const timeSincePayout = Math.floor((new Date().getTime() - lastPayout.getTime()) / 60000);
-      
-      console.log(`[MerchantPool] [DEBUG] timeThreshold=${timeThreshold.toISOString()}, lastPayout < timeThreshold = ${lastPayout < timeThreshold}, timeSince=${timeSincePayout}min`);
       
       if (lastPayout < timeThreshold) {
         console.log(`[MerchantPool] ✅ ${address.dataValues.wallet_address} (${walletType}): ${cryptoAmount}, ${timeSincePayout} min since payout — sweeping`);
