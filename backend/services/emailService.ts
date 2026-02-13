@@ -996,24 +996,19 @@ export const sendFailedLoginAttemptsEmail = async (
   time: string
 ) => {
   try {
-    const subject = "🚨 Multiple failed login attempts on your account";
+    const subject = "Multiple failed login attempts on your account";
     
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">We detected <strong>${attemptCount} failed login attempts</strong> on your Dynopay account.</p>
-    <div class="highlight-box" style="border-left-color: #ef4444;">
-      <p><strong>⚠️ Alert Details:</strong></p>
-      <p>Failed Attempts: ${attemptCount}<br />
-      Date: ${date} at ${time}<br />
-      IP Address: ${ipAddress}</p>
-    </div>
-    <p class="message"><strong>Was this you?</strong><br />
-    If you forgot your password, you can reset it using the button below.</p>
-    <p class="message"><strong>Wasn't you?</strong><br />
-    Someone may be trying to access your account. We recommend:</p>
-    <p class="message">1. Change your password immediately<br />
-    2. Enable two-factor authentication<br />
-    3. Review your recent account activity</p>
-    <p class="message">Your account is still secure - we blocked these login attempts.</p>`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`We detected <strong>${attemptCount} failed login attempts</strong> on your Dynopay account.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Failed Attempts', `<strong>${attemptCount}</strong>`)}
+        ${dataRow('Date', `${date} at ${time}`)}
+        ${dataRow('IP Address', `<span style="font-family: monospace; font-size: 13px;">${ipAddress}</span>`, true)}
+      </table>
+    `, '#ef4444')}
+    ${p(`<strong>Was this you?</strong><br />If you forgot your password, you can reset it using the button below.`)}
+    ${p(`<strong>Wasn't you?</strong><br />Someone may be trying to access your account. We recommend changing your password immediately. Your account is still secure - we blocked these login attempts.`)}`;
 
     const html = dynoPayEmailTemplate("Security Alert", content, true, "Reset Password", "https://dynopay.com/forgot-password");
     
