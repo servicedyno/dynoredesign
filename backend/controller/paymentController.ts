@@ -3066,34 +3066,39 @@ const settleCryptoTransaction = async ({
       );
 
       // Deduct gas cost from merchant's token payout (consistent with UTXO/native chains)
+      // TWO gas costs: (1) merchant transfer gas + (2) estimated sweep gas for admin fee collection
       // Gas is in native currency (ETH/TRX/XRP/POL), so convert to USD equivalent for stablecoin deduction
-      let gasDeductionInToken = 0;
+      let merchantTransferGasUSD = 0;
+      let estimatedSweepGasUSD = 0;
       try {
         const networkFee = await getBlockchainNetworkFee(currency);
-        gasDeductionInToken = Number(networkFee.feeInUSD) || 0;
-        // For non-USD stablecoins, feeInUSD is still the right approximation since USDT/USDC ≈ $1
-        console.log(`[settleCryptoTransaction] Token ${currency}: Gas fee ≈ $${gasDeductionInToken.toFixed(4)} USD (deducted from merchant token payout)`);
+        merchantTransferGasUSD = Number(networkFee.feeInUSD) || 0;
+        // Sweep is same type of token transfer on same chain → same gas estimate
+        estimatedSweepGasUSD = merchantTransferGasUSD;
+        console.log(`[settleCryptoTransaction] Token ${currency}: Transfer gas ≈ $${merchantTransferGasUSD.toFixed(4)}, Sweep gas ≈ $${estimatedSweepGasUSD.toFixed(4)} (both deducted from merchant)`);
       } catch (feeErr) {
         // Fallback: convert raw native fee to USD using price lookup
-        // Raw fee is in native currency (e.g., 0.0005 ETH) — must convert to USD, NOT use directly as token amount
         const rawFee = Number(fees?.fast ?? fees?.slow ?? 0);
         try {
           const nativePrices: Record<string, number> = { ETH: 2300, TRX: 0.25, XRP: 2.5, POLYGON: 0.5 };
           const nativePrice = nativePrices[wallet_type] || 1;
-          gasDeductionInToken = rawFee * nativePrice;
-          console.warn(`[settleCryptoTransaction] Token ${currency}: Fallback gas deduction: ${rawFee} ${wallet_type} × $${nativePrice} = $${gasDeductionInToken.toFixed(4)} USD`);
+          merchantTransferGasUSD = rawFee * nativePrice;
+          estimatedSweepGasUSD = merchantTransferGasUSD; // Same chain, same tx type
+          console.warn(`[settleCryptoTransaction] Token ${currency}: Fallback gas: ${rawFee} ${wallet_type} × $${nativePrice} = $${merchantTransferGasUSD.toFixed(4)} per tx (×2 for transfer + sweep)`);
         } catch {
-          gasDeductionInToken = rawFee; // Last resort
+          merchantTransferGasUSD = rawFee;
+          estimatedSweepGasUSD = rawFee;
           console.warn(`[settleCryptoTransaction] Token ${currency}: Using raw native fee ${rawFee} as token deduction (price lookup failed)`);
         }
       }
 
-      merchantSendAmount = Number((Number(userAmount) - gasDeductionInToken).toFixed(6));
+      const totalGasDeductionToken = merchantTransferGasUSD + estimatedSweepGasUSD;
+      merchantSendAmount = Number((Number(userAmount) - totalGasDeductionToken).toFixed(6));
       if (merchantSendAmount <= 0) {
-        throw new Error(`Merchant token amount after gas deduction is non-positive. Amount: ${userAmount}, GasDeduction: ${gasDeductionInToken}`);
+        throw new Error(`Merchant token amount after gas deduction is non-positive. Amount: ${userAmount}, TransferGas: ${merchantTransferGasUSD}, SweepGas: ${estimatedSweepGasUSD}`);
       }
 
-      console.log(`[settleCryptoTransaction] Token ${currency}: Merchant gets ${merchantSendAmount} (was ${userAmount}, gas deduction ${gasDeductionInToken})`);
+      console.log(`[settleCryptoTransaction] Token ${currency}: Merchant gets ${merchantSendAmount} (was ${userAmount}, transfer gas $${merchantTransferGasUSD.toFixed(4)} + sweep gas $${estimatedSweepGasUSD.toFixed(4)} = $${totalGasDeductionToken.toFixed(4)} total)`);
 
       // === SmartGas: Fund gas (TRX/ETH) to temp address BEFORE token transfer ===
       try {
