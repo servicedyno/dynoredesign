@@ -925,7 +925,7 @@ export const sendNewDeviceLoginEmail = async (
   time: string
 ) => {
   try {
-    const subject = "🔔 New login to your Dynopay account";
+    const subject = "New login to your Dynopay account";
     
     // Parse user agent for readable device info
     let deviceInfo = 'Unknown Device';
