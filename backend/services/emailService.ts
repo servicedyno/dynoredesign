@@ -495,39 +495,20 @@ export const sendPaymentLinkCreatedEmail = async (
       // Keep original if URL parsing fails
     }
     
-    const content = `<p class="message">Hey ${name},</p>
-    <p class="message">Your payment link has been created successfully! 🔗</p>
-    <div class="highlight-box">
-      <p><strong>Payment Details:</strong></p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
-        <tr>
-          <td style="padding: 4px 0; color: #666;">Amount:</td>
-          <td style="padding: 4px 0; font-weight: 600; color: #1034a6;">${amount} ${currency}</td>
-        </tr>
-        <tr>
-          <td style="padding: 4px 0; color: #666;">Description:</td>
-          <td style="padding: 4px 0;">${description}</td>
-        </tr>
-        <tr>
-          <td style="padding: 4px 0; color: #666;">Expires:</td>
-          <td style="padding: 4px 0;">${expiresAt || 'Never'}</td>
-        </tr>
-        <tr>
-          <td style="padding: 4px 0; color: #666;">Link:</td>
-          <td style="padding: 4px 0;"><a href="${paymentLink}" style="color: #1034a6; text-decoration: none;">${shortDisplayUrl}</a></td>
-        </tr>
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your payment link has been created successfully.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Amount', `<strong>${amount} ${currency}</strong>`)}
+        ${dataRow('Description', description)}
+        ${dataRow('Expires', expiresAt || 'Never')}
+        ${dataRow('Link', `<a href="${paymentLink}" style="color: #0d1f5c; text-decoration: none;">${shortDisplayUrl}</a>`, true)}
       </table>
-    </div>
-    <p class="message">Share this link with your customer to receive payment. Click the button below to copy the full link.</p>`;
+    `)}
+    ${p(`Share this link with your customer to receive payment.`)}`;
 
     const html = dynoPayEmailTemplate("Payment Link Created", content, true, "Open Payment Link", paymentLink);
-    
-    await mailTransporter({
-      to: email,
-      name,
-      subject,
-      body: html,
-    });
+    await mailTransporter({ to: email, name, subject, body: html });
     
     console.log(`Payment link created email sent to ${email}`);
   } catch (e) {
