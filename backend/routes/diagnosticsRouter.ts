@@ -6,21 +6,92 @@
 import express from "express";
 import * as binanceService from "../services/binanceService";
 import { dynoPayEmailTemplate } from "../helper/sendEmail";
+import { baseEmailTemplate, infoBox, dataRow, statusBadge, p, otpBlock } from "../utils/emailTemplate";
 
 const router = express.Router();
 
 /**
  * GET /diagnostics/email-preview
- * Preview the email template to verify logo rendering
+ * Preview all email template styles in a gallery
  */
-router.get("/email-preview", async (_req: express.Request, res: express.Response) => {
-  const html = dynoPayEmailTemplate(
-    "Test User",
-    "<p>This is a test email to verify the logo renders correctly.</p><p>If you can see the DynoPay logo in the header and footer, the fix is working.</p>",
-    "Email Logo Test"
-  );
+router.get("/email-preview", async (req: express.Request, res: express.Response) => {
+  const template = req.query.template as string || 'payment';
+  
+  const templates: Record<string, () => string> = {
+    payment: () => {
+      const content = `${p(`Hey Richard,`)}
+      ${p(`Great news! Your company <strong>Acme Corp</strong> has received a payment.`)}
+      ${infoBox(`
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${dataRow('Amount', `<strong>0.05 BTC</strong>`)}
+          ${dataRow('Status', statusBadge('Received', 'success'))}
+          ${dataRow('Date', `14 Feb 2026 at 10:30 AM`)}
+          ${dataRow('Transaction ID', `<span style="font-size: 12px; font-family: monospace;">TX-00482</span>`, true)}
+        </table>
+      `, '#22c55e')}
+      ${p(`The funds have been forwarded to your payout wallet. You can view the full transaction details in your dashboard.`)}`;
+      return baseEmailTemplate("Payment Received", content, { showButton: true, buttonText: "View Transaction", buttonLink: "#" });
+    },
+    otp: () => {
+      const content = `${p(`Hey Richard,`)}
+      ${p(`Here's your one-time login code for Dynopay:`)}
+      ${otpBlock('847291')}
+      ${p(`This code expires in 10 minutes. If you didn't request this code, please secure your account immediately.`)}`;
+      return baseEmailTemplate("Your Login Code", content);
+    },
+    security: () => {
+      const content = `${p(`Hey Richard,`)}
+      ${p(`We detected unusual activity on your Dynopay account.`)}
+      ${infoBox(`
+        <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #991b1b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Alert Details</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${dataRow('Type', 'New Login from Unknown Device')}
+          ${dataRow('Date', '14 Feb 2026 at 3:45 PM')}
+          ${dataRow('IP Address', '192.168.1.100', true)}
+        </table>
+      `, '#ef4444')}
+      ${p(`<strong>Was this you?</strong><br />If you recognize this activity, you can ignore this message.`)}
+      ${p(`<strong>Didn't perform this action?</strong><br />Please change your password immediately and contact support.`)}`;
+      return baseEmailTemplate("Security Alert", content, { showButton: true, buttonText: "Secure My Account", buttonLink: "#" });
+    },
+    welcome: () => {
+      const content = `${p(`Hey Richard,`)}
+      ${p(`Welcome to Dynopay! We're excited to have you on board.`)}
+      ${p(`Dynopay makes accepting crypto payments simple, secure, and fast.`)}
+      ${infoBox(`
+        <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #0d1f5c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Here's what you can do next:</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding: 4px 0; font-size: 14px; color: #374151;">1. Complete your company profile</td></tr>
+          <tr><td style="padding: 4px 0; font-size: 14px; color: #374151;">2. Add your payout wallet</td></tr>
+          <tr><td style="padding: 4px 0; font-size: 14px; color: #374151;">3. Start accepting payments</td></tr>
+        </table>
+      `)}`;
+      return baseEmailTemplate("Welcome to Dynopay", content, { showButton: true, buttonText: "Get Started", buttonLink: "#" });
+    },
+    admin: () => {
+      const content = `${p(`Hey Admin,`)}
+      ${p(`Platform fee received from <strong>Acme Corp</strong>.`)}
+      ${infoBox(`
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${dataRow('Platform Fee', `<strong>$15.00 USDT</strong>`)}
+          ${dataRow('Status', statusBadge('Processed', 'success'))}
+          ${dataRow('Merchant Net', '$985.00 USDT')}
+          ${dataRow('Total Processed', '$1,000.00 USDT')}
+          ${dataRow('Company', 'Acme Corp')}
+          ${dataRow('Transaction ID', `<span style="font-size: 12px; font-family: monospace;">TX-00482</span>`, true)}
+        </table>
+      `, '#22c55e')}
+      ${p(`The fee has been credited to the admin USDT wallet.`)}`;
+      return baseEmailTemplate("Platform Fee Received", content);
+    },
+  };
+
+  const names = Object.keys(templates);
+  const nav = names.map(n => `<a href="?template=${n}" style="display:inline-block;padding:8px 16px;margin:4px;background:${n === template ? '#0d1f5c' : '#e5e7eb'};color:${n === template ? '#fff' : '#374151'};border-radius:6px;text-decoration:none;font-size:13px;font-family:sans-serif;">${n}</a>`).join('');
+  
+  const html = (templates[template] || templates.payment)();
   res.setHeader("Content-Type", "text/html");
-  res.send(html);
+  res.send(`<div style="background:#f3f4f6;padding:16px;text-align:center;">${nav}</div>${html}`);
 });
 
 /**
