@@ -286,10 +286,10 @@ const processWithdrawals = async (): Promise<number> => {
       const withdrawalAmount = merchantPayout;
 
       if (withdrawalAmount <= 0) {
-        log(`⚠️ Withdrawal amount too small for conversion #${data.conversion_id}: payout $${merchantPayout}, fee $${withdrawalFeeEstimate}`);
+        log(`Warning: Withdrawal amount too small for conversion #${data.conversion_id}: payout $${merchantPayout}`);
         await record.update({
           status: "FAILED",
-          error_message: `Withdrawal amount ($${withdrawalAmount.toFixed(2)}) too small after fees`,
+          error_message: `Withdrawal amount ($${withdrawalAmount.toFixed(2)}) too small`,
         });
         continue;
       }
