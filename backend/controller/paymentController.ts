@@ -3065,7 +3065,27 @@ const settleCryptoTransaction = async ({
         contractAddress
       );
 
-      merchantSendAmount = Number(userAmount);
+      // Deduct gas cost from merchant's token payout (consistent with UTXO/native chains)
+      // Gas is in native currency (ETH/TRX), so convert to USD equivalent for stablecoin deduction
+      let gasDeductionInToken = 0;
+      try {
+        const networkFee = await getBlockchainNetworkFee(currency);
+        gasDeductionInToken = Number(networkFee.feeInUSD) || 0;
+        // For non-USD stablecoins, feeInUSD is still the right approximation since USDT/USDC ≈ $1
+        console.log(`[settleCryptoTransaction] Token ${currency}: Gas fee ≈ $${gasDeductionInToken.toFixed(4)} USD (deducted from merchant token payout)`);
+      } catch (feeErr) {
+        // Fallback: use the raw native fee estimate as a rough deduction
+        const rawFee = Number(fees?.fast ?? fees?.slow ?? 0);
+        gasDeductionInToken = rawFee;
+        console.warn(`[settleCryptoTransaction] Token ${currency}: Failed to get USD gas fee, using raw estimate ${rawFee} as deduction`);
+      }
+
+      merchantSendAmount = Number((Number(userAmount) - gasDeductionInToken).toFixed(6));
+      if (merchantSendAmount <= 0) {
+        throw new Error(`Merchant token amount after gas deduction is non-positive. Amount: ${userAmount}, GasDeduction: ${gasDeductionInToken}`);
+      }
+
+      console.log(`[settleCryptoTransaction] Token ${currency}: Merchant gets ${merchantSendAmount} (was ${userAmount}, gas deduction ${gasDeductionInToken})`);
 
       // === SmartGas: Fund gas (TRX/ETH) to temp address BEFORE token transfer ===
       try {
