@@ -74,6 +74,7 @@ const processPendingDeposits = async (): Promise<number> => {
 
   for (const record of pending) {
     const data = record.dataValues;
+    log(`[LOOP] Processing conversion #${data.conversion_id}, status=${data.status}, currency=${data.source_currency}`);
     try {
       // Check Binance deposit history for this TX
       const binanceAsset = binanceService.default.toBinanceAsset(data.source_currency);
