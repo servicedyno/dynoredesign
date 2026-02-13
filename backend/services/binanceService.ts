@@ -175,7 +175,7 @@ const makePublicRequest = async (
     const response = await axios.get(url, {
       timeout: 15000,
       headers: { "User-Agent": "Mozilla/5.0 (compatible; DynoPay/1.0)" },
-      ...(proxyAgent ? { httpAgent: proxyAgent, httpsAgent: proxyAgent } : {}),
+      ...(() => { const agent = getEffectiveProxyAgent(); return agent ? { httpAgent: agent, httpsAgent: agent } : {}; })(),
     });
     return response.data;
   } catch (error) {
