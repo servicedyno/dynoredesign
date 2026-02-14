@@ -589,7 +589,7 @@ const getRecentTransactions = async (req: express.Request, res: express.Response
 /**
  * Get all conversion records for the merchant (with optional status filter)
  * GET /api/dashboard/conversions
- * Query params: status (optional), company_id (optional), limit (default 20)
+ * Query params: status (optional), company_id (required for scoping), limit (default 20)
  */
 const getConversions = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
@@ -597,6 +597,16 @@ const getConversions = async (req: express.Request, res: express.Response) => {
   try {
     const { status, company_id, limit = 20 } = req.query;
     const userId = userData.user_id;
+
+    // Validate company ownership when company_id is provided
+    if (company_id) {
+      const company = await companyModel.findOne({
+        where: { company_id, user_id: userId },
+      });
+      if (!company) {
+        return errorResponseHelper(res, 403, "You don't have access to this company's conversions");
+      }
+    }
 
     let whereClause = `sc.user_id = :userId`;
     const replacements: Record<string, unknown> = { userId, limit: parseInt(limit as string) };
