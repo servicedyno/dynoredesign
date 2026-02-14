@@ -107,6 +107,11 @@ const updatePreferences = async (req: express.Request, res: express.Response) =>
       browser_notifications,
     } = req.body;
 
+    if (company_id) {
+      const companyData = await validateCompanyOwnership(res, company_id, userId);
+      if (!companyData) return;
+    }
+
     // Find or create preferences
     let preferences = await notificationPreferencesModel.findOne({
       where: {
