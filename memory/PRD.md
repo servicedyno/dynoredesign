@@ -48,9 +48,11 @@ Full-stack crypto payment gateway (Node.js/TypeScript backend, React frontend, P
 
 ### Conversion Status Tracker (NEW)
 - `GET /api/dashboard/conversions?status=COMPLETED&company_id=38&limit=20` — List with optional filters
-  - Returns: `{ conversions: [..., pipeline_stage], count, status_summary, pipeline_stages }`
-- `GET /api/dashboard/conversions/:id` — Detailed view with timeline & fees
-  - Returns: `{ conversion, timeline: [{stage, label, timestamp, completed, active}], fee_breakdown, is_failed, is_complete }`
+  - **Multi-tenant**: `company_id` validated against user ownership; `company_name` joined in response
+  - Returns: `{ conversions: [..., pipeline_stage, company_name], count, status_summary, pipeline_stages }`
+- `GET /api/dashboard/conversions/:id?company_id=38` — Detailed view with timeline & fees
+  - **Multi-tenant**: `company_id` ownership check; scopes to user's companies only
+  - Returns: `{ conversion (with company_name), timeline: [{stage, label, timestamp, completed, active}], fee_breakdown, is_failed, is_complete }`
 - **Pipeline stages**: `DETECTED → SWEEPING → DEPOSITING → CONVERTING → WITHDRAWING → COMPLETE`
 - **Auth**: Bearer token required (from `POST /api/user/login`)
 
