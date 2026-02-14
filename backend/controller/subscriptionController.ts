@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
 import { planModel } from "../models";
 import subscriptionModel from "../models/apiModels/subscriptionModel";
+import { validateCompanyOwnership } from "../utils/validateCompanyOwnership";
 import { apiLogger } from "../utils/loggers";
 import crypto from "crypto";
 import sequelize from "../utils/dbInstance";
