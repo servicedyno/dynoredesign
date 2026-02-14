@@ -590,7 +590,40 @@ export const processStablecoinConversions = async (): Promise<{
   const summary = { depositsChecked, conversions, withdrawals, completed };
   log(`✅ Cycle complete: ${JSON.stringify(summary)}`);
 
+  // Adaptive fast-polling: if there are active records that need monitoring,
+  // schedule an extra check in 30 seconds instead of waiting for the full cron interval
+  const hasActiveWork = await hasActiveConversions();
+  if (hasActiveWork && (depositsChecked > 0 || conversions > 0 || withdrawals > 0)) {
+    log(`⚡ Active conversions detected — scheduling fast re-check in 30s`);
+    setTimeout(async () => {
+      try {
+        log(`⚡ Fast re-check starting...`);
+        await markExhaustedAsFailed();
+        const d = await processPendingDeposits();
+        const c = await processConversions();
+        const w = await processWithdrawals();
+        const comp = await monitorWithdrawals();
+        log(`⚡ Fast re-check complete: ${JSON.stringify({ depositsChecked: d, conversions: c, withdrawals: w, completed: comp })}`);
+      } catch (err) {
+        logError("Fast re-check failed", err);
+      }
+    }, 30_000);
+  }
+
   return summary;
+};
+
+/**
+ * Check if there are any active conversion records that need processing
+ */
+const hasActiveConversions = async (): Promise<boolean> => {
+  const count = await stablecoinConversionModel.count({
+    where: {
+      status: { [Op.in]: ["PENDING_DEPOSIT", "DEPOSIT_CREDITED", "CONVERTING", "CONVERTED", "WITHDRAWING"] },
+      retry_count: { [Op.lt]: MAX_RETRIES },
+    },
+  });
+  return count > 0;
 };
 
 // ============================================
