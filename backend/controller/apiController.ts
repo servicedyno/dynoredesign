@@ -161,30 +161,14 @@ const addApi = async (req: express.Request, res: express.Response) => {
       );
     }
     
-    const companyExists = await companyModel
-      .findOne({
-        where: {
-          company_id,
-        },
-      })
-      .then((token) => token !== null)
-      .then((isExists) => isExists);
-
-    if (!companyExists) {
-      return errorResponseHelper(res, 404, "Company does not exist!");
-    }
-    
-    const company_data = await companyModel.findOne({
-      where: {
-        company_id,
-      },
-    });
+    const companyData = await validateCompanyOwnership(res, company_id, userData.user_id);
+    if (!companyData) return; // 403 already sent
     
     const createdUser = await customerModel.create({
       id: crypto.randomUUID(),
-      customer_name: company_data.dataValues.company_name + " admin",
-      email: company_data.dataValues.email,
-      mobile: company_data.dataValues.email,
+      customer_name: companyData.company_name + " admin",
+      email: companyData.email,
+      mobile: companyData.email,
       company_id: company_id,
     });
 
