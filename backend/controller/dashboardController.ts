@@ -593,12 +593,8 @@ const getConversions = async (req: express.Request, res: express.Response) => {
 
     // Validate company ownership when company_id is provided
     if (company_id) {
-      const company = await companyModel.findOne({
-        where: { company_id, user_id: userId },
-      });
-      if (!company) {
-        return errorResponseHelper(res, 403, "You don't have access to this company's conversions");
-      }
+      const companyData = await validateCompanyOwnership(res, company_id as string, userId);
+      if (!companyData) return;
     }
 
     let whereClause = `sc.user_id = :userId`;
@@ -722,12 +718,8 @@ const getConversionDetail = async (req: express.Request, res: express.Response) 
 
     // Validate company ownership when company_id is provided
     if (company_id) {
-      const company = await companyModel.findOne({
-        where: { company_id, user_id: userId },
-      });
-      if (!company) {
-        return errorResponseHelper(res, 403, "You don't have access to this company's conversions");
-      }
+      const companyData = await validateCompanyOwnership(res, company_id as string, userId);
+      if (!companyData) return;
     }
 
     let detailWhere = `sc.conversion_id = :id AND sc.user_id = :userId`;
