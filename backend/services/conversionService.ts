@@ -191,8 +191,28 @@ const processConversions = async (): Promise<number> => {
       const result = await binanceService.convertViaLimitIOC(fromAsset, toAsset, sourceAmount);
       const actualSaleUsd = parseFloat(result.toAmount);
       const tradeFeeUsd = actualSaleUsd * 0.001; // Binance 0.1% taker fee (already deducted in fill)
+      const conversionRate = parseFloat(result.avgPrice); // price per 1 source_currency in USDT
 
       log(`✅ ${result.method} executed: order #${result.orderId}, ${result.fromAmount} ${fromAsset} → ${result.toAmount} ${toAsset} (avg price: ${result.avgPrice}, fill: ${result.fillPercent.toFixed(1)}%)`);
+
+      // Calculate sweep gas fee in USD using the actual conversion rate
+      let sweepFeeUsd = 0;
+      try {
+        const sweepRecord = await sequelize.query(
+          `SELECT gas_used FROM tbl_merchant_pool_sweep WHERE sweep_tx_id = $1 LIMIT 1`,
+          { bind: [data.deposit_tx_hash], type: (sequelize as any).constructor.QueryTypes.SELECT }
+        ) as any[];
+        if (sweepRecord.length > 0 && sweepRecord[0].gas_used) {
+          sweepFeeUsd = parseFloat(sweepRecord[0].gas_used) * conversionRate;
+        }
+      } catch (sweepErr) {
+        log(`⚠️ Could not fetch sweep gas for #${data.conversion_id}: ${sweepErr instanceof Error ? sweepErr.message : sweepErr}`);
+      }
+
+      // Calculate platform fee in USD using the actual conversion rate
+      // conversion_fee stores the platform fee crypto amount (set at creation)
+      const platformFeeCrypto = parseFloat(data.conversion_fee || "0");
+      const platformFeeUsd = platformFeeCrypto > 0 ? platformFeeCrypto * conversionRate : 0;
 
       // Payout calculation: locked rate vs actual sale
       const lockedMerchantUsd = parseFloat(data.source_amount_usd || data.locked_merchant_usd || "0");
@@ -215,9 +235,11 @@ const processConversions = async (): Promise<number> => {
         log(`📉 Price dropped ${priceMovementPct.toFixed(2)}%: merchant absorbs, gets $${merchantPayoutPreFees.toFixed(2)}`);
       }
 
+      log(`💰 Fee breakdown for #${data.conversion_id}: platform=$${platformFeeUsd.toFixed(4)}, sweepGas=$${sweepFeeUsd.toFixed(4)}, tradeFee=$${tradeFeeUsd.toFixed(4)}, surplus=$${platformSurplus.toFixed(4)}`);
+
       await record.update({
         binance_order_id: String(result.orderId),
-        conversion_rate: parseFloat(result.avgPrice),
+        conversion_rate: conversionRate,
         target_amount: actualSaleUsd,
         actual_sale_usd: actualSaleUsd,
         platform_surplus: platformSurplus,
@@ -225,6 +247,8 @@ const processConversions = async (): Promise<number> => {
         trade_fee_usd: tradeFeeUsd,
         ioc_fill_percent: result.fillPercent,
         sell_method: result.method,
+        sweep_fee_usd: sweepFeeUsd,
+        conversion_fee: platformFeeUsd, // Update with USD value using actual rate
         merchant_payout_usd: merchantPayoutPreFees, // Will be updated after withdrawal fee deduction
         status: "CONVERTED",
         converted_at: new Date(),
