@@ -24,6 +24,11 @@ const getSubscriptions = async (req: express.Request, res: express.Response) => 
   try {
     const { company_id, status } = req.query;
 
+    if (company_id) {
+      const companyData = await validateCompanyOwnership(res, company_id as string, userData.user_id);
+      if (!companyData) return;
+    }
+
     // Get user's plans first
     const userPlans = await planModel.findAll({
       attributes: ["plan_id"],
