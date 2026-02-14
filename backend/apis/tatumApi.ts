@@ -1569,6 +1569,7 @@ const assetToOtherAddress = async ({
       tokenAddress: process.env.TRX_CONTRACT,
     });
   } else if (currency === "BSC") {
+    console.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for BSC transfer. For sweeps, use directEvmSweep().`);
     transaction = await tatumSdk.blockchain.bsc.bscBlockchainTransfer({
       currency,
       amount: Number(amount).toFixed(8).toString(),
