@@ -625,6 +625,7 @@ const getConversions = async (req: express.Request, res: express.Response) => {
         sc.conversion_id,
         sc.transaction_id,
         sc.company_id,
+        co.company_name,
         sc.source_currency,
         sc.source_amount,
         sc.source_amount_usd,
@@ -656,6 +657,7 @@ const getConversions = async (req: express.Request, res: express.Response) => {
         sc.withdrawn_at,
         sc.completed_at
        FROM tbl_stablecoin_conversion sc
+       LEFT JOIN tbl_company co ON sc.company_id = co.company_id
        WHERE ${whereClause}
        ORDER BY sc."createdAt" DESC
        LIMIT :limit`,
