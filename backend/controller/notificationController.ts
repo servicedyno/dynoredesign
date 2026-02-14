@@ -178,6 +178,11 @@ const getNotifications = async (req: express.Request, res: express.Response) => 
     const userId = userData.user_id;
     const offset = (Number(page) - 1) * Number(limit);
 
+    if (company_id) {
+      const companyData = await validateCompanyOwnership(res, company_id as string, userId);
+      if (!companyData) return;
+    }
+
     // Build where clause
     const where: Record<string, unknown> = { user_id: userId };
     if (company_id) where.company_id = company_id;
