@@ -1680,6 +1680,7 @@ const assetToOtherAddress = async ({
       } : undefined,
     });
   } else if (currency === "USDT-POLYGON") {
+    console.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for USDT-POLYGON transfer. For sweeps, use directEvmSweep().`);
     // USDT on Polygon — use contract-address-based smart contract invocation
     // This is more reliable than currency-name-based transfer (no dependency on SDK naming)
     const usdtPolygonContract = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
