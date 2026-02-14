@@ -4213,6 +4213,9 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
                 settlementChain: autoConvertSettlementChain,
                 depositTxHash: adminTransferResult.transactionDetails?.txId || undefined,
                 adminWalletAddress: adminWalletAddr,
+                platformFeeUsd: platformFeeUsdForConversion,
+                platformFeeCrypto: adminFeeForConversion,
+                totalReceivedCrypto: Number(totalAmountReceived),
               });
             }
 
