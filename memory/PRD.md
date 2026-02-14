@@ -68,8 +68,14 @@ Full-stack crypto payment gateway (Node.js/TypeScript backend, React frontend, P
 - `GET /api/dashboard/recent-transactions` — Recent transactions
 
 ## Key Files Modified (Session 4)
-- `backend/controller/dashboardController.ts` — Added `getConversions` and `getConversionDetail` handlers
+- `backend/utils/validateCompanyOwnership.ts` — **NEW** shared multi-tenant ownership validator
+- `backend/controller/dashboardController.ts` — Added `getConversions`/`getConversionDetail` + refactored to shared validator
+- `backend/controller/apiController.ts` — **CRITICAL**: Fixed addApi ownership check + getApi validation
+- `backend/controller/walletController.ts` — Added ownership validation to getWallet
+- `backend/controller/notificationController.ts` — Added ownership validation to 5 endpoints
+- `backend/controller/subscriptionController.ts` — Added ownership validation to getSubscriptions
 - `backend/routes/dashboardRouter.ts` — Added `/conversions` and `/conversions/:id` routes
+- `backend/swagger/paths/dashboard.ts` — Added OpenAPI specs for conversion tracker endpoints
 - `backend/services/merchantPool/merchantPoolSweep.ts` — Gas funding now uses `directEvmSweep` for EVM chains
 - `backend/apis/tatumApi.ts` — Deprecation warnings on EVM branches of `assetToOtherAddress`
 
