@@ -585,6 +585,10 @@ export const createConversionRecord = async ({
   settlementChain,
   depositTxHash,
   adminWalletAddress,
+  platformFeeUsd,
+  platformFeeCrypto,
+  totalReceivedCrypto,
+  sweepGasCrypto,
 }: {
   transactionId: number;
   companyId: number;
@@ -597,6 +601,10 @@ export const createConversionRecord = async ({
   settlementChain: string;
   depositTxHash?: string;
   adminWalletAddress: string;
+  platformFeeUsd?: number;
+  platformFeeCrypto?: number;
+  totalReceivedCrypto?: number;
+  sweepGasCrypto?: number;
 }): Promise<unknown> => {
   const record = await stablecoinConversionModel.create({
     transaction_id: transactionId,
@@ -611,9 +619,12 @@ export const createConversionRecord = async ({
     deposit_tx_hash: depositTxHash,
     admin_wallet_address: adminWalletAddress,
     status: "PENDING_DEPOSIT",
+    conversion_fee: platformFeeUsd || null,
+    sweep_fee_usd: null, // Will be populated after sweep with actual gas cost in USD
   });
 
-  log(`📝 Created conversion record #${record.dataValues.conversion_id}: ${sourceAmount} ${sourceCurrency} → ${targetCurrency} for company ${companyId}`);
+  // Store fee metadata in a separate log for email use later
+  log(`📝 Created conversion record #${record.dataValues.conversion_id}: ${sourceAmount} ${sourceCurrency} → ${targetCurrency} for company ${companyId} (platformFee: $${platformFeeUsd?.toFixed(4) || '0'}, sweepGas: ${sweepGasCrypto?.toFixed(8) || '0'} ${sourceCurrency})`);
   return record;
 };
 
