@@ -1596,10 +1596,17 @@ const assetToOtherAddress = async ({
     const ltcOutputs = toUTXO.length > 0
       ? toUTXO.map((o: any) => ({ address: o.address, value: Number(Number(o.value).toFixed(8)) }))
       : [{ address: toAddress, value: Number(Number(amount).toFixed(8)) }];
+    // UTXO chains: fee should be a simple string like "0.00002446", not the full {slow,medium,fast} object
+    const ltcFee = typeof fee === 'object' && fee !== null
+      ? (fee.slow || fee.medium || fee.fast || "0.00005")
+      : fee;
+    // Ensure max 8 decimal places
+    const ltcFeeStr = typeof ltcFee === 'string' ? ltcFee : String(Number(ltcFee).toFixed(8));
+    console.log(`[assetToOtherAddress] LTC fee: ${JSON.stringify(fee)} → resolved: ${ltcFeeStr}`);
     transaction = await tatumSdk.blockchain.ltc.ltcTransferBlockchain({
       fromAddress: [{ address: fromAddress, privateKey }],
       to: ltcOutputs,
-      fee,
+      fee: ltcFeeStr,
       changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
   } else if (currency === "BCH") {
