@@ -21,4 +21,11 @@ dashboardRouter.get("/fee-tiers", dashboardController.getFeeTiers);
 // Query params: limit (default 10), company_id
 dashboardRouter.get("/recent-transactions", dashboardController.getRecentTransactions);
 
+// GET /api/dashboard/conversions - Get conversion status tracker
+// Query params: status (optional), company_id (optional), limit (default 20)
+dashboardRouter.get("/conversions", dashboardController.getConversions);
+
+// GET /api/dashboard/conversions/:id - Get single conversion detail with timeline
+dashboardRouter.get("/conversions/:id", dashboardController.getConversionDetail);
+
 export default dashboardRouter;
