@@ -166,19 +166,12 @@ const acquireLock = async (
       EX: ttlSeconds
     });
     
-    console.log(`[Lock] SET NX result for ${lockKey}: '${result}' (type: ${typeof result}), attempt ${attempt + 1}/${maxRetries}`);
-    
     if (result === 'OK') {
       // Store lockValue so releaseLock can verify ownership
       lockOwners.set(fullKey, lockValue);
       console.log(`[Lock] Acquired: ${lockKey}`);
       return true;
     }
-    
-    // Check what's blocking us
-    const existing = await redisClient.get(fullKey);
-    const existingTtl = await redisClient.ttl(fullKey);
-    console.log(`[Lock] Blocked by existing lock: key=${fullKey}, value='${existing}', ttl=${existingTtl}`);
     
     // Wait before retry
     if (attempt < maxRetries - 1) {
