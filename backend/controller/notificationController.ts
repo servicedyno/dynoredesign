@@ -225,6 +225,11 @@ const getUnreadCount = async (req: express.Request, res: express.Response) => {
     const { company_id } = req.query;
     const userId = userData.user_id;
 
+    if (company_id) {
+      const companyData = await validateCompanyOwnership(res, company_id as string, userId);
+      if (!companyData) return;
+    }
+
     const where: Record<string, unknown> = { user_id: userId, is_read: false };
     if (company_id) where.company_id = company_id;
 
