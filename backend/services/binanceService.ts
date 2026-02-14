@@ -42,6 +42,8 @@ const proxyAgent = getBinanceProxyAgent();
 
 /** Whether the proxy is actually needed (determined by detectBinanceAccess) */
 let proxyNeeded: boolean | null = null; // null = not yet detected
+/** Track if proxy detection failed so we can retry when tunnel comes up */
+let proxyDetectionFailed = false;
 
 /**
  * Get the effective proxy agent: returns the agent only if proxy is actually needed.
@@ -54,10 +56,12 @@ export const getEffectiveProxyAgent = (): SocksProxyAgent | undefined => {
 
 /**
  * Auto-detect whether Binance API is directly accessible from this server.
- * Runs once on startup. Result is cached for the lifetime of the process.
+ * Re-detects if the previous detection failed (e.g., proxy tunnel was down at startup).
+ * Caches permanently once proxy is confirmed working or direct access succeeds.
  */
 export const detectBinanceAccess = async (): Promise<void> => {
-  if (proxyNeeded !== null) return; // Already detected
+  // Skip if already successfully detected (direct access or proxy working)
+  if (proxyNeeded !== null && !proxyDetectionFailed) return;
 
   const directUrl = `${BINANCE_BASE_URL}/api/v3/ping`;
   try {
@@ -68,6 +72,7 @@ export const detectBinanceAccess = async (): Promise<void> => {
       // Explicitly NO proxy agent
     });
     proxyNeeded = false;
+    proxyDetectionFailed = false;
     console.log(`[Binance] ✅ Direct access OK — non-US deployment detected. Proxy DISABLED (lower latency).`);
   } catch (err) {
     const axiosErr = err as AxiosError;
@@ -84,19 +89,23 @@ export const detectBinanceAccess = async (): Promise<void> => {
             httpsAgent: proxyAgent,
           });
           proxyNeeded = true;
+          proxyDetectionFailed = false;
           console.log(`[Binance] 🌍 Geo-blocked (HTTP ${status}) — US deployment detected. Proxy ENABLED: ${BINANCE_PROXY_URL}`);
         } catch (proxyErr) {
           proxyNeeded = false;
-          console.warn(`[Binance] 🌍 Geo-blocked but proxy also failed. Proxy DISABLED. Will use REST fallbacks.`);
+          proxyDetectionFailed = true; // Allow retry — tunnel may come up later
+          console.warn(`[Binance] 🌍 Geo-blocked but proxy also failed. Proxy DISABLED (will retry next cycle).`);
         }
       } else {
         proxyNeeded = false;
+        proxyDetectionFailed = false; // No proxy configured, no point retrying
         console.warn(`[Binance] 🌍 Geo-blocked (HTTP ${status}) but no proxy configured. Will use REST fallbacks.`);
       }
     } else {
       // Network error or other issue — try without proxy first
       proxyNeeded = false;
-      console.warn(`[Binance] ⚠️ Direct ping failed (${axiosErr.message}), defaulting to no proxy. Will retry detection on next connect.`);
+      proxyDetectionFailed = true; // Allow retry
+      console.warn(`[Binance] ⚠️ Direct ping failed (${axiosErr.message}), defaulting to no proxy. Will retry detection on next cycle.`);
     }
   }
 };
