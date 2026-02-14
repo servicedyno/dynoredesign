@@ -8,6 +8,7 @@ import {
 } from "../helper";
 import { IUserType } from "../utils/types";
 import { notificationModel, notificationPreferencesModel } from "../models";
+import { validateCompanyOwnership } from "../utils/validateCompanyOwnership";
 // sequelize import removed - not used
 import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 
