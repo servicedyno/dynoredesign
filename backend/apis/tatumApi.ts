@@ -1488,10 +1488,15 @@ const assetToOtherAddress = async ({
     const btcOutputs = toUTXO.length > 0
       ? toUTXO.map((o: any) => ({ address: o.address, value: Number(Number(o.value).toFixed(8)) }))
       : [{ address: toAddress, value: Number(Number(amount).toFixed(8)) }];
+    // UTXO chains: fee should be a simple string, not the full {slow,medium,fast} object
+    const btcFee = typeof fee === 'object' && fee !== null
+      ? (fee.slow || fee.medium || fee.fast || "0.00005")
+      : fee;
+    const btcFeeStr = typeof btcFee === 'string' ? btcFee : String(Number(btcFee).toFixed(8));
     transaction = await tatumSdk.blockchain.bitcoin.btcTransferBlockchain({
       fromAddress: [{ address: fromAddress, privateKey }],
       to: btcOutputs,
-      fee,
+      fee: btcFeeStr,
       changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
   } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20") {
