@@ -1590,10 +1590,15 @@ const assetToOtherAddress = async ({
     const dogeOutputs = toUTXO.length > 0
       ? toUTXO.map((o: any) => ({ address: o.address, value: Number(Number(o.value).toFixed(8)) }))
       : [{ address: toAddress, value: Number(Number(amount).toFixed(8)) }];
+    // UTXO chains: fee should be a simple string, not the full {slow,medium,fast} object
+    const dogeFee = typeof fee === 'object' && fee !== null
+      ? (fee.slow || fee.medium || fee.fast || "0.00100")
+      : fee;
+    const dogeFeeStr = typeof dogeFee === 'string' ? dogeFee : String(Number(dogeFee).toFixed(8));
     transaction = await tatumSdk.blockchain.doge.dogeTransferBlockchain({
       fromAddress: [{ address: fromAddress, privateKey }],
       to: dogeOutputs,
-      fee,
+      fee: dogeFeeStr,
       changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
   } else if (currency === "LTC") {
