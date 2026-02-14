@@ -434,26 +434,31 @@ const monitorWithdrawals = async (): Promise<number> => {
       });
 
       const match = history.find((w) => w.id === data.withdrawal_id);
-      if (!match) continue;
+      if (!match) {
+        log(`[DEBUG] Withdrawal ${data.withdrawal_id} not found in Binance history yet for #${data.conversion_id}`);
+        continue;
+      }
 
       if (match.status === 6) {
-        // Completed - record actual fee and calculate net payout
-        const actualFee = parseFloat(match.transactionFee);
+        // Completed — calculate actual net payout after Binance withdrawal fee
+        const actualFee = parseFloat(match.transactionFee || "0");
         const submittedAmount = parseFloat(data.merchant_payout_usd || data.target_amount || "0");
         const netPayout = submittedAmount - actualFee;
-        log(`🎉 Withdrawal complete for conversion #${data.conversion_id}: TX ${match.txId} (submitted: $${submittedAmount.toFixed(2)}, fee: $${actualFee.toFixed(2)}, net: $${netPayout.toFixed(2)})`);
+        
+        log(`🎉 Withdrawal complete for conversion #${data.conversion_id}: TX ${match.txId} (submitted: $${submittedAmount.toFixed(2)}, binanceFee: $${actualFee.toFixed(2)}, net: $${netPayout.toFixed(2)})`);
+        
         await record.update({
           status: "COMPLETED",
           withdrawal_tx_hash: match.txId,
           withdrawal_fee: actualFee,
-          merchant_payout_usd: netPayout, // Actual amount merchant received
+          merchant_payout_usd: netPayout, // Actual amount merchant received after all fees
           completed_at: new Date(),
         });
         completed++;
 
-        // Send auto-conversion payout email to merchant
+        // Send auto-conversion payout email to merchant with full fee breakdown
         try {
-          await sendConversionPayoutNotification(data, match.txId);
+          await sendConversionPayoutNotification(data, match.txId, actualFee, netPayout);
         } catch (emailErr) {
           logError(`Failed to send payout email for conversion #${data.conversion_id}`, emailErr);
         }
@@ -465,6 +470,8 @@ const monitorWithdrawals = async (): Promise<number> => {
           retry_count: data.retry_count + 1,
           error_message: `Withdrawal status: ${match.status}`,
         });
+      } else {
+        log(`[DEBUG] Withdrawal #${data.conversion_id} still processing (Binance status: ${match.status})`);
       }
       // status 0,2,4 = still processing, wait
     } catch (err) {
