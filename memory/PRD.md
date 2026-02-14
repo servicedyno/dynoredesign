@@ -43,6 +43,11 @@ Full-stack crypto payment gateway (Node.js/TypeScript backend, React frontend, P
   - `GET /api/dashboard/conversions` — List conversions with `pipeline_stage` field, status filter, status summary counts
   - `GET /api/dashboard/conversions/:id` — Single conversion detail with timeline (Detected → Sweeping → Depositing → Converting → Withdrawing → Complete), fee breakdown, error info
 - **Pipeline stages enum** returned in list response for frontend rendering reference
+- **Multi-tenant security audit & fix**: Created shared `validateCompanyOwnership` utility and applied to 8 endpoints:
+  - **CRITICAL FIX**: `apiController.addApi` — was only checking company existence, not ownership. Fixed to validate user owns the company before creating API keys.
+  - `apiController.getApi`, `walletController.getWallet`, `notificationController` (5 endpoints), `subscriptionController.getSubscriptions` — added ownership validation
+  - `dashboardController` (getDashboard, getConversions, getConversionDetail) — refactored to use shared utility
+- **Swagger API docs updated**: Added full OpenAPI specs for both new conversion tracker endpoints with schemas, examples, and multi-tenant notes
 
 ## Key API Endpoints
 
