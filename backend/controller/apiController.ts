@@ -281,6 +281,8 @@ const getApi = async (req: express.Request, res: express.Response) => {
     }
     
     if (company_id) {
+      const companyData = await validateCompanyOwnership(res, company_id as string, userData.user_id);
+      if (!companyData) return; // 403 already sent
       whereClause += ` AND a.company_id = :company_id`;
       replacements.company_id = company_id;
     }
