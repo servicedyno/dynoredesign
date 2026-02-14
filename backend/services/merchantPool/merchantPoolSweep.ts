@@ -372,7 +372,15 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       }
       throw balanceError;
     }
-    let actualBalance = parseFloat(balanceData?.balance || "0");
+    // UTXO chains (BTC, LTC, DOGE, BCH) return {incoming, outgoing} not {balance}
+    // Account-based chains (ETH, TRX, XRP, SOL, POLYGON) return {balance}
+    let actualBalance: number;
+    if (balanceData?.incoming !== undefined && balanceData?.outgoing !== undefined) {
+      actualBalance = parseFloat(balanceData.incoming || "0") - parseFloat(balanceData.outgoing || "0");
+      console.log(`[MerchantPool] UTXO balance: incoming=${balanceData.incoming}, outgoing=${balanceData.outgoing}, net=${actualBalance}`);
+    } else {
+      actualBalance = parseFloat(balanceData?.balance || "0");
+    }
 
     if (actualBalance <= 0) {
       await poolAddress.update({
