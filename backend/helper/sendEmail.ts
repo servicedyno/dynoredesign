@@ -941,6 +941,55 @@ const sendAutoConversionPayoutEmail = async (
       ${savingsBlock}
       ${priceUpBlock}
 
+      <!-- Fee Breakdown -->
+      ${hasDetailedFees ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+        <tr>
+          <td style="padding: 20px; background: #faf9f7; border-radius: 8px; border-left: 4px solid #e5a100;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="font-size: 13px; font-weight: 600; color: #78716c; font-family: 'Inter', Arial, sans-serif; padding-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                  Fee Breakdown
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family: 'Inter', Arial, sans-serif; font-size: 13px;">
+                    <tr style="color: #6b7280;">
+                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Gross Conversion</td>
+                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #1a1a2e; font-weight: 500;">$${grossSaleUsd.toFixed(2)} ${targetCurrency}</td>
+                    </tr>
+                    ${platformFeeUsd > 0 ? `<tr style="color: #6b7280;">
+                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Platform Fee (1.5%)</td>
+                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #dc2626;">-$${platformFeeUsd.toFixed(4)}</td>
+                    </tr>` : ''}
+                    ${sweepGasFeeUsd > 0 ? `<tr style="color: #6b7280;">
+                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Network Gas Fee (sweep)</td>
+                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #dc2626;">-$${sweepGasFeeUsd.toFixed(4)}</td>
+                    </tr>` : ''}
+                    ${tradeFeeUsd > 0 ? `<tr style="color: #6b7280;">
+                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Exchange Fee (0.1%)</td>
+                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #dc2626;">-$${tradeFeeUsd.toFixed(4)}</td>
+                    </tr>` : ''}
+                    ${binanceWithdrawalFeeUsd > 0 ? `<tr style="color: #6b7280;">
+                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Withdrawal Fee (on-chain)</td>
+                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #dc2626;">-$${binanceWithdrawalFeeUsd.toFixed(4)}</td>
+                    </tr>` : `<tr style="color: #6b7280;">
+                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Withdrawal Fee</td>
+                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #166534;">$0.00 (off-chain)</td>
+                    </tr>`}
+                    <tr>
+                      <td style="padding: 10px 0 0; font-weight: 700; color: #1a1a2e; font-size: 14px;">Net Payout</td>
+                      <td style="padding: 10px 0 0; text-align: right; font-weight: 700; color: #15803d; font-size: 14px;">${payoutAmount} ${targetCurrency}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>` : ''}
+
       <!-- Conversion Details -->
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6; margin: 0 0 24px 0;">
         <tr><td style="padding: 20px;">
