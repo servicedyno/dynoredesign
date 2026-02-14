@@ -358,7 +358,7 @@ const processWithdrawals = async (): Promise<number> => {
 // Helper: Send Payout Notification Email
 // ============================================
 
-const sendConversionPayoutNotification = async (data: any, withdrawalTxHash: string) => {
+const sendConversionPayoutNotification = async (data: any, withdrawalTxHash: string, binanceWithdrawalFee: number = 0, netPayout: number = 0) => {
   // Fetch merchant user and company info
   const user: any = await userModel.findOne({ where: { user_id: data.user_id }, raw: true });
   const company: any = await companyModel.findOne({ where: { company_id: data.company_id }, raw: true });
@@ -381,6 +381,20 @@ const sendConversionPayoutNotification = async (data: any, withdrawalTxHash: str
 
   const priceAtConversion = parseFloat(data.conversion_rate || "0");
 
+  // Fetch full conversion record for accurate fee data
+  const fullRecord: any = await stablecoinConversionModel.findOne({
+    where: { conversion_id: data.conversion_id },
+    raw: true,
+  });
+
+  // Calculate total received in crypto (merchant + platform fee)
+  const sourceAmountCrypto = parseFloat(data.source_amount || "0");
+  const platformFeeUsd = parseFloat(fullRecord?.conversion_fee || "0");
+  const sweepGasFeeUsd = parseFloat(fullRecord?.sweep_fee_usd || "0");
+  const tradeFeeUsd = parseFloat(fullRecord?.trade_fee_usd || "0");
+  const grossSaleUsd = parseFloat(fullRecord?.actual_sale_usd || data.target_amount || "0");
+  const totalReceivedUsd = grossSaleUsd + platformFeeUsd + sweepGasFeeUsd;
+
   await sendAutoConversionPayoutEmail(
     user.email,
     user.name || "Merchant",
@@ -390,7 +404,7 @@ const sendConversionPayoutNotification = async (data: any, withdrawalTxHash: str
       sourceAmount: parseFloat(data.source_amount).toString(),
       sourceAmountUsd: data.source_amount_usd || data.locked_merchant_usd || "0",
       targetCurrency: data.target_currency,
-      payoutAmount: parseFloat(data.merchant_payout_usd || data.target_amount || "0").toFixed(2),
+      payoutAmount: netPayout > 0 ? netPayout.toFixed(2) : parseFloat(data.merchant_payout_usd || data.target_amount || "0").toFixed(2),
       conversionRate: priceAtConversion.toString(),
       priceAtConversion,
       currentPrice,
@@ -400,10 +414,17 @@ const sendConversionPayoutNotification = async (data: any, withdrawalTxHash: str
       transactionId: String(data.transaction_id),
       conversionId: String(data.conversion_id),
       withdrawalTxHash,
+      // Fee breakdown
+      platformFeeUsd,
+      sweepGasFeeUsd,
+      tradeFeeUsd,
+      binanceWithdrawalFeeUsd: binanceWithdrawalFee,
+      grossSaleUsd,
+      totalReceivedUsd,
     }
   );
 
-  log(`📧 Payout email sent to ${user.email} for conversion #${data.conversion_id}`);
+  log(`📧 Payout email sent to ${user.email} for conversion #${data.conversion_id} (net: $${netPayout.toFixed(2)})`);
 };
 
 // ============================================
