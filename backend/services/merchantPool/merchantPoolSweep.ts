@@ -452,9 +452,26 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     console.log(`[MerchantPool] ✅ Sweep is profitable: $${profitabilityResult.balanceUSD?.toFixed(2)} balance vs $${profitabilityResult.feeUSD?.toFixed(2)} fee`);
 
     const isAccountChain = ACCOUNT_CHAINS.includes(walletType);
+    const isUTXOChain = ["BTC", "LTC", "DOGE", "BCH"].includes(walletType);
     let amountToSend = actualBalance;
     
-    if (isAccountChain) {
+    if (isUTXOChain) {
+      // UTXO chains: fee is separate from amount but must fit within total balance
+      // amountToSend + fee = actualBalance → amountToSend = actualBalance - fee
+      const utxoFee = typeof feeData === 'object' && feeData !== null
+        ? parseFloat(feeData.slow || feeData.medium || feeData.fast || "0.00005")
+        : parseFloat(feeData || "0.00005");
+      amountToSend = actualBalance - utxoFee;
+      // Round down to 8 decimal places (UTXO precision)
+      amountToSend = Math.floor(amountToSend * 100000000) / 100000000;
+      
+      if (amountToSend <= 0) {
+        console.warn(`[MerchantPool] ⚠️ UTXO balance too low after fee: ${actualBalance} - ${utxoFee} = ${amountToSend}`);
+        await poolAddress.update({ status: "AVAILABLE" });
+        return { success: false, skipped: true, reason: "Balance too low after UTXO fee" };
+      }
+      console.log(`[MerchantPool] UTXO chain sweep: ${actualBalance} - ${utxoFee} (fee) = ${amountToSend} ${walletType}`);
+    } else if (isAccountChain) {
       const gasFee = parseFloat(feeData?.slow || feeData?.fast || "0");
       
       // XRP Ledger reserves (updated Dec 2, 2024 — validator vote reduced reserves 10x):
