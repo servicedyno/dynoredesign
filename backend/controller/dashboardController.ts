@@ -717,20 +717,40 @@ const getConversions = async (req: express.Request, res: express.Response) => {
 /**
  * Get single conversion with detailed timeline
  * GET /api/dashboard/conversions/:id
+ * Query params: company_id (optional, for ownership validation)
  */
 const getConversionDetail = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   
   try {
     const { id } = req.params;
+    const { company_id } = req.query;
     const userId = userData.user_id;
 
+    // Validate company ownership when company_id is provided
+    if (company_id) {
+      const company = await companyModel.findOne({
+        where: { company_id, user_id: userId },
+      });
+      if (!company) {
+        return errorResponseHelper(res, 403, "You don't have access to this company's conversions");
+      }
+    }
+
+    let detailWhere = `sc.conversion_id = :id AND sc.user_id = :userId`;
+    const detailReplacements: Record<string, unknown> = { id, userId };
+    if (company_id) {
+      detailWhere += ` AND sc.company_id = :companyId`;
+      detailReplacements.companyId = company_id;
+    }
+
     const conversions = await sequelize.query(
-      `SELECT sc.*
+      `SELECT sc.*, co.company_name
        FROM tbl_stablecoin_conversion sc
-       WHERE sc.conversion_id = :id AND sc.user_id = :userId`,
+       LEFT JOIN tbl_company co ON sc.company_id = co.company_id
+       WHERE ${detailWhere}`,
       {
-        replacements: { id, userId },
+        replacements: detailReplacements,
         type: QueryTypes.SELECT,
       }
     ) as Array<Record<string, unknown>>;
