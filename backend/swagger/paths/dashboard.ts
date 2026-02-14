@@ -137,7 +137,8 @@ export const dashboardPaths = {
       summary: 'Get recent transactions',
       description: `Retrieve the most recent transactions for the dashboard overview.
 
-**Authentication:** Requires JWT token (Bearer Auth).`,
+**Authentication:** Requires JWT token (Bearer Auth).
+**Multi-Tenant:** company_id is validated against user ownership.`,
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -174,6 +175,199 @@ export const dashboardPaths = {
           }
         },
         401: { description: 'Unauthorized' }
+      }
+    }
+  },
+
+  '/api/dashboard/conversions': {
+    get: {
+      tags: ['Conversion Tracker'],
+      summary: 'List conversion records',
+      description: `Retrieve crypto-to-stablecoin conversion records with pipeline status. Each conversion tracks the full lifecycle: Detected → Sweeping → Depositing → Converting → Withdrawing → Complete.
+
+**Multi-Tenant:** Requires \`company_id\` for proper scoping. Validates ownership — returns 403 if the company doesn't belong to the authenticated user.
+**Authentication:** Requires JWT token (Bearer Auth).`,
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'company_id',
+          schema: { type: 'integer' },
+          description: 'Scope to a specific company (validated against user ownership)',
+          example: 38
+        },
+        {
+          in: 'query',
+          name: 'status',
+          schema: { type: 'string', enum: ['PENDING_DEPOSIT', 'DEPOSIT_CREDITED', 'CONVERTING', 'CONVERTED', 'WITHDRAWING', 'COMPLETED', 'FAILED'] },
+          description: 'Filter by conversion status',
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
+          description: 'Number of records to return',
+          example: 20
+        }
+      ],
+      responses: {
+        200: {
+          description: 'Conversions retrieved successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Conversions retrieved successfully' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      conversions: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            conversion_id: { type: 'integer', example: 11 },
+                            transaction_id: { type: 'integer', example: 1404 },
+                            company_id: { type: 'integer', example: 38 },
+                            company_name: { type: 'string', example: 'Bozzmail' },
+                            source_currency: { type: 'string', example: 'ETH' },
+                            source_amount: { type: 'string', example: '0.005650' },
+                            source_amount_usd: { type: 'string', example: '10.00' },
+                            target_currency: { type: 'string', example: 'USDT' },
+                            target_amount: { type: 'string', example: '9.98' },
+                            status: { type: 'string', example: 'COMPLETED' },
+                            pipeline_stage: {
+                              type: 'string',
+                              enum: ['DETECTED', 'SWEEPING', 'DEPOSITING', 'CONVERTING', 'WITHDRAWING', 'COMPLETE', 'FAILED'],
+                              example: 'COMPLETE',
+                              description: 'User-facing pipeline stage mapped from internal status'
+                            },
+                            merchant_payout_usd: { type: 'string', example: '9.41' },
+                            conversion_fee: { type: 'string', example: '0.15', description: 'Platform fee (1.5%) in USD' },
+                            sweep_fee_usd: { type: 'string', example: '0.30', description: 'On-chain gas fee in USD' },
+                            withdrawal_fee: { type: 'string', example: '0.10', description: 'Exchange withdrawal fee in USD' },
+                            error_message: { type: 'string', nullable: true },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            deposit_confirmed_at: { type: 'string', format: 'date-time', nullable: true },
+                            converted_at: { type: 'string', format: 'date-time', nullable: true },
+                            withdrawn_at: { type: 'string', format: 'date-time', nullable: true },
+                            completed_at: { type: 'string', format: 'date-time', nullable: true },
+                          }
+                        }
+                      },
+                      count: { type: 'integer', example: 5 },
+                      status_summary: {
+                        type: 'object',
+                        description: 'Count of conversions per status',
+                        example: { COMPLETED: 5, FAILED: 2, PENDING_DEPOSIT: 1 }
+                      },
+                      pipeline_stages: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        example: ['DETECTED', 'SWEEPING', 'DEPOSITING', 'CONVERTING', 'WITHDRAWING', 'COMPLETE'],
+                        description: 'Ordered pipeline stages for frontend rendering'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized - Invalid or missing JWT token' },
+        403: { description: 'Forbidden - Company does not belong to the authenticated user' }
+      }
+    }
+  },
+
+  '/api/dashboard/conversions/{id}': {
+    get: {
+      tags: ['Conversion Tracker'],
+      summary: 'Get conversion detail with timeline',
+      description: `Retrieve a single conversion record with a detailed timeline and fee breakdown. The timeline maps the conversion through 6 stages: **Detected → Sweeping → Depositing → Converting → Withdrawing → Complete**.
+
+**Multi-Tenant:** Optionally pass \`company_id\` for ownership validation. The conversion must belong to the authenticated user.
+**Authentication:** Requires JWT token (Bearer Auth).`,
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: { type: 'integer' },
+          description: 'Conversion ID',
+          example: 11
+        },
+        {
+          in: 'query',
+          name: 'company_id',
+          schema: { type: 'integer' },
+          description: 'Company ID for ownership validation (optional but recommended)',
+          example: 38
+        }
+      ],
+      responses: {
+        200: {
+          description: 'Conversion detail retrieved',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string', example: 'Conversion detail retrieved' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      conversion: {
+                        type: 'object',
+                        description: 'Full conversion record including all fields from the list endpoint plus company_name',
+                      },
+                      timeline: {
+                        type: 'array',
+                        description: 'Ordered pipeline stages with completion status',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            stage: { type: 'string', example: 'DETECTED' },
+                            label: { type: 'string', example: 'Detected' },
+                            timestamp: { type: 'string', format: 'date-time', nullable: true },
+                            completed: { type: 'boolean', example: true },
+                            active: { type: 'boolean', example: false, description: 'True for the current stage only' },
+                          }
+                        },
+                        example: [
+                          { stage: 'DETECTED', label: 'Detected', timestamp: '2026-02-14T11:00:00Z', completed: true, active: false },
+                          { stage: 'SWEEPING', label: 'Sweeping', timestamp: '2026-02-14T11:00:00Z', completed: true, active: false },
+                          { stage: 'DEPOSITING', label: 'Depositing', timestamp: '2026-02-14T11:05:00Z', completed: true, active: false },
+                          { stage: 'CONVERTING', label: 'Converting', timestamp: '2026-02-14T11:10:00Z', completed: true, active: false },
+                          { stage: 'WITHDRAWING', label: 'Withdrawing', timestamp: '2026-02-14T11:15:00Z', completed: true, active: false },
+                          { stage: 'COMPLETE', label: 'Complete', timestamp: '2026-02-14T11:20:00Z', completed: true, active: true },
+                        ]
+                      },
+                      fee_breakdown: {
+                        type: 'object',
+                        properties: {
+                          platform_fee_usd: { type: 'number', example: 0.15, description: '1.5% platform fee' },
+                          sweep_gas_fee_usd: { type: 'number', example: 0.30, description: 'On-chain gas cost' },
+                          trade_fee_usd: { type: 'number', example: 0.01, description: 'Exchange trade fee' },
+                          withdrawal_fee_usd: { type: 'number', example: 0.10, description: 'Exchange withdrawal fee' },
+                          gross_sale_usd: { type: 'number', example: 9.98, description: 'Total sale amount before fees' },
+                          net_payout_usd: { type: 'number', example: 9.41, description: 'Final merchant payout after all deductions' },
+                        }
+                      },
+                      is_failed: { type: 'boolean', example: false },
+                      is_complete: { type: 'boolean', example: true },
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Unauthorized' },
+        403: { description: 'Forbidden - Company does not belong to the authenticated user' },
+        404: { description: 'Conversion not found or does not belong to user' }
       }
     }
   },
