@@ -290,6 +290,22 @@ app.post("/diagnostics/trigger-conversion", adminAuthMiddleware, async (req: exp
   }
 });
 
+// Diagnostics: Trigger manual sweep for a specific temp address
+app.post("/diagnostics/trigger-sweep", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const { temp_address_id } = req.body;
+    if (!temp_address_id) {
+      return res.status(400).json({ success: false, error: "temp_address_id is required" });
+    }
+    log(`Admin triggered manual sweep for temp_address_id=${temp_address_id}`, "info");
+    const { sweepPoolAddress } = await import("./services/merchantPool/merchantPoolSweep");
+    const result = await sweepPoolAddress(temp_address_id);
+    res.status(200).json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
 // Diagnostics: Volatility monitor states
 app.get("/diagnostics/volatility", async (_req: express.Request, res: express.Response) => {
   try {
