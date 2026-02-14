@@ -8,6 +8,7 @@ import {
 } from "../helper";
 import { IUserType } from "../utils/types";
 import { userTransactionModel, userWalletModel, companyModel } from "../models";
+import { validateCompanyOwnership } from "../utils/validateCompanyOwnership";
 import sequelize from "../utils/dbInstance";
 import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 import { getCurrencySymbol, getCurrencyInfo, formatAmountForDisplay, COMPANY_CURRENCY_QUERY, convertToFiat, getCompanyBaseCurrency } from "../utils/currencyUtils";
