@@ -78,16 +78,8 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     
     // Validate company ownership if company_id is provided
     if (company_id) {
-      const company = await companyModel.findOne({
-        where: { 
-          company_id: company_id,
-          user_id: userId  // Ensure company belongs to user
-        }
-      });
-      
-      if (!company) {
-        return errorResponseHelper(res, 403, "You don't have access to this company's dashboard");
-      }
+      const companyData = await validateCompanyOwnership(res, company_id as string, userId);
+      if (!companyData) return;
     }
     
     // Get company's preferred currency
