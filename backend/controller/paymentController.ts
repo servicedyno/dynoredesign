@@ -4106,6 +4106,12 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         let autoConvertSettlementChain = "";
         let originalUserAddress = walletData.dataValues.wallet_address;
         let originalUserAmount = userAmountToSend;
+        
+        // Capture platform fee BEFORE auto-convert merges it with merchant amount
+        const platformFeeUsdForConversion = Number(totalAmountReceived) > 0
+          ? (adminAmountToSend / Number(totalAmountReceived)) * (await currencyConvert({ sourceCurrency: tempCurrency, currency: ["USD"], amount: adminAmountToSend, fixedDecimal: false }).then(r => Number(r[0]?.amount || 0)).catch(() => 0))
+          : 0;
+        const adminFeeForConversion = adminAmountToSend;
 
         if (
           company_data.auto_convert_enabled &&
