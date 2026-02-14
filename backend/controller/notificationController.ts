@@ -45,6 +45,11 @@ const getPreferences = async (req: express.Request, res: express.Response) => {
     const { company_id } = req.query;
     const userId = userData.user_id;
 
+    if (company_id) {
+      const companyData = await validateCompanyOwnership(res, company_id as string, userId);
+      if (!companyData) return;
+    }
+
     // Find existing preferences or return defaults
     let preferences = await notificationPreferencesModel.findOne({
       where: {
