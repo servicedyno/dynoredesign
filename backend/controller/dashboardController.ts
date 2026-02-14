@@ -712,18 +712,27 @@ const getConversionDetail = async (req: express.Request, res: express.Response) 
 
     const conversion = conversions[0];
 
-    // Build timeline from timestamps
+    // Build timeline: Detected → Sweeping → Depositing → Converting → Withdrawing → Complete
+    // Maps DB statuses to user-facing pipeline stages
     const STAGES = [
-      { key: "PENDING_DEPOSIT", label: "Payment Detected", field: "createdAt" },
-      { key: "DEPOSIT_CREDITED", label: "Deposit Confirmed", field: "deposit_confirmed_at" },
-      { key: "CONVERTING", label: "Converting to Stablecoin", field: "converted_at" },
-      { key: "CONVERTED", label: "Conversion Complete", field: "converted_at" },
-      { key: "WITHDRAWING", label: "Withdrawing to Merchant", field: "withdrawn_at" },
-      { key: "COMPLETED", label: "Payout Complete", field: "completed_at" },
+      { key: "DETECTED",    label: "Detected",    dbStatus: "PENDING_DEPOSIT",  field: "createdAt" },
+      { key: "SWEEPING",    label: "Sweeping",    dbStatus: "PENDING_DEPOSIT",  field: "createdAt" },
+      { key: "DEPOSITING",  label: "Depositing",  dbStatus: "DEPOSIT_CREDITED", field: "deposit_confirmed_at" },
+      { key: "CONVERTING",  label: "Converting",  dbStatus: "CONVERTED",        field: "converted_at" },
+      { key: "WITHDRAWING", label: "Withdrawing", dbStatus: "WITHDRAWING",      field: "withdrawn_at" },
+      { key: "COMPLETE",    label: "Complete",     dbStatus: "COMPLETED",        field: "completed_at" },
     ];
 
-    const STATUS_ORDER = ["PENDING_DEPOSIT", "DEPOSIT_CREDITED", "CONVERTING", "CONVERTED", "WITHDRAWING", "COMPLETED"];
-    const currentIdx = STATUS_ORDER.indexOf(conversion.status as string);
+    // Map DB status to pipeline index
+    const DB_STATUS_TO_STAGE: Record<string, number> = {
+      PENDING_DEPOSIT:  1, // Sweeping (detected + sweep already happened to create record)
+      DEPOSIT_CREDITED: 2, // Depositing confirmed, ready for conversion
+      CONVERTING:       3, // Converting on exchange
+      CONVERTED:        3, // Conversion done, same stage
+      WITHDRAWING:      4, // Withdrawing to merchant
+      COMPLETED:        5, // Complete
+    };
+    const currentIdx = DB_STATUS_TO_STAGE[conversion.status as string] ?? -1;
 
     const timeline = STAGES.map((stage, idx) => ({
       stage: stage.key,
