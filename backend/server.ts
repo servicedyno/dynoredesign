@@ -291,7 +291,7 @@ app.post("/diagnostics/trigger-conversion", adminAuthMiddleware, async (req: exp
 });
 
 // Diagnostics: Trigger manual sweep for a specific temp address
-app.post("/diagnostics/trigger-sweep", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+app.post("/diagnostics/trigger-sweep", authMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const { temp_address_id } = req.body;
     if (!temp_address_id) {
