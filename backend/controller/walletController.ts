@@ -95,6 +95,8 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     let fiatConversionRate = 1;
     
     if (company_id) {
+      const companyData = await validateCompanyOwnership(res, company_id as string, userData.user_id);
+      if (!companyData) return; // 403 already sent
       preferredCurrency = await getCompanyBaseCurrency(company_id as string);
     }
     
