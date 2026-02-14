@@ -672,10 +672,27 @@ const getConversions = async (req: express.Request, res: express.Response) => {
       statusMap[s.status as string] = s.count as number;
     });
 
+    // Map each conversion to include its pipeline stage
+    const DB_STATUS_TO_PIPELINE: Record<string, string> = {
+      PENDING_DEPOSIT: "SWEEPING",
+      DEPOSIT_CREDITED: "DEPOSITING",
+      CONVERTING: "CONVERTING",
+      CONVERTED: "CONVERTING",
+      WITHDRAWING: "WITHDRAWING",
+      COMPLETED: "COMPLETE",
+      FAILED: "FAILED",
+    };
+
+    const enrichedConversions = conversions.map((c: Record<string, unknown>) => ({
+      ...c,
+      pipeline_stage: DB_STATUS_TO_PIPELINE[c.status as string] || c.status,
+    }));
+
     return successResponseHelper(res, 200, "Conversions retrieved successfully", {
-      conversions,
-      count: conversions.length,
+      conversions: enrichedConversions,
+      count: enrichedConversions.length,
       status_summary: statusMap,
+      pipeline_stages: ["DETECTED", "SWEEPING", "DEPOSITING", "CONVERTING", "WITHDRAWING", "COMPLETE"],
     });
 
   } catch (e) {
