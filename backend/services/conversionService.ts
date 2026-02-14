@@ -474,26 +474,57 @@ export const processStablecoinConversions = async (): Promise<{
   const binanceReachable = wsStatus.connected || (wsStatus.lastMessageAge >= 0 && wsStatus.lastMessageAge < 5 * 60 * 1000);
 
   if (!binanceReachable) {
-    log(`⚠️ Binance appears unreachable (WS connected: ${wsStatus.connected}, last msg: ${wsStatus.lastMessageAge > 0 ? Math.round(wsStatus.lastMessageAge / 1000) + 's ago' : 'never'}). Skipping conversion/withdrawal phases — will retry next cycle.`);
+    log(`⚠️ Binance appears unreachable (WS connected: ${wsStatus.connected}, last msg: ${wsStatus.lastMessageAge > 0 ? Math.round(wsStatus.lastMessageAge / 1000) + 's ago' : 'never'}). Attempting proxy re-detection...`);
 
-    // Still mark exhausted records to prevent infinite loops
-    await markExhaustedAsFailed();
-
-    // Attempt deposit check as a connectivity probe
-    let depositsChecked = 0;
+    // Re-detect proxy — tunnel may have come up since last check
     try {
-      depositsChecked = await processPendingDeposits();
-    } catch (err) {
-      logError("Deposit check failed (Binance unreachable)", err);
-    }
+      await binanceService.detectBinanceAccess();
+      const agent = binanceService.getEffectiveProxyAgent();
+      if (agent) {
+        log(`✅ Proxy re-detected! Binance proxy is now available. Proceeding with conversion.`);
+        // Don't skip — fall through to normal processing
+      } else {
+        log(`⚠️ Proxy still unavailable. Skipping conversion/withdrawal phases — will retry next cycle.`);
 
-    return {
-      depositsChecked,
-      conversions: 0,
-      withdrawals: 0,
-      completed: 0,
-      skipped_reason: "binance_unreachable",
-    };
+        // Still mark exhausted records to prevent infinite loops
+        await markExhaustedAsFailed();
+
+        // Attempt deposit check as a connectivity probe
+        let depositsChecked = 0;
+        try {
+          depositsChecked = await processPendingDeposits();
+        } catch (err) {
+          logError("Deposit check failed (Binance unreachable)", err);
+        }
+
+        return {
+          depositsChecked,
+          conversions: 0,
+          withdrawals: 0,
+          completed: 0,
+          skipped_reason: "binance_unreachable",
+        };
+      }
+    } catch (detectErr) {
+      log(`⚠️ Proxy re-detection failed. Skipping conversion/withdrawal phases — will retry next cycle.`);
+
+      await markExhaustedAsFailed();
+
+      let depositsChecked = 0;
+      try {
+        depositsChecked = await processPendingDeposits();
+      } catch (err) {
+        logError("Deposit check failed (Binance unreachable)", err);
+      }
+
+      return {
+        depositsChecked,
+        conversions: 0,
+        withdrawals: 0,
+        completed: 0,
+        skipped_reason: "binance_unreachable",
+      };
+    }
   }
 
   // First, mark any records that exceeded retries as FAILED
