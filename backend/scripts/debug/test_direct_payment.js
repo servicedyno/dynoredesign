@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://payout-pipeline-e2e.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://merchant-status-hub.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {
