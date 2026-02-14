@@ -1666,6 +1666,8 @@ const assetToOtherAddress = async ({
       ...(resolvedDestTag !== undefined && { destinationTag: resolvedDestTag }),
     } as any);
   } else if (currency === "POLYGON") {
+    // DEPRECATION WARNING: For sweep operations, use directEvmSweep() from directEvmTransfer.ts instead.
+    console.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for POLYGON transfer. For sweeps, use directEvmSweep().`);
     // Polygon native transfer (POL)
     transaction = await tatumSdk.blockchain.polygon.polygonBlockchainTransfer({
       fromPrivateKey: privateKey,
