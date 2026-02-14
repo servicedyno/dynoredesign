@@ -586,9 +586,183 @@ const getRecentTransactions = async (req: express.Request, res: express.Response
   }
 };
 
+/**
+ * Get all conversion records for the merchant (with optional status filter)
+ * GET /api/dashboard/conversions
+ * Query params: status (optional), company_id (optional), limit (default 20)
+ */
+const getConversions = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  
+  try {
+    const { status, company_id, limit = 20 } = req.query;
+    const userId = userData.user_id;
+
+    let whereClause = `sc.user_id = :userId`;
+    const replacements: Record<string, unknown> = { userId, limit: parseInt(limit as string) };
+
+    if (company_id) {
+      whereClause += ` AND sc.company_id = :companyId`;
+      replacements.companyId = company_id;
+    }
+    if (status) {
+      whereClause += ` AND sc.status = :status`;
+      replacements.status = status;
+    }
+
+    const conversions = await sequelize.query(
+      `SELECT 
+        sc.conversion_id,
+        sc.transaction_id,
+        sc.company_id,
+        sc.source_currency,
+        sc.source_amount,
+        sc.source_amount_usd,
+        sc.target_currency,
+        sc.target_amount,
+        sc.settlement_wallet_address,
+        sc.settlement_chain,
+        sc.deposit_tx_hash,
+        sc.binance_order_id,
+        sc.conversion_rate,
+        sc.conversion_fee,
+        sc.sweep_fee_usd,
+        sc.trade_fee_usd,
+        sc.withdrawal_fee,
+        sc.withdrawal_tx_hash,
+        sc.withdrawal_id,
+        sc.merchant_payout_usd,
+        sc.locked_merchant_usd,
+        sc.actual_sale_usd,
+        sc.platform_surplus,
+        sc.price_movement_pct,
+        sc.sell_method,
+        sc.status,
+        sc.error_message,
+        sc.retry_count,
+        sc."createdAt",
+        sc.deposit_confirmed_at,
+        sc.converted_at,
+        sc.withdrawn_at,
+        sc.completed_at
+       FROM tbl_stablecoin_conversion sc
+       WHERE ${whereClause}
+       ORDER BY sc."createdAt" DESC
+       LIMIT :limit`,
+      {
+        replacements,
+        type: QueryTypes.SELECT,
+      }
+    ) as Array<Record<string, unknown>>;
+
+    // Count by status for summary
+    const statusCounts = await sequelize.query(
+      `SELECT sc.status, COUNT(*)::int as count
+       FROM tbl_stablecoin_conversion sc
+       WHERE sc.user_id = :userId ${company_id ? 'AND sc.company_id = :companyId' : ''}
+       GROUP BY sc.status`,
+      {
+        replacements: { userId, companyId: company_id },
+        type: QueryTypes.SELECT,
+      }
+    ) as Array<Record<string, unknown>>;
+
+    const statusMap: Record<string, number> = {};
+    statusCounts.forEach((s: Record<string, unknown>) => {
+      statusMap[s.status as string] = s.count as number;
+    });
+
+    return successResponseHelper(res, 200, "Conversions retrieved successfully", {
+      conversions,
+      count: conversions.length,
+      status_summary: statusMap,
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    console.error("Conversions error:", message);
+    return errorResponseHelper(res, 500, message);
+  }
+};
+
+/**
+ * Get single conversion with detailed timeline
+ * GET /api/dashboard/conversions/:id
+ */
+const getConversionDetail = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  
+  try {
+    const { id } = req.params;
+    const userId = userData.user_id;
+
+    const conversions = await sequelize.query(
+      `SELECT sc.*
+       FROM tbl_stablecoin_conversion sc
+       WHERE sc.conversion_id = :id AND sc.user_id = :userId`,
+      {
+        replacements: { id, userId },
+        type: QueryTypes.SELECT,
+      }
+    ) as Array<Record<string, unknown>>;
+
+    if (conversions.length === 0) {
+      return errorResponseHelper(res, 404, "Conversion not found");
+    }
+
+    const conversion = conversions[0];
+
+    // Build timeline from timestamps
+    const STAGES = [
+      { key: "PENDING_DEPOSIT", label: "Payment Detected", field: "createdAt" },
+      { key: "DEPOSIT_CREDITED", label: "Deposit Confirmed", field: "deposit_confirmed_at" },
+      { key: "CONVERTING", label: "Converting to Stablecoin", field: "converted_at" },
+      { key: "CONVERTED", label: "Conversion Complete", field: "converted_at" },
+      { key: "WITHDRAWING", label: "Withdrawing to Merchant", field: "withdrawn_at" },
+      { key: "COMPLETED", label: "Payout Complete", field: "completed_at" },
+    ];
+
+    const STATUS_ORDER = ["PENDING_DEPOSIT", "DEPOSIT_CREDITED", "CONVERTING", "CONVERTED", "WITHDRAWING", "COMPLETED"];
+    const currentIdx = STATUS_ORDER.indexOf(conversion.status as string);
+
+    const timeline = STAGES.map((stage, idx) => ({
+      stage: stage.key,
+      label: stage.label,
+      timestamp: conversion[stage.field] || null,
+      completed: idx <= currentIdx && conversion.status !== "FAILED",
+      active: idx === currentIdx && conversion.status !== "FAILED",
+    }));
+
+    // Fee breakdown
+    const feeBreakdown = {
+      platform_fee_usd: parseFloat(String(conversion.conversion_fee || "0")),
+      sweep_gas_fee_usd: parseFloat(String(conversion.sweep_fee_usd || "0")),
+      trade_fee_usd: parseFloat(String(conversion.trade_fee_usd || "0")),
+      withdrawal_fee_usd: parseFloat(String(conversion.withdrawal_fee || "0")),
+      gross_sale_usd: parseFloat(String(conversion.actual_sale_usd || "0")),
+      net_payout_usd: parseFloat(String(conversion.merchant_payout_usd || "0")),
+    };
+
+    return successResponseHelper(res, 200, "Conversion detail retrieved", {
+      conversion,
+      timeline,
+      fee_breakdown: feeBreakdown,
+      is_failed: conversion.status === "FAILED",
+      is_complete: conversion.status === "COMPLETED",
+    });
+
+  } catch (e) {
+    const message = getErrorMessage(e);
+    console.error("Conversion detail error:", message);
+    return errorResponseHelper(res, 500, message);
+  }
+};
+
 export default {
   getDashboard,
   getChartData,
   getFeeTiers,
   getRecentTransactions,
+  getConversions,
+  getConversionDetail,
 };
