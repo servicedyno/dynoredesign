@@ -5,7 +5,7 @@ Full-stack crypto payment gateway (Node.js/TypeScript backend, React frontend, P
 
 ## Architecture
 - **Backend**: Node.js, TypeScript, Fastify, Sequelize
-- **Frontend**: React
+- **Frontend**: React (separate repo — this repo's frontend is a placeholder)
 - **Database**: PostgreSQL
 - **Cache**: Redis (Railway hosted)
 - **Integrations**: Tatum (blockchain), Binance (crypto conversion), Brevo (emails)
@@ -37,36 +37,40 @@ Full-stack crypto payment gateway (Node.js/TypeScript backend, React frontend, P
 - **Fee tracking in conversion records**: `conversion_fee` (platform fee USD), `sweep_fee_usd` (gas cost in USD), calculated using actual conversion rate at trade time
 - **E2E verified**: Conversion #11 completed successfully — full pipeline from fund detection to merchant payout ($9.41 USDT)
 
-## Key Files Modified
-- `backend/services/conversionService.ts` — Fee tracking, adaptive polling, proxy re-detection, completion logging
-- `backend/services/binanceService.ts` — Retry-able proxy detection
-- `backend/helper/sendEmail.ts` — Detailed fee breakdown in payout email
-- `backend/controller/paymentController.ts` — Pass platform fee data to conversion record
-- `backend/services/merchantPool/merchantPoolSweep.ts` — Sweep logic (EVM → directEvmSweep)
-- `backend/server.ts` — Lock TTL, cron scheduling
-- `/etc/supervisor/conf.d/binance-proxy.conf` — Persistent SSH tunnel
+### Session 4 (Feb 14, 2026)
+- **(P0) Consolidated EVM sweep logic**: Gas funding for EVM chains (ETH, POLYGON) now uses `directEvmSweep` instead of Tatum SDK. All EVM branches in `tatumApi.ts:assetToOtherAddress` have deprecation warnings for sweep usage.
+- **(P1) Real-time conversion status tracker API**: Two new endpoints added to `dashboardRouter`:
+  - `GET /api/dashboard/conversions` — List conversions with `pipeline_stage` field, status filter, status summary counts
+  - `GET /api/dashboard/conversions/:id` — Single conversion detail with timeline (Detected → Sweeping → Depositing → Converting → Withdrawing → Complete), fee breakdown, error info
+- **Pipeline stages enum** returned in list response for frontend rendering reference
 
-## Key Technical Decisions
-- EVM chains: ethers.js direct RPC (LlamaRPC → publicnode → Tatum as fallback)
-- Non-EVM chains (TRX, XRP, BTC, etc.): Continue using Tatum SDK (proven reliable)
-- Binance proxy: `sshpass + ssh -D 1080` via supervisor (autorestart=true, startretries=999)
-- Fee calculation: Platform fee deducted in crypto before conversion, converted to USD using actual trade rate
+## Key API Endpoints
 
-## Fee Flow
-1. Customer pays ETH to temp wallet
-2. Platform fee (1.5% + fixed) deducted in crypto → `adminAmountToSend`
-3. Merchant amount → `originalUserAmount` (= `source_amount` in conversion)
-4. ALL crypto swept to admin wallet (Binance deposit address)
-5. Gas fee for sweep deducted from swept amount
-6. Only merchant portion converted to USDT on Binance
-7. USDT withdrawn to merchant settlement wallet
-8. Binance withdrawal fee deducted (0 for off-chain, ~1 USDT for on-chain TRC20)
+### Conversion Status Tracker (NEW)
+- `GET /api/dashboard/conversions?status=COMPLETED&company_id=38&limit=20` — List with optional filters
+  - Returns: `{ conversions: [..., pipeline_stage], count, status_summary, pipeline_stages }`
+- `GET /api/dashboard/conversions/:id` — Detailed view with timeline & fees
+  - Returns: `{ conversion, timeline: [{stage, label, timestamp, completed, active}], fee_breakdown, is_failed, is_complete }`
+- **Pipeline stages**: `DETECTED → SWEEPING → DEPOSITING → CONVERTING → WITHDRAWING → COMPLETE`
+- **Auth**: Bearer token required (from `POST /api/user/login`)
+
+### Existing
+- `POST /api/company/direct_crypto_payment` — Create new payment request
+- `GET /api/dashboard` — Dashboard stats
+- `GET /api/dashboard/chart-data` — Chart data
+- `GET /api/dashboard/recent-transactions` — Recent transactions
+
+## Key Files Modified (Session 4)
+- `backend/controller/dashboardController.ts` — Added `getConversions` and `getConversionDetail` handlers
+- `backend/routes/dashboardRouter.ts` — Added `/conversions` and `/conversions/:id` routes
+- `backend/services/merchantPool/merchantPoolSweep.ts` — Gas funding now uses `directEvmSweep` for EVM chains
+- `backend/apis/tatumApi.ts` — Deprecation warnings on EVM branches of `assetToOtherAddress`
 
 ## Credentials
 - **User**: richard@dyno.pt / Katiekendra123@
 - **SSH Proxy**: root@95.179.167.16 (password in supervisor config)
 
 ## Backlog
-- P1: Consolidate redundant sweep logic (clean up dead Tatum SDK EVM paths in tatumApi.ts)
 - P2: Monitor sweep reliability over time
-- P2: Add dashboard visibility for conversion fee breakdown
+- P2: Broader integration testing of full pipeline
+- P2: Additional monitoring/alerting for proxy health
