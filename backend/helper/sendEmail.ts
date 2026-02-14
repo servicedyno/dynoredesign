@@ -800,6 +800,13 @@ const sendAutoConversionPayoutEmail = async (
     transactionId: string;
     conversionId: string;
     withdrawalTxHash?: string;
+    // Fee breakdown
+    platformFeeUsd?: number;
+    sweepGasFeeUsd?: number;
+    tradeFeeUsd?: number;
+    binanceWithdrawalFeeUsd?: number;
+    grossSaleUsd?: number;
+    totalReceivedUsd?: number;
   }
 ) => {
   try {
