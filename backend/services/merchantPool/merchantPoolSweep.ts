@@ -208,34 +208,42 @@ export const fundGasIfNeeded = async (
       process.env.TEMP_KEY_ID
     );
 
-    let transferFees = null;
-    if (gasToken === "ETH" || gasToken === "POLYGON") {
-      transferFees = await tatumApi.feeEstimation(
-        gasToken,
-        feeWalletAddress,
-        tempAddress,
-        fundAmount
-      );
-    }
-
     console.log(`[SmartGas] 🔥 Funding ${fundAmount.toFixed(6)} ${gasToken} to ${tempAddress}`);
 
-    const txResult = await tatumApi.assetToOtherAddress({
-      currency: gasToken,
-      fromAddress: feeWalletAddress,
-      toAddress: tempAddress,
-      privateKey: feeWalletPrivateKey,
-      amount: fundAmount,
-      fee: transferFees,
-    });
+    let txId: string | undefined;
+
+    if (isDirectEvmSupported(gasToken)) {
+      // EVM gas funding: use directEvmSweep (ethers.js) to avoid Tatum SDK ghost TX issue
+      console.log(`[SmartGas] Using direct EVM transfer for ${gasToken} gas funding`);
+      const evmResult = await directEvmSweep({
+        fromAddress: feeWalletAddress,
+        toAddress: tempAddress,
+        privateKey: feeWalletPrivateKey,
+        walletType: gasToken,
+        amount: fundAmount,
+      });
+      txId = evmResult.txHash;
+      console.log(`[SmartGas] ✅ Direct EVM gas funding: ${txId} (gas: ${evmResult.gasPriceGwei} Gwei)`);
+    } else {
+      // Non-EVM gas funding (TRX, XRP): continue using Tatum SDK
+      const txResult = await tatumApi.assetToOtherAddress({
+        currency: gasToken,
+        fromAddress: feeWalletAddress,
+        toAddress: tempAddress,
+        privateKey: feeWalletPrivateKey,
+        amount: fundAmount,
+        fee: null,
+      });
+      txId = txResult?.txId;
+    }
 
     const newBalance = currentBalance + fundAmount;
     await poolAddress.update({ gas_balance: newBalance });
 
-    console.log(`[SmartGas] ✅ Gas funded: ${fundAmount.toFixed(6)} ${gasToken} (TX: ${txResult?.txId})`);
+    console.log(`[SmartGas] ✅ Gas funded: ${fundAmount.toFixed(6)} ${gasToken} (TX: ${txId})`);
     console.log(`[SmartGas]    Old balance: ${currentBalance.toFixed(6)} → New balance: ${newBalance.toFixed(6)} ${gasToken}`);
 
-    return { funded: true, amount: fundAmount, txId: txResult?.txId, reason: 'Deficit funded' };
+    return { funded: true, amount: fundAmount, txId: txId, reason: 'Deficit funded' };
     
   } catch (error) {
     const message = getErrorMessage(error);
