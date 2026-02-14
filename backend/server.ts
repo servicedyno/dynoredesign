@@ -8,6 +8,7 @@ import { setupSwagger } from "./swagger";
 import sanitizeInputMiddleware from "./middleware/sanitizeInput";
 import requestLoggerMiddleware from "./middleware/requestLogger";
 import adminAuthMiddleware from "./middleware/adminAuthMiddleware";
+import authMiddleware from "./middleware/authMiddleware";
 
 // Load environment variables FIRST
 dotenv.config();
