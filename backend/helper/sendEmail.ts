@@ -816,7 +816,12 @@ const sendAutoConversionPayoutEmail = async (
       priceAtConversion, currentPrice, priceMovementPct,
       marketState, feeTierUsed, transactionId, conversionId,
       withdrawalTxHash,
+      platformFeeUsd = 0, sweepGasFeeUsd = 0, tradeFeeUsd = 0,
+      binanceWithdrawalFeeUsd = 0, grossSaleUsd = 0, totalReceivedUsd = 0,
     } = data;
+
+    const totalFeesUsd = platformFeeUsd + sweepGasFeeUsd + tradeFeeUsd + binanceWithdrawalFeeUsd;
+    const hasDetailedFees = totalFeesUsd > 0;
 
     const isVolatile = ["VOLATILE", "DECLINING"].includes(marketState);
     const priceDiffSinceConversion = ((currentPrice - priceAtConversion) / priceAtConversion) * 100;
