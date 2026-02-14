@@ -1495,6 +1495,10 @@ const assetToOtherAddress = async ({
       changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
   } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20") {
+    // DEPRECATION WARNING: For sweep operations, use directEvmSweep() from directEvmTransfer.ts instead.
+    // This Tatum SDK path is retained only for non-sweep operations (merchant payouts, admin transfers).
+    // Tatum SDK's ethBlockchainTransfer has known ghost TX issues — never use for sweep/pool operations.
+    console.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for ${currency} transfer. For sweeps, use directEvmSweep().`);
     // USDT/USDC ERC-20 have 6 decimals; ETH has 18 — truncate accordingly
     const isERC20Token = currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20";
     const decimals = isERC20Token ? 6 : 8;
