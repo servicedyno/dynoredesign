@@ -500,28 +500,11 @@ const getAllTransactions = async (
       company_id
     } = req.body;
     
-    let column, sortType, offset, limit;
-    if (filters) {
-      column = filters?.column ?? "createdAt";
-      sortType = !filters?.asc ? "desc" : "asc";
-    } else {
-      column = "createdAt";
-      sortType = "desc";
-    }
-    
-    // Pagination
-    if (rowsPerPage && page) {
-      offset = (page - 1) * rowsPerPage;
-      limit = rowsPerPage;
-    }
-
-    // Whitelist allowed columns for ORDER BY to prevent SQL injection
     const ALLOWED_COLUMNS: Record<string, string> = {
       createdAt: 'ut."createdAt"', updatedAt: 'ut."updatedAt"', base_amount: 'ut.base_amount',
       status: 'ut.status', id: 'ut.id', transaction_reference: 'ut.transaction_reference',
     };
-    const safeCol = (column && ALLOWED_COLUMNS[column]) ? ALLOWED_COLUMNS[column] : 'ut."createdAt"';
-    const safeSort = sortType === 'asc' ? 'ASC' : 'DESC';
+    const sort = parseSortAndPagination(ALLOWED_COLUMNS, filters, rowsPerPage, page);
 
     // Build WHERE conditions with parameterized replacements
     const { whereConditions, replacements } = buildTransactionFilters(userData.user_id, {
@@ -551,11 +534,11 @@ const getAllTransactions = async (
       LEFT JOIN tbl_user_wallet uw ON uw.wallet_id=ut.wallet_id
       LEFT JOIN tbl_stablecoin_conversion sc ON sc.transaction_id=ut.transaction_id
       WHERE ${whereConditions}
-      ORDER BY ${safeCol} ${safeSort}`;
-    if (offset !== undefined && limit) {
+      ORDER BY ${sort.safeColumn} ${sort.safeSortType}`;
+    if (sort.offset !== undefined && sort.limit) {
       txQuery += ` OFFSET :offset LIMIT :limit`;
-      replacements.offset = offset;
-      replacements.limit = limit;
+      replacements.offset = sort.offset;
+      replacements.limit = sort.limit;
     }
     const tempData = await sequelize.query(txQuery, {
       type: QueryTypes.SELECT,
