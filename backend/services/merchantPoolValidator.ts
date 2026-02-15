@@ -4,6 +4,8 @@
  * Prevents runtime errors from missing configurations
  */
 
+import { cronLogger } from "../utils/loggers";
+
 export async function validateMerchantPoolConfiguration(): Promise<void> {
   cronLogger.info("[MerchantPool] 🔍 Validating configuration...");
 

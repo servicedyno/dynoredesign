@@ -8,6 +8,8 @@
  * - HALF_OPEN: Testing if service recovered, limited requests allowed
  */
 
+import { cronLogger } from "./loggers";
+
 interface CircuitBreakerOptions {
   failureThreshold: number;      // Number of failures before opening circuit
   successThreshold: number;      // Number of successes to close circuit from half-open
