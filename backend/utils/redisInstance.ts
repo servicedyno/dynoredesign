@@ -361,5 +361,6 @@ export {
   acquireLock,
   releaseLock,
   withLock,
+  cleanupStaleLocks,
   redisClient as redis,
 };
