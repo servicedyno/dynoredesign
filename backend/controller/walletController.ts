@@ -529,9 +529,8 @@ const getAllTransactions = async (
       replacements.company_id = parseInt(company_id as string, 10);
     }
 
-    // Get user transactions with filters
-    const tempData = await sequelize.query(
-      `
+    // Get user transactions with filters (parameterized)
+    let txQuery = `
       SELECT 
         ut.*,
         c.customer_name,
@@ -555,13 +554,18 @@ const getAllTransactions = async (
       LEFT JOIN tbl_user_wallet uw ON uw.wallet_id=ut.wallet_id
       LEFT JOIN tbl_stablecoin_conversion sc ON sc.transaction_id=ut.transaction_id
       WHERE ${whereConditions}
-      ${column && sortType ? `ORDER BY ut."${column}" ${sortType}` : ``} 
-      ${offset !== undefined && limit ? `OFFSET ${offset} LIMIT ${limit}` : ``}
-      `,
-      { type: QueryTypes.SELECT }
-    );
+      ORDER BY ${safeCol} ${safeSort}`;
+    if (offset !== undefined && limit) {
+      txQuery += ` OFFSET :offset LIMIT :limit`;
+      replacements.offset = offset;
+      replacements.limit = limit;
+    }
+    const tempData = await sequelize.query(txQuery, {
+      type: QueryTypes.SELECT,
+      replacements,
+    });
 
-    // Get total count for pagination
+    // Get total count for pagination (parameterized)
     const countData = await sequelize.query(
       `
       SELECT COUNT(*) as total
@@ -570,7 +574,7 @@ const getAllTransactions = async (
       LEFT JOIN tbl_company cm ON cm.company_id=c.company_id
       WHERE ${whereConditions}
       `,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements }
     );
 
     const customer_data = tempData.map((x: Record<string, unknown>) => {
