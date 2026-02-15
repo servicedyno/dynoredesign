@@ -80,15 +80,15 @@ describe('Merchant Pool Config', () => {
       expect(TAG_BASED_CHAINS).toEqual(['XRP', 'RLUSD']);
     });
 
-    it('ACCOUNT_CHAINS includes all non-UTXO non-token native chains', () => {
-      expect(ACCOUNT_CHAINS).toContain('ETH');
-      expect(ACCOUNT_CHAINS).toContain('TRX');
-      expect(ACCOUNT_CHAINS).toContain('XRP');
-      expect(ACCOUNT_CHAINS).toContain('SOL');
-      expect(ACCOUNT_CHAINS).toContain('POLYGON');
-      // UTXO chains should NOT be in ACCOUNT_CHAINS
-      expect(ACCOUNT_CHAINS).not.toContain('BTC');
-      expect(ACCOUNT_CHAINS).not.toContain('LTC');
+    it('ACCOUNT_CHAINS (NATIVE_CURRENCIES) includes non-UTXO non-token native chains', () => {
+      expect(NATIVE_CURRENCIES).toContain('ETH');
+      expect(NATIVE_CURRENCIES).toContain('TRX');
+      expect(NATIVE_CURRENCIES).toContain('XRP');
+      expect(NATIVE_CURRENCIES).toContain('SOL');
+      expect(NATIVE_CURRENCIES).toContain('POLYGON');
+      // UTXO chains should NOT be in NATIVE_CURRENCIES
+      expect(NATIVE_CURRENCIES).not.toContain('BTC');
+      expect(NATIVE_CURRENCIES).not.toContain('LTC');
     });
 
     it('TOKEN_CHAINS includes token variants', () => {
@@ -101,15 +101,15 @@ describe('Merchant Pool Config', () => {
       expect(TOKEN_CHAINS).not.toContain('ETH');
     });
 
-    it('UTXO chains are BTC, LTC, DOGE, BCH', () => {
-      expect(MODEL_UTXO_CHAINS).toContain('BTC');
-      expect(MODEL_UTXO_CHAINS).toContain('LTC');
-      expect(MODEL_UTXO_CHAINS).toContain('DOGE');
-      expect(MODEL_UTXO_CHAINS).toContain('BCH');
+    it('UTXO chains include BTC, LTC, DOGE, BCH', () => {
+      expect(UTXO_CHAINS).toContain('BTC');
+      expect(UTXO_CHAINS).toContain('LTC');
+      expect(UTXO_CHAINS).toContain('DOGE');
+      expect(UTXO_CHAINS).toContain('BCH');
     });
 
-    it('no chain appears in both ACCOUNT_CHAINS and UTXO', () => {
-      const overlap = ACCOUNT_CHAINS.filter(c => MODEL_UTXO_CHAINS.includes(c));
+    it('no chain appears in both NATIVE_CURRENCIES and UTXO', () => {
+      const overlap = NATIVE_CURRENCIES.filter(c => UTXO_CHAINS.includes(c));
       expect(overlap).toEqual([]);
     });
   });
