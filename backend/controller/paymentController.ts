@@ -3636,7 +3636,7 @@ const verifyCryptoPayment = async (
       });
     }
     
-    if (redisStatus === "processing" || redisStatus === "retrying") {
+    if (parsedState === PaymentState.PROCESSING) {
       // Transaction detected and being processed
       return successResponseHelper(res, 200, "Payment pending", {
         status: "pending",
