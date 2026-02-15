@@ -1,5 +1,6 @@
 import express from "express";
 import { getRedisItem, setRedisItem } from "../utils/redisInstance";
+import { apiLogger } from "../utils/loggers";
 
 /**
  * Rate limiting middleware that enforces API rate limits stored in the database
@@ -101,7 +102,7 @@ export const createRateLimiter = (
       next();
     } catch (error) {
       // On Redis error, allow the request but log the error
-      console.error('[RateLimit] Error checking rate limit:', error);
+      apiLogger.error('[RateLimit] Error checking rate limit:', error);
       next();
     }
   };
