@@ -13,6 +13,7 @@ import { ADMIN_WALLETS, FEE_WALLETS, isTagBasedChain, getCryptoRedisKey, XRP_MAS
 import tatumApi from "../apis/tatumApi";
 import { merchantTempAddressModel } from "../models";
 import { enqueueWebhook } from "../services/webhookQueue";
+import { toRedisStatus, PaymentState } from "../services/paymentStateMachine";
 
 // Build a set of all admin/fee wallet addresses for fast lookup (lowercase for case-insensitive match)
 const INTERNAL_WALLETS = new Set(
