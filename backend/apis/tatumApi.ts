@@ -3253,8 +3253,16 @@ const findUtxoOutputIndex = async (
     }
 
     if (txData?.vout) {
+      // For BCH, compare both CashAddr and legacy formats
+      const addressVariants = [address];
+      if (currency === 'BCH') {
+        try {
+          addressVariants.push(bchaddr.toCashAddress(address));
+          addressVariants.push(bchaddr.toLegacyAddress(address));
+        } catch { /* invalid address, just use original */ }
+      }
       for (const output of txData.vout) {
-        if (output.scriptPubKey?.addresses?.includes(address)) {
+        if (output.scriptPubKey?.addresses?.some((a: string) => addressVariants.includes(a))) {
           const idx = output.n ?? 0;
           cronLogger.info(`[findUtxoOutputIndex] Found output index ${idx} for ${address} in tx ${txHash}`);
           return idx;
