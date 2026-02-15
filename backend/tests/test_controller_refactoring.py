@@ -18,7 +18,8 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+# Use internal URL for direct testing (external URL may have proxy issues)
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:8001').rstrip('/')
 
 # Helper for making requests
 def api_get(endpoint: str, headers: dict = None):
