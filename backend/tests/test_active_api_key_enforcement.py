@@ -15,7 +15,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://sri-frontend-update.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://quickstart-hub.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 TEST_EMAIL = "richard@dyno.pt"
