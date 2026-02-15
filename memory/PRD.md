@@ -143,7 +143,27 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
 ## Backlog
 - **P2: Enhanced Monitoring** — Add monitoring and alerting for key payment/payout stages
 - **P3: Dependency Injection refactoring** to decouple services from Sequelize models for better testability
-- **P3: Integrate state machine into webhookProcessor** — Replace ad-hoc status strings with `PaymentState` enum and `transition()` calls throughout the processing pipeline
+
+### State Machine Integration (Completed - Feb 15, 2026)
+
+**P0 — Soft-Enforcement in webhookProcessor.ts:**
+- Wired `validateTransition()` into all 10 status change points in the webhook processor
+- Created `softValidate()` helper — wraps `validateTransition()` for non-breaking audit/warning logging
+- 13 `softValidate()` calls covering: crash-recovery (2), underpayment (2), crypto-verification (5), ref updates (1), retries (1), failures (1), pre-processing (1)
+- Replaced magic-string terminal state checks with `parseState()` + `PaymentState.PAYOUT_COMPLETE`
+- Replaced stale processing detection with `parseState()` + `PaymentState.PROCESSING`
+- Key gaps logged: PENDING → PROCESSING (skips DETECTED), processing → retrying (self-transition)
+
+**P1 — Hard-Enforce State Machine Across Codebase:**
+- `paymentController.ts`: 
+  - Verify endpoint: All 6 status comparisons now use `parsedState === PaymentState.XXX` (catches legacy aliases automatically)
+  - Redis writes: `"pending"` → `toRedisStatus(PaymentState.PENDING)`, `"successful"` → `toRedisStatus(PaymentState.PAYOUT_COMPLETE)`
+  - Link status: `parseState(linkData.status) === PaymentState.PAYOUT_COMPLETE` (catches both "completed" and "successful")
+- `walletController.ts`: Redis "pending" write → `toRedisStatus(PaymentState.PENDING)`
+- `reconciliation.ts`: Stuck payment detection uses `parseState()` + `PaymentState.PROCESSING` (catches "processing" + "retrying")
+- DB writes intentionally left as magic strings (different domain)
+- Legacy aliases ("recovered", "retrying") kept for diagnostic value — `parseState()` maps them correctly
+- All 511 tests passing across 15 suites (0 regressions)
 
 ### DLQ Email Alerting (Verified Existing - Feb 15, 2026)
 - Confirmed DLQ email alerting was **already implemented** in `services/webhookQueue.ts` (lines 244-302)
