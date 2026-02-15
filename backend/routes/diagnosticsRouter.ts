@@ -12,6 +12,20 @@ import { baseEmailTemplate, infoBox, dataRow, statusBadge, p, otpBlock } from ".
 const router = express.Router();
 
 /**
+ * GET /diagnostics/tunnel-status
+ * SSH SOCKS5 tunnel health and diagnostics
+ */
+router.get("/tunnel-status", (_req: express.Request, res: express.Response) => {
+  const status = getTunnelStatus();
+  const proxyState = binanceService.getProxyState();
+  res.status(200).json({
+    success: true,
+    tunnel: status,
+    binanceProxy: proxyState,
+  });
+});
+
+/**
  * GET /diagnostics/email-preview
  * Preview all email template styles in a gallery
  */
