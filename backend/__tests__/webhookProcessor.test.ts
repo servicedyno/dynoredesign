@@ -21,42 +21,33 @@
 
 // ── Mock Setup (must be before imports) ─────────────────────────────────────
 
-// Mock webhookQueue to prevent BullMQ from connecting to Redis at import time
 jest.mock('../services/webhookQueue', () => ({}));
 
-// Mock loggers
 jest.mock('../utils/loggers', () => ({
   webhookLogs: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
   cronLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
   apiLogger: { info: jest.fn(), error: jest.fn() },
 }));
 
-// Mock paymentController
 jest.mock('../controller', () => ({
   paymentController: {
     cryptoVerification: jest.fn().mockResolvedValue({}),
   },
 }));
 
-// Mock pendingPaymentService
 jest.mock('../services/pendingPaymentService', () => ({
   sendPendingPaymentNotification: jest.fn().mockResolvedValue(undefined),
 }));
 
-// Mock tatumApi
 jest.mock('../apis/tatumApi', () => ({
-  default: {
-    getXrpDestinationTag: jest.fn().mockResolvedValue(null),
-  },
+  default: { getXrpDestinationTag: jest.fn().mockResolvedValue(null) },
   __esModule: true,
 }));
 
-// Mock callMerchantWebhook
 jest.mock('../webhooks', () => ({
   callMerchantWebhook: jest.fn().mockResolvedValue({ success: true }),
 }));
 
-// Mock merchantPoolConfig with deterministic values
 jest.mock('../services/merchantPool/merchantPoolConfig', () => ({
   ADMIN_WALLETS: { BTC: '0xAdminBTC', ETH: '0xAdminETH' },
   FEE_WALLETS: { TRX: '0xFeeTRX', ETH: '0xFeeETH' },
@@ -77,8 +68,6 @@ import {
   setRedisTTL,
   acquireLock,
   releaseLock,
-  __clearMockStore,
-  __setMockData,
 } from '../utils/redisInstance';
 import { paymentController } from '../controller';
 import tatumApi from '../apis/tatumApi';
@@ -87,6 +76,9 @@ import { sendPendingPaymentNotification } from '../services/pendingPaymentServic
 import { companyModel } from '../models';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+// In-memory mock store for Redis — tests set initial state, assertions check calls
+let mockStore: Record<string, any> = {};
 
 interface JobDataOverrides {
   address?: string;
@@ -117,7 +109,10 @@ function createJobData(overrides: JobDataOverrides = {}) {
   };
 }
 
-/** Standard Redis data that simulates a pending payment waiting for a webhook */
+function seedRedis(key: string, value: any) {
+  mockStore[key] = value;
+}
+
 function createRedisPaymentData(overrides: Record<string, unknown> = {}) {
   return {
     amount: '100',
@@ -136,13 +131,27 @@ function createRedisPaymentData(overrides: Record<string, unknown> = {}) {
 describe('Webhook Processor — processWebhookJob', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    __clearMockStore();
-    // Restore defaults
+    mockStore = {};
+
+    // Wire up getRedisItem to use our mock store
+    (getRedisItem as jest.Mock).mockImplementation((key: string) =>
+      Promise.resolve(mockStore[key] ?? null)
+    );
+    // Wire up setRedisItem to track calls AND update mock store
+    (setRedisItem as jest.Mock).mockImplementation((key: string, value: any) => {
+      mockStore[key] = value;
+      return Promise.resolve();
+    });
+
+    // Defaults
     (acquireLock as jest.Mock).mockResolvedValue(true);
+    (releaseLock as jest.Mock).mockResolvedValue(undefined);
+    (setRedisTTL as jest.Mock).mockResolvedValue(undefined);
     (paymentController.cryptoVerification as jest.Mock).mockResolvedValue({});
     (callMerchantWebhook as jest.Mock).mockResolvedValue({ success: true });
     (sendPendingPaymentNotification as jest.Mock).mockResolvedValue(undefined);
     (tatumApi.getXrpDestinationTag as jest.Mock).mockResolvedValue(null);
+    (companyModel.findOne as jest.Mock).mockResolvedValue(null);
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -151,18 +160,16 @@ describe('Webhook Processor — processWebhookJob', () => {
 
   describe('Stage 1 — Duplicate Detection', () => {
     it('skips already-processed transactions', async () => {
-      __setMockData('processed-tx-tx-test-123', { processed: true, timestamp: new Date().toISOString() });
+      seedRedis('processed-tx-tx-test-123', { processed: true });
 
       await processWebhookJob(createJobData());
 
-      // Should NOT acquire lock since it bailed early
       expect(acquireLock).not.toHaveBeenCalled();
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
     });
 
     it('processes new transactions not yet in Redis', async () => {
-      // No processed-tx key set → should attempt to acquire lock
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData());
 
       await processWebhookJob(createJobData());
 
@@ -170,9 +177,8 @@ describe('Webhook Processor — processWebhookJob', () => {
     });
 
     it('treats empty processed-tx object as not processed', async () => {
-      // Edge case: key exists but has empty object (stale data)
-      __setMockData('processed-tx-tx-test-123', {});
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
+      seedRedis('processed-tx-tx-test-123', {});
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData());
 
       await processWebhookJob(createJobData());
 
@@ -185,28 +191,28 @@ describe('Webhook Processor — processWebhookJob', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Stage 2 — Atomic Lock', () => {
-    it('skips if lock cannot be acquired (another worker processing)', async () => {
+    it('skips when lock cannot be acquired', async () => {
       (acquireLock as jest.Mock).mockResolvedValue(false);
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
 
       await processWebhookJob(createJobData());
 
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
-      // Lock was never acquired so should NOT be released
       expect(releaseLock).not.toHaveBeenCalled();
     });
 
-    it('always releases lock in finally block after processing', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
+    it('always releases lock after processing', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData());
 
       await processWebhookJob(createJobData());
 
       expect(releaseLock).toHaveBeenCalledWith('tatum-webhook-tx-test-123');
     });
 
-    it('releases lock even when an error occurs', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
-      (paymentController.cryptoVerification as jest.Mock).mockRejectedValue(new Error('invalid address'));
+    it('releases lock even on error', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData());
+      (paymentController.cryptoVerification as jest.Mock).mockRejectedValue(
+        new Error('invalid address')
+      );
 
       await expect(processWebhookJob(createJobData())).rejects.toThrow();
 
@@ -220,11 +226,10 @@ describe('Webhook Processor — processWebhookJob', () => {
 
   describe('Stage 3 — Internal Wallet Filter', () => {
     it('ignores transfers FROM admin wallets (case-insensitive)', async () => {
-      const data = createJobData({ counterAddress: '0xadminbtc' }); // lowercase match
+      const data = createJobData({ counterAddress: '0xadminbtc' });
 
       await processWebhookJob(data);
 
-      // Should mark as internal transfer
       expect(setRedisItem).toHaveBeenCalledWith(
         'processed-tx-tx-test-123',
         expect.objectContaining({ processed: true, type: 'internal_sweep' })
@@ -244,22 +249,18 @@ describe('Webhook Processor — processWebhookJob', () => {
     });
 
     it('processes transfers from external wallets', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
-      const data = createJobData({ counterAddress: '0xExternalCustomer' });
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData());
 
-      await processWebhookJob(data);
+      await processWebhookJob(createJobData({ counterAddress: '0xExternalCustomer' }));
 
-      // Should proceed to processing
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
 
     it('handles empty counterAddress gracefully', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
-      const data = createJobData({ counterAddress: '' });
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData());
 
-      await processWebhookJob(data);
+      await processWebhookJob(createJobData({ counterAddress: '' }));
 
-      // Empty string is not in INTERNAL_WALLETS, should proceed
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
   });
@@ -270,7 +271,7 @@ describe('Webhook Processor — processWebhookJob', () => {
 
   describe('Stage 4 — Address Resolution', () => {
     it('resolves payment data from primary address', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData());
 
       await processWebhookJob(createJobData());
 
@@ -278,34 +279,28 @@ describe('Webhook Processor — processWebhookJob', () => {
     });
 
     it('normalizes BCH address with cashaddr prefix', async () => {
-      // Primary address has no data, but prefixed version does
-      __setMockData('crypto-bitcoincash:0xBCHAddr', createRedisPaymentData({ currency: 'BCH' }));
-      const data = createJobData({ address: '0xBCHAddr', asset: 'BCH' });
+      seedRedis('crypto-bitcoincash:0xBCHAddr', createRedisPaymentData({ currency: 'BCH' }));
 
-      await processWebhookJob(data);
+      await processWebhookJob(createJobData({ address: '0xBCHAddr', asset: 'BCH' }));
 
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
 
     it('falls back to counterAddress when primary has no data', async () => {
-      // No data for primary address, but counterAddress has data
-      __setMockData('crypto-0xCounterAddress', createRedisPaymentData());
-      const data = createJobData();
+      seedRedis('crypto-0xCounterAddress', createRedisPaymentData());
 
-      await processWebhookJob(data);
+      await processWebhookJob(createJobData());
 
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
 
     it('resolves XRP master address via destination tag', async () => {
-      // XRP master address scenario
       (tatumApi.getXrpDestinationTag as jest.Mock).mockResolvedValue(12345);
       const { getCryptoRedisKey } = require('../services/merchantPool/merchantPoolConfig');
       (getCryptoRedisKey as jest.Mock).mockReturnValue('crypto-rMasterXRP123-tag-12345');
-      __setMockData('crypto-rMasterXRP123-tag-12345', createRedisPaymentData({ currency: 'XRP' }));
+      seedRedis('crypto-rMasterXRP123-tag-12345', createRedisPaymentData({ currency: 'XRP' }));
 
-      const data = createJobData({ address: 'rMasterXRP123', asset: 'XRP' });
-      await processWebhookJob(data);
+      await processWebhookJob(createJobData({ address: 'rMasterXRP123', asset: 'XRP' }));
 
       expect(tatumApi.getXrpDestinationTag).toHaveBeenCalledWith('tx-test-123');
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
@@ -313,19 +308,14 @@ describe('Webhook Processor — processWebhookJob', () => {
 
     it('handles XRP master address with no destination tag (tagless)', async () => {
       (tatumApi.getXrpDestinationTag as jest.Mock).mockResolvedValue(null);
-      const data = createJobData({ address: 'rMasterXRP123', asset: 'XRP' });
 
-      await processWebhookJob(data);
+      await processWebhookJob(createJobData({ address: 'rMasterXRP123', asset: 'XRP' }));
 
-      // No tag → no Redis data → should not call cryptoVerification
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
     });
 
     it('ignores webhook when no Redis data found for any address', async () => {
-      // No data anywhere
-      const data = createJobData();
-
-      await processWebhookJob(data);
+      await processWebhookJob(createJobData());
 
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
     });
@@ -336,35 +326,27 @@ describe('Webhook Processor — processWebhookJob', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Stage 5 — Amount Validation', () => {
+    beforeEach(() => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData());
+    });
+
     it('ignores zero-amount transactions', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
-
       await processWebhookJob(createJobData({ amount: '0' }));
-
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
     });
 
     it('ignores negative-amount transactions', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
-
       await processWebhookJob(createJobData({ amount: '-50' }));
-
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
     });
 
     it('ignores NaN amounts', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
-
       await processWebhookJob(createJobData({ amount: 'notanumber' }));
-
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
     });
 
-    it('processes valid positive amounts', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData());
-
+    it('processes valid small amounts', async () => {
       await processWebhookJob(createJobData({ amount: '0.0001' }));
-
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
   });
@@ -374,28 +356,26 @@ describe('Webhook Processor — processWebhookJob', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Stage 6 — Already Successful Payments', () => {
-    const successStatuses = ['successful', 'completed', 'recovered'];
-
-    successStatuses.forEach((status) => {
+    for (const status of ['successful', 'completed', 'recovered']) {
       it(`ignores payment with status "${status}"`, async () => {
-        __setMockData('crypto-0xTestAddress', createRedisPaymentData({ status }));
+        seedRedis('crypto-0xTestAddress', createRedisPaymentData({ status }));
 
         await processWebhookJob(createJobData());
 
         expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
       });
-    });
+    }
 
     it('processes payment with status "pending"', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ status: 'pending' }));
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({ status: 'pending' }));
 
       await processWebhookJob(createJobData());
 
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
 
-    it('processes payment with status "underpaid"', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('processes underpaid payment as completion', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         status: 'underpaid',
         incomplete: 'true',
         txId: 'tx-previous-456',
@@ -415,8 +395,8 @@ describe('Webhook Processor — processWebhookJob', () => {
 
   describe('Stage 7 — Crash Recovery', () => {
     it('recovers stale "processing" payments older than 60s', async () => {
-      const staleTime = new Date(Date.now() - 120000).toISOString(); // 2 min ago
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+      const staleTime = new Date(Date.now() - 120_000).toISOString();
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         status: 'processing',
         txId: 'tx-old-789',
         lastAttempt: staleTime,
@@ -424,18 +404,16 @@ describe('Webhook Processor — processWebhookJob', () => {
 
       await processWebhookJob(createJobData());
 
-      // Should call cryptoVerification for recovery
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
-      // Should mark as successful after recovery
       expect(setRedisItem).toHaveBeenCalledWith(
         'crypto-0xTestAddress',
         expect.objectContaining({ status: 'successful' })
       );
     });
 
-    it('does NOT trigger recovery for "processing" payments < 60s old', async () => {
-      const recentTime = new Date(Date.now() - 30000).toISOString(); // 30s ago
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('does NOT trigger recovery for recent "processing" payments', async () => {
+      const recentTime = new Date(Date.now() - 30_000).toISOString();
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         status: 'processing',
         txId: 'tx-recent-789',
         lastAttempt: recentTime,
@@ -443,32 +421,31 @@ describe('Webhook Processor — processWebhookJob', () => {
 
       await processWebhookJob(createJobData());
 
-      // Not stale, and txId already exists (not first tx, not completion) → should be ignored
-      // Because isFirstTransaction = false (items.txId exists) and isCompletionPayment = false
+      // Not stale + txId already set → duplicate, ignored
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
     });
 
-    it('handles crash recovery failure with direct webhook fallback', async () => {
-      const staleTime = new Date(Date.now() - 120000).toISOString();
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('falls back to direct webhook when recovery cryptoVerification fails', async () => {
+      const staleTime = new Date(Date.now() - 120_000).toISOString();
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         status: 'processing',
         txId: 'tx-old-789',
         lastAttempt: staleTime,
         ref: 'ref-001',
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1, webhook_url: 'https://merchant.com/hook' });
+      seedRedis('ref-001', { adm_id: 1, company_id: 1, webhook_url: 'https://merchant.com/hook' });
 
-      // cryptoVerification fails
-      (paymentController.cryptoVerification as jest.Mock).mockResolvedValue({ status: 500, message: 'Settlement failed' });
+      (paymentController.cryptoVerification as jest.Mock).mockResolvedValue({
+        status: 500,
+        message: 'Settlement failed',
+      });
 
       await processWebhookJob(createJobData());
 
-      // Should attempt direct webhook delivery as fallback
       expect(callMerchantWebhook).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ event: 'payment.confirmed', recovered: true })
       );
-      // Should mark as "recovered"
       expect(setRedisItem).toHaveBeenCalledWith(
         'crypto-0xTestAddress',
         expect.objectContaining({ status: 'recovered' })
@@ -481,10 +458,12 @@ describe('Webhook Processor — processWebhookJob', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Stage 8 — New Transaction (First Tx)', () => {
-    it('processes first transaction and marks as successful', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
+    beforeEach(() => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
+      seedRedis('ref-001', { adm_id: 1, company_id: 1 });
+    });
 
+    it('processes first transaction and marks as successful', async () => {
       await processWebhookJob(createJobData({ amount: '100' }));
 
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
@@ -494,19 +473,13 @@ describe('Webhook Processor — processWebhookJob', () => {
       );
     });
 
-    it('sends pending notification for first transaction', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
-
+    it('sends pending notification', async () => {
       await processWebhookJob(createJobData());
 
       expect(sendPendingPaymentNotification).toHaveBeenCalled();
     });
 
-    it('sends payment.pending merchant webhook', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
-
+    it('sends payment.pending webhook to merchant', async () => {
       await processWebhookJob(createJobData());
 
       expect(callMerchantWebhook).toHaveBeenCalledWith(
@@ -515,20 +488,15 @@ describe('Webhook Processor — processWebhookJob', () => {
       );
     });
 
-    it('ignores duplicate transactions (txId already matches)', async () => {
-      // txId exists and matches the incoming tx → duplicate
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: 'tx-test-123' }));
+    it('ignores duplicate tx (same txId already in Redis)', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({ txId: 'tx-test-123' }));
 
       await processWebhookJob(createJobData());
 
-      // Should not process (not first tx, not completion, not stale)
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
     });
 
-    it('marks processed-tx after successful verification', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
-
+    it('marks processed-tx after success', async () => {
       await processWebhookJob(createJobData());
 
       expect(setRedisItem).toHaveBeenCalledWith(
@@ -537,24 +505,23 @@ describe('Webhook Processor — processWebhookJob', () => {
       );
     });
 
-    it('sets TTL on processed-tx key (48h)', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
-
+    it('sets 48h TTL on processed-tx key', async () => {
       await processWebhookJob(createJobData());
 
       expect(setRedisTTL).toHaveBeenCalledWith('processed-tx-tx-test-123', 172800);
     });
 
     it('updates customer ref data on success', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined, ref: 'ref-customer-1' }));
-      __setMockData('ref-customer-1', { adm_id: 1, company_id: 1, status: 'pending' });
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
+        txId: undefined,
+        ref: 'ref-cust-1',
+      }));
+      seedRedis('ref-cust-1', { adm_id: 1, company_id: 1, status: 'pending' });
 
       await processWebhookJob(createJobData());
 
-      // Customer ref should also be updated
       expect(setRedisItem).toHaveBeenCalledWith(
-        'ref-customer-1',
+        'ref-cust-1',
         expect.objectContaining({ status: 'successful', txId: 'tx-test-123' })
       );
     });
@@ -564,17 +531,17 @@ describe('Webhook Processor — processWebhookJob', () => {
   // Stage 8b: Completion Payments
   // ═══════════════════════════════════════════════════════════════════════════
 
-  describe('Stage 8b — Completion Payment (partial payment follow-up)', () => {
+  describe('Stage 8b — Completion Payment', () => {
     it('processes completion payment with combined amount', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         status: 'underpaid',
         incomplete: 'true',
         txId: 'tx-first-part',
         previousAmount: '60',
         originalExpectedAmount: '100',
-        amount: '40', // remaining expected
+        amount: '40',
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
+      seedRedis('ref-001', { adm_id: 1, company_id: 1 });
 
       await processWebhookJob(createJobData({ txId: 'tx-second-part', amount: '40' }));
 
@@ -592,37 +559,34 @@ describe('Webhook Processor — processWebhookJob', () => {
 
   describe('Stage 9 — Underpayment: Payment Link', () => {
     it('marks underpaid payment link and waits for remaining', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
         amount: '100',
         link_id: 'link-001',
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
+      seedRedis('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
 
-      // Send 70 out of 100 expected
       await processWebhookJob(createJobData({ amount: '70' }));
 
-      // Should mark as underpaid and NOT call cryptoVerification
       expect(setRedisItem).toHaveBeenCalledWith(
         'crypto-0xTestAddress',
         expect.objectContaining({
           status: 'underpaid',
           incomplete: 'true',
           receivedAmount: 70,
-          amount: 30, // remaining
+          amount: 30,
         })
       );
-      // CryptoVerification should NOT be called (waiting for remaining)
       expect(paymentController.cryptoVerification).not.toHaveBeenCalled();
     });
 
-    it('sends underpaid webhook to merchant for payment link', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('sends underpaid webhook for payment link', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
         amount: '100',
         link_id: 'link-001',
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
+      seedRedis('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
 
       await processWebhookJob(createJobData({ amount: '70' }));
 
@@ -638,43 +602,39 @@ describe('Webhook Processor — processWebhookJob', () => {
       );
     });
 
-    it('sets grace period TTL on underpaid payment', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('sets grace period TTL (default 30 min)', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
         amount: '100',
         link_id: 'link-001',
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
+      seedRedis('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
 
       await processWebhookJob(createJobData({ amount: '70' }));
 
-      // Default grace period is 30 min = 1800 seconds
       expect(setRedisTTL).toHaveBeenCalledWith('crypto-0xTestAddress', 1800);
     });
   });
 
   describe('Stage 9 — Underpayment: Direct API', () => {
     it('processes underpaid direct API payment immediately', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
         amount: '100',
-        // No link_id → direct API
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
+      seedRedis('ref-001', { adm_id: 1, company_id: 1 });
 
-      // Send 70 out of 100 expected
       await processWebhookJob(createJobData({ amount: '70' }));
 
-      // Direct API: should process immediately (not wait)
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
 
-    it('sends underpaid webhook for direct API with correct type', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('sends underpaid webhook with direct_api type', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
         amount: '100',
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
+      seedRedis('ref-001', { adm_id: 1, company_id: 1 });
 
       await processWebhookJob(createJobData({ amount: '70' }));
 
@@ -689,23 +649,18 @@ describe('Webhook Processor — processWebhookJob', () => {
   });
 
   describe('Stage 9 — Minor Underpayment (within threshold)', () => {
-    it('accepts minor underpayment within $1 threshold for payment links', async () => {
-      // Payment of $99.50 for $100 expected (shortfall ~$0.50 < $1 threshold)
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('accepts minor underpayment within $1 threshold', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
-        amount: '100',      // expected crypto
-        base_amount: '100',  // $100 USD equivalent
+        amount: '100',
+        base_amount: '100',
         link_id: 'link-001',
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
+      seedRedis('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
 
-      // Mock company with default threshold
-      (companyModel.findOne as jest.Mock).mockResolvedValue(null);
-
-      // Send 99.5 out of 100 expected (0.5% short → $0.50 in USD)
+      // 99.5/100 → $0.50 shortfall < $1 threshold
       await processWebhookJob(createJobData({ amount: '99.5' }));
 
-      // Should accept and process (not wait for remaining)
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
   });
@@ -715,17 +670,15 @@ describe('Webhook Processor — processWebhookJob', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Stage 10 — Overpayment', () => {
-    it('processes overpayment normally (no special handling needed)', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('processes overpayment normally', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
         amount: '100',
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
+      seedRedis('ref-001', { adm_id: 1, company_id: 1 });
 
-      // Send 150 when only 100 was expected → overpayment
       await processWebhookJob(createJobData({ amount: '150' }));
 
-      // Should process normally with the actual received amount
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
       expect(setRedisItem).toHaveBeenCalledWith(
         'crypto-0xTestAddress',
@@ -739,19 +692,18 @@ describe('Webhook Processor — processWebhookJob', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Stage 11 — CryptoVerification', () => {
-    it('succeeds on first attempt', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
+    beforeEach(() => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
+      seedRedis('ref-001', { adm_id: 1, company_id: 1 });
+    });
 
+    it('succeeds on first attempt', async () => {
       await processWebhookJob(createJobData());
 
       expect(paymentController.cryptoVerification).toHaveBeenCalledTimes(1);
     });
 
     it('retries on retryable error and succeeds', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
-
       (paymentController.cryptoVerification as jest.Mock)
         .mockRejectedValueOnce(new Error('network timeout'))
         .mockResolvedValueOnce({});
@@ -765,41 +717,34 @@ describe('Webhook Processor — processWebhookJob', () => {
       );
     }, 15000);
 
-    it('does NOT retry on non-retryable errors (e.g., invalid address)', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
-
-      (paymentController.cryptoVerification as jest.Mock)
-        .mockRejectedValue(new Error('invalid address'));
+    it('does NOT retry non-retryable errors (invalid address)', async () => {
+      (paymentController.cryptoVerification as jest.Mock).mockRejectedValue(
+        new Error('invalid address')
+      );
 
       await expect(processWebhookJob(createJobData())).rejects.toThrow('invalid address');
 
-      // Should only be called once (no retries for non-retryable)
       expect(paymentController.cryptoVerification).toHaveBeenCalledTimes(1);
     });
 
     it('marks payment as failed after all retries exhausted', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
-
-      (paymentController.cryptoVerification as jest.Mock)
-        .mockRejectedValue(new Error('server error'));
+      (paymentController.cryptoVerification as jest.Mock).mockRejectedValue(
+        new Error('server error')
+      );
 
       await expect(processWebhookJob(createJobData())).rejects.toThrow('server error');
 
-      expect(paymentController.cryptoVerification).toHaveBeenCalledTimes(3); // maxRetries = 3
+      expect(paymentController.cryptoVerification).toHaveBeenCalledTimes(3);
       expect(setRedisItem).toHaveBeenCalledWith(
         'crypto-0xTestAddress',
         expect.objectContaining({ status: 'failed' })
       );
     }, 30000);
 
-    it('records failed payment in Redis', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
-
-      (paymentController.cryptoVerification as jest.Mock)
-        .mockRejectedValue(new Error('server error'));
+    it('records failed payment details in Redis', async () => {
+      (paymentController.cryptoVerification as jest.Mock).mockRejectedValue(
+        new Error('server error')
+      );
 
       await expect(processWebhookJob(createJobData())).rejects.toThrow();
 
@@ -813,14 +758,15 @@ describe('Webhook Processor — processWebhookJob', () => {
       );
     }, 30000);
 
-    it('handles cryptoVerification returning error status (non-exception)', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({ txId: undefined }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 1 });
+    it('handles cryptoVerification returning error status code', async () => {
+      (paymentController.cryptoVerification as jest.Mock).mockResolvedValue({
+        status: 500,
+        message: 'Internal error',
+      });
 
-      (paymentController.cryptoVerification as jest.Mock)
-        .mockResolvedValue({ status: 500, message: 'Internal error' });
-
-      await expect(processWebhookJob(createJobData())).rejects.toThrow('cryptoVerification error 500');
+      await expect(processWebhookJob(createJobData())).rejects.toThrow(
+        'cryptoVerification error 500'
+      );
     }, 30000);
   });
 
@@ -829,48 +775,45 @@ describe('Webhook Processor — processWebhookJob', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Stage 12 — Query Param Enrichment', () => {
-    it('enriches Redis items with company_id from query params', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('enriches items with company_id from query params', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
-        company_id: undefined, // No company_id in Redis
+        company_id: undefined,
       }));
-      __setMockData('ref-001', { adm_id: 1 });
+      seedRedis('ref-001', { adm_id: 1 });
 
       await processWebhookJob(createJobData({ company_id: 42 }));
 
-      // The items object should be enriched with company_id from query params
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
 
-    it('does NOT override existing company_id from Redis', async () => {
-      __setMockData('crypto-0xTestAddress', createRedisPaymentData({
+    it('does NOT override existing company_id', async () => {
+      seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
-        company_id: 99, // Already has company_id
+        company_id: 99,
       }));
-      __setMockData('ref-001', { adm_id: 1, company_id: 99 });
+      seedRedis('ref-001', { adm_id: 1, company_id: 99 });
 
       await processWebhookJob(createJobData({ company_id: 42 }));
 
-      // Should preserve the original company_id (99), not override with 42
       expect(paymentController.cryptoVerification).toHaveBeenCalled();
     });
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Integration: Full Pipeline
+  // Full Pipeline Happy Path
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Full Pipeline — Happy Path', () => {
-    it('processes a standard ETH payment end-to-end', async () => {
-      // Setup: pending payment in Redis
-      __setMockData('crypto-0xPaymentAddr', createRedisPaymentData({
+    it('processes standard ETH payment end-to-end', async () => {
+      seedRedis('crypto-0xPaymentAddr', createRedisPaymentData({
         txId: undefined,
         amount: '0.05',
         currency: 'ETH',
         payment_id: 'pay-full-001',
         ref: 'ref-full-001',
       }));
-      __setMockData('ref-full-001', {
+      seedRedis('ref-full-001', {
         adm_id: 1,
         company_id: 1,
         customer_name: 'Alice',
@@ -888,28 +831,25 @@ describe('Webhook Processor — processWebhookJob', () => {
 
       await processWebhookJob(data);
 
-      // 1. Lock was acquired
       expect(acquireLock).toHaveBeenCalledWith('tatum-webhook-tx-eth-001', 300, 1, 50);
-      // 2. Pending notification was sent
       expect(sendPendingPaymentNotification).toHaveBeenCalled();
-      // 3. Pending webhook was sent to merchant
       expect(callMerchantWebhook).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ event: 'payment.pending' })
       );
-      // 4. CryptoVerification was called
-      expect(paymentController.cryptoVerification).toHaveBeenCalledWith('0xPaymentAddr', true, 'crypto-0xPaymentAddr');
-      // 5. Payment marked successful
+      expect(paymentController.cryptoVerification).toHaveBeenCalledWith(
+        '0xPaymentAddr',
+        true,
+        'crypto-0xPaymentAddr'
+      );
       expect(setRedisItem).toHaveBeenCalledWith(
         'crypto-0xPaymentAddr',
         expect.objectContaining({ status: 'successful' })
       );
-      // 6. Processed-tx key set
       expect(setRedisItem).toHaveBeenCalledWith(
         'processed-tx-tx-eth-001',
         expect.objectContaining({ address: '0xPaymentAddr', payment_id: 'pay-full-001' })
       );
-      // 7. Lock was released
       expect(releaseLock).toHaveBeenCalledWith('tatum-webhook-tx-eth-001');
     });
   });
