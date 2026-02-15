@@ -5,6 +5,7 @@
  */
 
 import { Op } from "sequelize";
+import { cronLogger } from "../../utils/loggers";
 import {
   UTXO_CHAINS as MODEL_UTXO_CHAINS,
   TOKEN_CHAINS as MODEL_TOKEN_CHAINS,
@@ -149,14 +150,14 @@ const parseSweepConfig = (walletType: string): SweepConfig => {
     const [mode, valueStr] = configValue.split(":");
 
     if (mode !== "threshold" && mode !== "time") {
-      console.error(`[MerchantPool] Invalid sweep mode for ${walletType}: ${mode}. Using default.`);
+      cronLogger.error(`[MerchantPool] Invalid sweep mode for ${walletType}: ${mode}. Using default.`);
     } else if (TOKEN_CHAINS.includes(walletType) && mode === "time") {
-      console.error(`[MerchantPool] Tokens cannot use time-based sweep! ${walletType} must use threshold. Using threshold:30`);
+      cronLogger.error(`[MerchantPool] Tokens cannot use time-based sweep! ${walletType} must use threshold. Using threshold:30`);
       return { mode: "threshold", value: 30 };
     } else {
       const value = valueStr ? parseInt(valueStr, 10) : (mode === "threshold" ? 30 : 10);
       if (isNaN(value) || value <= 0) {
-        console.error(`[MerchantPool] Invalid sweep value for ${walletType}: ${valueStr}. Using default.`);
+        cronLogger.error(`[MerchantPool] Invalid sweep value for ${walletType}: ${valueStr}. Using default.`);
         return { mode, value: mode === "threshold" ? 30 : 10 };
       }
       return { mode, value };
@@ -168,7 +169,7 @@ const parseSweepConfig = (walletType: string): SweepConfig => {
     return { mode: "batch" };
   }
 
-  console.warn(`[MerchantPool] No sweep config for ${walletType}, using default: threshold:30`);
+  cronLogger.warn(`[MerchantPool] No sweep config for ${walletType}, using default: threshold:30`);
   return { mode: "threshold", value: 30 };
 };
 
@@ -207,17 +208,17 @@ export const withRetry = async <T>(
       const message = getErrorMessage(error);
       
       if (!isRetryable(lastError)) {
-        console.error(`[MerchantPool] ❌ ${operationName} failed with non-retryable error: ${message}`);
+        cronLogger.error(`[MerchantPool] ❌ ${operationName} failed with non-retryable error: ${message}`);
         throw lastError;
       }
       
       if (attempt < maxRetries) {
         const waitTime = delayMs * Math.pow(2, attempt - 1);
-        console.warn(`[MerchantPool] ⚠️ ${operationName} failed (attempt ${attempt}/${maxRetries}): ${message}`);
-        console.warn(`[MerchantPool] Retrying in ${waitTime}ms...`);
+        cronLogger.warn(`[MerchantPool] ⚠️ ${operationName} failed (attempt ${attempt}/${maxRetries}): ${message}`);
+        cronLogger.warn(`[MerchantPool] Retrying in ${waitTime}ms...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       } else {
-        console.error(`[MerchantPool] ❌ ${operationName} failed after ${maxRetries} attempts: ${message}`);
+        cronLogger.error(`[MerchantPool] ❌ ${operationName} failed after ${maxRetries} attempts: ${message}`);
       }
     }
   }

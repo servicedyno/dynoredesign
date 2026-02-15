@@ -12,6 +12,7 @@
  */
 
 import { ethers } from "ethers";
+import { cronLogger } from "../../utils/loggers";
 import { TOKEN_CONTRACTS } from "./merchantPoolConfig";
 
 const LOG_PREFIX = "[DirectEvmSweep]";
@@ -176,13 +177,13 @@ export async function directEvmSweep(params: {
   for (const rpcUrl of rpcUrls) {
     const rpcLabel = rpcUrl.substring(0, 50) + (rpcUrl.length > 50 ? "..." : "");
     try {
-      console.log(`${LOG_PREFIX} Attempting via ${rpcLabel}`);
+      cronLogger.info(`${LOG_PREFIX} Attempting via ${rpcLabel}`);
       const provider = createProvider(rpcUrl);
       const wallet = new ethers.Wallet(params.privateKey, provider);
 
       // 1. Get nonce (use 'pending' to account for in-flight TXs)
       const nonce = await provider.getTransactionCount(params.fromAddress, "pending");
-      console.log(`${LOG_PREFIX} Nonce: ${nonce}`);
+      cronLogger.info(`${LOG_PREFIX} Nonce: ${nonce}`);
 
       // 2. Determine gas price
       let gasPrice: bigint;
@@ -197,7 +198,7 @@ export async function directEvmSweep(params: {
         if (!feeData.gasPrice) {
           const currentGasPrice = await provider.send("eth_gasPrice", []);
           gasPrice = BigInt(currentGasPrice);
-          console.log(`${LOG_PREFIX} Using network gas price: ${ethers.formatUnits(gasPrice, "gwei")} Gwei`);
+          cronLogger.info(`${LOG_PREFIX} Using network gas price: ${ethers.formatUnits(gasPrice, "gwei")} Gwei`);
         } else {
           gasPrice = feeData.gasPrice;
         }
@@ -205,21 +206,21 @@ export async function directEvmSweep(params: {
         // If still null or zero, use a reasonable default (0.5 Gwei for modern Ethereum)
         if (!gasPrice || gasPrice === 0n) {
           gasPrice = ethers.parseUnits("0.5", "gwei");
-          console.warn(`${LOG_PREFIX} Could not fetch gas price, using fallback: 0.5 Gwei`);
+          cronLogger.warn(`${LOG_PREFIX} Could not fetch gas price, using fallback: 0.5 Gwei`);
         }
       }
 
       // Cap gas price to prevent overpaying during spikes
       const maxGas = ethers.parseUnits(config.maxGasPriceGwei.toString(), "gwei");
       if (gasPrice > maxGas) {
-        console.warn(
+        cronLogger.warn(
           `${LOG_PREFIX} Gas price ${ethers.formatUnits(gasPrice, "gwei")} Gwei exceeds cap ${config.maxGasPriceGwei}, capping`
         );
         gasPrice = maxGas;
       }
 
       const gasPriceStr = ethers.formatUnits(gasPrice, "gwei");
-      console.log(`${LOG_PREFIX} Gas price: ${gasPriceStr} Gwei`);
+      cronLogger.info(`${LOG_PREFIX} Gas price: ${gasPriceStr} Gwei`);
 
       const gasLimit = params.gasLimit || config.defaultGasLimit;
 
@@ -249,7 +250,7 @@ export async function directEvmSweep(params: {
           nonce,
         };
 
-        console.log(
+        cronLogger.info(
           `${LOG_PREFIX} ERC20 sweep: ${truncatedAmount} tokens → ${params.toAddress} via ${config.contractAddress}`
         );
       } else {
@@ -266,7 +267,7 @@ export async function directEvmSweep(params: {
           nonce,
         };
 
-        console.log(
+        cronLogger.info(
           `${LOG_PREFIX} Native sweep: ${truncatedAmount} → ${params.toAddress}`
         );
       }
@@ -274,7 +275,7 @@ export async function directEvmSweep(params: {
       // 4. Sign and broadcast
       const txResponse = await wallet.sendTransaction(tx);
 
-      console.log(`${LOG_PREFIX} ✅ TX broadcast successfully: ${txResponse.hash}`);
+      cronLogger.info(`${LOG_PREFIX} ✅ TX broadcast successfully: ${txResponse.hash}`);
 
       return {
         txHash: txResponse.hash,
@@ -283,7 +284,7 @@ export async function directEvmSweep(params: {
       };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      console.warn(`${LOG_PREFIX} RPC ${rpcLabel} failed: ${errMsg}`);
+      cronLogger.warn(`${LOG_PREFIX} RPC ${rpcLabel} failed: ${errMsg}`);
       lastError = error instanceof Error ? error : new Error(errMsg);
 
       // Don't try other RPCs for non-retryable errors

@@ -1,4 +1,5 @@
 import express from "express";
+import { apiLogger } from "./utils/loggers";
 import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
@@ -79,9 +80,9 @@ const log = (message: string, level: 'info' | 'error' | 'warn' = 'info') => {
   const output = `[${timestamp}] ${prefix} ${message}`;
   
   if (level === 'error') {
-    console.error(output);
+    apiLogger.error(output);
   } else {
-    console.log(output);
+    apiLogger.info(output);
   }
 };
 

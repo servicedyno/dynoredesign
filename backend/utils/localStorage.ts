@@ -6,13 +6,14 @@
  */
 
 // Placeholder export to prevent import errors
+import { apiLogger } from "./loggers";
 const localStorage = {
   push: async (_key: string, _data: unknown) => {
-    console.warn('[DEPRECATED] localStorage.push called - use Redis instead');
+    apiLogger.warn('[DEPRECATED] localStorage.push called - use Redis instead');
     throw new Error('localStorage is deprecated. Use Redis for OTP storage.');
   },
   getData: async (_key: string) => {
-    console.warn('[DEPRECATED] localStorage.getData called - use Redis instead');
+    apiLogger.warn('[DEPRECATED] localStorage.getData called - use Redis instead');
     throw new Error('localStorage is deprecated. Use Redis for OTP storage.');
   }
 };

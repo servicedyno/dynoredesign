@@ -4,6 +4,7 @@
  */
 
 import express from "express";
+import { apiLogger } from "../utils/loggers";
 import { QueryTypes } from "sequelize";
 import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../helper";
 import { setRedisItem, getRedisItem, deleteRedisItem } from "../utils/redisInstance";
@@ -750,20 +751,20 @@ testRouter.post("/rlusd-trustline", authMiddleware, async (_req, res) => {
       return errorResponseHelper(res, 401, "User not authenticated");
     }
 
-    console.log(`[TestTrustLine] Triggering RLUSD address creation for user ${userId}...`);
+    apiLogger.info(`[TestTrustLine] Triggering RLUSD address creation for user ${userId}...`);
     const result = await addAddressToMerchantPool(userId, "RLUSD") as any;
 
     const address = result?.dataValues?.wallet_address || result?.wallet_address || "unknown";
     const status = result?.dataValues?.status || result?.status || "unknown";
 
-    console.log(`[TestTrustLine] Result: address=${address}, status=${status}`);
+    apiLogger.info(`[TestTrustLine] Result: address=${address}, status=${status}`);
     successResponseHelper(res, 200, "RLUSD trust line test complete", {
       address,
       status,
       note: status === "AVAILABLE" ? "Trust line established successfully" : "Trust line pending — check retryPendingTrustLines cron"
     });
   } catch (e) {
-    console.error(`[TestTrustLine] Error:`, getErrorMessage(e));
+    apiLogger.error(`[TestTrustLine] Error:`, getErrorMessage(e));
     errorResponseHelper(res, 500, getErrorMessage(e));
   }
 });

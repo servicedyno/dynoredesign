@@ -20,6 +20,7 @@
  */
 
 import express from "express";
+import { apiLogger } from "../utils/loggers";
 import jwt from "jsonwebtoken";
 import Crypto from "crypto";
 import { QueryTypes } from "sequelize";
@@ -79,7 +80,7 @@ const apiKeyOnlyMiddleware = async (
     res.locals.apiKeyData = apiKeyData;
     next();
   } catch (error) {
-    console.error("[MerchantAPI] apiKeyOnly error:", error);
+    apiLogger.error("[MerchantAPI] apiKeyOnly error:", error);
     return res.status(500).json({
       success: false,
       message: "API key validation error"
@@ -177,7 +178,7 @@ router.post("/createUser", apiKeyOnlyMiddleware, async (req, res) => {
       company_id: data.company_id
     }, tokenSecret);
     
-    console.log(`[MerchantAPI] Created customer ${customerId} for company ${data.company_id}`);
+    apiLogger.info(`[MerchantAPI] Created customer ${customerId} for company ${data.company_id}`);
     
     return res.status(200).json({
       success: true,
@@ -186,7 +187,7 @@ router.post("/createUser", apiKeyOnlyMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] createUser error:", error);
+    apiLogger.error("[MerchantAPI] createUser error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"
@@ -215,7 +216,7 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
       accepted_currencies,
     } = req.body;
     
-    console.log(`[MerchantAPI] cryptoPayment body keys: ${Object.keys(req.body).join(', ')}`);
+    apiLogger.info(`[MerchantAPI] cryptoPayment body keys: ${Object.keys(req.body).join(', ')}`);
     
     if (!amount || amount <= 0) {
       return res.status(400).json({
@@ -288,7 +289,7 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
         false,
       );
     } catch (rateError) {
-      console.error("[MerchantAPI] Currency rate error:", rateError);
+      apiLogger.error("[MerchantAPI] Currency rate error:", rateError);
       return res.status(500).json({ success: false, message: "Failed to get currency rates" });
     }
     
@@ -301,11 +302,11 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     const effectiveWebhookUrl = webhook_url || data.webhook_url || null;
     const effectiveWebhookSecret = data.webhook_secret || null;
     
-    console.log(`[MerchantAPI] cryptoPayment - Company: ${data.company_id}, Amount: ${amount}, Currency: ${normalizedCurrency}`);
-    console.log(`[MerchantAPI] webhook_url from body: ${webhook_url || 'NOT PROVIDED'}`);
-    console.log(`[MerchantAPI] webhook_url from API key: ${data.webhook_url || 'NOT SET'}`);
-    console.log(`[MerchantAPI] effectiveWebhookUrl: ${effectiveWebhookUrl || 'NULL'}`);
-    console.log(`[MerchantAPI] callback_url: ${callback_url || 'NOT PROVIDED'}`);
+    apiLogger.info(`[MerchantAPI] cryptoPayment - Company: ${data.company_id}, Amount: ${amount}, Currency: ${normalizedCurrency}`);
+    apiLogger.info(`[MerchantAPI] webhook_url from body: ${webhook_url || 'NOT PROVIDED'}`);
+    apiLogger.info(`[MerchantAPI] webhook_url from API key: ${data.webhook_url || 'NOT SET'}`);
+    apiLogger.info(`[MerchantAPI] effectiveWebhookUrl: ${effectiveWebhookUrl || 'NULL'}`);
+    apiLogger.info(`[MerchantAPI] callback_url: ${callback_url || 'NOT PROVIDED'}`);
     
     const redisPayload = {
       customer_id: customerData[0].customer_id,
@@ -360,7 +361,7 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     await paymentController.createCryptoPayment(mockReq, mockRes);
     
     if (capturedStatus !== 200 || !capturedData) {
-      console.error("[MerchantAPI] createCryptoPayment failed:", capturedData);
+      apiLogger.error("[MerchantAPI] createCryptoPayment failed:", capturedData);
       return res.status(capturedStatus || 500).json({
         success: false,
         message: (capturedData as Record<string, unknown>)?.message || "Failed to create crypto payment",
@@ -370,7 +371,7 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     const paymentData = (capturedData as Record<string, unknown>).data as Record<string, unknown>;
     const { qr_code, address, transaction_id, destination_tag } = paymentData;
     
-    console.log(`[MerchantAPI] Payment created - TX: ${transaction_id}, Address: ${address}${destination_tag ? `, Tag: ${destination_tag}` : ''}`);
+    apiLogger.info(`[MerchantAPI] Payment created - TX: ${transaction_id}, Address: ${address}${destination_tag ? `, Tag: ${destination_tag}` : ''}`);
     
     return res.status(200).json({
       success: true,
@@ -390,7 +391,7 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] cryptoPayment error:", error);
+    apiLogger.error("[MerchantAPI] cryptoPayment error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"
@@ -469,7 +470,7 @@ router.post("/createPayment", legacyApiAuthMiddleware, async (req, res) => {
     const effectiveWebhookUrl = webhook_url || data.webhook_url || null;
     const effectiveWebhookSecret = data.webhook_secret || null;
     
-    console.log(`[MerchantAPI] createPayment - Company: ${data.company_id}, Amount: ${amount}`);
+    apiLogger.info(`[MerchantAPI] createPayment - Company: ${data.company_id}, Amount: ${amount}`);
     
     const redisPayload = {
       customer_id: customerData[0].customer_id,
@@ -507,7 +508,7 @@ router.post("/createPayment", legacyApiAuthMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] createPayment error:", error);
+    apiLogger.error("[MerchantAPI] createPayment error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"
@@ -591,7 +592,7 @@ router.post("/addFunds", legacyApiAuthMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] addFunds error:", error);
+    apiLogger.error("[MerchantAPI] addFunds error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"
@@ -693,7 +694,7 @@ router.post("/useWallet", legacyApiAuthMiddleware, async (req, res) => {
       }
     );
     
-    console.log(`[MerchantAPI] useWallet - Debited ${amount} from customer ${customerId}`);
+    apiLogger.info(`[MerchantAPI] useWallet - Debited ${amount} from customer ${customerId}`);
     
     return res.status(200).json({
       success: true,
@@ -705,7 +706,7 @@ router.post("/useWallet", legacyApiAuthMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] useWallet error:", error);
+    apiLogger.error("[MerchantAPI] useWallet error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"
@@ -737,7 +738,7 @@ router.get("/getBalance", legacyApiAuthMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] getBalance error:", error);
+    apiLogger.error("[MerchantAPI] getBalance error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"
@@ -828,7 +829,7 @@ router.get("/getTransactions", legacyApiAuthMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] getTransactions error:", error);
+    apiLogger.error("[MerchantAPI] getTransactions error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"
@@ -929,7 +930,7 @@ router.get("/getSingleTransaction/:id", legacyApiAuthMiddleware, async (req, res
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] getSingleTransaction error:", error);
+    apiLogger.error("[MerchantAPI] getSingleTransaction error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"
@@ -997,7 +998,7 @@ router.get("/getCryptoTransaction/:address", legacyApiAuthMiddleware, async (req
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] getCryptoTransaction error:", error);
+    apiLogger.error("[MerchantAPI] getCryptoTransaction error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"
@@ -1025,7 +1026,7 @@ router.get("/getSupportedCurrency", apiKeyOnlyMiddleware, async (req, res) => {
     });
     
   } catch (error) {
-    console.error("[MerchantAPI] getSupportedCurrency error:", error);
+    apiLogger.error("[MerchantAPI] getSupportedCurrency error:", error);
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error"

@@ -5,6 +5,7 @@
  */
 
 import { Transaction, Op } from "sequelize";
+import { cronLogger } from "../../utils/loggers";
 import {
   merchantWalletModel,
   merchantTempAddressModel,
@@ -82,7 +83,7 @@ export const getOrCreateMerchantWallet = async (
     };
   }
 
-  console.log(`[MerchantPool] Generating new ${baseChain} wallet for merchant ${userId}...`);
+  cronLogger.info(`[MerchantPool] Generating new ${baseChain} wallet for merchant ${userId}...`);
   
   const walletData = await tatumApi.generateWallet(baseChain);
   
@@ -105,7 +106,7 @@ export const getOrCreateMerchantWallet = async (
       last_derivation_index: 0,
     });
 
-    console.log(`[MerchantPool] ✅ Created ${baseChain} (non-HD) wallet marker for merchant ${userId}`);
+    cronLogger.info(`[MerchantPool] ✅ Created ${baseChain} (non-HD) wallet marker for merchant ${userId}`);
     return { xpub: walletData.xpub, mnemonic: "NON_HD" };
   }
   
@@ -126,7 +127,7 @@ export const getOrCreateMerchantWallet = async (
     last_derivation_index: 0,
   });
 
-  console.log(`[MerchantPool] ✅ Created ${baseChain} wallet for merchant ${userId}`);
+  cronLogger.info(`[MerchantPool] ✅ Created ${baseChain} wallet for merchant ${userId}`);
 
   return {
     xpub: walletData.xpub,
@@ -208,7 +209,7 @@ export const addAddressToMerchantPool = async (
         );
         subscriptionId = subResult?.id;
       } catch (subError) {
-        console.warn(`[MerchantPool] Warning: Subscription for master address:`, getErrorMessage(subError));
+        cronLogger.warn(`[MerchantPool] Warning: Subscription for master address:`, getErrorMessage(subError));
       }
 
       const poolAddress = await merchantTempAddressModel.create(
@@ -228,7 +229,7 @@ export const addAddressToMerchantPool = async (
         { transaction }
       );
 
-      console.log(`[MerchantPool] ✅ Added tag-based ${walletType} address for merchant ${userId}: ${XRP_MASTER_ADDRESS}:${destinationTag}`);
+      cronLogger.info(`[MerchantPool] ✅ Added tag-based ${walletType} address for merchant ${userId}: ${XRP_MASTER_ADDRESS}:${destinationTag}`);
       return poolAddress;
     }
 
@@ -264,7 +265,7 @@ export const addAddressToMerchantPool = async (
       );
       subscriptionId = subResult?.id;
     } catch (subError) {
-      console.error(`[MerchantPool] Warning: Failed to create subscription for ${addressData.address}:`, subError);
+      cronLogger.error(`[MerchantPool] Warning: Failed to create subscription for ${addressData.address}:`, subError);
     }
 
     const poolAddress = await merchantTempAddressModel.create(
@@ -283,12 +284,12 @@ export const addAddressToMerchantPool = async (
       { transaction }
     );
 
-    console.log(`[MerchantPool] ✅ Added ${walletType} address to merchant ${userId}'s pool: ${addressData.address}`);
+    cronLogger.info(`[MerchantPool] ✅ Added ${walletType} address to merchant ${userId}'s pool: ${addressData.address}`);
 
     return poolAddress;
   } catch (error) {
     const message = getErrorMessage(error);
-    console.error(`[MerchantPool] ❌ Failed to add address to pool:`, message);
+    cronLogger.error(`[MerchantPool] ❌ Failed to add address to pool:`, message);
     throw error;
   }
 };
@@ -312,24 +313,24 @@ export const initializeMerchantPool = async (
     });
 
     if (existingCount >= POOL_CONFIG.INITIAL_SIZE) {
-      console.log(`[MerchantPool] Pool already exists for merchant ${userId}, type ${walletType}`);
+      cronLogger.info(`[MerchantPool] Pool already exists for merchant ${userId}, type ${walletType}`);
       await transaction.commit();
       return;
     }
 
     const toCreate = POOL_CONFIG.INITIAL_SIZE - existingCount;
-    console.log(`[MerchantPool] Creating ${toCreate} ${walletType} addresses for merchant ${userId}...`);
+    cronLogger.info(`[MerchantPool] Creating ${toCreate} ${walletType} addresses for merchant ${userId}...`);
 
     for (let i = 0; i < toCreate; i++) {
       await addAddressToMerchantPool(userId, walletType, transaction);
     }
 
     await transaction.commit();
-    console.log(`[MerchantPool] ✅ Initialized ${walletType} pool for merchant ${userId}`);
+    cronLogger.info(`[MerchantPool] ✅ Initialized ${walletType} pool for merchant ${userId}`);
   } catch (error) {
     await transaction.rollback();
     const message = getErrorMessage(error);
-    console.error(`[MerchantPool] ❌ Failed to initialize pool:`, message);
+    cronLogger.error(`[MerchantPool] ❌ Failed to initialize pool:`, message);
     throw error;
   }
 };
@@ -365,7 +366,7 @@ export const prewarmPoolAddresses = async (): Promise<{
       raw: true,
     }) as unknown as Array<{ owner_user_id: number; wallet_type: string }>;
 
-    console.log(`[PreWarm] Checking ${activePoolGroups.length} merchant+chain combinations...`);
+    cronLogger.info(`[PreWarm] Checking ${activePoolGroups.length} merchant+chain combinations...`);
 
     for (const group of activePoolGroups) {
       result.checked++;
@@ -386,16 +387,16 @@ export const prewarmPoolAddresses = async (): Promise<{
         }
 
         const toCreate = POOL_CONFIG.MIN_AVAILABLE - availableCount;
-        console.log(`[PreWarm] 🔥 Merchant ${userId} / ${walletType}: ${availableCount} available, creating ${toCreate} more...`);
+        cronLogger.info(`[PreWarm] 🔥 Merchant ${userId} / ${walletType}: ${availableCount} available, creating ${toCreate} more...`);
 
         for (let i = 0; i < toCreate; i++) {
           try {
             await addAddressToMerchantPool(userId, walletType);
             result.created++;
-            console.log(`[PreWarm] ✅ Created pre-warmed ${walletType} address for merchant ${userId}`);
+            cronLogger.info(`[PreWarm] ✅ Created pre-warmed ${walletType} address for merchant ${userId}`);
           } catch (createError) {
             const msg = getErrorMessage(createError);
-            console.error(`[PreWarm] ❌ Failed to create ${walletType} for merchant ${userId}: ${msg}`);
+            cronLogger.error(`[PreWarm] ❌ Failed to create ${walletType} for merchant ${userId}: ${msg}`);
             result.errors.push(`${walletType}:${userId} - ${msg}`);
           }
         }
@@ -405,10 +406,10 @@ export const prewarmPoolAddresses = async (): Promise<{
       }
     }
 
-    console.log(`[PreWarm] Complete: checked=${result.checked}, created=${result.created}, errors=${result.errors.length}`);
+    cronLogger.info(`[PreWarm] Complete: checked=${result.checked}, created=${result.created}, errors=${result.errors.length}`);
   } catch (error) {
     const msg = getErrorMessage(error);
-    console.error(`[PreWarm] ❌ Pre-warming failed:`, msg);
+    cronLogger.error(`[PreWarm] ❌ Pre-warming failed:`, msg);
     result.errors.push(msg);
   }
 
@@ -445,7 +446,7 @@ export const retryPendingTrustLines = async (): Promise<{
       return result;
     }
 
-    console.log(`[TrustLineRetry] Found ${pendingAddresses.length} RLUSD addresses with pending trust lines`);
+    cronLogger.info(`[TrustLineRetry] Found ${pendingAddresses.length} RLUSD addresses with pending trust lines`);
 
     const rlusdIssuer = RLUSD_CONFIG.issuer;
     const rlusdCurrencyHex = RLUSD_CONFIG.currencyHex;
@@ -461,7 +462,7 @@ export const retryPendingTrustLines = async (): Promise<{
           // Try to fund the account
           const xrpFeeWallet = process.env.XRP_FEE_WALLET || process.env.XRP;
           if (!xrpFeeWallet) {
-            console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — no XRP fee wallet configured`);
+            cronLogger.info(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — no XRP fee wallet configured`);
             result.errors.push(`${walletAddress}: No XRP fee wallet configured`);
             continue;
           }
@@ -469,7 +470,7 @@ export const retryPendingTrustLines = async (): Promise<{
           const { adminFeeModel } = await import("../../models");
           const xrpFeeWalletRecord = await adminFeeModel.findOne({ where: { wallet_type: "XRP" } });
           if (!xrpFeeWalletRecord) {
-            console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — XRP fee wallet not found in DB`);
+            cronLogger.info(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — XRP fee wallet not found in DB`);
             result.errors.push(`${walletAddress}: XRP fee wallet not found in DB`);
             continue;
           }
@@ -482,7 +483,7 @@ export const retryPendingTrustLines = async (): Promise<{
             feeWalletActivated = false;
           }
           if (!feeWalletActivated) {
-            console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — XRP fee wallet (${xrpFeeWallet.substring(0, 10)}...) is not activated yet. Backing off for 1 hour.`);
+            cronLogger.info(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — XRP fee wallet (${xrpFeeWallet.substring(0, 10)}...) is not activated yet. Backing off for 1 hour.`);
             result.errors.push(`${walletAddress}: XRP fee wallet not activated`);
             // FIX: Set backoff for 1 hour to avoid noisy retries every 3 min
             await setRedisItemWithTTL(backoffKey, { reason: 'XRP fee wallet not activated', wallet: xrpFeeWallet, checkedAt: new Date().toISOString() }, 3600);
@@ -503,14 +504,14 @@ export const retryPendingTrustLines = async (): Promise<{
               amount: 2,
               fee: null,
             });
-            console.log(`[TrustLineRetry] Funded ${walletAddress} with 2 XRP`);
+            cronLogger.info(`[TrustLineRetry] Funded ${walletAddress} with 2 XRP`);
           } catch (fundErr: unknown) {
             const fundMsg = (fundErr as { message?: string })?.message || '';
             // If funding fails (fee wallet not activated, insufficient balance, etc.), skip this address
             if (fundMsg.includes('account.failed') || fundMsg.includes('Account not found') ||
                 fundMsg.includes('not.found') || fundMsg.includes('Unable to sign') ||
                 fundMsg.includes('insufficient') || fundMsg.includes('tecUNFUNDED')) {
-              console.log(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — funding failed: ${fundMsg.substring(0, 100)}`);
+              cronLogger.info(`[TrustLineRetry] ⏭️ Skipping ${walletAddress} — funding failed: ${fundMsg.substring(0, 100)}`);
               result.errors.push(`${walletAddress}: Funding failed — ${fundMsg.substring(0, 80)}`);
               continue;
             }
@@ -524,7 +525,7 @@ export const retryPendingTrustLines = async (): Promise<{
         // Check if trust line already exists
         const hasTrustLine = await tatumApi.verifyXrpTrustLine(walletAddress, rlusdIssuer, rlusdCurrencyHex);
         if (hasTrustLine) {
-          console.log(`[TrustLineRetry] ✅ Trust line already exists for ${walletAddress}, marking AVAILABLE`);
+          cronLogger.info(`[TrustLineRetry] ✅ Trust line already exists for ${walletAddress}, marking AVAILABLE`);
           await addr.update({ status: "AVAILABLE" });
           result.succeeded++;
           continue;
@@ -544,20 +545,20 @@ export const retryPendingTrustLines = async (): Promise<{
           "999999999"
         );
         
-        console.log(`[TrustLineRetry] ✅ Trust line established for ${walletAddress}`);
+        cronLogger.info(`[TrustLineRetry] ✅ Trust line established for ${walletAddress}`);
         await addr.update({ status: "AVAILABLE" });
         result.succeeded++;
       } catch (error) {
         const msg = getErrorMessage(error);
-        console.error(`[TrustLineRetry] ❌ Failed for ${walletAddress}: ${msg}`);
+        cronLogger.error(`[TrustLineRetry] ❌ Failed for ${walletAddress}: ${msg}`);
         result.errors.push(`${walletAddress}: ${msg}`);
       }
     }
 
-    console.log(`[TrustLineRetry] Complete: retried=${result.retried}, succeeded=${result.succeeded}, errors=${result.errors.length}`);
+    cronLogger.info(`[TrustLineRetry] Complete: retried=${result.retried}, succeeded=${result.succeeded}, errors=${result.errors.length}`);
   } catch (error) {
     const msg = getErrorMessage(error);
-    console.error(`[TrustLineRetry] ❌ Retry job failed:`, msg);
+    cronLogger.error(`[TrustLineRetry] ❌ Retry job failed:`, msg);
     result.errors.push(msg);
   }
 

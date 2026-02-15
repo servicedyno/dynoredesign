@@ -87,7 +87,7 @@ export async function withSdkFallback<T>(
       metric.lastAt = new Date();
       fallbackMetrics[metricKey] = metric;
 
-      console.warn(
+      cronLogger.warn(
         `[RpcFallback] ${context.chain}.${context.operation} SDK failed (${sdkMsg}), ` +
         `using RPC fallback (occurrence #${metric.count})` +
         (context.address ? ` [addr: ${context.address.substring(0, 10)}...]` : '') +
@@ -106,7 +106,7 @@ export async function withSdkFallback<T>(
       return result;
     } catch (rpcError: unknown) {
       const rpcErr = rpcError as { message?: string };
-      console.error(
+      cronLogger.error(
         `[RpcFallback] ${context.chain}.${context.operation} BOTH SDK and RPC failed. ` +
         `SDK: ${sdkMsg}, RPC: ${rpcErr?.message || 'Unknown RPC error'}`
       );

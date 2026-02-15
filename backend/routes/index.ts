@@ -1,4 +1,5 @@
 import express from "express";
+import { apiLogger } from "../utils/loggers";
 import userRouter from "./userRouter";
 import companyRouter from "./companyRouter";
 import walletRouter from "./walletRouter";
@@ -46,7 +47,7 @@ const verifyTatumWebhookSource = (req: express.Request, res: express.Response, n
   const signature = req.headers["x-payload-hash"] as string;
   if (!signature) {
     // Existing subscriptions may not have HMAC enabled — allow but warn
-    console.warn(`[WebhookAuth] Missing x-payload-hash header from ${req.ip} — allowing (legacy subscription)`);
+    apiLogger.warn(`[WebhookAuth] Missing x-payload-hash header from ${req.ip} — allowing (legacy subscription)`);
     return next();
   }
 
@@ -54,7 +55,7 @@ const verifyTatumWebhookSource = (req: express.Request, res: express.Response, n
   const expectedSignature = crypto.createHmac("sha512", secret).update(rawBody).digest("hex");
 
   if (signature !== expectedSignature) {
-    console.warn(`[WebhookAuth] Invalid webhook signature from ${req.ip}`);
+    apiLogger.warn(`[WebhookAuth] Invalid webhook signature from ${req.ip}`);
     logWebhookValidationFailure('tatum', req.ip || 'unknown', 'Invalid HMAC signature');
     return res.status(401).json({ error: "Invalid webhook signature" });
   }
