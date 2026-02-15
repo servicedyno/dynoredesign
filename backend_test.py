@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Backend Testing for UTXO Auto-Convert Stranding Bug Fix
-Tests the implementation according to review requirements
+Backend Testing for: Add admin sweep notification email for UTXO auto-convert
 """
 
 import requests
@@ -9,349 +8,234 @@ import subprocess
 import sys
 import os
 import json
-from typing import Dict, Any, List
+from datetime import datetime
 
-# Backend URL from frontend .env
-BACKEND_URL = "https://onboarding-flow-52.preview.emergentagent.com"
+# Base URL for testing
+BASE_URL = "http://localhost:8001"
 
-def run_command(cmd: str, cwd: str = "/app/backend") -> Dict[str, Any]:
-    """Execute shell command and return result"""
+def log(message):
+    """Log a message with timestamp"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}")
+
+def test_backend_health():
+    """TEST 1: Backend healthy"""
+    log("TEST 1: Testing backend health...")
+    
     try:
-        result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True, timeout=30)
-        return {
-            "success": result.returncode == 0,
-            "returncode": result.returncode,
-            "stdout": result.stdout.strip(),
-            "stderr": result.stderr.strip(),
-            "command": cmd
-        }
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "returncode": -1,
-            "stdout": "",
-            "stderr": "Command timed out after 30 seconds",
-            "command": cmd
-        }
+        response = requests.get(f"{BASE_URL}/health", timeout=30)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy":
+                log("✅ TEST 1 PASSED: Backend returns 200 with status 'healthy'")
+                return True
+            else:
+                log(f"❌ TEST 1 FAILED: Backend status is '{data.get('status')}', expected 'healthy'")
+                return False
+        else:
+            log(f"❌ TEST 1 FAILED: Backend returned status {response.status_code}")
+            return False
     except Exception as e:
-        return {
-            "success": False,
-            "returncode": -1,
-            "stdout": "",
-            "stderr": str(e),
-            "command": cmd
-        }
+        log(f"❌ TEST 1 FAILED: Connection error - {str(e)}")
+        return False
 
-def test_backend_health() -> Dict[str, Any]:
-    """TEST 1: Backend healthy - GET /health returns 200"""
-    print("🔍 TEST 1: Testing backend health...")
+def test_typescript_compilation():
+    """TEST 2: TypeScript compiles"""
+    log("TEST 2: Testing TypeScript compilation...")
+    
     try:
-        response = requests.get(f"{BACKEND_URL}/health", timeout=10)
-        success = response.status_code == 200
-        data = response.json() if response.headers.get('content-type', '').startswith('application/json') else {}
+        # Change to backend directory and run TypeScript compiler
+        result = subprocess.run(
+            ["npx", "tsc", "--noEmit"], 
+            cwd="/app/backend",
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
         
-        return {
-            "test": "Backend Health",
-            "success": success,
-            "status_code": response.status_code,
-            "response": data,
-            "expected": "200 with status 'healthy'"
-        }
+        if result.returncode == 0:
+            log("✅ TEST 2 PASSED: TypeScript compilation successful (exit code 0)")
+            return True
+        else:
+            log(f"❌ TEST 2 FAILED: TypeScript compilation failed (exit code {result.returncode})")
+            if result.stderr:
+                log(f"   Error output: {result.stderr[:500]}")
+            return False
+    except subprocess.TimeoutExpired:
+        log("❌ TEST 2 FAILED: TypeScript compilation timed out")
+        return False
     except Exception as e:
-        return {
-            "test": "Backend Health", 
-            "success": False,
-            "error": str(e),
-            "expected": "200 with status 'healthy'"
-        }
+        log(f"❌ TEST 2 FAILED: Error running TypeScript compiler - {str(e)}")
+        return False
 
-def test_typescript_compilation() -> Dict[str, Any]:
-    """TEST 2: TypeScript compiles clean"""
-    print("🔍 TEST 2: Testing TypeScript compilation...")
-    result = run_command("npx tsc --noEmit")
+def test_sendadminfeesweep_import_usage():
+    """TEST 3: sendAdminFeeSweepEmail imported and used in paymentController"""
+    log("TEST 3: Testing sendAdminFeeSweepEmail import and usage...")
     
-    return {
-        "test": "TypeScript Compilation",
-        "success": result["success"],
-        "returncode": result["returncode"],
-        "output": result["stdout"] + result["stderr"] if result["stderr"] else result["stdout"],
-        "expected": "exit code 0"
-    }
+    try:
+        with open("/app/backend/controller/paymentController.ts", "r") as f:
+            content = f.read()
+        
+        # Count occurrences of sendAdminFeeSweepEmail
+        occurrences = content.count("sendAdminFeeSweepEmail")
+        
+        if occurrences >= 2:
+            log(f"✅ TEST 3 PASSED: Found {occurrences} occurrences of 'sendAdminFeeSweepEmail' (>= 2 required)")
+            
+            # Check for import
+            has_import = "sendAdminFeeSweepEmail" in content.split('\n')[0:20]
+            # Check for usage
+            has_usage = "sendAdminFeeSweepEmail(" in content
+            
+            if has_import and has_usage:
+                log("   ✓ Both import and usage found")
+                return True
+            else:
+                log(f"   ⚠️ Found {occurrences} total occurrences but missing import or usage")
+                return False
+        else:
+            log(f"❌ TEST 3 FAILED: Found only {occurrences} occurrences of 'sendAdminFeeSweepEmail' (need >= 2)")
+            return False
+    except Exception as e:
+        log(f"❌ TEST 3 FAILED: Error reading file - {str(e)}")
+        return False
 
-def test_utxo_auto_convert_patterns() -> Dict[str, Any]:
-    """TEST 3: FIX 1 — UTXO auto-convert direct transfer in settleCryptoTransaction"""
-    print("🔍 TEST 3: Testing UTXO auto-convert patterns in paymentController...")
+def test_utxo_sweep_email_block():
+    """TEST 4: UTXO sweep email block exists"""
+    log("TEST 4: Testing UTXO sweep email block...")
     
-    tests = []
-    
-    # Check for 'UTXO auto-convert' occurrences
-    result1 = run_command("grep -c 'UTXO auto-convert' /app/backend/controller/paymentController.ts")
-    count1 = int(result1["stdout"]) if result1["success"] and result1["stdout"].isdigit() else 0
-    tests.append({
-        "pattern": "UTXO auto-convert", 
-        "expected": "at least 3 occurrences",
-        "found": count1,
-        "success": count1 >= 3
-    })
-    
-    # Check for isUTXODirect logic
-    result2 = run_command("grep 'isUTXODirect' /app/backend/controller/paymentController.ts")
-    tests.append({
-        "pattern": "isUTXODirect",
-        "expected": "UTXO detection logic",
-        "found": result2["stdout"] if result2["success"] else "Not found",
-        "success": result2["success"]
-    })
-    
-    # Check for UTXO admin-only transfer
-    result3 = run_command("grep 'UTXO admin-only transfer' /app/backend/controller/paymentController.ts")
-    tests.append({
-        "pattern": "UTXO admin-only transfer",
-        "expected": "withRetry call",
-        "found": result3["stdout"] if result3["success"] else "Not found", 
-        "success": result3["success"]
-    })
-    
-    all_success = all(t["success"] for t in tests)
-    
-    return {
-        "test": "UTXO Auto-Convert Direct Transfer",
-        "success": all_success,
-        "details": tests,
-        "expected": "All 3 patterns found in paymentController.ts"
-    }
+    try:
+        with open("/app/backend/controller/paymentController.ts", "r") as f:
+            content = f.read()
+        
+        # Check for admin sweep notification log message
+        log_message_found = "Admin sweep notification" in content and "UTXO" in content
+        
+        # Check for auto-convert UTXO direct sweep mode parameter
+        sweep_mode_found = "auto-convert" in content and "UTXO direct" in content
+        
+        if log_message_found and sweep_mode_found:
+            log("✅ TEST 4 PASSED: Found both admin sweep notification log and UTXO direct sweep mode")
+            
+            # Show specific lines found
+            lines = content.split('\n')
+            for i, line in enumerate(lines):
+                if "Admin sweep notification" in line and "UTXO" in line:
+                    log(f"   ✓ Log message found at line {i+1}: {line.strip()[:100]}...")
+                if "auto-convert" in line and "UTXO direct" in line:
+                    log(f"   ✓ Sweep mode found at line {i+1}: {line.strip()[:100]}...")
+            
+            return True
+        else:
+            log(f"❌ TEST 4 FAILED: Missing components - log_message: {log_message_found}, sweep_mode: {sweep_mode_found}")
+            return False
+    except Exception as e:
+        log(f"❌ TEST 4 FAILED: Error reading file - {str(e)}")
+        return False
 
-def test_release_address_pending_sweep() -> Dict[str, Any]:
-    """TEST 4: FIX 2 — releaseAddress has pendingSweep parameter"""
-    print("🔍 TEST 4: Testing releaseAddress pendingSweep parameter...")
+def test_sweep_mode_email_template():
+    """TEST 5: Sweep mode display updated in email template"""
+    log("TEST 5: Testing sweep mode display in email template...")
     
-    tests = []
-    
-    # Check for pendingSweep occurrences
-    result1 = run_command("grep -c 'pendingSweep' /app/backend/services/merchantPool/merchantPoolReservation.ts")
-    count1 = int(result1["stdout"]) if result1["success"] and result1["stdout"].isdigit() else 0
-    tests.append({
-        "pattern": "pendingSweep (all occurrences)",
-        "expected": "at least 5 occurrences", 
-        "found": count1,
-        "success": count1 >= 5
-    })
-    
-    # Check for pendingSweep boolean parameter
-    result2 = run_command("grep 'pendingSweep.*boolean' /app/backend/services/merchantPool/merchantPoolReservation.ts")
-    tests.append({
-        "pattern": "pendingSweep.*boolean",
-        "expected": "parameter definition",
-        "found": result2["stdout"] if result2["success"] else "Not found",
-        "success": result2["success"]
-    })
-    
-    all_success = all(t["success"] for t in tests)
-    
-    return {
-        "test": "releaseAddress pendingSweep Parameter",
-        "success": all_success,
-        "details": tests,
-        "expected": "pendingSweep parameter properly defined"
-    }
+    try:
+        with open("/app/backend/helper/sendEmail.ts", "r") as f:
+            content = f.read()
+        
+        # Check for 'auto-convert' in email template
+        auto_convert_found = "auto-convert" in content.lower()
+        
+        if auto_convert_found:
+            log("✅ TEST 5 PASSED: Found 'auto-convert' in sendEmail.ts")
+            
+            # Show the ternary operator for sweep mode display
+            lines = content.split('\n')
+            for i, line in enumerate(lines):
+                if "auto-convert" in line.lower() and ("ternary" in line.lower() or "?" in line):
+                    log(f"   ✓ Sweep mode ternary found at line {i+1}: {line.strip()[:150]}...")
+                elif "Auto-Convert (Direct Transfer)" in line:
+                    log(f"   ✓ Auto-convert display found at line {i+1}: {line.strip()[:150]}...")
+            
+            return True
+        else:
+            log("❌ TEST 5 FAILED: 'auto-convert' not found in sendEmail.ts")
+            return False
+    except Exception as e:
+        log(f"❌ TEST 5 FAILED: Error reading file - {str(e)}")
+        return False
 
-def test_crypto_verification_pending_sweep() -> Dict[str, Any]:
-    """TEST 5: FIX 3 — cryptoVerification passes pendingSweep flag"""
-    print("🔍 TEST 5: Testing cryptoVerification pendingSweep flag...")
+def test_account_based_sweep_email():
+    """TEST 6: Account-based sweep still has email"""
+    log("TEST 6: Testing account-based sweep email in merchantPoolSweep.ts...")
     
-    tests = []
-    
-    # Check for pendingSweep flag computation
-    result1 = run_command("grep 'pendingSweep.*autoConvertEnabled' /app/backend/controller/paymentController.ts")
-    tests.append({
-        "pattern": "pendingSweep.*autoConvertEnabled",
-        "expected": "flag computation",
-        "found": result1["stdout"] if result1["success"] else "Not found",
-        "success": result1["success"]
-    })
-    
-    # Check for pendingSweep passed to releaseAddress
-    result2 = run_command("grep 'pendingSweep' /app/backend/controller/paymentController.ts")
-    tests.append({
-        "pattern": "pendingSweep in paymentController",
-        "expected": "passed to releaseAddress",
-        "found": result2["stdout"] if result2["success"] else "Not found",
-        "success": result2["success"]
-    })
-    
-    all_success = all(t["success"] for t in tests)
-    
-    return {
-        "test": "cryptoVerification pendingSweep Flag",
-        "success": all_success,
-        "details": tests,
-        "expected": "pendingSweep flag computed and passed"
-    }
+    try:
+        with open("/app/backend/services/merchantPool/merchantPoolSweep.ts", "r") as f:
+            content = f.read()
+        
+        # Check for sendAdminFeeSweepEmail call in sweep function
+        sweep_email_found = "sendAdminFeeSweepEmail" in content
+        
+        if sweep_email_found:
+            log("✅ TEST 6 PASSED: Found 'sendAdminFeeSweepEmail' in merchantPoolSweep.ts")
+            
+            # Count occurrences and show context
+            occurrences = content.count("sendAdminFeeSweepEmail")
+            log(f"   ✓ Found {occurrences} occurrence(s) of sendAdminFeeSweepEmail")
+            
+            return True
+        else:
+            log("❌ TEST 6 FAILED: 'sendAdminFeeSweepEmail' not found in merchantPoolSweep.ts")
+            return False
+    except Exception as e:
+        log(f"❌ TEST 6 FAILED: Error reading file - {str(e)}")
+        return False
 
-def test_sweep_by_time_utxo_recovery() -> Dict[str, Any]:
-    """TEST 6: FIX 4 — sweepByTime allows UTXO recovery"""
-    print("🔍 TEST 6: Testing sweepByTime UTXO recovery...")
-    
-    tests = []
-    
-    # Check for isUTXOAutoConvertRecovery
-    result1 = run_command("grep 'isUTXOAutoConvertRecovery' /app/backend/services/merchantPool/merchantPoolSweep.ts")
-    tests.append({
-        "pattern": "isUTXOAutoConvertRecovery",
-        "expected": "recovery check", 
-        "found": result1["stdout"] if result1["success"] else "Not found",
-        "success": result1["success"]
-    })
-    
-    # Check for UTXO_CHAINS import and usage
-    result2 = run_command("grep 'UTXO_CHAINS' /app/backend/services/merchantPool/merchantPoolSweep.ts")
-    tests.append({
-        "pattern": "UTXO_CHAINS",
-        "expected": "imported and used in time sweep",
-        "found": result2["stdout"] if result2["success"] else "Not found",
-        "success": result2["success"]
-    })
-    
-    all_success = all(t["success"] for t in tests)
-    
-    return {
-        "test": "sweepByTime UTXO Recovery",
-        "success": all_success,
-        "details": tests,
-        "expected": "UTXO recovery logic in sweep"
-    }
-
-def test_utxo_tatum_api_patterns() -> Dict[str, Any]:
-    """TEST 7: UTXO direct transfer uses correct Tatum API patterns"""
-    print("🔍 TEST 7: Testing UTXO Tatum API patterns...")
-    
-    tests = []
-    
-    # Check for fromUTXO references
-    result1 = run_command("grep 'fromUTXO' /app/backend/controller/paymentController.ts")
-    tests.append({
-        "pattern": "fromUTXO",
-        "expected": "UTXO input references in BOTH auto-convert and normal settlement blocks",
-        "found": result1["stdout"] if result1["success"] else "Not found",
-        "success": result1["success"]
-    })
-    
-    # Check for toUTXO references  
-    result2 = run_command("grep 'toUTXO' /app/backend/controller/paymentController.ts")
-    tests.append({
-        "pattern": "toUTXO",
-        "expected": "output references",
-        "found": result2["stdout"] if result2["success"] else "Not found",
-        "success": result2["success"]
-    })
-    
-    # Check for findUtxoOutputIndex
-    result3 = run_command("grep 'findUtxoOutputIndex' /app/backend/controller/paymentController.ts")
-    tests.append({
-        "pattern": "findUtxoOutputIndex",
-        "expected": "UTXO index lookup in both blocks",
-        "found": result3["stdout"] if result3["success"] else "Not found",
-        "success": result3["success"]
-    })
-    
-    all_success = all(t["success"] for t in tests)
-    
-    return {
-        "test": "UTXO Tatum API Patterns",
-        "success": all_success,
-        "details": tests,
-        "expected": "Correct UTXO API usage patterns"
-    }
-
-def test_immediate_sweep_account_based_only() -> Dict[str, Any]:
-    """TEST 8: Immediate sweep only triggers for account-based chains now"""
-    print("🔍 TEST 8: Testing immediate sweep account-based chain logic...")
-    
-    tests = []
-    
-    # Check for adminTransferResult.transactionDetails near autoConvertEnabled
-    result1 = run_command("grep 'adminTransferResult.transactionDetails' /app/backend/controller/paymentController.ts")
-    tests.append({
-        "pattern": "adminTransferResult.transactionDetails",
-        "expected": "check near autoConvertEnabled sweep trigger",
-        "found": result1["stdout"] if result1["success"] else "Not found",
-        "success": result1["success"]
-    })
-    
-    # Look for the specific condition pattern
-    result2 = run_command("grep -A 5 -B 5 'autoConvertEnabled.*adminTransferResult.transactionDetails' /app/backend/controller/paymentController.ts")
-    condition_found = "!adminTransferResult.transactionDetails" in result2["stdout"]
-    tests.append({
-        "pattern": "autoConvertEnabled && !adminTransferResult.transactionDetails",
-        "expected": "sweep trigger condition (not just autoConvertEnabled)",
-        "found": "Condition pattern found" if condition_found else "Pattern not found",
-        "success": condition_found
-    })
-    
-    all_success = all(t["success"] for t in tests)
-    
-    return {
-        "test": "Immediate Sweep Account-Based Only", 
-        "success": all_success,
-        "details": tests,
-        "expected": "Sweep only triggers for account-based chains"
-    }
-
-def main():
-    """Run all UTXO Auto-Convert Stranding Bug fix tests"""
-    print("🚀 STARTING UTXO AUTO-CONVERT STRANDING BUG FIX TESTING")
-    print("=" * 70)
+def run_comprehensive_test():
+    """Run all tests and provide summary"""
+    log("=" * 80)
+    log("BACKEND TESTING: Add admin sweep notification email for UTXO auto-convert")
+    log("=" * 80)
     
     tests = [
-        test_backend_health,
-        test_typescript_compilation,
-        test_utxo_auto_convert_patterns,
-        test_release_address_pending_sweep,
-        test_crypto_verification_pending_sweep,
-        test_sweep_by_time_utxo_recovery,
-        test_utxo_tatum_api_patterns,
-        test_immediate_sweep_account_based_only
+        ("Backend Health", test_backend_health),
+        ("TypeScript Compilation", test_typescript_compilation), 
+        ("sendAdminFeeSweepEmail Import/Usage", test_sendadminfeesweep_import_usage),
+        ("UTXO Sweep Email Block", test_utxo_sweep_email_block),
+        ("Email Template Sweep Mode", test_sweep_mode_email_template),
+        ("Account-Based Sweep Email", test_account_based_sweep_email),
     ]
     
     results = []
-    passed = 0
-    total = len(tests)
-    
-    for test_func in tests:
+    for test_name, test_func in tests:
+        log(f"\n{'=' * 60}")
         try:
             result = test_func()
-            results.append(result)
-            if result["success"]:
-                passed += 1
-                print(f"✅ {result['test']}: PASSED")
-            else:
-                print(f"❌ {result['test']}: FAILED")
-                if "details" in result:
-                    for detail in result["details"]:
-                        status = "✅" if detail["success"] else "❌"
-                        print(f"    {status} {detail['pattern']}: {detail['found']}")
-                elif "error" in result:
-                    print(f"    Error: {result['error']}")
-            print()
+            results.append((test_name, result))
         except Exception as e:
-            print(f"❌ {test_func.__name__}: ERROR - {e}")
-            results.append({
-                "test": test_func.__name__,
-                "success": False,
-                "error": str(e)
-            })
+            log(f"❌ {test_name}: EXCEPTION - {str(e)}")
+            results.append((test_name, False))
     
-    print("=" * 70)
-    print(f"🎯 UTXO AUTO-CONVERT STRANDING BUG FIX TEST SUMMARY")
-    print(f"   Passed: {passed}/{total} tests")
-    print(f"   Success Rate: {(passed/total)*100:.1f}%")
+    log(f"\n{'=' * 80}")
+    log("TEST SUMMARY")
+    log("=" * 80)
+    
+    passed = 0
+    total = len(results)
+    
+    for test_name, result in results:
+        status = "✅ PASSED" if result else "❌ FAILED"
+        log(f"{status}: {test_name}")
+        if result:
+            passed += 1
+    
+    log(f"\nOVERALL RESULT: {passed}/{total} tests passed ({(passed/total*100):.1f}%)")
     
     if passed == total:
-        print("🎉 ALL TESTS PASSED - Fix implementation verified!")
+        log("🎉 ALL TESTS PASSED! UTXO admin sweep notification email implementation is working correctly.")
+        return True
     else:
-        print("⚠️  Some tests failed - Fix needs attention")
-    
-    return results
+        log(f"⚠️  {total-passed} test(s) failed. Implementation needs attention.")
+        return False
 
 if __name__ == "__main__":
-    main()
+    success = run_comprehensive_test()
+    sys.exit(0 if success else 1)
