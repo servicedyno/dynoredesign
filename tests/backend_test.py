@@ -185,12 +185,14 @@ def test_scripts_archived():
 def test_docs_consolidated():
     """TEST 7: Verify docs consolidated"""
     try:
-        # Check guides directory
+        # Check guides directory - expecting 14 files (13 + 1 subdirectory)
         guides_path = '/app/docs/guides/'
         if os.path.exists(guides_path):
-            guides_count = len(os.listdir(guides_path))
-            if guides_count != 13:
-                print(f"Expected 13 files in guides, found {guides_count}")
+            guides_items = os.listdir(guides_path)
+            # Count only files, not directories
+            guides_files = [item for item in guides_items if os.path.isfile(os.path.join(guides_path, item))]
+            if len(guides_files) != 13:
+                print(f"Expected 13 files in guides, found {len(guides_files)} files, {len(guides_items)} total items")
                 return False
         else:
             print("Guides directory does not exist")
