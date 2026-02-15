@@ -573,6 +573,10 @@ async function handleNewTransaction(
         if (attempt < maxRetries) {
           const waitTime = 2000 * Math.pow(2, attempt - 1);
           webhookLogs.warn(`[WebhookProcessor] Retry ${attempt}/${maxRetries}: ${err.message}, waiting ${waitTime}ms`);
+
+          // Soft-enforce: processing → retrying (self-transition via legacy map)
+          softValidate("processing", "retrying", paymentId, `crypto-verification-retry-${attempt}`);
+
           await setRedisItem(redisKey, {
             ...items, status: "retrying", receivedAmount: incomingAmount,
             txId: payload.txId, retryCount: String(attempt),
