@@ -442,7 +442,7 @@ cron.schedule("*/15 * * * *", function () {
 });
 
 cron.schedule("*/10 * * * *", async () => {
-  const lockAcquired = await acquireLock("cron:processIncompletePayments", 540, 1);
+  const lockAcquired = await acquireLock("cron:processIncompletePayments", 540, 1, 100, true);
   if (!lockAcquired) { log("Cron: processIncompletePayments skipped (already running)", "info"); return; }
   try {
     log("Cron: processIncompletePayments running", "info");
@@ -471,7 +471,7 @@ import * as merchantPoolService from "./services/merchantPoolService";
 // Handles both threshold-based ($30 USD) and time-based (3 min for ETH/TRX) sweeps
 // OPTIMIZED: Reduced from 1 min to 2 min — sweeps still trigger within time thresholds
 cron.schedule("*/2 * * * *", async function () {
-  const lockAcquired = await acquireLock("cron:performScheduledSweeps", 180, 1);
+  const lockAcquired = await acquireLock("cron:performScheduledSweeps", 180, 1, 100, true);
   if (!lockAcquired) { log("Cron: performScheduledSweeps skipped (already running)", "info"); return; }
   try {
     log("Cron: performMerchantPoolScheduledSweeps running", "info");
@@ -529,7 +529,7 @@ cron.schedule("0 */2 * * *", function () {
 // This is a fallback mechanism when Tatum webhooks fail to deliver
 // OPTIMIZED: Reduced from 5 min to 10 min — reduces Tatum API calls by ~50%
 cron.schedule("*/10 * * * *", async function () {
-  const lockAcquired = await acquireLock("cron:checkMissedPayments", 240, 1);
+  const lockAcquired = await acquireLock("cron:checkMissedPayments", 240, 1, 100, true);
   if (!lockAcquired) { log("Cron: checkMissedPayments skipped (already running)", "info"); return; }
   try {
     log("Cron: checkMissedPayments running", "info");
@@ -548,7 +548,7 @@ cron.schedule("*/10 * * * *", async function () {
 // OPTIMIZED: Reduced from 10 min to hourly — was ~22,000 Tatum API calls/day scanning 154 addresses
 cron.schedule("0 * * * *", async function () {
   // FIX: Increased lock TTL from 900s to 1800s (30 min) — scanning 158+ addresses can take 10+ min with API latency
-  const lockAcquired = await acquireLock("cron:detectOrphanPayments", 1800, 1);
+  const lockAcquired = await acquireLock("cron:detectOrphanPayments", 1800, 1, 100, true);
   if (!lockAcquired) { log("Cron: detectOrphanPayments skipped (already running)", "info"); return; }
   try {
     log("Cron: detectOrphanPayments running", "info");
@@ -592,7 +592,7 @@ setupWeeklySummaryCron();
 
 // Weekly conversion summary email (every Monday at 9:30 AM UTC)
 cron.schedule("30 9 * * 1", async function () {
-  const lockAcquired = await acquireLock("cron:weeklyConversionSummary", 600, 1);
+  const lockAcquired = await acquireLock("cron:weeklyConversionSummary", 600, 1, 100, true);
   if (!lockAcquired) { log("Cron: weeklyConversionSummary skipped (already running)", "info"); return; }
   try {
     log("Cron: sendWeeklyConversionSummaries running", "info");
@@ -623,7 +623,7 @@ setupPaymentLinkReminderCron();
 // Runs every N minutes (configurable via BINANCE_CONVERT_INTERVAL_MINUTES)
 const convertIntervalMinutes = parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "5");
 cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
-  const lockAcquired = await acquireLock("cron:stablecoinConversion", 240, 1);
+  const lockAcquired = await acquireLock("cron:stablecoinConversion", 240, 1, 100, true);
   if (!lockAcquired) { log("Cron: stablecoinConversion skipped (already running)", "info"); return; }
   try {
     log("Cron: processStablecoinConversions running", "info");
