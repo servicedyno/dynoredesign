@@ -161,17 +161,28 @@ const acquireLock = async (
   const lockValue = `${process.pid}:${Date.now()}`;
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    // SET NX (only if not exists) with EX (expiry)
-    const result = await redisClient.set(fullKey, lockValue, {
-      NX: true,
-      EX: ttlSeconds
-    });
-    
-    if (result === 'OK') {
-      // Store lockValue so releaseLock can verify ownership
-      lockOwners.set(fullKey, lockValue);
-      cronLogger.info(`[Lock] Acquired: ${lockKey}`);
-      return true;
+    try {
+      // SET NX (only if not exists) with EX (expiry)
+      const result = await redisClient.set(fullKey, lockValue, {
+        NX: true,
+        EX: ttlSeconds
+      });
+      
+      if (result === 'OK') {
+        // Store lockValue so releaseLock can verify ownership
+        lockOwners.set(fullKey, lockValue);
+        cronLogger.info(`[Lock] Acquired: ${lockKey}`);
+        return true;
+      }
+      
+      // Log who holds the lock for debugging
+      if (attempt === 0) {
+        const holder = await redisClient.get(fullKey);
+        const ttl = await redisClient.ttl(fullKey);
+        cronLogger.info(`[Lock] ${lockKey} held by ${holder}, TTL: ${ttl}s (current PID: ${process.pid})`);
+      }
+    } catch (err) {
+      cronLogger.error(`[Lock] Redis error during acquire ${lockKey}: ${err instanceof Error ? err.message : String(err)}`);
     }
     
     // Wait before retry
