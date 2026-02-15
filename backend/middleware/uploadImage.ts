@@ -1,6 +1,7 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { apiLogger } from "../utils/loggers";
 
 let storage;
 try {
@@ -39,7 +40,7 @@ try {
     },
   });
 } catch (err) {
-  console.log("****ERROR****", err);
+  apiLogger.error("****UPLOAD ERROR****", err);
 }
 
 const uploadImage = multer({ storage });
