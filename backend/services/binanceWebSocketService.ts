@@ -132,7 +132,7 @@ const connect = () => {
       ...(() => { const agent = getEffectiveProxyAgent(); return agent ? { agent } : {}; })(),
     });
   } catch (err) {
-    log(`❌ WebSocket constructor error: ${(err as Error).message}`);
+    logError(`❌ WebSocket constructor error: ${(err as Error).message}`);
     isConnecting = false;
     scheduleReconnect();
     return;
