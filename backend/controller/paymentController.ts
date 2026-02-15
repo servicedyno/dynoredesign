@@ -1373,7 +1373,7 @@ const createCryptoPayment = async (
         const existingRedisData = await getRedisItem(getCryptoRedisKey(existingAddress, existingDestTag));
         
         // Only return existing address if it's still pending (not completed/expired)
-        if (existingRedisData && existingRedisData.status === 'pending') {
+        if (existingRedisData && parseState(existingRedisData.status) === PaymentState.PENDING) {
           cronLogger.info(`[Phase 12.1] ✓ Returning existing address for same payment link + currency: ${existingAddress}${existingDestTag ? ` (tag: ${existingDestTag})` : ''}`);
           return successResponseHelper(res, 200, "Using existing payment address", {
             qr_code: items.active_crypto_address.qr_code,
