@@ -258,6 +258,63 @@ const inferSeverity = (component: ErrorComponent, statusCode?: number): ErrorSev
   return "low";
 };
 
+// ─── Redis Persistence ───────────────────────────────────────────────────────
+
+/**
+ * Persist the current error buffer to Redis (survives restarts).
+ */
+const persistBufferToRedis = async (): Promise<void> => {
+  try {
+    const redis = await getRedisClient();
+    // Serialize entries (Date objects → ISO strings)
+    const serialized = errorBuffer.map(e => ({ ...e, timestamp: e.timestamp.toISOString ? (e.timestamp as Date).toISOString() : String(e.timestamp) }));
+    await redis.set(REDIS_ERROR_BUFFER_KEY, serialized);
+  } catch {
+    // Silently fail — Redis might not be connected yet at startup
+  }
+};
+
+/**
+ * Restore error buffer from Redis (called on startup).
+ */
+const restoreBufferFromRedis = async (): Promise<void> => {
+  try {
+    const redis = await getRedisClient();
+    const stored = await redis.get(REDIS_ERROR_BUFFER_KEY);
+    if (stored && Array.isArray(stored) && stored.length > 0) {
+      // Deserialize: ISO strings → Date objects
+      const restored: ErrorEntry[] = stored.map((e: any) => ({
+        ...e,
+        timestamp: new Date(e.timestamp),
+      }));
+      // Merge with any already-buffered errors (avoid duplicates by fingerprint+timestamp)
+      const existingFingerprints = new Set(errorBuffer.map(e => e.fingerprint + e.timestamp.toISOString()));
+      for (const entry of restored) {
+        const key = entry.fingerprint + entry.timestamp.toISOString();
+        if (!existingFingerprints.has(key) && errorBuffer.length < MAX_BUFFER_SIZE) {
+          errorBuffer.push(entry);
+          existingFingerprints.add(key);
+        }
+      }
+      cronLogger.info(`[ErrorMonitor] ♻️ Restored ${restored.length} errors from Redis (total buffer: ${errorBuffer.length})`);
+    }
+  } catch {
+    // Silently fail — Redis might not be available
+  }
+};
+
+/**
+ * Clear Redis error buffer after successful digest send.
+ */
+const clearRedisBuffer = async (): Promise<void> => {
+  try {
+    const redis = await getRedisClient();
+    await redis.del(REDIS_ERROR_BUFFER_KEY);
+  } catch {
+    // Silently fail
+  }
+};
+
 // ─── Digest Logic ────────────────────────────────────────────────────────────
 
 /**
