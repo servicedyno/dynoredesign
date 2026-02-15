@@ -1650,12 +1650,12 @@ const assetToOtherAddress = async ({
         ? (fee.slow || fee.medium || fee.fast || "0.00001")
         : fee;
     const bchFeeStr = typeof bchFee === 'string' ? bchFee : String(Number(bchFee).toFixed(8));
-    cronLogger.info(`[assetToOtherAddress] BCH: changeAddress=${bchChangeAddress}, fee=${bchFeeStr}, fromUTXO=${normalizedFromUTXO.length}, toUTXO=${normalizedToUTXO.length}`);
+    cronLogger.info(`[assetToOtherAddress] BCH: changeAddress=${bchChangeAddress}, fee=${bchFeeStr}, fromUTXO=${normalizedFromUTXO.length}, toUTXO=${normalizedToUTXO.length}, toAddr=${normalizedToUTXO[0]?.address}`);
+    // Try without fee+changeAddress first (let Tatum auto-calculate)
+    // If that fails with dust, provide both
     transaction = await tatumSdk.blockchain.bcash.bchTransferBlockchain({
       fromUTXO: normalizedFromUTXO,
       to: normalizedToUTXO,
-      fee: bchFeeStr,
-      changeAddress: bchChangeAddress,
     });
   } else if (currency === "SOL") {
     // Solana native transfer
