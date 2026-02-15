@@ -1,5 +1,6 @@
 import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
+import { log } from "./loggers";
 
 dotenv.config();
 
@@ -43,7 +44,7 @@ const sequelize = process.env.DATABASE_URL
   ? new Sequelize(process.env.DATABASE_URL, {
       dialect: "postgres",
       dialectOptions,
-      logging: isProduction ? false : console.log,
+      logging: isProduction ? false : (msg: string) => log(`[Sequelize] ${msg}`, 'debug'),
       pool: poolConfig,
       retry: retryConfig,
     })
