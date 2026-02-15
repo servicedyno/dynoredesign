@@ -103,8 +103,8 @@ describe('getTransactionFee', () => {
     expect(fee).toBe(2.5);
   });
 
-  it('returns Redis-cached fee when env is not set', async () => {
-    delete process.env.TRANSACTION_FEE_PERCENT;
+  it('returns Redis-cached fee when env fee is zero (fallback path)', async () => {
+    process.env.TRANSACTION_FEE_PERCENT = '0'; // Force falsy to trigger Redis path
     (getRedisItem as jest.Mock).mockResolvedValueOnce({ transaction_fee: 3.0 });
 
     const fee = await getTransactionFee();
@@ -112,8 +112,8 @@ describe('getTransactionFee', () => {
     expect(feesModel.findOne).not.toHaveBeenCalled();
   });
 
-  it('falls back to DB and caches result when Redis is empty', async () => {
-    delete process.env.TRANSACTION_FEE_PERCENT;
+  it('falls back to DB and caches result when Redis is empty and env fee is zero', async () => {
+    process.env.TRANSACTION_FEE_PERCENT = '0'; // Force falsy to trigger DB path
     (getRedisItem as jest.Mock).mockResolvedValueOnce({});
     (feesModel.findOne as jest.Mock).mockResolvedValueOnce({
       dataValues: { fee: 1.8 },
