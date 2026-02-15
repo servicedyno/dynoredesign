@@ -97,7 +97,8 @@ async function reconcileStuckPayments(): Promise<number> {
         if (!rawData) continue;
 
         const data = JSON.parse(rawData);
-        const isStuck = (data.status === "processing" || data.status === "retrying")
+        const parsedStatus = parseState(data.status);
+        const isStuck = (parsedStatus === PaymentState.PROCESSING)
           && data.txId
           && data.lastAttempt
           && (Date.now() - new Date(data.lastAttempt).getTime()) > staleThresholdMs;
