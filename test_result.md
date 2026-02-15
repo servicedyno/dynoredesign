@@ -7,7 +7,7 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
-  - task: "QR Code Currency Logo Overlay + JSON Parse Error Fix"
+  - task: "QR Code Currency Logo Overlay + JSON Parse Error Fix + Error Alert Email Fix"
     implemented: true
     working: true
     files:
