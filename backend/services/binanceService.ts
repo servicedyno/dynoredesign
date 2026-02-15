@@ -56,6 +56,24 @@ export const getEffectiveProxyAgent = (): SocksProxyAgent | undefined => {
 };
 
 /**
+ * Force-enable or force-disable the Binance proxy (admin override).
+ * Useful when auto-detection fails but you know the proxy is available.
+ */
+export const forceProxyState = (enabled: boolean): { proxyNeeded: boolean; proxyDetectionFailed: boolean; proxyAvailable: boolean } => {
+  proxyNeeded = enabled;
+  proxyDetectionFailed = false; // Clear retry flag
+  cronLogger.info(`[Binance] 🔧 Proxy FORCE-${enabled ? "ENABLED" : "DISABLED"} by admin. proxyAgent available: ${!!proxyAgent}`);
+  return { proxyNeeded: enabled, proxyDetectionFailed: false, proxyAvailable: !!proxyAgent };
+};
+
+/**
+ * Get current proxy detection state for diagnostics.
+ */
+export const getProxyState = (): { proxyNeeded: boolean | null; proxyDetectionFailed: boolean; proxyUrl: string; proxyAvailable: boolean } => {
+  return { proxyNeeded, proxyDetectionFailed, proxyUrl: BINANCE_PROXY_URL, proxyAvailable: !!proxyAgent };
+};
+
+/**
  * Auto-detect whether Binance API is directly accessible from this server.
  * Re-detects if the previous detection failed (e.g., proxy tunnel was down at startup).
  * Caches permanently once proxy is confirmed working or direct access succeeds.
