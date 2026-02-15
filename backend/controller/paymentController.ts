@@ -7201,13 +7201,7 @@ const processIncompletePayments = async () => {
               });
             }
 
-            if (tempTx.subscription_id) {
-              try {
-                await tatumApi.deleteSubscription(tempTx.subscription_id);
-              } catch (e) {
-                cronLogger.info(`Failed to delete subscription ${tempTx.subscription_id}:`, e.message);
-              }
-            }
+            await safeDeleteSubscription(tempTx.subscription_id, 'partial payment expired');
 
             // Send partial payment expired notification
             await sendPartialPaymentExpiredNotification(
