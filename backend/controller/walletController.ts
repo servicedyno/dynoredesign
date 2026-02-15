@@ -537,35 +537,9 @@ const getAllTransactions = async (
     const safeSort = sortType === 'asc' ? 'ASC' : 'DESC';
 
     // Build WHERE conditions with parameterized replacements
-    const replacements: Record<string, unknown> = { user_id: userData.user_id };
-    let whereConditions = `ut.user_id=:user_id`;
-    
-    if (date_from) {
-      whereConditions += ` AND ut."createdAt" >= :date_from`;
-      replacements.date_from = date_from;
-    }
-    if (date_to) {
-      whereConditions += ` AND ut."createdAt" <= :date_to`;
-      replacements.date_to = date_to;
-    }
-    if (status) {
-      whereConditions += ` AND ut.status = :status`;
-      replacements.status = status;
-    }
-    if (currency) {
-      whereConditions += ` AND ut.base_currency = :currency`;
-      replacements.currency = currency;
-    }
-    if (search) {
-      whereConditions += ` AND (ut.id ILIKE :search OR ut.transaction_reference ILIKE :search)`;
-      replacements.search = `%${search}%`;
-    }
-    if (company_id) {
-      whereConditions += ` AND cm.company_id = :company_id`;
-      replacements.company_id = parseInt(company_id as string, 10);
-    }
-
-    // Get user transactions with filters (parameterized)
+    const { whereConditions, replacements } = buildTransactionFilters(userData.user_id, {
+      date_from, date_to, status, currency, search, company_id
+    });
     let txQuery = `
       SELECT 
         ut.*,
