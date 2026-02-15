@@ -432,6 +432,59 @@ app.post("/diagnostics/error-monitor/test", adminAuthMiddleware, async (_req: ex
   }
 });
 
+// ── Queue Health Monitoring Endpoints ─────────────────────────────────────────
+app.get("/diagnostics/webhook-queue", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
+  try {
+    const health = await getQueueHealth();
+    res.status(200).json({ success: true, queue: health });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+app.get("/diagnostics/webhook-queue/dlq", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const start = parseInt(req.query.start as string) || 0;
+    const end = parseInt(req.query.end as string) || 20;
+    const jobs = await getDLQItems(start, end);
+    res.status(200).json({
+      success: true,
+      count: jobs.length,
+      items: jobs.map((j) => ({
+        id: j.id,
+        data: j.data,
+        timestamp: j.timestamp,
+        failedReason: j.failedReason,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+app.post("/diagnostics/webhook-queue/dlq/:jobId/retry", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const { jobId } = req.params;
+    const retried = await retryDLQItem(jobId);
+    if (retried) {
+      res.status(200).json({ success: true, message: `Job ${jobId} re-queued from DLQ` });
+    } else {
+      res.status(404).json({ success: false, error: `Job ${jobId} not found in DLQ` });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+app.post("/diagnostics/webhook-queue/reconcile", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
+  try {
+    const stats = await runStartupReconciliation();
+    res.status(200).json({ success: true, reconciliation: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
 // OPTIMIZED: Reduced from */30 to every 2h — legacy system, rarely has pending addresses
 cron.schedule("0 */2 * * *", function () {
   log("Cron: USDT check running", "info");
