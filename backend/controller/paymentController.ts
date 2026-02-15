@@ -3168,6 +3168,7 @@ const settleCryptoTransaction = async ({
               {
                 txHash: transactionId,
                 index: utxoIndex,
+                privateKey: privateKey,  // BCH requires privateKey in fromUTXO
               },
             ],
             toUTXO: [
