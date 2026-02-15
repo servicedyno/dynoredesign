@@ -57,11 +57,9 @@ describe('feeConfigUtils', () => {
       expect(getBlockchainThreshold('BTC')).toBe(5);
     });
 
-    it('returns 0 when env is explicitly "0" (falsy but valid)', () => {
+    it('returns 0 when env is explicitly "0" (valid threshold)', () => {
       process.env.BTC_THRESHOLD = '0';
-      // Number('0') || 5 = 5 (because 0 is falsy)
-      // This is a POTENTIAL BUG: threshold of 0 is impossible to set
-      expect(getBlockchainThreshold('BTC')).toBe(5);
+      expect(getBlockchainThreshold('BTC')).toBe(0);
     });
   });
 
