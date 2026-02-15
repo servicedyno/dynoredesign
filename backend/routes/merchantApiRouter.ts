@@ -379,7 +379,7 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
       data: {
         transaction_id,
         qr_code,
-        address: normalizedCurrency === "BCH" ? "bitcoincash:" + address : address,
+        address: normalizedCurrency === "BCH" && address && !String(address).startsWith("bitcoincash:") ? "bitcoincash:" + address : address,
         amount: cryptoAmount,
         currency: normalizedCurrency,
         base_amount: amount,
