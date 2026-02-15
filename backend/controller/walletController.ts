@@ -758,6 +758,10 @@ const addFunds = async (req: express.Request, res: express.Response) => {
             mode: paymentTypes.CRYPTO,
             amount: value.amount,
             status: toRedisStatus(PaymentState.PENDING),
+            ref: uniqueRef,
+            currency: value.currency,
+            walletType: "user",
+            temp_id: (paymentRes as { temp_id?: string }).temp_id,
             is_merchant_pool: (paymentRes as any).is_merchant_pool ? "true" : "false",  // Include merchant pool flag
           });
         }
