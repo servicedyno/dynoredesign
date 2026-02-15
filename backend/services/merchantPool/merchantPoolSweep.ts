@@ -959,13 +959,25 @@ export const sweepByTime = async (): Promise<number> => {
     cronLogger.info(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for time-based sweep`);
   }
 
-  for (const address of eligibleAddresses) {
+  // Sweep eligible addresses concurrently with per-address locks
+  const sweepPromises = eligibleAddresses.map(async (address) => {
+    const addrId = address.dataValues.temp_address_id;
+    const lockKey = `sweep:address:${addrId}`;
+    const { acquireLock, releaseLock } = await import("../../utils/redisInstance");
+    const locked = await acquireLock(lockKey, 300, 1, 50, true);
+    if (!locked) {
+      cronLogger.info(`[MerchantPool] Sweep skipped (locked): address ${addrId}`);
+      return;
+    }
     try {
-      await sweepPoolAddress(address.dataValues.temp_address_id);
+      await sweepPoolAddress(addrId);
     } catch (error) {
       cronLogger.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
+    } finally {
+      await releaseLock(lockKey);
     }
-  }
+  });
+  await Promise.allSettled(sweepPromises);
   
   return eligibleAddresses.length;
 };
