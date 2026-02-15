@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 
 async function verifyPrivateKey() {
   try {
-    const encryptedPrivateKey = "CiQAAxOcdYBXr6dQRhCdxkOdZKGM5Z4d3FUKHebkNTFd0jiqfNsShwEqhAEKFAoMSh41C1oJ9ju+CTiCELmii7gMElIKShG4N+gs4OGcHuhp4ZrOU8BZNNfqaZrN/X3yHwDpze1utNbmIgaGeK1trjL1FgkXUa6mY14CKNqIQL6Y0YXKEawxr8JDL/Oc6kAkEK66uOQBGhgKECP+HNxMIa70BatFdEHzVKQQ9Y2j2As=";
+    const encryptedPrivateKey = process.env.VERIFY_ENCRYPTED_KEY || "";
     
     const projectId = process.env.PROJECT_ID;
     const locationId = process.env.LOCATION_ID;
