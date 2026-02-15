@@ -2789,10 +2789,7 @@ const Crypto = async (
     let qr_code;
 
     if (address) {
-      const url = await QR_Code.toDataURL(address, {
-        width: 300,
-      });
-      qr_code = url;
+      qr_code = await generateQRCodeWithLogo(address, currency, 400);
     }
     // Ensure user_id is a valid integer
     const userId = tokenData.adm_id;
