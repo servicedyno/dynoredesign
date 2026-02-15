@@ -3696,6 +3696,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
       if (existingTransaction) {
         cronLogger.warn(`[cryptoVerification] ⚠️  DUPLICATE WEBHOOK DETECTED: ${transactionId}`);
         cronLogger.warn(`[cryptoVerification] Transaction already processed, ignoring webhook`);
+        transactionFinished = true;
         await transaction.rollback();
         return {
           status: 200,
