@@ -21,6 +21,7 @@ import {
   calculateDynamicTRXNativeFee,
   logCostSavings,
 } from "../services/tronEnergyService";
+import * as bchaddr from "bchaddrjs";
 
 // Type interfaces for blockchain transaction data
 interface ERC20Transaction {
