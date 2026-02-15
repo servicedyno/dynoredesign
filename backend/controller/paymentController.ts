@@ -1245,102 +1245,18 @@ const createCryptoPayment = async (
 
       // ========================================
       // KYC ENFORCEMENT: Block payment processing if merchant's KYC required but not approved
-      // Threshold: $10,000 USD with 90-day grace period
       // ========================================
       const merchantUserId = items?.adm_id;
       const merchantCompanyId = items?.company_id;
       
       if (merchantUserId) {
-        // Calculate merchant's total transaction volume
-        const merchantVolumeQuery = merchantCompanyId
-          ? `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
-             FROM tbl_customer_transaction 
-             WHERE company_id = :companyId AND status = 'successful'`
-          : `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
-             FROM tbl_customer_transaction 
-             WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId) AND status = 'successful'`;
-        
-        const merchantVolumeResult = await sequelize.query<{ total_volume: string }>(
-          merchantVolumeQuery,
-          {
-            replacements: { userId: merchantUserId, companyId: merchantCompanyId },
-            type: QueryTypes.SELECT,
-          }
-        );
-        
-        const merchantTotalVolume = parseFloat(String(merchantVolumeResult[0]?.total_volume || "0"));
-        const kycThreshold = 10000; // $10,000 USD threshold
-        const kycGracePeriodDays = 90; // 90-day grace period
-        
-        if (merchantTotalVolume >= kycThreshold) {
-          // Merchant KYC is required - check if it's approved
-          const merchantKycWhereClause: Record<string, unknown> = {
-            user_id: merchantUserId,
-          };
-          if (merchantCompanyId) {
-            merchantKycWhereClause.company_id = merchantCompanyId;
-          }
-          
-          const merchantKycRecord = await kycModel.findOne({
-            where: merchantKycWhereClause,
-            order: [["created_at", "DESC"]],
-          });
-          
-          const merchantKycStatus = merchantKycRecord ? merchantKycRecord.get("status") as string : "not_started";
-          
-          if (merchantKycStatus !== "approved") {
-            // Check 90-day grace period
-            const thresholdReachedQuery = merchantCompanyId
-              ? `SELECT MIN("createdAt") as threshold_date
-                 FROM (
-                   SELECT "createdAt", 
-                          SUM(CAST(base_amount AS DECIMAL)) OVER (ORDER BY "createdAt") as running_total
-                   FROM tbl_customer_transaction 
-                   WHERE company_id = :companyId AND status = 'successful'
-                 ) sub
-                 WHERE running_total >= :threshold`
-              : `SELECT MIN("createdAt") as threshold_date
-                 FROM (
-                   SELECT "createdAt", 
-                          SUM(CAST(base_amount AS DECIMAL)) OVER (ORDER BY "createdAt") as running_total
-                   FROM tbl_customer_transaction 
-                   WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId) AND status = 'successful'
-                 ) sub
-                 WHERE running_total >= :threshold`;
-            
-            const thresholdResult = await sequelize.query<{ threshold_date: string }>(
-              thresholdReachedQuery,
-              {
-                replacements: { userId: merchantUserId, companyId: merchantCompanyId, threshold: kycThreshold },
-                type: QueryTypes.SELECT,
-              }
-            );
-            
-            const thresholdDate = thresholdResult[0]?.threshold_date ? new Date(thresholdResult[0].threshold_date) : null;
-            const now = new Date();
-            
-            if (thresholdDate) {
-              const gracePeriodEnd = new Date(thresholdDate);
-              gracePeriodEnd.setDate(gracePeriodEnd.getDate() + kycGracePeriodDays);
-              
-              if (now >= gracePeriodEnd) {
-                // Grace period expired - block checkout
-                cronLogger.info(`[KYC BLOCK - Checkout] Merchant ${merchantUserId} grace period expired. Volume: $${merchantTotalVolume.toFixed(2)}, KYC status: ${merchantKycStatus}`);
-                
-                return errorResponseHelper(
-                  res,
-                  503,
-                  "This payment cannot be processed at this time. The merchant's account requires verification. Please contact the merchant for assistance. [MERCHANT_KYC_REQUIRED]"
-                );
-              } else {
-                // Within grace period - allow but log
-                const daysRemaining = Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                cronLogger.info(`[KYC GRACE - Checkout] Merchant ${merchantUserId} within grace period. Days remaining: ${daysRemaining}`);
-              }
-            }
-          } else {
-            cronLogger.info(`[KYC OK - Checkout] Merchant ${merchantUserId} KYC approved. Volume: $${merchantTotalVolume.toFixed(2)}`);
-          }
+        const kycResult = await checkKycEnforcement(merchantUserId, merchantCompanyId, '[KYC - Checkout]');
+        if (kycResult.blocked) {
+          return errorResponseHelper(
+            res,
+            503,
+            "This payment cannot be processed at this time. The merchant's account requires verification. Please contact the merchant for assistance. [MERCHANT_KYC_REQUIRED]"
+          );
         }
       }
       // ========================================
