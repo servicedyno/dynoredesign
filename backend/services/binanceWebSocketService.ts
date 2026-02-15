@@ -343,7 +343,7 @@ const restFetchPrices = async (): Promise<void> => {
 
     if (restFallbackFailures >= REST_MAX_FAILURES) {
       restFallbackCooldownUntil = Date.now() + REST_COOLDOWN_MS;
-      log(`❌ REST fallback failed ${restFallbackFailures}x — cooling down for ${REST_COOLDOWN_MS / 1000}s`);
+      logError(`❌ REST fallback failed ${restFallbackFailures}x — cooling down for ${REST_COOLDOWN_MS / 1000}s`);
       captureError(
         new Error(`Binance REST fallback exhausted after ${restFallbackFailures} failures: ${msg}`),
         "blockchain",
