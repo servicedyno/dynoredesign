@@ -979,14 +979,14 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           await setRedisItem("customer-" + userData.ref, {
             ...items,
             mode: paymentTypes.WALLET,
-            status: status ? "successful" : "failed",
+            status: status ? toRedisStatus(PaymentState.PAYOUT_COMPLETE) : toRedisStatus(PaymentState.FAILED),
             paid_amount: value.amount,
             paid_currency: value.currency,
             id: userData.ref,
           });
 
           finalRes = {
-            status: status ? "successful" : "failed",
+            status: status ? toRedisStatus(PaymentState.PAYOUT_COMPLETE) : toRedisStatus(PaymentState.FAILED),
             txRef: "customer-" + userData.ref,
           };
         }
