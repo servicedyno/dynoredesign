@@ -27,7 +27,7 @@ def get_base_url():
     # Fallback to localhost
     return "http://localhost:8001"
 
-BASE_URL = get_base_url()
+BASE_URL = "http://localhost:8001"  # Use localhost directly for container testing
 print(f"Using BASE_URL: {BASE_URL}")
 
 class TestResults:
