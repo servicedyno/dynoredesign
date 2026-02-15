@@ -141,38 +141,35 @@ export interface SweepConfig {
 }
 
 const parseSweepConfig = (walletType: string): SweepConfig => {
+  // Check for explicit env override first (allows overriding UTXO default)
+  const envKey = `${walletType.replace(/-/g, "_")}_SWEEP`;
+  const configValue = process.env[envKey];
+
+  if (configValue) {
+    const [mode, valueStr] = configValue.split(":");
+
+    if (mode !== "threshold" && mode !== "time") {
+      console.error(`[MerchantPool] Invalid sweep mode for ${walletType}: ${mode}. Using default.`);
+    } else if (TOKEN_CHAINS.includes(walletType) && mode === "time") {
+      console.error(`[MerchantPool] Tokens cannot use time-based sweep! ${walletType} must use threshold. Using threshold:30`);
+      return { mode: "threshold", value: 30 };
+    } else {
+      const value = valueStr ? parseInt(valueStr, 10) : (mode === "threshold" ? 30 : 10);
+      if (isNaN(value) || value <= 0) {
+        console.error(`[MerchantPool] Invalid sweep value for ${walletType}: ${valueStr}. Using default.`);
+        return { mode, value: mode === "threshold" ? 30 : 10 };
+      }
+      return { mode, value };
+    }
+  }
+
+  // Default: UTXO chains use batch mode
   if (UTXO_CHAINS.includes(walletType)) {
     return { mode: "batch" };
   }
 
-  const envKey = `${walletType.replace(/-/g, "_")}_SWEEP`;
-  const configValue = process.env[envKey];
-
-  if (!configValue) {
-    console.warn(`[MerchantPool] No sweep config for ${walletType}, using default: threshold:30`);
-    return { mode: "threshold", value: 30 };
-  }
-
-  const [mode, valueStr] = configValue.split(":");
-
-  if (mode !== "threshold" && mode !== "time") {
-    console.error(`[MerchantPool] Invalid sweep mode for ${walletType}: ${mode}. Using threshold:30`);
-    return { mode: "threshold", value: 30 };
-  }
-
-  if (TOKEN_CHAINS.includes(walletType) && mode === "time") {
-    console.error(`[MerchantPool] Tokens cannot use time-based sweep! ${walletType} must use threshold. Using threshold:30`);
-    return { mode: "threshold", value: 30 };
-  }
-
-  const value = valueStr ? parseInt(valueStr) : (mode === "threshold" ? 30 : 10);
-
-  if (isNaN(value) || value <= 0) {
-    console.error(`[MerchantPool] Invalid sweep value for ${walletType}: ${valueStr}. Using default.`);
-    return { mode, value: mode === "threshold" ? 30 : 10 };
-  }
-
-  return { mode, value };
+  console.warn(`[MerchantPool] No sweep config for ${walletType}, using default: threshold:30`);
+  return { mode: "threshold", value: 30 };
 };
 
 export const getSweepConfig = (walletType: string): SweepConfig => {
