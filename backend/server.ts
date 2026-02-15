@@ -903,7 +903,15 @@ const gracefulShutdown = async (signal: string) => {
     log(`Error flushing error digest: ${err}`, 'error');
   }
 
-  // 3. Wait briefly for in-flight DB operations to finish
+  // 3. Shutdown BullMQ webhook queue and worker
+  try {
+    await shutdownWebhookQueue();
+    log('Webhook queue shut down.', 'info');
+  } catch (err) {
+    log(`Error shutting down webhook queue: ${err}`, 'error');
+  }
+
+  // 4. Wait briefly for in-flight DB operations to finish
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   // 4. Close database connection pool LAST
