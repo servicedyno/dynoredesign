@@ -2958,9 +2958,8 @@ const settleCryptoTransaction = async ({
             toAddress: adminWalletAddress,
             privateKey: privateKey,
             amount: utxoAmountToSend,
-            // For BCH: omit fee so Tatum auto-calculates, avoiding dust change
-            // For others: pass the estimated fee
-            ...(currency !== 'BCH' && { fee: String(utxoFees.fast) }),
+            // Fee = full UTXO input - output, ensuring zero change (avoids dust)
+            fee: String(Number((receivedAmount - utxoAmountToSend).toFixed(8))),
             fromUTXO: [
               {
                 txHash: transactionId,
