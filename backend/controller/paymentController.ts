@@ -4370,10 +4370,16 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           // MERCHANT POOL: Release address back to pool with admin fee tracking
           cronLogger.info(`[cryptoVerification] Releasing MERCHANT POOL address back to pool`);
           
+          // Safety net: If auto-convert was enabled but settleCryptoTransaction returned
+          // without creating a transfer (funds still in pool address), flag for sweep.
+          // This handles edge cases where UTXO direct-transfer failed or future changes.
+          const pendingSweep = autoConvertEnabled && !adminTransferResult.transactionDetails;
+          
           await merchantPoolService.releaseAddress(
             tempAddressData.temp_address_id,
             adminAmountToSend,
-            adminTransferResult.blockchainFee || 0
+            adminTransferResult.blockchainFee || 0,
+            pendingSweep
           );
           
           // Record pool transaction for audit
@@ -4396,18 +4402,21 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
 
           // AUTO-CONVERT OPTIMIZATION: Trigger immediate sweep instead of waiting for cron
           // This eliminates the 3-5 min delay (ETH_SWEEP=time:3 + 2-min cron interval)
-          // Only for auto-convert payments where ALL crypto goes to admin wallet (Binance)
-          if (autoConvertEnabled) {
+          // Only for account-based chains where funds stay in pool address for sweep.
+          // UTXO chains with auto-convert already sent funds directly in settleCryptoTransaction.
+          if (autoConvertEnabled && !adminTransferResult.transactionDetails) {
             const sweepAddressId = tempAddressData.temp_address_id;
             cronLogger.info(`[AutoConvert] Triggering immediate sweep for address ID ${sweepAddressId} (${tempCurrency})`);
 
             // Fire-and-forget: don't block the payment response
-            // No need to manually set IN_USE - releaseAddress() already sets correct status
+            // releaseAddress(pendingSweep=true) already set correct IN_USE status
             merchantPoolService.sweepPoolAddress(sweepAddressId).then(() => {
               cronLogger.info(`[AutoConvert] Immediate sweep completed for address ID ${sweepAddressId}`);
             }).catch((sweepErr: unknown) => {
               cronLogger.warn(`[AutoConvert] Immediate sweep failed (will be retried by cron):`, sweepErr instanceof Error ? sweepErr.message : sweepErr);
             });
+          } else if (autoConvertEnabled && adminTransferResult.transactionDetails) {
+            cronLogger.info(`[AutoConvert] ✅ UTXO direct transfer already sent funds to admin wallet (TX: ${adminTransferResult.transactionDetails.txId}). No sweep needed.`);
           }
           
         } else {
