@@ -22,8 +22,8 @@ import os
 import time
 import uuid
 
-# Base URL - internal backend port
-BASE_URL = "http://localhost:3300"
+# Base URL - backend runs behind Python proxy on port 8001
+BASE_URL = "http://localhost:8001"
 
 # Test user credentials (non-admin user)
 TEST_EMAIL = "richard@dyno.pt"
