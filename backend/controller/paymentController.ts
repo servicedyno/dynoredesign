@@ -2184,10 +2184,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           const platformCharge = (data.amount * Number(transaction_fee)) / 100;
           const blockchainCharge = (data.amount * Number(blockchain_fee)) / 100;
 
-          await adminWalletModel.increment("fee", {
-            by: platformCharge + blockchainCharge,
-            where: { wallet_type: data.currency },
-          });
+          await incrementAdminFee(data.currency, platformCharge + blockchainCharge);
 
           // Send admin fee notification email for create payment
           try {
