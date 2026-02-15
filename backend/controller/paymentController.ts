@@ -3001,8 +3001,77 @@ const settleCryptoTransaction = async ({
     // and is more gas efficient as admin fees can be collected in batches
 
     if (!userAmount || userAmount <= 0 || !userAddress) {
-      // No merchant amount (under threshold or error) - nothing to transfer now
-      // Admin fee stays in temp address for sweep cron
+      // UTXO chains (BTC, LTC, DOGE, BCH): Send directly to admin wallet NOW
+      // UTXO chains can't efficiently "leave funds for later sweep" because:
+      //   1. releaseAddress() sets UTXO status to AVAILABLE (sweep requires IN_USE)
+      //   2. UTXO sweep mode is "batch" (skipped by threshold/time sweep crons)
+      // This matches how normal UTXO settlement creates instant multi-output TXs.
+      const isUTXODirect = ["BTC", "LTC", "DOGE", "BCH"].includes(currency);
+      
+      if (isUTXODirect && receivedAmount > 0 && adminWalletAddress) {
+        cronLogger.info(`[settleCryptoTransaction] UTXO auto-convert: Sending ${receivedAmount} ${currency} directly to admin wallet ${adminWalletAddress.substring(0, 12)}...`);
+        
+        const utxoFees = await tatumApi.feeEstimation(
+          currency,
+          fromAddress,
+          adminWalletAddress,
+          receivedAmount
+        );
+        
+        const utxoFeeToDeduct = Number(utxoFees?.fast ?? utxoFees?.slow ?? 0);
+        const utxoAmountToSend = Number((receivedAmount - utxoFeeToDeduct).toFixed(8));
+        
+        if (utxoAmountToSend <= 0) {
+          cronLogger.warn(`[settleCryptoTransaction] UTXO auto-convert: Amount after fee is non-positive. Balance: ${receivedAmount}, Fee: ${utxoFeeToDeduct}`);
+          return {
+            transactionDetails: null,
+            userTransactionDetails: null,
+            sendAmount: 0,
+            blockchainFee: 0,
+            adminFeeRetained: receivedAmount,
+          };
+        }
+        
+        // Lookup the correct UTXO output index for this address
+        const utxoIndex = await tatumApi.findUtxoOutputIndex(transactionId, fromAddress, currency);
+        
+        const adminTransferDetails = await withRetry(
+          () => tatumApi.assetToOtherAddress({
+            currency,
+            fromAddress: fromAddress,
+            toAddress: adminWalletAddress,
+            privateKey: privateKey,
+            amount: utxoAmountToSend,
+            fee: String(utxoFees.fast),
+            fromUTXO: [
+              {
+                txHash: transactionId,
+                index: utxoIndex,
+              },
+            ],
+            toUTXO: [
+              {
+                address: adminWalletAddress,
+                value: utxoAmountToSend,
+              },
+            ],
+          }),
+          `UTXO admin-only transfer (${currency})`
+        );
+        
+        cronLogger.info(`[settleCryptoTransaction] ✅ UTXO auto-convert TX sent: ${adminTransferDetails?.txId} (${utxoAmountToSend} ${currency} → admin wallet, fee: ${utxoFeeToDeduct})`);
+        
+        return {
+          transactionDetails: adminTransferDetails,
+          userTransactionDetails: null,
+          sendAmount: 0,
+          blockchainFee: utxoFeeToDeduct,
+          adminFeeRetained: 0, // All sent to admin wallet — nothing left to sweep
+        };
+      }
+      
+      // Account-based chains (ETH, TRX, XRP, SOL, POLYGON): Admin fee stays for sweep
+      // Sweep mechanism works correctly for these chains (status=IN_USE, threshold/time modes)
       cronLogger.info(`[settleCryptoTransaction] No merchant transfer needed. Admin fee ${receivedAmount} ${currency} stays in temp address for sweep.`);
       return {
         transactionDetails: null,
