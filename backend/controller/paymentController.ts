@@ -5235,37 +5235,7 @@ const createPaymentLink = async (
     
     // ========================================
     // KYC ENFORCEMENT: Block payment creation if KYC required but not approved
-    // Threshold: $10,000 USD with 90-day grace period
     // ========================================
-    const kycWhereClause: Record<string, unknown> = {
-      user_id: userData.user_id,
-    };
-    if (company_id) {
-      kycWhereClause.company_id = company_id;
-    }
-    
-    // Calculate total transaction volume
-    const volumeQuery = company_id
-      ? `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
-         FROM tbl_customer_transaction 
-         WHERE company_id = :companyId AND status = 'successful'`
-      : `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
-         FROM tbl_customer_transaction 
-         WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId) AND status = 'successful'`;
-    
-    const volumeResult = await sequelize.query<{ total_volume: string }>(
-      volumeQuery,
-      {
-        replacements: { userId: userData.user_id, companyId: company_id },
-        type: QueryTypes.SELECT,
-      }
-    );
-    
-    const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
-    const kycThreshold = 10000; // $10,000 USD threshold
-    const kycGracePeriodDays = 90; // 90-day grace period after threshold reached
-    
-    // Store KYC warning for in-app display
     let kycWarning: {
       type: string;
       message: string;
@@ -5277,97 +5247,34 @@ const createPaymentLink = async (
       api_endpoint: string;
       has_active_session: boolean;
     } | null = null;
-    
-    if (totalVolume >= kycThreshold) {
-      // KYC is required - check if it's approved
-      const kycRecord = await kycModel.findOne({
-        where: kycWhereClause,
-        order: [["created_at", "DESC"]],
-      });
-      
-      const kycStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
-      
-      // Get existing Veriff session URL if available
-      const veriffSessionUrl = kycRecord ? kycRecord.get("veriff_session_url") as string | null : null;
-      const hasActiveSession = veriffSessionUrl && ["submitted", "pending"].includes(kycStatus);
-      
-      if (kycStatus !== "approved") {
-        // Check if we're still within the 90-day grace period
-        // Get the date when threshold was first reached (first transaction that pushed over threshold)
-        const thresholdReachedQuery = company_id
-          ? `SELECT MIN("createdAt") as threshold_date
-             FROM (
-               SELECT "createdAt", 
-                      SUM(CAST(base_amount AS DECIMAL)) OVER (ORDER BY "createdAt") as running_total
-               FROM tbl_customer_transaction 
-               WHERE company_id = :companyId AND status = 'successful'
-             ) sub
-             WHERE running_total >= :threshold`
-          : `SELECT MIN("createdAt") as threshold_date
-             FROM (
-               SELECT "createdAt", 
-                      SUM(CAST(base_amount AS DECIMAL)) OVER (ORDER BY "createdAt") as running_total
-               FROM tbl_customer_transaction 
-               WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId) AND status = 'successful'
-             ) sub
-             WHERE running_total >= :threshold`;
-        
-        const thresholdResult = await sequelize.query<{ threshold_date: string }>(
-          thresholdReachedQuery,
-          {
-            replacements: { userId: userData.user_id, companyId: company_id, threshold: kycThreshold },
-            type: QueryTypes.SELECT,
-          }
-        );
-        
-        const thresholdDate = thresholdResult[0]?.threshold_date ? new Date(thresholdResult[0].threshold_date) : null;
-        const now = new Date();
-        
-        if (thresholdDate) {
-          const gracePeriodEnd = new Date(thresholdDate);
-          gracePeriodEnd.setDate(gracePeriodEnd.getDate() + kycGracePeriodDays);
-          
-          const daysRemaining = Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          
-          if (now < gracePeriodEnd) {
-            // Still within grace period - allow but set warning for in-app display
-            cronLogger.info(`[KYC GRACE PERIOD] User ${userData.user_id} within grace period. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Days remaining: ${daysRemaining}`);
-            
-            // Set in-app warning
-            const urgencyType = daysRemaining <= 14 ? "critical" : daysRemaining <= 30 ? "warning" : "info";
-            kycWarning = {
-              type: urgencyType,
-              message: daysRemaining <= 14 
-                ? `URGENT: Only ${daysRemaining} days left to complete KYC verification! Your account will be restricted after ${gracePeriodEnd.toLocaleDateString()}.`
-                : daysRemaining <= 30
-                ? `Warning: ${daysRemaining} days remaining to complete KYC verification before your account is restricted.`
-                : `KYC verification required within ${daysRemaining} days. Your transaction volume ($${totalVolume.toLocaleString()}) has exceeded the $${kycThreshold.toLocaleString()} threshold.`,
-              days_remaining: daysRemaining,
-              threshold_date: thresholdDate.toISOString(),
-              grace_period_end: gracePeriodEnd.toISOString(),
-              kyc_status: kycStatus,
-              // If merchant has an active Veriff session, use that URL; otherwise null
-              verification_url: hasActiveSession ? veriffSessionUrl : null,
-              api_endpoint: "/api/kyc/submit",
-              has_active_session: !!hasActiveSession,
-            };
-          } else {
-            // Grace period expired - block
-            cronLogger.info(`[KYC BLOCK] User ${userData.user_id} grace period expired. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Grace period ended: ${gracePeriodEnd.toISOString()}`);
-            
-            return errorResponseHelper(
-              res,
-              403,
-              `KYC verification required. Your transaction volume ($${totalVolume.toFixed(2)}) exceeded the $${kycThreshold.toLocaleString()} threshold on ${thresholdDate.toLocaleDateString()}. Your 90-day grace period has expired. Please complete KYC verification to continue creating payment links. Current KYC status: ${kycStatus}. [KYC_REQUIRED]`
-            );
-          }
-        } else {
-          // Couldn't determine threshold date - be lenient, allow but log warning
-          cronLogger.warn(`[KYC WARNING] Could not determine threshold date for user ${userData.user_id}. Allowing payment creation.`);
-        }
-      } else {
-        cronLogger.info(`[KYC OK] User ${userData.user_id} KYC approved. Volume: $${totalVolume.toFixed(2)}`);
-      }
+
+    const kycResult = await checkKycEnforcement(userData.user_id, company_id, '[KYC - PaymentCreate]');
+
+    if (kycResult.blocked) {
+      return errorResponseHelper(
+        res,
+        403,
+        `KYC verification required. Your transaction volume ($${kycResult.totalVolume.toFixed(2)}) exceeded the $${KYC_THRESHOLD_USD.toLocaleString()} threshold on ${kycResult.thresholdDate?.toLocaleDateString()}. Your 90-day grace period has expired. Please complete KYC verification to continue creating payment links. Current KYC status: ${kycResult.kycStatus}. [KYC_REQUIRED]`
+      );
+    } else if (kycResult.needsEnforcement && kycResult.kycStatus !== 'approved' && kycResult.daysRemaining !== undefined) {
+      // Within grace period - set in-app warning
+      const daysRemaining = kycResult.daysRemaining;
+      const urgencyType = daysRemaining <= 14 ? "critical" : daysRemaining <= 30 ? "warning" : "info";
+      kycWarning = {
+        type: urgencyType,
+        message: daysRemaining <= 14 
+          ? `URGENT: Only ${daysRemaining} days left to complete KYC verification! Your account will be restricted after ${kycResult.gracePeriodEnd?.toLocaleDateString()}.`
+          : daysRemaining <= 30
+          ? `Warning: ${daysRemaining} days remaining to complete KYC verification before your account is restricted.`
+          : `KYC verification required within ${daysRemaining} days. Your transaction volume ($${kycResult.totalVolume.toLocaleString()}) has exceeded the $${KYC_THRESHOLD_USD.toLocaleString()} threshold.`,
+        days_remaining: daysRemaining,
+        threshold_date: kycResult.thresholdDate?.toISOString() || '',
+        grace_period_end: kycResult.gracePeriodEnd?.toISOString() || '',
+        kyc_status: kycResult.kycStatus,
+        verification_url: kycResult.hasActiveSession ? (kycResult.veriffSessionUrl || null) : null,
+        api_endpoint: "/api/kyc/submit",
+        has_active_session: !!kycResult.hasActiveSession,
+      };
     }
     // ========================================
     // END KYC ENFORCEMENT
