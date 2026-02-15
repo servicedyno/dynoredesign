@@ -6143,7 +6143,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
           const activeDestTag = activeAddress.destination_tag ? Number(activeAddress.destination_tag) : null;
           const activeCryptoKey = getCryptoRedisKey(activeAddress.address, activeDestTag);
           const cryptoRedisData = await getRedisItem(activeCryptoKey);
-          if (cryptoRedisData && cryptoRedisData.status === 'pending') {
+          if (cryptoRedisData && parseState(cryptoRedisData.status) === PaymentState.PENDING) {
             const cryptoUpdates: Record<string, unknown> = {};
             
             if (updateData.webhook_url !== undefined) {
