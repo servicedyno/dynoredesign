@@ -514,6 +514,15 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
           accountReserve = 1.2;
           cronLogger.warn(`[MerchantPool] ⚠️ XRPL account_info failed, using fallback reserve ${accountReserve} XRP:`, xrplErr);
         }
+      } else if (walletType === 'SOL') {
+        // SOL requires a minimum rent-exempt balance (~0.00089088 SOL for a basic account).
+        // If we drain below this, the Solana runtime rejects the TX with 403 "Failed creating transaction".
+        // We close the account by sending ALL lamports (which returns rent to the recipient),
+        // but only if Tatum SDK supports it. Otherwise, reserve rent + a safety buffer.
+        const SOL_RENT_EXEMPT_MINIMUM = 0.001; // ~890880 lamports + safety buffer
+        const SOL_TX_FEE = 0.000005; // 5000 lamports per signature
+        accountReserve = SOL_RENT_EXEMPT_MINIMUM + SOL_TX_FEE;
+        cronLogger.info(`[MerchantPool] SOL reserve: ${accountReserve} SOL (rent-exempt ${SOL_RENT_EXEMPT_MINIMUM} + tx fee ${SOL_TX_FEE})`);
       }
       
       amountToSend = actualBalance - gasFee - accountReserve;
