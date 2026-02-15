@@ -2928,7 +2928,12 @@ const settleCryptoTransaction = async ({
           receivedAmount
         );
         
-        const utxoFeeToDeduct = Number(utxoFees?.fast ?? utxoFees?.slow ?? 0);
+        // For BCH: the feeEstimation returns fee-per-KB rate. A simple 1-in/1-out tx ≈ 225 bytes.
+        // Use a generous minimum fee to avoid dust change outputs.
+        // BCH dust threshold = 546 sats. Use at least 1000 sats (0.00001 BCH) as fee floor.
+        const rawFee = Number(utxoFees?.fast ?? utxoFees?.slow ?? 0);
+        const minFee = currency === 'BCH' ? 0.00001 : rawFee;
+        const utxoFeeToDeduct = Math.max(rawFee, minFee);
         // Use integer arithmetic to avoid floating-point precision issues (Tatum rejects >8 decimal places)
         const utxoAmountToSend = Math.floor((receivedAmount - utxoFeeToDeduct) * 1e8) / 1e8;
         
