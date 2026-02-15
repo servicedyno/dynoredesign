@@ -96,7 +96,7 @@ const mailTransporter = async ({ to, subject, body, name, attachments }: mailOpt
         timeout: 15000,
       }
     );
-    console.log(`[Email] Sent to ${to}: ${subject}${attachments ? ` (with ${attachments.length} attachment(s))` : ''}`);
+    log(`[Email] Sent to ${to}: ${subject}${attachments ? ` (with ${attachments.length} attachment(s))` : ''}`);
     return data;
   } catch (apiError) {
     // Capture Brevo-specific error details for diagnostics
