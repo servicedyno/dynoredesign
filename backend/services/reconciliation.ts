@@ -86,10 +86,10 @@ async function reconcileStuckPayments(): Promise<number> {
   const staleThresholdMs = 60000; // 1 minute — if "processing" for >1min, it's stale
 
   // Scan Redis for crypto-* keys (these are payment state keys)
-  let cursor = "0";
+  let cursor = 0;
   do {
     const result = await redisClient.scan(cursor, { MATCH: "crypto-*:json", COUNT: 100 });
-    cursor = result.cursor.toString();
+    cursor = result.cursor;
 
     for (const key of result.keys) {
       try {
@@ -138,10 +138,10 @@ async function reconcileFailedPayments(): Promise<number> {
   let count = 0;
   const maxAgeMs = 24 * 60 * 60 * 1000; // Only reconcile failures from last 24h
 
-  let cursor = "0";
+  let cursor = 0;
   do {
     const result = await redisClient.scan(cursor, { MATCH: "failed-payment-*:json", COUNT: 100 });
-    cursor = result.cursor.toString();
+    cursor = result.cursor;
 
     for (const key of result.keys) {
       try {
