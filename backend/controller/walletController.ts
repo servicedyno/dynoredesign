@@ -626,12 +626,12 @@ const getAllTransactions = async (
     const selfData = await selfTransactionModel.findAll({
       attributes: { exclude: ["wallet_id", "transaction_id"] },
       where: selfWhereClause,
-      ...(column && sortType && { order: [[column, sortType]] }),
-      ...(offset !== undefined && limit && { offset, limit }),
+      ...(sort.column && sort.sortType && { order: [[sort.column, sort.sortType]] }),
+      ...(sort.offset !== undefined && sort.limit && { offset: sort.offset, limit: sort.limit }),
     });
 
     const total = Number((countData[0] as Record<string, unknown> | undefined)?.total) || 0;
-    const totalPages = limit ? Math.ceil(total / limit) : 1;
+    const totalPages = sort.limit ? Math.ceil(total / sort.limit) : 1;
 
     const message = total === 0
       ? "No transactions found"
@@ -643,7 +643,7 @@ const getAllTransactions = async (
       pagination: {
         total: total,
         page: page || 1,
-        rowsPerPage: limit || customer_data.length,
+        rowsPerPage: sort.limit || customer_data.length,
         totalPages
       }
     });
