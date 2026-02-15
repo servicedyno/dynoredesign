@@ -4214,10 +4214,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         const isUTXOChain = ["BTC", "LTC", "DOGE", "BCH"].includes(tempCurrency);
         const adminFeeStatus = isUTXOChain ? "successful" : "pending_sweep";
 
-        await adminWalletModel.increment("fee", {
-          by: adminAmountToSend,
-          where: { wallet_type: tempCurrency },
-        });
+        await incrementAdminFee(tempCurrency, adminAmountToSend);
 
         // Send admin fee notification email
         try {
