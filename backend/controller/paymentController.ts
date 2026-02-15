@@ -4418,6 +4418,32 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             });
           } else if (autoConvertEnabled && adminTransferResult.transactionDetails) {
             cronLogger.info(`[AutoConvert] ✅ UTXO direct transfer already sent funds to admin wallet (TX: ${adminTransferResult.transactionDetails.txId}). No sweep needed.`);
+            
+            // Send admin sweep notification for UTXO auto-convert direct transfer
+            // (same email that account-based chains get after sweep completes)
+            try {
+              const adminEmail = process.env.ADMIN_EMAIL;
+              if (adminEmail) {
+                const gasToken = tempCurrency; // UTXO chains use native coin for gas
+                const gasDisplay = adminTransferResult.blockchainFee
+                  ? `${Number(adminTransferResult.blockchainFee).toFixed(8)} ${gasToken}`
+                  : 'Included in TX';
+                
+                await sendAdminFeeSweepEmail(
+                  adminEmail,
+                  Number(adminAmountToSend).toFixed(8),
+                  tempCurrency,
+                  tempAddressData.wallet_address || 'Pool Address',
+                  getAdminWalletAddress(tempCurrency) || 'Admin Wallet',
+                  adminTransferResult.transactionDetails.txId || 'N/A',
+                  gasDisplay,
+                  'auto-convert (UTXO direct)'
+                );
+                cronLogger.info(`[AutoConvert] 📧 Admin sweep notification sent for UTXO direct transfer: ${adminAmountToSend} ${tempCurrency} to ${adminEmail}`);
+              }
+            } catch (sweepEmailErr) {
+              cronLogger.error(`[AutoConvert] ⚠️ Admin sweep email failed (non-critical):`, sweepEmailErr instanceof Error ? sweepEmailErr.message : sweepEmailErr);
+            }
           }
           
         } else {
