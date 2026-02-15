@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../utils/dbInstance";
+import { apiLogger } from "../utils/loggers";
 
 /**
  * Service Health Check Model
@@ -57,9 +58,9 @@ const serviceHealthModel = sequelize.define(
 
 // Create table if not exists
 serviceHealthModel.sync({ alter: true }).then(() => {
-  console.log("tbl_service_health table ready");
+  apiLogger.info("tbl_service_health table ready");
 }).catch(err => {
-  console.error("Error creating tbl_service_health:", err.message);
+  apiLogger.error("Error creating tbl_service_health:", err.message);
 });
 
 export default serviceHealthModel;
