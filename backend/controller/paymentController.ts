@@ -4462,11 +4462,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             };
           } else if (customerData?.pathType?.includes("cryptoPayment") && overPayment) {
             if (customerData.customer_id) {
-              await customerWalletModel.increment("amount", {
-                by: Number(newAmount[0].amount),
-                where: { customer_id: Number(customerData.customer_id) },
-                transaction,
-              });
+              await incrementCustomerWallet(Number(customerData.customer_id), Number(newAmount[0].amount), transaction);
             }
           } else {
             const finalAmount = await currencyConvert({
@@ -4476,11 +4472,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               fixedDecimal: false,
             });
             if (customerData.customer_id) {
-              await customerWalletModel.increment("amount", {
-                by: Number(finalAmount[0].amount),
-                where: { customer_id: Number(customerData.customer_id) },
-                transaction,
-              });
+              await incrementCustomerWallet(Number(customerData.customer_id), Number(finalAmount[0].amount), transaction);
             }
           }
         }
