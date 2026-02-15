@@ -85,6 +85,7 @@ const setRedisTTL = async (key: string, ttlSeconds: number) => {
 };
 
 const getRedisItem = async (key: string) => {
+  if (!key) return {};
   // Check for JSON stored object FIRST (preferred storage for objects)
   const jsonValue = await redisClient.get(key + ':json');
   if (jsonValue) {
