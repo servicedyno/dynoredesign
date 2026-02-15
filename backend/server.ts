@@ -728,6 +728,10 @@ const startServer = async () => {
       log(`Initial rate cache population failed: ${err.message}`, "error");
     });
 
+    // Start SSH tunnel manager (auto-reconnect for Binance SOCKS5 proxy)
+    // Must start BEFORE detectBinanceAccess so the tunnel is available for probe
+    startTunnelManager();
+
     // Detect Binance access mode (direct vs proxy) BEFORE starting WebSocket
     // Non-US deployments get direct access (no proxy overhead)
     detectBinanceAccess().then(() => {
