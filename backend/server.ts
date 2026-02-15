@@ -44,7 +44,7 @@ import stablecoinConversionModel from "./models/stablecoinConversionModel";
 import { processWebhookRetryQueue } from "./utils/webhookRetry";
 import { startWebhookWorker, getQueueHealth, getDLQItems, retryDLQItem, shutdownWebhookQueue } from "./services/webhookQueue";
 import { processWebhookJob } from "./services/webhookProcessor";
-import { runStartupReconciliation } from "./services/reconciliation";
+import { runStartupReconciliation, clearStaleTatumWebhooks } from "./services/reconciliation";
 import { startVolatilityMonitor, getAllMarketStates, runMonitorCycle } from "./services/volatilityMonitorService";
 import { startBinanceWebSocket, getStatus as getWsStatus } from "./services/binanceWebSocketService";
 import { detectBinanceAccess, forceProxyState, getProxyState } from "./services/binanceService";
