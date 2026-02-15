@@ -1,164 +1,150 @@
 <analysis>**original_problem_statement:**
-The user's initial request was to  a cryptocurrency payment gateway. Following the setup, the user made several requests:
-1.  **QR Code Enhancement**: Add currency logos to the center of generated QR codes.
-2.  **Bug Fix**: Handle invalid JSON errors in the API gracefully instead of causing a 500 error.
-3.  **Alerting System**: Ensure error alerts are sent via email using a provided Brevo API key.
-4.  **Binance Connectivity**: Turn on SSH and verify that the Binance API is reachable.
-5.  **Payment Creation**: Create five 0 test payments (for SOL, POLYGON, DOGE, BCH, BTC) using the merchant API for the 'bozzmail' company.
-6.  **Display Address**: Make the crypto addresses visible in the payment creation summary.
-7.  **Payment Tracking**: After sending funds to the generated addresses, the user requested to start tracking and ensure it completes through binance coversion and distribtions and any bug detected fixed. see logs.
+The user's initial request was to build a cryptocurrency payment gateway. The core task is to ensure the end-to-end payment processing lifecycle works for five test payments (SOL, POLYGON, DOGE, BCH, BTC). This involves tracking payments from the initial webhook, sweeping funds, converting them via Binance, and handling any bugs.
+
+During the session, the user raised two critical new issues:
+1.  A  error, indicating a problem with graceful shutdown.
+2.  Concerns about the Redis locking architecture and its ability to handle simultaneous payments.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is a Node.js/Express/TypeScript-based cryptocurrency payment gateway. The initial setup and user requests for QR codes, error handling, alerting, and Binance connectivity are complete. Five test payments have been created. The agent has been actively debugging the end-to-end payment processing lifecycle, which involves receiving webhook notifications from Tatum, sweeping funds, and converting them to stablecoins via the Binance API. A critical bug related to floating-point precision in BTC/DOGE/LTC transaction amounts has been identified and fixed.
+The project is a Node.js/Express/TypeScript payment gateway. In this session, the agent implemented significant stability improvements and bug fixes:
+-   **Infrastructure**: Implemented graceful shutdown logic to resolve the  error. The Redis locking mechanism was enhanced with stale lock cleanup on startup and auto-renewal for long-running jobs to address the user's concurrency concerns. The Binance SSH tunnel was also repaired and configured as a managed service.
+-   **Bug Fixes**: The stuck SOL payment was fixed by adding a rent-exemption reserve. The BCH payment failure was traced to two bugs (an address format mismatch and a missing private key in the UTXO payload), both of which have been fixed in the code.
+-   **Payment Status**: SOL and POLYGON payments have been successfully processed and swept. The BTC payment was investigated and found to have already been swept. DOGE and BCH payments remain stuck, awaiting reprocessing.
 
 **Last working item**:
--   **Last item agent was working**: The agent was debugging why the BTC test payment was stuck. After fixing a decimal precision bug that caused the initial failure, the agent found that reprocessing was blocked by a duplicate transaction check in Redis. The user then said continue, and the agent's last action was to devise a plan to clear the Redis lock and manually re-trigger the webhook for the BTC transaction.
+-   **Last item agent was working**: The agent identified and fixed a bug in  where the  was missing from the  payload when building a Bitcoin Cash (BCH) transaction. The code has been updated, but the fix has not been verified yet.
 -   **Status**: IN PROGRESS
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?**: manual testing by curl. The agent needs to clear the Redis key and then re-submit the original webhook payload to the  endpoint to verify the fix.
+-   **Which testing method agent to use?**: manual testing by curl. The agent must re-trigger the BCH webhook to validate that the new UTXO construction logic works.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0)** Re-process the stuck BTC payment to validate the decimal precision fix.
--   **Issue 2: (P1)** Investigate and fix the stuck SOL payment sweep.
--   **Issue 3: (P2)** Investigate why the webhook for the BCH payment has not been received/processed.
+-   **Issue 1: (P0)** Re-process the stuck BCH payment to validate the UTXO private key fix.
+-   **Issue 2: (P1)** Re-process the stuck DOGE payment.
+-   **Issue 3: (P2)** Verify the end-to-end flow for all 5 test payments is complete.
 
 **Issues Detail**:
--   **Issue 1: Re-process stuck BTC payment**
-    -   **Attempted fixes**: The underlying decimal precision bug was fixed in . The reprocessing attempt was blocked by a Redis key () intended to prevent duplicate webhook processing.
+-   **Issue 1: Re-process stuck BCH payment**
+    -   **Attempted fixes**: Two root causes were fixed in : 1) Address normalization for  prefix. 2) The  is now correctly added to the  array for sweep transactions.
     -   **Next debug checklist**:
-        1.  Find the  of the failed BTC payment from the logs.
-        2.  Execute a Redis command to  the key: .
-        3.  Find the original webhook payload for the BTC transaction from the logs.
-        4.  Use  to  the payload to the  endpoint to simulate the webhook.
-        5.  Check backend logs to confirm the BTC payment is successfully processed and settled.
-    -   **Why fix this issue and what will be achieved with the fix?**: To confirm the decimal precision bug is resolved and to complete the BTC payment lifecycle as requested by the user.
+        1.  Use  to  the BCH webhook payload from  to the  endpoint.
+        2.  Monitor backend logs to confirm the BCH sweep is now successful.
+    -   **Why fix this issue and what will be achieved with the fix?**: To confirm the recent bug fix is correct and to complete the BCH test payment lifecycle.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: N (The root cause is fixed, but manual intervention is needed for this specific transaction).
+    -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Backend
     -   **Blocked on other issue**: None
 
--   **Issue 2: Investigate stuck SOL payment**
-    -   **Attempted fixes**: None.
+-   **Issue 2: Re-process stuck DOGE payment**
+    -   **Attempted fixes**: The root cause (a decimal precision bug) was fixed in a previous session, but the transaction has not been reprocessed.
     -   **Next debug checklist**:
-        1.  Logs show the sweep for the SOL payment failed with a  error, leaving funds in the temporary address.
-        2.  Investigate the  function in .
-        3.  Check API keys and permissions for the sweep provider (likely Tatum or a direct node connection).
-        4.  Determine the cause of the  error and resolve it.
-    -   **Why fix this issue and what will be achieved with the fix?**: The funds for the SOL payment are currently stuck. This must be fixed to complete the payment lifecycle.
+        1.  Use  to  the DOGE webhook payload from  to the  endpoint.
+        2.  Monitor backend logs to confirm the DOGE sweep is successful.
+    -   **Why fix this issue and what will be achieved with the fix?**: To complete the DOGE test payment lifecycle.
     -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: Y (If there is a configuration/permission issue, it will affect all future SOL sweeps).
+    -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Backend
     -   **Blocked on other issue**: None
 
--   **Issue 3: Investigate missing BCH payment webhook**
-    -   **Attempted fixes**: None.
+-   **Issue 3: Verify end-to-end flow**
+    -   **Attempted fixes**: N/A
     -   **Next debug checklist**:
-        1.  The system has not received a webhook notification for the BCH payment.
-        2.  Verify on a block explorer that the transaction was confirmed.
-        3.  Check the Tatum dashboard to see if a webhook notification was ever sent for the subscribed BCH address.
-        4.  Review the address subscription logic in the application to ensure it was created correctly.
-    -   **Why fix this issue and what will be achieved with the fix?**: The BCH payment cannot be processed without the initial webhook trigger.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: Y (If subscriptions are failing, no BCH/BTC payments will be processed).
+        1.  Confirm successful reprocessing of both BCH and DOGE payments.
+        2.  Query the database to ensure all 5 test payments have a final  status.
+    -   **Why fix this issue and what will be achieved with the fix?**: This fulfills the user's primary request of ensuring the entire payment pipeline works.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Backend
-    -   **Blocked on other issue**: None
+    -   **Blocked on other issue**: Issue 1, Issue 2
 
 **In progress Task List**:
 -   **Task 1: Complete end-to-end payment tracking for all 5 test payments**
-    -   **Where to resume**: Start by resolving Issue 1: Re-process stuck BTC payment. Then, address the stuck SOL payment (Issue 2) and the missing BCH webhook (Issue 3). Monitor the DOGE and POLYGON payments to ensure they complete their full cycles.
-    -   **What will be achieved with this?**: This will validate the entire payment processing pipeline for multiple currencies, from deposit detection to final settlement, fulfilling the user's core request.
+    -   **Where to resume**: Start by resolving Issue 1: Re-process stuck BCH payment.
+    -   **What will be achieved with this?**: Fulfills the user's core request to validate the entire payment processing pipeline for multiple currencies.
     -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: Backend
-    -   **Blocked on something**: The three pending issues listed above.
+    -   **Blocked on something**: The two pending payment issues.
 
 **Upcoming and Future Tasks**
-None were explicitly discussed. The entire focus is on completing and verifying the current payment processing flow.
+-   None. The entire focus is on completing and verifying the current payment processing flow.
 
 **Completed work in this session**
--   **Payment Creation & Address Visibility**: Created 5 crypto payments (SOL, POLYGON, DOGE, BCH, BTC) and displayed their addresses in the summary as requested.
--   **Binance Connectivity Verification**: Confirmed that the SSH tunnel is active and that both REST and WebSocket connections to the Binance API are functioning correctly through the proxy.
--   **Floating-Point Precision Bug Fix**: Identified and fixed a bug in  where JavaScript floating-point errors caused BTC, DOGE, and LTC transaction amounts to exceed the 8-decimal limit, leading to API rejections.
--   **Stuck Cron Investigation**: Diagnosed and observed the recovery from stuck cron jobs, which were caused by persistent Redis locks from killed processes blocking new ones until the TTL expired.
+-   **Infrastructure: Graceful Shutdown**: Fixed the  error by implementing proper shutdown order in .
+-   **Infrastructure: Redis Architecture**: Improved concurrency handling by adding stale lock cleanup, lock auto-renewal, and per-address locking for sweeps.
+-   **Bug Fix: SOL Payment Sweep**: Resolved the stuck SOL sweep by correctly handling Solana's rent-exemption fee in .
+-   **Bug Fix: Binance Connectivity**: Re-established the SSH tunnel for Binance API access and configured it as a supervised service.
+-   **Bug Fix: BCH Payment Processing**: Fixed two critical bugs in : one for address normalization and another for adding the private key to UTXO transaction payloads.
+-   **Completed Payments**: The SOL and POLYGON test payments were successfully processed. The BTC payment was confirmed to be already completed.
 
 **Earlier issues found/mentioned but not fixed**
-None. All identified issues are captured in the pending list.
+-   None.
 
 **Known issue recurrence from previous fork**
-None.
+-   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend**: Node.js, Express, TypeScript
--   **Database/State**: MongoDB, Redis
--   **Asynchronous Payment Processing**: Tracking payment states across multiple asynchronous steps: Tatum Webhook -> DB Update -> Cron Job Sweep -> Cron Job Conversion -> Binance API.
--   **Distributed Locking**: Using Redis () to ensure cron jobs and webhook handlers do not run concurrently for the same resource.
--   **Floating-Point Precision**: Handling cryptocurrency values carefully to avoid JavaScript's native floating-point inaccuracies, which can lead to API errors with strict decimal limits.
--   **Networking**: Using an SSH tunnel with a SOCKS5 proxy () to bypass geo-restrictions for the Binance API.
+-   **Asynchronous Payment Processing**: Tracking payment states (deposit, sweep, conversion, settlement) across webhooks and cron jobs.
+-   **Distributed Locking**: Using Redis for locking with enhancements like stale lock cleanup and auto-renewal to handle concurrency and failures.
+-   **Graceful Shutdown**: Ensuring application components (Redis, DB) are closed in the correct order to prevent errors.
+-   **UTXO Transaction Construction**: Correctly building transaction payloads for chains like BCH, ensuring all required inputs like private keys are included.
+-   **Blockchain idiosyncrasies**: Handling network-specific rules like Solana's rent-exemption fee and Bitcoin Cash's address formats.
 
 **key DB schema**
--   **Payments**: Collection storing payment details, including , , , , and .
--   **Conversions**: Collection tracking the state of converting received crypto to a stablecoin, linked to a payment.
--   **Redis Keys**: Used for application state and locking.
-    -   : Prevents concurrent execution of cron jobs.
-    -   : Prevents duplicate processing of the same transaction webhook.
+-   No changes were made to the database schema.
 
 **changes in tech stack**
--   No new technologies were added in this session.
+-   No changes to the core technology stack.
 
 **All files of reference**
--   : Modified to fix a critical decimal precision bug for BTC, DOGE, and LTC transactions. This is the main file for payment processing logic.
--   : Investigated for stuck cron issues related to Redis locks.
--   : Location of the  function that was a focus of debugging.
+-   : Contains the majority of the business logic and recent bug fixes for SOL, BCH, and sweep concurrency.
+-   : Modified for graceful shutdown and calling the stale lock cleanup.
+-   : Contains the new  function.
+-   : A new file containing webhook data required to manually re-trigger failed transactions.
+-   : New supervisor configuration for the Binance SSH tunnel.
 
-**Areas that need refactoring**
--   The cron job locking mechanism is brittle. A process kill during a locked operation can halt all future cron executions until the lock's TTL expires. A more robust startup procedure that clears stale locks or a heartbeat-based lock renewal system would improve reliability.
+**Areas that need refactoring**:
+-   The critical locking mechanism was already refactored and improved in this session. No new areas for immediate refactoring were identified.
 
 **key api endpoints**
--   : Creates a crypto payment request.
--   : Webhook endpoint that receives payment notifications from Tatum. This is the entry point for the entire backend processing flow and the endpoint that needs to be manually called to retry the stuck BTC payment.
+-   : The primary webhook endpoint, which will be used with  to reprocess the stuck BCH and DOGE payments.
 
 **Critical Info for New Agent**
--   **Primary Goal**: Your main objective is to fix the remaining issues (stuck BTC, stuck SOL, missing BCH webhook) to ensure all 5 test payments complete the full end-to-end lifecycle successfully.
--   **Tech Stack**: The backend is **Node.js/Express/TypeScript**. Do not use Python/FastAPI tools.
--   **Stale Redis Locks**: Be aware that Redis locks can persist if the server restarts unexpectedly. If crons or webhooks seem stuck, your first step should be to check for and potentially clear stale locks in Redis (e.g.,  and ).
--   **BTC Payment is Blocked**: The path to fixing the BTC payment is clear: you must manually delete the  key from Redis and then re-post the original webhook data to .
+-   **Primary Goal**: Your main objective is to fix the two remaining stuck payments (BCH and DOGE). The fixes are already in the code; you just need to trigger the reprocessing and verify success.
+-   **Recovery First**: Start by using the webhook data in  to re-trigger the BCH payment. This will validate the most recent bug fix.
+-   **Next, DOGE**: After confirming the BCH payment is processing, use the same method to re-trigger the DOGE payment.
+-   **Final Verification**: Once both are reprocessed, query the database to ensure all five original test payments have a final  status.
 
 **documents and test reports created in this job**
-None.
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
--   user: continue (COMPLETED - agent continued debugging)
--   user: payment sent to all 5 addresses, start tracking and ensure it completes through binance coversion and distribtions and any bug detected fixed. see logs (IN PROGRESS - this is the core task)
--   agent: (Provides summary of created payments with addresses) (COMPLETED)
--   user: make the addresses visible (COMPLETED)
--   ... (previous messages related to creating the payments)
+-   user: continue (COMPLETED - agent confirmed BTC payment was already swept).
+-   user: Continue P0, P1, P3 and fix all issues. I also think there are issues when multiple payments are received simultaneously and redis struggle with that... (IN PROGRESS - Agent has addressed the architectural concerns and is now working through the individual payment fixes).
 
 **Project Health Check:**
--   **Broken**: The payment processing pipeline is partially non-functional. Funds for the SOL payment are stuck, and the BTC and BCH payments require manual intervention or investigation to proceed.
+-   **Broken**: Partially. The payment pipeline is unstable as two of the five test payments (BCH, DOGE) are stuck. However, the underlying bugs have been fixed in the code.
 -   **Mocked**: No services are mocked.
 
 **3rd Party Integrations**
--   **Brevo (Email)**: For error alert emails.
--   **Binance (Crypto Exchange)**: For converting cryptocurrencies to stablecoins. Accessed via an SSH tunnel.
--   **Redis (In-memory DB)**: Used for distributed locking and caching.
--   **Tatum (Blockchain API)**: For creating crypto addresses and receiving payment notifications via webhooks.
+-   **Brevo**: Email alerting.
+-   **Binance**: Cryptocurrency exchange (accessed via SSH tunnel).
+-   **Redis**: Caching and distributed locking.
+-   **Tatum**: Blockchain API for address creation and webhooks.
 
 **Testing status**
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None. All debugging was done via logs and manual API/Redis commands.
+-   **Test files created**: None.
 -   **Known regressions**: None.
 
 **Credentials to test flow:**
--   **Merchant User**: 
--   **Merchant Password**: 
--   **Company**: 
--   The agent will need to re-authenticate this user to get an  and query the database for the   to use protected endpoints.
+-   Not required for the immediate next steps, which involve using  and pre-existing webhook data.
 
 **What agent forgot to execute**
--   The agent was about to execute the final step of its plan to fix the stuck BTC payment: clearing the Redis lock and re-sending the webhook. The session ended before this action could be taken.</analysis>
+-   The agent applied the fix for the BCH UTXO bug but did not re-run the  command to trigger the webhook and verify that the fix works. This is the immediate next action.
+-   The agent has not yet attempted to reprocess the stuck DOGE transaction.</analysis>
