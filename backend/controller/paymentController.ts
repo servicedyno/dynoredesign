@@ -4458,8 +4458,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             if (!isMerchantPoolAddress) {
               await safeDeleteSubscription(tempAddressData.subscription_id, 'legacy address overpayment');
             }
+            transactionFinished = true;
             await transaction.commit();
-            // FIXED: Use soft delete with TTL for checkout status polling
             await setRedisItem(cryptoKey, {
               ...tempData,
               status: "overpayment",
