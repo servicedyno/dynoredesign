@@ -29,6 +29,7 @@ import legacyApiAuthMiddleware, { validateApiKey } from "../middleware/legacyApi
 import { setRedisItem } from "../utils/redisInstance";
 import { convertToMultiple } from "../utils/currencyUtils";
 import { paymentController } from "../controller";
+import { parseState, toExternalStatus, toConversionDisplayStatus } from "../services/paymentStateMachine";
 
 const router = express.Router();
 
