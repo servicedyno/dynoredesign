@@ -2934,8 +2934,13 @@ const settleCryptoTransaction = async ({
         const rawFee = Number(utxoFees?.fast ?? utxoFees?.slow ?? 0);
         const minFee = currency === 'BCH' ? 0.00001 : rawFee;
         const utxoFeeToDeduct = Math.max(rawFee, minFee);
-        // Use integer arithmetic to avoid floating-point precision issues (Tatum rejects >8 decimal places)
-        const utxoAmountToSend = Math.floor((receivedAmount - utxoFeeToDeduct) * 1e8) / 1e8;
+        // Use SATOSHI-LEVEL integer arithmetic to avoid floating-point precision dust
+        // JavaScript: 0.01879 * 1e8 = 1878999.9999998 (not exact!) → creates 1 sat dust change
+        const inputSats = Math.round(receivedAmount * 1e8);
+        const feeSats = Math.round(utxoFeeToDeduct * 1e8);
+        const outputSats = inputSats - feeSats;
+        const utxoAmountToSend = outputSats / 1e8;
+        const exactFee = (inputSats - outputSats) / 1e8; // Guarantees zero change
         
         if (utxoAmountToSend <= 0) {
           cronLogger.warn(`[settleCryptoTransaction] UTXO auto-convert: Amount after fee is non-positive. Balance: ${receivedAmount}, Fee: ${utxoFeeToDeduct}`);
