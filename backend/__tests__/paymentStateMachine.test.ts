@@ -510,7 +510,7 @@ describe("transition map completeness", () => {
       if (isTerminal(startState)) continue;
 
       const visited = new Set<string>();
-      const queue = [startState];
+      const queue: string[] = [startState];
       let reachesTerminal = false;
 
       while (queue.length > 0) {
