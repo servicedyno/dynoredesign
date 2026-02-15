@@ -265,12 +265,13 @@ console.log(toConversionDisplayStatus('FAILED') === 'failed' ? 'OK' : 'FAIL');
 """
     
     success, output = run_command(
-        f'cd /app/backend && npx ts-node --transpile-only -e "{test_script}"',
+        f'cd /app/backend && npx ts-node --transpile-only -e "{test_script}" 2>/dev/null',
         "TEST 13: Testing conversion display status mapping"
     )
     
     if success and output.strip():
-        results = output.strip().split('\n')
+        # Filter out Winston initialization logs and keep only the OK/FAIL results
+        results = [line.strip() for line in output.strip().split('\n') if line.strip() in ['OK', 'FAIL']]
         if len(results) == 4 and all(result == 'OK' for result in results):
             print("✅ TEST 13: Conversion display status mapping CORRECT - all 4 mappings OK")
             return True
