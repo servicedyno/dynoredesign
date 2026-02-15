@@ -90,8 +90,8 @@ const getStatus = async (_req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, "Status retrieved successfully", response);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -125,8 +125,8 @@ const getServicesStatus = async (_req: express.Request, res: express.Response) =
 
     successResponseHelper(res, 200, "Services status retrieved", { services: serviceStatuses });
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -162,8 +162,8 @@ const getServiceStatus = async (req: express.Request, res: express.Response) => 
 
     successResponseHelper(res, 200, "Service status retrieved", response);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -227,8 +227,8 @@ const getServiceUptime = async (req: express.Request, res: express.Response) => 
 
     successResponseHelper(res, 200, "Service uptime data retrieved", response);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -284,8 +284,8 @@ const getAllServicesUptime = async (req: express.Request, res: express.Response)
 
     successResponseHelper(res, 200, "All services uptime data retrieved", { services: servicesUptime });
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -356,8 +356,8 @@ const getUptimeChart = async (req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, "Uptime data retrieved", response);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -376,8 +376,8 @@ const triggerHealthCheck = async (_req: express.Request, res: express.Response) 
       results: currentStatus 
     });
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -410,8 +410,8 @@ const getIncidents = async (req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, "Incidents retrieved", response);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -439,8 +439,8 @@ const getIncident = async (req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, "Incident retrieved", response);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 

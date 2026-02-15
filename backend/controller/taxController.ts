@@ -5,6 +5,7 @@ import {
   getErrorMessage,
   successResponseHelper,
 } from "../helper";
+import { handleControllerErrorReturn } from "../helper/controllerErrorHandler";
 import { taxRateModel } from "../models";
 import { taxLogger } from "../utils/loggers";
 
@@ -153,10 +154,10 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
       source,
     });
 
-  } catch (e: unknown) {
-    const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(message)) || taxLogger.error("Tax rate error:", message);
-    return errorResponseHelper(res, 500, message);
+  } catch (e) {
+
+
+      return handleControllerErrorReturn(res, e, taxLogger);
   }
 };
 
@@ -234,10 +235,10 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
       throw apiError;
     }
 
-  } catch (e: unknown) {
-    const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(message)) || taxLogger.error("Tax validation error:", message);
-    return errorResponseHelper(res, 500, message);
+  } catch (e) {
+
+
+      return handleControllerErrorReturn(res, e, taxLogger);
   }
 };
 
@@ -272,9 +273,9 @@ const getTaxAcronyms = async (_req: express.Request, res: express.Response) => {
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(e as any)) || taxLogger.error("Tax acronyms error:", message);
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, taxLogger);
   }
 };
 
@@ -305,9 +306,9 @@ const lookupByCountryName = async (req: express.Request, res: express.Response) 
     return getTaxRate(req, res);
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(e as any)) || taxLogger.error("Tax lookup error:", message);
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, taxLogger);
   }
 };
 

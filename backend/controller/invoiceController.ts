@@ -6,6 +6,7 @@ import {
   getErrorMessage,
   successResponseHelper,
 } from "../helper";
+import { handleControllerError } from "../helper/controllerErrorHandler";
 import { IUserType } from "../utils/types";
 import invoiceModel from "../models/invoiceModel";
 import taxRateModel from "../models/taxRateModel";
@@ -319,13 +320,8 @@ const getTransactionInvoice = async (
       invoice.dataValues
     );
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    apiLogger.error(
-      errorMessage,
-      { id: userData.user_id, email: userData.email, transaction_id: id },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -397,13 +393,8 @@ const getAllInvoices = async (
       },
     });
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    apiLogger.error(
-      errorMessage,
-      { id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -476,13 +467,8 @@ const getInvoiceById = async (
       sanitizedInvoice
     );
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    apiLogger.error(
-      errorMessage,
-      { id: userData.user_id, email: userData.email, invoice_id: id },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
@@ -533,13 +519,8 @@ const downloadInvoicePDF = async (
     // Pipe PDF stream to response
     pdfStream.pipe(res);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    apiLogger.error(
-      errorMessage,
-      { id: userData.user_id, email: userData.email, invoice_id: id },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger);
   }
 };
 
