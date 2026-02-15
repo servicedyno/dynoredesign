@@ -431,6 +431,7 @@ const getCryptoRateViaCoinGecko = async (from: string, to: string): Promise<numb
  * Normalize currency code (handle variants like USDT-TRC20, USDT-ERC20, etc.)
  */
 const normalizeCurrency = (currency: string): string => {
+  if (!currency) return 'USD';
   const upper = currency.toUpperCase();
   if (upper.includes("USDT")) return "USDT";
   if (upper.includes("USDC")) return "USDC";
