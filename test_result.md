@@ -78,6 +78,23 @@ current_test_task:
           - grep 'QR_Code.toDataURL' /app/backend/controller/paymentController.ts should return empty
           - grep 'QR_Code.toDataURL' /app/backend/controller/walletController.ts should return empty
           
+          TEST 10: Error monitoring uses Redis-backed buffer
+          - grep 'REDIS_ERROR_BUFFER_KEY' /app/backend/services/errorMonitoringService.ts should find the Redis key
+          - grep 'restoreBufferFromRedis' /app/backend/services/errorMonitoringService.ts should find the restore function
+          - grep 'persistBufferToRedis' /app/backend/services/errorMonitoringService.ts should find the persist function
+          
+          TEST 11: High severity errors get immediate alerts (not just critical)
+          - grep 'severity === "high"' /app/backend/services/errorMonitoringService.ts should find it in the immediate alert condition
+          
+          TEST 12: Body parser middleware captures errors for monitoring
+          - grep 'captureError.*api.*Malformed' /app/backend/server.ts should find the captureError call in the body parser handler
+          
+          TEST 13: Error digest emails sent successfully (check logs)
+          - grep 'Digest sent to' /var/log/supervisor/backend.out.log should find at least 1 successful digest
+          
+          TEST 14: Brevo API key is configured
+          - grep 'BREVO_API_KEY=xkeysib' /app/backend/.env should find the key
+          
           Base URL: http://localhost:8001
       - working: true
         agent: "testing"
