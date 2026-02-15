@@ -3657,9 +3657,9 @@ const deletePaymentWalletWithOTP = async (
       `
         <div style="margin: 24px 0;">
           <h3 style="color: #dc3545; margin: 0 0 16px 0;">🗑️ Wallet Successfully Removed</h3>
-          <p style="margin: 8px 0;"><strong>Company:</strong> ${companyName}</p>
-          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${wallet.dataValues.wallet_type}</p>
-          <p style="margin: 8px 0;"><strong>Removed Address:</strong> ${maskAddress(wallet.dataValues.wallet_address)}</p>
+          <p style="margin: 8px 0;"><strong>Company:</strong> ${escapeHtml(companyName)}</p>
+          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${escapeHtml(wallet.dataValues.wallet_type)}</p>
+          <p style="margin: 8px 0;"><strong>Removed Address:</strong> ${escapeHtml(maskAddress(wallet.dataValues.wallet_address))}</p>
           <div style="margin-top: 20px; padding: 12px; background-color: #f8d7da; border-left: 4px solid: #dc3545; border-radius: 4px;">
             <p style="margin: 0; font-size: 13px; color: #721c24;">🚨 This wallet address has been removed from your account. If you did not perform this action, please contact support immediately.</p>
           </div>
