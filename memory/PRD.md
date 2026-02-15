@@ -76,5 +76,18 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
 - `backend/utils/redisInstance.ts` — Redis connection
 - `backend/utils/webhookRetry.ts` — Merchant webhook retry
 
+### Phase: Reconciliation Log Cleanup (Completed - Feb 15, 2026)
+- Fixed noisy `reconcileTatumFailedWebhooks()` function that re-queued all 50+ historical webhooks on every startup
+- Added 7-day time-based filter to skip stale webhooks
+- Changed API sort from `asc` to `desc` (newest first)
+- Added clean summary log: `"Tatum webhooks: X re-queued, Y skipped (older than 7d), Z skipped (already processed)"`
+- File: `backend/services/reconciliation.ts`
+
+## Architecture Diagrams
+- System Overview: https://static.prod-images.emergentagent.com/jobs/c586ec27-53a2-4d4a-9555-00021f104f43/images/d2853814b1b29d5c949b16233f069d686592f1f0b8ce440f337e11b8b0faf736.png
+- Webhook Processing Pipeline: https://static.prod-images.emergentagent.com/jobs/c586ec27-53a2-4d4a-9555-00021f104f43/images/369d9e1997696cde84ad4f7850fe1b685432f287899a2057b15388770cca4043.png
+- Data Architecture: https://static.prod-images.emergentagent.com/jobs/c586ec27-53a2-4d4a-9555-00021f104f43/images/ea99c4f101c12bdd9cb07f3607b6399da07e4f5d8f576eb3b2862a52094ea2c1.png
+
 ## Backlog
-- No pending items. All requested features have been implemented and tested.
+- P1: DLQ email alerting (notify admin when jobs land in dead-letter queue)
+- No other pending items.
