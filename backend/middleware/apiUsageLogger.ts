@@ -1,6 +1,7 @@
 import express from 'express';
 import sequelize from '../utils/dbInstance';
 import { apiModel } from '../models';
+import { apiLogger } from '../utils/loggers';
 
 /**
  * API Usage Logging Middleware
@@ -47,7 +48,7 @@ export const apiUsageLogger = async (
       );
     }
   } catch (error) {
-    console.error('Error finding API key:', error);
+    apiLogger.error('Error finding API key:', error);
   }
 
   // Override res.send to capture response
@@ -103,7 +104,7 @@ export const apiUsageLogger = async (
             }
           );
         } catch (error) {
-          console.error('Error logging API usage:', error);
+          apiLogger.error('Error logging API usage:', error);
         }
       });
     }
