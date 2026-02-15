@@ -237,3 +237,63 @@ export async function shutdownWebhookQueue(): Promise<void> {
   
   webhookLogs.info("[WebhookQueue] Shutdown complete");
 }
+
+// ── DLQ Email Alert ───────────────────────────────────────────────────────────
+
+// Lazy-loaded mail transporter (avoids circular dependency at import time)
+let _mailTransporter: ((opts: { to: string; name: string; subject: string; body: string }) => Promise<unknown>) | null = null;
+
+const getMailTransporter = async () => {
+  if (!_mailTransporter) {
+    const mod = await import("../utils/mailTransporter");
+    _mailTransporter = mod.default;
+  }
+  return _mailTransporter;
+};
+
+async function sendDLQAlert(jobData: WebhookJobData, jobId: string, attempts: number, errorMessage: string): Promise<void> {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return;
+
+  const { payload, source } = jobData;
+  const serverUrl = process.env.SERVER_URL || "unknown";
+  const now = new Date();
+  const dateStr = now.toISOString().replace("T", " ").substring(0, 19) + " UTC";
+
+  const content = `${p(`A webhook job has <strong>exhausted all retries</strong> and been moved to the Dead Letter Queue (DLQ) for manual review.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Transaction ID', `<code style="font-size: 12px; word-break: break-all;">${payload.txId}</code>`, false)}
+        ${dataRow('Address', `<code style="font-size: 12px; word-break: break-all;">${payload.address || 'N/A'}</code>`, false)}
+        ${dataRow('Amount', `<strong>${payload.amount}</strong> ${payload.asset || 'unknown'}`)}
+        ${dataRow('Source', source === 'reconciliation' ? 'Startup Reconciliation' : 'Live Webhook')}
+        ${dataRow('Attempts', `${attempts} (all failed)`)}
+        ${dataRow('Status', statusBadge('Dead Letter Queue', 'error'))}
+        ${dataRow('Job ID', `<code style="font-size: 12px;">${jobId}</code>`, true)}
+      </table>
+    `, '#ef4444')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">
+      <tr>
+        <td style="padding: 14px 18px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626;">
+          <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: 600; color: #991b1b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Error</p>
+          <p style="margin: 0; font-size: 13px; color: #7f1d1d; font-family: monospace; word-break: break-word;">${errorMessage.substring(0, 500)}</p>
+        </td>
+      </tr>
+    </table>
+    ${p(`<strong>What to do:</strong>`)}
+    ${p(`1. Review the error above to understand the failure<br/>2. Check the DLQ via: <code>GET /diagnostics/webhook-queue/dlq</code><br/>3. Retry with: <code>POST /diagnostics/webhook-queue/dlq/${jobId}/retry</code>`)}
+    <p style="font-size: 12px; color: #9ca3af; margin: 16px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+      Timestamp: ${dateStr} | Server: ${serverUrl}
+    </p>`;
+
+  const subject = `DLQ Alert: Webhook failed for tx ${payload.txId.substring(0, 16)}... (${payload.asset || 'crypto'})`;
+  const htmlBody = baseEmailTemplate("Webhook Moved to DLQ", content);
+
+  try {
+    const transporter = await getMailTransporter();
+    await transporter({ to: adminEmail, name: "DynoPay Admin", subject, body: htmlBody });
+    webhookLogs.info(`[WebhookQueue] DLQ alert sent to ${adminEmail} for tx ${payload.txId}`);
+  } catch (emailErr) {
+    webhookLogs.error(`[WebhookQueue] Failed to send DLQ alert: ${(emailErr as Error).message}`);
+  }
+}
