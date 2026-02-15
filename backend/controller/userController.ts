@@ -211,9 +211,9 @@ const registerPhoneStep1 = async (req: express.Request, res: express.Response) =
     }
     
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Phone registration step 1 error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+    
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -320,9 +320,9 @@ const registerPhoneStep2 = async (req: express.Request, res: express.Response) =
     successResponseHelper(res, 200, "Registration successful!", resData);
     
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Phone registration step 2 error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+    
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -995,9 +995,9 @@ const facebookSignIn = async (req: express.Request, res: express.Response) => {
     return successResponseHelper(res, 200, "Registration Successful!", resData);
 
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Facebook sign-in error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1067,9 +1067,9 @@ If you didn't request this, please ignore this email. Your password will remain 
     return successResponseHelper(res, 200, "If the email exists, a reset link has been sent", {});
 
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Forgot password error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1149,9 +1149,9 @@ const resetPassword = async (req: express.Request, res: express.Response) => {
     return successResponseHelper(res, 200, "Password has been reset successfully", {});
 
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Reset password error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1276,9 +1276,9 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
     return successResponseHelper(res, 200, "Registration Successful!", resData);
 
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Google sign-in error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1328,9 +1328,9 @@ const getProfile = async (req: express.Request, res: express.Response) => {
     return successResponseHelper(res, 200, "Profile retrieved successfully", profileData);
 
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Get profile error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1390,9 +1390,8 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
     
     successResponseHelper(res, 200, "Profile updated successfully!", updatedUser);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Update profile error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1465,9 +1464,8 @@ Dynopay Team`
     
     successResponseHelper(res, 200, "Email updated successfully!", token);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Change email error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1548,9 +1546,8 @@ const changePhone = async (req: express.Request, res: express.Response) => {
     
     successResponseHelper(res, 200, "Phone number updated successfully!", updatedUser);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Change phone error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1606,9 +1603,9 @@ const removeEmail = async (req: express.Request, res: express.Response) => {
     successResponseHelper(res, 200, "Email removed successfully. You can still login using your phone or social accounts.");
     
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Remove email error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+    
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1664,9 +1661,9 @@ const removePhone = async (req: express.Request, res: express.Response) => {
     successResponseHelper(res, 200, "Phone number removed successfully. You can still login using your email or social accounts.");
     
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Remove phone error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+    
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1762,9 +1759,9 @@ const deleteAccount = async (req: express.Request, res: express.Response) => {
     });
 
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Delete account error: ${errorMessage}`, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1816,9 +1813,9 @@ const unsubscribeFromReminders = async (req: express.Request, res: express.Respo
     });
     
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Unsubscribe error: ${errorMessage}`, new Error(String(e)));
-    errorResponseHelper(res, 500, errorMessage);
+
+    
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -1870,9 +1867,9 @@ const unsubscribeFromPaymentReminders = async (req: express.Request, res: expres
     });
     
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Unsubscribe payment reminders error: ${errorMessage}`, new Error(String(e)));
-    errorResponseHelper(res, 500, errorMessage);
+
+    
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -2117,9 +2114,9 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     return successResponseHelper(res, 200, "Onboarding status retrieved successfully", onboardingStatus);
     
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(`Get onboarding status error: ${errorMessage}`, new Error(String(e)));
-    errorResponseHelper(res, 500, errorMessage);
+
+    
+      handleControllerError(res, e, userLogger);
   }
 };
 
