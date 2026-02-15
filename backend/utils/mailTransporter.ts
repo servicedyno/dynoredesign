@@ -1,5 +1,6 @@
 import axios from "axios";
 import { captureError } from "../services/errorMonitoringService";
+import { log } from "../utils/loggers";
 
 interface Attachment {
   name: string;

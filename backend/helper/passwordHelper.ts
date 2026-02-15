@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import sha256 from "crypto-js/sha256";
 import { userModel } from "../models";
+import { log } from "../utils/loggers";
 
 const BCRYPT_ROUNDS = 12;
 

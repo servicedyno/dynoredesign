@@ -2,6 +2,7 @@ import {
   feesModel,
 } from "../models";
 import { getRedisItem, setRedisItem } from "../utils/redisInstance";
+import { log } from "../utils/loggers";
 import apiController from "./apiController";
 import companyController from "./companyController";
 import paymentController from "./paymentController";

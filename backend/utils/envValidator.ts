@@ -4,6 +4,8 @@
  * Prevents runtime errors due to missing configuration
  */
 
+import { log } from './loggers';
+
 interface EnvValidationError {
   variable: string;
   message: string;
