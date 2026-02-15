@@ -538,6 +538,9 @@ async function handleNewTransaction(
   const finalReceivedAmount = (isCompletionPayment || isDirectApiUnderpayment) ? totalReceivedAmount : incomingAmount;
 
   try {
+    // Soft-enforce: varies → processing (pre-cryptoVerification)
+    softValidate(items.status, "processing", paymentId, "pre-crypto-verification");
+
     await setRedisItem(redisKey, {
       ...items, status: "processing",
       receivedAmount: finalReceivedAmount, txId: payload.txId,
