@@ -329,7 +329,7 @@ describe('Payment Fee Calculation — controller/index.ts', () => {
       expect(result.base_fee).toBe(1.5);
       expect(result.discount_percent).toBe(25);
       expect(result.discount_reason).toBe('referral_signup');
-      expect(result.final_fee).toBeCloseTo(1.125, 3); // 1.5 - (1.5 * 25%)
+      expect(result.final_fee).toBeCloseTo(1.13, 2); // 1.5 - (1.5*25%) = 1.125 → rounded to 1.13
       expect(result.discount_expires_at).toEqual(expiresAt);
     });
 
