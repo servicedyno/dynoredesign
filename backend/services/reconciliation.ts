@@ -186,6 +186,9 @@ async function reconcileFailedPayments(): Promise<number> {
  */
 async function reconcileTatumFailedWebhooks(): Promise<number> {
   let count = 0;
+  const MAX_AGE_DAYS = 7;
+  const maxAgeMs = MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+  const cutoffTime = Date.now() - maxAgeMs;
 
   const tatumKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
   if (!tatumKey) {
@@ -194,12 +197,11 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
   }
 
   try {
-    // Get all failed webhooks from Tatum
-    // Tatum endpoint: GET /v4/subscription/webhook - lists failed webhook delivery attempts
+    // Get failed webhooks from Tatum (most recent first so we can stop early)
     const headers = { "x-api-key": tatumKey };
     
     const { data: failedWebhooks } = await axios.get(
-      "https://api.tatum.io/v4/subscription/webhook?pageSize=50&direction=asc",
+      "https://api.tatum.io/v4/subscription/webhook?pageSize=50&direction=desc",
       { headers, timeout: 15000 }
     );
 
@@ -208,21 +210,31 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
       return 0;
     }
 
-    webhookLogs.info(`[Reconciliation] Found ${failedWebhooks.length} failed Tatum webhooks`);
+    // Filter to only recent webhooks (last 7 days)
+    let skippedStale = 0;
+    let skippedProcessed = 0;
 
     for (const webhook of failedWebhooks) {
       try {
-        // Each failed webhook has: { id, subscriptionId, url, data, nextTime, failed, response }
-        // The `data` field contains the original webhook payload Tatum tried to send us
-        const webhookData = typeof webhook.data === "string" ? JSON.parse(webhook.data) : webhook.data;
+        // Check webhook timestamp — skip anything older than MAX_AGE_DAYS
+        const webhookTimestamp = webhook.timestamp || webhook.created || webhook.nextTime;
+        if (webhookTimestamp) {
+          const webhookTime = new Date(webhookTimestamp).getTime();
+          if (!isNaN(webhookTime) && webhookTime < cutoffTime) {
+            skippedStale++;
+            continue; // Too old, skip
+          }
+        }
 
+        const webhookData = typeof webhook.data === "string" ? JSON.parse(webhook.data) : webhook.data;
         if (!webhookData?.txId) continue;
 
         // Check if we already processed this transaction
         const processedKey = `processed-tx-${webhookData.txId}`;
         const alreadyProcessed = await getRedisItem(processedKey);
         if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
-          continue; // Already processed, skip
+          skippedProcessed++;
+          continue;
         }
 
         webhookLogs.info(`[Reconciliation] Re-queuing Tatum failed webhook: txId=${webhookData.txId}`);
@@ -244,6 +256,10 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
         webhookLogs.error(`[Reconciliation] Failed to parse Tatum webhook:`, parseErr);
       }
     }
+
+    webhookLogs.info(
+      `[Reconciliation] Tatum webhooks: ${count} re-queued, ${skippedStale} skipped (older than ${MAX_AGE_DAYS}d), ${skippedProcessed} skipped (already processed)`
+    );
   } catch (apiErr) {
     const msg = (apiErr as Error).message;
     // Non-critical: Tatum API might not support this endpoint on all plans
