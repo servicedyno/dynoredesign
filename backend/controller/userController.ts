@@ -152,9 +152,8 @@ const registerUser = async (req: express.Request, res: express.Response) => {
       });
     }
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -474,9 +473,8 @@ const login = async (req: express.Request, res: express.Response) => {
       successResponseHelper(res, 200, "Login Successful!", resData);
     }
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -499,9 +497,8 @@ const checkEmail = async (req: express.Request, res: express.Response) => {
     }
     successResponseHelper(res, 200, "User profile retrieved successfully", resData);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -591,9 +588,8 @@ const generateOTP = async (req: express.Request, res: express.Response) => {
       }
     }
   } catch (e) {
-    const message = getErrorMessage(e);
-    userLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -743,9 +739,8 @@ const updateUser = async (req: express.Request, res: express.Response) => {
     const token = await getAccessToken(userData.user_id);
     successResponseHelper(res, 200, "User updated successfully!", token);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -803,9 +798,8 @@ const changePassword = async (req: express.Request, res: express.Response) => {
       errorResponseHelper(res, 401, "Old password not recognized!");
     }
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 
@@ -880,9 +874,8 @@ const connectSocial = async (req: express.Request, res: express.Response) => {
       successResponseHelper(res, 200, "Registered Successful!", resData);
     }
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    userLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, userLogger);
   }
 };
 

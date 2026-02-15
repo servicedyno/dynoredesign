@@ -61,9 +61,8 @@ const getTransactionFee = async (
       blockchain_fee,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    adminLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -100,9 +99,8 @@ const newTransactionFee = async (
     await setRedisItem("admin_fee", { transaction_fee, blockchain_fee });
     successResponseHelper(res, 200, "Admin fees retrieved successfully", { transaction_fee, blockchain_fee });
   } catch (e) {
-    const message = getErrorMessage(e);
-    adminLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -166,9 +164,8 @@ const getWallets = async (_req: express.Request, res: express.Response) => {
     
     successResponseHelper(res, 200, message, { fiatWallets, cryptoWallets });
   } catch (e) {
-    const message = getErrorMessage(e);
-    adminLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -330,9 +327,8 @@ const login = async (req: express.Request, res: express.Response) => {
       throw { message: "Invalid username or password!" };
     }
   } catch (e) {
-    const message = getErrorMessage(e);
-    adminLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -395,9 +391,8 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, "Amount withdrawed!", transactionDetails);
   } catch (e) {
-    const message = getErrorMessage(e);
-    adminLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -448,9 +443,8 @@ const getFeeWalletBalance = async (
       transactions,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    adminLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -484,9 +478,8 @@ const changePassword = async (req: express.Request, res: express.Response) => {
       errorResponseHelper(res, 500, "Old password not recognized!");
     }
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    adminLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -547,9 +540,8 @@ const updateEmail = async (req: express.Request, res: express.Response) => {
       }
     }
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    adminLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -569,9 +561,8 @@ const updateFeeLimits = async (req: express.Request, res: express.Response) => {
     );
     successResponseHelper(res, 200, "Limits updated successfully!");
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    adminLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -599,9 +590,8 @@ const updateTransferFees = async (
     }
     successResponseHelper(res, 200, "Transfer fees updated successfully!");
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    adminLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -610,9 +600,8 @@ const getTransferFees = async (_req: express.Request, res: express.Response) => 
     const resData = await adminTransferFeeModel.findAll();
     successResponseHelper(res, 200, "", resData);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    adminLogger.error(errorMessage, new Error(e));
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -679,9 +668,8 @@ const getAllTransactions = async (
       users_transactions: selfData,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    adminLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -819,9 +807,8 @@ const getAdminAnalytics = async (
 
     successResponseHelper(res, 200, "Dashboard statistics retrieved successfully", returnData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    adminLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
@@ -836,9 +823,8 @@ const getAllUsers = async (_req: express.Request, res: express.Response) => {
     
     successResponseHelper(res, 200, message, userData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    adminLogger.error(message, new Error(e));
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, adminLogger);
   }
 };
 
