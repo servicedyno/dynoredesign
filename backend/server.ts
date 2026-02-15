@@ -658,6 +658,9 @@ const startServer = async () => {
   await connectRedis();
   log('Redis connected successfully', 'info');
   
+  // Clean up stale locks from dead processes (prevents "stuck cron" after unclean restart)
+  await cleanupStaleLocks();
+  
   try {
     log('Connecting to PostgreSQL...', 'info');
     await sequelize.authenticate();
