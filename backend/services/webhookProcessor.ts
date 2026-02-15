@@ -498,6 +498,10 @@ async function handleNewTransaction(
     } else {
       // Payment Link: wait for remaining payment
       const remainingAmount = expectedAmount - totalReceivedAmount;
+
+      // Soft-enforce: pending → underpaid (PENDING → UNDERPAID — skips DETECTED)
+      softValidate(items.status, "underpaid", paymentId, "payment-link-underpayment");
+
       await setRedisItem(redisKey, {
         ...items, status: "underpaid", incomplete: "true",
         txId: payload.txId, receivedAmount: totalReceivedAmount,
