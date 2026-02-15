@@ -578,8 +578,9 @@ export const sendErrorDigest = async (): Promise<void> => {
     lastDigestSent = new Date();
     totalDigestsSent++;
 
-    // Clear buffer after successful send
+    // Clear buffer after successful send (both in-memory and Redis)
     errorBuffer = [];
+    await clearRedisBuffer();
   } catch (sendErr) {
     // Don't capture this in the error monitor (avoid infinite loop)
     cronLogger.error(`[ErrorMonitor] ❌ Failed to send digest: ${(sendErr as Error).message}`);
