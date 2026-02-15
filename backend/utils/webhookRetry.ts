@@ -5,6 +5,7 @@
  */
 
 import axios, { AxiosError } from 'axios';
+import { webhookLogs } from "../utils/loggers";
 import { setRedisItem, getRedisItem, deleteRedisItem, setRedisTTL } from './redisInstance';
 
 interface WebhookPayload {
@@ -112,10 +113,10 @@ const moveToDeadLetterQueue = async (
       }
     );
   } catch (dbErr) {
-    console.error('[WebhookRetry] Failed to log DLQ entry:', dbErr);
+    webhookLogs.error('[WebhookRetry] Failed to log DLQ entry:', dbErr);
   }
   
-  console.error(
+  webhookLogs.error(
     `[WebhookRetry] Webhook ${webhookData.webhookId} moved to DLQ after ${DEFAULT_RETRY_CONFIG.maxRetries} failed attempts. ` +
     `URL: ${webhookData.url}, Error: ${finalError}`
   );
@@ -141,7 +142,7 @@ export const deliverWebhookWithRetry = async (
     const responseTime = Date.now() - startTime;
     
     // Log successful delivery
-    console.log(
+    webhookLogs.info(
       `[WebhookRetry] ✅ Webhook delivered successfully on attempt ${attemptNumber}. ` +
       `URL: ${webhookData.url}, Response time: ${responseTime}ms, Status: ${response.status}`
     );
@@ -160,7 +161,7 @@ export const deliverWebhookWithRetry = async (
       ? `HTTP ${axiosError.response.status}: ${axiosError.message}`
       : axiosError.message || 'Unknown error';
     
-    console.error(
+    webhookLogs.error(
       `[WebhookRetry] ❌ Webhook delivery failed (attempt ${attemptNumber}/${config.maxRetries}). ` +
       `URL: ${webhookData.url}, Error: ${errorMessage}`
     );
@@ -171,7 +172,7 @@ export const deliverWebhookWithRetry = async (
       await storeFailedWebhook(webhookData, attemptNumber + 1, errorMessage);
       
       const nextDelay = calculateRetryDelay(attemptNumber + 1, config);
-      console.log(
+      webhookLogs.info(
         `[WebhookRetry] ⏳ Webhook ${webhookData.webhookId} scheduled for retry in ${nextDelay}ms`
       );
       
@@ -207,13 +208,13 @@ export const processWebhookRetryQueue = async (): Promise<{
       (item: { scheduledFor: number }) => item.scheduledFor <= now
     );
     
-    console.log(`[WebhookRetry] Processing ${itemsToRetry.length} webhooks from retry queue`);
+    webhookLogs.info(`[WebhookRetry] Processing ${itemsToRetry.length} webhooks from retry queue`);
     
     for (const item of itemsToRetry) {
       const webhookData = await getRedisItem(item.key);
       
       if (!webhookData) {
-        console.warn(`[WebhookRetry] Webhook data not found for key: ${item.key}`);
+        webhookLogs.warn(`[WebhookRetry] Webhook data not found for key: ${item.key}`);
         continue;
       }
       
@@ -241,14 +242,14 @@ export const processWebhookRetryQueue = async (): Promise<{
     await setRedisTTL(queueKey, 86400);
     
     if (stats.processed > 0) {
-      console.log(
+      webhookLogs.info(
         `[WebhookRetry] Queue processing complete: ` +
         `${stats.succeeded} succeeded, ${stats.failed} failed, ${stats.processed} total`
       );
     }
     
   } catch (error) {
-    console.error('[WebhookRetry] Error processing retry queue:', error);
+    webhookLogs.error('[WebhookRetry] Error processing retry queue:', error);
   }
   
   return stats;
@@ -271,11 +272,11 @@ export const retryFromDeadLetterQueue = async (webhookId: string): Promise<boole
   const webhookData = await getRedisItem(dlqKey);
   
   if (!webhookData) {
-    console.error(`[WebhookRetry] Webhook not found in DLQ: ${webhookId}`);
+    webhookLogs.error(`[WebhookRetry] Webhook not found in DLQ: ${webhookId}`);
     return false;
   }
   
-  console.log(`[WebhookRetry] Manually retrying webhook from DLQ: ${webhookId}`);
+  webhookLogs.info(`[WebhookRetry] Manually retrying webhook from DLQ: ${webhookId}`);
   
   const result = await deliverWebhookWithRetry(webhookData, 1);
   

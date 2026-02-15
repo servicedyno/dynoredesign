@@ -4,6 +4,7 @@
  */
 
 import { QueryTypes } from "sequelize";
+import { cronLogger } from "../utils/loggers";
 import sequelize from "../utils/dbInstance";
 import { createNotification, NOTIFICATION_TYPES } from "../controller/notificationController";
 import { 
@@ -56,7 +57,7 @@ export const sendPendingPaymentNotification = async (
     const existingNotification = await getRedisItem(pendingKey);
     
     if (existingNotification && existingNotification.sent) {
-      console.log(`Pending notification already sent for tx: ${txId}`);
+      cronLogger.info(`Pending notification already sent for tx: ${txId}`);
       return false;
     }
     
@@ -88,7 +89,7 @@ export const sendPendingPaymentNotification = async (
     ) as Array<Record<string, unknown>>;
 
     if (!userResult || userResult.length === 0) {
-      console.log("User not found for pending notification");
+      cronLogger.info("User not found for pending notification");
       return false;
     }
 
@@ -134,11 +135,11 @@ export const sendPendingPaymentNotification = async (
       status: 'completed',
     });
 
-    console.log(`Pending payment notification sent for tx: ${txId}`);
+    cronLogger.info(`Pending payment notification sent for tx: ${txId}`);
     return true;
 
   } catch (error) {
-    console.error("Error sending pending payment notification:", error);
+    cronLogger.error("Error sending pending payment notification:", error);
     return false;
   }
 };
@@ -234,7 +235,7 @@ export const sendConfirmationProgressNotification = async (
     return true;
 
   } catch (error) {
-    console.error("Error sending confirmation progress notification:", error);
+    cronLogger.error("Error sending confirmation progress notification:", error);
     return false;
   }
 };
@@ -253,7 +254,7 @@ export const getTransactionConfirmations = async (
     const tatumKey = process.env.TATUM_KEY;
     
     if (!tatumKey) {
-      console.log("Tatum key not configured");
+      cronLogger.info("Tatum key not configured");
       return 0;
     }
 
@@ -271,7 +272,7 @@ export const getTransactionConfirmations = async (
 
     const chain = chainMap[currency];
     if (!chain) {
-      console.log(`Unknown chain for currency: ${currency}`);
+      cronLogger.info(`Unknown chain for currency: ${currency}`);
       return 0;
     }
 
@@ -285,7 +286,7 @@ export const getTransactionConfirmations = async (
     return 0;
 
   } catch (error) {
-    console.error("Error getting transaction confirmations:", error);
+    cronLogger.error("Error getting transaction confirmations:", error);
     return 0;
   }
 };
@@ -309,7 +310,7 @@ export const sendPartialPaymentNotification = async (
     const existingNotification = await getRedisItem(partialKey);
     
     if (existingNotification && existingNotification.sent) {
-      console.log(`Partial notification already sent for address: ${address}`);
+      cronLogger.info(`Partial notification already sent for address: ${address}`);
       return false;
     }
 
@@ -330,7 +331,7 @@ export const sendPartialPaymentNotification = async (
     ) as Array<Record<string, unknown>>;
 
     if (!userResult || userResult.length === 0) {
-      console.log("User not found for partial payment notification");
+      cronLogger.info("User not found for partial payment notification");
       return false;
     }
 
@@ -382,11 +383,11 @@ export const sendPartialPaymentNotification = async (
       expectedAmount,
     });
 
-    console.log(`Partial payment notification sent for address: ${address}`);
+    cronLogger.info(`Partial payment notification sent for address: ${address}`);
     return true;
 
   } catch (error) {
-    console.error("Error sending partial payment notification:", error);
+    cronLogger.error("Error sending partial payment notification:", error);
     return false;
   }
 };
@@ -423,7 +424,7 @@ export const sendPartialPaymentExpiredNotification = async (
     ) as Array<Record<string, unknown>>;
 
     if (!userResult || userResult.length === 0) {
-      console.log("User not found for partial expired notification");
+      cronLogger.info("User not found for partial expired notification");
       return false;
     }
 
@@ -462,11 +463,11 @@ export const sendPartialPaymentExpiredNotification = async (
       status
     );
 
-    console.log(`Partial payment expired notification sent for address: ${address}, status: ${status}`);
+    cronLogger.info(`Partial payment expired notification sent for address: ${address}, status: ${status}`);
     return true;
 
   } catch (error) {
-    console.error("Error sending partial payment expired notification:", error);
+    cronLogger.error("Error sending partial payment expired notification:", error);
     return false;
   }
 };

@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosInstance } from "axios";
+import { apiLogger } from "../utils/loggers";
 import CryptoJS from "crypto-js";
 
 // Veriff API Configuration
@@ -138,12 +139,12 @@ class VeriffService {
         }
       );
 
-      console.log("Veriff session created:", response.data.verification.id);
+      apiLogger.info("Veriff session created:", response.data.verification.id);
       return response.data;
 
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
-      console.error("Veriff create session error:", err.response?.data || err.message);
+      apiLogger.error("Veriff create session error:", err.response?.data || err.message);
       throw new Error(
         `Failed to create Veriff session: ${err.response?.data?.message || err.message}`
       );
@@ -167,12 +168,12 @@ class VeriffService {
         }
       );
 
-      console.log("Veriff decision retrieved:", verificationId);
+      apiLogger.info("Veriff decision retrieved:", verificationId);
       return response.data;
 
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
-      console.error("Veriff get decision error:", err.response?.data || err.message);
+      apiLogger.error("Veriff get decision error:", err.response?.data || err.message);
       throw new Error(
         `Failed to get Veriff decision: ${err.response?.data?.message || err.message}`
       );
@@ -188,7 +189,7 @@ class VeriffService {
       const expectedSignature = this.generateSignature(payload);
       return signature.toLowerCase() === expectedSignature;
     } catch (error) {
-      console.error("Webhook signature verification error:", error);
+      apiLogger.error("Webhook signature verification error:", error);
       return false;
     }
   }
@@ -218,7 +219,7 @@ class VeriffService {
     try {
       vendorData = JSON.parse(verification.vendorData || "{}");
     } catch (e) {
-      console.error("Failed to parse vendor data:", e);
+      apiLogger.error("Failed to parse vendor data:", e);
     }
 
     return {

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { apiLogger } from "../utils/loggers";
 import { Op } from 'sequelize';
 import User from '../models/userModels/userModel';
 import RefereeCode from '../models/referralModels/refereeCodeModel';
@@ -59,14 +60,14 @@ export const createRefereeCode = async (params: {
   // Check if email already has account
   const hasAccount = await checkEmailHasAccount(email);
   if (hasAccount) {
-    console.log(`[RefereeCode] Skipping - ${email} already has an account`);
+    apiLogger.info(`[RefereeCode] Skipping - ${email} already has an account`);
     return null;
   }
 
   // Check if code already sent to this email
   const codeSent = await checkRefereeCodeSent(email);
   if (codeSent) {
-    console.log(`[RefereeCode] Skipping - code already sent to ${email}`);
+    apiLogger.info(`[RefereeCode] Skipping - code already sent to ${email}`);
     return null;
   }
 
@@ -97,7 +98,7 @@ export const createRefereeCode = async (params: {
     expires_at: expiresAt,
   } as Record<string, unknown>);
 
-  console.log(`[RefereeCode] Created code ${code} for ${email}`);
+  apiLogger.info(`[RefereeCode] Created code ${code} for ${email}`);
 
   return {
     code: refereeCode.code,
@@ -197,8 +198,8 @@ export const redeemRefereeCode = async (params: {
     { where: { user_id: refereeCode.referrer_user_id } }
   );
 
-  console.log(`[RefereeCode] Code ${code} redeemed by user ${userId}`);
-  console.log(`[RefereeCode] Referrer ${refereeCode.referrer_user_id} rewarded with 10% off for 30 days`);
+  apiLogger.info(`[RefereeCode] Code ${code} redeemed by user ${userId}`);
+  apiLogger.info(`[RefereeCode] Referrer ${refereeCode.referrer_user_id} rewarded with 10% off for 30 days`);
 
   return {
     success: true,
@@ -304,7 +305,7 @@ export const redeemUserReferralCode = async (params: {
     { where: { user_id: referrerId } }
   );
 
-  console.log(`[UserReferral] New user ${newUserId} referred by ${referrerId}`);
+  apiLogger.info(`[UserReferral] New user ${newUserId} referred by ${referrerId}`);
 
   return {
     success: true,
@@ -374,7 +375,7 @@ export const processReferrerReward = async (params: {
     rewarded_at: new Date(),
   });
 
-  console.log(`[UserReferral] Referrer ${referral.referrer_user_id} rewarded - 50% off for 30 days`);
+  apiLogger.info(`[UserReferral] Referrer ${referral.referrer_user_id} rewarded - 50% off for 30 days`);
 
   return true;
 };

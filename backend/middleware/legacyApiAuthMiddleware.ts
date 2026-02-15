@@ -19,6 +19,7 @@
  */
 
 import express from "express";
+import { apiLogger } from "../utils/loggers";
 import jwt from "jsonwebtoken";
 import { QueryTypes } from "sequelize";
 import sequelize from "../utils/dbInstance";
@@ -55,7 +56,7 @@ const validateApiKey = async (apiKey: string): Promise<ApiKeyData | null> => {
     const decryptedData = decrypt(apiKey, process.env.API_SECRET || '');
     
     if (!decryptedData.includes("DYNOPAY_USER_API")) {
-      console.log("[LegacyAuth] Invalid API key format");
+      apiLogger.info("[LegacyAuth] Invalid API key format");
       return null;
     }
     
@@ -74,7 +75,7 @@ const validateApiKey = async (apiKey: string): Promise<ApiKeyData | null> => {
     );
     
     if (tempData.length === 0) {
-      console.log("[LegacyAuth] Company not found for API key");
+      apiLogger.info("[LegacyAuth] Company not found for API key");
       return null;
     }
     
@@ -96,7 +97,7 @@ const validateApiKey = async (apiKey: string): Promise<ApiKeyData | null> => {
     
     return apiData;
   } catch (error) {
-    console.error("[LegacyAuth] API key validation error:", error);
+    apiLogger.error("[LegacyAuth] API key validation error:", error);
     return null;
   }
 };
@@ -141,7 +142,7 @@ const findOrCreateDefaultCustomer = async (
     );
     
     if (existingCustomer.length > 0) {
-      console.log(`[LegacyAuth] Found existing default customer: ${existingCustomer[0].customer_id}`);
+      apiLogger.info(`[LegacyAuth] Found existing default customer: ${existingCustomer[0].customer_id}`);
       return existingCustomer[0];
     }
     
@@ -181,13 +182,13 @@ const findOrCreateDefaultCustomer = async (
         }
       );
       
-      console.log(`[LegacyAuth] Created default customer: ${newCustomer[0].customer_id}`);
+      apiLogger.info(`[LegacyAuth] Created default customer: ${newCustomer[0].customer_id}`);
       return newCustomer[0];
     }
     
     return null;
   } catch (error) {
-    console.error("[LegacyAuth] Error creating default customer:", error);
+    apiLogger.error("[LegacyAuth] Error creating default customer:", error);
     return null;
   }
 };
@@ -253,7 +254,7 @@ const legacyApiAuthMiddleware = async (
       
       if (customerData) {
         // Valid customer JWT - use NEW flow
-        console.log(`[LegacyAuth] Valid customer JWT for customer: ${customerData.id}`);
+        apiLogger.info(`[LegacyAuth] Valid customer JWT for customer: ${customerData.id}`);
         res.locals.token = token;
         res.locals.user = customerData;
         return next();
@@ -262,7 +263,7 @@ const legacyApiAuthMiddleware = async (
     
     // Step 3: No valid customer token - use LEGACY flow
     // This handles: no auth header, invalid JWT, or wallet_token (old style)
-    console.log(`[LegacyAuth] Using legacy flow - creating/finding default customer`);
+    apiLogger.info(`[LegacyAuth] Using legacy flow - creating/finding default customer`);
     
     const defaultCustomer = await findOrCreateDefaultCustomer(
       apiKeyData.company_id,
@@ -288,11 +289,11 @@ const legacyApiAuthMiddleware = async (
       company_id: defaultCustomer.company_id
     };
     
-    console.log(`[LegacyAuth] Legacy flow authenticated for company ${apiKeyData.company_id}`);
+    apiLogger.info(`[LegacyAuth] Legacy flow authenticated for company ${apiKeyData.company_id}`);
     next();
     
   } catch (error) {
-    console.error("[LegacyAuth] Middleware error:", error);
+    apiLogger.error("[LegacyAuth] Middleware error:", error);
     return res.status(500).json({
       success: false,
       message: "Authentication error: " + (error instanceof Error ? error.message : String(error))

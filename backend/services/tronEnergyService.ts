@@ -12,6 +12,7 @@
  */
 
 import axios from "axios";
+import { cronLogger } from "../utils/loggers";
 import { getRedisItem, setRedisItem } from "../utils/redisInstance";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -143,12 +144,12 @@ export const getTronNetworkParams = async (): Promise<TronNetworkParams> => {
       // Non-critical
     }
 
-    console.log(`[TronEnergy] 📊 Network params: Energy=${energyPriceSun} SUN/unit, Bandwidth=${bandwidthPriceSun} SUN/point`);
+    cronLogger.info(`[TronEnergy] 📊 Network params: Energy=${energyPriceSun} SUN/unit, Bandwidth=${bandwidthPriceSun} SUN/point`);
     return result;
 
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.warn(`[TronEnergy] ⚠️ Failed to fetch network params: ${err.message}, using fallbacks`);
+    cronLogger.warn(`[TronEnergy] ⚠️ Failed to fetch network params: ${err.message}, using fallbacks`);
     return {
       energyPriceSun: FALLBACK.ENERGY_PRICE_SUN,
       bandwidthPriceSun: FALLBACK.BANDWIDTH_PRICE_SUN,
@@ -226,7 +227,7 @@ export const getAccountResources = async (address: string): Promise<AccountResou
 
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.warn(`[TronEnergy] ⚠️ Failed to get resources for ${address}: ${err.message}`);
+    cronLogger.warn(`[TronEnergy] ⚠️ Failed to get resources for ${address}: ${err.message}`);
     return {
       address,
       energyLimit: 0,
@@ -286,7 +287,7 @@ export const isRecipientActivatedForToken = async (
 
   } catch (_error: unknown) {
     // Default to existing recipient (cheaper estimate, safer)
-    console.warn(`[TronEnergy] ⚠️ Could not check token activation for ${recipientAddress}, assuming existing`);
+    cronLogger.warn(`[TronEnergy] ⚠️ Could not check token activation for ${recipientAddress}, assuming existing`);
     return true;
   }
 };
@@ -341,7 +342,7 @@ export const calculateOptimalFeeLimit = async (
 
   const savingsPercent = ((50 - finalFeeLimit) / 50) * 100;
 
-  console.log(
+  cronLogger.info(
     `[TronEnergy] 💡 Fee optimization: ` +
     `Energy needed=${energyNeeded}, available=${senderResources.availableEnergy}, deficit=${energyDeficit} | ` +
     `Est. cost=${estimatedCostTRX.toFixed(2)} TRX | feeLimit=${finalFeeLimit} TRX (was 50, saving ${savingsPercent.toFixed(0)}%)`
@@ -393,7 +394,7 @@ export const calculateDynamicTRC20Fee = async (
   // Round up with 15% buffer, min 1 TRX
   const fastFee = Math.max(Math.ceil(totalCostTRX * 1.15 * 10) / 10, 1);
 
-  console.log(
+  cronLogger.info(
     `[TronEnergy] 📊 Dynamic TRC20 fee: ${fastFee} TRX ` +
     `(energy: ${energyNeeded} needed, ${availableEnergy} available, ${energyDeficit} deficit @ ${networkParams.energyPriceSun} SUN/unit)`
   );
@@ -420,7 +421,7 @@ export const logCostSavings = (
   const savedTRX = oldFeeTRX - newFeeTRX;
   const savedPercent = oldFeeTRX > 0 ? ((savedTRX / oldFeeTRX) * 100).toFixed(1) : "0";
 
-  console.log(
+  cronLogger.info(
     `[TronEnergy] 💰 COST SAVINGS [${context}]: ` +
     `Old=${oldFeeTRX} TRX → New=${newFeeTRX.toFixed(2)} TRX | ` +
     `Saved=${savedTRX.toFixed(2)} TRX (${savedPercent}%)` +
@@ -456,7 +457,7 @@ export const calculateDynamicTRXNativeFee = async (
   }
 
   if (bandwidthFree) {
-    console.log(`[TronEnergy] 🆓 TRX native transfer: FREE (bandwidth available)`);
+    cronLogger.info(`[TronEnergy] 🆓 TRX native transfer: FREE (bandwidth available)`);
     return { fast: 0, medium: 0, slow: 0, bandwidthFree: true };
   }
 
@@ -466,7 +467,7 @@ export const calculateDynamicTRXNativeFee = async (
   const costTRX = costSun / 1_000_000;
   const fee = Math.max(Math.ceil(costTRX * 1.1 * 10) / 10, 0.5); // 10% buffer, min 0.5 TRX
 
-  console.log(
+  cronLogger.info(
     `[TronEnergy] 📊 TRX native fee: ${fee} TRX (${TRX_NATIVE_BANDWIDTH} bandwidth @ ${networkParams.bandwidthPriceSun} SUN/point)`
   );
 

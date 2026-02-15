@@ -5,7 +5,7 @@
  */
 
 export async function validateMerchantPoolConfiguration(): Promise<void> {
-  console.log("[MerchantPool] 🔍 Validating configuration...");
+  cronLogger.info("[MerchantPool] 🔍 Validating configuration...");
 
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -133,22 +133,22 @@ export async function validateMerchantPoolConfiguration(): Promise<void> {
   }
 
   // 6. Report Results
-  console.log("[MerchantPool] ========================================");
+  cronLogger.info("[MerchantPool] ========================================");
   
   if (warnings.length > 0) {
-    console.log("[MerchantPool] ⚠️  Configuration Warnings:");
-    warnings.forEach(w => console.log(`[MerchantPool]    - ${w}`));
+    cronLogger.info("[MerchantPool] ⚠️  Configuration Warnings:");
+    warnings.forEach(w => cronLogger.info(`[MerchantPool]    - ${w}`));
   }
 
   if (errors.length > 0) {
-    console.log("[MerchantPool] ❌ Configuration Errors:");
-    errors.forEach(e => console.log(`[MerchantPool]    - ${e}`));
-    console.log("[MerchantPool] ========================================");
+    cronLogger.info("[MerchantPool] ❌ Configuration Errors:");
+    errors.forEach(e => cronLogger.info(`[MerchantPool]    - ${e}`));
+    cronLogger.info("[MerchantPool] ========================================");
     throw new Error(`Merchant Pool configuration validation failed with ${errors.length} errors`);
   }
 
-  console.log("[MerchantPool] ✅ Configuration validation passed");
-  console.log("[MerchantPool] ========================================");
+  cronLogger.info("[MerchantPool] ✅ Configuration validation passed");
+  cronLogger.info("[MerchantPool] ========================================");
 }
 
 // Export for use in server startup

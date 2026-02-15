@@ -14,6 +14,7 @@
  */
 
 import crypto from "crypto";
+import { cronLogger } from "../utils/loggers";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -187,9 +188,9 @@ export const captureError = (
     if (details.responseBody) logParts.push(`body=${details.responseBody.substring(0, 200)}`);
     const logLine = logParts.join(" | ");
     if (severity === "critical" || severity === "high") {
-      console.error(`[ErrorMonitor] ${logLine}`);
+      cronLogger.error(`[ErrorMonitor] ${logLine}`);
     } else {
-      console.warn(`[ErrorMonitor] ${logLine}`);
+      cronLogger.warn(`[ErrorMonitor] ${logLine}`);
     }
 
     const entry: ErrorEntry = {
@@ -215,12 +216,12 @@ export const captureError = (
     // Immediate alert for critical errors
     if (severity === "critical") {
       sendImmediateAlert(entry).catch((e) => {
-        console.error(`[ErrorMonitor] Failed to send immediate alert: ${(e as Error).message}`);
+        cronLogger.error(`[ErrorMonitor] Failed to send immediate alert: ${(e as Error).message}`);
       });
     }
   } catch (captureErr) {
     // Never let monitoring itself crash the app
-    console.error(`[ErrorMonitor] captureError failed: ${(captureErr as Error).message}`);
+    cronLogger.error(`[ErrorMonitor] captureError failed: ${(captureErr as Error).message}`);
   }
 };
 
@@ -464,7 +465,7 @@ export const sendErrorDigest = async (): Promise<void> => {
 
   const adminEmail = getAdminEmail();
   if (!adminEmail) {
-    console.log("[ErrorMonitor] No ADMIN_EMAIL configured, skipping digest");
+    cronLogger.info("[ErrorMonitor] No ADMIN_EMAIL configured, skipping digest");
     errorBuffer = [];
     return;
   }
@@ -496,7 +497,7 @@ export const sendErrorDigest = async (): Promise<void> => {
       body: htmlBody,
     });
 
-    console.log(`[ErrorMonitor] ✅ Digest sent to ${adminEmail}: ${totalRaw} errors, ${digest.length} unique`);
+    cronLogger.info(`[ErrorMonitor] ✅ Digest sent to ${adminEmail}: ${totalRaw} errors, ${digest.length} unique`);
     lastDigestSent = new Date();
     totalDigestsSent++;
 
@@ -504,7 +505,7 @@ export const sendErrorDigest = async (): Promise<void> => {
     errorBuffer = [];
   } catch (sendErr) {
     // Don't capture this in the error monitor (avoid infinite loop)
-    console.error(`[ErrorMonitor] ❌ Failed to send digest: ${(sendErr as Error).message}`);
+    cronLogger.error(`[ErrorMonitor] ❌ Failed to send digest: ${(sendErr as Error).message}`);
     // Keep buffer so next cycle can retry, but cap it
     if (errorBuffer.length > MAX_BUFFER_SIZE) {
       errorBuffer = errorBuffer.slice(-MAX_BUFFER_SIZE);
@@ -531,9 +532,9 @@ const sendImmediateAlert = async (entry: ErrorEntry): Promise<void> => {
       body: htmlBody,
     });
 
-    console.log(`[ErrorMonitor] 🔴 Immediate alert sent to ${adminEmail}: ${entry.message.substring(0, 100)}`);
+    cronLogger.info(`[ErrorMonitor] 🔴 Immediate alert sent to ${adminEmail}: ${entry.message.substring(0, 100)}`);
   } catch (sendErr) {
-    console.error(`[ErrorMonitor] ❌ Failed to send immediate alert: ${(sendErr as Error).message}`);
+    cronLogger.error(`[ErrorMonitor] ❌ Failed to send immediate alert: ${(sendErr as Error).message}`);
   }
 };
 
@@ -550,11 +551,11 @@ export const startErrorMonitoring = (): void => {
 
   digestTimer = setInterval(() => {
     sendErrorDigest().catch((e) => {
-      console.error(`[ErrorMonitor] Digest timer error: ${(e as Error).message}`);
+      cronLogger.error(`[ErrorMonitor] Digest timer error: ${(e as Error).message}`);
     });
   }, DIGEST_INTERVAL_MS);
 
-  console.log(`[ErrorMonitor] ✅ Started — digest every 15 min to ${getAdminEmail() || "NO EMAIL CONFIGURED"}`);
+  cronLogger.info(`[ErrorMonitor] ✅ Started — digest every 15 min to ${getAdminEmail() || "NO EMAIL CONFIGURED"}`);
 };
 
 /**

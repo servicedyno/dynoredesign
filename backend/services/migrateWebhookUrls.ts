@@ -11,6 +11,7 @@
  */
 
 import axios from "axios";
+import { webhookLogs } from "../utils/loggers";
 import tatumApi from "../apis/tatumApi";
 
 // ── helpers ────────────────────────────────────────────────────────
@@ -77,8 +78,8 @@ interface MigrationStats {
 
 export const migrateWebhookUrls = async (): Promise<MigrationStats> => {
   const canonicalBase = getCanonicalBaseUrl();
-  console.log(`[WebhookMigration] 🔍 Starting webhook URL migration...`);
-  console.log(`[WebhookMigration]    Canonical base: ${canonicalBase}`);
+  webhookLogs.info(`[WebhookMigration] 🔍 Starting webhook URL migration...`);
+  webhookLogs.info(`[WebhookMigration]    Canonical base: ${canonicalBase}`);
 
   const stats: MigrationStats = {
     total: 0,
@@ -94,15 +95,15 @@ export const migrateWebhookUrls = async (): Promise<MigrationStats> => {
     subscriptions = await tatumApi.listAllSubscriptions();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[WebhookMigration] ❌ Failed to list subscriptions: ${msg}`);
+    webhookLogs.error(`[WebhookMigration] ❌ Failed to list subscriptions: ${msg}`);
     throw err;
   }
 
   stats.total = subscriptions.length;
-  console.log(`[WebhookMigration]    Found ${stats.total} subscriptions`);
+  webhookLogs.info(`[WebhookMigration]    Found ${stats.total} subscriptions`);
 
   if (stats.total === 0) {
-    console.log(`[WebhookMigration] ✅ No subscriptions to migrate`);
+    webhookLogs.info(`[WebhookMigration] ✅ No subscriptions to migrate`);
     return stats;
   }
 
@@ -112,7 +113,7 @@ export const migrateWebhookUrls = async (): Promise<MigrationStats> => {
     headers = await tatumApi.getTatumHeaders();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[WebhookMigration] ❌ Failed to get Tatum headers: ${msg}`);
+    webhookLogs.error(`[WebhookMigration] ❌ Failed to get Tatum headers: ${msg}`);
     throw err;
   }
 
@@ -157,7 +158,7 @@ export const migrateWebhookUrls = async (): Promise<MigrationStats> => {
         status: "updated",
       });
 
-      console.log(
+      webhookLogs.info(
         `[WebhookMigration] ✅ Updated ${subId} (${address}): ${existingOrigin} → ${canonicalBase}`
       );
 
@@ -177,20 +178,20 @@ export const migrateWebhookUrls = async (): Promise<MigrationStats> => {
         error: errMsg,
       });
 
-      console.error(
+      webhookLogs.error(
         `[WebhookMigration] ❌ Failed to update ${subId}: ${errMsg}`
       );
     }
   }
 
   // 5. Summary
-  console.log(`[WebhookMigration] ════════════════════════════════════`);
-  console.log(`[WebhookMigration] Migration complete:`);
-  console.log(`[WebhookMigration]    Total subscriptions: ${stats.total}`);
-  console.log(`[WebhookMigration]    Already correct:     ${stats.alreadyCorrect}`);
-  console.log(`[WebhookMigration]    Updated:             ${stats.updated}`);
-  console.log(`[WebhookMigration]    Errors:              ${stats.errors}`);
-  console.log(`[WebhookMigration] ════════════════════════════════════`);
+  webhookLogs.info(`[WebhookMigration] ════════════════════════════════════`);
+  webhookLogs.info(`[WebhookMigration] Migration complete:`);
+  webhookLogs.info(`[WebhookMigration]    Total subscriptions: ${stats.total}`);
+  webhookLogs.info(`[WebhookMigration]    Already correct:     ${stats.alreadyCorrect}`);
+  webhookLogs.info(`[WebhookMigration]    Updated:             ${stats.updated}`);
+  webhookLogs.info(`[WebhookMigration]    Errors:              ${stats.errors}`);
+  webhookLogs.info(`[WebhookMigration] ════════════════════════════════════`);
 
   return stats;
 };

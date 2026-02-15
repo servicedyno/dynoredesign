@@ -1,4 +1,5 @@
 import axios from "axios";
+import { apiLogger } from "../utils/loggers";
 
 interface CurrencyRateList {
   currency: string;
@@ -101,14 +102,14 @@ export const refreshBackgroundRateCache = async (): Promise<void> => {
           backgroundRateCache.set(cacheKey, { rate: crossRate, timestamp: Date.now() });
           backgroundRateCache.set(`rate_bg:${fiat}:${crypto}`, { rate: 1 / crossRate, timestamp: Date.now() });
           ratesUpdated += 2;
-          console.log(`[BackgroundCache] 🔗 Cross-rate recovery: ${crypto}→${fiat} = ${crossRate.toFixed(6)} (via ${crypto}→USD × USD→${fiat})`);
+          apiLogger.info(`[BackgroundCache] 🔗 Cross-rate recovery: ${crypto}→${fiat} = ${crossRate.toFixed(6)} (via ${crypto}→USD × USD→${fiat})`);
         }
       }
     }
     
     // If Tatum produced very few rates, supplement with CoinGecko as fallback
     if (ratesUpdated < 8) {
-      console.warn(`[BackgroundCache] Tatum only returned ${ratesUpdated} rates, supplementing with CoinGecko`);
+      apiLogger.warn(`[BackgroundCache] Tatum only returned ${ratesUpdated} rates, supplementing with CoinGecko`);
       provider = 'Tatum+CoinGecko';
       try {
         const coinIds = CACHE_CRYPTO_TARGETS
@@ -142,16 +143,16 @@ export const refreshBackgroundRateCache = async (): Promise<void> => {
           }
         }
       } catch {
-        console.warn(`[BackgroundCache] CoinGecko fallback also failed — using Tatum-only rates`);
+        apiLogger.warn(`[BackgroundCache] CoinGecko fallback also failed — using Tatum-only rates`);
       }
     }
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.error(`[BackgroundCache] Rate refresh failed: ${err.message}`);
+    apiLogger.error(`[BackgroundCache] Rate refresh failed: ${err.message}`);
   }
   
   const elapsed = Date.now() - startTime;
-  console.log(`[BackgroundCache] ✅ Refreshed ${ratesUpdated} rates via ${provider} in ${elapsed}ms`);
+  apiLogger.info(`[BackgroundCache] ✅ Refreshed ${ratesUpdated} rates via ${provider} in ${elapsed}ms`);
 };
 
 /**
@@ -164,7 +165,7 @@ const getBackgroundCachedRate = (from: string, to: string): number | null => {
   if (cached) {
     const age = Date.now() - cached.timestamp;
     if (age < BACKGROUND_CACHE_TTL_MS) {
-      console.log(`[currencyConvert] Using background-cached rate for ${from}→${to}: ${cached.rate} (age: ${Math.floor(age / 1000)}s, source: CoinGecko/Tatum)`);
+      apiLogger.info(`[currencyConvert] Using background-cached rate for ${from}→${to}: ${cached.rate} (age: ${Math.floor(age / 1000)}s, source: CoinGecko/Tatum)`);
       return cached.rate;
     }
   }
@@ -227,7 +228,7 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
 
   const apiKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
   if (!apiKey) {
-    console.warn(`[currencyConvert] Tatum: no API key configured`);
+    apiLogger.warn(`[currencyConvert] Tatum: no API key configured`);
     return null;
   }
 
@@ -242,7 +243,7 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
     );
     const rate = parseFloat(data?.value);
     if (rate > 0) {
-      console.log(`[currencyConvert] Tatum rate for ${crypto}→${fiat}: ${rate}`);
+      apiLogger.info(`[currencyConvert] Tatum rate for ${crypto}→${fiat}: ${rate}`);
       return rate;
     }
   } catch (error: unknown) {
@@ -255,7 +256,7 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
       const suffix = is403
         ? `(Tatum 403 — pair may not be supported directly; cross-rate recovery will fill the gap)`
         : `(suppressing for 10 min)`;
-      console.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message} ${suffix}`);
+      apiLogger.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message} ${suffix}`);
     }
   }
   return null;
@@ -284,7 +285,7 @@ const getCryptoRateViaTatum = async (from: string, to: string): Promise<number |
         const usdtInFiat = await getTatumRate('USDT', to);
         if (usdtInFiat) {
           const crossRate = priceInUSD * usdtInFiat;
-          console.log(`[currencyConvert] 🔗 Cross-rate: ${from}→${to} = ${crossRate.toFixed(6)} (via ${from}→USD × USDT→${to})`);
+          apiLogger.info(`[currencyConvert] 🔗 Cross-rate: ${from}→${to} = ${crossRate.toFixed(6)} (via ${from}→USD × USDT→${to})`);
           return crossRate;
         }
       }
@@ -302,7 +303,7 @@ const getCryptoRateViaTatum = async (from: string, to: string): Promise<number |
         const usdtInFrom = await getTatumRate('USDT', from);
         if (usdtInFrom) {
           const crossRate = 1 / (priceInUSD * usdtInFrom);
-          console.log(`[currencyConvert] 🔗 Cross-rate: ${from}→${to} = ${crossRate.toFixed(8)} (via USDT→${from} / ${to}→USD)`);
+          apiLogger.info(`[currencyConvert] 🔗 Cross-rate: ${from}→${to} = ${crossRate.toFixed(8)} (via USDT→${from} / ${to}→USD)`);
           return crossRate;
         }
       }
@@ -320,7 +321,7 @@ const getCryptoRateViaTatum = async (from: string, to: string): Promise<number |
     if (fromRate && toRate) {
       // fromRate = "1 USDT in FROM currency", toRate = "1 USDT in TO currency"
       const rate = toRate / fromRate;
-      console.log(`[currencyConvert] Tatum fiat rate ${from}→${to}: ${rate} (via USDT proxy)`);
+      apiLogger.info(`[currencyConvert] Tatum fiat rate ${from}→${to}: ${rate} (via USDT proxy)`);
       return rate;
     }
   }
@@ -348,7 +349,7 @@ const getFastForexRate = async (from: string, to: string, amount: number): Promi
     if (data.result) {
       const rate = data.result[to.toUpperCase()];
       if (rate && rate > 0) {
-        console.log(`[currencyConvert] FastForex rate for ${from}→${to}: ${rate} (${data.ms}ms server)`);
+        apiLogger.info(`[currencyConvert] FastForex rate for ${from}→${to}: ${rate} (${data.ms}ms server)`);
         return {
           rate: rate,
           converted: amount * rate,
@@ -358,7 +359,7 @@ const getFastForexRate = async (from: string, to: string, amount: number): Promi
   } catch (error: unknown) {
     const err = error as { response?: { data?: { error?: string }; status?: number }; message?: string };
     const errorMsg = err.response?.data?.error || err.message;
-    console.warn(`[currencyConvert] FastForex API failed for ${from}→${to}: ${errorMsg}`);
+    apiLogger.warn(`[currencyConvert] FastForex API failed for ${from}→${to}: ${errorMsg}`);
   }
   return null;
 };
@@ -371,7 +372,7 @@ const getCoinGeckoRate = async (crypto: string, fiat: string): Promise<number | 
   try {
     const coinId = COINGECKO_IDS[crypto.toUpperCase()];
     if (!coinId) {
-      console.warn(`[currencyConvert] CoinGecko: Unknown crypto ${crypto}`);
+      apiLogger.warn(`[currencyConvert] CoinGecko: Unknown crypto ${crypto}`);
       return null;
     }
 
@@ -388,12 +389,12 @@ const getCoinGeckoRate = async (crypto: string, fiat: string): Promise<number | 
 
     const rate = response.data[coinId]?.[fiat.toLowerCase()];
     if (rate) {
-      console.log(`[currencyConvert] CoinGecko rate for ${crypto}→${fiat}: ${rate}`);
+      apiLogger.info(`[currencyConvert] CoinGecko rate for ${crypto}→${fiat}: ${rate}`);
       return rate;
     }
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.warn(`[currencyConvert] CoinGecko API failed for ${crypto}→${fiat}: ${err.message}`);
+    apiLogger.warn(`[currencyConvert] CoinGecko API failed for ${crypto}→${fiat}: ${err.message}`);
   }
   return null;
 };
@@ -469,7 +470,7 @@ const processSingleCurrency = async (
   const isTargetUSD = currentCurrency === 'USD';
   
   if ((isSourceUSD && isTargetStable) || (isSourceStable && isTargetUSD)) {
-    console.log(`[currencyConvert] 💵 Stablecoin 1:1: ${source}→${currentCurrency} = ${amount} (exact peg)`);
+    apiLogger.info(`[currencyConvert] 💵 Stablecoin 1:1: ${source}→${currentCurrency} = ${amount} (exact peg)`);
     return {
       currency: defaultCurrency.toUpperCase(),
       amount: amount,
@@ -509,7 +510,7 @@ const processSingleCurrency = async (
   }
 
   if (!rate) {
-    console.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - all providers failed (FastForex, Tatum, CoinGecko)`);
+    apiLogger.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - all providers failed (FastForex, Tatum, CoinGecko)`);
     throw new Error(`Currency conversion failed for ${source}→${currentCurrency}. Please try again later.`);
   }
 
@@ -558,13 +559,13 @@ const currencyConvert = async ({
 }) => {
   // Validate amount parameter
   if (amount === null || amount === undefined || isNaN(Number(amount))) {
-    console.error(`[currencyConvert] Invalid amount: ${amount}`);
+    apiLogger.error(`[currencyConvert] Invalid amount: ${amount}`);
     throw new Error(`Invalid amount parameter: ${amount}`);
   }
 
   const source = normalizeCurrency(sourceCurrency);
   
-  console.log(`[currencyConvert] Processing ${currency.length} currencies in parallel...`);
+  apiLogger.info(`[currencyConvert] Processing ${currency.length} currencies in parallel...`);
   const startTime = Date.now();
 
   // Process all currencies in parallel using Promise.all
@@ -573,8 +574,8 @@ const currencyConvert = async ({
   );
 
   const elapsed = Date.now() - startTime;
-  console.log(`[currencyConvert] Completed ${currency.length} currencies in ${elapsed}ms`);
-  console.log(`[currencyConvert] Results:`, currencyRateList);
+  apiLogger.info(`[currencyConvert] Completed ${currency.length} currencies in ${elapsed}ms`);
+  apiLogger.info(`[currencyConvert] Results:`, currencyRateList);
   
   return currencyRateList;
 };

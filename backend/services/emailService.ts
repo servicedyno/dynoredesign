@@ -1,4 +1,5 @@
 import mailTransporter from "../utils/mailTransporter";
+import { apiLogger } from "../utils/loggers";
 import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService";
 import { baseEmailTemplate, getCurrencySymbol, infoBox, dataRow, statusBadge, p, otpBlock } from "../utils/emailTemplate";
 
@@ -46,9 +47,9 @@ export const sendWelcomeEmail = async (
     const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Get Started", "https://dynopay.com/dashboard");
     
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Welcome email sent to ${email}`);
+    apiLogger.info(`Welcome email sent to ${email}`);
   } catch (e) {
-    console.error("Welcome email error:", e);
+    apiLogger.error("Welcome email error:", e);
   }
 };
 
@@ -74,9 +75,9 @@ export const sendCompanyProfileCreatedEmail = async (
 
     const html = dynoPayEmailTemplate("Profile Complete", content, true, "Add Wallet", "https://dynopay.com/dashboard/wallets");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Company profile created email sent to ${email}`);
+    apiLogger.info(`Company profile created email sent to ${email}`);
   } catch (e) {
-    console.error("Company profile created email error:", e);
+    apiLogger.error("Company profile created email error:", e);
   }
 };
 
@@ -107,9 +108,9 @@ export const sendCompanyContactWelcomeEmail = async (
 
     const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Learn More", "https://dynopay.com");
     await mailTransporter({ to: companyContactEmail, name: companyName, subject, body: html });
-    console.log(`Company contact welcome email sent to ${companyContactEmail}`);
+    apiLogger.info(`Company contact welcome email sent to ${companyContactEmail}`);
   } catch (e) {
-    console.error("Company contact welcome email error:", e);
+    apiLogger.error("Company contact welcome email error:", e);
   }
 };
 
@@ -160,12 +161,12 @@ export const sendUserProfileUpdatedEmail = async (
 
       const oldEmailHtml = dynoPayEmailTemplate("Email Address Changed", oldEmailContent, true, "Contact Support", "https://dynopay.com/support");
       await mailTransporter({ to: oldEmail, name, subject: "Your Dynopay Email Address Has Been Changed", body: oldEmailHtml });
-      console.log(`[ProfileUpdate] Email change notification sent to old email: ${oldEmail}`);
+      apiLogger.info(`[ProfileUpdate] Email change notification sent to old email: ${oldEmail}`);
     }
     
-    console.log(`[ProfileUpdate] Profile updated email sent to ${email}`);
+    apiLogger.info(`[ProfileUpdate] Profile updated email sent to ${email}`);
   } catch (e) {
-    console.error("[ProfileUpdate] Email error:", e);
+    apiLogger.error("[ProfileUpdate] Email error:", e);
   }
 };
 
@@ -197,9 +198,9 @@ export const sendCompanyProfileUpdatedEmail = async (
 
     const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", "https://dynopay.com/dashboard/company");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Company profile updated email sent to ${email}`);
+    apiLogger.info(`Company profile updated email sent to ${email}`);
   } catch (e) {
-    console.error("Company profile updated email error:", e);
+    apiLogger.error("Company profile updated email error:", e);
   }
 };
 
@@ -230,9 +231,9 @@ export const sendWalletOTPEmail = async (
 
     const html = dynoPayEmailTemplate("Confirm Your Wallet", content);
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Wallet OTP email sent to ${email}`);
+    apiLogger.info(`Wallet OTP email sent to ${email}`);
   } catch (e) {
-    console.error("Wallet OTP email error:", e);
+    apiLogger.error("Wallet OTP email error:", e);
   }
 };
 
@@ -261,9 +262,9 @@ export const sendWalletVerifiedEmail = async (
 
     const html = dynoPayEmailTemplate("Wallet Active", content, true, "View Dashboard", "https://dynopay.com/dashboard");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Wallet verified email sent to ${email}`);
+    apiLogger.info(`Wallet verified email sent to ${email}`);
   } catch (e) {
-    console.error("Wallet verified email error:", e);
+    apiLogger.error("Wallet verified email error:", e);
   }
 };
 
@@ -295,9 +296,9 @@ export const sendWalletUpdateOTPEmail = async (
 
     const html = dynoPayEmailTemplate("Confirm Wallet Update", content);
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Wallet update OTP email sent to ${email}`);
+    apiLogger.info(`Wallet update OTP email sent to ${email}`);
   } catch (e) {
-    console.error("Wallet update OTP email error:", e);
+    apiLogger.error("Wallet update OTP email error:", e);
   }
 };
 
@@ -331,9 +332,9 @@ export const sendPaymentReceivedEmail = async (
 
     const html = dynoPayEmailTemplate("Payment Received", content, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Payment received email sent to ${email}`);
+    apiLogger.info(`Payment received email sent to ${email}`);
   } catch (e) {
-    console.error("Payment received email error:", e);
+    apiLogger.error("Payment received email error:", e);
   }
 };
 
@@ -358,9 +359,9 @@ export const sendAddWalletReminderEmail = async (
 
     const html = dynoPayEmailTemplate("Add Your Wallet", content, true, "Add Wallet Now", "https://dynopay.com/dashboard/wallets");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Add wallet reminder email sent to ${email}`);
+    apiLogger.info(`Add wallet reminder email sent to ${email}`);
   } catch (e) {
-    console.error("Add wallet reminder email error:", e);
+    apiLogger.error("Add wallet reminder email error:", e);
   }
 };
 
@@ -382,9 +383,9 @@ export const sendEmailVerificationOTPEmail = async (
 
     const html = dynoPayEmailTemplate("Verify Your Email", content);
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Email verification OTP sent to ${email}`);
+    apiLogger.info(`Email verification OTP sent to ${email}`);
   } catch (e) {
-    console.error("Email verification OTP email error:", e);
+    apiLogger.error("Email verification OTP email error:", e);
   }
 };
 
@@ -406,9 +407,9 @@ export const sendLoginOTPEmail = async (
 
     const html = dynoPayEmailTemplate("Your Login Code", content);
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Login OTP email sent to ${email}`);
+    apiLogger.info(`Login OTP email sent to ${email}`);
   } catch (e) {
-    console.error("Login OTP email error:", e);
+    apiLogger.error("Login OTP email error:", e);
   }
 };
 
@@ -430,9 +431,9 @@ export const sendForgotPasswordOTPEmail = async (
 
     const html = dynoPayEmailTemplate("Reset Your Password", content);
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Forgot password OTP email sent to ${email}`);
+    apiLogger.info(`Forgot password OTP email sent to ${email}`);
   } catch (e) {
-    console.error("Forgot password OTP email error:", e);
+    apiLogger.error("Forgot password OTP email error:", e);
   }
 };
 
@@ -459,9 +460,9 @@ export const sendPasswordChangedEmail = async (
 
     const html = dynoPayEmailTemplate("Password Updated", content, true, "View Account Settings", "https://dynopay.com/dashboard/settings");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Password changed email sent to ${email}`);
+    apiLogger.info(`Password changed email sent to ${email}`);
   } catch (e) {
-    console.error("Password changed email error:", e);
+    apiLogger.error("Password changed email error:", e);
   }
 };
 
@@ -510,9 +511,9 @@ export const sendPaymentLinkCreatedEmail = async (
     const html = dynoPayEmailTemplate("Payment Link Created", content, true, "Open Payment Link", paymentLink);
     await mailTransporter({ to: email, name, subject, body: html });
     
-    console.log(`Payment link created email sent to ${email}`);
+    apiLogger.info(`Payment link created email sent to ${email}`);
   } catch (e) {
-    console.error("Payment link created email error:", e);
+    apiLogger.error("Payment link created email error:", e);
   }
 };
 
@@ -545,9 +546,9 @@ export const sendKYCRequiredEmail = async (
 
     const html = dynoPayEmailTemplate("Verification Required", content, true, "Start Verification", "https://dynopay.com/dashboard/kyc");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`KYC required email sent to ${email}`);
+    apiLogger.info(`KYC required email sent to ${email}`);
   } catch (e) {
-    console.error("KYC required email error:", e);
+    apiLogger.error("KYC required email error:", e);
   }
 };
 
@@ -572,9 +573,9 @@ export const sendKYCApprovedEmail = async (
 
     const html = dynoPayEmailTemplate("Verification Approved", content, true, "View Dashboard", "https://dynopay.com/dashboard");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`KYC approved email sent to ${email}`);
+    apiLogger.info(`KYC approved email sent to ${email}`);
   } catch (e) {
-    console.error("KYC approved email error:", e);
+    apiLogger.error("KYC approved email error:", e);
   }
 };
 
@@ -601,9 +602,9 @@ export const sendKYCRejectedEmail = async (
 
     const html = dynoPayEmailTemplate("Verification Unsuccessful", content, true, "Resubmit Documents", "https://dynopay.com/dashboard/kyc");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`KYC rejected email sent to ${email}`);
+    apiLogger.info(`KYC rejected email sent to ${email}`);
   } catch (e) {
-    console.error("KYC rejected email error:", e);
+    apiLogger.error("KYC rejected email error:", e);
   }
 };
 
@@ -641,9 +642,9 @@ export const sendWeeklySummaryEmail = async (
 
     const html = dynoPayEmailTemplate("Your Weekly Summary", content, true, "View Full Analytics", "https://dynopay.com/dashboard/analytics");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Weekly summary email sent to ${email}`);
+    apiLogger.info(`Weekly summary email sent to ${email}`);
   } catch (e) {
-    console.error("Weekly summary email error:", e);
+    apiLogger.error("Weekly summary email error:", e);
   }
 };
 
@@ -676,9 +677,9 @@ export const sendSecurityAlertEmail = async (
 
     const html = dynoPayEmailTemplate("Security Alert", content, true, "Secure My Account", "https://dynopay.com/dashboard/security");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`Security alert email sent to ${email}`);
+    apiLogger.info(`Security alert email sent to ${email}`);
   } catch (e) {
-    console.error("Security alert email error:", e);
+    apiLogger.error("Security alert email error:", e);
   }
 };
 
@@ -721,9 +722,9 @@ export const sendInvoiceGeneratedEmail = async (
     const html = dynoPayEmailTemplate("Invoice Generated", content, true, "View Invoice", invoiceData.invoice_url);
     await mailTransporter({ to: email, name, subject, body: html });
 
-    console.log(`Invoice email sent to ${email} for invoice ${invoiceData.invoice_number}`);
+    apiLogger.info(`Invoice email sent to ${email} for invoice ${invoiceData.invoice_number}`);
   } catch (error) {
-    console.error(`Failed to send invoice email to ${email}:`, error);
+    apiLogger.error(`Failed to send invoice email to ${email}:`, error);
     throw error;
   }
 };
@@ -779,9 +780,9 @@ export const sendCustomerPaymentConfirmationEmail = async (
         content: pdfBuffer.toString('base64'),
         contentType: 'application/pdf',
       };
-      console.log(`[Email] Generated PDF receipt: ${filename}`);
+      apiLogger.info(`[Email] Generated PDF receipt: ${filename}`);
     } catch (pdfError) {
-      console.error("[Email] Failed to generate PDF receipt:", pdfError);
+      apiLogger.error("[Email] Failed to generate PDF receipt:", pdfError);
       // Continue without PDF attachment
     }
     
@@ -805,9 +806,9 @@ export const sendCustomerPaymentConfirmationEmail = async (
     const html = dynoPayEmailTemplate("Payment Successful", content);
     await mailTransporter({ to: customerEmail, name: displayName, subject, body: html, attachments: pdfAttachment ? [pdfAttachment] : undefined });
     
-    console.log(`[Email] Customer payment confirmation sent to ${customerEmail} for ${amount} ${currency}${pdfAttachment ? ' with PDF receipt' : ''}`);
+    apiLogger.info(`[Email] Customer payment confirmation sent to ${customerEmail} for ${amount} ${currency}${pdfAttachment ? ' with PDF receipt' : ''}`);
   } catch (e) {
-    console.error("Customer payment confirmation email error:", e);
+    apiLogger.error("Customer payment confirmation email error:", e);
   }
 };
 
@@ -837,9 +838,9 @@ export const sendKYCStartedEmail = async (
 
     const html = dynoPayEmailTemplate("Identity Verification", content, true, "Complete Verification", verificationUrl);
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`KYC started email sent to ${email}`);
+    apiLogger.info(`KYC started email sent to ${email}`);
   } catch (e) {
-    console.error("KYC started email error:", e);
+    apiLogger.error("KYC started email error:", e);
   }
 };
 
@@ -866,9 +867,9 @@ export const sendKYCResubmissionRequiredEmail = async (
 
     const html = dynoPayEmailTemplate("Resubmission Required", content, true, "Resubmit Documents", "https://dynopay.com/dashboard/kyc");
     await mailTransporter({ to: email, name, subject, body: html });
-    console.log(`KYC resubmission required email sent to ${email}`);
+    apiLogger.info(`KYC resubmission required email sent to ${email}`);
   } catch (e) {
-    console.error("KYC resubmission required email error:", e);
+    apiLogger.error("KYC resubmission required email error:", e);
   }
 };
 
@@ -904,9 +905,9 @@ export const sendPaymentExpiringEmail = async (
 
     const html = dynoPayEmailTemplate("Payment Expiring Soon", content, true, "Pay Now", paymentLink);
     await mailTransporter({ to: customerEmail, name: displayName, subject, body: html });
-    console.log(`[Email] Payment expiring reminder sent to ${customerEmail} - expires ${expiresIn}`);
+    apiLogger.info(`[Email] Payment expiring reminder sent to ${customerEmail} - expires ${expiresIn}`);
   } catch (e) {
-    console.error("Payment expiring email error:", e);
+    apiLogger.error("Payment expiring email error:", e);
   }
 };
 
@@ -976,9 +977,9 @@ export const sendNewDeviceLoginEmail = async (
     const html = dynoPayEmailTemplate("New Login Detected", content, true, "Secure My Account", "https://dynopay.com/dashboard/settings");
     await mailTransporter({ to: email, name, subject, body: html });
     
-    console.log(`[Email] New device login alert sent to ${email} from ${locationDisplay} (${ipAddress})`);
+    apiLogger.info(`[Email] New device login alert sent to ${email} from ${locationDisplay} (${ipAddress})`);
   } catch (e) {
-    console.error("New device login email error:", e);
+    apiLogger.error("New device login email error:", e);
   }
 };
 
@@ -1019,9 +1020,9 @@ export const sendFailedLoginAttemptsEmail = async (
       body: html,
     });
     
-    console.log(`[Email] Failed login attempts alert sent to ${email} - ${attemptCount} attempts from ${ipAddress}`);
+    apiLogger.info(`[Email] Failed login attempts alert sent to ${email} - ${attemptCount} attempts from ${ipAddress}`);
   } catch (e) {
-    console.error("Failed login attempts email error:", e);
+    apiLogger.error("Failed login attempts email error:", e);
   }
 };
 
@@ -1076,7 +1077,7 @@ export const sendPaymentFailedEmail = async (
 
     const customerHtml = dynoPayEmailTemplate("Payment Unsuccessful", customerContent);
     await mailTransporter({ to: customerEmail, name: displayName, subject, body: customerHtml });
-    console.log(`[Email] Payment failed notification sent to customer ${customerEmail} - reason: ${reason}`);
+    apiLogger.info(`[Email] Payment failed notification sent to customer ${customerEmail} - reason: ${reason}`);
     
     // Email to Merchant (if provided)
     if (merchantEmail) {
@@ -1103,10 +1104,10 @@ export const sendPaymentFailedEmail = async (
 
       const merchantHtml = dynoPayEmailTemplate("Payment Alert", merchantContent, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
       await mailTransporter({ to: merchantEmail, name: merchantDisplayName, subject: merchantSubject, body: merchantHtml });
-      console.log(`[Email] Payment failed notification sent to merchant ${merchantEmail} - reason: ${reason}`);
+      apiLogger.info(`[Email] Payment failed notification sent to merchant ${merchantEmail} - reason: ${reason}`);
     }
   } catch (e) {
-    console.error("Payment failed email error:", e);
+    apiLogger.error("Payment failed email error:", e);
   }
 };
 
@@ -1144,9 +1145,9 @@ export const sendApiKeyCreatedEmail = async (
     const html = dynoPayEmailTemplate("API Key Update", content, true, "View API Keys", "https://dynopay.com/dashboard/api-keys");
     await mailTransporter({ to: email, name, subject, body: html });
     
-    console.log(`[Email] API key ${action} notification sent to ${email} for ${keyType} environment`);
+    apiLogger.info(`[Email] API key ${action} notification sent to ${email} for ${keyType} environment`);
   } catch (e) {
-    console.error("API key created email error:", e);
+    apiLogger.error("API key created email error:", e);
   }
 };
 
@@ -1181,9 +1182,9 @@ export const sendWalletDeletedEmail = async (
     const html = dynoPayEmailTemplate("Wallet Removed", content, true, "Manage Wallets", "https://dynopay.com/dashboard/wallets");
     await mailTransporter({ to: email, name, subject, body: html });
     
-    console.log(`[Email] Wallet deleted notification sent to ${email} for ${network}`);
+    apiLogger.info(`[Email] Wallet deleted notification sent to ${email} for ${network}`);
   } catch (e) {
-    console.error("Wallet deleted email error:", e);
+    apiLogger.error("Wallet deleted email error:", e);
   }
 };
 
@@ -1222,9 +1223,9 @@ export const sendLargeTransactionAlertEmail = async (
     const html = dynoPayEmailTemplate("Large Payment Received", content, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
     await mailTransporter({ to: email, name, subject, body: html });
     
-    console.log(`[Email] Large transaction alert sent to ${email} - ${amount} ${currency}`);
+    apiLogger.info(`[Email] Large transaction alert sent to ${email} - ${amount} ${currency}`);
   } catch (e) {
-    console.error("Large transaction alert email error:", e);
+    apiLogger.error("Large transaction alert email error:", e);
   }
 };
 
@@ -1280,9 +1281,9 @@ export const sendSubscriptionCreatedEmail = async (
     const merchantHtml = dynoPayEmailTemplate("New Subscription", merchantContent, true, "View Subscriptions", "https://dynopay.com/dashboard/subscriptions");
     await mailTransporter({ to: merchantEmail, name: merchantName, subject: merchantSubject, body: merchantHtml });
     
-    console.log(`[Email] Subscription created notifications sent for ${planName}`);
+    apiLogger.info(`[Email] Subscription created notifications sent for ${planName}`);
   } catch (e) {
-    console.error("Subscription created email error:", e);
+    apiLogger.error("Subscription created email error:", e);
   }
 };
 
@@ -1343,9 +1344,9 @@ export const sendSubscriptionCancelledEmail = async (
     const merchantHtml = dynoPayEmailTemplate("Subscription Cancelled", merchantContent, true, "View Subscriptions", "https://dynopay.com/dashboard/subscriptions");
     await mailTransporter({ to: merchantEmail, name: merchantName, subject: merchantSubject, body: merchantHtml });
     
-    console.log(`[Email] Subscription cancelled notifications sent for ${planName}`);
+    apiLogger.info(`[Email] Subscription cancelled notifications sent for ${planName}`);
   } catch (e) {
-    console.error("Subscription cancelled email error:", e);
+    apiLogger.error("Subscription cancelled email error:", e);
   }
 };
 
@@ -1404,9 +1405,9 @@ export const sendSubscriptionPaymentFailedEmail = async (
     const merchantHtml = dynoPayEmailTemplate("Subscription Payment Failed", merchantContent, true, "View Subscription", "https://dynopay.com/dashboard/subscriptions");
     await mailTransporter({ to: merchantEmail, name: merchantName, subject: merchantSubject, body: merchantHtml });
     
-    console.log(`[Email] Subscription payment failed notifications sent for ${planName}`);
+    apiLogger.info(`[Email] Subscription payment failed notifications sent for ${planName}`);
   } catch (e) {
-    console.error("Subscription payment failed email error:", e);
+    apiLogger.error("Subscription payment failed email error:", e);
   }
 };
 

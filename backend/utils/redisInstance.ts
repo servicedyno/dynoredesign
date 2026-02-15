@@ -1,4 +1,5 @@
 import { createClient } from "redis";
+import { cronLogger } from "../utils/loggers";
 import { log } from "./loggers";
 
 const redisClient = createClient({
@@ -90,7 +91,7 @@ const getRedisItem = async (key: string) => {
     try {
       return JSON.parse(jsonValue);
     } catch (e) {
-      console.log(`[Redis] JSON parse error for ${key}:json, falling back to hash`);
+      cronLogger.info(`[Redis] JSON parse error for ${key}:json, falling back to hash`);
     }
   }
   
@@ -114,7 +115,7 @@ const softDeleteRedisItem = async (key: string, ttlSeconds: number = 1800) => {
   // Default 30 minutes TTL to allow checkout to poll for status
   await redisClient.expire(key, ttlSeconds);
   await redisClient.expire(key + ':json', ttlSeconds);
-  console.log(`[Redis] Soft delete: ${key} will expire in ${ttlSeconds}s`);
+  cronLogger.info(`[Redis] Soft delete: ${key} will expire in ${ttlSeconds}s`);
 };
 
 // ============================================
@@ -135,7 +136,7 @@ const getMemoryCache = async (key: string): Promise<unknown | null> => {
 
 const invalidateCache = async (key: string) => {
   await deleteRedisItem(key);
-  console.log(`[Redis] INVALIDATED ${key}`);
+  cronLogger.info(`[Redis] INVALIDATED ${key}`);
 };
 
 // ============================================
@@ -169,7 +170,7 @@ const acquireLock = async (
     if (result === 'OK') {
       // Store lockValue so releaseLock can verify ownership
       lockOwners.set(fullKey, lockValue);
-      console.log(`[Lock] Acquired: ${lockKey}`);
+      cronLogger.info(`[Lock] Acquired: ${lockKey}`);
       return true;
     }
     
@@ -179,7 +180,7 @@ const acquireLock = async (
     }
   }
   
-  console.log(`[Lock] Failed to acquire after ${maxRetries} attempts: ${lockKey}`);
+  cronLogger.info(`[Lock] Failed to acquire after ${maxRetries} attempts: ${lockKey}`);
   return false;
 };
 
@@ -211,20 +212,20 @@ const releaseLock = async (lockKey: string): Promise<void> => {
         arguments: [lockValue],
       });
       if (result === 1) {
-        console.log(`[Lock] Released: ${lockKey}`);
+        cronLogger.info(`[Lock] Released: ${lockKey}`);
       } else {
-        console.warn(`[Lock] Lock expired or owned by another process: ${lockKey}`);
+        cronLogger.warn(`[Lock] Lock expired or owned by another process: ${lockKey}`);
       }
     } catch (err) {
       // Fallback: delete directly if Lua eval fails (e.g., older Redis)
       await redisClient.del(fullKey);
-      console.log(`[Lock] Released (fallback): ${lockKey}`);
+      cronLogger.info(`[Lock] Released (fallback): ${lockKey}`);
     }
     lockOwners.delete(fullKey);
   } else {
     // No ownership info — legacy fallback
     await redisClient.del(fullKey);
-    console.log(`[Lock] Released (no owner): ${lockKey}`);
+    cronLogger.info(`[Lock] Released (no owner): ${lockKey}`);
   }
 };
 

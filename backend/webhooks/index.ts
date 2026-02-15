@@ -1,6 +1,6 @@
 import express from "express";
 import crypto from "crypto";
-import { apiLogger } from "../utils/loggers";
+import { apiLogger, webhookLogs} from "../utils/loggers";
 import { getErrorMessage } from "../helper";
 import { ITatumWebHook, IWebHook } from "../utils/types";
 import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
@@ -87,7 +87,7 @@ const logWebhookDelivery = async (
     );
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error(`[logWebhookDelivery] Failed to log webhook: ${errorMsg}`);
+    webhookLogs.error(`[logWebhookDelivery] Failed to log webhook: ${errorMsg}`);
   }
 };
 
@@ -124,7 +124,7 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
       webhookUrl = customerData.webhook_url as string;
       callbackUrl = (customerData?.callback_url as string) || null;
       webhookSecret = (customerData?.webhook_secret as string) || null;
-      console.log(`[callMerchantWebhook] Using webhook URL from payment data: ${webhookUrl}`);
+      webhookLogs.info(`[callMerchantWebhook] Using webhook URL from payment data: ${webhookUrl}`);
     }
     
     // Then try payment link record (for payment link flow)
@@ -157,13 +157,13 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
       if (apiResult?.webhook_url) {
         webhookUrl = apiResult.webhook_url;
         if (!webhookSecret) webhookSecret = apiResult.webhook_secret;
-        console.log(`[callMerchantWebhook] Found webhook URL from API key for company ${companyId}: ${webhookUrl}`);
+        webhookLogs.info(`[callMerchantWebhook] Found webhook URL from API key for company ${companyId}: ${webhookUrl}`);
       }
     }
     
     // If neither webhook_url nor callback_url configured, skip
     if (!webhookUrl && !callbackUrl) {
-      console.log("[callMerchantWebhook] No webhook URL or callback URL configured (checked: payment_link, company, API key), skipping");
+      webhookLogs.info("[callMerchantWebhook] No webhook URL or callback URL configured (checked: payment_link, company, API key), skipping");
       return { success: true }; // No webhook configured is not an error
     }
     
@@ -171,7 +171,7 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
     const urlToCheck = webhookUrl || callbackUrl;
     if (urlToCheck && (urlToCheck.includes('localhost') || urlToCheck.includes('127.0.0.1'))) {
       const errorMsg = `Webhook URL "${urlToCheck}" uses localhost which is unreachable from Dynopay servers. Please use a public URL.`;
-      console.error(`[callMerchantWebhook] ❌ ${errorMsg}`);
+      webhookLogs.error(`[callMerchantWebhook] ❌ ${errorMsg}`);
       return { success: false, error: errorMsg, url: urlToCheck };
     }
     
@@ -193,7 +193,7 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
         }
       } catch (convErr) {
         // Non-blocking — send webhook without fiat enrichment
-        console.warn(`[callMerchantWebhook] Fiat enrichment failed:`, convErr);
+        webhookLogs.warn(`[callMerchantWebhook] Fiat enrichment failed:`, convErr);
       }
     }
     // Preserve any base_amount/base_currency already set by the caller
@@ -218,7 +218,7 @@ const callMerchantWebhook = async (customerData: Record<string, unknown>, eventD
   } catch (error: unknown) {
     // Log but don't throw - webhook failure shouldn't block payment processing
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(`[callMerchantWebhook] Failed to send webhook: ${errorMsg}`);
+    webhookLogs.error(`[callMerchantWebhook] Failed to send webhook: ${errorMsg}`);
     return { success: false, error: errorMsg };
   }
 };
@@ -260,11 +260,11 @@ const callUrlWithPayload = async (
       headers['X-DynoPay-Signature'] = generateWebhookSignature(signaturePayload, webhookSecret);
     }
     
-    console.log(`[callMerchantWebhook] Sending ${urlType} ${eventData.event} to ${url}`);
-    console.log(`[callMerchantWebhook] Signature included: ${!!webhookSecret}`);
+    webhookLogs.info(`[callMerchantWebhook] Sending ${urlType} ${eventData.event} to ${url}`);
+    webhookLogs.info(`[callMerchantWebhook] Signature included: ${!!webhookSecret}`);
     // Log payload for debugging (truncate large payloads)
     const payloadStr = JSON.stringify(webhookPayload);
-    console.log(`[callMerchantWebhook] Payload (${payloadStr.length} bytes): ${payloadStr.substring(0, 500)}${payloadStr.length > 500 ? '...' : ''}`);
+    webhookLogs.info(`[callMerchantWebhook] Payload (${payloadStr.length} bytes): ${payloadStr.substring(0, 500)}${payloadStr.length > 500 ? '...' : ''}`);
     
     // Send webhook with timeout and retry
     const maxRetries = 3;
@@ -283,7 +283,7 @@ const callUrlWithPayload = async (
         const responseTimeMs = Date.now() - startTime;
         finalResponseStatus = response.status;
         
-        console.log(`[callMerchantWebhook] ✅ ${urlType} sent successfully, status: ${response.status}`);
+        webhookLogs.info(`[callMerchantWebhook] ✅ ${urlType} sent successfully, status: ${response.status}`);
         
         // Log successful delivery
         if (companyId) {
@@ -324,9 +324,9 @@ const callUrlWithPayload = async (
         
         // Don't retry on client errors (4xx) except 429 (rate limit)
         if (finalResponseStatus && finalResponseStatus >= 400 && finalResponseStatus < 500 && finalResponseStatus !== 429) {
-          console.error(`[callMerchantWebhook] ❌ Client error ${finalResponseStatus}, not retrying: ${errorMessage}`);
+          webhookLogs.error(`[callMerchantWebhook] ❌ Client error ${finalResponseStatus}, not retrying: ${errorMessage}`);
           if (responseBodyStr) {
-            console.error(`[callMerchantWebhook] ❌ Response body: ${responseBodyStr.substring(0, 500)}`);
+            webhookLogs.error(`[callMerchantWebhook] ❌ Response body: ${responseBodyStr.substring(0, 500)}`);
           }
           // Include response body in error message for caller
           if (responseBodyStr) {
@@ -337,7 +337,7 @@ const callUrlWithPayload = async (
         
         if (attempt < maxRetries) {
           const delay = 1000 * Math.pow(2, attempt - 1); // Exponential backoff: 1s, 2s, 4s
-          console.warn(`[callMerchantWebhook] ⚠️ Attempt ${attempt} failed, retrying in ${delay}ms: ${errorMessage}`);
+          webhookLogs.warn(`[callMerchantWebhook] ⚠️ Attempt ${attempt} failed, retrying in ${delay}ms: ${errorMessage}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -346,7 +346,7 @@ const callUrlWithPayload = async (
     // All retries failed - log the failure
     const responseTimeMs = Date.now() - startTime;
     const finalErrorMessage = lastError?.message || 'Unknown error';
-    console.error(`[callMerchantWebhook] ❌ ${urlType} failed after ${maxRetries} attempts: ${finalErrorMessage}`);
+    webhookLogs.error(`[callMerchantWebhook] ❌ ${urlType} failed after ${maxRetries} attempts: ${finalErrorMessage}`);
     
     if (companyId) {
       await logWebhookDelivery(
@@ -367,7 +367,7 @@ const callUrlWithPayload = async (
     
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.error(`[callMerchantWebhook] Error in callUrlWithPayload: ${err.message}`);
+    webhookLogs.error(`[callMerchantWebhook] Error in callUrlWithPayload: ${err.message}`);
     return { success: false, error: err.message || 'Unknown error', url };
   }
 };
@@ -387,14 +387,14 @@ const flutterwaveWebHook = async (
       ? payload.txRef
       : "flw-txt-" + payload.txRef;
     const items = await getRedisItem(txRef);
-    console.log("here==========>", payload.id, payload.status, items);
+    webhookLogs.info("here==========>", payload.id, payload.status, items);
     await setRedisItem(txRef, {
       ...items,
       id: payload.id,
       status: payload.status,
     });
 
-    console.log("IWebHook=============>", payload);
+    webhookLogs.info("IWebHook=============>", payload);
     res.status(200).end();
   } catch (e) {
     const message = getErrorMessage(e);
@@ -411,7 +411,7 @@ const tatumWebHook = async (req: express.Request, res: express.Response) => {
     address = payload.counterAddress;
     items = await getRedisItem("crypto-" + address);
   }
-  console.log("items===========>", items, payload);
+  webhookLogs.info("items===========>", items, payload);
   let newPayload;
   if (Object.keys(items).length > 0) {
     if (
@@ -422,7 +422,7 @@ const tatumWebHook = async (req: express.Request, res: express.Response) => {
         ...items,
         status: "successful",
       };
-      console.log("here payload");
+      webhookLogs.info("here payload");
     } else {
       newPayload = {
         ...items,
@@ -457,7 +457,7 @@ const tatumCryptoWebHook = async (
     const queryUserId = req.query.user_id ? Number(req.query.user_id) : null;
     const queryAddressId = req.query.address_id ? Number(req.query.address_id) : null;
 
-    console.log("[tatumCryptoWebHook] Received webhook:", {
+    webhookLogs.info("[tatumCryptoWebHook] Received webhook:", {
       address: payload.address,
       amount: payload.amount,
       currency: (payload as unknown as Record<string, unknown>).currency || payload.asset,
@@ -473,7 +473,7 @@ const tatumCryptoWebHook = async (
     
     const alreadyProcessed = await getRedisItem(processedTxKey);
     if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
-      console.log("[tatumCryptoWebHook] Transaction already processed, ignoring duplicate:", payload.txId);
+      webhookLogs.info("[tatumCryptoWebHook] Transaction already processed, ignoring duplicate:", payload.txId);
       return res.status(200).end();
     }
 
@@ -482,15 +482,15 @@ const tatumCryptoWebHook = async (
     const { acquireLock, releaseLock } = await import("../utils/redisInstance");
     const lockAcquired = await acquireLock(`tatum-webhook-${payload.txId}`, 300, 1, 50);
     if (!lockAcquired) {
-      console.log("[tatumCryptoWebHook] Transaction already being processed by another request (atomic lock), ignoring:", payload.txId);
+      webhookLogs.info("[tatumCryptoWebHook] Transaction already being processed by another request (atomic lock), ignoring:", payload.txId);
       return res.status(200).end();
     }
-    console.log("[tatumCryptoWebHook] Acquired atomic processing lock for tx:", payload.txId);
+    webhookLogs.info("[tatumCryptoWebHook] Acquired atomic processing lock for tx:", payload.txId);
 
     // Skip outgoing transactions to admin/fee wallets (e.g. sweep or gas funding)
     const counterAddr = (payload.counterAddress || "").toLowerCase();
     if (counterAddr && INTERNAL_WALLETS.has(counterAddr)) {
-      console.log(`[tatumCryptoWebHook] Ignoring internal transfer (sweep/gas) to admin wallet: ${payload.counterAddress}`);
+      webhookLogs.info(`[tatumCryptoWebHook] Ignoring internal transfer (sweep/gas) to admin wallet: ${payload.counterAddress}`);
       await setRedisItem(processedTxKey, { processed: true, type: "internal_sweep", timestamp: new Date().toISOString() });
       await setRedisTTL(processedTxKey, 86400);
       return res.status(200).end();
@@ -509,12 +509,12 @@ const tatumCryptoWebHook = async (
     if (isMasterAddress || (!items || Object.keys(items).length === 0)) {
       // Check if this is a payment to the XRP/RLUSD master address
       if (isMasterAddress && payload.txId) {
-        console.log(`[tatumCryptoWebHook] Master address detected, fetching destination tag from tx ${payload.txId}...`);
+        webhookLogs.info(`[tatumCryptoWebHook] Master address detected, fetching destination tag from tx ${payload.txId}...`);
         resolvedDestinationTag = await tatumApi.getXrpDestinationTag(payload.txId);
         
         if (resolvedDestinationTag !== null) {
           const tagRedisKey = getCryptoRedisKey(address, resolvedDestinationTag);
-          console.log(`[tatumCryptoWebHook] Destination tag: ${resolvedDestinationTag}, Redis key: ${tagRedisKey}`);
+          webhookLogs.info(`[tatumCryptoWebHook] Destination tag: ${resolvedDestinationTag}, Redis key: ${tagRedisKey}`);
           items = await getRedisItem(tagRedisKey);
         } else {
           // ═══════════════════════════════════════════════════════════════════
@@ -523,12 +523,12 @@ const tatumCryptoWebHook = async (
           // We can't attribute this to any specific customer payment.
           // Log prominently + alert admin for manual reconciliation.
           // ═══════════════════════════════════════════════════════════════════
-          console.error(`[tatumCryptoWebHook] ⚠️ TAGLESS XRP PAYMENT DETECTED!`);
-          console.error(`[tatumCryptoWebHook]   TX: ${payload.txId}`);
-          console.error(`[tatumCryptoWebHook]   Amount: ${payload.amount}`);
-          console.error(`[tatumCryptoWebHook]   From: ${payload.counterAddress || 'unknown'}`);
-          console.error(`[tatumCryptoWebHook]   Master Address: ${address}`);
-          console.error(`[tatumCryptoWebHook]   ACTION REQUIRED: Manual reconciliation needed — payment cannot be attributed without destination tag`);
+          webhookLogs.error(`[tatumCryptoWebHook] ⚠️ TAGLESS XRP PAYMENT DETECTED!`);
+          webhookLogs.error(`[tatumCryptoWebHook]   TX: ${payload.txId}`);
+          webhookLogs.error(`[tatumCryptoWebHook]   Amount: ${payload.amount}`);
+          webhookLogs.error(`[tatumCryptoWebHook]   From: ${payload.counterAddress || 'unknown'}`);
+          webhookLogs.error(`[tatumCryptoWebHook]   Master Address: ${address}`);
+          webhookLogs.error(`[tatumCryptoWebHook]   ACTION REQUIRED: Manual reconciliation needed — payment cannot be attributed without destination tag`);
           
           // Try to match by looking for pending payments with expected amount
           try {
@@ -544,22 +544,22 @@ const tatumCryptoWebHook = async (
               limit: 5,
             });
             if (possibleMatches.length > 0) {
-              console.error(`[tatumCryptoWebHook] 📋 Possible matches (${possibleMatches.length} active reservations):`);
+              webhookLogs.error(`[tatumCryptoWebHook] 📋 Possible matches (${possibleMatches.length} active reservations):`);
               for (const m of possibleMatches) {
-                console.error(`[tatumCryptoWebHook]   - tag:${m.dataValues.destination_tag} expected:${m.dataValues.expected_amount} payment:${m.dataValues.current_payment_id}`);
+                webhookLogs.error(`[tatumCryptoWebHook]   - tag:${m.dataValues.destination_tag} expected:${m.dataValues.expected_amount} payment:${m.dataValues.current_payment_id}`);
               }
             } else {
-              console.error(`[tatumCryptoWebHook] 📋 No active reservations found for master address — truly orphaned tagless payment`);
+              webhookLogs.error(`[tatumCryptoWebHook] 📋 No active reservations found for master address — truly orphaned tagless payment`);
             }
           } catch (matchErr) {
-            console.error(`[tatumCryptoWebHook] Failed to look up possible matches:`, matchErr);
+            webhookLogs.error(`[tatumCryptoWebHook] Failed to look up possible matches:`, matchErr);
           }
         }
       }
     }
 
     if (!items || Object.keys(items).length === 0) {
-      console.log("[tatumCryptoWebHook] No Redis data for primary address, checking counterAddress");
+      webhookLogs.info("[tatumCryptoWebHook] No Redis data for primary address, checking counterAddress");
       address = payload.counterAddress;
       items = await getRedisItem("crypto-" + address);
       
@@ -576,7 +576,7 @@ const tatumCryptoWebHook = async (
     }
 
     if (!items || Object.keys(items).length === 0) {
-      console.log("[tatumCryptoWebHook] No Redis data found, ignoring webhook");
+      webhookLogs.info("[tatumCryptoWebHook] No Redis data found, ignoring webhook");
       return res.status(200).end();
     }
     
@@ -588,14 +588,14 @@ const tatumCryptoWebHook = async (
     // BLOCKBEE STYLE: Enrich items with company info from URL if not present
     if (queryCompanyId && !items.company_id) {
       items.company_id = queryCompanyId;
-      console.log(`[tatumCryptoWebHook] Added company_id from URL: ${queryCompanyId}`);
+      webhookLogs.info(`[tatumCryptoWebHook] Added company_id from URL: ${queryCompanyId}`);
     }
     if (queryUserId && !items.user_id) {
       items.user_id = queryUserId;
-      console.log(`[tatumCryptoWebHook] Added user_id from URL: ${queryUserId}`);
+      webhookLogs.info(`[tatumCryptoWebHook] Added user_id from URL: ${queryUserId}`);
     }
 
-    console.log("[tatumCryptoWebHook] Redis data found:", {
+    webhookLogs.info("[tatumCryptoWebHook] Redis data found:", {
       currency: items.currency,
       expectedAmount: items.amount,
       payment_id: items.payment_id,
@@ -605,7 +605,7 @@ const tatumCryptoWebHook = async (
 
     const incomingAmount = Number(payload.amount);
     if (!Number.isFinite(incomingAmount) || incomingAmount <= 0) {
-      console.log("[tatumCryptoWebHook] Invalid amount, ignoring");
+      webhookLogs.info("[tatumCryptoWebHook] Invalid amount, ignoring");
       return res.status(200).end();
     }
 
@@ -620,7 +620,7 @@ const tatumCryptoWebHook = async (
     
     // Skip if payment is already successful (prevents duplicate processing from merchant payout webhooks)
     if (isAlreadySuccessful) {
-      console.log("[tatumCryptoWebHook] Payment already successful, ignoring webhook for tx:", payload.txId);
+      webhookLogs.info("[tatumCryptoWebHook] Payment already successful, ignoring webhook for tx:", payload.txId);
       return res.status(200).end();
     }
 
@@ -635,8 +635,8 @@ const tatumCryptoWebHook = async (
       (Date.now() - new Date(items.lastAttempt as string).getTime()) > 60000; // 1+ minute stale
 
     if (isStaleProcessing && incomingAmount > 0) {
-      console.log("[tatumCryptoWebHook] ⚠️ CRASH RECOVERY: Payment stuck in 'processing' state");
-      console.log(`[tatumCryptoWebHook] Recovery: payment_id=${items.payment_id}, stale since ${items.lastAttempt}`);
+      webhookLogs.info("[tatumCryptoWebHook] ⚠️ CRASH RECOVERY: Payment stuck in 'processing' state");
+      webhookLogs.info(`[tatumCryptoWebHook] Recovery: payment_id=${items.payment_id}, stale since ${items.lastAttempt}`);
       
       try {
         // Re-attempt cryptoVerification — it handles settlement + webhook + emails
@@ -647,7 +647,7 @@ const tatumCryptoWebHook = async (
         if (recoveryResult && recoveryResult.status && recoveryResult.status >= 400) {
           throw new Error(`Recovery cryptoVerification returned error status ${recoveryResult.status}: ${recoveryResult.message || 'Settlement failed'}`);
         }
-        console.log("[tatumCryptoWebHook] ✅ Recovery: cryptoVerification completed successfully");
+        webhookLogs.info("[tatumCryptoWebHook] ✅ Recovery: cryptoVerification completed successfully");
         
         // Mark as successful
         await setRedisItem(redisKey, {
@@ -670,12 +670,12 @@ const tatumCryptoWebHook = async (
         });
         await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
         
-        console.log("[tatumCryptoWebHook] ✅ Recovery complete, Redis updated");
+        webhookLogs.info("[tatumCryptoWebHook] ✅ Recovery complete, Redis updated");
 
       } catch (recoveryError: unknown) {
         const err = recoveryError as { message?: string };
-        console.error("[tatumCryptoWebHook] ⚠️ Recovery cryptoVerification failed (settlement likely already on-chain):", err.message);
-        console.log("[tatumCryptoWebHook] Attempting direct webhook delivery as recovery fallback...");
+        webhookLogs.error("[tatumCryptoWebHook] ⚠️ Recovery cryptoVerification failed (settlement likely already on-chain):", err.message);
+        webhookLogs.info("[tatumCryptoWebHook] Attempting direct webhook delivery as recovery fallback...");
         
         // Settlement already happened on-chain but cryptoVerification can't re-run.
         // Send the payment.confirmed webhook directly so the merchant isn't left in the dark.
@@ -728,13 +728,13 @@ const tatumCryptoWebHook = async (
             });
             
             if (recoveryWebhookResult.success) {
-              console.log("[tatumCryptoWebHook] ✅ Recovery: Direct webhook sent successfully");
+              webhookLogs.info("[tatumCryptoWebHook] ✅ Recovery: Direct webhook sent successfully");
             } else {
-              console.error(`[tatumCryptoWebHook] ❌ Recovery: Direct webhook failed: ${recoveryWebhookResult.error}`);
+              webhookLogs.error(`[tatumCryptoWebHook] ❌ Recovery: Direct webhook failed: ${recoveryWebhookResult.error}`);
             }
           }
         } catch (webhookErr) {
-          console.error("[tatumCryptoWebHook] ❌ Recovery: Direct webhook error:", webhookErr);
+          webhookLogs.error("[tatumCryptoWebHook] ❌ Recovery: Direct webhook error:", webhookErr);
         }
         
         // Mark as recovered to prevent infinite recovery loops
@@ -756,7 +756,7 @@ const tatumCryptoWebHook = async (
         });
         await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
         
-        console.log("[tatumCryptoWebHook] ✅ Recovery: Marked as recovered, Redis updated");
+        webhookLogs.info("[tatumCryptoWebHook] ✅ Recovery: Marked as recovered, Redis updated");
       }
       
       return res.status(200).end();
@@ -764,10 +764,10 @@ const tatumCryptoWebHook = async (
 
     if ((isFirstTransaction || isCompletionPayment) && incomingAmount > 0) {
       if (isCompletionPayment) {
-        console.log("[tatumCryptoWebHook] COMPLETION payment detected for underpayment!");
-        console.log(`[tatumCryptoWebHook] Previous txId: ${items.txId}, New txId: ${payload.txId}`);
+        webhookLogs.info("[tatumCryptoWebHook] COMPLETION payment detected for underpayment!");
+        webhookLogs.info(`[tatumCryptoWebHook] Previous txId: ${items.txId}, New txId: ${payload.txId}`);
       } else {
-        console.log("[tatumCryptoWebHook] First transaction detected, processing...");
+        webhookLogs.info("[tatumCryptoWebHook] First transaction detected, processing...");
       }
       
       // Get customer data - try from Redis first, then fallback to temp_id lookup
@@ -775,7 +775,7 @@ const tatumCryptoWebHook = async (
       
       // If customerData is empty, try to reconstruct from temp address
       if (!customerData || Object.keys(customerData).length === 0) {
-        console.log("[tatumCryptoWebHook] CustomerData empty from Redis, fetching from DB...");
+        webhookLogs.info("[tatumCryptoWebHook] CustomerData empty from Redis, fetching from DB...");
         try {
           const tempId = items?.temp_id;
           if (tempId) {
@@ -790,11 +790,11 @@ const tatumCryptoWebHook = async (
                 adm_id: tempAddr.owner_user_id,
                 company_id: tempAddr.current_company_id,
               };
-              console.log("[tatumCryptoWebHook] Reconstructed customerData from temp address:", customerData);
+              webhookLogs.info("[tatumCryptoWebHook] Reconstructed customerData from temp address:", customerData);
             }
           }
         } catch (dbErr) {
-          console.error("[tatumCryptoWebHook] Error fetching customerData from DB:", dbErr);
+          webhookLogs.error("[tatumCryptoWebHook] Error fetching customerData from DB:", dbErr);
         }
       }
       
@@ -804,7 +804,7 @@ const tatumCryptoWebHook = async (
       if (customerData) {
         if (!customerData.webhook_url && items?.webhook_url) {
           customerData.webhook_url = items.webhook_url;
-          console.log(`[tatumCryptoWebHook] Merged webhook_url from crypto-{address}: ${items.webhook_url}`);
+          webhookLogs.info(`[tatumCryptoWebHook] Merged webhook_url from crypto-{address}: ${items.webhook_url}`);
         }
         if (!customerData.callback_url && items?.callback_url) {
           customerData.callback_url = items.callback_url;
@@ -830,7 +830,7 @@ const tatumCryptoWebHook = async (
             items?.currency || payload.asset,
             customerData
           );
-          console.log("[tatumCryptoWebHook] Pending notification sent successfully");
+          webhookLogs.info("[tatumCryptoWebHook] Pending notification sent successfully");
           
           // Call merchant webhook if configured (for pending state)
           // ENHANCED: Include customer details and payment context
@@ -858,13 +858,13 @@ const tatumCryptoWebHook = async (
             timestamp: new Date().toISOString(),
           });
           if (!pendingWebhookResult.success) {
-            console.error(`[tatumCryptoWebHook] Pending webhook failed: ${pendingWebhookResult.error}`);
+            webhookLogs.error(`[tatumCryptoWebHook] Pending webhook failed: ${pendingWebhookResult.error}`);
           }
         } catch (notifError) {
-          console.error("[tatumCryptoWebHook] Error sending pending notification:", notifError);
+          webhookLogs.error("[tatumCryptoWebHook] Error sending pending notification:", notifError);
         }
       } else {
-        console.warn("[tatumCryptoWebHook] No customerData available, skipping pending notification");
+        webhookLogs.warn("[tatumCryptoWebHook] No customerData available, skipping pending notification");
       }
 
       // Check if this is an underpayment BEFORE processing
@@ -878,7 +878,7 @@ const tatumCryptoWebHook = async (
         totalReceivedAmount = previousAmount + incomingAmount;
         // Use original expected amount for comparison (since items.amount is now the remaining)
         expectedAmount = parseFloat(items?.originalExpectedAmount || '0') || (expectedAmount + previousAmount);
-        console.log(`[tatumCryptoWebHook] Completion payment cumulative: 
+        webhookLogs.info(`[tatumCryptoWebHook] Completion payment cumulative: 
           - Previous: ${previousAmount} ${items?.currency || payload.asset}
           - New: ${incomingAmount} ${items?.currency || payload.asset}
           - Total: ${totalReceivedAmount} ${items?.currency || payload.asset}
@@ -919,7 +919,7 @@ const tatumCryptoWebHook = async (
               merchantGracePeriodMinutes = Math.min(parseInt(String(company.dataValues.grace_period_minutes)), 30);
             }
           } catch (e) {
-            console.log("[tatumCryptoWebHook] Could not fetch merchant settings:", e);
+            webhookLogs.info("[tatumCryptoWebHook] Could not fetch merchant settings:", e);
           }
         }
       }
@@ -930,7 +930,7 @@ const tatumCryptoWebHook = async (
       const linkIdForThreshold = customerData?.link_id || items?.link_id || null;
       const isMinorUnderpayment = isUnderpayment && !!linkIdForThreshold && underpaymentAmountUsd <= underpaymentThresholdUsd;
       
-      console.log(`[tatumCryptoWebHook] Payment analysis:
+      webhookLogs.info(`[tatumCryptoWebHook] Payment analysis:
         - Expected: ${expectedAmount} ${items?.currency || payload.asset}
         - Received (this payment): ${incomingAmount} ${items?.currency || payload.asset}
         - Total Received: ${totalReceivedAmount} ${items?.currency || payload.asset}
@@ -951,8 +951,8 @@ const tatumCryptoWebHook = async (
           // DIRECT API: Process immediately with actual received amount
           // Whatever is received gets processed — funds split between merchant and admin
           // If below forwarding threshold, all goes to admin
-          console.log(`[tatumCryptoWebHook] UNDERPAYMENT on DIRECT API — processing immediately with received amount`);
-          console.log(`[tatumCryptoWebHook]   Expected: ${expectedAmount}, Received: ${totalReceivedAmount}, Shortfall: ${(expectedAmount - totalReceivedAmount).toFixed(8)}`);
+          webhookLogs.info(`[tatumCryptoWebHook] UNDERPAYMENT on DIRECT API — processing immediately with received amount`);
+          webhookLogs.info(`[tatumCryptoWebHook]   Expected: ${expectedAmount}, Received: ${totalReceivedAmount}, Shortfall: ${(expectedAmount - totalReceivedAmount).toFixed(8)}`);
           
           // Update Redis with actual received amount so cryptoVerification uses it
           await setRedisItem(redisKey, {
@@ -989,9 +989,9 @@ const tatumCryptoWebHook = async (
               timestamp: new Date().toISOString(),
             });
             if (underpaidWebhookResult.success) {
-              console.log("[tatumCryptoWebHook] ✅ Direct API underpaid notification sent");
+              webhookLogs.info("[tatumCryptoWebHook] ✅ Direct API underpaid notification sent");
             } else {
-              console.error(`[tatumCryptoWebHook] ❌ Direct API underpaid notification failed: ${underpaidWebhookResult.error}`);
+              webhookLogs.error(`[tatumCryptoWebHook] ❌ Direct API underpaid notification failed: ${underpaidWebhookResult.error}`);
             }
           }
           
@@ -999,11 +999,11 @@ const tatumCryptoWebHook = async (
           // cryptoVerification will handle fund distribution:
           //   - Above min forwarding threshold: split between merchant and admin
           //   - Below min forwarding threshold: 100% to admin
-          console.log("[tatumCryptoWebHook] Direct API underpayment — falling through to cryptoVerification");
+          webhookLogs.info("[tatumCryptoWebHook] Direct API underpayment — falling through to cryptoVerification");
           
         } else {
           // PAYMENT LINK: Wait for remaining payment (existing behavior)
-          console.log("[tatumCryptoWebHook] UNDERPAYMENT on PAYMENT LINK — setting incomplete flag, waiting for remaining");
+          webhookLogs.info("[tatumCryptoWebHook] UNDERPAYMENT on PAYMENT LINK — setting incomplete flag, waiting for remaining");
           
           const remainingAmount = expectedAmount - totalReceivedAmount;
           
@@ -1024,7 +1024,7 @@ const tatumCryptoWebHook = async (
           
           // Set TTL for underpayment grace period (merchant-specific, max 30 minutes)
           const graceTtlSeconds = merchantGracePeriodMinutes * 60;
-          console.log(`[tatumCryptoWebHook] Setting grace period TTL: ${merchantGracePeriodMinutes} minutes (${graceTtlSeconds}s) for company ${customerData?.company_id}`);
+          webhookLogs.info(`[tatumCryptoWebHook] Setting grace period TTL: ${merchantGracePeriodMinutes} minutes (${graceTtlSeconds}s) for company ${customerData?.company_id}`);
           await setRedisTTL(redisKey, graceTtlSeconds);
           
           // Send underpayment webhook to merchant
@@ -1053,27 +1053,27 @@ const tatumCryptoWebHook = async (
               timestamp: new Date().toISOString(),
             });
             if (underpaidWebhookResult.success) {
-              console.log("[tatumCryptoWebHook] ✅ Payment link underpayment webhook sent to merchant");
+              webhookLogs.info("[tatumCryptoWebHook] ✅ Payment link underpayment webhook sent to merchant");
             } else {
-              console.error(`[tatumCryptoWebHook] ❌ Payment link underpayment webhook failed: ${underpaidWebhookResult.error}`);
+              webhookLogs.error(`[tatumCryptoWebHook] ❌ Payment link underpayment webhook failed: ${underpaidWebhookResult.error}`);
             }
           }
           
-          console.log("[tatumCryptoWebHook] Payment link underpayment recorded, waiting for remaining payment");
+          webhookLogs.info("[tatumCryptoWebHook] Payment link underpayment recorded, waiting for remaining payment");
           return res.status(200).end();
         }
       }
       
       // Log if minor underpayment was accepted
       if (isMinorUnderpayment) {
-        console.log(`[tatumCryptoWebHook] Minor underpayment ($${underpaymentAmountUsd.toFixed(2)}) within threshold ($${underpaymentThresholdUsd}) - accepting as full payment`);
+        webhookLogs.info(`[tatumCryptoWebHook] Minor underpayment ($${underpaymentAmountUsd.toFixed(2)}) within threshold ($${underpaymentThresholdUsd}) - accepting as full payment`);
       }
       
       // FULL, OVERPAYMENT, MINOR UNDERPAYMENT, or DIRECT API UNDERPAYMENT: Process normally
       // For completion payments or Direct API underpayments, use totalReceivedAmount
       const isDirectApiUnderpayment = isUnderpayment && !isMinorUnderpayment && !(customerData?.link_id || items?.link_id);
       const finalReceivedAmount = (isCompletionPayment || isDirectApiUnderpayment) ? totalReceivedAmount : incomingAmount;
-      console.log("[tatumCryptoWebHook] Calling cryptoVerification for address:", address, "final amount:", finalReceivedAmount);
+      webhookLogs.info("[tatumCryptoWebHook] Calling cryptoVerification for address:", address, "final amount:", finalReceivedAmount);
       
       // Hard failures that should NOT be retried
       const NON_RETRYABLE_ERRORS = [
@@ -1118,7 +1118,7 @@ const tatumCryptoWebHook = async (
             if (verifyResult && verifyResult.status && verifyResult.status >= 400) {
               throw new Error(`cryptoVerification returned error status ${verifyResult.status}: ${verifyResult.message || 'Settlement failed'}`);
             }
-            console.log("[tatumCryptoWebHook] cryptoVerification completed successfully");
+            webhookLogs.info("[tatumCryptoWebHook] cryptoVerification completed successfully");
             lastError = null;
             break;
           } catch (retryError: unknown) {
@@ -1127,14 +1127,14 @@ const tatumCryptoWebHook = async (
             
             // SMART RETRY: Check if error is retryable
             if (!isRetryable(lastError)) {
-              console.error(`[tatumCryptoWebHook] Non-retryable error, stopping: ${err.message}`);
+              webhookLogs.error(`[tatumCryptoWebHook] Non-retryable error, stopping: ${err.message}`);
               break; // Don't retry hard failures
             }
             
             if (attempt < maxRetries) {
               const waitTime = 2000 * Math.pow(2, attempt - 1); // Exponential backoff: 2s, 4s, 8s
-              console.warn(`[tatumCryptoWebHook] cryptoVerification failed (attempt ${attempt}/${maxRetries}): ${err.message}`);
-              console.warn(`[tatumCryptoWebHook] Retrying in ${waitTime}ms...`);
+              webhookLogs.warn(`[tatumCryptoWebHook] cryptoVerification failed (attempt ${attempt}/${maxRetries}): ${err.message}`);
+              webhookLogs.warn(`[tatumCryptoWebHook] Retrying in ${waitTime}ms...`);
               
               // Update retry state in Redis (persistence)
               await setRedisItem(redisKey, {
@@ -1194,15 +1194,15 @@ const tatumCryptoWebHook = async (
         });
         await setRedisTTL(`processed-tx-${payload.txId}`, 172800); // 48 hours TTL
         
-        console.log("[tatumCryptoWebHook] Redis updated with txId after successful processing");
+        webhookLogs.info("[tatumCryptoWebHook] Redis updated with txId after successful processing");
         
         // NOTE: Merchant webhook is sent by cryptoVerification, NOT here
         // This prevents duplicate webhook delivery
-        console.log("[tatumCryptoWebHook] Payment confirmed - webhook handled by cryptoVerification");
+        webhookLogs.info("[tatumCryptoWebHook] Payment confirmed - webhook handled by cryptoVerification");
 
       } catch (verifyError: unknown) {
         const err = verifyError as { message?: string };
-        console.error("[tatumCryptoWebHook] Error in cryptoVerification after retries:", verifyError);
+        webhookLogs.error("[tatumCryptoWebHook] Error in cryptoVerification after retries:", verifyError);
         
         // PERSISTENCE: Store failed state for manual recovery or cron retry
         await setRedisItem(redisKey, {
@@ -1227,13 +1227,13 @@ const tatumCryptoWebHook = async (
         throw verifyError;
       }
     } else {
-      console.log("[tatumCryptoWebHook] Duplicate transaction or txId already exists, ignoring");
+      webhookLogs.info("[tatumCryptoWebHook] Duplicate transaction or txId already exists, ignoring");
     }
     // If txId already exists, this is a duplicate/retry - ignore it
 
     return res.status(200).end();
   } catch (error) {
-    console.error("[tatumCryptoWebHook] Webhook error:", error);
+    webhookLogs.error("[tatumCryptoWebHook] Webhook error:", error);
     return res.status(200).end();
   }
 };

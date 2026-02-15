@@ -67,7 +67,7 @@ export class CircuitBreaker {
         // Transition to HALF_OPEN to test service
         this.state = CircuitState.HALF_OPEN;
         this.successCount = 0;
-        console.log(`${this.options.name}: Circuit breaker transitioning to HALF_OPEN`);
+        cronLogger.info(`${this.options.name}: Circuit breaker transitioning to HALF_OPEN`);
       }
     }
     
@@ -106,7 +106,7 @@ export class CircuitBreaker {
       if (this.successCount >= this.options.successThreshold) {
         this.state = CircuitState.CLOSED;
         this.successCount = 0;
-        console.log(`${this.options.name}: Circuit breaker CLOSED (service recovered)`);
+        cronLogger.info(`${this.options.name}: Circuit breaker CLOSED (service recovered)`);
       }
     }
   }
@@ -122,12 +122,12 @@ export class CircuitBreaker {
       // Failed during testing, reopen circuit
       this.state = CircuitState.OPEN;
       this.nextAttemptTime = Date.now() + this.options.resetTimeout;
-      console.error(`${this.options.name}: Circuit breaker reopened (test failed)`);
+      cronLogger.error(`${this.options.name}: Circuit breaker reopened (test failed)`);
     } else if (this.failureCount >= this.options.failureThreshold) {
       // Too many failures, open circuit
       this.state = CircuitState.OPEN;
       this.nextAttemptTime = Date.now() + this.options.resetTimeout;
-      console.error(
+      cronLogger.error(
         `${this.options.name}: Circuit breaker OPENED ` +
         `(${this.failureCount} failures, threshold: ${this.options.failureThreshold})`
       );
@@ -157,7 +157,7 @@ export class CircuitBreaker {
     this.successCount = 0;
     this.lastFailureTime = null;
     this.nextAttemptTime = null;
-    console.log(`${this.options.name}: Circuit breaker manually reset`);
+    cronLogger.info(`${this.options.name}: Circuit breaker manually reset`);
   }
   
   /**

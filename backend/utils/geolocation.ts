@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { apiLogger } from "../utils/loggers";
 import express from 'express';
 import { IncomingHttpHeaders } from 'http';
 
@@ -73,7 +74,7 @@ export const getCountryFromIP = async (ip: string, headers?: HeadersType): Promi
     // First, try Cloudflare header (most reliable if using CF)
     const cfCountry = getHeaderValue(headers, 'cf-ipcountry');
     if (cfCountry && cfCountry !== 'XX' && cfCountry !== 'T1') {
-      console.log(`[Geolocation] Country from Cloudflare header: ${cfCountry}`);
+      apiLogger.info(`[Geolocation] Country from Cloudflare header: ${cfCountry}`);
       return {
         country_code: cfCountry,
         country_name: COUNTRY_NAMES[cfCountry] || cfCountry,
@@ -84,12 +85,12 @@ export const getCountryFromIP = async (ip: string, headers?: HeadersType): Promi
 
     // Skip API call for localhost/private IPs
     if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
-      console.log('[Geolocation] Private/localhost IP detected, cannot determine country');
+      apiLogger.info('[Geolocation] Private/localhost IP detected, cannot determine country');
       return null;
     }
 
     // Use ip-api.com (free, no key required, 45 requests/minute)
-    console.log(`[Geolocation] Fetching country for IP: ${ip}`);
+    apiLogger.info(`[Geolocation] Fetching country for IP: ${ip}`);
     const response = await axios.get(`http://ip-api.com/json/${ip}`, {
       timeout: 5000,
       params: {
@@ -98,7 +99,7 @@ export const getCountryFromIP = async (ip: string, headers?: HeadersType): Promi
     });
 
     if (response.data.status === 'success') {
-      console.log(`[Geolocation] Detected country: ${response.data.country} (${response.data.countryCode})`);
+      apiLogger.info(`[Geolocation] Detected country: ${response.data.country} (${response.data.countryCode})`);
       return {
         country_code: response.data.countryCode,
         country_name: response.data.country,
@@ -109,12 +110,12 @@ export const getCountryFromIP = async (ip: string, headers?: HeadersType): Promi
       };
     }
 
-    console.log(`[Geolocation] ip-api.com failed: ${response.data.message}`);
+    apiLogger.info(`[Geolocation] ip-api.com failed: ${response.data.message}`);
     return null;
     
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
-    console.error('[Geolocation] Failed to detect country:', errMsg);
+    apiLogger.error('[Geolocation] Failed to detect country:', errMsg);
     return null;
   }
 };
@@ -152,7 +153,7 @@ const TIMEZONE_TO_COUNTRY: Record<string, string> = {
 export const getCountryFromTimezone = (timezone: string): GeoLocationResult | null => {
   const countryCode = TIMEZONE_TO_COUNTRY[timezone];
   if (countryCode) {
-    console.log(`[Geolocation] Country from timezone ${timezone}: ${countryCode}`);
+    apiLogger.info(`[Geolocation] Country from timezone ${timezone}: ${countryCode}`);
     return {
       country_code: countryCode,
       country_name: COUNTRY_NAMES[countryCode] || countryCode,
@@ -164,7 +165,7 @@ export const getCountryFromTimezone = (timezone: string): GeoLocationResult | nu
   // Try to extract from timezone (e.g., "Europe/Lisbon" -> check Europe)
   if (timezone.startsWith('Europe/')) {
     // Default to GB for unknown European timezones
-    console.log(`[Geolocation] Unknown European timezone ${timezone}, defaulting to GB`);
+    apiLogger.info(`[Geolocation] Unknown European timezone ${timezone}, defaulting to GB`);
     return {
       country_code: 'GB',
       country_name: 'United Kingdom',

@@ -6,6 +6,7 @@
  */
 
 import axios from "axios";
+import { cronLogger } from "../utils/loggers";
 import { getRedisItem, setRedisItem } from "../utils/redisInstance";
 import { getTronNetworkParams } from "./tronEnergyService";
 
@@ -104,7 +105,7 @@ const fetchTatumFee = async (chain: string): Promise<unknown> => {
     return response.data;
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.error(`[BlockchainFeeService] Error fetching ${chain} fee:`, err.message);
+    cronLogger.error(`[BlockchainFeeService] Error fetching ${chain} fee:`, err.message);
     throw error;
   }
 };
@@ -125,7 +126,7 @@ const fetchTronFee = async (): Promise<unknown> => {
     };
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.warn('[BlockchainFeeService] tronEnergyService failed, trying Tatum API:', err.message);
+    cronLogger.warn('[BlockchainFeeService] tronEnergyService failed, trying Tatum API:', err.message);
     
     // Fallback to Tatum API
     const tatumKey = getTatumKey();
@@ -142,7 +143,7 @@ const fetchTronFee = async (): Promise<unknown> => {
       };
     } catch (tatumError: unknown) {
       const tErr = tatumError as { message?: string };
-      console.error('[BlockchainFeeService] Error fetching TRON fee:', tErr.message);
+      cronLogger.error('[BlockchainFeeService] Error fetching TRON fee:', tErr.message);
       // Post Proposal #104 fallback: 100 SUN/energy (was 420)
       return {
         chain: 'TRON',
@@ -203,20 +204,20 @@ const getCryptoPrice = async (symbol: string): Promise<number> => {
     }
     
     // If price is 0, use fallback
-    console.warn(`[BlockchainFeeService] Got 0 price for ${symbol}, using fallback`);
+    cronLogger.warn(`[BlockchainFeeService] Got 0 price for ${symbol}, using fallback`);
     return fallbackPrices[symbol] || 0;
   } catch (error: unknown) {
     const err = error as { response?: { status?: number }; message?: string };
     // Only log non-429 errors as errors (429 is expected rate limiting)
     if (err.response?.status === 429) {
-      console.warn(`[BlockchainFeeService] Rate limited fetching ${symbol} price, using fallback`);
+      cronLogger.warn(`[BlockchainFeeService] Rate limited fetching ${symbol} price, using fallback`);
     } else {
-      console.error(`[BlockchainFeeService] Error fetching ${symbol} price:`, err.message || error);
+      cronLogger.error(`[BlockchainFeeService] Error fetching ${symbol} price:`, err.message || error);
     }
     
     // Use cached price if available (even if stale)
     if (cached?.price) {
-      console.log(`[BlockchainFeeService] Using stale cached price for ${symbol}: ${cached.price}`);
+      cronLogger.info(`[BlockchainFeeService] Using stale cached price for ${symbol}: ${cached.price}`);
       return Number(cached.price);
     }
     
@@ -441,7 +442,7 @@ export const getAllBlockchainFees = async (): Promise<Record<string, BlockchainF
       try {
         results[chain] = await getBlockchainNetworkFee(chain);
       } catch (error) {
-        console.error(`[BlockchainFeeService] Failed to get fee for ${chain}:`, error);
+        cronLogger.error(`[BlockchainFeeService] Failed to get fee for ${chain}:`, error);
       }
     })
   );

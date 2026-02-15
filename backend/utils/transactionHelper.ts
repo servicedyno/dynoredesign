@@ -5,6 +5,7 @@
  */
 
 import sequelize from './dbInstance';
+import { apiLogger } from "../utils/loggers";
 import { Transaction } from 'sequelize';
 
 /**
@@ -44,17 +45,17 @@ export async function withPaymentTransaction<T>(
   const startTime = Date.now();
   
   try {
-    console.log(`[Transaction] Starting payment transaction for: ${paymentId}`);
+    apiLogger.info(`[Transaction] Starting payment transaction for: ${paymentId}`);
     
     const result = await withTransaction(callback);
     
     const duration = Date.now() - startTime;
-    console.log(`[Transaction] Payment transaction committed successfully: ${paymentId} (${duration}ms)`);
+    apiLogger.info(`[Transaction] Payment transaction committed successfully: ${paymentId} (${duration}ms)`);
     
     return result;
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error(
+    apiLogger.error(
       `[Transaction] Payment transaction rolled back: ${paymentId} (${duration}ms)`,
       error
     );
@@ -118,7 +119,7 @@ export async function withRetryableTransaction<T>(
       
       // Exponential backoff
       const delay = retryDelay * Math.pow(2, attempt - 1);
-      console.warn(
+      apiLogger.warn(
         `[Transaction] Retryable error detected, attempt ${attempt}/${maxRetries}. ` +
         `Retrying in ${delay}ms...`,
         errorMessage

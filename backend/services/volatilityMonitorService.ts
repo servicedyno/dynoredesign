@@ -15,6 +15,7 @@
  */
 
 import { setRedisItemWithTTL, getRedisItem } from "../utils/redisInstance";
+import { cronLogger } from "../utils/loggers";
 import { captureError } from "./errorMonitoringService";
 import {
   getKlines,
@@ -26,7 +27,7 @@ import {
 } from "./binanceWebSocketService";
 
 const LOG_PREFIX = "[VolatilityMonitor]";
-const log = (msg: string) => console.log(`${LOG_PREFIX} ${msg}`);
+const log = (msg: string) => cronLogger.info(`${LOG_PREFIX} ${msg}`);
 
 // ============================================
 // Market State Thresholds (unchanged from v1)
@@ -186,7 +187,7 @@ const maybeAlertAdmin = async (state: MarketState) => {
   log(`🚨 Sending admin alert for ${state.asset}: ${state.state}`);
 
   try {
-    console.warn(`\n${"=".repeat(60)}\n🚨 VOLATILITY ALERT: ${message}\n${"=".repeat(60)}\n`);
+    cronLogger.warn(`\n${"=".repeat(60)}\n🚨 VOLATILITY ALERT: ${message}\n${"=".repeat(60)}\n`);
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     log(`❌ Failed to send admin alert: ${errMsg}`);

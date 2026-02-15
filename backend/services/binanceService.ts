@@ -11,6 +11,7 @@
  */
 
 import crypto from "crypto";
+import { cronLogger } from "../utils/loggers";
 import axios, { AxiosError } from "axios";
 import { SocksProxyAgent } from "socks-proxy-agent";
 
@@ -33,7 +34,7 @@ const getBinanceProxyAgent = (): SocksProxyAgent | undefined => {
   try {
     return new SocksProxyAgent(BINANCE_PROXY_URL);
   } catch (err) {
-    console.error(`[Binance] Failed to create SOCKS proxy agent: ${err}`);
+    cronLogger.error(`[Binance] Failed to create SOCKS proxy agent: ${err}`);
     return undefined;
   }
 };
@@ -73,7 +74,7 @@ export const detectBinanceAccess = async (): Promise<void> => {
     });
     proxyNeeded = false;
     proxyDetectionFailed = false;
-    console.log(`[Binance] ✅ Direct access OK — non-US deployment detected. Proxy DISABLED (lower latency).`);
+    cronLogger.info(`[Binance] ✅ Direct access OK — non-US deployment detected. Proxy DISABLED (lower latency).`);
   } catch (err) {
     const axiosErr = err as AxiosError;
     const status = axiosErr.response?.status;
@@ -90,22 +91,22 @@ export const detectBinanceAccess = async (): Promise<void> => {
           });
           proxyNeeded = true;
           proxyDetectionFailed = false;
-          console.log(`[Binance] 🌍 Geo-blocked (HTTP ${status}) — US deployment detected. Proxy ENABLED: ${BINANCE_PROXY_URL}`);
+          cronLogger.info(`[Binance] 🌍 Geo-blocked (HTTP ${status}) — US deployment detected. Proxy ENABLED: ${BINANCE_PROXY_URL}`);
         } catch (proxyErr) {
           proxyNeeded = false;
           proxyDetectionFailed = true; // Allow retry — tunnel may come up later
-          console.warn(`[Binance] 🌍 Geo-blocked but proxy also failed. Proxy DISABLED (will retry next cycle).`);
+          cronLogger.warn(`[Binance] 🌍 Geo-blocked but proxy also failed. Proxy DISABLED (will retry next cycle).`);
         }
       } else {
         proxyNeeded = false;
         proxyDetectionFailed = false; // No proxy configured, no point retrying
-        console.warn(`[Binance] 🌍 Geo-blocked (HTTP ${status}) but no proxy configured. Will use REST fallbacks.`);
+        cronLogger.warn(`[Binance] 🌍 Geo-blocked (HTTP ${status}) but no proxy configured. Will use REST fallbacks.`);
       }
     } else {
       // Network error or other issue — try without proxy first
       proxyNeeded = false;
       proxyDetectionFailed = true; // Allow retry
-      console.warn(`[Binance] ⚠️ Direct ping failed (${axiosErr.message}), defaulting to no proxy. Will retry detection on next cycle.`);
+      cronLogger.warn(`[Binance] ⚠️ Direct ping failed (${axiosErr.message}), defaulting to no proxy. Will retry detection on next cycle.`);
     }
   }
 };
@@ -168,7 +169,7 @@ const makeSignedRequest = async (
     const axiosError = error as AxiosError<{ code?: number; msg?: string }>;
     const errMsg = axiosError.response?.data?.msg || axiosError.message;
     const errCode = axiosError.response?.data?.code;
-    console.error(`[Binance] ${method} ${endpoint} failed: [${errCode}] ${errMsg}`);
+    cronLogger.error(`[Binance] ${method} ${endpoint} failed: [${errCode}] ${errMsg}`);
     throw new Error(`Binance API error [${errCode || "NETWORK"}]: ${errMsg}`);
   }
 };
@@ -294,7 +295,7 @@ export const placeLimitIOCSell = async (
   const tickSize = priceFilter?.tickSize || "0.01";
   const roundedPrice = roundToStepSize(parseFloat(price), tickSize);
 
-  console.log(`[Binance] Limit IOC SELL ${roundedQty} ${symbol} @ ${roundedPrice}`);
+  cronLogger.info(`[Binance] Limit IOC SELL ${roundedQty} ${symbol} @ ${roundedPrice}`);
 
   const data = (await makeSignedRequest("POST", "/api/v3/order", {
     symbol,
@@ -339,7 +340,7 @@ export const convertViaLimitIOC = async (
   const orderBook = await getOrderBookDepth(symbol, 5);
   const bestBid = orderBook.bestBid;
 
-  console.log(`[Binance] Converting ${fromAmount} ${from} → ${to} via Limit IOC @ best bid ${bestBid}`);
+  cronLogger.info(`[Binance] Converting ${fromAmount} ${from} → ${to} via Limit IOC @ best bid ${bestBid}`);
 
   // Step 2: Place Limit IOC at best bid
   const order = await placeLimitIOCSell(symbol, fromAmount, bestBid);
@@ -348,7 +349,7 @@ export const convertViaLimitIOC = async (
 
   // Step 3: If less than 95% filled, try market order for remainder
   if (fillPercent < 95 && fromAmount - executedQty > 0.000001) {
-    console.log(`[Binance] IOC filled ${fillPercent.toFixed(1)}%, using market order for remainder`);
+    cronLogger.info(`[Binance] IOC filled ${fillPercent.toFixed(1)}%, using market order for remainder`);
     const remaining = fromAmount - executedQty;
     try {
       const marketOrder = await placeMarketSellOrder(symbol, remaining);
@@ -368,7 +369,7 @@ export const convertViaLimitIOC = async (
         fillPercent: 100,
       };
     } catch (err) {
-      console.error(`[Binance] Market fallback failed:`, err);
+      cronLogger.error(`[Binance] Market fallback failed:`, err);
       // Return partial fill from IOC
     }
   }
@@ -455,7 +456,7 @@ export const placeMarketSellOrder = async (
   const info = await getExchangeInfo(symbol);
   const roundedQty = roundToStepSize(quantity, info.stepSize);
 
-  console.log(`[Binance] Market SELL ${roundedQty} on ${symbol}`);
+  cronLogger.info(`[Binance] Market SELL ${roundedQty} on ${symbol}`);
 
   const data = (await makeSignedRequest("POST", "/api/v3/order", {
     symbol,

@@ -1,4 +1,5 @@
 import express from "express";
+import { apiLogger } from "../utils/loggers";
 import jwt from "jsonwebtoken";
 import { errorResponseHelper, getErrorMessage } from "../helper";
 import { userModel } from "../models";
@@ -27,7 +28,7 @@ const authMiddleware = async (
       const decoded = jwt.verify(token, tokenSecret) as IUserType & { exp?: number; iat?: number; type?: string };
       
       // Debug logging (redacted — no sensitive data)
-      // console.log("Auth Middleware - Token validated for user_id:", decoded.user_id);
+      // apiLogger.info("Auth Middleware - Token validated for user_id:", decoded.user_id);
       
       // Check token type - customer tokens have 'id', user tokens have 'user_id'
       if (decoded.id && !decoded.user_id) {
@@ -69,7 +70,7 @@ const authMiddleware = async (
       }
     }
   } catch (e: unknown) {
-    console.log("Auth Middleware Error:", e);
+    apiLogger.info("Auth Middleware Error:", e);
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);
   }
@@ -113,7 +114,7 @@ const companyOwnershipMiddleware = async (
     });
     
     if (!company) {
-      console.log(`[CompanyOwnership] ❌ User ${userData.user_id} does not own company ${parsedCompanyId}`);
+      apiLogger.info(`[CompanyOwnership] ❌ User ${userData.user_id} does not own company ${parsedCompanyId}`);
       return errorResponseHelper(res, 403, "You do not have access to this company");
     }
     
@@ -122,7 +123,7 @@ const companyOwnershipMiddleware = async (
     
     next();
   } catch (e: unknown) {
-    console.log("Company Ownership Middleware Error:", e);
+    apiLogger.info("Company Ownership Middleware Error:", e);
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);
   }

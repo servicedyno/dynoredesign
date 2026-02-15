@@ -1,4 +1,5 @@
 import mailTransporter from "../utils/mailTransporter";
+import { apiLogger } from "../utils/loggers";
 import { captureError } from "../services/errorMonitoringService";
 import { baseEmailTemplate, getCurrencySymbol, infoBox, dataRow, statusBadge, p, otpBlock } from "../utils/emailTemplate";
 
@@ -656,7 +657,7 @@ const sendRefereeCodeReminderEmail = async (
       body: htmlBody,
     });
     
-    console.log(`[Email] Referee reminder (${reminderType}) sent to ${recipientEmail}`);
+    apiLogger.info(`[Email] Referee reminder (${reminderType}) sent to ${recipientEmail}`);
     return info;
   } catch (e) {
     captureError(e, 'email', { extraContext: 'sendRefereeCodeReminderEmail' });
@@ -769,7 +770,7 @@ const sendPaymentLinkReminderEmail = async (
       body: htmlBody,
     });
     
-    console.log(`[Email] Payment link reminder (${reminderType}) sent to ${recipientEmail}`);
+    apiLogger.info(`[Email] Payment link reminder (${reminderType}) sent to ${recipientEmail}`);
     return info;
   } catch (e) {
     captureError(e, 'email', { extraContext: 'sendPaymentLinkReminderEmail' });
@@ -1015,7 +1016,7 @@ const sendAutoConversionPayoutEmail = async (
       body: htmlBody,
     });
 
-    console.log(`[Email] Auto-conversion payout email sent to ${recipientEmail} (conversion #${conversionId})`);
+    apiLogger.info(`[Email] Auto-conversion payout email sent to ${recipientEmail} (conversion #${conversionId})`);
     return info;
   } catch (e) {
     captureError(e, 'email', { extraContext: 'sendAutoConversionPayoutEmail' });
@@ -1203,7 +1204,7 @@ const sendWeeklyConversionSummaryEmail = async (
       body: htmlBody,
     });
 
-    console.log(`[Email] Weekly conversion summary sent to ${recipientEmail} (${totalConversions} conversions)`);
+    apiLogger.info(`[Email] Weekly conversion summary sent to ${recipientEmail} (${totalConversions} conversions)`);
     return info;
   } catch (e) {
     captureError(e, 'email', { extraContext: 'sendWeeklyConversionSummaryEmail' });
