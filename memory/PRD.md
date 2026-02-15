@@ -94,14 +94,14 @@ Full-stack crypto payment processing system with FastAPI proxy + Node.js/TypeScr
 - Merchant email deliverability: check Brevo sender domain verification + delivery logs for `richard@dyno.pt`
 
 ### P2 - Remaining Code Quality
-- 65 console.log in standalone scripts/model inits (low priority)
+- 65 console.log in standalone scripts/model inits (low priority — migration scripts, not runtime)
 - Remaining ~46 getErrorMessage(e) calls with custom logic (non-standard patterns)
 
 ### P2 - Code Duplication Hotspots (reduced from original)
 - walletController.ts: wallet increment pattern (5x), query column aliasing
-- paymentController.ts: subscription cleanup (8x), threshold KYC check (4x)
+- paymentController.ts: (subscription cleanup & KYC checks already extracted to helpers in prior session)
 
 ### P3 - Infrastructure
-- SSH tunnel auto-reconnect (keepalive running but not supervisor-managed)
+- SSH tunnel auto-reconnect: DONE — managed by `sshTunnelManager.ts`
 - Sub-dependency axios vulnerability tracking (@tatumio, tronweb, flutterwave)
 - Monitor LTC conversion #16 completion
