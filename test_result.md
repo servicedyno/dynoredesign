@@ -8086,3 +8086,95 @@ ports:
           
           Base URL: http://localhost:8001
 
+
+  - task: "Comprehensive Code Cleanup (Dead Code, Dependencies, Documentation, Config)"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/package.json"
+      - "/app/backend/utils/redisKeyNamespace.ts (DELETED)"
+      - "/app/backend/utils/destinationTagValidator.ts (DELETED)"
+      - "/app/backend/middleware/csrfProtection.ts (DELETED)"
+      - "/app/README.md"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          COMPREHENSIVE CODE CLEANUP — 5 CATEGORIES:
+          
+          CATEGORY 1: Dead Code Removal
+          - Deleted utils/redisKeyNamespace.ts (created but never imported anywhere)
+          - Deleted utils/destinationTagValidator.ts (created but never imported anywhere)
+          - Deleted middleware/csrfProtection.ts (middleware never applied to any route)
+          
+          CATEGORY 2: Script & Loose File Archival
+          - Moved 60+ debug/analysis/migration scripts to /backend/scripts/_archive/
+          - Moved 5 loose root .ts/.js files to /backend/scripts/_archive/root_utils/
+          - Moved 3 root .py test files to /tests/
+          - Only ssh-tunnel-keepalive.sh kept in scripts/ root (operational)
+          
+          CATEGORY 3: Dependency Cleanup (package.json)
+          - Removed unused packages: cheerio, yamljs, ioredis, crc-32, crc32, fast-crc32c
+          - Moved 7 @types/* packages from dependencies to devDependencies
+          - Moved nodemon from dependencies to devDependencies
+          - Production deps reduced from 48 to 34
+          
+          CATEGORY 4: Documentation Consolidation
+          - Created /docs/ with guides/, plans/, reports/ subdirs
+          - Moved 22 root .md files to organized /docs/ structure
+          - Moved 5 backend .md/.txt files to /docs/
+          - Updated README.md with clean project index
+          
+          CATEGORY 5: Config Dedup
+          - Moved backend/Procfile, backend/railway.json, backend/nixpacks.toml to /docs/guides/legacy-deploy-configs/
+          - Root configs (used by Dockerfile deployment) kept as canonical
+          
+          TESTS:
+          TEST 1: Backend healthy
+          - GET http://localhost:8001/health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - cd /app/backend && npx tsc --noEmit — exit code 0
+          
+          TEST 3: Deleted files no longer exist
+          - ls /app/backend/utils/redisKeyNamespace.ts should fail
+          - ls /app/backend/utils/destinationTagValidator.ts should fail
+          - ls /app/backend/middleware/csrfProtection.ts should fail
+          
+          TEST 4: Unused packages removed from package.json
+          - grep 'cheerio' /app/backend/package.json should return empty
+          - grep 'yamljs' /app/backend/package.json should return empty
+          - grep 'ioredis' /app/backend/package.json should return empty
+          - grep '"crc-32"' /app/backend/package.json should return empty
+          - grep '"crc32"' /app/backend/package.json should return empty
+          - grep '"fast-crc32c"' /app/backend/package.json should return empty
+          
+          TEST 5: @types moved to devDependencies
+          - The devDependencies section should contain @types/fast-crc32c, @types/node-cron, @types/nodemailer, @types/qrcode, @types/sharp, @types/swagger-jsdoc, @types/swagger-ui-express
+          - The dependencies section should NOT contain any @types/* packages
+          
+          TEST 6: Scripts archived
+          - ls /app/backend/scripts/_archive/ should show debug, analysis, migration, recovery, root_utils directories
+          - ls /app/backend/scripts/_archive/debug/ should show 50+ files
+          
+          TEST 7: Docs consolidated
+          - ls /app/docs/guides/ should show 13 files
+          - ls /app/docs/plans/ should show 5 files
+          - ls /app/docs/reports/ should show 7 files
+          
+          TEST 8: No root doc sprawl
+          - ls /app/*.md should only show README.md and test_result.md
+          
+          TEST 9: Root test .py files moved
+          - ls /app/tests/backend_test.py should exist
+          - ls /app/backend_test.py should NOT exist
+          
+          TEST 10: Config dedup
+          - ls /app/backend/Procfile should fail (moved)
+          - ls /app/backend/railway.json should fail (moved)
+          - ls /app/backend/nixpacks.toml should fail (moved)
+          
+          Base URL: http://localhost:8001
