@@ -3576,6 +3576,7 @@ const verifyCryptoPayment = async (
       // FIXED: Use "underpaid" status and camelCase fields to match checkout page expectations
       return successResponseHelper(res, 200, "Partial payment received", {
         status: "underpaid",
+        payment_status: "underpaid",
         message: "Partial payment received. Please pay the remaining amount.",
         paidAmount: parseFloat(totalPaid.toFixed(6)),
         expectedAmount: parseFloat(originalExpected.toFixed(6)),
