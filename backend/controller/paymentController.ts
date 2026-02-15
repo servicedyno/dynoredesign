@@ -2646,13 +2646,12 @@ const Crypto = async (
     const destinationTag = poolAddress.dataValues.destination_tag || null;
     cronLogger.info(`[Crypto] ✅ Reserved merchant pool address: ${address}${destinationTag ? ` (tag: ${destinationTag})` : ''}`);
     
-    // Generate QR code — for tag-based chains, include the destination tag in the QR
+    // Generate QR code with currency logo — for tag-based chains, include the destination tag
     let qr_code;
     if (address) {
       // For XRP/RLUSD: Include destination tag in QR payload for wallet compatibility
       const qrPayload = destinationTag ? `${address}?dt=${destinationTag}` : address;
-      const url = await QR_Code.toDataURL(qrPayload, { width: 300 });
-      qr_code = url;
+      qr_code = await generateQRCodeWithLogo(qrPayload, currency, 400);
     }
     
     // Create transaction record — use merchant's own wallet (FK references tbl_user_wallet)
