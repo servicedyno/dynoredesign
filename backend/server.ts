@@ -19,7 +19,7 @@ import { validateEnvironment } from "./utils/envValidator";
 validateEnvironment();
 
 // Redis imports - only used ones
-import { connectRedis, acquireLock, releaseLock } from "./utils/redisInstance";
+import { connectRedis, acquireLock, releaseLock, cleanupStaleLocks } from "./utils/redisInstance";
 // Unused Redis imports removed: deleteRedisItem, getRedisItem, setRedisItem
 import {
   adminFeeModel,
