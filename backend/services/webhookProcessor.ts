@@ -590,6 +590,9 @@ async function handleNewTransaction(
     if (lastError) throw lastError;
 
     // Success: update Redis
+    // Soft-enforce: processing → successful (PROCESSING → PAYOUT_COMPLETE)
+    softValidate("processing", "successful", paymentId, "crypto-verification-success");
+
     await setRedisItem(redisKey, {
       ...items, status: "successful", txId: payload.txId,
       receivedAmount: finalReceivedAmount, originalExpectedAmount: expectedAmount,
@@ -600,6 +603,9 @@ async function handleNewTransaction(
     if (items?.ref) {
       const custData = await getRedisItem(items.ref);
       if (custData && Object.keys(custData).length > 0) {
+        // Soft-enforce: ref data — processing → successful
+        softValidate(custData.status, "successful", paymentId, "crypto-verification-success-ref");
+
         await setRedisItem(items.ref, {
           ...custData, status: "successful", txId: payload.txId,
           receivedAmount: finalReceivedAmount, completedAt: new Date().toISOString(),
