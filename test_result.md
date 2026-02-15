@@ -7652,3 +7652,68 @@ ports:
           
           Base URL: http://localhost:8001
 
+  - task: "Fix UTXO Auto-Convert Stranding Bug (LTC/BTC/DOGE/BCH funds not forwarded to Binance)"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/services/merchantPool/merchantPoolReservation.ts"
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          ROOT CAUSE: When auto-convert is enabled for UTXO chains (LTC, BTC, DOGE, BCH),
+          settleCryptoTransaction returned early ("no merchant transfer needed") because
+          userAmountToSend=0. For account-based chains (ETH/XRP), the sweep mechanism
+          picks up the stranded funds. But for UTXO chains, THREE bugs prevented sweep:
+            1) releaseAddress() ignored admin_fee_balance for UTXO (set to 0)
+            2) releaseAddress() always set UTXO status to "AVAILABLE" (sweep needs "IN_USE")
+            3) UTXO sweep mode is "batch" — skipped by both threshold and time crons
+          
+          FIX (Primary): settleCryptoTransaction now detects UTXO chains when userAmount=0
+          and creates a direct UTXO TX sending everything to admin wallet — same instant
+          distribution pattern as normal UTXO settlement. No sweep dependency.
+          
+          FIX (Safety Net): releaseAddress() now accepts pendingSweep parameter. When true
+          (auto-convert + no transfer happened), UTXO chains track balance + keep IN_USE.
+          sweepByTime also now processes UTXO chains that are IN_USE (recovery path).
+          
+          TESTS:
+          TEST 1: Backend healthy
+          - GET http://localhost:8001/health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - cd /app/backend && npx tsc --noEmit — exit code 0
+          
+          TEST 3: FIX 1 — UTXO auto-convert direct transfer in settleCryptoTransaction
+          - grep 'UTXO auto-convert' /app/backend/controller/paymentController.ts should find at least 3 occurrences
+          - grep 'isUTXODirect' /app/backend/controller/paymentController.ts should find the UTXO detection logic
+          - grep 'UTXO admin-only transfer' /app/backend/controller/paymentController.ts should find the withRetry call
+          
+          TEST 4: FIX 2 — releaseAddress has pendingSweep parameter
+          - grep 'pendingSweep' /app/backend/services/merchantPool/merchantPoolReservation.ts should find at least 5 occurrences
+          - grep 'pendingSweep.*boolean' /app/backend/services/merchantPool/merchantPoolReservation.ts should find the parameter
+          
+          TEST 5: FIX 3 — cryptoVerification passes pendingSweep flag
+          - grep 'pendingSweep.*autoConvertEnabled' /app/backend/controller/paymentController.ts should find the flag computation
+          - grep 'pendingSweep' /app/backend/controller/paymentController.ts should find it passed to releaseAddress
+          
+          TEST 6: FIX 4 — sweepByTime allows UTXO recovery
+          - grep 'isUTXOAutoConvertRecovery' /app/backend/services/merchantPool/merchantPoolSweep.ts should find the recovery check
+          - grep 'UTXO_CHAINS' /app/backend/services/merchantPool/merchantPoolSweep.ts should find it in the time sweep
+          
+          TEST 7: UTXO direct transfer uses correct Tatum API patterns
+          - grep 'fromUTXO.*txHash.*transactionId' /app/backend/controller/paymentController.ts should find UTXO input reference in the new block
+          - grep 'toUTXO.*adminWalletAddress' /app/backend/controller/paymentController.ts should find single-output to admin
+          - grep 'findUtxoOutputIndex' /app/backend/controller/paymentController.ts should find UTXO index lookup in both new and existing blocks
+          
+          TEST 8: Immediate sweep only triggers for account-based chains now
+          - grep 'adminTransferResult.transactionDetails' /app/backend/controller/paymentController.ts should find the check before triggering sweep
+          - The sweep should NOT trigger for UTXO chains where direct transfer succeeded
+          
+          Base URL: http://localhost:8001
+
