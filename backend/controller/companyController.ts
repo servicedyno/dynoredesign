@@ -4,6 +4,7 @@ import {
   getErrorMessage,
   successResponseHelper,
 } from "../helper";
+import { handleControllerError } from "../helper/controllerErrorHandler";
 import { formatAmountForDisplay, getCurrencyInfo, COMPANY_CURRENCY_QUERY, convertToFiat, getCompanyBaseCurrency } from "../utils/currencyUtils";
 import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
@@ -301,13 +302,8 @@ const addCompany = async (req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, "Company added successfully!", responseData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -512,13 +508,8 @@ const updateCompany = async (req: express.Request, res: express.Response) => {
       finalArray
     );
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -543,13 +534,8 @@ const getCompany = async (_req: express.Request, res: express.Response) => {
     
     successResponseHelper(res, 200, message, resData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -575,13 +561,8 @@ const getCompanyById = async (req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, "Company retrieved successfully", resData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -640,13 +621,8 @@ const deleteCompany = async (req: express.Request, res: express.Response) => {
     
     successResponseHelper(res, 200, "Company deleted successfully!", resData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -769,13 +745,8 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
       currency_info: getCurrencyInfo(preferredCurrency),
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -852,13 +823,9 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -923,13 +890,9 @@ const updateWebhookSettings = async (req: express.Request, res: express.Response
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -964,13 +927,9 @@ const getWebhookSettings = async (req: express.Request, res: express.Response) =
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -1120,13 +1079,9 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
     }
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -1209,13 +1164,9 @@ const getWebhookHistory = async (req: express.Request, res: express.Response) =>
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -1252,13 +1203,9 @@ const getWebhookDetail = async (req: express.Request, res: express.Response) => 
     successResponseHelper(res, 200, "Webhook detail retrieved", log);
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -1344,13 +1291,9 @@ const getWebhookStats = async (req: express.Request, res: express.Response) => {
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    companyLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+
+      handleControllerError(res, e, companyLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 

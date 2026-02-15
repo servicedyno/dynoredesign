@@ -6,6 +6,7 @@ import {
   successResponseHelper,
   generateApiKeyName,
 } from "../helper";
+import { handleControllerError } from "../helper/controllerErrorHandler";
 import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
 import {
@@ -238,13 +239,8 @@ const addApi = async (req: express.Request, res: express.Response) => {
       }),
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -328,13 +324,8 @@ const getApi = async (req: express.Request, res: express.Response) => {
       development_count: grouped.development.length,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -394,13 +385,8 @@ const toggleApiStatus = async (req: express.Request, res: express.Response) => {
       environment: updatedApi?.dataValues.environment,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -443,13 +429,8 @@ const revokeApi = async (req: express.Request, res: express.Response) => {
       message: "Please create a new API key if needed. Update your integrations to use the new key.",
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -465,13 +446,8 @@ const deleteApi = async (req: express.Request, res: express.Response) => {
     });
     successResponseHelper(res, 200, "Api deleted successfully!", resData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -508,13 +484,8 @@ const getApiCustomers = async (req: express.Request, res: express.Response) => {
     
     successResponseHelper(res, 200, message, customer_data);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -547,13 +518,8 @@ const createPlan = async (req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, "Plan generated successfully!", planData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -574,13 +540,8 @@ const getPlans = async (req: express.Request, res: express.Response) => {
     
     successResponseHelper(res, 200, message, planData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -723,13 +684,8 @@ const updateApi = async (req: express.Request, res: express.Response) => {
     apiLogger.info(`API ${api_id} updated by user ${userData.user_id}`);
     successResponseHelper(res, 200, "API updated successfully", responseData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -798,13 +754,8 @@ const regenerateApiKey = async (req: express.Request, res: express.Response) => 
       message: "Please update your integrations with the new API key"
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -863,13 +814,8 @@ const updatePlan = async (req: express.Request, res: express.Response) => {
     apiLogger.info(`Plan ${plan_id} updated by user ${userData.user_id}`);
     successResponseHelper(res, 200, "Plan updated successfully", updatedPlan);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -909,13 +855,8 @@ const deletePlan = async (req: express.Request, res: express.Response) => {
     apiLogger.info(`Plan ${plan_id} deleted by user ${userData.user_id}`);
     successResponseHelper(res, 200, "Plan deleted successfully", { plan_id });
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -967,13 +908,8 @@ const updateCustomer = async (req: express.Request, res: express.Response) => {
     apiLogger.info(`Customer ${customer_id} updated by user ${userData.user_id}`);
     successResponseHelper(res, 200, "Customer updated successfully", updatedCustomer);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -1018,13 +954,8 @@ const deleteCustomer = async (req: express.Request, res: express.Response) => {
     apiLogger.info(`Customer ${customer_id} deleted by user ${userData.user_id}`);
     successResponseHelper(res, 200, "Customer deleted successfully", { customer_id });
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 

@@ -71,13 +71,8 @@ const getSubscriptions = async (req: express.Request, res: express.Response) => 
 
     successResponseHelper(res, 200, "Subscriptions retrieved successfully", subscriptions);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -108,13 +103,8 @@ const getSubscriptionById = async (req: express.Request, res: express.Response) 
 
     successResponseHelper(res, 200, "Subscription retrieved successfully", subscription[0]);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -172,13 +162,8 @@ const createSubscription = async (req: express.Request, res: express.Response) =
     apiLogger.info(`Subscription created for plan ${plan_id} by user ${userData.user_id}`);
     successResponseHelper(res, 201, "Subscription created successfully", subscription);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -236,13 +221,8 @@ const updateSubscription = async (req: express.Request, res: express.Response) =
     apiLogger.info(`Subscription ${subscription_id} updated to ${status} by user ${userData.user_id}`);
     successResponseHelper(res, 200, "Subscription updated successfully", updatedSubscription);
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -290,13 +270,8 @@ const cancelSubscription = async (req: express.Request, res: express.Response) =
     apiLogger.info(`Subscription ${subscription_id} cancelled by user ${userData.user_id}`);
     successResponseHelper(res, 200, "Subscription cancelled successfully", { subscription_id });
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
