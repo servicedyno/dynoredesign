@@ -24,6 +24,30 @@ import { ADMIN_WALLETS, FEE_WALLETS, isTagBasedChain, getCryptoRedisKey, XRP_MAS
 import tatumApi from "../apis/tatumApi";
 import { callMerchantWebhook } from "../webhooks";
 import { WebhookJobData } from "./webhookQueue";
+import { validateTransition, parseState, PaymentState } from "./paymentStateMachine";
+
+// ── Soft-enforcement helper ──────────────────────────────────────────────────
+// Calls validateTransition() before every status change. Logs warnings for
+// invalid transitions but NEVER throws — the payment flow always continues.
+function softValidate(
+  currentStatusRaw: string | undefined,
+  newStatusRaw: string,
+  paymentId: string,
+  context: string,
+): void {
+  const currentState = parseState(currentStatusRaw);
+  const nextState = parseState(newStatusRaw);
+
+  if (!currentState || !nextState) {
+    webhookLogs.warn(
+      `[StateMachine] Unparseable status in ${context}: ` +
+      `"${currentStatusRaw}" → "${newStatusRaw}" (payment ${paymentId})`
+    );
+    return;
+  }
+
+  validateTransition(currentState, nextState, paymentId, context);
+}
 
 // Build a set of all admin/fee wallet addresses for fast lookup (lowercase for case-insensitive match)
 const INTERNAL_WALLETS = new Set(
