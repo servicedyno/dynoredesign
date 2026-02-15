@@ -281,3 +281,79 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
 
   return count;
 }
+
+
+/**
+ * Clear stale Tatum failed webhooks by marking them all as "reconciled" in Redis.
+ * This prevents them from being re-queued on every server restart.
+ * Call this once to stop the recurring HIGH severity reconciliation alerts.
+ */
+export async function clearStaleTatumWebhooks(): Promise<{
+  total: number;
+  cleared: number;
+  alreadyCleared: number;
+  errors: string[];
+}> {
+  const stats = { total: 0, cleared: 0, alreadyCleared: 0, errors: [] as string[] };
+
+  const tatumKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
+  if (!tatumKey) {
+    stats.errors.push("No Tatum API key available");
+    return stats;
+  }
+
+  try {
+    const headers = { "x-api-key": tatumKey };
+    const { data: failedWebhooks } = await axios.get(
+      "https://api.tatum.io/v4/subscription/webhook?pageSize=50&direction=desc",
+      { headers, timeout: 15000 }
+    );
+
+    if (!failedWebhooks || !Array.isArray(failedWebhooks) || failedWebhooks.length === 0) {
+      webhookLogs.info("[ClearStale] No failed Tatum webhooks found");
+      return stats;
+    }
+
+    stats.total = failedWebhooks.length;
+
+    for (const webhook of failedWebhooks) {
+      try {
+        const webhookData = typeof webhook.data === "string" ? JSON.parse(webhook.data) : webhook.data;
+        if (!webhookData?.txId) continue;
+
+        const reconciledKey = `reconciled-tx-${webhookData.txId}`;
+        const processedKey = `processed-tx-${webhookData.txId}`;
+
+        // Check if already marked
+        const alreadyReconciled = await getRedisItem(reconciledKey);
+        const alreadyProcessed = await getRedisItem(processedKey);
+        if ((alreadyReconciled && Object.keys(alreadyReconciled).length > 0) ||
+            (alreadyProcessed && Object.keys(alreadyProcessed).length > 0)) {
+          stats.alreadyCleared++;
+          continue;
+        }
+
+        // Mark as reconciled with 30-day TTL
+        await setRedisItemWithTTL(reconciledKey, {
+          reconciledAt: new Date().toISOString(),
+          source: "manual-clear-stale",
+          txId: webhookData.txId,
+          address: webhookData.address || "unknown",
+        }, 30 * 24 * 60 * 60);
+
+        webhookLogs.info(`[ClearStale] Marked as reconciled: txId=${webhookData.txId}`);
+        stats.cleared++;
+      } catch (parseErr) {
+        stats.errors.push(`Failed to parse webhook: ${(parseErr as Error).message}`);
+      }
+    }
+
+    webhookLogs.info(
+      `[ClearStale] Complete: ${stats.cleared} cleared, ${stats.alreadyCleared} already cleared, ${stats.errors.length} errors out of ${stats.total} total`
+    );
+  } catch (apiErr) {
+    stats.errors.push(`Tatum API error: ${(apiErr as Error).message}`);
+  }
+
+  return stats;
+}
