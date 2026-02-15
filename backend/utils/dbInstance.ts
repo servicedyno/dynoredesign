@@ -24,12 +24,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 const useSSL = isProduction || isRemoteDB;
 
 const dialectOptions: Record<string, unknown> = {
-  // TCP keep-alive prevents stale connections from being silently terminated
-  // by network intermediaries (Railway proxy, NAT, load balancers).
-  // Without this, idle connections die and the next query gets "Connection terminated unexpectedly".
   keepAlive: true,
-  keepAliveInitialDelayMillis: 10000, // Start keepAlive probes after 10s idle
-  // Statement timeout: 30s to prevent long-running queries from holding connections
+  keepAliveInitialDelayMillis: 10000,
   statement_timeout: 30000,
   idle_in_transaction_session_timeout: 30000,
   ...(useSSL ? {
@@ -47,6 +43,21 @@ const sequelize = process.env.DATABASE_URL
       logging: isProduction ? false : (msg: string) => log(`[Sequelize] ${msg}`, 'debug'),
       pool: poolConfig,
       retry: retryConfig,
+      // Hooks to suppress "connection manager was closed" during shutdown
+      hooks: {
+        beforeQuery: () => {
+          // Lazy import to avoid circular deps — server.ts exports isShuttingDown
+          try {
+            const { isShuttingDown } = require('../server');
+            if (isShuttingDown) {
+              throw new Error('[Sequelize] Query blocked: server is shutting down');
+            }
+          } catch (e) {
+            // Module not loaded yet (startup) — allow query
+            if (e.message?.includes('shutting down')) throw e;
+          }
+        },
+      },
     })
   : new Sequelize(
       process.env.DB_NAME,
