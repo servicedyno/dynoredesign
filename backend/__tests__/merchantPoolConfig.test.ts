@@ -10,9 +10,9 @@ import {
   isTagBasedChain, 
   getCryptoRedisKey, 
   TAG_BASED_CHAINS,
-  ACCOUNT_CHAINS,
+  NATIVE_CURRENCIES,
   TOKEN_CHAINS,
-  MODEL_UTXO_CHAINS,
+  UTXO_CHAINS,
   TOKEN_CONTRACTS,
   RLUSD_CONFIG,
 } from '../services/merchantPool/merchantPoolConfig';
