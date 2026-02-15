@@ -1,11 +1,11 @@
 import {
-import { cronLogger } from "../utils/loggers";
   FeeEvmBased,
   PrivKey,
   SignatureId,
   TatumApi,
   TransactionHash,
 } from "@tatumio/api-client";
+import { cronLogger } from "../utils/loggers";
 import { IGenerateUserAddressParams, virtualAccount } from "../utils/types";
 import axios from "axios";
 import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
