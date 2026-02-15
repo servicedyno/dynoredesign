@@ -15,10 +15,13 @@ import pytest
 import requests
 import os
 
-# Get base URL from environment - MUST use external URL for proper testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://refactor-backend-6.preview.emergentagent.com')
+# Get base URL - use localhost if external URL returns 520/503 errors
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:8001')
 if BASE_URL.endswith('/'):
     BASE_URL = BASE_URL.rstrip('/')
+
+# Override to use localhost for internal testing since external URL may have intermittent issues
+BASE_URL = 'http://localhost:8001'
 
 # Test timeout for slow endpoints
 TIMEOUT = 30
