@@ -4621,11 +4621,9 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
 
         // FIX: Only delete subscription for LEGACY (non-merchant-pool) addresses
         // Merchant pool addresses handle their own subscription lifecycle in releaseAddress()
-        // Deleting here would remove the subscription that was just renewed in releaseAddress()
-        if (!isMerchantPoolAddress && tempAddressData.subscription_id) {
-          cronLogger.info(`[cryptoVerification] Deleting subscription for legacy address: ${tempAddressData.subscription_id}`);
-          await tatumApi.deleteSubscription(tempAddressData.subscription_id);
-        } else if (isMerchantPoolAddress) {
+        if (!isMerchantPoolAddress) {
+          await safeDeleteSubscription(tempAddressData.subscription_id, 'legacy address completion');
+        } else {
           cronLogger.info(`[cryptoVerification] Skipping subscription delete for merchant pool address (handled by releaseAddress)`);
         }
         
