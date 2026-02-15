@@ -908,7 +908,12 @@ export const sweepByTime = async (): Promise<number> => {
       
       const sweepConfig = getSweepConfig(walletType);
       
-      if (sweepConfig.mode !== "time") {
+      // UTXO chains normally have "batch" mode (no sweep needed — admin fee sent in same TX).
+      // But if a UTXO chain is IN_USE with balance > 0, it means auto-convert left funds
+      // in the address (pendingSweep safety net). Always sweep these regardless of mode.
+      const isUTXOAutoConvertRecovery = UTXO_CHAINS.includes(walletType);
+      
+      if (sweepConfig.mode !== "time" && !isUTXOAutoConvertRecovery) {
         continue;
       }
       
