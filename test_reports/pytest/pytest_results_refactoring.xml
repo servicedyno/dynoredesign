@@ -1,85 +1,73 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="19" time="2.403" timestamp="2026-02-15T10:31:29.089569+00:00" hostname="agent-env-432b49de-95c5-4eae-8e41-d3aee627f4b4"><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_tunnel_status_endpoint" time="0.139" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_binance_info_endpoint" time="0.085" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_email_preview_endpoint" time="0.093" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_email_preview_different_templates" time="0.413" /><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_health_endpoint" time="0.080"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_refactoring_regression.py:95: in test_health_endpoint
-    data = response.json()
-           ^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:978: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_root_endpoint" time="0.105"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_refactoring_regression.py:107: in test_root_endpoint
-    data = response.json()
-           ^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:978: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_swagger_docs_accessible" time="0.145" /><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_user_endpoint_reachable" time="0.092" /><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_wallet_endpoint_reachable" time="0.087" /><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_admin_login_endpoint_structure" time="0.229"><failure message="AssertionError: Got 520&#10;assert 520 == 500&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:141: in test_admin_login_endpoint_structure
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="19" skipped="0" tests="19" time="1.994" timestamp="2026-02-15T10:31:50.901022+00:00" hostname="agent-env-432b49de-95c5-4eae-8e41-d3aee627f4b4"><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_tunnel_status_endpoint" time="1.312"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:36: in test_tunnel_status_endpoint
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_binance_info_endpoint" time="0.012"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:55: in test_binance_info_endpoint
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_email_preview_endpoint" time="0.003"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:67: in test_email_preview_endpoint
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_email_preview_different_templates" time="0.003"><failure message="AssertionError: Template 'payment' returned 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:87: in test_email_preview_different_templates
+    assert response.status_code == 200, f"Template '{template}' returned {response.status_code}"
+E   AssertionError: Template 'payment' returned 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_health_endpoint" time="0.003"><failure message="AssertionError: Missing 'status' key&#10;assert 'status' in {'error': 'Backend starting, please retry'}">backend/tests/test_refactoring_regression.py:99: in test_health_endpoint
+    assert "status" in data, "Missing 'status' key"
+E   AssertionError: Missing 'status' key
+E   assert 'status' in {'error': 'Backend starting, please retry'}</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_root_endpoint" time="0.003"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:108: in test_root_endpoint
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_swagger_docs_accessible" time="0.070"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:119: in test_swagger_docs_accessible
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_user_endpoint_reachable" time="0.005"><failure message="AssertionError: Got 503 - controller may have import error&#10;assert 503 in [401, 400, 403]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:129: in test_user_endpoint_reachable
+    assert response.status_code in [401, 400, 403], f"Got {response.status_code} - controller may have import error"
+E   AssertionError: Got 503 - controller may have import error
+E   assert 503 in [401, 400, 403]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_wallet_endpoint_reachable" time="0.002"><failure message="AssertionError: Got 503 - controller may have import error&#10;assert 503 in [401, 400, 403]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:134: in test_wallet_endpoint_reachable
+    assert response.status_code in [401, 400, 403], f"Got {response.status_code} - controller may have import error"
+E   AssertionError: Got 503 - controller may have import error
+E   assert 503 in [401, 400, 403]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_admin_login_endpoint_structure" time="0.003"><failure message="AssertionError: Got 503&#10;assert 503 == 500&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:144: in test_admin_login_endpoint_structure
     assert response.status_code == 500, f"Got {response.status_code}"
-E   AssertionError: Got 520
-E   assert 520 == 500
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_payment_endpoint_reachable" time="0.083" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_volatility_endpoint" time="0.080"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_refactoring_regression.py:164: in test_volatility_endpoint
-    data = response.json()
-           ^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:978: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_fee_rates_endpoint" time="0.086"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_refactoring_regression.py:175: in test_fee_rates_endpoint
-    data = response.json()
-           ^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:978: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_conversion_email_preview" time="0.087" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_weekly_conversion_email_preview" time="0.074" /><testcase classname="backend.tests.test_refactoring_regression.TestErrorHandling" name="test_404_for_invalid_endpoint" time="0.084" /><testcase classname="backend.tests.test_refactoring_regression.TestErrorHandling" name="test_malformed_json_handling" time="0.080"><failure message="AssertionError: Got 520&#10;assert 520 in [400, 500]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:210: in test_malformed_json_handling
+E   AssertionError: Got 503
+E   assert 503 == 500
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_payment_endpoint_reachable" time="0.003"><failure message="AssertionError: Got unexpected 503&#10;assert 503 in [200, 400, 404, 500]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:156: in test_payment_endpoint_reachable
+    assert response.status_code in [200, 400, 404, 500], f"Got unexpected {response.status_code}"
+E   AssertionError: Got unexpected 503
+E   assert 503 in [200, 400, 404, 500]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_volatility_endpoint" time="0.014"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:165: in test_volatility_endpoint
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_fee_rates_endpoint" time="0.003"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:176: in test_fee_rates_endpoint
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_conversion_email_preview" time="0.002"><failure message="assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:185: in test_conversion_email_preview
+    assert response.status_code == 200
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_weekly_conversion_email_preview" time="0.003"><failure message="assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:191: in test_weekly_conversion_email_preview
+    assert response.status_code == 200
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestErrorHandling" name="test_404_for_invalid_endpoint" time="0.004"><failure message="AssertionError: Got 503&#10;assert 503 in [404, 500]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:202: in test_404_for_invalid_endpoint
+    assert response.status_code in [404, 500], f"Got {response.status_code}"
+E   AssertionError: Got 503
+E   assert 503 in [404, 500]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestErrorHandling" name="test_malformed_json_handling" time="0.003"><failure message="AssertionError: Got 503&#10;assert 503 in [400, 500]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:213: in test_malformed_json_handling
     assert response.status_code in [400, 500], f"Got {response.status_code}"
-E   AssertionError: Got 520
-E   assert 520 in [400, 500]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestAPIVersioning" name="test_v1_route_works" time="0.078" /><testcase classname="backend.tests.test_refactoring_regression.TestAPIVersioning" name="test_diagnostics_without_api_prefix" time="0.096" /></testsuite></testsuites>
+E   AssertionError: Got 503
+E   assert 503 in [400, 500]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestAPIVersioning" name="test_v1_route_works" time="0.002"><failure message="AssertionError: Got 503&#10;assert 503 in [401, 400, 403]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:223: in test_v1_route_works
+    assert response.status_code in [401, 400, 403], f"Got {response.status_code}"
+E   AssertionError: Got 503
+E   assert 503 in [401, 400, 403]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestAPIVersioning" name="test_diagnostics_without_api_prefix" time="0.002"><failure message="assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">backend/tests/test_refactoring_regression.py:228: in test_diagnostics_without_api_prefix
+    assert response.status_code == 200
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase></testsuite></testsuites>
