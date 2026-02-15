@@ -66,12 +66,12 @@ export const validateRequiredEnvVars = (): void => {
   });
   
   if (errors.length > 0) {
-    console.error('❌ Environment Validation Failed:');
-    errors.forEach(err => console.error(`  - ${err.message}`));
+    log('Environment Validation Failed', 'error');
+    errors.forEach(err => log(`  - ${err.message}`, 'error'));
     throw new Error(`Missing ${errors.length} required environment variable(s). Application cannot start.`);
   }
   
-  console.log('✅ All required environment variables validated');
+  log('All required environment variables validated');
 };
 
 /**
@@ -87,9 +87,9 @@ export const checkRecommendedEnvVars = (): void => {
   });
   
   if (warnings.length > 0) {
-    console.warn('⚠️  Missing recommended environment variables:');
-    warnings.forEach(varName => console.warn(`  - ${varName}`));
-    console.warn('⚠️  Some features may not work correctly without these variables');
+    log('Missing recommended environment variables:', 'warn');
+    warnings.forEach(varName => log(`  - ${varName}`, 'warn'));
+    log('Some features may not work correctly without these variables', 'warn');
   }
 };
 
@@ -127,8 +127,8 @@ export const validateSensitiveDataFormat = (): void => {
   });
   
   if (warnings.length > 0) {
-    console.warn('⚠️  Security warnings for environment variables:');
-    warnings.forEach(warning => console.warn(`  - ${warning}`));
+    log('Security warnings for environment variables:', 'warn');
+    warnings.forEach(warning => log(`  - ${warning}`, 'warn'));
   }
 };
 
@@ -151,7 +151,7 @@ export const validateUrlFormats = (): void => {
         
         if (isProduction && !isRailway && 
             (value.includes('localhost') || value.includes('127.0.0.1'))) {
-          console.warn(`⚠️  ${varName} uses localhost in production: ${value}`);
+          log(`${varName} uses localhost in production: ${value}`, 'warn');
           // Don't throw error, just warn
         }
       } catch (err) {
@@ -161,8 +161,8 @@ export const validateUrlFormats = (): void => {
   });
   
   if (errors.length > 0) {
-    console.error('❌ URL validation errors:');
-    errors.forEach(error => console.error(`  - ${error}`));
+    log('URL validation errors:', 'error');
+    errors.forEach(error => log(`  - ${error}`, 'error'));
     throw new Error('Invalid URL configuration detected');
   }
 };
@@ -171,14 +171,14 @@ export const validateUrlFormats = (): void => {
  * Complete environment validation (call on startup)
  */
 export const validateEnvironment = (): void => {
-  console.log('🔍 Validating environment configuration...');
+  log('Validating environment configuration...');
   
   validateRequiredEnvVars();
   checkRecommendedEnvVars();
   validateSensitiveDataFormat();
   validateUrlFormats();
   
-  console.log('✅ Environment validation complete\n');
+  log('Environment validation complete');
 };
 
 export default {
