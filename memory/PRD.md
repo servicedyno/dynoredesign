@@ -1,89 +1,73 @@
-# DynoPay - Crypto Payment Gateway
+# DynoPay - Crypto Payment Processing Platform
 
 ## Original Problem Statement
-Full-stack crypto payment gateway (Node.js/TypeScript backend, React frontend, PostgreSQL). User reported critical bug: ETH payment sweep ("auto-sweep to Binance for auto conversion") was failing with "ghost transactions" — Tatum SDK returned TX hashes that never appeared on the Ethereum blockchain.
+Full-stack crypto payment processing system with FastAPI proxy + Node.js/TypeScript backend + React frontend + PostgreSQL. Uses Tatum for blockchain interactions and Binance for crypto-to-stablecoin swaps. SOCKS5 proxy via SSH tunnel to German VPS for Binance geo-restriction bypass.
 
 ## Architecture
-- **Backend**: Node.js, TypeScript, Fastify, Sequelize
-- **Frontend**: React (separate repo — this repo's frontend is a placeholder)
-- **Database**: PostgreSQL
-- **Cache**: Redis (Railway hosted)
-- **Integrations**: Tatum (blockchain), Binance (crypto conversion), Brevo (emails)
-- **Infrastructure**: Supervisor-managed services, SOCKS5 proxy for Binance API
+- **Backend**: Node.js/TypeScript (port 3300) behind Python FastAPI proxy (port 8001)
+- **Frontend**: React (port 3000)  
+- **Database**: PostgreSQL (Railway)
+- **Cache**: Redis (Railway)
+- **APIs**: Tatum (blockchain), Binance (conversions)
+- **Proxy**: SOCKS5 SSH tunnel to 95.179.167.16 (Binance access)
 
 ## What's Been Implemented
 
-### Session 1 (Previous Agent)
-- Repository setup, dependency installation
-- Binance SOCKS5 proxy configuration via autossh
-- Test payment creation ($10 ETH via merchant API)
-- Multiple failed attempts to fix sweep (Tatum SDK, state management, DB model fixes)
+### Session Feb 14-15, 2026: Security Audit Fixes
 
-### Session 2 (Feb 13, 2026)
-- **ROOT CAUSE IDENTIFIED**: Tatum SDK's `ethBlockchainTransfer` was computing TX hashes locally but never broadcasting to the Ethereum network (ghost TXs)
-- **FIX APPLIED**: Switched EVM chain sweeps (ETH, POLYGON) to use `directEvmSweep` (ethers.js + `eth_sendRawTransaction` via public RPCs), bypassing Tatum SDK entirely
-- **Lock TTL fix**: Increased cron lock TTL from 50s to 180s to prevent lock contention
-- **E2E conversion verified**: Conversion #8 & #9 completed — sweep → Binance deposit → ETH→USDT conversion → USDT withdrawal to merchant
-- **Payout email bug fixed**: Corrected column name (user_id instead of id) in emails.ts DB query
+**P0 - SQL Injection Fixes (6 locations)**
+- `walletController.ts` line 301: Parameterized `wallet_id`, `column`, `sortType`, `offset`, `limit` via Sequelize replacements
+- `walletController.ts` line 511: Parameterized WHERE conditions (`date_from`, `date_to`, `status`, `currency`, `search`, `company_id`) + whitelisted ORDER BY columns
+- `walletController.ts` line 4057: Parameterized transaction detail query (`id`, `company_id`, `user_id`)
+- `walletController.ts` line 4203: Parameterized export query (same pattern as 511)
+- `companyController.ts` line 662: Parameterized `company_id` in getTransactions
+- `adminController.ts` line 644: Parameterized + whitelisted ORDER BY columns
 
-### Session 3 (Feb 14, 2026)
-- **Binance proxy persistence fix**: Installed `sshpass` (missing in forked env), fixed supervisor config, removed broken `binance-tunnel` (required unavailable `autossh`)
-- **Proxy detection retry**: Made `detectBinanceAccess()` retry-able — if proxy was down at startup but tunnel comes up later, next cron cycle re-detects and enables it
-- **Conversion cron proxy re-detection**: When Binance appears unreachable, conversion service now re-runs `detectBinanceAccess()` before giving up
-- **Cron interval reduced**: 2 min → 1 min for faster deposit/withdrawal detection
-- **Adaptive fast-polling**: When active PENDING_DEPOSIT/WITHDRAWING records exist, auto-schedules 30s re-check
-- **Withdrawal completion logging fixed**: Added DEBUG logs for monitoring, proper counter tracking
-- **Full fee breakdown in payout email**: Platform fee (1.5%), sweep gas fee, exchange fee (0.1%), Binance withdrawal fee, net payout
-- **Fee tracking in conversion records**: `conversion_fee` (platform fee USD), `sweep_fee_usd` (gas cost in USD), calculated using actual conversion rate at trade time
-- **E2E verified**: Conversion #11 completed successfully — full pipeline from fund detection to merchant payout ($9.41 USDT)
+**P0 - TLS Verification Fix**
+- `dbInstance.ts`: Changed `rejectUnauthorized: false` to `rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'` (configurable, defaults to true)
 
-### Session 4 (Feb 14, 2026)
-- **(P0) Consolidated EVM sweep logic**: Gas funding for EVM chains (ETH, POLYGON) now uses `directEvmSweep` instead of Tatum SDK. All EVM branches in `tatumApi.ts:assetToOtherAddress` have deprecation warnings for sweep usage.
-- **(P1) Real-time conversion status tracker API**: Two new endpoints added to `dashboardRouter`:
-  - `GET /api/dashboard/conversions` — List conversions with `pipeline_stage` field, status filter, status summary counts
-  - `GET /api/dashboard/conversions/:id` — Single conversion detail with timeline (Detected → Sweeping → Depositing → Converting → Withdrawing → Complete), fee breakdown, error info
-- **Pipeline stages enum** returned in list response for frontend rendering reference
-- **Multi-tenant security audit & fix**: Created shared `validateCompanyOwnership` utility and applied to 8 endpoints:
-  - **CRITICAL FIX**: `apiController.addApi` — was only checking company existence, not ownership. Fixed to validate user owns the company before creating API keys.
-  - `apiController.getApi`, `walletController.getWallet`, `notificationController` (5 endpoints), `subscriptionController.getSubscriptions` — added ownership validation
-  - `dashboardController` (getDashboard, getConversions, getConversionDetail) — refactored to use shared utility
-- **Swagger API docs updated**: Added full OpenAPI specs for both new conversion tracker endpoints with schemas, examples, and multi-tenant notes
+**P0 - Hardcoded Secrets Removed (6 files)**
+- `scripts/debug/check_stuck_payment.js`: Redis URL → `process.env.REDIS_PUBLIC_URL`
+- `scripts/debug/clear_stuck_txid.js`: Redis URL → `process.env.REDIS_PUBLIC_URL`
+- `scripts/migration/fix_redis_for_retry.js`: Redis URL → `process.env.REDIS_PUBLIC_URL`
+- `scripts/manual_sweep_usdt_trc20.ts`: Encrypted key → `process.env.USDT_TRC20_ENCRYPTED_KEY`
+- `scripts/migration/migrate_john_user.js`: DB credentials → env vars
+- `verify_private_key.ts`: Encrypted key → `process.env.VERIFY_ENCRYPTED_KEY`
 
-## Key API Endpoints
+**P1 - XSS Prevention (6 locations in walletController.ts)**
+- Added `escapeHtml()` utility function
+- Applied to all email template interpolations (wallet added/updated/removed emails)
+- Escapes companyName, currency, wallet_address, wallet_name, wallet_type
 
-### Conversion Status Tracker (NEW)
-- `GET /api/dashboard/conversions?status=COMPLETED&company_id=38&limit=20` — List with optional filters
-  - **Multi-tenant**: `company_id` validated against user ownership; `company_name` joined in response
-  - Returns: `{ conversions: [..., pipeline_stage, company_name], count, status_summary, pipeline_stages }`
-- `GET /api/dashboard/conversions/:id?company_id=38` — Detailed view with timeline & fees
-  - **Multi-tenant**: `company_id` ownership check; scopes to user's companies only
-  - Returns: `{ conversion (with company_name), timeline: [{stage, label, timestamp, completed, active}], fee_breakdown, is_failed, is_complete }`
-- **Pipeline stages**: `DETECTED → SWEEPING → DEPOSITING → CONVERTING → WITHDRAWING → COMPLETE`
-- **Auth**: Bearer token required (from `POST /api/user/login`)
+**P1 - Package Upgrades**
+- `axios`: 1.4.0 → 1.13.5
+- `nodemailer`: 6.9.3 → 8.0.1  
+- `multer`: 1.4.5-lts.1 → 1.4.5-lts.2 (kept v1 for API compat, fixes DoS vulnerabilities)
 
-### Existing
-- `POST /api/company/direct_crypto_payment` — Create new payment request
-- `GET /api/dashboard` — Dashboard stats
-- `GET /api/dashboard/chart-data` — Chart data
-- `GET /api/dashboard/recent-transactions` — Recent transactions
+**Bug Fixes**
+- `merchantPoolConfig.ts`: Fixed `parseSweepConfig` to check env var overrides BEFORE defaulting UTXO chains to "batch" mode
+- `merchantPoolSweep.ts`: Added UTXO balance rounding to 8 decimal places to prevent Tatum API validation errors from floating point imprecision
+- LTC sweep successfully executed: TX `51665a57dd5c2b9d68a8782cf61b7fa38b8cff12775ffe1f1708aae007168288`
 
-## Key Files Modified (Session 4)
-- `backend/utils/validateCompanyOwnership.ts` — **NEW** shared multi-tenant ownership validator
-- `backend/controller/dashboardController.ts` — Added `getConversions`/`getConversionDetail` + refactored to shared validator
-- `backend/controller/apiController.ts` — **CRITICAL**: Fixed addApi ownership check + getApi validation
-- `backend/controller/walletController.ts` — Added ownership validation to getWallet
-- `backend/controller/notificationController.ts` — Added ownership validation to 5 endpoints
-- `backend/controller/subscriptionController.ts` — Added ownership validation to getSubscriptions
-- `backend/routes/dashboardRouter.ts` — Added `/conversions` and `/conversions/:id` routes
-- `backend/swagger/paths/dashboard.ts` — Added OpenAPI specs for conversion tracker endpoints
-- `backend/services/merchantPool/merchantPoolSweep.ts` — Gas funding now uses `directEvmSweep` for EVM chains
-- `backend/apis/tatumApi.ts` — Deprecation warnings on EVM branches of `assetToOtherAddress`
+### Previous Session: UTXO Payment Bug Fix
+- Fixed balance parsing for UTXO chains (incoming - outgoing instead of balance field)
+- Fixed fee format for Tatum SDK (string vs object)
+- Fixed fee deduction from sweep amount
 
-## Credentials
-- **User**: richard@dyno.pt / Katiekendra123@
-- **SSH Proxy**: root@95.179.167.16 (password in supervisor config)
+## Prioritized Backlog
 
-## Backlog
-- P2: Monitor sweep reliability over time
-- P2: Broader integration testing of full pipeline
-- P2: Additional monitoring/alerting for proxy health
+### P1 - Remaining from Security Audit
+- SRI attribute for external scripts in `frontend/public/index.html`
+- Remaining SCA: axios sub-dependency in @tatumio and tronweb (no direct fix)
+
+### P2 - Code Quality (from audit report)
+- 1115 code smells (await in loops, missing radix, string concatenation)
+- 501 lines dead code
+- 7180 lines duplicate code across 173 groups
+- 247 functions missing docstrings
+- Accessibility issues in frontend components
+
+### P3 - Infrastructure
+- SSH tunnel auto-reconnect on container restart (currently manual)
+- Redis lock TTL monitoring to prevent stale lock accumulation
+- Stablecoin conversion lock hanging investigation
