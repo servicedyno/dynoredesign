@@ -21,8 +21,8 @@ import { adminFeeModel } from "../models";
 
 const POOL_ADDRESS = "TAoyePonm5YS5Liwjfcaw6wKHVqcPcaBqe";
 const ADMIN_WALLET = "TTve8v6Y48ChsCTEiCjMRFSbjNtz4mAkxR";
-const ENCRYPTED_PRIVATE_KEY = "CiQAAxOcdf13E+EXV0xOUK1u3c88ZrR6g/b16Y0fQwvAOy4q9pUShQEqggEKFAoM3+hRWhVTYykRvZr6EKOElfMKElAKSJEUtybrRXj+i/3WNuonHoeWTnaUjZmNGsUMy4ditbeC19wcwZPQdf9dnyqIyvgwDkCgN9o0VX4f6SG6mKHOm4FoLhDd87s8ohCtqYCYBxoYChBFGoA43YYi92CoGjjpQ47VEMmOr7wC";
-const TRX_FEE_WALLET = process.env.TRX_FEE_WALLET || "TTXk9SbNj8tnRABdGDM3PZvT5bHqTNtANB";
+const ENCRYPTED_PRIVATE_KEY = process.env.USDT_TRC20_ENCRYPTED_KEY || "";
+const TRX_FEE_WALLET = process.env.TRX_FEE_WALLET || "";
 const USDT_AMOUNT = "116.30253"; // Full balance from on-chain
 
 async function sleep(ms: number) {
