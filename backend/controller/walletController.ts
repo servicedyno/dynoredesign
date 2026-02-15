@@ -16,6 +16,7 @@ import {
   successResponseHelper,
   generateWalletName,
 } from "../helper";
+import { handleControllerError, handleControllerErrorReturn } from "../helper/controllerErrorHandler";
 import { formatAmountForDisplay, getCurrencyInfo, COMPANY_CURRENCY_QUERY, convertToUSD, convertToFiat, convertToMultiple, getCompanyBaseCurrency } from "../utils/currencyUtils";
 import crypto from "crypto";
 
@@ -236,13 +237,8 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     
     successResponseHelper(res, 200, message, returnData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -345,13 +341,8 @@ const getWalletTransactions = async (
       currency: preferredCurrency,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -675,13 +666,8 @@ const getAllTransactions = async (
       }
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -825,13 +811,8 @@ const addFunds = async (req: express.Request, res: express.Response) => {
       throw { message: "Please enter valid data!" };
     }
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -905,13 +886,8 @@ const authStep = async (req: express.Request, res: express.Response) => {
       throw { message: "Please enter valid data!" };
     }
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -1527,13 +1503,8 @@ const sendConfirmationOTP = async (
       errorResponseHelper(res, 404, "Please enter a registered email!");
     }
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -2005,13 +1976,8 @@ const getWalletAddresses = async (
     
     successResponseHelper(res, 200, message, resData);
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -2101,13 +2067,8 @@ const addWalletAddress = async (
       );
     }
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -2901,13 +2862,8 @@ const validateWallet = async (
       );
     }
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -3077,13 +3033,8 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       company_id,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -3192,13 +3143,8 @@ const deleteWalletAddress = async (
       company_id: wallet.dataValues.company_id,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    return errorResponseHelper(res, 500, message);
+
+      return handleControllerErrorReturn(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -3276,13 +3222,8 @@ const sendUpdateWalletOTP = async (
       email: userData.email.replace(/(.{2})(.*)(@.*)/, "$1***$3"),
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    return errorResponseHelper(res, 500, message);
+
+      return handleControllerErrorReturn(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -3449,13 +3390,8 @@ const updateWalletWithOTP = async (
       destination_tag: updatedWallet.dataValues.destination_tag || null,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    return errorResponseHelper(res, 500, message);
+
+      return handleControllerErrorReturn(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -3534,13 +3470,8 @@ const sendDeletePaymentWalletOTP = async (
       warning: "This action is permanent and cannot be undone",
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    return errorResponseHelper(res, 500, message);
+
+      return handleControllerErrorReturn(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -3675,13 +3606,8 @@ const deletePaymentWalletWithOTP = async (
       company_id: wallet.dataValues.company_id,
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    return errorResponseHelper(res, 500, message);
+
+      return handleControllerErrorReturn(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -3755,13 +3681,9 @@ If you didn't request this, please ignore this email or contact support.`;
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -3866,13 +3788,9 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
     return successResponseHelper(res, 200, "Wallet updated successfully", updatedAddress);
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -3957,13 +3875,9 @@ If you didn't request this, please ignore this email or contact support immediat
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -4056,13 +3970,9 @@ const deleteWalletAddressWithOTP = async (
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -4190,13 +4100,8 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
 
     successResponseHelper(res, 200, "Transaction details retrieved", response);
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
@@ -4314,13 +4219,8 @@ const exportTransactions = async (req: express.Request, res: express.Response) =
     
     res.send(csvContent);
   } catch (e) {
-    const message = getErrorMessage(e);
-    walletLogger.error(
-      message,
-      { user_id: userData.user_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, walletLogger, { user_id: userData.user_id, email: userData.email });
   }
 };
 
