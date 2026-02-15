@@ -217,6 +217,98 @@ export function parseState(raw: string | undefined | null): PaymentState | undef
   return LEGACY_MAP[normalized];
 }
 
+// ── External Compatibility Layer ─────────────────────────────────────────────
+// Maps formal PaymentState → legacy status strings that merchants already
+// handle in their integrations. This ensures ZERO breaking changes for any
+// developer who has integrated our payment gateway.
+
+/**
+ * Convert internal PaymentState to the legacy Redis status string.
+ * This is what gets stored in Redis and read by the verify endpoint.
+ */
+export function toRedisStatus(state: PaymentState): string {
+  const REDIS_MAP: Record<PaymentState, string> = {
+    [PaymentState.PENDING]:         "pending",
+    [PaymentState.DETECTED]:        "pending",
+    [PaymentState.CONFIRMING]:      "processing",
+    [PaymentState.CONFIRMED]:       "processing",
+    [PaymentState.UNDERPAID]:       "underpaid",
+    [PaymentState.PROCESSING]:      "processing",
+    [PaymentState.CONVERTED]:       "successful",
+    [PaymentState.PAYOUT_COMPLETE]: "successful",
+    [PaymentState.FAILED]:          "failed",
+    [PaymentState.EXPIRED]:         "failed",
+    [PaymentState.REFUNDED]:        "successful",
+  };
+  return REDIS_MAP[state];
+}
+
+/**
+ * Convert internal PaymentState to the external API status string.
+ * This is what merchants see in the verify endpoint response and callback URLs.
+ */
+export function toExternalStatus(state: PaymentState): string {
+  const EXTERNAL_MAP: Record<PaymentState, string> = {
+    [PaymentState.PENDING]:         "waiting",
+    [PaymentState.DETECTED]:        "pending",
+    [PaymentState.CONFIRMING]:      "pending",
+    [PaymentState.CONFIRMED]:       "pending",
+    [PaymentState.UNDERPAID]:       "underpaid",
+    [PaymentState.PROCESSING]:      "pending",
+    [PaymentState.CONVERTED]:       "confirmed",
+    [PaymentState.PAYOUT_COMPLETE]: "confirmed",
+    [PaymentState.FAILED]:          "failed",
+    [PaymentState.EXPIRED]:         "failed",
+    [PaymentState.REFUNDED]:        "confirmed",
+  };
+  return EXTERNAL_MAP[state];
+}
+
+/**
+ * Convert internal PaymentState to the webhook event name.
+ * This is what merchants see in the X-DynoPay-Event header.
+ */
+export function toWebhookEvent(state: PaymentState): string | null {
+  const EVENT_MAP: Partial<Record<PaymentState, string>> = {
+    [PaymentState.PENDING]:         "payment.pending",
+    [PaymentState.DETECTED]:        "payment.pending",
+    [PaymentState.CONFIRMED]:       "payment.confirmed",
+    [PaymentState.PAYOUT_COMPLETE]: "payment.confirmed",
+    [PaymentState.UNDERPAID]:       "payment.underpaid",
+    [PaymentState.FAILED]:          "payment.failed",
+  };
+  return EVENT_MAP[state] || null;
+}
+
+/**
+ * Soft-enforcement transition validator. Validates the state transition and
+ * logs an audit record, but does NOT throw on invalid transitions — instead
+ * it returns `{ valid: false }` so the caller can decide how to handle it.
+ *
+ * Use this when wiring the state machine into existing code paths where
+ * throwing would break the payment flow.
+ */
+export function validateTransition(
+  currentState: PaymentState,
+  nextState: PaymentState,
+  paymentId: string,
+  reason?: string,
+  metadata?: Record<string, unknown>,
+): { valid: boolean; record?: TransitionRecord; error?: string } {
+  if (canTransition(currentState, nextState)) {
+    const record = transition(currentState, nextState, paymentId, reason, metadata);
+    return { valid: true, record };
+  }
+
+  const error =
+    `Invalid state transition: ${currentState} → ${nextState} for payment ${paymentId}. ` +
+    `Allowed: [${getAllowedTransitions(currentState).join(", ")}]`;
+
+  webhookLogs.warn(`[StateMachine] SOFT REJECT: ${error}`);
+
+  return { valid: false, error };
+}
+
 /**
  * Get the full transition map (for diagnostics / admin endpoints).
  */
