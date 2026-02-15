@@ -7570,3 +7570,42 @@ ports:
             grep 'Connection terminated' /app/backend/server.ts should find the retry condition
           
           Base URL: http://localhost:8001
+  - task: "BinanceWS Logging Improvement: Switch from console.log to winston cronLogger"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/services/binanceWebSocketService.ts"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          IMPROVEMENT: BinanceWS logs now use winston cronLogger instead of console.log.
+          
+          CHANGE: In binanceWebSocketService.ts:
+          - Added import: `import { cronLogger } from "../utils/loggers";`
+          - Replaced: `const log = (msg) => console.log(...)` with `const log = (msg) => cronLogger.info(...)`
+          - Added: `logWarn()` using `cronLogger.warn()` for geo-block warnings
+          - Added: `logError()` using `cronLogger.error()` for WebSocket/REST errors
+          - Updated 4 error/warning log calls to use proper severity levels
+          
+          RESULT: All [BinanceWS] logs now appear in Railway with consistent format:
+          `[timestamp] [cronLogger] info/warn/error: [BinanceWS] message`
+          Previously they were plain console.log without timestamp/service/level metadata.
+          
+          TESTS:
+          TEST 1: Backend healthy - GET http://localhost:8001/health returns 200
+          TEST 2: TypeScript compiles clean - cd /app/backend && npx tsc --noEmit — exit code 0
+          TEST 3: No console.log in binanceWebSocketService.ts
+            grep 'console.log\|console.warn\|console.error' /app/backend/services/binanceWebSocketService.ts should return empty
+          TEST 4: cronLogger imported
+            grep 'import.*cronLogger.*from.*loggers' /app/backend/services/binanceWebSocketService.ts should find the import
+          TEST 5: logError used for errors
+            grep 'logError' /app/backend/services/binanceWebSocketService.ts should find at least 3 occurrences
+          TEST 6: logWarn used for warnings
+            grep 'logWarn' /app/backend/services/binanceWebSocketService.ts should find at least 1 occurrence
+          
+          Base URL: http://localhost:8001
+
