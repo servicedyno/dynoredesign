@@ -326,6 +326,9 @@ async function handleCrashRecovery(
       webhookLogs.error("[WebhookProcessor] Recovery direct webhook error:", webhookErr);
     }
 
+    // Soft-enforce: processing → recovered (PROCESSING → PAYOUT_COMPLETE via legacy map)
+    softValidate(items.status, "recovered", paymentId, "crash-recovery-fallback");
+
     await setRedisItem(redisKey, {
       ...items,
       status: "recovered",
