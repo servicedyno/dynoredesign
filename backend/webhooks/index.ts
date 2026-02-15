@@ -577,6 +577,17 @@ const tatumCryptoWebHook = async (
       address = payload.counterAddress;
       items = await getRedisItem("crypto-" + address);
       
+      // BCH CashAddr normalization for counterAddress
+      if ((!items || Object.keys(items).length === 0) && address && !address.startsWith('bitcoincash:')) {
+        const bchFullAddr = `bitcoincash:${address}`;
+        const bchItems = await getRedisItem("crypto-" + bchFullAddr);
+        if (bchItems && Object.keys(bchItems).length > 0) {
+          webhookLogs.info(`[tatumCryptoWebHook] BCH CashAddr resolved (counter): ${address} → ${bchFullAddr}`);
+          address = bchFullAddr;
+          items = bchItems;
+        }
+      }
+      
       // Also check if counterAddress is the master address
       if ((!items || Object.keys(items).length === 0) && address?.toLowerCase() === XRP_MASTER_ADDRESS?.toLowerCase() && payload.txId) {
         if (resolvedDestinationTag === null) {
