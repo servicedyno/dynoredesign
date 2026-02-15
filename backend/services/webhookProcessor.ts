@@ -253,12 +253,17 @@ async function handleCrashRecovery(
 ): Promise<void> {
   webhookLogs.info(`[WebhookProcessor] Recovery: payment_id=${items.payment_id}, stale since ${items.lastAttempt}`);
 
+  const paymentId = items.payment_id || items.ref || "unknown";
+
   try {
     const recoveryResult = await paymentController.cryptoVerification(address, true, redisKey);
     if (recoveryResult && recoveryResult.status && recoveryResult.status >= 400) {
       throw new Error(`Recovery cryptoVerification returned error ${recoveryResult.status}: ${recoveryResult.message || "Settlement failed"}`);
     }
     webhookLogs.info("[WebhookProcessor] Recovery: cryptoVerification completed successfully");
+
+    // Soft-enforce: processing → successful (PROCESSING → PAYOUT_COMPLETE)
+    softValidate(items.status, "successful", paymentId, "crash-recovery-success");
 
     await setRedisItem(redisKey, {
       ...items,
