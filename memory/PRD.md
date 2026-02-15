@@ -156,9 +156,17 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
 - Features: `canTransition()`, `transition()` (returns audit record), `isTerminal()`, `parseState()` (with legacy alias mapping), `getTransitionMap()`
 - `InvalidTransitionError` class with from/to/paymentId for debugging
 - Legacy status mapping: `successful/completed/recovered/done` → `payout_complete`, `retrying` → `processing`, etc.
-- Created `__tests__/paymentStateMachine.test.ts` with 94 comprehensive unit tests covering:
-  - 23 valid transitions, 22 invalid transitions, success/failure cases, terminal states, lifecycle paths, legacy aliases, BFS reachability proof
-- All 473 tests passing across 15 suites
+- **Backward-Compatibility Layer** (zero breaking changes for merchants):
+  - `toRedisStatus()` — maps formal state → legacy Redis string (e.g., `PAYOUT_COMPLETE` → `"successful"`)
+  - `toExternalStatus()` — maps formal state → verify API response string (e.g., `PAYOUT_COMPLETE` → `"confirmed"`)
+  - `toWebhookEvent()` — maps formal state → merchant webhook event name (e.g., `CONFIRMED` → `"payment.confirmed"`)
+  - `validateTransition()` — soft enforcement (validates + logs, never throws, for gradual integration)
+  - Round-trip consistency: `parseState(toRedisStatus(state))` always returns a valid state
+- Created `__tests__/paymentStateMachine.test.ts` with 132 comprehensive unit tests covering:
+  - 23 valid transitions, 22 invalid transitions, success/failure cases, terminal states
+  - Full lifecycle paths (happy, auto-conversion, underpayment recovery, failure, refund)
+  - Redis/external/webhook event mappings, soft enforcement, round-trip consistency
+- All 511 tests passing across 15 suites
 
 ### Centralize Fee Logic (Completed - Feb 15, 2026)
 - Created `services/feeService.ts` — single import point for all platform fee calculation
