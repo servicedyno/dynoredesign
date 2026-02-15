@@ -7702,7 +7702,7 @@ ports:
 
   - task: "Fix UTXO Auto-Convert Stranding Bug (LTC/BTC/DOGE/BCH funds not forwarded to Binance)"
     implemented: true
-    working: "NA"
+    working: true
     files:
       - "/app/backend/controller/paymentController.ts"
       - "/app/backend/services/merchantPool/merchantPoolReservation.ts"
