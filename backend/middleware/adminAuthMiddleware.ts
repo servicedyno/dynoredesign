@@ -2,6 +2,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import { errorResponseHelper, getErrorMessage } from "../helper";
 import { IUserType } from "../utils/types";
+import { apiLogger } from "../utils/loggers";
 
 const adminAuthMiddleware = async (
   req: express.Request,
@@ -54,7 +55,7 @@ const adminAuthMiddleware = async (
       }
     }
   } catch (e: unknown) {
-    console.log("Admin Auth Middleware Error:", e);
+    apiLogger.error("Admin Auth Middleware Error:", e);
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);
   }
