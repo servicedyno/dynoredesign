@@ -230,8 +230,11 @@ export const captureError = (
     }
     totalErrorsCaptured++;
 
-    // Immediate alert for critical errors
-    if (severity === "critical") {
+    // Persist buffer to Redis (survives restarts)
+    persistBufferToRedis().catch(() => {}); // fire-and-forget
+
+    // Immediate alert for critical or high errors
+    if (severity === "critical" || severity === "high") {
       sendImmediateAlert(entry).catch((e) => {
         cronLogger.error(`[ErrorMonitor] Failed to send immediate alert: ${(e as Error).message}`);
       });
