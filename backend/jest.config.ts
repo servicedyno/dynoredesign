@@ -17,6 +17,10 @@ const config: Config = {
     '^../utils/redisInstance$': '<rootDir>/__tests__/__mocks__/redisInstance.ts',
     '^../../utils/dbInstance$': '<rootDir>/__tests__/__mocks__/dbInstance.ts',
     '^../../utils/redisInstance$': '<rootDir>/__tests__/__mocks__/redisInstance.ts',
+    '^../models$': '<rootDir>/__tests__/__mocks__/models.ts',
+    '^../../models$': '<rootDir>/__tests__/__mocks__/models.ts',
+    '^../models/index$': '<rootDir>/__tests__/__mocks__/models.ts',
+    '^../../models/index$': '<rootDir>/__tests__/__mocks__/models.ts',
   },
   // Don't load .env automatically
   setupFiles: [],
