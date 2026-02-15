@@ -5758,7 +5758,7 @@ const getPaymentLinkById = async (req: express.Request, res: express.Response) =
     if (linkData.expires_at && new Date(linkData.expires_at) <= now) {
       status = "Expired";
     }
-    if (linkData.status === "completed" || linkData.status === "successful") {
+    if (parseState(linkData.status) === PaymentState.PAYOUT_COMPLETE) {
       status = "Completed";
     }
 
