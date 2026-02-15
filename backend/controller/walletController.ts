@@ -289,18 +289,11 @@ const getWalletTransactions = async (
   try {
     const id = req.params.id;
     const { rowsPerPage, page, filters } = req.body;
-    let column,
-      sortType,
-      offset = -1,
-      limit;
-    if (filters) {
-      column = filters?.column ?? "createdAt";
-      sortType = !filters?.asc ? "DESC" : "ASC";
-    }
-    if (rowsPerPage && page) {
-      offset = (page - 1) * rowsPerPage;
-      limit = rowsPerPage;
-    }
+    const ALLOWED_SORT_COLUMNS: Record<string, string> = {
+      createdAt: '"createdAt"', updatedAt: '"updatedAt"', base_amount: 'base_amount',
+      status: 'status', id: 'id', transaction_reference: 'transaction_reference',
+    };
+    const sort = parseSortAndPagination(ALLOWED_SORT_COLUMNS, filters, rowsPerPage, page);
     const walletData = await userWalletModel.findOne({
       where: {
         id,
@@ -336,27 +329,20 @@ const getWalletTransactions = async (
       where: {
         wallet_id,
       },
-      ...(column && sortType && { order: [[column, sortType]] }),
-      ...(offset !== -1 && limit && { offset, limit }),
+      ...(sort.column && sort.sortType && { order: [[sort.column, sort.sortType]] }),
+      ...(sort.offset !== undefined && sort.limit && { offset: sort.offset, limit: sort.limit }),
     });
-    // Whitelist allowed columns to prevent SQL injection via ORDER BY
-    const ALLOWED_SORT_COLUMNS: Record<string, string> = {
-      createdAt: '"createdAt"', updatedAt: '"updatedAt"', base_amount: 'base_amount',
-      status: 'status', id: 'id', transaction_reference: 'transaction_reference',
-    };
-    const safeColumn = (column && ALLOWED_SORT_COLUMNS[column]) ? ALLOWED_SORT_COLUMNS[column] : null;
-    const safeSortType = sortType === 'ASC' ? 'ASC' : 'DESC';
 
     let query = `
       select ut.*,c.customer_name,c.email,cm.company_name,cm.company_id from tbl_user_transaction ut 
       join tbl_customer c on c.customer_id=ut.customer_id
       join tbl_company cm on cm.company_id=c.company_id where ut.wallet_id=:wallet_id`;
-    if (safeColumn) query += ` order by ${safeColumn} ${safeSortType}`;
-    if (offset !== -1 && limit) query += ` offset :offset limit :limit`;
+    query += ` order by ${sort.safeColumn} ${sort.safeSortType}`;
+    if (sort.offset !== undefined && sort.limit) query += ` offset :offset limit :limit`;
 
     const tempData = await sequelize.query(query, {
       type: QueryTypes.SELECT,
-      replacements: { wallet_id: parseInt(wallet_id, 10), offset, limit },
+      replacements: { wallet_id: parseInt(wallet_id, 10), offset: sort.offset, limit: sort.limit },
     });
 
     const customer_data = tempData.map((x: Record<string, unknown>) => {
