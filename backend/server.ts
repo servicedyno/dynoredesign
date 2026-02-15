@@ -836,6 +836,27 @@ const startServer = async () => {
       .catch(err => {
         log(`Webhook URL migration failed: ${err.message}`, "error");
       });
+
+    // ── Start BullMQ webhook worker ───────────────────────────────────────────
+    try {
+      startWebhookWorker(processWebhookJob);
+      log('BullMQ webhook worker started (concurrency: 5)', 'info');
+    } catch (workerErr) {
+      log(`BullMQ webhook worker failed to start: ${(workerErr as Error).message}`, 'error');
+    }
+
+    // ── Run startup reconciliation (catch missed webhooks during downtime) ────
+    runStartupReconciliation()
+      .then(stats => {
+        const total = stats.stuckPayments + stats.failedPayments + stats.tatumMissed;
+        log(`Reconciliation complete: ${total} items re-queued (stuck=${stats.stuckPayments}, failed=${stats.failedPayments}, tatum=${stats.tatumMissed})`, 'info');
+        if (stats.errors.length > 0) {
+          log(`Reconciliation warnings: ${stats.errors.join('; ')}`, 'warn');
+        }
+      })
+      .catch(err => {
+        log(`Reconciliation failed: ${(err as Error).message}`, 'error');
+      });
   });
 
   // ─── Global Error Handler (must be AFTER all routes) ─────────────────────────
