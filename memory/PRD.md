@@ -13,6 +13,34 @@ Full-stack crypto payment processing system with FastAPI proxy + Node.js/TypeScr
 
 ## What's Been Implemented
 
+### Session Feb 15, 2026: Logging Cleanup + SSH Tunnel Auto-Reconnect
+
+**Task 3 — Final console.log Replacement (utils, services, helpers, controllers)**
+- Replaced all remaining active `console.log/error/warn` calls in application source:
+  - `utils/envValidator.ts` (11 calls → logger)
+  - `utils/mailTransporter.ts` (1 call → logger)
+  - `utils/currencyUtils.ts` (1 call → logger)
+  - `utils/dbInstance.ts` (Sequelize logging config → logger wrapper)
+  - `helper/passwordHelper.ts` (2 calls → logger)
+  - `controller/index.ts` (2 calls → logger)
+- Zero active `console.log` calls remain outside `loggers.ts` (the logger itself), migration scripts, and Swagger code examples
+- TypeScript compilation: zero errors
+
+**Task 4 — SSH Tunnel Auto-Reconnect**
+- Created `services/sshTunnelManager.ts`: Node.js-managed SSH SOCKS5 tunnel lifecycle
+  - Auto-starts on boot (when SSH_TUNNEL_HOST configured)
+  - Periodic TCP health probes every 30s
+  - Auto-reconnect with exponential backoff (30s → 60s → 120s → cap 300s)
+  - Early `sshpass` availability check (prevents useless retry loops)
+  - Re-triggers `detectBinanceAccess()` when tunnel is restored
+  - Graceful SIGTERM/SIGINT shutdown
+  - Kills stale tunnel processes on startup
+- Added `GET /diagnostics/tunnel-status` endpoint for health monitoring
+- Moved SSH credentials from hardcoded bash script to `.env` variables:
+  - `SSH_TUNNEL_HOST`, `SSH_TUNNEL_USER`, `SSH_TUNNEL_PASS`, `SSH_TUNNEL_LOCAL_PORT`
+- Updated `scripts/ssh-tunnel-keepalive.sh` to read from env vars (fallback/reference)
+- Wired tunnel start into `server.ts` before Binance access detection
+
 ### Session Feb 15, 2026: Unused Exports + Controller Deduplication
 
 **Task 1 — Unused Export Cleanup**
