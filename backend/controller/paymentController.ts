@@ -3508,6 +3508,7 @@ const verifyCryptoPayment = async (
       // Minor overpayments (below merchant threshold) are treated as normal "confirmed"
       const responseData: Record<string, unknown> = {
         status: isSignificantOverpayment ? "overpaid" : "confirmed",
+        payment_status: isSignificantOverpayment ? "overpaid" : "confirmed",
         message: isSignificantOverpayment ? "Payment confirmed with overpayment" : "Payment confirmed",
         redirect: redirectUrl,
         txId: tempData.txId,
