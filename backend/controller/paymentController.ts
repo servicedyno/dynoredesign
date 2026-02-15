@@ -3985,7 +3985,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           }
         }
 
-        transaction.commit();
+        transactionFinished = true;
+        await transaction.commit();
 
         throw {
           status: 200,
