@@ -907,12 +907,14 @@ router.get("/getSingleTransaction/:id", legacyApiAuthMiddleware, async (req, res
     } = txRaw;
     const data = {
       ...txRest,
+      payment_status: toExternalStatus(parseState(txRest.status as string) || undefined as any) || txRest.status,
       display_currency: baseCurrency,
       auto_converted: !!auto_convert_id,
       auto_convert: auto_convert_id
         ? {
             conversion_id: auto_convert_id,
             status: auto_convert_status,
+            display_status: toConversionDisplayStatus(auto_convert_status as string),
             source_currency: auto_convert_source_currency,
             source_amount: auto_convert_source_amount ? Number(auto_convert_source_amount) : null,
             source_amount_usd: auto_convert_source_amount_usd ? Number(auto_convert_source_amount_usd) : null,
