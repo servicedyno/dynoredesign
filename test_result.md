@@ -7652,6 +7652,48 @@ ports:
             grep 'getEffectiveProxyAgent' /app/backend/services/binanceWebSocketService.ts should find occurrences
             grep 'wsProxyAgent' /app/backend/services/binanceWebSocketService.ts should return EMPTY
           TEST 6: server.ts calls detectBinanceAccess before startBinanceWebSocket
+  - task: "Add admin sweep notification email for UTXO auto-convert and verify all auto-convert chains have sweep emails"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/helper/sendEmail.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Added admin sweep notification email for UTXO auto-convert direct transfers.
+          Updated sweep mode display in email template to handle "auto-convert" mode.
+          
+          Coverage:
+          - UTXO auto-convert (BTC/LTC/DOGE/BCH): Sweep email sent after direct transfer in cryptoVerification
+          - Account-based auto-convert (ETH/TRX/XRP/SOL): Sweep email already sent by sweepPoolAddress
+          
+          TESTS:
+          TEST 1: Backend healthy
+          - GET http://localhost:8001/health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles
+          - cd /app/backend && npx tsc --noEmit exits 0
+          
+          TEST 3: sendAdminFeeSweepEmail imported in paymentController
+          - grep 'sendAdminFeeSweepEmail' /app/backend/controller/paymentController.ts should find import AND usage
+          
+          TEST 4: UTXO sweep email block exists
+          - grep 'Admin sweep notification.*UTXO' /app/backend/controller/paymentController.ts should find the log message
+          - grep 'auto-convert.*UTXO direct' /app/backend/controller/paymentController.ts should find the sweep mode param
+          
+          TEST 5: Sweep mode display updated in email template
+          - grep 'auto-convert.*Auto-Convert.*Direct Transfer' /app/backend/helper/sendEmail.ts should find the updated ternary
+          
+          TEST 6: Account-based sweep still has email
+          - grep 'sendAdminFeeSweepEmail' /app/backend/services/merchantPool/merchantPoolSweep.ts should find existing sweep email call
+          
+          Base URL: http://localhost:8001
+
             grep 'detectBinanceAccess' /app/backend/server.ts should find import + call
           TEST 7: dbInstance.ts has keepAlive
             grep 'keepAlive' /app/backend/utils/dbInstance.ts should find keepAlive: true
