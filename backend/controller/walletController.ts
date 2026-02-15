@@ -932,24 +932,15 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
         const platformCharge = (data.amount * Number(transaction_fee)) / 100;
         const blockchainCharge = (data.amount * Number(blockchain_fee)) / 100;
 
-        const adminWallet = await adminWalletModel.increment("fee", {
-          by: platformCharge + blockchainCharge,
-          where: { wallet_type: data.currency },
-        });
+        const adminWallet = await incrementAdminFee(data.currency, platformCharge + blockchainCharge);
 
-        walletLogger.info(adminWallet[0]);
+        walletLogger.info(adminWallet);
 
         const userSettledAmount = Number(
           data.amount_settled - platformCharge - blockchainCharge
         ).toFixed(2);
 
-        await userWalletModel.increment("amount", {
-          by: Number(userSettledAmount),
-          where: {
-            wallet_id: walletData.dataValues.wallet_id,
-          },
-          transaction,
-        });
+        await incrementUserWallet(walletData.dataValues.wallet_id, Number(userSettledAmount), transaction);
 
         const userPayload = {
           id: uniqueRef,
