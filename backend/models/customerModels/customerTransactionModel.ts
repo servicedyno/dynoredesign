@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../utils/dbInstance";
+import { apiLogger } from "../../utils/loggers";
 
 const customerTransactionModel = sequelize.define(
   "Customer_Transaction",
@@ -73,6 +74,6 @@ const customerTransactionModel = sequelize.define(
 // Sync to ensure schema matches model (customer_id should be nullable)
 customerTransactionModel
   .sync({ alter: true })
-  .then(() => console.log("tbl_customer_transaction synced"));
+  .then(() => apiLogger.info("tbl_customer_transaction synced"));
 
 export default customerTransactionModel;
