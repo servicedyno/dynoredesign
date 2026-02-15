@@ -160,24 +160,29 @@ describe('Fee Rate Service', () => {
       expect(rates.chain).toBe('BTC');
     });
 
-    it('uses default rates when BTC API fails', async () => {
+    it('uses memory-cached rates when BTC API fails', async () => {
+      // First call populates memory cache
+      await getFeeRates('BTC');
+      // Now API fails
       mockAxiosGet.mockRejectedValue(new Error('Network error'));
+      mockRedisGet.mockResolvedValue(null);
 
       const rates = await getFeeRates('BTC');
 
-      // Should return defaults
-      expect(rates.slow).toBe(2);
-      expect(rates.medium).toBe(10);
-      expect(rates.fast).toBe(30);
+      // Should use memory-cached values from first call
+      expect(rates.chain).toBe('BTC');
+      expect(rates.fast).toBe(25); // From Blockstream mock
     });
 
-    it('uses default rates when ETH API fails', async () => {
+    it('uses memory-cached rates when ETH API fails', async () => {
+      await getFeeRates('ETH');
       mockAxiosGet.mockRejectedValue(new Error('Network error'));
+      mockRedisGet.mockResolvedValue(null);
 
       const rates = await getFeeRates('ETH');
 
-      expect(rates.slow).toBe(5);
-      expect(rates.fast).toBe(30);
+      expect(rates.chain).toBe('ETH');
+      expect(rates.fast).toBe(30); // From Blocknative mock
     });
 
     it('handles ERC20 as ETH alias', async () => {
