@@ -125,7 +125,7 @@ async function reconcileStuckPayments(): Promise<number> {
         // Skip malformed keys
       }
     }
-  } while (cursor !== "0");
+  } while (cursor !== 0);
 
   return count;
 }
@@ -177,7 +177,7 @@ async function reconcileFailedPayments(): Promise<number> {
         // Skip malformed keys
       }
     }
-  } while (cursor !== "0");
+  } while (cursor !== 0);
 
   return count;
 }
