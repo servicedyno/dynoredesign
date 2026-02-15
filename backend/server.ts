@@ -18,9 +18,8 @@ dotenv.config();
 import { validateEnvironment } from "./utils/envValidator";
 validateEnvironment();
 
-// Redis imports - only used ones
-import { connectRedis, acquireLock, releaseLock, cleanupStaleLocks } from "./utils/redisInstance";
-// Unused Redis imports removed: deleteRedisItem, getRedisItem, setRedisItem
+// Redis imports
+import { connectRedis, acquireLock, releaseLock, cleanupStaleLocks, getRedisItem, setRedisItem } from "./utils/redisInstance";
 import {
   adminFeeModel,
   adminFeeTransactionModel,
