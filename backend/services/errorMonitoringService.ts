@@ -16,6 +16,23 @@
 import crypto from "crypto";
 import { cronLogger } from "../utils/loggers";
 
+// Lazy-loaded Redis functions (avoids circular dependency at import time)
+let _redisGet: ((key: string) => Promise<any>) | null = null;
+let _redisSet: ((key: string, value: any) => Promise<void>) | null = null;
+let _redisDel: ((key: string) => Promise<void>) | null = null;
+
+const getRedisClient = async () => {
+  if (!_redisGet) {
+    const mod = await import("../utils/redisInstance");
+    _redisGet = mod.getRedisItem;
+    _redisSet = mod.setRedisItem;
+    _redisDel = mod.deleteRedisItem;
+  }
+  return { get: _redisGet!, set: _redisSet!, del: _redisDel! };
+};
+
+const REDIS_ERROR_BUFFER_KEY = "dynopay:error-monitor:buffer";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ErrorComponent =
