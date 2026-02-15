@@ -79,7 +79,7 @@ import {
   getBlockchainFee,
   getDiscountedTransactionFee,
   calculateTransactionFees,
-} from ".";
+} from "../services/feeService";
 import { 
   getBlockchainNetworkFee, 
   getAllBlockchainFees, 

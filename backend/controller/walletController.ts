@@ -92,7 +92,7 @@ import {
 import tatumApi from "../apis/tatumApi";
 // localStorage import removed - OTP now uses Redis
 import blockchairApi from "../apis/blockchairApi";
-import { getTransactionFee, getBlockchainFee } from ".";
+import { getTransactionFee, getBlockchainFee } from "../services/feeService";
 import mailTransporter from "../utils/mailTransporter";
 import { getAdminWalletAddress } from "../utils/adminUtils";
 import WAValidator from "wallet-address-validator";

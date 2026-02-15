@@ -6,7 +6,7 @@
 import { setRedisItem, deleteRedisItem } from '../utils/redisInstance';
 import { apiLogger } from "../utils/loggers";
 // sequelize and QueryTypes imports removed - not used
-import { calculateTransactionFees } from './index';
+import { calculateTransactionFees } from '../services/feeService';
 import { getBlockchainThreshold } from '../utils/feeConfigUtils';
 
 // Test configuration

@@ -34,7 +34,8 @@ import {
 import { getErrorMessage } from "./helper";
 import { refreshBackgroundRateCache } from "./helper/currencyConvert";
 import cron from "node-cron";
-import { getTransactionFee, getBlockchainFee, paymentController } from "./controller";
+import { getTransactionFee, getBlockchainFee } from "./services/feeService";
+import { paymentController } from "./controller";
 import sequelize from "./utils/dbInstance";
 import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron, setupRefereeCodeReminderCron, setupPaymentLinkReminderCron } from "./utils/cronJobs";
 import { getOptimizationDiagnostics } from "./services/tronEnergyService";
