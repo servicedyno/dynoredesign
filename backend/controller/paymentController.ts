@@ -3466,7 +3466,7 @@ const verifyCryptoPayment = async (
     
     // IMPORTANT: Check for SUCCESSFUL status FIRST before checking underpaid
     // This prevents returning stale underpaid data after payment completes
-    if (redisStatus === "successful") {
+    if (parsedState === PaymentState.PAYOUT_COMPLETE) {
       // Payment confirmed - check for overpayment
       const totalReceived = receivedAmount > 0 ? receivedAmount : parseFloat(tempData?.amount || '0');
       const originalExpected = tempData?.originalExpectedAmount ? parseFloat(tempData.originalExpectedAmount) : expectedAmount;
