@@ -4574,12 +4574,12 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         // Update status to successful before soft delete
         await setRedisItem(tempData.ref, {
           ...tempData,
-          status: "successful",
+          status: toRedisStatus(PaymentState.PAYOUT_COMPLETE),
           completedAt: new Date().toISOString(),
         });
         await setRedisItem(cryptoKey, {
           ...tempData,
-          status: "successful",
+          status: toRedisStatus(PaymentState.PAYOUT_COMPLETE),
           completedAt: new Date().toISOString(),
         });
         await softDeleteRedisItem(tempData.ref, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
