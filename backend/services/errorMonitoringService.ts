@@ -621,11 +621,25 @@ const sendImmediateAlert = async (entry: ErrorEntry): Promise<void> => {
 /**
  * Start the error monitoring digest timer.
  * Call this once during server startup.
+ * Restores any buffered errors from Redis (survives restarts).
  */
 export const startErrorMonitoring = (): void => {
   if (digestTimer) {
     clearInterval(digestTimer);
   }
+
+  // Restore errors from previous run (Redis-backed buffer)
+  restoreBufferFromRedis().then(() => {
+    // If there are restored errors, send a digest sooner (2 min delay to let server fully start)
+    if (errorBuffer.length > 0) {
+      cronLogger.info(`[ErrorMonitor] 📬 Found ${errorBuffer.length} buffered errors from previous run — will send digest in 2 min`);
+      setTimeout(() => {
+        sendErrorDigest().catch((e) => {
+          cronLogger.error(`[ErrorMonitor] Startup digest error: ${(e as Error).message}`);
+        });
+      }, 2 * 60 * 1000); // 2 minutes — give server time to fully initialize
+    }
+  }).catch(() => {});
 
   digestTimer = setInterval(() => {
     sendErrorDigest().catch((e) => {
