@@ -3776,13 +3776,14 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
 
       const company_data = (
         await companyModel.findOne({
-          where: { company_id: customerData.company_id },
+          where: { company_id: customerData.company_id || tempData?.company_id },
         })
-      ).dataValues;
+      )?.dataValues;
 
+      const baseCurrency = customerData?.base_currency || company_data?.settlement_currency || 'USD';
       const finalAmount = await currencyConvert({
         sourceCurrency: tempData?.currency,
-        currency: [customerData?.base_currency],
+        currency: [baseCurrency],
         amount: receivedAmount,
         fixedDecimal: false,
       });
