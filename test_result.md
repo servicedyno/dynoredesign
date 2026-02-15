@@ -7,6 +7,79 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
+  - task: "QR Code Currency Logo Overlay + JSON Parse Error Fix"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/utils/qrCodeWithLogo.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/controller/walletController.ts"
+      - "/app/backend/server.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          TWO FIXES IMPLEMENTED:
+          
+          FIX 1: QR Code Currency Logo Overlay
+          - Created new utility /app/backend/utils/qrCodeWithLogo.ts
+          - Uses 'sharp' library to composite SVG currency logos onto QR code center
+          - QR generated with error correction level H (30% recovery) to support logo overlay
+          - Supports all 15 chains: BTC, ETH, LTC, DOGE, TRX, SOL, XRP, RLUSD, POLYGON, BCH, USDT-ERC20, USDC-ERC20, RLUSD-ERC20, USDT-POLYGON, USDT-TRC20
+          - Each currency has brand-accurate colored circle + recognizable icon
+          - Logo is ~22% of QR width (safe for H-level EC)
+          - Fallback to plain QR if logo overlay fails
+          - Updated all 4 QR generation sites:
+            1. paymentController.ts line ~2654 (merchant pool address QR)
+            2. paymentController.ts line ~2793 (legacy address QR)
+            3. paymentController.ts line ~3945 (incomplete payment QR)
+            4. walletController.ts line ~1422 (wallet crypto QR)
+          - New dependency: sharp@0.34.5 + @types/sharp
+          
+          FIX 2: JSON Parse Error (SyntaxError: "not valid json")
+          - Added body-parser error handler middleware in server.ts after express.json()
+          - Catches SyntaxError with type 'entity.parse.failed' from body-parser
+          - Returns 400 Bad Request with clear "Invalid JSON in request body" message
+          - Previously fell through to global error handler returning 500
+          
+          TESTS TO RUN:
+          
+          TEST 1: Backend healthy
+          - GET http://localhost:8001/health returns 200 with status "healthy"
+          
+          TEST 2: TypeScript compiles clean
+          - cd /app/backend && npx tsc --noEmit — exit code 0
+          
+          TEST 3: QR code generation with logo works for all 15 currencies
+          - Run: cd /app/backend && npx ts-node --transpile-only -e "import { generateQRCodeWithLogo } from './utils/qrCodeWithLogo'; async function t() { const currencies = ['BTC','ETH','LTC','DOGE','TRX','SOL','XRP','RLUSD','POLYGON','BCH','USDT-ERC20','USDC-ERC20','RLUSD-ERC20','USDT-POLYGON','USDT-TRC20']; for (const c of currencies) { const r = await generateQRCodeWithLogo('test123', c, 400); console.log(c + ': ' + (r.startsWith('data:image/png;base64,') ? 'OK' : 'FAIL')); } } t();"
+          - All 15 should print OK
+          
+          TEST 4: QR code output is a valid data:image/png;base64 URL
+          - The result of generateQRCodeWithLogo should start with 'data:image/png;base64,'
+          
+          TEST 5: Malformed JSON body returns 400 (not 500)
+          - curl -s -X POST http://localhost:8001/api/payment -H "Content-Type: application/json" -d "not valid json"
+          - Should return: {"success":false,"message":"Invalid JSON in request body","statusCode":400}
+          
+          TEST 6: Valid JSON body still works normally
+          - curl -s -X POST http://localhost:8001/api/payment -H "Content-Type: application/json" -d '{"test":true}'
+          - Should NOT return the JSON parse error (may return auth error or other business logic error)
+          
+          TEST 7: Import added correctly in paymentController
+          - grep 'generateQRCodeWithLogo' /app/backend/controller/paymentController.ts should find import and 3 usage sites
+          
+          TEST 8: Import added correctly in walletController
+          - grep 'generateQRCodeWithLogo' /app/backend/controller/walletController.ts should find import and 1 usage site
+          
+          TEST 9: No remaining plain QR_Code.toDataURL calls
+          - grep 'QR_Code.toDataURL' /app/backend/controller/paymentController.ts should return empty
+          - grep 'QR_Code.toDataURL' /app/backend/controller/walletController.ts should return empty
+          
+          Base URL: http://localhost:8001
+
   - task: "BinanceWS Logging Improvement: Switch from console.log to winston cronLogger"
     implemented: true
     working: true
