@@ -3428,10 +3428,10 @@ const updateWalletWithOTP = async (
       `
         <div style="margin: 24px 0;">
           <h3 style="color: #1034a6; margin: 0 0 16px 0;">✏️ Wallet Successfully Updated</h3>
-          <p style="margin: 8px 0;"><strong>Company:</strong> ${companyName}</p>
-          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${updatedWallet.dataValues.wallet_type}</p>
-          <p style="margin: 8px 0;"><strong>New Wallet Address:</strong> ${maskAddress(updatedWallet.dataValues.wallet_address)}</p>
-          ${updatedWallet.dataValues.wallet_name ? `<p style="margin: 8px 0;"><strong>Wallet Name:</strong> ${updatedWallet.dataValues.wallet_name}</p>` : ''}
+          <p style="margin: 8px 0;"><strong>Company:</strong> ${escapeHtml(companyName)}</p>
+          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${escapeHtml(updatedWallet.dataValues.wallet_type)}</p>
+          <p style="margin: 8px 0;"><strong>New Wallet Address:</strong> ${escapeHtml(maskAddress(updatedWallet.dataValues.wallet_address))}</p>
+          ${updatedWallet.dataValues.wallet_name ? `<p style="margin: 8px 0;"><strong>Wallet Name:</strong> ${escapeHtml(updatedWallet.dataValues.wallet_name)}</p>` : ''}
           <div style="margin-top: 20px; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
             <p style="margin: 0; font-size: 13px; color: #666;">⚠️ Your wallet address has been changed. If you did not perform this action, please contact support immediately.</p>
           </div>
