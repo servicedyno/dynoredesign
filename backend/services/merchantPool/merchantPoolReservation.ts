@@ -409,9 +409,10 @@ export const releaseExpiredReservations = async (
 export const releaseAddress = async (
   tempAddressId: number,
   adminFeeAmount: number,
-  gasUsed: number = 0
+  gasUsed: number = 0,
+  pendingSweep: boolean = false
 ): Promise<void> => {
-  cronLogger.info(`[releaseAddress] Called with tempAddressId=${tempAddressId}, adminFeeAmount=${adminFeeAmount}, gasUsed=${gasUsed}`);
+  cronLogger.info(`[releaseAddress] Called with tempAddressId=${tempAddressId}, adminFeeAmount=${adminFeeAmount}, gasUsed=${gasUsed}, pendingSweep=${pendingSweep}`);
   
   const poolAddress = await merchantTempAddressModel.findByPk(tempAddressId);
   
@@ -424,16 +425,21 @@ export const releaseAddress = async (
   const isUTXO = UTXO_CHAINS.includes(walletType);
   const isToken = TOKEN_CHAINS.includes(walletType);
 
-  cronLogger.info(`[releaseAddress] walletType=${walletType}, isUTXO=${isUTXO}, isToken=${isToken}`);
+  cronLogger.info(`[releaseAddress] walletType=${walletType}, isUTXO=${isUTXO}, isToken=${isToken}, pendingSweep=${pendingSweep}`);
 
   const currentAdminBalance = parseFloat(poolAddress.dataValues.admin_fee_balance) || 0;
   const currentGasBalance = parseFloat(poolAddress.dataValues.gas_balance) || 0;
   const currentTxCount = poolAddress.dataValues.total_transactions || 0;
 
-  const newAdminBalance = isUTXO ? currentAdminBalance : (currentAdminBalance + adminFeeAmount);
+  // For UTXO chains: normally the admin fee is sent in the same multi-output TX,
+  // so we don't track it (balance stays 0, status AVAILABLE).
+  // EXCEPTION: pendingSweep=true means funds are still in the address (e.g., auto-convert
+  // where settleCryptoTransaction failed or account-based fallback was used).
+  // In that case, track the balance and keep IN_USE so sweep can pick it up.
+  const newAdminBalance = (isUTXO && !pendingSweep) ? currentAdminBalance : (currentAdminBalance + adminFeeAmount);
   
   let newStatus: string;
-  if (isUTXO) {
+  if (isUTXO && !pendingSweep) {
     newStatus = "AVAILABLE";
   } else if (isToken) {
     // For token chains: if there's an admin fee balance, keep as IN_USE for sweeping
