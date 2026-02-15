@@ -34,7 +34,7 @@ const dialectOptions: Record<string, unknown> = {
   ...(useSSL ? {
     ssl: {
       require: true,
-      rejectUnauthorized: false,
+      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
     },
   } : {}),
 };
