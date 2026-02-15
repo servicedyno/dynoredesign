@@ -357,6 +357,8 @@ async function handleNewTransaction(
   isFirstTransaction: boolean,
   queryCompanyId: number | null
 ): Promise<void> {
+  const paymentId = items.payment_id || items.ref || "unknown";
+
   if (isCompletionPayment) {
     webhookLogs.info(`[WebhookProcessor] COMPLETION payment: prev=${items.txId}, new=${payload.txId}`);
   } else {
