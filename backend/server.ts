@@ -108,6 +108,19 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ─── Body Parser Error Handler ──────────────────────────────────────────────
+// Catches malformed JSON (SyntaxError from body-parser) and returns 400 instead of 500
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof SyntaxError && 'body' in err && err.type === 'entity.parse.failed') {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid JSON in request body",
+      statusCode: 400,
+    });
+  }
+  next(err);
+});
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
