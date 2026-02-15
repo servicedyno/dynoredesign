@@ -3655,7 +3655,7 @@ const verifyCryptoPayment = async (
       });
     }
     
-    if (redisStatus === "failed") {
+    if (parsedState === PaymentState.FAILED) {
       return successResponseHelper(res, 200, "Payment failed", {
         status: "failed",
         message: tempData.lastError || "Payment processing failed",
