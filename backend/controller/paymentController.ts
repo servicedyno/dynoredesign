@@ -3671,6 +3671,7 @@ const verifyCryptoPayment = async (
 
 const cryptoVerification = async (address, webhook = true, overrideRedisKey?: string) => {
   const transaction = await sequelize.transaction();
+  let transactionFinished = false; // Track commit/rollback state to prevent double-finishing
 
   try {
     let customerData;
