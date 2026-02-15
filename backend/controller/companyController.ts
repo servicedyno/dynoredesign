@@ -675,8 +675,8 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
       join tbl_customer c on c.customer_id=ut.customer_id
       join tbl_company cm on cm.company_id=c.company_id
       left join tbl_stablecoin_conversion sc on sc.transaction_id=ut.transaction_id
-      where c.company_id=${id}`,
-      { type: QueryTypes.SELECT }
+      where c.company_id=:company_id`,
+      { type: QueryTypes.SELECT, replacements: { company_id: parseInt(id as string, 10) } }
     );
 
     // Build conversion rates: crypto/fiat base_currency → preferred currency
