@@ -18,6 +18,13 @@ import {
 } from "../helper";
 import { formatAmountForDisplay, getCurrencyInfo, COMPANY_CURRENCY_QUERY, convertToUSD, convertToFiat, convertToMultiple, getCompanyBaseCurrency } from "../utils/currencyUtils";
 import crypto from "crypto";
+
+// HTML escape utility to prevent XSS in email templates
+const escapeHtml = (str: string): string => {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+};
 import flw from "../apis/flutterwaveApi";
 import {
   deleteRedisItem,
