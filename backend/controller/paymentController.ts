@@ -10,6 +10,7 @@ import {
   sendAdminFeeReceivedEmail,
   successResponseHelper,
 } from "../helper";
+import { handleControllerError } from "../helper/controllerErrorHandler";
 import { apiLogger, cronLogger, webhookLogs } from "../utils/loggers";
 import {
   deleteRedisItem,
@@ -1208,13 +1209,8 @@ const addPayment = async (req: express.Request, res: express.Response) => {
       throw { message: "Please enter valid data!" };
     }
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { customer_id: userData.customer_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { customer_id: userData.customer_id, email: userData.email });
   }
 };
 
@@ -2036,13 +2032,8 @@ const verifyPayment = async (req: express.Request, res: express.Response) => {
       errorResponseHelper(res, 500, "Transaction still in progress!");
     }
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error(
-      message,
-      { customer_id: userData.customer_id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, message);
+
+      handleControllerError(res, e, apiLogger, { customer_id: userData.customer_id, email: userData.email });
   }
 };
 
@@ -5648,13 +5639,8 @@ ${refereeCodeSection}
 
     successResponseHelper(res, 200, "Payment link created successfully", responseData);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    apiLogger.error(
-      errorMessage,
-      { id: userData.id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger, { id: userData.id, email: userData.email });
   }
 };
 
@@ -5787,13 +5773,8 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
       successResponseHelper(res, 200, "Links Fetched Successfully!", formattedLinks);
     }
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    apiLogger.error(
-      errorMessage,
-      { id: userData.id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger, { id: userData.id, email: userData.email });
   }
 };
 
@@ -5876,13 +5857,8 @@ const getPaymentLinkById = async (req: express.Request, res: express.Response) =
 
     successResponseHelper(res, 200, "Payment link retrieved successfully", response);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    apiLogger.error(
-      errorMessage,
-      { id: userData.id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger, { id: userData.id, email: userData.email });
   }
 };
 
@@ -6249,13 +6225,8 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
 
     successResponseHelper(res, 200, "Payment link updated successfully", responseData);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    apiLogger.error(
-      errorMessage,
-      { id: userData.id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger, { id: userData.id, email: userData.email });
   }
 };
 
@@ -6299,13 +6270,8 @@ const deletePaymentLink = async (
 
     successResponseHelper(res, 200, "Payment link deleted successfully", links);
   } catch (e) {
-    const errorMessage = getErrorMessage(e);
-    apiLogger.error(
-      errorMessage,
-      { id: userData.id, email: userData.email },
-      new Error(e)
-    );
-    errorResponseHelper(res, 500, errorMessage);
+
+      handleControllerError(res, e, apiLogger, { id: userData.id, email: userData.email });
   }
 };
 
@@ -6398,9 +6364,10 @@ const checkingUSDT = async () => {
         );
       }
     } catch (e) {
-      cronLogger.info(e);
-      const message = getErrorMessage(e);
-      cronLogger.error(message, new Error(e));
+
+        const message = getErrorMessage(e);
+
+        cronLogger.error(message, new Error(e));
     }
   }
 };
@@ -6714,9 +6681,10 @@ const checkFeeBalance = async () => {
       }
     }
   } catch (e) {
-    cronLogger.info(e);
-    const message = getErrorMessage(e);
-    cronLogger.error(message, new Error(e));
+
+      const message = getErrorMessage(e);
+
+      cronLogger.error(message, new Error(e));
   }
 };
 
@@ -6759,9 +6727,10 @@ const checkOnBlockchair = async () => {
       cronLogger.info("No pending transactions!");
     }
   } catch (e) {
-    cronLogger.info(e);
-    const message = getErrorMessage(e);
-    cronLogger.error(message, new Error(e));
+
+      const message = getErrorMessage(e);
+
+      cronLogger.error(message, new Error(e));
   }
 };
 
@@ -6793,9 +6762,10 @@ const removeUnwantedSubscriptions = async () => {
       );
     }
   } catch (e) {
-    cronLogger.info(e);
-    const message = getErrorMessage(e);
-    cronLogger.error(message, new Error(e));
+
+      const message = getErrorMessage(e);
+
+      cronLogger.error(message, new Error(e));
   }
 };
 
