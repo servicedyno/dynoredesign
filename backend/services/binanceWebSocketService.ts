@@ -21,13 +21,16 @@ import { SocksProxyAgent } from "socks-proxy-agent";
 import { setRedisItemWithTTL, getRedisItem } from "../utils/redisInstance";
 import { captureError } from "./errorMonitoringService";
 import { getEffectiveProxyAgent, detectBinanceAccess } from "./binanceService";
+import { cronLogger } from "../utils/loggers";
 
 // SOCKS5 proxy for bypassing geo-blocks — uses smart detection from binanceService
 // getEffectiveProxyAgent() returns the agent ONLY when proxy is actually needed (US deployment)
 const BINANCE_PROXY_URL = process.env.BINANCE_PROXY_URL || "";
 
 const LOG_PREFIX = "[BinanceWS]";
-const log = (msg: string) => console.log(`${LOG_PREFIX} ${msg}`);
+const log = (msg: string) => cronLogger.info(`${LOG_PREFIX} ${msg}`);
+const logWarn = (msg: string) => cronLogger.warn(`${LOG_PREFIX} ${msg}`);
+const logError = (msg: string) => cronLogger.error(`${LOG_PREFIX} ${msg}`);
 
 // ============================================
 // Configuration
