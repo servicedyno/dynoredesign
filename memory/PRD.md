@@ -144,7 +144,27 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
 - **P2: Enhanced Monitoring** — Add monitoring and alerting for key payment/payout stages
 - **P3: Dependency Injection refactoring** to decouple services from Sequelize models for better testability
 
-### State Machine Integration (Completed - Feb 15, 2026)
+### Status Normalization (Completed - Feb 15, 2026)
+
+**Additive `payment_status` field across all merchant-facing endpoints (non-breaking):**
+
+All endpoints now return both `status` (legacy, backward-compatible) and `payment_status` (normalized):
+
+| Endpoint | `status` (kept) | `payment_status` (new) |
+|----------|----------------|----------------------|
+| verifyCryptoPayment | "confirmed" | "confirmed" |
+| getTransactions | "successful" | "confirmed" |
+| getSingleTransaction | "successful" | "confirmed" |
+| Webhook (payment.confirmed) | "successful" | "confirmed" |
+| Webhook (payment.pending) | "pending" | "pending" |
+| Webhook (payment.underpaid) | "underpaid" | "underpaid" |
+
+Auto-conversion statuses also normalized with `display_status`:
+- PENDING_DEPOSIT → "pending", CONVERTING → "converting", COMPLETED → "settled", FAILED → "failed"
+
+**Bug fixed:** Crash recovery webhook was sending `status: "processing"` with `event: "payment.confirmed"` — now correctly sends `"successful"`.
+
+**Legacy cleanup:** `tatumWebHook` handler now uses `toRedisStatus(PaymentState.XXX)` instead of magic strings.
 
 **P0 — Soft-Enforcement in webhookProcessor.ts:**
 - Wired `validateTransition()` into all 10 status change points in the webhook processor
