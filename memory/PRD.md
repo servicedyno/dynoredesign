@@ -41,6 +41,16 @@ Full-stack crypto payment processing system with FastAPI proxy + Node.js/TypeScr
 - Updated `scripts/ssh-tunnel-keepalive.sh` to read from env vars (fallback/reference)
 - Wired tunnel start into `server.ts` before Binance access detection
 
+**Task 5 — Wallet Increment Deduplication**
+- Created `helper/walletHelpers.ts` with 3 centralized helpers:
+  - `incrementAdminFee(currency, amount)` — replaced 8 direct calls
+  - `incrementUserWallet(walletId, amount, transaction?)` — replaced 5 direct calls
+  - `incrementCustomerWallet(customerId, amount, transaction?)` — replaced 2 direct calls
+- Applied across `walletController.ts` (4 sites) and `paymentController.ts` (11 sites)
+- Zero direct `.increment()` calls remain on wallet models in controller code
+
+**Full Regression Test**: 19/19 tests passed (100%). TypeScript compilation clean. All helper modules verified.
+
 ### Session Feb 15, 2026: Unused Exports + Controller Deduplication
 
 **Task 1 — Unused Export Cleanup**
