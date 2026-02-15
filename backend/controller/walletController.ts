@@ -1420,8 +1420,7 @@ const Crypto = async (data: IFundData, tokenData: IUserType) => {
   let qr_code;
 
   if (cryptoData) {
-    const url = await QR_Code.toDataURL(cryptoData, { width: 300 });
-    qr_code = url;
+    qr_code = await generateQRCodeWithLogo(cryptoData, currency, 400);
   }
 
   const paymentRes = { qr_code, address: cryptoData };
