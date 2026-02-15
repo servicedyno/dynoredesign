@@ -800,21 +800,35 @@ const startServer = async () => {
 
 startServer();
 
+// ─── Shutdown State ──────────────────────────────────────────────────────────
+// Exported flag so cron jobs and services can check before starting new work
+export let isShuttingDown = false;
+
 // ─── Graceful Shutdown ───────────────────────────────────────────────────────
-// Ensures open DB connections, Redis, and cron jobs are properly cleaned up
+// ORDER: 1) Stop accepting work → 2) Wait for in-flight ops → 3) Close connections
 const gracefulShutdown = async (signal: string) => {
+  if (isShuttingDown) return; // Prevent double shutdown
+  isShuttingDown = true;
   log(`Received ${signal}. Starting graceful shutdown...`, 'warn');
-  
+
+  // 1. Destroy all cron jobs so no new DB/Redis work is scheduled
+  const cronTasks = cron.getTasks();
+  cronTasks.forEach((task) => task.stop());
+  log(`Stopped ${cronTasks.size} cron tasks.`, 'info');
+
+  // 2. Flush error monitoring (uses Redis, not Sequelize)
   try {
-    // Flush any pending error digests before shutting down
     stopErrorMonitoring();
     await sendErrorDigest();
   } catch (err) {
     log(`Error flushing error digest: ${err}`, 'error');
   }
 
+  // 3. Wait briefly for in-flight DB operations to finish
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // 4. Close database connection pool LAST
   try {
-    // Close database connection
     await sequelize.close();
     log('Database connection closed.', 'info');
   } catch (err) {
@@ -829,6 +843,12 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  // Suppress Sequelize "connection manager was closed" errors during shutdown
+  const msg = reason instanceof Error ? reason.message : String(reason);
+  if (isShuttingDown && msg.includes('connection manager was closed')) {
+    log(`[Shutdown] Suppressed post-shutdown DB error: ${msg}`, 'warn');
+    return;
+  }
   log(`Unhandled Promise Rejection at: ${promise}, reason: ${reason}`, 'error');
   captureError(reason, 'unhandled-rejection', {
     severity: 'critical',
@@ -838,6 +858,11 @@ process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) =>
 });
 
 process.on('uncaughtException', (error: Error) => {
+  // Suppress Sequelize "connection manager was closed" errors during shutdown
+  if (isShuttingDown && error.message.includes('connection manager was closed')) {
+    log(`[Shutdown] Suppressed post-shutdown DB error: ${error.message}`, 'warn');
+    return;
+  }
   log(`Uncaught Exception: ${error.message}\n${error.stack}`, 'error');
   captureError(error, 'uncaught', {
     severity: 'critical',

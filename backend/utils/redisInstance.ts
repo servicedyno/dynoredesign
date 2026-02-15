@@ -142,40 +142,77 @@ const invalidateCache = async (key: string) => {
 // ============================================
 // DISTRIBUTED LOCKING (for concurrency control)
 // ============================================
+// Designed for a payment gateway handling many concurrent payments.
+// Features:
+//  - Automatic lock TTL renewal (heartbeat) for long operations
+//  - Stale lock cleanup on startup (dead-process recovery)
+//  - Per-payment granular locking (no global batch bottleneck)
+//  - Atomic acquire/release via Lua scripts
+
+// Track lock ownership per key for safe release
+const lockOwners = new Map<string, string>();
+
+// Active renewal timers (cleared on release)
+const lockRenewTimers = new Map<string, NodeJS.Timeout>();
 
 /**
- * Acquire a distributed lock
- * @param lockKey - Unique key for the lock
- * @param ttlSeconds - Lock expiry time (prevents deadlock)
- * @param maxRetries - Number of retry attempts
- * @param retryDelayMs - Delay between retries
- * @returns true if lock acquired, false otherwise
+ * Acquire a distributed lock with optional auto-renewal.
+ *
+ * Auto-renewal: When `autoRenew` is true, a background timer extends the lock
+ * at 50% of TTL. This prevents the lock expiring mid-operation when a sweep or
+ * conversion takes longer than expected — the #1 cause of the "stuck lock" bugs.
  */
 const acquireLock = async (
   lockKey: string,
   ttlSeconds: number = 30,
   maxRetries: number = 3,
-  retryDelayMs: number = 100
+  retryDelayMs: number = 100,
+  autoRenew: boolean = false
 ): Promise<boolean> => {
   const fullKey = `lock:${lockKey}`;
   const lockValue = `${process.pid}:${Date.now()}`;
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      // SET NX (only if not exists) with EX (expiry)
       const result = await redisClient.set(fullKey, lockValue, {
         NX: true,
         EX: ttlSeconds
       });
       
       if (result === 'OK') {
-        // Store lockValue so releaseLock can verify ownership
         lockOwners.set(fullKey, lockValue);
-        cronLogger.info(`[Lock] Acquired: ${lockKey}`);
+        cronLogger.info(`[Lock] Acquired: ${lockKey} (TTL: ${ttlSeconds}s, autoRenew: ${autoRenew})`);
+        
+        // Start heartbeat renewal at 50% of TTL
+        if (autoRenew) {
+          const renewInterval = Math.floor(ttlSeconds * 500); // ms, 50% of TTL
+          const timer = setInterval(async () => {
+            try {
+              // Only extend if we still own the lock (atomic check via Lua)
+              const extended = await redisClient.eval(EXTEND_LOCK_SCRIPT, {
+                keys: [fullKey],
+                arguments: [lockValue, String(ttlSeconds)],
+              });
+              if (extended === 1) {
+                cronLogger.info(`[Lock] Renewed: ${lockKey} (+${ttlSeconds}s)`);
+              } else {
+                // Lock was lost (expired or stolen) — stop renewing
+                clearInterval(timer);
+                lockRenewTimers.delete(fullKey);
+                cronLogger.warn(`[Lock] Renewal failed (lost): ${lockKey}`);
+              }
+            } catch {
+              // Redis error — stop renewing to avoid noise
+              clearInterval(timer);
+              lockRenewTimers.delete(fullKey);
+            }
+          }, renewInterval);
+          lockRenewTimers.set(fullKey, timer);
+        }
+        
         return true;
       }
       
-      // Log who holds the lock for debugging
       if (attempt === 0) {
         const holder = await redisClient.get(fullKey);
         const ttl = await redisClient.ttl(fullKey);
@@ -185,7 +222,6 @@ const acquireLock = async (
       cronLogger.error(`[Lock] Redis error during acquire ${lockKey}: ${err instanceof Error ? err.message : String(err)}`);
     }
     
-    // Wait before retry
     if (attempt < maxRetries - 1) {
       await new Promise(resolve => setTimeout(resolve, retryDelayMs));
     }
@@ -195,10 +231,7 @@ const acquireLock = async (
   return false;
 };
 
-// Track lock ownership per key for safe release
-const lockOwners = new Map<string, string>();
-
-// Lua script for atomic compare-and-delete (only delete if we own the lock)
+// Lua: Atomic compare-and-delete (only delete if we own the lock)
 const RELEASE_LOCK_SCRIPT = `
   if redis.call("get", KEYS[1]) == ARGV[1] then
     return redis.call("del", KEYS[1])
@@ -207,15 +240,29 @@ const RELEASE_LOCK_SCRIPT = `
   end
 `;
 
+// Lua: Atomic compare-and-extend (only extend TTL if we still own the lock)
+const EXTEND_LOCK_SCRIPT = `
+  if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("expire", KEYS[1], ARGV[2])
+  else
+    return 0
+  end
+`;
+
 /**
  * Release a distributed lock (only if current process owns it)
- * Uses atomic Lua script to prevent releasing another process's lock
- * @param lockKey - Unique key for the lock
  */
 const releaseLock = async (lockKey: string): Promise<void> => {
   const fullKey = `lock:${lockKey}`;
-  const lockValue = lockOwners.get(fullKey);
   
+  // Stop renewal timer first
+  const timer = lockRenewTimers.get(fullKey);
+  if (timer) {
+    clearInterval(timer);
+    lockRenewTimers.delete(fullKey);
+  }
+  
+  const lockValue = lockOwners.get(fullKey);
   if (lockValue) {
     try {
       const result = await redisClient.eval(RELEASE_LOCK_SCRIPT, {
@@ -227,32 +274,27 @@ const releaseLock = async (lockKey: string): Promise<void> => {
       } else {
         cronLogger.warn(`[Lock] Lock expired or owned by another process: ${lockKey}`);
       }
-    } catch (err) {
-      // Fallback: delete directly if Lua eval fails (e.g., older Redis)
-      await redisClient.del(fullKey);
+    } catch {
+      await redisClient.del(fullKey).catch(() => {});
       cronLogger.info(`[Lock] Released (fallback): ${lockKey}`);
     }
     lockOwners.delete(fullKey);
   } else {
-    // No ownership info — legacy fallback
-    await redisClient.del(fullKey);
+    await redisClient.del(fullKey).catch(() => {});
     cronLogger.info(`[Lock] Released (no owner): ${lockKey}`);
   }
 };
 
 /**
- * Execute a function with a distributed lock
- * @param lockKey - Unique key for the lock
- * @param fn - Function to execute while holding the lock
- * @param ttlSeconds - Lock expiry time
- * @returns Result of the function or null if lock could not be acquired
+ * Execute a function with a distributed lock.
+ * Uses auto-renewal by default to prevent lock expiry during long operations.
  */
 const withLock = async <T>(
   lockKey: string,
   fn: () => Promise<T>,
   ttlSeconds: number = 30
 ): Promise<{ success: boolean; result?: T; error?: string }> => {
-  const acquired = await acquireLock(lockKey, ttlSeconds);
+  const acquired = await acquireLock(lockKey, ttlSeconds, 3, 100, true);
   
   if (!acquired) {
     return { success: false, error: 'Could not acquire lock' };
@@ -264,6 +306,46 @@ const withLock = async <T>(
   } finally {
     await releaseLock(lockKey);
   }
+};
+
+/**
+ * Cleanup stale locks from dead processes on startup.
+ * Scans all lock:cron:* keys and removes any owned by PIDs that no longer exist.
+ * This prevents the "stuck cron" scenario after an unclean restart.
+ */
+const cleanupStaleLocks = async (): Promise<number> => {
+  let cleaned = 0;
+  try {
+    const lockKeys = await redisClient.keys('lock:cron:*');
+    for (const key of lockKeys) {
+      const value = await redisClient.get(key);
+      if (!value) continue;
+      
+      const [pidStr] = value.split(':');
+      const pid = parseInt(pidStr, 10);
+      
+      // Check if the PID is still alive
+      let alive = false;
+      try {
+        process.kill(pid, 0); // Signal 0 = existence check, no actual signal
+        alive = true;
+      } catch {
+        alive = false; // Process doesn't exist
+      }
+      
+      if (!alive) {
+        await redisClient.del(key);
+        cleaned++;
+        cronLogger.info(`[Lock] Cleaned stale lock: ${key} (dead PID: ${pid})`);
+      }
+    }
+    if (cleaned > 0) {
+      cronLogger.info(`[Lock] Startup cleanup: removed ${cleaned} stale locks`);
+    }
+  } catch (err) {
+    cronLogger.error(`[Lock] Startup cleanup error: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  return cleaned;
 };
 
 export { 
