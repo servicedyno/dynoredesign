@@ -7,6 +7,44 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
+  - task: "Consistent payment_status field across all merchant-facing endpoints (additive, non-breaking)"
+    implemented: true
+    working: true
+    files:
+      - "/app/backend/services/paymentStateMachine.ts"
+      - "/app/backend/services/webhookProcessor.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/routes/merchantApiRouter.ts"
+      - "/app/backend/webhooks/index.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          ✅ ADDITIVE STATUS NORMALIZATION COMPLETED: 511/511 tests pass (0 regressions)
+          
+          Added `payment_status` field across ALL merchant-facing endpoints for consistency.
+          Existing `status` field kept untouched for backward compatibility.
+          
+          Changes:
+          1. paymentStateMachine.ts: Added toConversionDisplayStatus() for auto-convert status mapping
+          2. webhookProcessor.ts: 
+             - BUGFIX: Crash recovery webhook status "processing" → "successful" (was sending wrong status)
+             - Added payment_status to all 4 callMerchantWebhook calls (confirmed, pending, underpaid x2)
+          3. paymentController.ts:
+             - Added payment_status to cryptoVerification success webhook payload
+             - Added payment_status to all 6 verify endpoint responses (confirmed, overpaid, underpaid, waiting, pending, failed)
+          4. merchantApiRouter.ts:
+             - getTransactions: Added payment_status field (via parseState + toExternalStatus)
+             - getTransactions: Added auto_convert.display_status (via toConversionDisplayStatus)
+             - getSingleTransaction: Same additions
+          5. webhooks/index.ts:
+             - Legacy tatumWebHook: Replaced magic strings with toRedisStatus(PaymentState.XXX)
+          
+          Base URL: http://localhost:8001
+
   - task: "P0: Wire validateTransition() into webhookProcessor.ts + P1: Hard-Enforce State Machine Across Codebase"
     implemented: true
     working: true
