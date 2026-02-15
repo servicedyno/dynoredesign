@@ -1,362 +1,304 @@
 #!/usr/bin/env python3
 """
-Backend Test Suite for DynoPay QR Code Currency Logo Overlay + JSON Parse Error Fix + Error Alert Email Fix
+Backend Test for Comprehensive Code Cleanup
+DynoPay Backend Testing Script
 """
 
 import requests
 import subprocess
-import sys
-import json
-import re
 import os
+import json
+import sys
+from pathlib import Path
 
-# Backend Base URL
-BASE_URL = "http://localhost:8001"
-
-def run_command(cmd, cwd=None):
-    """Run shell command and return output"""
+def get_base_url():
+    """Get the backend base URL from environment"""
+    # Check if we're in the container environment
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)
-        return result.returncode, result.stdout, result.stderr
-    except Exception as e:
-        return 1, "", str(e)
+        with open('/app/backend/.env', 'r') as f:
+            for line in f:
+                if line.startswith('SERVER_URL='):
+                    server_url = line.split('=')[1].strip()
+                    if server_url.startswith('http'):
+                        return server_url
+    except:
+        pass
+    
+    # Fallback to localhost
+    return "http://localhost:8001"
 
-def test_backend_health():
-    """TEST 1: Backend healthy"""
-    print("\n=== TEST 1: Backend Health ===")
+BASE_URL = get_base_url()
+print(f"Using BASE_URL: {BASE_URL}")
+
+class TestResults:
+    def __init__(self):
+        self.tests_run = 0
+        self.tests_passed = 0
+        self.failures = []
+
+    def run_test(self, test_name, test_func):
+        """Run a test and record results"""
+        self.tests_run += 1
+        try:
+            result = test_func()
+            if result:
+                self.tests_passed += 1
+                print(f"✅ TEST {self.tests_run} - {test_name}: PASSED")
+                return True
+            else:
+                self.failures.append(f"TEST {self.tests_run} - {test_name}: FAILED")
+                print(f"❌ TEST {self.tests_run} - {test_name}: FAILED")
+                return False
+        except Exception as e:
+            self.failures.append(f"TEST {self.tests_run} - {test_name}: ERROR - {str(e)}")
+            print(f"❌ TEST {self.tests_run} - {test_name}: ERROR - {str(e)}")
+            return False
+
+    def summary(self):
+        print(f"\n🎯 TEST SUMMARY: {self.tests_passed}/{self.tests_run} tests passed")
+        if self.failures:
+            print("\n❌ FAILURES:")
+            for failure in self.failures:
+                print(f"  - {failure}")
+        return self.tests_passed == self.tests_run
+
+def test_backend_healthy():
+    """TEST 1: Backend health check"""
     try:
         response = requests.get(f"{BASE_URL}/health", timeout=10)
         if response.status_code == 200:
             data = response.json()
-            if data.get('status') == 'healthy':
-                print("✅ Backend health check passed")
-                return True
-            else:
-                print(f"❌ Backend not healthy: {data}")
-                return False
-        else:
-            print(f"❌ Health check failed: {response.status_code}")
-            return False
+            return data.get('status') == 'healthy'
+        return False
     except Exception as e:
-        print(f"❌ Health check error: {e}")
+        print(f"Health check failed: {e}")
         return False
 
-def test_typescript_compilation():
-    """TEST 2: TypeScript compiles clean"""
-    print("\n=== TEST 2: TypeScript Compilation ===")
-    code, stdout, stderr = run_command("npx tsc --noEmit", cwd="/app/backend")
-    if code == 0:
-        print("✅ TypeScript compilation successful")
-        return True
-    else:
-        print(f"❌ TypeScript compilation failed:")
-        print(f"STDOUT: {stdout}")
-        print(f"STDERR: {stderr}")
-        return False
-
-def test_qr_generation_all_currencies():
-    """TEST 3: QR code generation with logo works for all 15 currencies"""
-    print("\n=== TEST 3: QR Code Generation All Currencies ===")
-    
-    test_script = '''
-import { generateQRCodeWithLogo } from './utils/qrCodeWithLogo';
-async function t() {
-    const currencies = ['BTC','ETH','LTC','DOGE','TRX','SOL','XRP','RLUSD','POLYGON','BCH','USDT-ERC20','USDC-ERC20','RLUSD-ERC20','USDT-POLYGON','USDT-TRC20'];
-    for (const c of currencies) {
-        const r = await generateQRCodeWithLogo('test123', c, 400);
-        console.log(c + ': ' + (r.startsWith('data:image/png;base64,') ? 'OK' : 'FAIL'));
-    }
-}
-t();
-'''
-    
-    code, stdout, stderr = run_command(f'npx ts-node --transpile-only -e "{test_script}"', cwd="/app/backend")
-    
-    if code == 0:
-        lines = stdout.strip().split('\n')
-        success_count = sum(1 for line in lines if ': OK' in line)
-        total_currencies = 15
-        
-        print(f"Generated QR codes for {success_count}/{total_currencies} currencies")
-        for line in lines:
-            if line.strip():
-                status = "✅" if ": OK" in line else "❌"
-                print(f"  {status} {line}")
-        
-        if success_count == total_currencies:
-            print("✅ All QR code generations successful")
-            return True
-        else:
-            print(f"❌ Only {success_count}/{total_currencies} QR codes generated successfully")
-            return False
-    else:
-        print(f"❌ QR code generation test failed:")
-        print(f"STDOUT: {stdout}")
-        print(f"STDERR: {stderr}")
-        return False
-
-def test_malformed_json_400():
-    """TEST 4: Malformed JSON returns 400"""
-    print("\n=== TEST 4: Malformed JSON Returns 400 ===")
+def test_typescript_compiles():
+    """TEST 2: TypeScript compilation check"""
     try:
-        response = requests.post(
-            f"{BASE_URL}/api/payment",
-            headers={"Content-Type": "application/json"},
-            data="not valid json",
-            timeout=10
-        )
-        
-        if response.status_code == 400:
-            data = response.json()
-            expected_message = "Invalid JSON in request body"
-            if data.get('message') == expected_message and data.get('statusCode') == 400:
-                print("✅ Malformed JSON correctly returns 400 with proper message")
-                print(f"   Response: {data}")
-                return True
-            else:
-                print(f"❌ Wrong response format: {data}")
-                return False
-        else:
-            print(f"❌ Expected 400, got {response.status_code}")
-            return False
+        os.chdir('/app/backend')
+        result = subprocess.run(['npx', 'tsc', '--noEmit'], 
+                              capture_output=True, text=True, timeout=60)
+        return result.returncode == 0
     except Exception as e:
-        print(f"❌ Malformed JSON test error: {e}")
+        print(f"TypeScript compilation failed: {e}")
         return False
 
-def test_valid_json_no_regression():
-    """TEST 5: Valid JSON still works (no regression)"""
-    print("\n=== TEST 5: Valid JSON No Regression ===")
-    try:
-        response = requests.post(
-            f"{BASE_URL}/api/payment",
-            headers={"Content-Type": "application/json"},
-            json={"test": True},
-            timeout=10
-        )
-        
-        # Should NOT return JSON parse error - business logic error is fine
-        if response.status_code != 400 or not response.text.strip().startswith('{"success":false,"message":"Invalid JSON'):
-            data = response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text
-            print("✅ Valid JSON does not trigger JSON parse error")
-            print(f"   Response code: {response.status_code}")
-            print(f"   Response: {str(data)[:200]}...")
-            return True
-        else:
-            print(f"❌ Valid JSON incorrectly triggered JSON parse error: {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Valid JSON test error: {e}")
-        return False
-
-def test_payment_controller_import():
-    """TEST 6: generateQRCodeWithLogo imported in paymentController"""
-    print("\n=== TEST 6: Payment Controller Import ===")
-    code, stdout, stderr = run_command("grep -c 'generateQRCodeWithLogo' /app/backend/controller/paymentController.ts")
-    
-    if code == 0:
-        count = int(stdout.strip())
-        if count >= 4:
-            print(f"✅ Found {count} occurrences of 'generateQRCodeWithLogo' in paymentController (>= 4 required)")
-            return True
-        else:
-            print(f"❌ Only found {count} occurrences, need >= 4")
-            return False
-    else:
-        print(f"❌ Error checking paymentController: {stderr}")
-        return False
-
-def test_wallet_controller_import():
-    """TEST 7: generateQRCodeWithLogo imported in walletController"""
-    print("\n=== TEST 7: Wallet Controller Import ===")
-    code, stdout, stderr = run_command("grep -c 'generateQRCodeWithLogo' /app/backend/controller/walletController.ts")
-    
-    if code == 0:
-        count = int(stdout.strip())
-        if count >= 2:
-            print(f"✅ Found {count} occurrences of 'generateQRCodeWithLogo' in walletController (>= 2 required)")
-            return True
-        else:
-            print(f"❌ Only found {count} occurrences, need >= 2")
-            return False
-    else:
-        print(f"❌ Error checking walletController: {stderr}")
-        return False
-
-def test_no_plain_qr_calls():
-    """TEST 8: No remaining plain QR_Code.toDataURL calls"""
-    print("\n=== TEST 8: No Plain QR Calls Remaining ===")
-    
-    # Check paymentController
-    code1, stdout1, stderr1 = run_command("grep 'QR_Code.toDataURL' /app/backend/controller/paymentController.ts")
-    # Check walletController
-    code2, stdout2, stderr2 = run_command("grep 'QR_Code.toDataURL' /app/backend/controller/walletController.ts")
-    
-    # Exit code 1 means no matches found (good)
-    if code1 == 1 and code2 == 1:
-        print("✅ No plain QR_Code.toDataURL calls found in either controller")
-        return True
-    else:
-        print("❌ Found remaining plain QR_Code.toDataURL calls:")
-        if code1 == 0:
-            print(f"   In paymentController: {stdout1}")
-        if code2 == 0:
-            print(f"   In walletController: {stdout2}")
-        return False
-
-def test_redis_error_buffer():
-    """TEST 9: Error monitoring uses Redis-backed buffer"""
-    print("\n=== TEST 9: Redis Error Buffer ===")
-    
-    patterns = [
-        ('REDIS_ERROR_BUFFER_KEY', 1),
-        ('restoreBufferFromRedis', 2),
-        ('persistBufferToRedis', 2)
+def test_deleted_files():
+    """TEST 3: Verify deleted files no longer exist"""
+    deleted_files = [
+        '/app/backend/utils/redisKeyNamespace.ts',
+        '/app/backend/utils/destinationTagValidator.ts', 
+        '/app/backend/middleware/csrfProtection.ts'
     ]
     
-    all_passed = True
-    for pattern, min_count in patterns:
-        code, stdout, stderr = run_command(f"grep -c '{pattern}' /app/backend/services/errorMonitoringService.ts")
-        if code == 0:
-            count = int(stdout.strip())
-            if count >= min_count:
-                print(f"✅ Found {count} occurrences of '{pattern}' (>= {min_count} required)")
-            else:
-                print(f"❌ Found only {count} occurrences of '{pattern}', need >= {min_count}")
-                all_passed = False
-        else:
-            print(f"❌ Error checking '{pattern}': {stderr}")
-            all_passed = False
-    
-    return all_passed
-
-def test_high_severity_alerts():
-    """TEST 10: High severity errors get immediate alerts"""
-    print("\n=== TEST 10: High Severity Immediate Alerts ===")
-    code, stdout, stderr = run_command("grep 'severity === \"high\"' /app/backend/services/errorMonitoringService.ts")
-    
-    if code == 0:
-        print("✅ Found high severity immediate alert condition")
-        print(f"   Context: {stdout.strip()}")
-        return True
-    else:
-        print("❌ High severity immediate alert condition not found")
-        return False
-
-def test_body_parser_error_capture():
-    """TEST 11: Body parser middleware captures errors for monitoring"""
-    print("\n=== TEST 11: Body Parser Error Capture ===")
-    code, stdout, stderr = run_command("grep 'captureError' /app/backend/server.ts")
-    
-    if code == 0:
-        # Check if it's in the body parser context (around lines 112-125)
-        lines = stdout.strip().split('\n')
-        for line in lines:
-            if 'captureError' in line and ('api' in line or 'Malformed' in line):
-                print("✅ Found captureError call in body parser handler")
-                print(f"   Context: {line.strip()}")
-                return True
-        print("❌ captureError found but not in body parser context")
-        return False
-    else:
-        print("❌ captureError not found in server.ts")
-        return False
-
-def test_digest_emails_sent():
-    """TEST 12: Digest emails confirmed sent (check logs)"""
-    print("\n=== TEST 12: Digest Emails Sent ===")
-    code, stdout, stderr = run_command("grep 'Digest sent to' /var/log/supervisor/backend.out.log")
-    
-    if code == 0:
-        count = len(stdout.strip().split('\n')) if stdout.strip() else 0
-        if count >= 1:
-            print(f"✅ Found {count} digest email(s) sent in logs")
-            return True
-        else:
-            print("❌ No digest emails found in logs")
+    for file_path in deleted_files:
+        if os.path.exists(file_path):
+            print(f"File still exists: {file_path}")
             return False
-    else:
-        print("❌ Could not check digest email logs or no emails sent yet")
-        # This might be OK if no errors have occurred yet
-        print("   (This might be normal if no errors have been captured yet)")
-        return True  # Don't fail the test for this
-
-def test_brevo_api_key():
-    """TEST 13: Brevo API key configured"""
-    print("\n=== TEST 13: Brevo API Key ===")
-    code, stdout, stderr = run_command("grep 'BREVO_API_KEY=xkeysib' /app/backend/.env")
     
-    if code == 0:
-        print("✅ Brevo API key found in .env")
+    return True
+
+def test_unused_packages_removed():
+    """TEST 4: Verify unused packages removed from package.json"""
+    try:
+        with open('/app/backend/package.json', 'r') as f:
+            package_content = f.read()
+        
+        unused_packages = ['cheerio', 'yamljs', 'ioredis', '"crc-32"', '"crc32"', '"fast-crc32c"']
+        
+        for package in unused_packages:
+            if package in package_content:
+                print(f"Unused package still found: {package}")
+                return False
+        
         return True
-    else:
-        print("❌ Brevo API key not found or not configured properly")
+    except Exception as e:
+        print(f"Package.json check failed: {e}")
         return False
 
-def test_admin_email():
-    """TEST 14: ADMIN_EMAIL configured"""
-    print("\n=== TEST 14: Admin Email Configuration ===")
-    code, stdout, stderr = run_command("grep 'ADMIN_EMAIL=' /app/backend/.env")
-    
-    if code == 0 and 'moxxcompany@gmail.com' in stdout:
-        print("✅ ADMIN_EMAIL configured correctly")
+def test_types_moved_to_dev_dependencies():
+    """TEST 5: Verify @types moved to devDependencies"""
+    try:
+        with open('/app/backend/package.json', 'r') as f:
+            package_data = json.load(f)
+        
+        # Check devDependencies has the required @types packages
+        dev_deps = package_data.get('devDependencies', {})
+        required_types = [
+            '@types/fast-crc32c',
+            '@types/node-cron', 
+            '@types/nodemailer',
+            '@types/qrcode',
+            '@types/sharp',
+            '@types/swagger-jsdoc',
+            '@types/swagger-ui-express'
+        ]
+        
+        for type_package in required_types:
+            if type_package not in dev_deps:
+                print(f"Missing from devDependencies: {type_package}")
+                return False
+        
+        # Check dependencies does NOT contain @types packages
+        deps = package_data.get('dependencies', {})
+        for dep in deps:
+            if dep.startswith('@types/'):
+                print(f"@types package found in dependencies: {dep}")
+                return False
+                
         return True
-    else:
-        print("❌ ADMIN_EMAIL not configured or incorrect")
+    except Exception as e:
+        print(f"devDependencies check failed: {e}")
+        return False
+
+def test_scripts_archived():
+    """TEST 6: Verify scripts archived"""
+    try:
+        archive_path = '/app/backend/scripts/_archive/'
+        if not os.path.exists(archive_path):
+            print("Archive directory does not exist")
+            return False
+        
+        # Check for required archived directories
+        required_dirs = ['debug', 'analysis', 'migration', 'recovery', 'root_utils']
+        for dir_name in required_dirs:
+            dir_path = os.path.join(archive_path, dir_name)
+            if not os.path.exists(dir_path):
+                print(f"Archived directory missing: {dir_name}")
+                return False
+        
+        # Check debug directory has 50+ files
+        debug_path = os.path.join(archive_path, 'debug')
+        if os.path.exists(debug_path):
+            debug_files = len(os.listdir(debug_path))
+            if debug_files < 50:
+                print(f"Debug directory has only {debug_files} files, expected 50+")
+                return False
+        
+        return True
+    except Exception as e:
+        print(f"Scripts archive check failed: {e}")
+        return False
+
+def test_docs_consolidated():
+    """TEST 7: Verify docs consolidated"""
+    try:
+        # Check guides directory
+        guides_path = '/app/docs/guides/'
+        if os.path.exists(guides_path):
+            guides_count = len(os.listdir(guides_path))
+            if guides_count != 13:
+                print(f"Expected 13 files in guides, found {guides_count}")
+                return False
+        else:
+            print("Guides directory does not exist")
+            return False
+            
+        # Check plans directory  
+        plans_path = '/app/docs/plans/'
+        if os.path.exists(plans_path):
+            plans_count = len(os.listdir(plans_path))
+            if plans_count != 5:
+                print(f"Expected 5 files in plans, found {plans_count}")
+                return False
+        else:
+            print("Plans directory does not exist")
+            return False
+            
+        # Check reports directory
+        reports_path = '/app/docs/reports/'
+        if os.path.exists(reports_path):
+            reports_count = len(os.listdir(reports_path))
+            if reports_count != 7:
+                print(f"Expected 7 files in reports, found {reports_count}")
+                return False
+        else:
+            print("Reports directory does not exist")
+            return False
+            
+        return True
+    except Exception as e:
+        print(f"Docs consolidation check failed: {e}")
+        return False
+
+def test_no_root_doc_sprawl():
+    """TEST 8: Verify no root doc sprawl"""
+    try:
+        md_files = []
+        for file in os.listdir('/app/'):
+            if file.endswith('.md'):
+                md_files.append(file)
+        
+        expected_files = ['README.md', 'test_result.md']
+        
+        if set(md_files) != set(expected_files):
+            print(f"Expected only {expected_files}, found: {md_files}")
+            return False
+            
+        return True
+    except Exception as e:
+        print(f"Root doc sprawl check failed: {e}")
+        return False
+
+def test_root_test_files_moved():
+    """TEST 9: Verify root test .py files moved"""
+    try:
+        # Check that backend_test.py exists in tests directory
+        if not os.path.exists('/app/tests/backend_test.py'):
+            print("backend_test.py does not exist in /app/tests/")
+            return False
+            
+        # Check that backend_test.py does NOT exist in root
+        if os.path.exists('/app/backend_test.py'):
+            print("backend_test.py still exists in root")
+            return False
+            
+        return True
+    except Exception as e:
+        print(f"Test files move check failed: {e}")
+        return False
+
+def test_config_dedup():
+    """TEST 10: Verify config dedup"""
+    try:
+        config_files = ['Procfile', 'railway.json', 'nixpacks.toml']
+        
+        for config_file in config_files:
+            backend_path = f'/app/backend/{config_file}'
+            if os.path.exists(backend_path):
+                print(f"Config file still exists in backend: {config_file}")
+                return False
+                
+        return True
+    except Exception as e:
+        print(f"Config dedup check failed: {e}")
         return False
 
 def main():
     """Run all tests"""
-    print("🧪 DynoPay Backend Test Suite")
-    print("Testing: QR Code Currency Logo Overlay + JSON Parse Error Fix + Error Alert Email Fix")
-    print("=" * 80)
+    print("🧪 COMPREHENSIVE CODE CLEANUP TESTING")
+    print("=" * 50)
     
-    tests = [
-        ("Backend Health", test_backend_health),
-        ("TypeScript Compilation", test_typescript_compilation),
-        ("QR Generation All Currencies", test_qr_generation_all_currencies),
-        ("Malformed JSON Returns 400", test_malformed_json_400),
-        ("Valid JSON No Regression", test_valid_json_no_regression),
-        ("Payment Controller Import", test_payment_controller_import),
-        ("Wallet Controller Import", test_wallet_controller_import),
-        ("No Plain QR Calls", test_no_plain_qr_calls),
-        ("Redis Error Buffer", test_redis_error_buffer),
-        ("High Severity Alerts", test_high_severity_alerts),
-        ("Body Parser Error Capture", test_body_parser_error_capture),
-        ("Digest Emails Sent", test_digest_emails_sent),
-        ("Brevo API Key", test_brevo_api_key),
-        ("Admin Email Configuration", test_admin_email)
-    ]
+    test_runner = TestResults()
     
-    results = []
+    # Run all tests
+    test_runner.run_test("Backend Health", test_backend_healthy)
+    test_runner.run_test("TypeScript Compilation", test_typescript_compiles) 
+    test_runner.run_test("Deleted Files Removed", test_deleted_files)
+    test_runner.run_test("Unused Packages Removed", test_unused_packages_removed)
+    test_runner.run_test("@types Moved to devDependencies", test_types_moved_to_dev_dependencies)
+    test_runner.run_test("Scripts Archived", test_scripts_archived)
+    test_runner.run_test("Docs Consolidated", test_docs_consolidated)
+    test_runner.run_test("No Root Doc Sprawl", test_no_root_doc_sprawl)
+    test_runner.run_test("Root Test Files Moved", test_root_test_files_moved)
+    test_runner.run_test("Config Dedup", test_config_dedup)
     
-    for test_name, test_func in tests:
-        try:
-            result = test_func()
-            results.append((test_name, result))
-        except Exception as e:
-            print(f"❌ Test '{test_name}' crashed: {e}")
-            results.append((test_name, False))
+    # Print summary
+    success = test_runner.summary()
     
-    # Summary
-    print("\n" + "=" * 80)
-    print("📊 TEST RESULTS SUMMARY")
-    print("=" * 80)
-    
-    passed = sum(1 for _, result in results if result)
-    total = len(results)
-    
-    for test_name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status:8} {test_name}")
-    
-    print(f"\n📈 Overall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
-    
-    if passed == total:
-        print("🎉 ALL TESTS PASSED - QR Code Currency Logo Overlay + JSON Parse Error Fix + Error Alert Email Fix is working correctly!")
-        return 0
-    else:
-        print(f"⚠️  {total - passed} test(s) failed - see details above")
-        return 1
+    return 0 if success else 1
 
 if __name__ == "__main__":
     sys.exit(main())
