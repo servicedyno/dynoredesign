@@ -7,6 +7,7 @@
 import express from "express";
 import crypto from "crypto";
 import { errorResponseHelper } from "../helper";
+import { apiLogger } from "../utils/loggers";
 
 const CSRF_TOKEN_LENGTH = 32;
 const CSRF_COOKIE_NAME = 'XSRF-TOKEN';
@@ -119,7 +120,7 @@ export const adminCsrfProtection = (
   next: express.NextFunction
 ): void => {
   // Log CSRF validation attempt for security monitoring
-  console.log(`[CSRF] Admin endpoint access attempt: ${req.method} ${req.path} from ${req.ip}`);
+  apiLogger.info(`[CSRF] Admin endpoint access attempt: ${req.method} ${req.path} from ${req.ip}`);
   
   // Apply standard CSRF protection
   csrfProtection(req, res, next);
