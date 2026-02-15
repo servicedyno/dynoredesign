@@ -308,6 +308,32 @@ app.post("/diagnostics/trigger-sweep", authMiddleware, async (req: express.Reque
   }
 });
 
+// Diagnostics: Binance proxy state
+app.get("/diagnostics/binance-proxy", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const proxyState = getProxyState();
+    const wsStatus = getWsStatus();
+    res.status(200).json({ success: true, proxy: proxyState, websocket: wsStatus });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+// Diagnostics: Force Binance proxy on/off
+app.post("/diagnostics/binance-proxy", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const { enabled } = req.body;
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ success: false, error: "enabled (boolean) is required" });
+    }
+    const result = forceProxyState(enabled);
+    res.status(200).json({ success: true, message: `Proxy ${enabled ? "ENABLED" : "DISABLED"}`, ...result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+
 // Diagnostics: Volatility monitor states
 app.get("/diagnostics/volatility", async (_req: express.Request, res: express.Response) => {
   try {
