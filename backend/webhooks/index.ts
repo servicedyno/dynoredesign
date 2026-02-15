@@ -499,6 +499,20 @@ const tatumCryptoWebHook = async (
     let address = payload.address;
     let items = await getRedisItem("crypto-" + address);
 
+    // ── BCH CASHADDR NORMALIZATION ──
+    // Tatum webhooks send BCH addresses in short CashAddr format (e.g., "qqxer0q7..."),
+    // but our system stores them with the full "bitcoincash:" prefix.
+    // Try both formats to ensure matching.
+    if ((!items || Object.keys(items).length === 0) && address && !address.startsWith('bitcoincash:')) {
+      const bchFullAddr = `bitcoincash:${address}`;
+      const bchItems = await getRedisItem("crypto-" + bchFullAddr);
+      if (bchItems && Object.keys(bchItems).length > 0) {
+        webhookLogs.info(`[tatumCryptoWebHook] BCH CashAddr resolved: ${address} → ${bchFullAddr}`);
+        address = bchFullAddr;
+        items = bchItems;
+      }
+    }
+
     // ── TAG-BASED CHAIN HANDLING (XRP, RLUSD) ──
     // The Tatum webhook doesn't include destination tags.
     // For tag-based master addresses, fetch the full tx to get the tag,
