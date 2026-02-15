@@ -203,10 +203,11 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
       return;
     }
 
-    // ── 6. Status checks ──────────────────────────────────────────────────────
+    // ── 6. Status checks (using state machine for terminal detection) ─────────
     const isFirstTransaction = !items.txId;
     const isCompletionPayment = String(items.incomplete) === "true" && items.txId !== payload.txId;
-    const isAlreadySuccessful = items.status === "successful" || items.status === "completed" || items.status === "recovered";
+    const currentParsedState = parseState(items.status);
+    const isAlreadySuccessful = currentParsedState === PaymentState.PAYOUT_COMPLETE;
 
     if (isAlreadySuccessful) {
       webhookLogs.info("[WebhookProcessor] Payment already successful, ignoring for tx:", payload.txId);
@@ -214,7 +215,7 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
     }
 
     // ── 7. Crash recovery for stale "processing" payments ─────────────────────
-    const isStaleProcessing = items.status === "processing"
+    const isStaleProcessing = currentParsedState === PaymentState.PROCESSING
       && !!items.txId
       && items.lastAttempt
       && (Date.now() - new Date(items.lastAttempt as string).getTime()) > 60000;
