@@ -640,16 +640,30 @@ const getAllTransactions = async (
       ...(offset !== -1 && limit && { offset, limit }),
     });
 
-    const tempData = await sequelize.query(
-      `
+    // Whitelist allowed columns for ORDER BY to prevent SQL injection
+    const ALLOWED_COLUMNS: Record<string, string> = {
+      createdAt: '"createdAt"', updatedAt: '"updatedAt"', base_amount: 'base_amount',
+      status: 'status', id: 'id',
+    };
+    const safeCol = (column && ALLOWED_COLUMNS[column]) ? ALLOWED_COLUMNS[column] : '"createdAt"';
+    const safeSort = sortType === 'asc' ? 'ASC' : 'DESC';
+
+    let adminQuery = `
       select ut.*,c.customer_name,c.email,cm.company_name,cm.company_id from tbl_user_transaction ut 
       join tbl_customer c on c.customer_id=ut.customer_id
       join tbl_company cm on cm.company_id=c.company_id
-       ${column && sortType ? `order by "${column}" ${sortType}` : ``} 
-      ${offset !== -1 && limit ? `offset ${offset} limit ${limit}` : ``}
-      `,
-      { type: QueryTypes.SELECT }
-    );
+      order by ${safeCol} ${safeSort}`;
+    const adminReplacements: Record<string, unknown> = {};
+    if (offset !== -1 && limit) {
+      adminQuery += ` offset :offset limit :limit`;
+      adminReplacements.offset = offset;
+      adminReplacements.limit = limit;
+    }
+
+    const tempData = await sequelize.query(adminQuery, {
+      type: QueryTypes.SELECT,
+      replacements: adminReplacements,
+    });
     const customer_data = tempData.map((x: Record<string, unknown>) => {
       const { wallet_id, transaction_id, ...rest } = x;
       return rest;
