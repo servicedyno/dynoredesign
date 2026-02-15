@@ -1040,13 +1040,13 @@ const verifyCryptoPayment = async (
       //   platformCharge
       // );
 
-      const adminWallet = await incrementAdminFee(tempData.currency, platformCharge + blockchainCharge);
+      await incrementAdminFee(tempData.currency, platformCharge + blockchainCharge);
 
       const userSettledAmount = Number(
         Number(receivedAmount) - platformCharge - blockchainCharge
       ).toFixed(8);
 
-      walletLogger.info("adminWallet and settled amount", { adminWallet: JSON.stringify(adminWallet), userSettledAmount });
+      walletLogger.info("settled amount", { userSettledAmount });
 
       let fees: unknown;
       let sendAmount: string | number = Number(receivedAmount);
