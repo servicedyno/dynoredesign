@@ -3153,6 +3153,8 @@ const settleCryptoTransaction = async ({
 
       if (canUseSingleUTXO) {
         // UTXO chains: Create single transaction with two outputs (merchant + admin)
+        // Use SATOSHI-LEVEL integer arithmetic to avoid floating-point precision issues
+        // that cause Tatum API rejection ("decimal places not more than 8")
         fees = await tatumApi.feeEstimation(
           currency,
           fromAddress,
@@ -3160,9 +3162,23 @@ const settleCryptoTransaction = async ({
           Number(receivedAmount) + Number(userAmount)
         );
 
-        const feeToDeduct = fees?.fast ?? 0;
-        const adminAmount = Number(receivedAmount);
-        merchantSendAmount = Number(userAmount) - Number(feeToDeduct);
+        const rawFeeToDeduct = Number(fees?.fast ?? fees?.slow ?? 0);
+        // Use satoshi-level arithmetic: multiply to int, compute, divide back
+        const totalInputSats = Math.round((Number(receivedAmount) + Number(userAmount)) * 1e8);
+        const feeSats = Math.round(rawFeeToDeduct * 1e8);
+        const adminSats = Math.round(Number(receivedAmount) * 1e8);
+        const merchantSats = totalInputSats - adminSats - feeSats;
+
+        if (merchantSats <= 0) {
+          cronLogger.warn(`[settleCryptoTransaction] UTXO multi-output: Merchant amount after fee is non-positive. Total: ${totalInputSats}, Admin: ${adminSats}, Fee: ${feeSats}`);
+          throw new Error(`Merchant amount after fee is non-positive for ${currency}`);
+        }
+
+        const adminAmount = adminSats / 1e8;
+        merchantSendAmount = merchantSats / 1e8;
+        const exactFee = feeSats / 1e8;
+
+        cronLogger.info(`[settleCryptoTransaction] UTXO multi-output math (satoshi): totalInput=${totalInputSats}, admin=${adminSats}, merchant=${merchantSats}, fee=${feeSats}, change=${totalInputSats - adminSats - merchantSats - feeSats}`);
 
         // Lookup the correct UTXO output index for this address (instead of assuming index 0)
         const utxoIndex = await tatumApi.findUtxoOutputIndex(transactionId, fromAddress, currency);
@@ -3175,7 +3191,7 @@ const settleCryptoTransaction = async ({
             toAddress: userAddress,  // Primary recipient is merchant
             privateKey: privateKey,
             amount: merchantSendAmount,
-            fee: String(fees.fast),
+            fee: String(exactFee),
             fromUTXO: [
               {
                 txHash: transactionId,
@@ -3186,20 +3202,20 @@ const settleCryptoTransaction = async ({
             toUTXO: [
               {
                 address: userAddress,
-                value: Number(merchantSendAmount),
+                value: merchantSendAmount,
               },
               {
                 address: adminWalletAddress,
-                value: Number(adminAmount),
+                value: adminAmount,
               },
             ],
           }),
           `UTXO merchant transfer (${currency})`
         );
 
-        totalBlockchainFee = feeToDeduct;
+        totalBlockchainFee = exactFee;
         
-        cronLogger.info(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${merchantSendAmount} + admin ${adminAmount}`);
+        cronLogger.info(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${merchantSendAmount} + admin ${adminAmount} (fee: ${exactFee})`);
 
       } else {
         // Account-based chains (ETH, TRX, BSC, SOL, XRP, POLYGON): Single transfer to merchant only
