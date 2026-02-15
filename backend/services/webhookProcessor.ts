@@ -472,6 +472,9 @@ async function handleNewTransaction(
 
     if (isDirectApi) {
       // Direct API: process immediately with received amount
+      // Soft-enforce: pending → processing (PENDING → PROCESSING — skips DETECTED)
+      softValidate(items.status, "processing", paymentId, "direct-api-underpayment");
+
       await setRedisItem(redisKey, {
         ...items, status: "processing", txId: payload.txId,
         receivedAmount: totalReceivedAmount, originalExpectedAmount: expectedAmount,
