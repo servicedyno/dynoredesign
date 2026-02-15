@@ -3598,9 +3598,9 @@ const verifyCryptoPayment = async (
       });
     }
     
-    // Return status based on Redis state
+    // Return status based on Redis state (using PaymentState enum)
     // Status flow: pending -> processing -> successful OR failed
-    if (redisStatus === "pending" && !tempData?.txId) {
+    if (parsedState === PaymentState.PENDING && !tempData?.txId) {
       // Payment initiated but no transaction detected yet
       return successResponseHelper(res, 200, "Waiting for payment", {
         status: "waiting",
