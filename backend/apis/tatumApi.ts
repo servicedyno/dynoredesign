@@ -1610,8 +1610,8 @@ const assetToOtherAddress = async ({
   } else if (currency === "LTC") {
     // When toUTXO is provided (merchant + admin split), use multi-output; otherwise single output
     const ltcOutputs = toUTXO.length > 0
-      ? toUTXO.map((o: any) => ({ address: o.address, value: Number(Number(o.value).toFixed(8)) }))
-      : [{ address: toAddress, value: Number(Number(amount).toFixed(8)) }];
+      ? toUTXO.map((o: any) => ({ address: o.address, value: truncateDecimals(Number(o.value)) }))
+      : [{ address: toAddress, value: truncateDecimals(Number(amount)) }];
     // UTXO chains: fee should be a simple string like "0.00002446", not the full {slow,medium,fast} object
     const ltcFee = typeof fee === 'object' && fee !== null
       ? (fee.slow || fee.medium || fee.fast || "0.00005")
