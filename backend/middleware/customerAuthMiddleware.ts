@@ -2,6 +2,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import { errorResponseHelper, getErrorMessage } from "../helper";
 import { customerModel, paymentLinkModel } from "../models";
+import { apiLogger } from "../utils/loggers";
 
 // Op and IUserType imports removed - not used
 
@@ -97,7 +98,7 @@ const customerAuthMiddleware = async (
       }
     }
   } catch (e: unknown) {
-    console.log("Customer Auth Middleware Error:", e);
+    apiLogger.error("Customer Auth Middleware Error:", e);
     const message = getErrorMessage(e);
     errorResponseHelper(res, 500, message);
   }
