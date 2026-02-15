@@ -14,6 +14,7 @@
 import { Queue, Worker, Job, QueueEvents } from "bullmq";
 import { webhookLogs } from "../utils/loggers";
 import { captureError } from "./errorMonitoringService";
+import { baseEmailTemplate, infoBox, dataRow, statusBadge, p } from "../utils/emailTemplate";
 
 // Redis connection config (reuse from environment)
 const REDIS_URL = process.env.REDIS_PUBLIC_URL || "redis://localhost:6379";
