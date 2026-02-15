@@ -1,4 +1,5 @@
 import {
+import { cronLogger } from "../utils/loggers";
   FeeEvmBased,
   PrivKey,
   SignatureId,
@@ -76,7 +77,7 @@ const getTatumHeaders = async () => {
   
   if (isTestnet()) {
     headers["x-testnet-type"] = getTestnetType();
-    console.log(`[Tatum] Using TESTNET mode: ${getTestnetType()}`);
+    cronLogger.info(`[Tatum] Using TESTNET mode: ${getTestnetType()}`);
   }
   
   return headers;
@@ -185,7 +186,7 @@ const getTatumSDK = async () => {
   try {
     // Use testnet key if in testnet mode
     if (isTestnet() && process.env.TATUM_TESTNET_KEY) {
-      if (!tatumSdkInitLogged) console.log('[getTatumSDK] Using TESTNET key');
+      if (!tatumSdkInitLogged) cronLogger.info('[getTatumSDK] Using TESTNET key');
       const tatumSdk = TatumApi(process.env.TATUM_TESTNET_KEY);
       tatumSdkInitLogged = true;
       return tatumSdk;
@@ -194,7 +195,7 @@ const getTatumSDK = async () => {
     let tatumKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
     
     if (!tatumKey) {
-      if (!tatumSdkInitLogged) console.log('[getTatumSDK] No Tatum key found in .env, attempting Secret Manager...');
+      if (!tatumSdkInitLogged) cronLogger.info('[getTatumSDK] No Tatum key found in .env, attempting Secret Manager...');
       const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
       const client = new SecretManagerServiceClient({
         credentials: {
@@ -211,17 +212,17 @@ const getTatumSDK = async () => {
       });
       const payload = version.payload.data.toString();
       tatumKey = payload;
-      if (!tatumSdkInitLogged) console.log('[getTatumSDK] Using key from Secret Manager');
+      if (!tatumSdkInitLogged) cronLogger.info('[getTatumSDK] Using key from Secret Manager');
     } else {
-      if (!tatumSdkInitLogged) console.log('[getTatumSDK] Using key from .env file');
+      if (!tatumSdkInitLogged) cronLogger.info('[getTatumSDK] Using key from .env file');
     }
     
     const tatumSdk = TatumApi(tatumKey);
-    if (!tatumSdkInitLogged) console.log('[getTatumSDK] TatumApi initialized: true');
+    if (!tatumSdkInitLogged) cronLogger.info('[getTatumSDK] TatumApi initialized: true');
     tatumSdkInitLogged = true;
     return tatumSdk;
   } catch (e) {
-    console.log('[getTatumSDK] ERROR:', e);
+    cronLogger.info('[getTatumSDK] ERROR:', e);
     throw e;
   }
 };
@@ -230,7 +231,7 @@ const getTatumKey = async () => {
   try {
     // Use testnet key if in testnet mode
     if (isTestnet() && process.env.TATUM_TESTNET_KEY) {
-      console.log('[getTatumKey] Using TESTNET key');
+      cronLogger.info('[getTatumKey] Using TESTNET key');
       return process.env.TATUM_TESTNET_KEY;
     }
     
@@ -255,7 +256,7 @@ const getTatumKey = async () => {
     }
     return tatumKey;
   } catch (e) {
-    console.log(e);
+    cronLogger.info(e);
   }
 };
 
@@ -266,7 +267,7 @@ const testingFunction = async () => {
 
     return data;
   } catch (e) {
-    console.log(e);
+    cronLogger.info(e);
   }
 };
 
@@ -279,14 +280,14 @@ const generateWallet = async (currency) => {
       mnemonic = wallet.mnemonic;
       xpub = wallet.xpub;
 
-      console.log("Mnemonic:", mnemonic);
-      console.log("xPub:", xpub);
+      cronLogger.info("Mnemonic:", mnemonic);
+      cronLogger.info("xPub:", xpub);
 
       const index = 0;
       address = (
         await tatumSdk.blockchain.bitcoin.btcGenerateAddress(xpub, index)
       ).address;
-      console.log(`Derived Address [Index ${index}]:`, address);
+      cronLogger.info(`Derived Address [Index ${index}]:`, address);
 
       privateKey = (
         await tatumSdk.blockchain.bitcoin.btcGenerateAddressPrivateKey({
@@ -295,19 +296,19 @@ const generateWallet = async (currency) => {
         })
       ).key;
       // SECURITY: Private keys must never be logged
-      console.log(`Derived address for index ${index}: ${address}`);
+      cronLogger.info(`Derived address for index ${index}: ${address}`);
     } else if (currency === "ETH") {
       const wallet = await tatumSdk.blockchain.eth.ethGenerateWallet();
       mnemonic = wallet.mnemonic;
       xpub = wallet.xpub;
 
-      console.log("Mnemonic:", mnemonic);
-      console.log("xPub:", xpub);
+      cronLogger.info("Mnemonic:", mnemonic);
+      cronLogger.info("xPub:", xpub);
 
       const index = 0;
       address = (await tatumSdk.blockchain.eth.ethGenerateAddress(xpub, index))
         .address;
-      console.log(`Derived Address [Index ${index}]:`, address);
+      cronLogger.info(`Derived Address [Index ${index}]:`, address);
 
       privateKey = (
         await tatumSdk.blockchain.eth.ethGenerateAddressPrivateKey({
@@ -316,20 +317,20 @@ const generateWallet = async (currency) => {
         })
       ).key;
       // SECURITY: Private keys must never be logged
-      console.log(`Derived ETH address for index ${index}: ${address}`);
+      cronLogger.info(`Derived ETH address for index ${index}: ${address}`);
     } else if (currency === "TRX") {
       const wallet = await tatumSdk.blockchain.tron.generateTronwallet();
       mnemonic = wallet.mnemonic;
       xpub = wallet.xpub;
 
-      console.log("Mnemonic:", mnemonic);
-      console.log("xPub:", xpub);
+      cronLogger.info("Mnemonic:", mnemonic);
+      cronLogger.info("xPub:", xpub);
 
       const index = 0;
       address = (
         await tatumSdk.blockchain.tron.tronGenerateAddress(xpub, index)
       ).address;
-      console.log(`Derived Address [Index ${index}]:`, address);
+      cronLogger.info(`Derived Address [Index ${index}]:`, address);
 
       privateKey = (
         await tatumSdk.blockchain.tron.tronGenerateAddressPrivateKey({
@@ -338,20 +339,20 @@ const generateWallet = async (currency) => {
         })
       ).key;
       // SECURITY: Private keys must never be logged
-      console.log(`Derived address for index ${index}`);
+      cronLogger.info(`Derived address for index ${index}`);
     } else if (currency === "DOGE") {
       const wallet = await tatumSdk.blockchain.doge.dogeGenerateWallet();
       mnemonic = wallet.mnemonic;
       xpub = wallet.xpub;
 
-      console.log("Mnemonic:", mnemonic);
-      console.log("xPub:", xpub);
+      cronLogger.info("Mnemonic:", mnemonic);
+      cronLogger.info("xPub:", xpub);
 
       const index = 0;
       address = (
         await tatumSdk.blockchain.doge.dogeGenerateAddress(xpub, index)
       ).address;
-      console.log(`Derived Address [Index ${index}]:`, address);
+      cronLogger.info(`Derived Address [Index ${index}]:`, address);
 
       privateKey = (
         await tatumSdk.blockchain.doge.dogeGenerateAddressPrivateKey({
@@ -360,19 +361,19 @@ const generateWallet = async (currency) => {
         })
       ).key;
       // SECURITY: Private keys must never be logged
-      console.log(`Derived address for index ${index}`);
+      cronLogger.info(`Derived address for index ${index}`);
     } else if (currency === "LTC") {
       const wallet = await tatumSdk.blockchain.ltc.ltcGenerateWallet();
       mnemonic = wallet.mnemonic;
       xpub = wallet.xpub;
 
-      console.log("Mnemonic:", mnemonic);
-      console.log("xPub:", xpub);
+      cronLogger.info("Mnemonic:", mnemonic);
+      cronLogger.info("xPub:", xpub);
 
       const index = 0;
       address = (await tatumSdk.blockchain.ltc.ltcGenerateAddress(xpub, index))
         .address;
-      console.log(`Derived Address [Index ${index}]:`, address);
+      cronLogger.info(`Derived Address [Index ${index}]:`, address);
 
       privateKey = (
         await tatumSdk.blockchain.ltc.ltcGenerateAddressPrivateKey({
@@ -381,19 +382,19 @@ const generateWallet = async (currency) => {
         })
       ).key;
       // SECURITY: Private keys must never be logged
-      console.log(`Derived address for index ${index}`);
+      cronLogger.info(`Derived address for index ${index}`);
     } else if (currency === "BSC") {
       const wallet = await tatumSdk.blockchain.bsc.bscGenerateWallet();
       mnemonic = wallet.mnemonic;
       xpub = wallet.xpub;
 
-      console.log("Mnemonic:", mnemonic);
-      console.log("xPub:", xpub);
+      cronLogger.info("Mnemonic:", mnemonic);
+      cronLogger.info("xPub:", xpub);
 
       const index = 0;
       address = (await tatumSdk.blockchain.bsc.bscGenerateAddress(xpub, index))
         .address;
-      console.log(`Derived Address [Index ${index}]:`, address);
+      cronLogger.info(`Derived Address [Index ${index}]:`, address);
 
       privateKey = (
         await tatumSdk.blockchain.bsc.bscGenerateAddressPrivateKey({
@@ -402,20 +403,20 @@ const generateWallet = async (currency) => {
         })
       ).key;
       // SECURITY: Private keys must never be logged
-      console.log(`Derived address for index ${index}`);
+      cronLogger.info(`Derived address for index ${index}`);
     } else if (currency === "BCH") {
       const wallet = await tatumSdk.blockchain.bcash.bchGenerateWallet();
       mnemonic = wallet.mnemonic;
       xpub = wallet.xpub;
 
-      console.log("Mnemonic:", mnemonic);
-      console.log("xPub:", xpub);
+      cronLogger.info("Mnemonic:", mnemonic);
+      cronLogger.info("xPub:", xpub);
 
       const index = 0;
       address = (
         await tatumSdk.blockchain.bcash.bchGenerateAddress(xpub, index)
       ).address;
-      console.log(`Derived Address [Index ${index}]:`, address);
+      cronLogger.info(`Derived Address [Index ${index}]:`, address);
 
       privateKey = (
         await tatumSdk.blockchain.bcash.bchGenerateAddressPrivateKey({
@@ -424,7 +425,7 @@ const generateWallet = async (currency) => {
         })
       ).key;
       // SECURITY: Private keys must never be logged
-      console.log(`Derived address for index ${index}`);
+      cronLogger.info(`Derived address for index ${index}`);
     } else if (currency === "SOL") {
       // Solana: Non-HD — each wallet is a unique keypair
       const wallet = await tatumSdk.blockchain.solana.solanaGenerateWallet();
@@ -432,7 +433,7 @@ const generateWallet = async (currency) => {
       privateKey = wallet.privateKey;
       mnemonic = "NON_HD";
       xpub = `NON_HD_SOL_${address.substring(0, 8)}`;
-      console.log("SOL Address:", address);
+      cronLogger.info("SOL Address:", address);
     } else if (currency === "XRP") {
       // XRP: Non-HD — each wallet is account + secret
       const wallet = await tatumSdk.blockchain.xrp.xrpWallet();
@@ -440,20 +441,20 @@ const generateWallet = async (currency) => {
       privateKey = wallet.secret;
       mnemonic = "NON_HD";
       xpub = `NON_HD_XRP_${address.substring(0, 8)}`;
-      console.log("XRP Address:", address);
+      cronLogger.info("XRP Address:", address);
     } else if (currency === "POLYGON") {
       // Polygon: EVM-compatible, HD derivation like ETH
       const wallet = await tatumSdk.blockchain.polygon.polygonGenerateWallet();
       mnemonic = wallet.mnemonic;
       xpub = wallet.xpub;
 
-      console.log("Mnemonic:", mnemonic);
-      console.log("xPub:", xpub);
+      cronLogger.info("Mnemonic:", mnemonic);
+      cronLogger.info("xPub:", xpub);
 
       const index = 0;
       address = (await tatumSdk.blockchain.polygon.polygonGenerateAddress(xpub, index))
         .address;
-      console.log(`Derived Address [Index ${index}]:`, address);
+      cronLogger.info(`Derived Address [Index ${index}]:`, address);
 
       privateKey = (
         await tatumSdk.blockchain.polygon.polygonGenerateAddressPrivateKey({
@@ -462,7 +463,7 @@ const generateWallet = async (currency) => {
         })
       ).key;
       // SECURITY: Private keys must never be logged
-      console.log(`Derived address for index ${index}`);
+      cronLogger.info(`Derived address for index ${index}`);
     }
     return {
       mnemonic,
@@ -471,7 +472,7 @@ const generateWallet = async (currency) => {
       privateKey,
     };
   } catch (error) {
-    console.error("Error in wallet generation and key derivation:", error);
+    cronLogger.error("Error in wallet generation and key derivation:", error);
   }
 };
 
@@ -532,7 +533,7 @@ const createVirtualAccount = async ({
   xpub,
   customerId,
 }: virtualAccount) => {
-  console.log(currency, xpub, customerId);
+  cronLogger.info(currency, xpub, customerId);
   try {
     const tatumSdk = await getTatumSDK();
     const account = await tatumSdk.ledger.account.createAccount({
@@ -546,7 +547,7 @@ const createVirtualAccount = async ({
 
     return { account };
   } catch (error) {
-    console.error("Error in wallet generation and key derivation:", error);
+    cronLogger.error("Error in wallet generation and key derivation:", error);
   }
 };
 
@@ -556,7 +557,7 @@ const getAllAccounts = async () => {
     const accounts = await tatumSdk.ledger.account.getAccounts();
     return { accounts };
   } catch (error) {
-    console.error("Error in wallet generation and key derivation:", error);
+    cronLogger.error("Error in wallet generation and key derivation:", error);
   }
 };
 
@@ -602,7 +603,7 @@ const generateUserAddress = async ({
         if (isTestnet()) {
           const wallet = new ethers.Wallet(privateKey.key);
           address = { address: wallet.address };
-          console.log(`[generateUserAddress] Testnet: Derived address ${wallet.address} from private key`);
+          cronLogger.info(`[generateUserAddress] Testnet: Derived address ${wallet.address} from private key`);
         } else {
           address = await tatumSdk.blockchain.eth.ethGenerateAddress(xpub, index);
         }
@@ -646,7 +647,7 @@ const generateUserAddress = async ({
         if (isTestnet()) {
           const wallet = new ethers.Wallet(privateKey.key);
           address = { address: wallet.address };
-          console.log(`[generateUserAddress] Testnet BSC: Derived address ${wallet.address} from private key`);
+          cronLogger.info(`[generateUserAddress] Testnet BSC: Derived address ${wallet.address} from private key`);
         } else {
           address = await tatumSdk.blockchain.bsc.bscGenerateAddress(xpub, index);
         }
@@ -683,7 +684,7 @@ const generateUserAddress = async ({
         if (isTestnet()) {
           const wallet = new ethers.Wallet(privateKey.key);
           address = { address: wallet.address };
-          console.log(`[generateUserAddress] Testnet POLYGON: Derived address ${wallet.address} from private key`);
+          cronLogger.info(`[generateUserAddress] Testnet POLYGON: Derived address ${wallet.address} from private key`);
         } else {
           address = await tatumSdk.blockchain.polygon.polygonGenerateAddress(xpub, index);
         }
@@ -693,7 +694,7 @@ const generateUserAddress = async ({
     }
     return { address: address.address, privateKey: privateKey.key };
   } catch (error) {
-    console.error("Error in address generation:", error);
+    cronLogger.error("Error in address generation:", error);
   }
 };
 
@@ -707,7 +708,7 @@ const deleteUserAddress = async (customerID, address) => {
 
     return { resData };
   } catch (error) {
-    console.error("Error in wallet generation and key derivation:", error);
+    cronLogger.error("Error in wallet generation and key derivation:", error);
   }
 };
 
@@ -734,7 +735,7 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
     const webhookPath = onlyCrypto ? "api/tatum-crypto-webhook" : "api/tatum-webhook";
     const url = buildUrl(webhookPath);
     
-    console.log(`[createSubscription] Address: ${address}, Chain: ${chain}, Webhook URL: ${url}`);
+    cronLogger.info(`[createSubscription] Address: ${address}, Chain: ${chain}, Webhook URL: ${url}`);
 
     const { data } = await axios.get(
       "https://api.tatum.io/v4/subscription?pageSize=10&address=" + address,
@@ -748,16 +749,16 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
       
       // ALWAYS update webhook URL to ensure it matches current SERVER_URL
       // This fixes issues where subscription was created with old URL
-      console.log(`[createSubscription] Existing subscription ${resData.id}, URL: ${existingUrl}`);
+      cronLogger.info(`[createSubscription] Existing subscription ${resData.id}, URL: ${existingUrl}`);
       if (existingUrl !== url) {
-        console.log(`[createSubscription] Updating webhook URL from ${existingUrl} to ${url}`);
+        cronLogger.info(`[createSubscription] Updating webhook URL from ${existingUrl} to ${url}`);
       }
       await axios.put(
         "https://api.tatum.io/v4/subscription/" + resData.id,
         { url },
         { headers }
       );
-      console.log(`[createSubscription] Webhook URL updated for subscription ${resData.id}`);
+      cronLogger.info(`[createSubscription] Webhook URL updated for subscription ${resData.id}`);
     } else {
       const { data } = await axios.post(
         "https://api.tatum.io/v4/subscription",
@@ -771,7 +772,7 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
         },
         { headers }
       );
-      console.log("[createSubscription] New Tatum subscription created:", data?.id);
+      cronLogger.info("[createSubscription] New Tatum subscription created:", data?.id);
       resData = data;
     }
     return resData;
@@ -781,11 +782,11 @@ const createSubscription = async (address, currency, onlyCrypto = false) => {
     if (errorData?.errorCode === 'subscription.exists.on.address-and-currency') {
       const match = errorData.message?.match(/already exists \(([a-f0-9]+)\)/);
       if (match && match[1]) {
-        console.log(`[createSubscription] Subscription already exists (${match[1]}), returning existing`);
+        cronLogger.info(`[createSubscription] Subscription already exists (${match[1]}), returning existing`);
         return { id: match[1] };
       }
     }
-    console.log("[createSubscription] Tatum subscription error:", JSON.stringify(errorData || e.message, null, 2));
+    cronLogger.info("[createSubscription] Tatum subscription error:", JSON.stringify(errorData || e.message, null, 2));
     throw e;
   }
 };
@@ -813,7 +814,7 @@ const createSubscriptionWithUrl = async (address: string, currency: string, cust
         ? "SOL"
         : currency;
 
-    console.log(`[createSubscriptionWithUrl] Address: ${address}, Chain: ${chain}, URL: ${customUrl}`);
+    cronLogger.info(`[createSubscriptionWithUrl] Address: ${address}, Chain: ${chain}, URL: ${customUrl}`);
 
     // Check for existing subscription
     const { data: existingData } = await axios.get(
@@ -827,17 +828,17 @@ const createSubscriptionWithUrl = async (address: string, currency: string, cust
       resData = { id: existingData[0]?.id };
       const existingUrl = existingData[0]?.attr?.url;
       
-      console.log(`[createSubscriptionWithUrl] Existing subscription ${resData.id}, URL: ${existingUrl}`);
+      cronLogger.info(`[createSubscriptionWithUrl] Existing subscription ${resData.id}, URL: ${existingUrl}`);
       
       // Update URL if different
       if (existingUrl !== customUrl) {
-        console.log(`[createSubscriptionWithUrl] Updating URL: ${existingUrl} -> ${customUrl}`);
+        cronLogger.info(`[createSubscriptionWithUrl] Updating URL: ${existingUrl} -> ${customUrl}`);
         await axios.put(
           "https://api.tatum.io/v4/subscription/" + resData.id,
           { url: customUrl },
           { headers }
         );
-        console.log(`[createSubscriptionWithUrl] ✅ URL updated for subscription ${resData.id}`);
+        cronLogger.info(`[createSubscriptionWithUrl] ✅ URL updated for subscription ${resData.id}`);
       }
     } else {
       // Create new subscription
@@ -853,14 +854,14 @@ const createSubscriptionWithUrl = async (address: string, currency: string, cust
         },
         { headers }
       );
-      console.log(`[createSubscriptionWithUrl] ✅ New subscription created: ${newData?.id}`);
+      cronLogger.info(`[createSubscriptionWithUrl] ✅ New subscription created: ${newData?.id}`);
       resData = newData;
     }
     
     return resData;
   } catch (e: unknown) {
     const error = e as { response?: { data?: unknown }; message?: string };
-    console.log("[createSubscriptionWithUrl] Error:", JSON.stringify(error.response?.data || error.message, null, 2));
+    cronLogger.info("[createSubscriptionWithUrl] Error:", JSON.stringify(error.response?.data || error.message, null, 2));
     throw e;
   }
 };
@@ -900,8 +901,8 @@ const createSubscriptionBlockBeeStyle = async (
     const baseUrl = (process.env.SERVER_URL || '').replace(/\/$/, '');
     const webhookUrl = `${baseUrl}/api/tatum-crypto-webhook?company_id=${companyId}&user_id=${userId}&address_id=${addressId}`;
     
-    console.log(`[createSubscriptionBlockBeeStyle] Address: ${address}, Chain: ${chain}`);
-    console.log(`[createSubscriptionBlockBeeStyle] Webhook URL: ${webhookUrl}`);
+    cronLogger.info(`[createSubscriptionBlockBeeStyle] Address: ${address}, Chain: ${chain}`);
+    cronLogger.info(`[createSubscriptionBlockBeeStyle] Webhook URL: ${webhookUrl}`);
 
     // Check for existing subscription
     const { data: existingData } = await axios.get(
@@ -915,18 +916,18 @@ const createSubscriptionBlockBeeStyle = async (
       resData.id = existingData[0]?.id;
       const existingUrl = existingData[0]?.attr?.url;
       
-      console.log(`[createSubscriptionBlockBeeStyle] Existing subscription ${resData.id}`);
-      console.log(`[createSubscriptionBlockBeeStyle] Current URL: ${existingUrl}`);
+      cronLogger.info(`[createSubscriptionBlockBeeStyle] Existing subscription ${resData.id}`);
+      cronLogger.info(`[createSubscriptionBlockBeeStyle] Current URL: ${existingUrl}`);
       
       // Always update URL to ensure company_id params are current
       if (existingUrl !== webhookUrl) {
-        console.log(`[createSubscriptionBlockBeeStyle] Updating URL with new company info`);
+        cronLogger.info(`[createSubscriptionBlockBeeStyle] Updating URL with new company info`);
         await axios.put(
           "https://api.tatum.io/v4/subscription/" + resData.id,
           { url: webhookUrl },
           { headers }
         );
-        console.log(`[createSubscriptionBlockBeeStyle] ✅ URL updated`);
+        cronLogger.info(`[createSubscriptionBlockBeeStyle] ✅ URL updated`);
       }
     } else {
       // Create new subscription
@@ -942,14 +943,14 @@ const createSubscriptionBlockBeeStyle = async (
         },
         { headers }
       );
-      console.log(`[createSubscriptionBlockBeeStyle] ✅ New subscription created: ${newData?.id}`);
+      cronLogger.info(`[createSubscriptionBlockBeeStyle] ✅ New subscription created: ${newData?.id}`);
       resData.id = newData?.id;
     }
     
     return resData;
   } catch (e: unknown) {
     const error = e as { response?: { data?: unknown }; message?: string };
-    console.error("[createSubscriptionBlockBeeStyle] Error:", error.response?.data || error.message);
+    cronLogger.error("[createSubscriptionBlockBeeStyle] Error:", error.response?.data || error.message);
     throw e;
   }
 };
@@ -963,12 +964,12 @@ const deleteSubscription = async (id: string | number | null): Promise<unknown> 
         `https://api.tatum.io/v4/subscription/${id}?type=${networkType}`,
         { headers }
       );
-      console.log(resData.data);
+      cronLogger.info(resData.data);
       return resData.data;
     }
     return null;
   } catch (e: unknown) {
-    console.log(e);
+    cronLogger.info(e);
   }
 };
 
@@ -1001,7 +1002,7 @@ const listAllSubscriptions = async (): Promise<Array<Record<string, unknown>>> =
     return allSubscriptions;
   } catch (e: unknown) {
     const error = e as { response?: { data?: unknown }; message?: string };
-    console.error("Failed to list subscriptions:", error.response?.data || error.message);
+    cronLogger.error("Failed to list subscriptions:", error.response?.data || error.message);
     throw e;
   }
 };
@@ -1014,10 +1015,10 @@ const sendFeeToAdmin = async (userId: string, adminID: string, amount: number | 
       recipientAccountId: adminID,
       senderAccountId: userId,
     });
-    console.log(resData.reference);
+    cronLogger.info(resData.reference);
     return resData.reference;
   } catch (e: unknown) {
-    console.log(e);
+    cronLogger.info(e);
   }
 };
 
@@ -1027,9 +1028,9 @@ const getBitcoinAddress = async (address) => {
     const data = await tatumSdk.blockchain.bitcoin.btcGetBalanceOfAddress(
       address
     );
-    console.log(data);
+    cronLogger.info(data);
   } catch (e) {
-    console.log(e);
+    cronLogger.info(e);
   }
 };
 
@@ -1061,7 +1062,7 @@ const feeEstimation = async (
     try {
       const cached = await getRedisItem(cacheKey);
       if (cached) {
-        console.log(`[feeEstimation] ⚡ Cache hit for ${currency}`);
+        cronLogger.info(`[feeEstimation] ⚡ Cache hit for ${currency}`);
         return JSON.parse(cached);
       }
     } catch (_cacheErr) {
@@ -1086,7 +1087,7 @@ const feeEstimation = async (
     const factor = Math.pow(10, decimals);
     const safeEstimateAmount = (Math.floor(localAmount * factor) / factor).toString();
     if (isERC20) {
-      console.log(`[getGasFee] ${currency} amount for gas estimation: ${localAmount} → truncated to ${decimals} decimals: ${safeEstimateAmount}`);
+      cronLogger.info(`[getGasFee] ${currency} amount for gas estimation: ${localAmount} → truncated to ${decimals} decimals: ${safeEstimateAmount}`);
     }
     const gasFees = (await tatumSdk.fee.estimateFeeBlockchain({
       chain: isERC20 ? "ETH" : currency,
@@ -1101,7 +1102,7 @@ const feeEstimation = async (
       amount: safeEstimateAmount,
     })) as FeeEvmBased;
 
-    console.log(gasFees);
+    cronLogger.info(gasFees);
 
     // Use EVM chain strategy utility for gas fee calculation
     const { calculateEvmGasFee } = require('../services/chains/evmChain');
@@ -1111,7 +1112,7 @@ const feeEstimation = async (
       maxGas: isPolygon ? 1000 : 50,
     });
     const usedGasPrice = fees.gasPrice;
-    console.log(`[EVM Gas] ⛽ Price: raw=${Math.ceil(gasFees?.gasPrice || 1)}, capped=${usedGasPrice}, chain=${currency}`);
+    cronLogger.info(`[EVM Gas] ⛽ Price: raw=${Math.ceil(gasFees?.gasPrice || 1)}, capped=${usedGasPrice}, chain=${currency}`);
   } else if (currency === "BCH") {
     const headers = await getTatumHeaders();
     const {
@@ -1145,7 +1146,7 @@ const feeEstimation = async (
         slow: trxFee.slow,
       };
     } catch (_trxFeeError) {
-      console.warn(`[feeEstimation] ⚠️ Dynamic TRX fee failed, using fallback 1 TRX`);
+      cronLogger.warn(`[feeEstimation] ⚠️ Dynamic TRX fee failed, using fallback 1 TRX`);
       fees = { fast: 1, medium: 1, slow: 1 };
     }
   } else if (currency === "USDT-TRC20") {
@@ -1162,7 +1163,7 @@ const feeEstimation = async (
         fast: dynamicFee.fast,
       };
     } catch (feeCalcError) {
-      console.warn(`[feeEstimation] ⚠️ Dynamic TRC20 fee failed, using fallback 14 TRX:`, feeCalcError);
+      cronLogger.warn(`[feeEstimation] ⚠️ Dynamic TRC20 fee failed, using fallback 14 TRX:`, feeCalcError);
       // Fallback: 65k energy × 100 SUN + bandwidth ≈ 7 TRX, with buffer ≈ 14 TRX
       fees = {
         fast: 14,
@@ -1197,7 +1198,7 @@ const feeEstimation = async (
         const totalFast = baseFee + priorityFeeSol * 2; // 2x median for fast
         const totalMedium = baseFee + priorityFeeSol;
         
-        console.log(`[feeEstimation] SOL dynamic: base=0.000005, priorityMedian=${medianPriorityFee} µ-lamports/CU, fast=${totalFast.toFixed(9)}, medium=${totalMedium.toFixed(9)}`);
+        cronLogger.info(`[feeEstimation] SOL dynamic: base=0.000005, priorityMedian=${medianPriorityFee} µ-lamports/CU, fast=${totalFast.toFixed(9)}, medium=${totalMedium.toFixed(9)}`);
         fees = {
           fast: Math.max(totalFast, 0.00001),    // Floor at 10k lamports
           medium: Math.max(totalMedium, 0.000005), // Floor at base fee
@@ -1208,7 +1209,7 @@ const feeEstimation = async (
         fees = { fast: 0.00001, medium: 0.000005, slow: 0.000005 };
       }
     } catch (_solFeeError) {
-      console.warn(`[feeEstimation] ⚠️ SOL dynamic fee query failed, using fallback`);
+      cronLogger.warn(`[feeEstimation] ⚠️ SOL dynamic fee query failed, using fallback`);
       fees = { fast: 0.00001, medium: 0.000005, slow: 0.000005 };
     }
   } else if (currency === "XRP") {
@@ -1269,17 +1270,17 @@ const feeEstimation = async (
           rpcGasPrice = Math.ceil(parseInt(rpcResp.data.result, 16) / 1e9);
         }
       } catch (_rpcErr) {
-        console.warn(`[feeEstimation] ⚠️ Polygon RPC gas price failed, using SDK value`);
+        cronLogger.warn(`[feeEstimation] ⚠️ Polygon RPC gas price failed, using SDK value`);
       }
 
       // Use Polygon chain strategy utility for fee calculation
       const { calculatePolygonGasFee } = require('../services/chains/polygonChain');
       const rawGasPrice = Math.max(sdkGasPrice, rpcGasPrice);
-      console.log(`[Polygon Gas] ⛽ SDK=${sdkGasPrice}, RPC=${rpcGasPrice}, used=${rawGasPrice} Gwei`);
+      cronLogger.info(`[Polygon Gas] ⛽ SDK=${sdkGasPrice}, RPC=${rpcGasPrice}, used=${rawGasPrice} Gwei`);
       
       fees = calculatePolygonGasFee(rawGasPrice, isToken, sdkGasLimit);
     } catch (_polyFeeError) {
-      console.warn(`[feeEstimation] ⚠️ Polygon fee estimation failed entirely, using fallback`);
+      cronLogger.warn(`[feeEstimation] ⚠️ Polygon fee estimation failed entirely, using fallback`);
       fees = { fast: isToken ? 0.05 : 0.005, gasPrice: 100, gasLimit: isToken ? 65000 : 21000 };
     }
   }
@@ -1310,8 +1311,8 @@ const batchFeeEstimation = async ({
   const tatumSdk = await getTatumSDK();
   // Handled Batch Transactions
   if (["BTC", "LTC", "DOGE"].indexOf(currency) !== -1) {
-    console.log("###IF 1 BTC OR 1 LTC OR 1 DOGE###");
-    console.log("###Payloads-->", {
+    cronLogger.info("###IF 1 BTC OR 1 LTC OR 1 DOGE###");
+    cronLogger.info("###Payloads-->", {
       chain: currency,
       type: "TRANSFER",
       fromAddress: fromAddresses.map((address) => address.address),
@@ -1329,7 +1330,7 @@ const batchFeeEstimation = async ({
         value: Number(address.value),
       })),
     });
-    console.log("###BTC FEES--->", fees);
+    cronLogger.info("###BTC FEES--->", fees);
   } else if (["ETH", "BSC", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20", "POLYGON", "USDT-POLYGON"].indexOf(currency) !== -1) {
     const isERC20 = ["USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20", "USDT-POLYGON"].includes(currency);
     const chainId = ["POLYGON", "USDT-POLYGON"].includes(currency) ? "MATIC" : (isERC20 ? "ETH" : currency);
@@ -1367,7 +1368,7 @@ const batchFeeEstimation = async ({
       { gasPrice: 0, gasLimit: 0 }
     );
 
-    console.log({ gasFees });
+    cronLogger.info({ gasFees });
 
     // Chain-specific gas cap — Polygon needs higher cap than ETH
     const isPolygonBatch = ["POLYGON", "USDT-POLYGON"].includes(currency);
@@ -1392,7 +1393,7 @@ const batchFeeEstimation = async ({
     let gasPrice = Math.max(isPolygonBatch ? 25 : 1, Math.min(maxBatchGas, rawBatchGas));
     // Percentage-based buffer: 10% + 0.5 Gwei priority tip (was flat +1 Gwei)
     const batchGasBuffer = Math.ceil(gasPrice * 1.1 + 0.5);
-    console.log(`[EVM Gas] ⛽ Batch price: SDK=${gasFees?.gasPrice}, RPC=${rpcGasPrice}, used=${gasPrice}, buffered=${batchGasBuffer} Gwei (chain=${currency}, max=${maxBatchGas})`);
+    cronLogger.info(`[EVM Gas] ⛽ Batch price: SDK=${gasFees?.gasPrice}, RPC=${rpcGasPrice}, used=${gasPrice}, buffered=${batchGasBuffer} Gwei (chain=${currency}, max=${maxBatchGas})`);
 
     fees = {
       fast: Number(
@@ -1459,7 +1460,7 @@ const batchFeeEstimation = async ({
         fast: batchFee,
       };
     } catch (_batchFeeError) {
-      console.warn(`[batchFeeEstimation] ⚠️ Dynamic TRC20 fee failed, using fallback`);
+      cronLogger.warn(`[batchFeeEstimation] ⚠️ Dynamic TRC20 fee failed, using fallback`);
       fees = {
         fast: 14 * (totalAddress || 1),
       };
@@ -1503,14 +1504,14 @@ const assetToOtherAddress = async ({
     // DEPRECATION WARNING: For sweep operations, use directEvmSweep() from directEvmTransfer.ts instead.
     // This Tatum SDK path is retained only for non-sweep operations (merchant payouts, admin transfers).
     // Tatum SDK's ethBlockchainTransfer has known ghost TX issues — never use for sweep/pool operations.
-    console.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for ${currency} transfer. For sweeps, use directEvmSweep().`);
+    cronLogger.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for ${currency} transfer. For sweeps, use directEvmSweep().`);
     // USDT/USDC ERC-20 have 6 decimals; ETH has 18 — truncate accordingly
     const isERC20Token = currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20";
     const decimals = isERC20Token ? 6 : 8;
     const factor = Math.pow(10, decimals);
     const safeAmount = (Math.floor(Number(amount) * factor) / factor).toString();
     if (isERC20Token) {
-      console.log(`[assetToOtherAddress] ${currency} amount: ${amount} → truncated to ${decimals} decimals: ${safeAmount}`);
+      cronLogger.info(`[assetToOtherAddress] ${currency} amount: ${amount} → truncated to ${decimals} decimals: ${safeAmount}`);
     }
     if (currency === "RLUSD-ERC20") {
       // RLUSD is a custom ERC-20 not in Tatum's predefined list — use generic erc20Transfer
@@ -1547,7 +1548,7 @@ const assetToOtherAddress = async ({
   } else if (currency === "USDT-TRC20") {
     // USDT TRC-20 has 6 decimals — truncate (not round) to avoid "callback is not defined" Tatum error
     const truncatedAmount = (Math.floor(Number(amount) * 1e6) / 1e6).toString();
-    console.log(`[assetToOtherAddress] USDT-TRC20 amount: ${amount} → truncated to 6 decimals: ${truncatedAmount}`);
+    cronLogger.info(`[assetToOtherAddress] USDT-TRC20 amount: ${amount} → truncated to 6 decimals: ${truncatedAmount}`);
 
     // Dynamic feeLimit based on sender's Energy & current network price
     let optimalFeeLimit = 15; // Default fallback (was hardcoded 50)
@@ -1563,7 +1564,7 @@ const assetToOtherAddress = async ({
         isNewRecipient: feeLimitResult.isNewRecipient,
       });
     } catch (feeLimitError) {
-      console.warn(`[assetToOtherAddress] ⚠️ Dynamic feeLimit failed, using fallback ${optimalFeeLimit} TRX`);
+      cronLogger.warn(`[assetToOtherAddress] ⚠️ Dynamic feeLimit failed, using fallback ${optimalFeeLimit} TRX`);
     }
 
     transaction = await tatumSdk.blockchain.tron.tronTransferTrc20({
@@ -1574,7 +1575,7 @@ const assetToOtherAddress = async ({
       tokenAddress: process.env.TRX_CONTRACT,
     });
   } else if (currency === "BSC") {
-    console.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for BSC transfer. For sweeps, use directEvmSweep().`);
+    cronLogger.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for BSC transfer. For sweeps, use directEvmSweep().`);
     transaction = await tatumSdk.blockchain.bsc.bscBlockchainTransfer({
       currency,
       amount: Number(amount).toFixed(8).toString(),
@@ -1612,7 +1613,7 @@ const assetToOtherAddress = async ({
       : fee;
     // Ensure max 8 decimal places
     const ltcFeeStr = typeof ltcFee === 'string' ? ltcFee : String(Number(ltcFee).toFixed(8));
-    console.log(`[assetToOtherAddress] LTC fee: ${JSON.stringify(fee)} → resolved: ${ltcFeeStr}`);
+    cronLogger.info(`[assetToOtherAddress] LTC fee: ${JSON.stringify(fee)} → resolved: ${ltcFeeStr}`);
     transaction = await tatumSdk.blockchain.ltc.ltcTransferBlockchain({
       fromAddress: [{ address: fromAddress, privateKey }],
       to: ltcOutputs,
@@ -1648,7 +1649,7 @@ const assetToOtherAddress = async ({
       : (toAddress === adminXrpWallet && adminDestTag) ? adminDestTag : undefined;
     
     if (resolvedDestTag) {
-      console.log(`[assetToOtherAddress] XRP transfer with destination tag: ${resolvedDestTag}`);
+      cronLogger.info(`[assetToOtherAddress] XRP transfer with destination tag: ${resolvedDestTag}`);
     }
     
     transaction = await tatumSdk.blockchain.xrp.xrpTransferBlockchain({
@@ -1668,7 +1669,7 @@ const assetToOtherAddress = async ({
       : (toAddress === adminXrpWallet && adminDestTag) ? adminDestTag : undefined;
     
     if (resolvedDestTag) {
-      console.log(`[assetToOtherAddress] RLUSD transfer with destination tag: ${resolvedDestTag}`);
+      cronLogger.info(`[assetToOtherAddress] RLUSD transfer with destination tag: ${resolvedDestTag}`);
     }
     
     const rlusdIssuer = process.env.RLUSD_ISSUER || "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
@@ -1684,7 +1685,7 @@ const assetToOtherAddress = async ({
     } as any);
   } else if (currency === "POLYGON") {
     // DEPRECATION WARNING: For sweep operations, use directEvmSweep() from directEvmTransfer.ts instead.
-    console.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for POLYGON transfer. For sweeps, use directEvmSweep().`);
+    cronLogger.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for POLYGON transfer. For sweeps, use directEvmSweep().`);
     // Polygon native transfer (POL)
     transaction = await tatumSdk.blockchain.polygon.polygonBlockchainTransfer({
       fromPrivateKey: privateKey,
@@ -1697,7 +1698,7 @@ const assetToOtherAddress = async ({
       } : undefined,
     });
   } else if (currency === "USDT-POLYGON") {
-    console.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for USDT-POLYGON transfer. For sweeps, use directEvmSweep().`);
+    cronLogger.warn(`[assetToOtherAddress] ⚠️ DEPRECATION: Using Tatum SDK for USDT-POLYGON transfer. For sweeps, use directEvmSweep().`);
     // USDT on Polygon — use contract-address-based smart contract invocation
     // This is more reliable than currency-name-based transfer (no dependency on SDK naming)
     const usdtPolygonContract = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
@@ -1727,7 +1728,7 @@ const assetToOtherAddress = async ({
         } : undefined,
       });
     } catch (polyTokenErr) {
-      console.error(`[assetToOtherAddress] USDT-POLYGON transfer failed:`, polyTokenErr?.message);
+      cronLogger.error(`[assetToOtherAddress] USDT-POLYGON transfer failed:`, polyTokenErr?.message);
       throw polyTokenErr;
     }
   }
@@ -1750,7 +1751,7 @@ const assetBatchAddressesToOtherAddress = async ({
   const destinationAddress = toAddress[0].address;
 
   if (currency === "BTC") {
-    console.log("#######BTC PAYLOAD ####", {
+    cronLogger.info("#######BTC PAYLOAD ####", {
       fromAddress: fromAddress.map((address) => ({
         address: address.address,
         privateKey: address.privateKey,
@@ -1782,7 +1783,7 @@ const assetBatchAddressesToOtherAddress = async ({
           : destinationAddress,
       }
     );
-    console.log("###result", result);
+    cronLogger.info("###result", result);
     const txId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
     fromAddress.forEach((fromAdd) => {
       transactions.push({
@@ -1792,14 +1793,14 @@ const assetBatchAddressesToOtherAddress = async ({
         fromAddress: fromAdd,
       });
     });
-    console.log("###transactions", transactions);
+    cronLogger.info("###transactions", transactions);
   } else if (currency === "ETH" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD-ERC20") {
     let transactionResponse: Array<{ txId: string; status: string; reason: string | null; fromAddress: unknown; toAddress?: string; errorMessage?: string; error?: string; cause?: string }> = [];
     // Send assets from all addresses to one address
     await Promise.allSettled(
       fromAddress.map(async (fromAddr) => {
         try {
-          console.log("####ETH Paylaod:", {
+          cronLogger.info("####ETH Paylaod:", {
             fromPrivateKey: fromAddr.privateKey,
             to: destinationAddress,
             amount: Number(fromAddr.value).toFixed(8).toString(),
@@ -1845,7 +1846,7 @@ const assetBatchAddressesToOtherAddress = async ({
           });
         } catch (error: unknown) {
           const err = error as { body?: { message?: string; cause?: string }; message?: string };
-          console.log("###error: ", error);
+          cronLogger.info("###error: ", error);
           transactionResponse.push({
             txId: '',
             fromAddress: fromAddr.address,
@@ -1866,7 +1867,7 @@ const assetBatchAddressesToOtherAddress = async ({
     await Promise.allSettled(
       fromAddress.map(async (fromAddr) => {
         try {
-          console.log("###TRX PAYLOAD: ", {
+          cronLogger.info("###TRX PAYLOAD: ", {
             fromPrivateKey: fromAddr.privateKey,
             to: destinationAddress,
             amount: Number(fromAddr.value).toFixed(8).toString(),
@@ -1876,7 +1877,7 @@ const assetBatchAddressesToOtherAddress = async ({
             to: destinationAddress,
             amount: Number(fromAddr.value).toFixed(8).toString(),
           });
-          console.log("###result", result);
+          cronLogger.info("###result", result);
           const ethTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
           transactionResponse.push({
             txId: ethTxId,
@@ -1886,7 +1887,7 @@ const assetBatchAddressesToOtherAddress = async ({
           });
         } catch (error: unknown) {
           const err = error as { body?: { message?: string; cause?: string }; message?: string };
-          console.log("###error: ", error);
+          cronLogger.info("###error: ", error);
           transactionResponse.push({
             txId: '',
             fromAddress: fromAddr.address,
@@ -1900,7 +1901,7 @@ const assetBatchAddressesToOtherAddress = async ({
         }
       })
     );
-    console.log("###transactionResponse", transactionResponse);
+    cronLogger.info("###transactionResponse", transactionResponse);
     transactions = transactionResponse;
   } else if (currency === "USDT-TRC20") {
     let transactionResponse: Array<{ txId: string; status: string; reason: string | null; fromAddress: unknown; toAddress?: string; errorMessage?: string; error?: string; cause?: string }> = [];
@@ -1919,14 +1920,14 @@ const assetBatchAddressesToOtherAddress = async ({
         energyDeficit: feeLimitResult.energyDeficit,
       });
     } catch (feeLimitError) {
-      console.warn(`[assetBatchAddressesToOtherAddress] ⚠️ Dynamic feeLimit failed, using fallback ${batchFeeLimit} TRX`);
+      cronLogger.warn(`[assetBatchAddressesToOtherAddress] ⚠️ Dynamic feeLimit failed, using fallback ${batchFeeLimit} TRX`);
     }
 
     // Send assets from all addresses to one address
     await Promise.allSettled(
       fromAddress.map(async (fromAddr) => {
         try {
-          console.log("###USDT-TRC20 PAYLOAD: ", {
+          cronLogger.info("###USDT-TRC20 PAYLOAD: ", {
             amount: Number(fromAddr.value).toFixed(2).toString(),
             feeLimit: batchFeeLimit,
             fromPrivateKey: fromAddr.privateKey,
@@ -1940,7 +1941,7 @@ const assetBatchAddressesToOtherAddress = async ({
             to: destinationAddress,
             tokenAddress: process.env.TRX_CONTRACT,
           });
-          console.log("###result", result);
+          cronLogger.info("###result", result);
           const trc20TxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
           transactionResponse.push({
             txId: trc20TxId,
@@ -1950,7 +1951,7 @@ const assetBatchAddressesToOtherAddress = async ({
           });
         } catch (error: unknown) {
           const err = error as { body?: { message?: string; cause?: string }; message?: string };
-          console.log("###error: ", error);
+          cronLogger.info("###error: ", error);
           transactionResponse.push({
             txId: '',
             fromAddress: fromAddr.address,
@@ -1971,7 +1972,7 @@ const assetBatchAddressesToOtherAddress = async ({
     await Promise.allSettled(
       fromAddress.map(async (fromAddr) => {
         try {
-          console.log("#######BSC PAYLOAD ####", {
+          cronLogger.info("#######BSC PAYLOAD ####", {
             currency,
             amount: Number(fromAddr.value).toFixed(8).toString(),
             fromPrivateKey: fromAddr.privateKey,
@@ -1992,7 +1993,7 @@ const assetBatchAddressesToOtherAddress = async ({
               },
             });
 
-          console.log("###result", result);
+          cronLogger.info("###result", result);
           const bscTxId = isTransactionHash(result) ? result.txId : (result as SignatureId).signatureId;
           transactionResponse.push({
             txId: bscTxId,
@@ -2002,7 +2003,7 @@ const assetBatchAddressesToOtherAddress = async ({
           });
         } catch (error: unknown) {
           const err = error as { body?: { message?: string; cause?: string }; message?: string };
-          console.log("###error: ", error);
+          cronLogger.info("###error: ", error);
           transactionResponse.push({
             txId: '',
             fromAddress: fromAddr.address,
@@ -2018,7 +2019,7 @@ const assetBatchAddressesToOtherAddress = async ({
     );
     transactions = transactionResponse;
   } else if (currency === "DOGE") {
-    console.log("###DODGE Payload ###", {
+    cronLogger.info("###DODGE Payload ###", {
       fromAddress: fromAddress.map((address) => ({
         address: address.address,
         privateKey: address.privateKey,
@@ -2056,7 +2057,7 @@ const assetBatchAddressesToOtherAddress = async ({
       });
     });
   } else if (currency === "LTC") {
-    console.log("#####LTC Payload", {
+    cronLogger.info("#####LTC Payload", {
       fromAddress: fromAddress.map((address) => ({
         address: address.address,
         privateKey: address.privateKey,
@@ -2094,7 +2095,7 @@ const assetBatchAddressesToOtherAddress = async ({
       });
     });
   } else if (currency === "BCH") {
-    console.log("###BCH Payload###", {
+    cronLogger.info("###BCH Payload###", {
       fromUTXO,
       to: toUTXO,
       fee: fee,
@@ -2178,7 +2179,7 @@ const getAddressBalance = async (address: string, currency: string) => {
       const tempRes = await tatumSdk.blockchain.tron.tronGetAccount(address);
       if (tempRes && tempRes?.trc20) {
         if (tempRes.trc20.length > 0) {
-          console.log(`[getAddressBalance] TRC20 tokens found: ${tempRes.trc20.length} entries`);
+          cronLogger.info(`[getAddressBalance] TRC20 tokens found: ${tempRes.trc20.length} entries`);
         }
         res = {
           balance: Number(tempRes.trc20[0]?.[process.env.TRX_CONTRACT]) / 1000000,
@@ -2316,7 +2317,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
           : currentBlock.time * 1000;
       const todayDate = new Date().toISOString().slice(0, 10);
       const blockDate = new Date(blockTime).toISOString().slice(0, 10);
-      console.log(todayDate, blockDate, todayDate === blockDate);
+      cronLogger.info(todayDate, blockDate, todayDate === blockDate);
       const checkOutput = currentBlock.inputs[0].coin.address === address;
       if (
         todayDate === blockDate &&
@@ -2330,7 +2331,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
           message: "payment detected, please wait for confirmation!",
         };
 
-        console.log("currentTransactionBlock===========>", res);
+        cronLogger.info("currentTransactionBlock===========>", res);
       }
     }
   }
@@ -2352,7 +2353,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
           : currentBlock.time * 1000;
       const todayDate = new Date().toISOString().slice(0, 10);
       const blockDate = new Date(blockTime).toISOString().slice(0, 10);
-      console.log(todayDate, blockDate, todayDate === blockDate);
+      cronLogger.info(todayDate, blockDate, todayDate === blockDate);
       const checkOutput = currentBlock.inputs[0].coin.address === address;
       if (
         todayDate === blockDate &&
@@ -2365,7 +2366,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
           transaction_id: currentBlock.hash,
           message: "payment detected, please wait for confirmation!",
         };
-        console.log("currentTransactionBlock===========>", res);
+        cronLogger.info("currentTransactionBlock===========>", res);
       }
     }
   }
@@ -2387,7 +2388,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
           : currentBlock.time * 1000;
       const todayDate = new Date().toISOString().slice(0, 10);
       const blockDate = new Date(blockTime).toISOString().slice(0, 10);
-      console.log(todayDate, blockDate, todayDate === blockDate);
+      cronLogger.info(todayDate, blockDate, todayDate === blockDate);
       const checkOutput = currentBlock.inputs[0].coin.address === address;
       if (
         todayDate === blockDate &&
@@ -2400,7 +2401,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
           transaction_id: currentBlock.hash,
           message: "payment detected, please wait for confirmation!",
         };
-        console.log("currentTransactionBlock===========>", res);
+        cronLogger.info("currentTransactionBlock===========>", res);
       }
     }
   }
@@ -2420,7 +2421,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
           : currentBlock.rawData.timestamp * 1000;
       const todayDate = new Date().toISOString().slice(0, 10);
       const blockDate = new Date(blockTime).toISOString().slice(0, 10);
-      console.log(todayDate, blockDate, todayDate === blockDate);
+      cronLogger.info(todayDate, blockDate, todayDate === blockDate);
       if (todayDate === blockDate) {
         res = {
           paymentStatus: "detected",
@@ -2429,7 +2430,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
           message: "payment detected, please wait for confirmation!",
         };
 
-        console.log("currentTransactionBlock===========>", res);
+        cronLogger.info("currentTransactionBlock===========>", res);
       }
     }
   }
@@ -2453,7 +2454,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
         message: "payment detected, please wait for confirmation!",
       };
 
-      console.log("currentTransactionBlock===========>", res);
+      cronLogger.info("currentTransactionBlock===========>", res);
     }
   }
   if (currency === "USDT-ERC20") {
@@ -2482,7 +2483,7 @@ const getCurrentPaymentStatus = async (address: string, currency) => {
           message: "payment detected, please wait for confirmation!",
         };
 
-        console.log("currentTransactionBlock===========>", res);
+        cronLogger.info("currentTransactionBlock===========>", res);
       }
     }
   }
@@ -2543,7 +2544,7 @@ const getPaymentStatusFallback = async (address: string, currency: string, expec
       };
     }
   } catch (e: any) {
-    console.warn(`[getPaymentStatusFallback] ${currency} balance check failed: ${e.message}`);
+    cronLogger.warn(`[getPaymentStatusFallback] ${currency} balance check failed: ${e.message}`);
   }
   
   return result;
@@ -2841,7 +2842,7 @@ const getIncomingTransactions = async (
           }
         }
       } catch (solErr: any) {
-        console.warn(`[getIncomingTransactions] SOL tx fetch failed for ${address}: ${solErr.response?.data?.message || solErr.message}`);
+        cronLogger.warn(`[getIncomingTransactions] SOL tx fetch failed for ${address}: ${solErr.response?.data?.message || solErr.message}`);
       }
     } else if (currency === "XRP") {
       // XRP account transactions — include DestinationTag for tag-based filtering
@@ -2869,7 +2870,7 @@ const getIncomingTransactions = async (
           }
         }
       } catch (_xrpErr) {
-        console.warn(`[getIncomingTransactions] XRP tx fetch failed for ${address}`);
+        cronLogger.warn(`[getIncomingTransactions] XRP tx fetch failed for ${address}`);
       }
     } else if (currency === "RLUSD") {
       // RLUSD on XRP — include DestinationTag for tag-based filtering
@@ -2897,7 +2898,7 @@ const getIncomingTransactions = async (
           }
         }
       } catch (_rlusdErr) {
-        console.warn(`[getIncomingTransactions] RLUSD tx fetch failed for ${address}`);
+        cronLogger.warn(`[getIncomingTransactions] RLUSD tx fetch failed for ${address}`);
       }
     } else if (currency === "POLYGON") {
       // Polygon native transactions
@@ -2930,12 +2931,12 @@ const getIncomingTransactions = async (
         }
       } catch (_sdkErr) {
         // SDK failed — will use RPC fallback below
-        console.warn(`[getIncomingTransactions] USDT-POLYGON SDK failed for ${address}, will try RPC fallback`);
+        cronLogger.warn(`[getIncomingTransactions] USDT-POLYGON SDK failed for ${address}, will try RPC fallback`);
       }
       
       // RPC fallback: if SDK returned empty or failed, use eth_getLogs to find ERC20 Transfer events
       if (transactions.length === 0) {
-        console.log(`[getIncomingTransactions] USDT-POLYGON: Using RPC fallback (eth_getLogs) for ${address}`);
+        cronLogger.info(`[getIncomingTransactions] USDT-POLYGON: Using RPC fallback (eth_getLogs) for ${address}`);
         try {
           const headers = await getTatumHeaders();
           const blockR = await axios.post('https://polygon-mainnet.gateway.tatum.io',
@@ -2964,14 +2965,14 @@ const getIncomingTransactions = async (
               });
             }
           }
-          console.log(`[getIncomingTransactions] USDT-POLYGON RPC found ${transactions.length} transactions`);
+          cronLogger.info(`[getIncomingTransactions] USDT-POLYGON RPC found ${transactions.length} transactions`);
         } catch (rpcErr: any) {
-          console.warn(`[getIncomingTransactions] USDT-POLYGON RPC fallback failed: ${rpcErr.message}`);
+          cronLogger.warn(`[getIncomingTransactions] USDT-POLYGON RPC fallback failed: ${rpcErr.message}`);
         }
       }
     }
   } catch (error) {
-    console.error(`[getIncomingTransactions] Error fetching transactions for ${currency}:`, error.message);
+    cronLogger.error(`[getIncomingTransactions] Error fetching transactions for ${currency}:`, error.message);
   }
 
   // Sort by timestamp descending (most recent first)
@@ -3016,19 +3017,19 @@ const waitForTransactionConfirmation = async (
       }
       
       if (txData && txData.blockNumber) {
-        console.log(`[waitForTransactionConfirmation] TX ${txHash} confirmed in block ${txData.blockNumber}`);
+        cronLogger.info(`[waitForTransactionConfirmation] TX ${txHash} confirmed in block ${txData.blockNumber}`);
         return { confirmed: true, blockNumber: txData.blockNumber as number };
       }
       
-      console.log(`[waitForTransactionConfirmation] TX ${txHash} still pending, waiting...`);
+      cronLogger.info(`[waitForTransactionConfirmation] TX ${txHash} still pending, waiting...`);
     } catch (error) {
-      console.log(`[waitForTransactionConfirmation] Error checking TX: ${error.message}`);
+      cronLogger.info(`[waitForTransactionConfirmation] Error checking TX: ${error.message}`);
     }
     
     await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
   }
   
-  console.log(`[waitForTransactionConfirmation] TX ${txHash} not confirmed within ${maxWaitMs}ms`);
+  cronLogger.info(`[waitForTransactionConfirmation] TX ${txHash} not confirmed within ${maxWaitMs}ms`);
   return { confirmed: false };
 };
 
@@ -3187,7 +3188,7 @@ const getTransactionConfirmations = async (
       }
     }
     
-    console.log(`[getTransactionConfirmations] ${currency} TX ${txHash}: ${confirmations}/${required} confirmations`);
+    cronLogger.info(`[getTransactionConfirmations] ${currency} TX ${txHash}: ${confirmations}/${required} confirmations`);
     
     return {
       confirmed: confirmations >= required,
@@ -3195,7 +3196,7 @@ const getTransactionConfirmations = async (
       required
     };
   } catch (error) {
-    console.error(`[getTransactionConfirmations] Error checking ${currency} TX ${txHash}:`, error.message);
+    cronLogger.error(`[getTransactionConfirmations] Error checking ${currency} TX ${txHash}:`, error.message);
     // If we can't check, assume not confirmed to be safe
     return { confirmed: false, confirmations: 0, required };
   }
@@ -3230,17 +3231,17 @@ const findUtxoOutputIndex = async (
       for (const output of txData.vout) {
         if (output.scriptPubKey?.addresses?.includes(address)) {
           const idx = output.n ?? 0;
-          console.log(`[findUtxoOutputIndex] Found output index ${idx} for ${address} in tx ${txHash}`);
+          cronLogger.info(`[findUtxoOutputIndex] Found output index ${idx} for ${address} in tx ${txHash}`);
           return idx;
         }
       }
     }
 
-    console.log(`[findUtxoOutputIndex] Could not find output for ${address} in tx ${txHash}, defaulting to index 0`);
+    cronLogger.info(`[findUtxoOutputIndex] Could not find output for ${address} in tx ${txHash}, defaulting to index 0`);
     return 0;
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.warn(`[findUtxoOutputIndex] Failed to lookup UTXO index for ${txHash}: ${err.message}, defaulting to index 0`);
+    cronLogger.warn(`[findUtxoOutputIndex] Failed to lookup UTXO index for ${txHash}: ${err.message}, defaulting to index 0`);
     return 0;
   }
 };
@@ -3261,7 +3262,7 @@ const getTransactionGasCost = async (
       const gasUsed = Number(txData?.gasUsed || 0);
       const gasPriceWei = Number(txData?.gasPrice || 0);
       const gasCostEth = (gasUsed * gasPriceWei) / 1e18;
-      console.log(`[getTransactionGasCost] ETH TX ${txHash}: gasUsed=${gasUsed}, gasPrice=${gasPriceWei} wei, cost=${gasCostEth} ETH`);
+      cronLogger.info(`[getTransactionGasCost] ETH TX ${txHash}: gasUsed=${gasUsed}, gasPrice=${gasPriceWei} wei, cost=${gasCostEth} ETH`);
       return { gasCostNative: gasCostEth, gasToken: "ETH" };
     }
 
@@ -3270,7 +3271,7 @@ const getTransactionGasCost = async (
       const ret = (txData?.ret as Array<Record<string, unknown>>) || [];
       const feeSun = Number(ret[0]?.fee || 0);
       const gasCostTrx = feeSun / 1_000_000;
-      console.log(`[getTransactionGasCost] TRX TX ${txHash}: fee=${feeSun} SUN, cost=${gasCostTrx} TRX`);
+      cronLogger.info(`[getTransactionGasCost] TRX TX ${txHash}: fee=${feeSun} SUN, cost=${gasCostTrx} TRX`);
       return { gasCostNative: gasCostTrx, gasToken: "TRX" };
     }
 
@@ -3279,7 +3280,7 @@ const getTransactionGasCost = async (
       const gasUsed = Number(txData?.gasUsed || 0);
       const gasPriceWei = Number(txData?.gasPrice || 0);
       const gasCostPol = (gasUsed * gasPriceWei) / 1e18;
-      console.log(`[getTransactionGasCost] POLYGON TX ${txHash}: gasUsed=${gasUsed}, gasPrice=${gasPriceWei} wei, cost=${gasCostPol} POL`);
+      cronLogger.info(`[getTransactionGasCost] POLYGON TX ${txHash}: gasUsed=${gasUsed}, gasPrice=${gasPriceWei} wei, cost=${gasCostPol} POL`);
       return { gasCostNative: gasCostPol, gasToken: "POLYGON" };
     }
 
@@ -3293,11 +3294,11 @@ const getTransactionGasCost = async (
       return { gasCostNative: 0.000005, gasToken: "SOL" };
     }
 
-    console.log(`[getTransactionGasCost] Unsupported currency ${currency} for gas cost lookup`);
+    cronLogger.info(`[getTransactionGasCost] Unsupported currency ${currency} for gas cost lookup`);
     return { gasCostNative: 0, gasToken: currency };
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.warn(`[getTransactionGasCost] Failed to fetch gas cost for ${txHash}: ${err.message}`);
+    cronLogger.warn(`[getTransactionGasCost] Failed to fetch gas cost for ${txHash}: ${err.message}`);
     return { gasCostNative: 0, gasToken: currency };
   }
 };
@@ -3368,7 +3369,7 @@ const verifyXrpAccountActivated = async (address: string): Promise<boolean> => {
       return false;
     }
     // Both failed, but don't log loudly — caller should handle gracefully
-    console.log(`[verifyXrpAccountActivated] SDK+RPC both failed for ${address.substring(0, 12)}... — treating as not activated`);
+    cronLogger.info(`[verifyXrpAccountActivated] SDK+RPC both failed for ${address.substring(0, 12)}... — treating as not activated`);
     return false;
   }
 };
@@ -3408,7 +3409,7 @@ const verifyXrpTrustLine = async (address: string, issuerAccount: string, curren
   ).catch((e: unknown) => {
     const err = e as { message?: string };
     if ((err.message || '').includes('actNotFound')) return false;
-    console.warn(`[verifyXrpTrustLine] Both SDK and RPC failed for ${address}:`, err.message);
+    cronLogger.warn(`[verifyXrpTrustLine] Both SDK and RPC failed for ${address}:`, err.message);
     return false;
   });
 };
@@ -3441,12 +3442,12 @@ const setupXrpTrustLine = async (
       token,
       limit,
     });
-    console.log(`[setupXrpTrustLine] ✅ Trust line set via Tatum SDK for ${fromAccount} → ${issuerAccount} (${token})`);
+    cronLogger.info(`[setupXrpTrustLine] ✅ Trust line set via Tatum SDK for ${fromAccount} → ${issuerAccount} (${token})`);
     return result;
   } catch (sdkError: unknown) {
     const sdkErr = sdkError as { message?: string; body?: any };
     const errMsg = sdkErr?.message || JSON.stringify(sdkErr?.body) || String(sdkError);
-    console.warn(`[setupXrpTrustLine] Tatum SDK failed: ${errMsg}. Falling back to Tatum RPC + local signing...`);
+    cronLogger.warn(`[setupXrpTrustLine] Tatum SDK failed: ${errMsg}. Falling back to Tatum RPC + local signing...`);
   }
 
   // ---- Attempt 2: Local sign + Tatum RPC gateway ----
@@ -3480,12 +3481,12 @@ const setupXrpTrustLine = async (
       LastLedgerSequence: currentLedger + 20,  // ~60-100 seconds to confirm
     };
 
-    console.log(`[setupXrpTrustLine] Built TrustSet tx: Seq=${sequence}, Fee=${trustSetTx.Fee}, LastLedger=${trustSetTx.LastLedgerSequence}`);
+    cronLogger.info(`[setupXrpTrustLine] Built TrustSet tx: Seq=${sequence}, Fee=${trustSetTx.Fee}, LastLedger=${trustSetTx.LastLedgerSequence}`);
 
     // 2e. Sign locally with xrpl Wallet
     const wallet = XrplWallet.fromSecret(fromSecret);
     if (wallet.address !== fromAccount) {
-      console.warn(`[setupXrpTrustLine] Derived address ${wallet.address} differs from ${fromAccount}, using derived`);
+      cronLogger.warn(`[setupXrpTrustLine] Derived address ${wallet.address} differs from ${fromAccount}, using derived`);
       trustSetTx.Account = wallet.address;
     }
 
@@ -3498,15 +3499,15 @@ const setupXrpTrustLine = async (
     const txHash = submitResult?.tx_json?.hash || "unknown";
 
     if (engineResult === "tesSUCCESS" || engineResult === "terQUEUED") {
-      console.log(`[setupXrpTrustLine] ✅ Trust line set via Tatum RPC for ${fromAccount} → ${issuerAccount} (${token}), engine=${engineResult}, hash=${txHash}`);
+      cronLogger.info(`[setupXrpTrustLine] ✅ Trust line set via Tatum RPC for ${fromAccount} → ${issuerAccount} (${token}), engine=${engineResult}, hash=${txHash}`);
       return { txId: txHash, status: engineResult };
     } else {
-      console.error(`[setupXrpTrustLine] ❌ TrustSet submit returned ${engineResult}: ${submitResult?.engine_result_message || ''}`);
+      cronLogger.error(`[setupXrpTrustLine] ❌ TrustSet submit returned ${engineResult}: ${submitResult?.engine_result_message || ''}`);
       throw new Error(`TrustSet submit failed: ${engineResult} — ${submitResult?.engine_result_message || 'no message'}`);
     }
   } catch (rpcError: unknown) {
     const rpcErr = rpcError as { message?: string };
-    console.error(`[setupXrpTrustLine] ❌ Tatum RPC fallback also failed:`, rpcErr?.message || rpcError);
+    cronLogger.error(`[setupXrpTrustLine] ❌ Tatum RPC fallback also failed:`, rpcErr?.message || rpcError);
     throw rpcError;
   }
 };
@@ -3528,7 +3529,7 @@ const getXrpDestinationTag = async (txId: string): Promise<number | null> => {
     return null;
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.warn(`[getXrpDestinationTag] Failed to fetch tx ${txId}:`, err?.message || error);
+    cronLogger.warn(`[getXrpDestinationTag] Failed to fetch tx ${txId}:`, err?.message || error);
     return null;
   }
 };

@@ -5,6 +5,7 @@
  */
 
 import {
+import { cronLogger } from "../../utils/loggers";
   merchantTempAddressModel,
   merchantPoolSweepModel,
   merchantPoolTransactionModel,
@@ -56,7 +57,7 @@ export const fundGasIfNeeded = async (
 
   const feeWalletAddress = FEE_WALLETS[gasToken];
   if (!feeWalletAddress) {
-    console.warn(`[SmartGas] No fee wallet configured for ${gasToken}`);
+    cronLogger.warn(`[SmartGas] No fee wallet configured for ${gasToken}`);
     return { funded: false, amount: 0, reason: 'No fee wallet configured' };
   }
 
@@ -69,7 +70,7 @@ export const fundGasIfNeeded = async (
     } catch (balanceError: unknown) {
       const balErr = balanceError as { message?: string };
       if ((balErr.message || '').includes('account.not.found') || (balErr.message || '').includes('not.found')) {
-        console.log(`[SmartGas] Account not yet activated on-chain: ${tempAddress}, assuming 0 balance`);
+        cronLogger.info(`[SmartGas] Account not yet activated on-chain: ${tempAddress}, assuming 0 balance`);
         balanceResult = { balance: '0' };
       } else {
         throw balanceError;
@@ -81,7 +82,7 @@ export const fundGasIfNeeded = async (
       currentBalance = currentBalance / 1000000;
     }
 
-    console.log(`[SmartGas] Current balance: ${currentBalance} ${gasToken} in ${tempAddress}`);
+    cronLogger.info(`[SmartGas] Current balance: ${currentBalance} ${gasToken} in ${tempAddress}`);
 
     let estimatedGas = 0;
     
@@ -91,7 +92,7 @@ export const fundGasIfNeeded = async (
       try {
         const accountResources = await getAccountResources(tempAddress);
         if (accountResources.hasSufficientEnergy) {
-          console.log(
+          cronLogger.info(
             `[SmartGas] ⚡ ENERGY OPTIMIZATION: ${tempAddress} has ${accountResources.availableEnergy} Energy ` +
             `(need ${TRC20_ENERGY.EXISTING_RECIPIENT}) — staked Energy covers transfer!`
           );
@@ -102,21 +103,21 @@ export const fundGasIfNeeded = async (
           // Only need a tiny amount for bandwidth (if not covered by free bandwidth)
           if (accountResources.availableBandwidth >= 345) {
             // Both Energy and Bandwidth covered — no TRX needed!
-            console.log(`[SmartGas] ✅ Full Energy+Bandwidth coverage — zero gas funding needed`);
+            cronLogger.info(`[SmartGas] ✅ Full Energy+Bandwidth coverage — zero gas funding needed`);
             await poolAddress.update({ gas_balance: currentBalance });
             return { funded: false, amount: 0, reason: 'Staked Energy+Bandwidth covers transfer' };
           }
           // Only need bandwidth cost (~0.345 TRX)
           estimatedGas = 0.5;
-          console.log(`[SmartGas] 📊 Energy covered, only bandwidth cost needed: ~${estimatedGas} TRX`);
+          cronLogger.info(`[SmartGas] 📊 Energy covered, only bandwidth cost needed: ~${estimatedGas} TRX`);
         } else {
-          console.log(
+          cronLogger.info(
             `[SmartGas] 📊 Energy check: ${accountResources.availableEnergy} available ` +
             `(need ${TRC20_ENERGY.EXISTING_RECIPIENT}) — will use dynamic fee estimation`
           );
         }
       } catch (resourceError) {
-        console.warn(`[SmartGas] ⚠️ Energy check failed: ${getErrorMessage(resourceError)}, proceeding with fee estimation`);
+        cronLogger.warn(`[SmartGas] ⚠️ Energy check failed: ${getErrorMessage(resourceError)}, proceeding with fee estimation`);
       }
     }
 
@@ -157,10 +158,10 @@ export const fundGasIfNeeded = async (
           estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 0.01);
         }
         
-        console.log(`[SmartGas] Estimated gas for ${walletType} transfer: ${estimatedGas} ${gasToken}`);
+        cronLogger.info(`[SmartGas] Estimated gas for ${walletType} transfer: ${estimatedGas} ${gasToken}`);
         
       } catch (estimationError) {
-        console.warn(`[SmartGas] Gas estimation failed, using fallback:`, getErrorMessage(estimationError));
+        cronLogger.warn(`[SmartGas] Gas estimation failed, using fallback:`, getErrorMessage(estimationError));
         estimatedGas = gasToken === "TRX" ? POOL_CONFIG.TRX_GAS_FALLBACK 
           : gasToken === "XRP" ? POOL_CONFIG.XRP_GAS_FALLBACK
           : gasToken === "POLYGON" ? POOL_CONFIG.POLYGON_GAS_FALLBACK
@@ -170,7 +171,7 @@ export const fundGasIfNeeded = async (
 
     const requiredGas = estimatedGas * POOL_CONFIG.GAS_SAFETY_BUFFER;
     
-    console.log(`[SmartGas] Required gas with ${((POOL_CONFIG.GAS_SAFETY_BUFFER - 1) * 100).toFixed(0)}% buffer: ${requiredGas.toFixed(6)} ${gasToken}`);
+    cronLogger.info(`[SmartGas] Required gas with ${((POOL_CONFIG.GAS_SAFETY_BUFFER - 1) * 100).toFixed(0)}% buffer: ${requiredGas.toFixed(6)} ${gasToken}`);
 
     const deficit = requiredGas - currentBalance;
     const minDeficit = gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT 
@@ -182,12 +183,12 @@ export const fundGasIfNeeded = async (
     // Only skip funding when currentBalance genuinely covers the required gas.
     // The minDeficit threshold prevents micro-fundings ONLY when the balance is already close to sufficient.
     if (currentBalance >= requiredGas || (deficit <= minDeficit && currentBalance > 0)) {
-      console.log(`[SmartGas] ✅ Sufficient gas (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)}) - No funding needed`);
+      cronLogger.info(`[SmartGas] ✅ Sufficient gas (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)}) - No funding needed`);
       await poolAddress.update({ gas_balance: currentBalance });
       return { funded: false, amount: 0, reason: 'Sufficient balance' };
     }
 
-    console.log(`[SmartGas] 📊 Gas deficit: ${deficit.toFixed(6)} ${gasToken} (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)})`);
+    cronLogger.info(`[SmartGas] 📊 Gas deficit: ${deficit.toFixed(6)} ${gasToken} (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)})`);
 
     // Ensure we fund at least a useful minimum amount to avoid immediate re-funding
     const fundAmount = Math.max(deficit, requiredGas, gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT 
@@ -208,13 +209,13 @@ export const fundGasIfNeeded = async (
       process.env.TEMP_KEY_ID
     );
 
-    console.log(`[SmartGas] 🔥 Funding ${fundAmount.toFixed(6)} ${gasToken} to ${tempAddress}`);
+    cronLogger.info(`[SmartGas] 🔥 Funding ${fundAmount.toFixed(6)} ${gasToken} to ${tempAddress}`);
 
     let txId: string | undefined;
 
     if (isDirectEvmSupported(gasToken)) {
       // EVM gas funding: use directEvmSweep (ethers.js) to avoid Tatum SDK ghost TX issue
-      console.log(`[SmartGas] Using direct EVM transfer for ${gasToken} gas funding`);
+      cronLogger.info(`[SmartGas] Using direct EVM transfer for ${gasToken} gas funding`);
       const evmResult = await directEvmSweep({
         fromAddress: feeWalletAddress,
         toAddress: tempAddress,
@@ -223,7 +224,7 @@ export const fundGasIfNeeded = async (
         amount: fundAmount,
       });
       txId = evmResult.txHash;
-      console.log(`[SmartGas] ✅ Direct EVM gas funding: ${txId} (gas: ${evmResult.gasPriceGwei} Gwei)`);
+      cronLogger.info(`[SmartGas] ✅ Direct EVM gas funding: ${txId} (gas: ${evmResult.gasPriceGwei} Gwei)`);
     } else {
       // Non-EVM gas funding (TRX, XRP): continue using Tatum SDK
       const txResult = await tatumApi.assetToOtherAddress({
@@ -240,14 +241,14 @@ export const fundGasIfNeeded = async (
     const newBalance = currentBalance + fundAmount;
     await poolAddress.update({ gas_balance: newBalance });
 
-    console.log(`[SmartGas] ✅ Gas funded: ${fundAmount.toFixed(6)} ${gasToken} (TX: ${txId})`);
-    console.log(`[SmartGas]    Old balance: ${currentBalance.toFixed(6)} → New balance: ${newBalance.toFixed(6)} ${gasToken}`);
+    cronLogger.info(`[SmartGas] ✅ Gas funded: ${fundAmount.toFixed(6)} ${gasToken} (TX: ${txId})`);
+    cronLogger.info(`[SmartGas]    Old balance: ${currentBalance.toFixed(6)} → New balance: ${newBalance.toFixed(6)} ${gasToken}`);
 
     return { funded: true, amount: fundAmount, txId: txId, reason: 'Deficit funded' };
     
   } catch (error) {
     const message = getErrorMessage(error);
-    console.error(`[SmartGas] ❌ Gas funding failed:`, message);
+    cronLogger.error(`[SmartGas] ❌ Gas funding failed:`, message);
     return { funded: false, amount: 0, reason: `Error: ${message}` };
   }
 };
@@ -296,11 +297,11 @@ const checkSweepProfitability = async (
       balanceUSD = await convertToUSD(walletType, balance);
       feeUSD = await convertToUSD(feeCurrency, estimatedFee);
     } catch (convError) {
-      console.warn(`[MerchantPool] Could not convert to USD for profitability check:`, convError);
+      cronLogger.warn(`[MerchantPool] Could not convert to USD for profitability check:`, convError);
       return { profitable: true, estimatedFee };
     }
     
-    console.log(`[MerchantPool] Profitability: ${walletType} balance=$${balanceUSD.toFixed(2)}, gas fee=${estimatedFee} ${feeCurrency} ($${feeUSD.toFixed(2)})`);
+    cronLogger.info(`[MerchantPool] Profitability: ${walletType} balance=$${balanceUSD.toFixed(2)}, gas fee=${estimatedFee} ${feeCurrency} ($${feeUSD.toFixed(2)})`);
     
     const PROFITABILITY_THRESHOLD = 0.5;
     const profitable = feeUSD < (balanceUSD * PROFITABILITY_THRESHOLD);
@@ -308,7 +309,7 @@ const checkSweepProfitability = async (
     
     return { profitable, balanceUSD, feeUSD, estimatedFee, profitMargin };
   } catch (error) {
-    console.error(`[MerchantPool] Profitability check error:`, error);
+    cronLogger.error(`[MerchantPool] Profitability check error:`, error);
     return { profitable: true };
   }
 };
@@ -339,7 +340,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     }
     
     if (adminBalance <= 0) {
-      console.log(`[MerchantPool] No admin fee to sweep for address ${tempAddressId}`);
+      cronLogger.info(`[MerchantPool] No admin fee to sweep for address ${tempAddressId}`);
       await poolAddress.update({ status: "AVAILABLE" }, { transaction: dbTransaction });
       await dbTransaction.commit();
       return { success: true, amount: 0, message: "No admin fee balance" };
@@ -356,7 +357,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     await dbTransaction.commit();
     dbTransaction = null;
 
-    console.log(`[MerchantPool] 🧹 Starting sweep for ${poolAddress.dataValues.wallet_address}`);
+    cronLogger.info(`[MerchantPool] 🧹 Starting sweep for ${poolAddress.dataValues.wallet_address}`);
     
     let balanceData;
     try {
@@ -367,7 +368,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     } catch (balanceError: unknown) {
       const balErr = balanceError as { message?: string };
       if ((balErr.message || '').includes('account.not.found') || (balErr.message || '').includes('not.found')) {
-        console.log(`[MerchantPool] ⏭️ Sweep skipped - account not yet activated on-chain: ${poolAddress.dataValues.wallet_address}`);
+        cronLogger.info(`[MerchantPool] ⏭️ Sweep skipped - account not yet activated on-chain: ${poolAddress.dataValues.wallet_address}`);
         return { success: true, amount: 0, message: "Account not activated on-chain" };
       }
       throw balanceError;
@@ -379,7 +380,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       actualBalance = parseFloat(balanceData.incoming || "0") - parseFloat(balanceData.outgoing || "0");
       // Round to 8 decimal places to avoid floating point precision issues
       actualBalance = Math.round(actualBalance * 100000000) / 100000000;
-      console.log(`[MerchantPool] UTXO balance: incoming=${balanceData.incoming}, outgoing=${balanceData.outgoing}, net=${actualBalance}`);
+      cronLogger.info(`[MerchantPool] UTXO balance: incoming=${balanceData.incoming}, outgoing=${balanceData.outgoing}, net=${actualBalance}`);
     } else {
       actualBalance = parseFloat(balanceData?.balance || "0");
     }
@@ -404,20 +405,20 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       // Wait for gas funding TX confirmation before attempting the sweep transfer
       if (gasFunding.funded && gasFunding.txId) {
         const gasToken = GAS_TOKEN_MAPPING[walletType] || 'TRX';
-        console.log(`[MerchantPool] ⏳ Waiting for gas funding TX ${gasFunding.txId} confirmation (${gasToken})...`);
+        cronLogger.info(`[MerchantPool] ⏳ Waiting for gas funding TX ${gasFunding.txId} confirmation (${gasToken})...`);
         const gasConfirmation = await tatumApi.waitForTransactionConfirmation(
           gasFunding.txId,
           gasToken,
           30000  // 30s timeout
         );
         if (gasConfirmation.confirmed) {
-          console.log(`[MerchantPool] ✅ Gas funding confirmed in block ${gasConfirmation.blockNumber}`);
+          cronLogger.info(`[MerchantPool] ✅ Gas funding confirmed in block ${gasConfirmation.blockNumber}`);
         } else {
-          console.warn(`[MerchantPool] ⚠️ Gas funding TX not confirmed in timeout — proceeding with retry logic`);
+          cronLogger.warn(`[MerchantPool] ⚠️ Gas funding TX not confirmed in timeout — proceeding with retry logic`);
         }
       }
     } else {
-      console.log(`[MerchantPool] Native ${walletType} - gas comes from remaining balance, no external funding needed`);
+      cronLogger.info(`[MerchantPool] Native ${walletType} - gas comes from remaining balance, no external funding needed`);
     }
 
     const privateKey = await tatumApi.decryptSymmetric(
@@ -435,10 +436,10 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     const profitabilityResult = await checkSweepProfitability(walletType, actualBalance, feeData);
     
     if (!profitabilityResult.profitable) {
-      console.warn(`[MerchantPool] ⚠️ Sweep not profitable for ${poolAddress.dataValues.wallet_address}`);
-      console.warn(`[MerchantPool]    Balance: ${actualBalance} ${walletType} ($${profitabilityResult.balanceUSD?.toFixed(2)})`);
-      console.warn(`[MerchantPool]    Est. Fee: ${profitabilityResult.estimatedFee} ${walletType} ($${profitabilityResult.feeUSD?.toFixed(2)})`);
-      console.warn(`[MerchantPool]    Skipping sweep - will retry when balance is higher`);
+      cronLogger.warn(`[MerchantPool] ⚠️ Sweep not profitable for ${poolAddress.dataValues.wallet_address}`);
+      cronLogger.warn(`[MerchantPool]    Balance: ${actualBalance} ${walletType} ($${profitabilityResult.balanceUSD?.toFixed(2)})`);
+      cronLogger.warn(`[MerchantPool]    Est. Fee: ${profitabilityResult.estimatedFee} ${walletType} ($${profitabilityResult.feeUSD?.toFixed(2)})`);
+      cronLogger.warn(`[MerchantPool]    Skipping sweep - will retry when balance is higher`);
       
       await poolAddress.update({ status: "AVAILABLE" });
       
@@ -451,7 +452,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       };
     }
     
-    console.log(`[MerchantPool] ✅ Sweep is profitable: $${profitabilityResult.balanceUSD?.toFixed(2)} balance vs $${profitabilityResult.feeUSD?.toFixed(2)} fee`);
+    cronLogger.info(`[MerchantPool] ✅ Sweep is profitable: $${profitabilityResult.balanceUSD?.toFixed(2)} balance vs $${profitabilityResult.feeUSD?.toFixed(2)} fee`);
 
     const isAccountChain = ACCOUNT_CHAINS.includes(walletType);
     const isUTXOChain = ["BTC", "LTC", "DOGE", "BCH"].includes(walletType);
@@ -468,11 +469,11 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       amountToSend = Math.floor(amountToSend * 100000000) / 100000000;
       
       if (amountToSend <= 0) {
-        console.warn(`[MerchantPool] ⚠️ UTXO balance too low after fee: ${actualBalance} - ${utxoFee} = ${amountToSend}`);
+        cronLogger.warn(`[MerchantPool] ⚠️ UTXO balance too low after fee: ${actualBalance} - ${utxoFee} = ${amountToSend}`);
         await poolAddress.update({ status: "AVAILABLE" });
         return { success: false, skipped: true, reason: "Balance too low after UTXO fee" };
       }
-      console.log(`[MerchantPool] UTXO chain sweep: ${actualBalance} - ${utxoFee} (fee) = ${amountToSend} ${walletType}`);
+      cronLogger.info(`[MerchantPool] UTXO chain sweep: ${actualBalance} - ${utxoFee} (fee) = ${amountToSend} ${walletType}`);
     } else if (isAccountChain) {
       const gasFee = parseFloat(feeData?.slow || feeData?.fast || "0");
       
@@ -502,16 +503,16 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
           // Use on-chain balance (drops → XRP) instead of Tatum API for accuracy
           const onChainBalance = parseInt(accountData?.Balance || '0') / 1000000;
           if (onChainBalance > 0 && Math.abs(onChainBalance - actualBalance) > 0.001) {
-            console.log(`[MerchantPool] Balance correction: Tatum=${actualBalance}, on-chain=${onChainBalance} XRP`);
+            cronLogger.info(`[MerchantPool] Balance correction: Tatum=${actualBalance}, on-chain=${onChainBalance} XRP`);
             actualBalance = onChainBalance;
           }
           
           accountReserve = BASE_RESERVE + (OWNER_RESERVE * ownerCount);
-          console.log(`[MerchantPool] XRP reserve: ${BASE_RESERVE} base + ${OWNER_RESERVE} × ${ownerCount} objects = ${accountReserve} XRP`);
+          cronLogger.info(`[MerchantPool] XRP reserve: ${BASE_RESERVE} base + ${OWNER_RESERVE} × ${ownerCount} objects = ${accountReserve} XRP`);
         } catch (xrplErr) {
           // Fallback: assume 1 trust line (RLUSD) = 1.2 XRP total reserve
           accountReserve = 1.2;
-          console.warn(`[MerchantPool] ⚠️ XRPL account_info failed, using fallback reserve ${accountReserve} XRP:`, xrplErr);
+          cronLogger.warn(`[MerchantPool] ⚠️ XRPL account_info failed, using fallback reserve ${accountReserve} XRP:`, xrplErr);
         }
       }
       
@@ -523,13 +524,13 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       
       if (amountToSend <= 0) {
         const reserveNote = accountReserve > 0 ? ` + ${accountReserve} reserve` : '';
-        console.warn(`[MerchantPool] ⚠️ Balance too low for sweep after deductions: ${actualBalance} - ${gasFee} (gas)${reserveNote} = ${amountToSend}`);
+        cronLogger.warn(`[MerchantPool] ⚠️ Balance too low for sweep after deductions: ${actualBalance} - ${gasFee} (gas)${reserveNote} = ${amountToSend}`);
         await poolAddress.update({ status: "AVAILABLE" });
         return { success: false, skipped: true, reason: `Balance too low after gas${reserveNote} deduction` };
       }
       
       const reserveLog = accountReserve > 0 ? ` - ${accountReserve} (reserve)` : '';
-      console.log(`[MerchantPool] Account chain sweep: ${actualBalance} - ${gasFee} (gas)${reserveLog} = ${amountToSend} ${walletType}`);
+      cronLogger.info(`[MerchantPool] Account chain sweep: ${actualBalance} - ${gasFee} (gas)${reserveLog} = ${amountToSend} ${walletType}`);
     }
 
     // Sweep strategy: Use direct ethers.js for EVM chains (ETH, POLYGON) to avoid
@@ -540,7 +541,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     if (isDirectEvmSupported(walletType)) {
       // DIRECT EVM SWEEP: ethers.js signs locally + broadcasts via eth_sendRawTransaction
       // The TX hash is real — sendTransaction() throws if the RPC node rejects the TX
-      console.log(`[MerchantPool] Using direct EVM sweep for ${walletType}`);
+      cronLogger.info(`[MerchantPool] Using direct EVM sweep for ${walletType}`);
       const evmResult = await withRetry(
         async () => {
           return await directEvmSweep({
@@ -556,10 +557,10 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         POOL_CONFIG.SWEEP_RETRY_DELAY_MS
       );
       sweepTxId = evmResult?.txHash;
-      console.log(`[MerchantPool] ✅ Direct EVM sweep broadcast: ${sweepTxId} (nonce: ${evmResult?.nonce}, gas: ${evmResult?.gasPriceGwei} Gwei)`);
+      cronLogger.info(`[MerchantPool] ✅ Direct EVM sweep broadcast: ${sweepTxId} (nonce: ${evmResult?.nonce}, gas: ${evmResult?.gasPriceGwei} Gwei)`);
     } else {
       // NON-EVM CHAINS: Use Tatum SDK (proven reliable for TRX, XRP, BTC, LTC, DOGE, etc.)
-      console.log(`[MerchantPool] Using Tatum SDK sweep for ${walletType}`);
+      cronLogger.info(`[MerchantPool] Using Tatum SDK sweep for ${walletType}`);
       const sweepResult = await withRetry(
         async () => {
           const result = await tatumApi.assetToOtherAddress({
@@ -580,7 +581,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         POOL_CONFIG.SWEEP_RETRY_DELAY_MS
       );
       sweepTxId = sweepResult?.txId;
-      console.log(`[MerchantPool] ✅ Tatum SDK sweep broadcast: ${sweepTxId}`);
+      cronLogger.info(`[MerchantPool] ✅ Tatum SDK sweep broadcast: ${sweepTxId}`);
     }
 
     if (!sweepTxId) {
@@ -594,10 +595,10 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         const gasCost = await tatumApi.getTransactionGasCost(sweepTxId, walletType);
         if (gasCost.gasCostNative > 0) {
           actualGasUsed = gasCost.gasCostNative;
-          console.log(`[MerchantPool]    On-chain gas: ${actualGasUsed} ${gasCost.gasToken}`);
+          cronLogger.info(`[MerchantPool]    On-chain gas: ${actualGasUsed} ${gasCost.gasToken}`);
         }
       } catch (gasErr: unknown) {
-        console.warn(`[MerchantPool]    Could not fetch on-chain gas cost, using estimate`);
+        cronLogger.warn(`[MerchantPool]    Could not fetch on-chain gas cost, using estimate`);
       }
     }
 
@@ -627,8 +628,8 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       await dbTransaction.commit();
       dbTransaction = null;
       
-      console.log(`[MerchantPool] 🎉 Sweep recorded: ${amountToSend} ${walletType} → admin wallet`);
-      console.log(`[MerchantPool]    Status set to: AVAILABLE`);
+      cronLogger.info(`[MerchantPool] 🎉 Sweep recorded: ${amountToSend} ${walletType} → admin wallet`);
+      cronLogger.info(`[MerchantPool]    Status set to: AVAILABLE`);
 
       // Update stablecoin conversion record with sweep TX hash so Binance deposit detection can match
       try {
@@ -649,11 +650,11 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
             }
           );
           if (updatedCount > 0) {
-            console.log(`[MerchantPool]    Updated stablecoin conversion deposit_tx_hash: ${sweepTxId.substring(0, 16)}...`);
+            cronLogger.info(`[MerchantPool]    Updated stablecoin conversion deposit_tx_hash: ${sweepTxId.substring(0, 16)}...`);
           }
         }
       } catch (convErr) {
-        console.warn(`[MerchantPool]    Could not update conversion deposit_tx_hash:`, convErr instanceof Error ? convErr.message : convErr);
+        cronLogger.warn(`[MerchantPool]    Could not update conversion deposit_tx_hash:`, convErr instanceof Error ? convErr.message : convErr);
       }
 
       try {
@@ -664,10 +665,10 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         );
         if (subResult?.id) {
           await poolAddress.update({ subscription_id: subResult.id });
-          console.log(`[MerchantPool]    Subscription renewed: ${subResult.id}`);
+          cronLogger.info(`[MerchantPool]    Subscription renewed: ${subResult.id}`);
         }
       } catch (subError) {
-        console.warn(`[MerchantPool]    ⚠️ Failed to renew subscription (will retry on next reserve)`);
+        cronLogger.warn(`[MerchantPool]    ⚠️ Failed to renew subscription (will retry on next reserve)`);
       }
 
       // Send admin email notification for completed sweep
@@ -688,10 +689,10 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
             gasDisplay,
             sweepConfig.mode
           );
-          console.log(`[MerchantPool] 📧 Admin sweep notification sent: ${amountToSend} ${walletType} to ${adminEmail}`);
+          cronLogger.info(`[MerchantPool] 📧 Admin sweep notification sent: ${amountToSend} ${walletType} to ${adminEmail}`);
         }
       } catch (emailError) {
-        console.error(`[MerchantPool] ⚠️ Admin sweep email failed (non-critical):`, emailError);
+        cronLogger.error(`[MerchantPool] ⚠️ Admin sweep email failed (non-critical):`, emailError);
       }
 
       // ===== EMAIL RECOVERY (FIX) =====
@@ -728,9 +729,9 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
                   company_id: latestPoolTx.dataValues.company_id,
                 }
               );
-              console.log(`[MerchantPool] 📧 [Sweep Recovery] Sent missed pending notification for ${poolAddress.dataValues.wallet_address}`);
+              cronLogger.info(`[MerchantPool] 📧 [Sweep Recovery] Sent missed pending notification for ${poolAddress.dataValues.wallet_address}`);
             } catch (pendingErr: unknown) {
-              console.warn(`[MerchantPool] ⚠️ [Sweep Recovery] Pending notification failed:`, getErrorMessage(pendingErr));
+              cronLogger.warn(`[MerchantPool] ⚠️ [Sweep Recovery] Pending notification failed:`, getErrorMessage(pendingErr));
             }
           }
 
@@ -764,24 +765,24 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
                 await setRedisItem(emailKey, { sent: true, sentAt: new Date().toISOString(), recoveredBySweep: true });
                 await setRedisTTL(emailKey, 86400);
 
-                console.log(`[MerchantPool] 📧 [Sweep Recovery] Sent missed payment-received email to ${userData.email} for ${poolAddress.dataValues.wallet_address}`);
+                cronLogger.info(`[MerchantPool] 📧 [Sweep Recovery] Sent missed payment-received email to ${userData.email} for ${poolAddress.dataValues.wallet_address}`);
               }
             } catch (receivedErr: unknown) {
-              console.warn(`[MerchantPool] ⚠️ [Sweep Recovery] Payment received email failed:`, getErrorMessage(receivedErr));
+              cronLogger.warn(`[MerchantPool] ⚠️ [Sweep Recovery] Payment received email failed:`, getErrorMessage(receivedErr));
             }
           }
         }
       } catch (recoveryError: unknown) {
-        console.warn(`[MerchantPool] ⚠️ Email recovery check failed (non-critical):`, getErrorMessage(recoveryError));
+        cronLogger.warn(`[MerchantPool] ⚠️ Email recovery check failed (non-critical):`, getErrorMessage(recoveryError));
       }
 
       return { success: true, amount: amountToSend, txId: sweepTxId };
       
     } catch (dbError) {
       const message = getErrorMessage(dbError);
-      console.error(`[MerchantPool] 🚨 CRITICAL: Sweep ${sweepTxId} succeeded but DB update failed: ${message}`);
-      console.error(`[MerchantPool] 🚨 Manual intervention needed for address ${poolAddress.dataValues.wallet_address}`);
-      console.error(`[MerchantPool] 🚨 Sweep details: ${actualBalance} ${walletType} sent to ${adminWallet}`);
+      cronLogger.error(`[MerchantPool] 🚨 CRITICAL: Sweep ${sweepTxId} succeeded but DB update failed: ${message}`);
+      cronLogger.error(`[MerchantPool] 🚨 Manual intervention needed for address ${poolAddress.dataValues.wallet_address}`);
+      cronLogger.error(`[MerchantPool] 🚨 Sweep details: ${actualBalance} ${walletType} sent to ${adminWallet}`);
       
       if (dbTransaction) {
         try { await dbTransaction.rollback(); } catch {}
@@ -805,7 +806,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     
   } catch (error) {
     const message = getErrorMessage(error);
-    console.error(`[MerchantPool] ❌ Sweep failed:`, message);
+    cronLogger.error(`[MerchantPool] ❌ Sweep failed:`, message);
     
     if (dbTransaction) {
       try { await dbTransaction.rollback(); } catch {}
@@ -836,7 +837,7 @@ export const sweepByThreshold = async (): Promise<number> => {
   // Skip logging entirely when nothing to check
   if (addressesWithFees.length === 0) return 0;
 
-  console.log(`[MerchantPool] 💰 Threshold sweep: checking ${addressesWithFees.length} AVAILABLE addresses...`);
+  cronLogger.info(`[MerchantPool] 💰 Threshold sweep: checking ${addressesWithFees.length} AVAILABLE addresses...`);
 
   const eligibleAddresses = [];
   
@@ -855,25 +856,25 @@ export const sweepByThreshold = async (): Promise<number> => {
       const usdAmount = await convertToUSD(walletType, cryptoAmount);
       
       if (usdAmount >= (sweepConfig.value || 30)) {
-        console.log(`[MerchantPool] ✅ ${walletAddress} (${walletType}): $${usdAmount.toFixed(2)} >= $${sweepConfig.value} threshold — sweeping`);
+        cronLogger.info(`[MerchantPool] ✅ ${walletAddress} (${walletType}): $${usdAmount.toFixed(2)} >= $${sweepConfig.value} threshold — sweeping`);
         await address.update({ status: "IN_USE" });
         eligibleAddresses.push(address);
       }
     } catch (error) {
       const message = getErrorMessage(error);
-      console.error(`[MerchantPool] ⚠️  Failed to check ${address.dataValues.wallet_type}:`, message);
+      cronLogger.error(`[MerchantPool] ⚠️  Failed to check ${address.dataValues.wallet_type}:`, message);
     }
   }
 
   if (eligibleAddresses.length > 0) {
-    console.log(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for threshold sweep`);
+    cronLogger.info(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for threshold sweep`);
   }
 
   for (const address of eligibleAddresses) {
     try {
       await sweepPoolAddress(address.dataValues.temp_address_id);
     } catch (error) {
-      console.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
+      cronLogger.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
     }
   }
   
@@ -895,7 +896,7 @@ export const sweepByTime = async (): Promise<number> => {
   // Skip logging entirely when nothing to check
   if (addressesWithFees.length === 0) return 0;
 
-  console.log(`[MerchantPool] ⏰ Time sweep: checking ${addressesWithFees.length} IN_USE addresses...`);
+  cronLogger.info(`[MerchantPool] ⏰ Time sweep: checking ${addressesWithFees.length} IN_USE addresses...`);
 
   const eligibleAddresses = [];
 
@@ -918,24 +919,24 @@ export const sweepByTime = async (): Promise<number> => {
       const timeSincePayout = Math.floor((new Date().getTime() - lastPayout.getTime()) / 60000);
       
       if (lastPayout < timeThreshold) {
-        console.log(`[MerchantPool] ✅ ${address.dataValues.wallet_address} (${walletType}): ${cryptoAmount}, ${timeSincePayout} min since payout — sweeping`);
+        cronLogger.info(`[MerchantPool] ✅ ${address.dataValues.wallet_address} (${walletType}): ${cryptoAmount}, ${timeSincePayout} min since payout — sweeping`);
         eligibleAddresses.push(address);
       }
     } catch (error) {
       const message = getErrorMessage(error);
-      console.error(`[MerchantPool] ⚠️  Failed to check ${address.dataValues.wallet_type}:`, message);
+      cronLogger.error(`[MerchantPool] ⚠️  Failed to check ${address.dataValues.wallet_type}:`, message);
     }
   }
 
   if (eligibleAddresses.length > 0) {
-    console.log(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for time-based sweep`);
+    cronLogger.info(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for time-based sweep`);
   }
 
   for (const address of eligibleAddresses) {
     try {
       await sweepPoolAddress(address.dataValues.temp_address_id);
     } catch (error) {
-      console.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
+      cronLogger.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
     }
   }
   
@@ -952,10 +953,10 @@ export const performScheduledSweeps = async (): Promise<void> => {
     
     // Only log banner when there was actual work
     if (thresholdCount > 0 || timeCount > 0) {
-      console.log(`[MerchantPool] ✅ Sweep completed: ${thresholdCount} threshold + ${timeCount} time-based`);
+      cronLogger.info(`[MerchantPool] ✅ Sweep completed: ${thresholdCount} threshold + ${timeCount} time-based`);
     }
   } catch (error) {
     const message = getErrorMessage(error);
-    console.error(`[MerchantPool] ❌ Scheduled sweep failed:`, message);
+    cronLogger.error(`[MerchantPool] ❌ Scheduled sweep failed:`, message);
   }
 };

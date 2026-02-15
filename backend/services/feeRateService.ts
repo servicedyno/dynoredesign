@@ -7,10 +7,11 @@
  */
 
 import axios from "axios";
+import { cronLogger } from "../utils/loggers";
 import { redis as redisClient } from "../utils/redisInstance";
 
 const LOG_PREFIX = "[FeeRateService]";
-const log = (msg: string) => console.log(`${LOG_PREFIX} ${msg}`);
+const log = (msg: string) => cronLogger.info(`${LOG_PREFIX} ${msg}`);
 
 const REDIS_KEY_PREFIX = "dynopay:v1:cache:fee";
 const CACHE_TTL = 60; // 60 seconds

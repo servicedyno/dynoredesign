@@ -5,6 +5,7 @@
  */
 
 import { Op, Transaction } from "sequelize";
+import { cronLogger } from "../../utils/loggers";
 import { merchantTempAddressModel } from "../../models";
 import { getRedisItem, setRedisItem, withLock } from "../../utils/redisInstance";
 import tatumApi from "../../apis/tatumApi";
@@ -55,7 +56,7 @@ export const reserveAddress = async (
       });
 
       if (!poolAddress) {
-        console.log(`[MerchantPool] No available ${walletType} address for merchant ${userId}, creating new...`);
+        cronLogger.info(`[MerchantPool] No available ${walletType} address for merchant ${userId}, creating new...`);
         const newAddress = await addAddressToMerchantPool(userId, walletType, transaction);
         poolAddress = newAddress as typeof poolAddress;
       }
@@ -71,7 +72,7 @@ export const reserveAddress = async (
       // The checkMissedPayments cron (5 min) acts as safety net
       const subscriptionUpdatePromise = (async () => {
         try {
-          console.log(`[MerchantPool] 🔄 Updating subscription with company info for ${addressToSubscribe} (async)`);
+          cronLogger.info(`[MerchantPool] 🔄 Updating subscription with company info for ${addressToSubscribe} (async)`);
           const subResult = await tatumApi.createSubscriptionBlockBeeStyle(
             addressToSubscribe,
             walletType,
@@ -84,12 +85,12 @@ export const reserveAddress = async (
             subscriptionId = subResult.id;
             // Update DB with new subscription ID if changed
             await poolAddress.update({ subscription_id: subscriptionId });
-            console.log(`[MerchantPool] ✅ Subscription updated with company info: ${subscriptionId}`);
-            console.log(`[MerchantPool]    URL: ${subResult.url}`);
+            cronLogger.info(`[MerchantPool] ✅ Subscription updated with company info: ${subscriptionId}`);
+            cronLogger.info(`[MerchantPool]    URL: ${subResult.url}`);
           }
         } catch (subError: unknown) {
           const errorMsg = subError instanceof Error ? subError.message : String(subError);
-          console.error(`[MerchantPool] ⚠️ Async subscription update failed (will retry via cron):`, errorMsg);
+          cronLogger.error(`[MerchantPool] ⚠️ Async subscription update failed (will retry via cron):`, errorMsg);
         }
       })();
 
@@ -116,19 +117,19 @@ export const reserveAddress = async (
 
       await transaction.commit();
 
-      console.log(`[MerchantPool] ✅ Reserved ${walletType} address for payment ${paymentId}`);
-      console.log(`[MerchantPool]    - Merchant: ${userId}`);
-      console.log(`[MerchantPool]    - Company: ${effectiveCompanyId}`);
-      console.log(`[MerchantPool]    - Address: ${poolAddress.dataValues.wallet_address}`);
-      console.log(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
-      console.log(`[MerchantPool]    - Reserved until: ${reservedUntil}`);
-      console.log(`[MerchantPool]    - Subscription: ${subscriptionId}`);
+      cronLogger.info(`[MerchantPool] ✅ Reserved ${walletType} address for payment ${paymentId}`);
+      cronLogger.info(`[MerchantPool]    - Merchant: ${userId}`);
+      cronLogger.info(`[MerchantPool]    - Company: ${effectiveCompanyId}`);
+      cronLogger.info(`[MerchantPool]    - Address: ${poolAddress.dataValues.wallet_address}`);
+      cronLogger.info(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
+      cronLogger.info(`[MerchantPool]    - Reserved until: ${reservedUntil}`);
+      cronLogger.info(`[MerchantPool]    - Subscription: ${subscriptionId}`);
 
       return poolAddress;
     } catch (error) {
       await transaction.rollback();
       const message = getErrorMessage(error);
-      console.error(`[MerchantPool] ❌ Failed to reserve address:`, message);
+      cronLogger.error(`[MerchantPool] ❌ Failed to reserve address:`, message);
       throw error;
     }
   }, 60);
@@ -180,7 +181,7 @@ export const markPaymentReceived = async (
     { where: { temp_address_id: tempAddressId } }
   );
 
-  console.log(`[MerchantPool] 💰 Payment received: ${receivedAmount} (TX: ${incomingTxId})`);
+  cronLogger.info(`[MerchantPool] 💰 Payment received: ${receivedAmount} (TX: ${incomingTxId})`);
 };
 
 /**
@@ -211,11 +212,11 @@ export const handlePartialPayment = async (
     reserved_until: graceDeadline,
   });
 
-  console.log(`[MerchantPool] ⚠️ PARTIAL payment for ${poolAddress.dataValues.wallet_address}`);
-  console.log(`[MerchantPool]    - Payment ID: ${poolAddress.dataValues.current_payment_id}`);
-  console.log(`[MerchantPool]    - Received: ${receivedAmount} (Total: ${totalReceived})`);
-  console.log(`[MerchantPool]    - Expected: ${expectedAmount}`);
-  console.log(`[MerchantPool]    - Grace period extended to: ${graceDeadline}`);
+  cronLogger.info(`[MerchantPool] ⚠️ PARTIAL payment for ${poolAddress.dataValues.wallet_address}`);
+  cronLogger.info(`[MerchantPool]    - Payment ID: ${poolAddress.dataValues.current_payment_id}`);
+  cronLogger.info(`[MerchantPool]    - Received: ${receivedAmount} (Total: ${totalReceived})`);
+  cronLogger.info(`[MerchantPool]    - Expected: ${expectedAmount}`);
+  cronLogger.info(`[MerchantPool]    - Grace period extended to: ${graceDeadline}`);
 };
 
 /**
@@ -263,9 +264,9 @@ export const handleBelowThresholdPayment = async (
     status: "below_threshold",
   });
 
-  console.log(`[MerchantPool] 📉 BELOW THRESHOLD: ${receivedAmount} ${poolAddress.dataValues.wallet_type}`);
-  console.log(`[MerchantPool]    - 100% to admin fee`);
-  console.log(`[MerchantPool]    - New admin balance: ${currentAdminBalance + receivedAmount}`);
+  cronLogger.info(`[MerchantPool] 📉 BELOW THRESHOLD: ${receivedAmount} ${poolAddress.dataValues.wallet_type}`);
+  cronLogger.info(`[MerchantPool]    - 100% to admin fee`);
+  cronLogger.info(`[MerchantPool]    - New admin balance: ${currentAdminBalance + receivedAmount}`);
 };
 
 /**
@@ -348,9 +349,9 @@ export const releaseExpiredReservations = async (
             last_payment_context: JSON.stringify(paymentContext),
           }, { transaction });
           
-          console.log(`[MerchantPool] 💾 Saved payment context for ${walletAddr} (payment: ${paymentContext.payment_id})`);
+          cronLogger.info(`[MerchantPool] 💾 Saved payment context for ${walletAddr} (payment: ${paymentContext.payment_id})`);
         } catch (ctxError) {
-          console.warn(`[MerchantPool] ⚠️ Failed to save payment context for ${walletAddr}:`, ctxError);
+          cronLogger.warn(`[MerchantPool] ⚠️ Failed to save payment context for ${walletAddr}:`, ctxError);
         }
       }
       
@@ -363,7 +364,7 @@ export const releaseExpiredReservations = async (
         );
         subscriptionId = subResult?.id || subscriptionId;
       } catch (subError) {
-        console.warn(`[MerchantPool] ⚠️ Failed to create subscription for expired address ${address.dataValues.wallet_address}`);
+        cronLogger.warn(`[MerchantPool] ⚠️ Failed to create subscription for expired address ${address.dataValues.wallet_address}`);
       }
 
       await address.update({
@@ -377,26 +378,26 @@ export const releaseExpiredReservations = async (
         subscription_id: subscriptionId,
       }, { transaction });
 
-      console.log(`[MerchantPool] ⏰ Released expired reservation: ${address.dataValues.wallet_address} (no payment, context saved)`);
+      cronLogger.info(`[MerchantPool] ⏰ Released expired reservation: ${address.dataValues.wallet_address} (no payment, context saved)`);
       releasedCount++;
     } catch (error) {
-      console.error(`[MerchantPool] ❌ Failed to release expired address ${address.dataValues.wallet_address}:`, error);
+      cronLogger.error(`[MerchantPool] ❌ Failed to release expired address ${address.dataValues.wallet_address}:`, error);
     }
   }
 
   for (const address of expiredWithPartial) {
     try {
-      console.log(`[MerchantPool] ⏰ Processing expired partial payment: ${address.dataValues.wallet_address}`);
-      console.log(`[MerchantPool]    - Received: ${address.dataValues.received_amount}`);
-      console.log(`[MerchantPool]    - Expected: ${address.dataValues.expected_amount}`);
+      cronLogger.info(`[MerchantPool] ⏰ Processing expired partial payment: ${address.dataValues.wallet_address}`);
+      cronLogger.info(`[MerchantPool]    - Received: ${address.dataValues.received_amount}`);
+      cronLogger.info(`[MerchantPool]    - Expected: ${address.dataValues.expected_amount}`);
       releasedCount++;
     } catch (error) {
-      console.error(`[MerchantPool] ❌ Failed to process expired partial for ${address.dataValues.wallet_address}:`, error);
+      cronLogger.error(`[MerchantPool] ❌ Failed to process expired partial for ${address.dataValues.wallet_address}:`, error);
     }
   }
 
   if (releasedCount > 0) {
-    console.log(`[MerchantPool] ⏰ Processed ${releasedCount} expired reservations (${expiredNoPayment.length} released, ${expiredWithPartial.length} partials)`);
+    cronLogger.info(`[MerchantPool] ⏰ Processed ${releasedCount} expired reservations (${expiredNoPayment.length} released, ${expiredWithPartial.length} partials)`);
   }
 
   return releasedCount;
@@ -410,7 +411,7 @@ export const releaseAddress = async (
   adminFeeAmount: number,
   gasUsed: number = 0
 ): Promise<void> => {
-  console.log(`[releaseAddress] Called with tempAddressId=${tempAddressId}, adminFeeAmount=${adminFeeAmount}, gasUsed=${gasUsed}`);
+  cronLogger.info(`[releaseAddress] Called with tempAddressId=${tempAddressId}, adminFeeAmount=${adminFeeAmount}, gasUsed=${gasUsed}`);
   
   const poolAddress = await merchantTempAddressModel.findByPk(tempAddressId);
   
@@ -423,7 +424,7 @@ export const releaseAddress = async (
   const isUTXO = UTXO_CHAINS.includes(walletType);
   const isToken = TOKEN_CHAINS.includes(walletType);
 
-  console.log(`[releaseAddress] walletType=${walletType}, isUTXO=${isUTXO}, isToken=${isToken}`);
+  cronLogger.info(`[releaseAddress] walletType=${walletType}, isUTXO=${isUTXO}, isToken=${isToken}`);
 
   const currentAdminBalance = parseFloat(poolAddress.dataValues.admin_fee_balance) || 0;
   const currentGasBalance = parseFloat(poolAddress.dataValues.gas_balance) || 0;
@@ -442,7 +443,7 @@ export const releaseAddress = async (
     newStatus = newAdminBalance > 0 ? "IN_USE" : "AVAILABLE";
   }
 
-  console.log(`[releaseAddress] Setting newStatus=${newStatus}, newAdminBalance=${newAdminBalance}`);
+  cronLogger.info(`[releaseAddress] Setting newStatus=${newStatus}, newAdminBalance=${newAdminBalance}`);
 
   await poolAddress.update({
     status: newStatus,
@@ -462,10 +463,10 @@ export const releaseAddress = async (
     last_payment_context: null,
   });
 
-  console.log(`[MerchantPool] ✅ Released address ${poolAddress.dataValues.wallet_address} (${walletType})`);
-  console.log(`[MerchantPool]    - Chain type: ${isUTXO ? 'UTXO' : isToken ? 'Token' : 'Native'}`);
-  console.log(`[MerchantPool]    - New status: ${newStatus}`);
-  console.log(`[MerchantPool]    - Admin fee balance: ${newAdminBalance}`);
+  cronLogger.info(`[MerchantPool] ✅ Released address ${poolAddress.dataValues.wallet_address} (${walletType})`);
+  cronLogger.info(`[MerchantPool]    - Chain type: ${isUTXO ? 'UTXO' : isToken ? 'Token' : 'Native'}`);
+  cronLogger.info(`[MerchantPool]    - New status: ${newStatus}`);
+  cronLogger.info(`[MerchantPool]    - Admin fee balance: ${newAdminBalance}`);
   
   if (newStatus === "AVAILABLE") {
     try {
@@ -476,13 +477,13 @@ export const releaseAddress = async (
       );
       if (subResult?.id) {
         await poolAddress.update({ subscription_id: subResult.id });
-        console.log(`[MerchantPool]    - Subscription renewed: ${subResult.id}`);
+        cronLogger.info(`[MerchantPool]    - Subscription renewed: ${subResult.id}`);
       }
     } catch (subError) {
-      console.warn(`[MerchantPool]    - ⚠️ Failed to renew subscription (will retry on next reserve)`);
+      cronLogger.warn(`[MerchantPool]    - ⚠️ Failed to renew subscription (will retry on next reserve)`);
     }
   } else {
-    console.log(`[MerchantPool]    - Sweep mode: ${sweepConfig.mode}:${sweepConfig.value || 'N/A'}`);
+    cronLogger.info(`[MerchantPool]    - Sweep mode: ${sweepConfig.mode}:${sweepConfig.value || 'N/A'}`);
   }
 };
 
@@ -523,11 +524,11 @@ export const cleanupStaleAddresses = async (
     const addrStr = address.dataValues.wallet_address;
     
     if (status === "SWEEPING") {
-      console.log(`[MerchantPool] 🔄 Resetting stuck SWEEPING address for retry: ${addrStr}`);
+      cronLogger.info(`[MerchantPool] 🔄 Resetting stuck SWEEPING address for retry: ${addrStr}`);
       await address.update({ status: "IN_USE" });
       retryCount++;
     } else {
-      console.log(`[MerchantPool] 🚨 Force-releasing stuck address: ${addrStr}`);
+      cronLogger.info(`[MerchantPool] 🚨 Force-releasing stuck address: ${addrStr}`);
       
       if (address.dataValues.current_payment_id) {
         try {
@@ -557,9 +558,9 @@ export const cleanupStaleAddresses = async (
             customer_email: staleCustomerData?.customer_email || null,
           };
           await address.update({ last_payment_context: JSON.stringify(staleContext) });
-          console.log(`[MerchantPool] 💾 Saved context for stuck address ${addrStr}`);
+          cronLogger.info(`[MerchantPool] 💾 Saved context for stuck address ${addrStr}`);
         } catch (ctxErr) {
-          console.warn(`[MerchantPool] ⚠️ Failed to save context for stuck address ${addrStr}`);
+          cronLogger.warn(`[MerchantPool] ⚠️ Failed to save context for stuck address ${addrStr}`);
         }
       }
       
@@ -576,10 +577,10 @@ export const cleanupStaleAddresses = async (
   }
 
   if (releasedCount > 0) {
-    console.log(`[MerchantPool] 🚨 Force-released ${releasedCount} stuck addresses`);
+    cronLogger.info(`[MerchantPool] 🚨 Force-released ${releasedCount} stuck addresses`);
   }
   if (retryCount > 0) {
-    console.log(`[MerchantPool] 🔄 Reset ${retryCount} stuck SWEEPING addresses for retry`);
+    cronLogger.info(`[MerchantPool] 🔄 Reset ${retryCount} stuck SWEEPING addresses for retry`);
   }
 
   return releasedCount + retryCount;
@@ -589,5 +590,5 @@ export const cleanupStaleAddresses = async (
  * Process queued payments (arrived during sweep)
  */
 export const processQueuedPayments = async (tempAddressId: number): Promise<void> => {
-  console.log(`[MerchantPool] Processing queued payments for address ${tempAddressId}`);
+  cronLogger.info(`[MerchantPool] Processing queued payments for address ${tempAddressId}`);
 };

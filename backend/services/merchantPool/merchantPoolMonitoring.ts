@@ -44,7 +44,7 @@ export const ensurePoolSubscriptions = async (): Promise<{
   };
 
   try {
-    console.log("[MerchantPool] 🔍 Starting subscription health check...");
+    cronLogger.info("[MerchantPool] 🔍 Starting subscription health check...");
 
     const activeSubscriptions = await tatumApi.listAllSubscriptions();
     
@@ -56,13 +56,13 @@ export const ensurePoolSubscriptions = async (): Promise<{
       }
     }
     
-    console.log(`[MerchantPool] 📋 Found ${activeSubscriptions.length} active Tatum subscriptions`);
+    cronLogger.info(`[MerchantPool] 📋 Found ${activeSubscriptions.length} active Tatum subscriptions`);
 
     const poolAddresses = await merchantTempAddressModel.findAll({
       attributes: ['temp_address_id', 'wallet_address', 'wallet_type', 'status', 'subscription_id'],
     });
 
-    console.log(`[MerchantPool] 📋 Found ${poolAddresses.length} merchant pool addresses in DB`);
+    cronLogger.info(`[MerchantPool] 📋 Found ${poolAddresses.length} merchant pool addresses in DB`);
 
     for (const addr of poolAddresses) {
       result.checked++;
@@ -93,21 +93,21 @@ export const ensurePoolSubscriptions = async (): Promise<{
       }
 
       if (activeSub && dbSubId !== activeSub.id) {
-        console.log(`[MerchantPool] 🔄 Updating subscription ID for ${walletAddressOriginal}: ${dbSubId} -> ${activeSub.id}`);
+        cronLogger.info(`[MerchantPool] 🔄 Updating subscription ID for ${walletAddressOriginal}: ${dbSubId} -> ${activeSub.id}`);
         await addr.update({ subscription_id: activeSub.id });
         result.valid++;
         continue;
       }
 
       if (!activeSub) {
-        console.log(`[MerchantPool] ⚠️ Missing subscription for ${walletAddressOriginal} (${walletType}), creating...`);
+        cronLogger.info(`[MerchantPool] ⚠️ Missing subscription for ${walletAddressOriginal} (${walletType}), creating...`);
         
         try {
           const newSub = await tatumApi.createSubscription(walletAddressOriginal, walletType, true);
           
           if (newSub?.id) {
             await addr.update({ subscription_id: newSub.id });
-            console.log(`[MerchantPool] ✅ Created subscription for ${walletAddressOriginal}: ${newSub.id}`);
+            cronLogger.info(`[MerchantPool] ✅ Created subscription for ${walletAddressOriginal}: ${newSub.id}`);
             result.resubscribed++;
           } else {
             throw new Error("No subscription ID returned");
@@ -119,25 +119,25 @@ export const ensurePoolSubscriptions = async (): Promise<{
             const match = errorData.message?.match(/already exists \(([a-f0-9]+)\)/);
             if (match && match[1]) {
               const existingSubId = match[1];
-              console.log(`[MerchantPool] 🔄 Subscription already exists, updating DB: ${existingSubId}`);
+              cronLogger.info(`[MerchantPool] 🔄 Subscription already exists, updating DB: ${existingSubId}`);
               await addr.update({ subscription_id: existingSubId });
               result.valid++;
               continue;
             }
           }
           
-          console.error(`[MerchantPool] ❌ Failed to create subscription for ${walletAddressOriginal}: ${err.message}`);
+          cronLogger.error(`[MerchantPool] ❌ Failed to create subscription for ${walletAddressOriginal}: ${err.message}`);
           result.failed++;
           result.errors.push(`${walletAddressOriginal}: ${err.message}`);
         }
       }
     }
 
-    console.log(`[MerchantPool] ✅ Subscription health check complete:`);
-    console.log(`   - Checked: ${result.checked}`);
-    console.log(`   - Valid: ${result.valid}`);
-    console.log(`   - Re-subscribed: ${result.resubscribed}`);
-    console.log(`   - Failed: ${result.failed}`);
+    cronLogger.info(`[MerchantPool] ✅ Subscription health check complete:`);
+    cronLogger.info(`   - Checked: ${result.checked}`);
+    cronLogger.info(`   - Valid: ${result.valid}`);
+    cronLogger.info(`   - Re-subscribed: ${result.resubscribed}`);
+    cronLogger.info(`   - Failed: ${result.failed}`);
 
     if (result.errors.length > 0) {
       cronLogger?.warn?.("Subscription health check had failures", { errors: result.errors });
@@ -145,7 +145,7 @@ export const ensurePoolSubscriptions = async (): Promise<{
 
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.error("[MerchantPool] ❌ Subscription health check failed:", err.message);
+    cronLogger.error("[MerchantPool] ❌ Subscription health check failed:", err.message);
     cronLogger?.error?.("Subscription health check failed", {}, error as Error);
     result.errors.push(`Global error: ${err.message}`);
   }
@@ -189,8 +189,8 @@ export const checkMissedPayments = async (): Promise<{
   };
 
   try {
-    console.log("[MerchantPool] 🔍 Checking for missed payments (webhook fallback)...");
-    console.log(`[MerchantPool] ⏱️ Webhook grace period: ${WEBHOOK_GRACE_PERIOD_MINUTES} minutes`);
+    cronLogger.info("[MerchantPool] 🔍 Checking for missed payments (webhook fallback)...");
+    cronLogger.info(`[MerchantPool] ⏱️ Webhook grace period: ${WEBHOOK_GRACE_PERIOD_MINUTES} minutes`);
 
     const reservedAddresses = await merchantTempAddressModel.findAll({
       where: { status: 'RESERVED' },
@@ -202,7 +202,7 @@ export const checkMissedPayments = async (): Promise<{
       ],
     });
 
-    console.log(`[MerchantPool] 📋 Found ${reservedAddresses.length} reserved addresses to check (concurrency: ${CONCURRENCY_LIMIT}, timeout: ${PER_ADDRESS_TIMEOUT_MS}ms)`);
+    cronLogger.info(`[MerchantPool] 📋 Found ${reservedAddresses.length} reserved addresses to check (concurrency: ${CONCURRENCY_LIMIT}, timeout: ${PER_ADDRESS_TIMEOUT_MS}ms)`);
 
     // Process addresses in batches with concurrency limit
     let consecutiveErrors = 0;
@@ -211,7 +211,7 @@ export const checkMissedPayments = async (): Promise<{
     for (let batchStart = 0; batchStart < totalAddresses; batchStart += CONCURRENCY_LIMIT) {
       // Circuit breaker: if too many errors, API might be down
       if (result.checked > 0 && result.errors.length / result.checked > CIRCUIT_BREAKER_THRESHOLD && result.errors.length > 3) {
-        console.error(`[MerchantPool] 🛑 Circuit breaker triggered: ${result.errors.length}/${result.checked} addresses failed (>${CIRCUIT_BREAKER_THRESHOLD * 100}%). Stopping.`);
+        cronLogger.error(`[MerchantPool] 🛑 Circuit breaker triggered: ${result.errors.length}/${result.checked} addresses failed (>${CIRCUIT_BREAKER_THRESHOLD * 100}%). Stopping.`);
         result.errors.push(`Circuit breaker: stopped after ${result.checked} addresses, ${result.errors.length} failures`);
         break;
       }
@@ -228,7 +228,7 @@ export const checkMissedPayments = async (): Promise<{
           ),
         ]).catch((timeoutErr: Error) => {
           const wa = addr.dataValues.wallet_address;
-          console.error(`[MerchantPool] ⏰ ${wa} — address processing timed out after ${Date.now() - addrStartTime}ms`);
+          cronLogger.error(`[MerchantPool] ⏰ ${wa} — address processing timed out after ${Date.now() - addrStartTime}ms`);
           result.errors.push(`Timeout for ${wa}: ${timeoutErr.message}`);
         });
       }));
@@ -245,18 +245,18 @@ export const checkMissedPayments = async (): Promise<{
       avgPerAddressMs: result.checked > 0 ? Math.round((Date.now() - startTime) / result.checked) : 0,
     };
 
-    console.log(`[MerchantPool] ✅ Missed payment check complete:`);
-    console.log(`[MerchantPool]   - Checked: ${result.checked}/${totalAddresses}`);
-    console.log(`[MerchantPool]   - Found: ${result.found}, Processed: ${result.processed}, Already: ${result.alreadyProcessed}`);
-    console.log(`[MerchantPool]   - Skipped (recent): ${result.skippedTooRecent}`);
-    console.log(`[MerchantPool]   - Timing: ${result.timing.totalMs}ms total, ${result.timing.avgPerAddressMs}ms avg/addr`);
+    cronLogger.info(`[MerchantPool] ✅ Missed payment check complete:`);
+    cronLogger.info(`[MerchantPool]   - Checked: ${result.checked}/${totalAddresses}`);
+    cronLogger.info(`[MerchantPool]   - Found: ${result.found}, Processed: ${result.processed}, Already: ${result.alreadyProcessed}`);
+    cronLogger.info(`[MerchantPool]   - Skipped (recent): ${result.skippedTooRecent}`);
+    cronLogger.info(`[MerchantPool]   - Timing: ${result.timing.totalMs}ms total, ${result.timing.avgPerAddressMs}ms avg/addr`);
     if (result.errors.length > 0) {
-      console.log(`[MerchantPool]   - Errors: ${result.errors.length}`);
+      cronLogger.info(`[MerchantPool]   - Errors: ${result.errors.length}`);
     }
     
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.error("[MerchantPool] ❌ Missed payment check failed:", err.message);
+    cronLogger.error("[MerchantPool] ❌ Missed payment check failed:", err.message);
     result.errors.push(`Global error: ${err.message}`);
     result.timing = { totalMs: Date.now() - startTime, avgPerAddressMs: 0 };
   }
@@ -286,7 +286,7 @@ const processAddress = async (addr: any, result: {
       const now = new Date();
       
       if (!reservedUntil) {
-        console.log(`[MerchantPool] ⏭️ Skipping ${walletAddress} - no reserved_until timestamp`);
+        cronLogger.info(`[MerchantPool] ⏭️ Skipping ${walletAddress} - no reserved_until timestamp`);
         return;
       }
       
@@ -296,7 +296,7 @@ const processAddress = async (addr: any, result: {
       if (minutesSinceReserved < WEBHOOK_GRACE_PERIOD_MINUTES) {
         result.skippedTooRecent++;
         if (minutesSinceReserved > 5) {
-          console.log(`[MerchantPool] ⏭️ ${walletAddress} - reserved ${minutesSinceReserved.toFixed(1)} min ago (waiting for ${WEBHOOK_GRACE_PERIOD_MINUTES} min grace period)`);
+          cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - reserved ${minutesSinceReserved.toFixed(1)} min ago (waiting for ${WEBHOOK_GRACE_PERIOD_MINUTES} min grace period)`);
         }
         return;
       }
@@ -313,16 +313,16 @@ const processAddress = async (addr: any, result: {
             const taggedTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 20, destinationTag);
             const taggedTotal = taggedTxs.reduce((sum, tx) => sum + tx.amount, 0);
             balance = taggedTotal;
-            console.log(`[MerchantPool] 🏷️ ${walletAddress} tag:${destinationTag} — incoming txs for this tag: ${taggedTxs.length}, total: ${taggedTotal} ${walletType}`);
+            cronLogger.info(`[MerchantPool] 🏷️ ${walletAddress} tag:${destinationTag} — incoming txs for this tag: ${taggedTxs.length}, total: ${taggedTotal} ${walletType}`);
           } catch (tagErr: unknown) {
             const err = tagErr as { message?: string };
             // If tag-filtered lookup fails, fallback to received_amount from DB
             const dbReceivedAmount = parseFloat(addr.dataValues.received_amount || '0');
             if (dbReceivedAmount > 0) {
               balance = dbReceivedAmount;
-              console.log(`[MerchantPool] 🏷️ ${walletAddress} tag:${destinationTag} — tx lookup failed (${err?.message}), using DB received_amount: ${dbReceivedAmount}`);
+              cronLogger.info(`[MerchantPool] 🏷️ ${walletAddress} tag:${destinationTag} — tx lookup failed (${err?.message}), using DB received_amount: ${dbReceivedAmount}`);
             } else {
-              console.warn(`[MerchantPool] ⚠️ ${walletAddress} tag:${destinationTag} — tx lookup failed and no DB received_amount, skipping`);
+              cronLogger.warn(`[MerchantPool] ⚠️ ${walletAddress} tag:${destinationTag} — tx lookup failed and no DB received_amount, skipping`);
               return;
             }
           }
@@ -333,7 +333,7 @@ const processAddress = async (addr: any, result: {
             const balErr = balanceError as { message?: string };
             const errMsg = balErr.message || '';
             if (errMsg.includes('account.not.found') || errMsg.includes('not.found')) {
-              console.log(`[MerchantPool] ⏭️ ${walletAddress} - account not yet activated on-chain (${walletType}), skipping`);
+              cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - account not yet activated on-chain (${walletType}), skipping`);
               return;
             }
             throw balanceError;
@@ -342,7 +342,7 @@ const processAddress = async (addr: any, result: {
         }
 
         if (balance <= 0) {
-          console.log(`[MerchantPool] ⏭️ ${walletAddress} - no balance (customer hasn't paid)`);
+          cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - no balance (customer hasn't paid)`);
           return;
         }
 
@@ -356,7 +356,7 @@ const processAddress = async (addr: any, result: {
         const effectiveBalance = Math.max(0, balance - adminFeeBalance);
         
         if (adminFeeBalance > 0) {
-          console.log(`[MerchantPool] 📊 ${walletAddress} — on-chain: ${balance} ${walletType}, admin_fee_residual: ${adminFeeBalance}, effective_new_payment: ${effectiveBalance.toFixed(8)}`);
+          cronLogger.info(`[MerchantPool] 📊 ${walletAddress} — on-chain: ${balance} ${walletType}, admin_fee_residual: ${adminFeeBalance}, effective_new_payment: ${effectiveBalance.toFixed(8)}`);
         }
 
         // Skip dust balances — leftover gas residue is not a real payment
@@ -377,17 +377,17 @@ const processAddress = async (addr: any, result: {
         
         // Use effectiveBalance (after admin fee subtraction) for dust check
         if (effectiveBalance < dustThreshold) {
-          console.log(`[MerchantPool] ⏭️ ${walletAddress} - effective balance ${effectiveBalance.toFixed(8)} ${walletType} is admin fee residual (on-chain: ${balance}, admin_fee: ${adminFeeBalance}), skipping`);
+          cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - effective balance ${effectiveBalance.toFixed(8)} ${walletType} is admin fee residual (on-chain: ${balance}, admin_fee: ${adminFeeBalance}), skipping`);
           return;
         }
 
         // Skip if expected_amount is 0 — no payment was actually requested for this address
         if (expectedAmount <= 0) {
-          console.log(`[MerchantPool] ⏭️ ${walletAddress} - expected_amount is ${expectedAmount}, likely stale reservation with dust. Skipping.`);
+          cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - expected_amount is ${expectedAmount}, likely stale reservation with dust. Skipping.`);
           return;
         }
 
-        console.log(`[MerchantPool] 💰 ${walletAddress} has balance: ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance}, reserved ${minutesSinceReserved.toFixed(1)} min ago)`);
+        cronLogger.info(`[MerchantPool] 💰 ${walletAddress} has balance: ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance}, reserved ${minutesSinceReserved.toFixed(1)} min ago)`);
 
         let redisData = await getRedisItem(cryptoRedisKey);
         
@@ -398,11 +398,11 @@ const processAddress = async (addr: any, result: {
           if (redisData?.status === 'failed') {
             const savedTxId = redisData.txId;
             const savedReceivedAmount = parseFloat(redisData.receivedAmount || '0');
-            console.log(`[MerchantPool] ⚠️ ${walletAddress} - FAILED PAYMENT RECOVERY (txId: ${savedTxId})`);
-            console.log(`[MerchantPool]   - Error: ${redisData.lastError || 'unknown'}`);
-            console.log(`[MerchantPool]   - Failed at: ${redisData.failedAt || 'unknown'}`);
-            console.log(`[MerchantPool]   - Received amount: ${savedReceivedAmount} ${walletType}`);
-            console.log(`[MerchantPool] 🔄 Directly reprocessing with preserved payment context...`);
+            cronLogger.info(`[MerchantPool] ⚠️ ${walletAddress} - FAILED PAYMENT RECOVERY (txId: ${savedTxId})`);
+            cronLogger.info(`[MerchantPool]   - Error: ${redisData.lastError || 'unknown'}`);
+            cronLogger.info(`[MerchantPool]   - Failed at: ${redisData.failedAt || 'unknown'}`);
+            cronLogger.info(`[MerchantPool]   - Received amount: ${savedReceivedAmount} ${walletType}`);
+            cronLogger.info(`[MerchantPool] 🔄 Directly reprocessing with preserved payment context...`);
             
             // Update Redis: set status to processing, remove error fields, keep all context
             const recoveryData = { ...redisData };
@@ -414,7 +414,7 @@ const processAddress = async (addr: any, result: {
             // Keep txId and receivedAmount — they are correct from the original webhook
             
             await setRedisItem(cryptoRedisKey, recoveryData);
-            console.log(`[MerchantPool] 📝 Redis restored: status=processing, txId=${savedTxId}, ref=${recoveryData.ref}`);
+            cronLogger.info(`[MerchantPool] 📝 Redis restored: status=processing, txId=${savedTxId}, ref=${recoveryData.ref}`);
             
             // Mark the tx as NOT already processed so cryptoVerification won't skip it
             const processedTxKey = `processed-tx-${savedTxId}`;
@@ -433,10 +433,10 @@ const processAddress = async (addr: any, result: {
                   company_id: companyId,
                 }
               );
-              console.log(`[MerchantPool] 📧 Pending notification sent for recovered payment on ${walletAddress}`);
+              cronLogger.info(`[MerchantPool] 📧 Pending notification sent for recovered payment on ${walletAddress}`);
             } catch (notifError: unknown) {
               const notifErr = notifError as { message?: string };
-              console.warn(`[MerchantPool] ⚠️ Failed to send pending notification (non-critical): ${notifErr?.message}`);
+              cronLogger.warn(`[MerchantPool] ⚠️ Failed to send pending notification (non-critical): ${notifErr?.message}`);
             }
 
             // Directly call cryptoVerification — all data is in Redis
@@ -444,38 +444,38 @@ const processAddress = async (addr: any, result: {
               const verificationResult = await paymentController.cryptoVerification(walletAddress, true, cryptoRedisKey) as { duplicate?: boolean; status?: number; paymentStatus?: string };
               
               if (verificationResult?.duplicate) {
-                console.log(`[MerchantPool] ⏭️ ${walletAddress} - Payment already processed (duplicate)`);
+                cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - Payment already processed (duplicate)`);
                 result.alreadyProcessed++;
               } else if (verificationResult?.status === 200 || verificationResult?.paymentStatus === 'completed' || verificationResult?.paymentStatus === 'complete') {
-                console.log(`[MerchantPool] ✅ FAILED PAYMENT RECOVERED: ${walletAddress} — ${savedReceivedAmount} ${walletType} (txId: ${savedTxId})`);
+                cronLogger.info(`[MerchantPool] ✅ FAILED PAYMENT RECOVERED: ${walletAddress} — ${savedReceivedAmount} ${walletType} (txId: ${savedTxId})`);
                 result.processed++;
               } else {
-                console.log(`[MerchantPool] ⚠️ Recovery returned:`, JSON.stringify(verificationResult));
+                cronLogger.info(`[MerchantPool] ⚠️ Recovery returned:`, JSON.stringify(verificationResult));
                 result.errors.push(`Recovery returned unexpected result for ${walletAddress}: ${JSON.stringify(verificationResult)}`);
               }
             } catch (verifyError: unknown) {
               const err = verifyError as { paymentStatus?: string; amount?: number; message?: string; status?: number };
               if (err?.paymentStatus === 'incomplete') {
-                console.log(`[MerchantPool] 📋 Partial payment recovered for ${walletAddress}`);
+                cronLogger.info(`[MerchantPool] 📋 Partial payment recovered for ${walletAddress}`);
                 result.processed++;
               } else {
                 // Mark as failed again so next cron cycle can retry
                 const failedData = { ...recoveryData, status: 'failed', failedAt: new Date().toISOString(), lastError: err?.message || 'cryptoVerification failed on retry' };
                 await setRedisItem(cryptoRedisKey, failedData);
-                console.error(`[MerchantPool] ❌ Recovery failed for ${walletAddress}: ${err?.message || verifyError}`);
+                cronLogger.error(`[MerchantPool] ❌ Recovery failed for ${walletAddress}: ${err?.message || verifyError}`);
                 result.errors.push(`Recovery failed for ${walletAddress}: ${err?.message}`);
               }
             }
             return;
           } else {
-            console.log(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
+            cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - Redis has txId (webhook already fired): ${redisData.txId}`);
             result.alreadyProcessed++;
             return;
           }
         }
         
         if (redisData?.status === 'processing' || redisData?.status === 'retrying') {
-          console.log(`[MerchantPool] ⏭️ ${walletAddress} - Webhook currently processing (status: ${redisData.status})`);
+          cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - Webhook currently processing (status: ${redisData.status})`);
           result.alreadyProcessed++;
           return;
         }
@@ -485,10 +485,10 @@ const processAddress = async (addr: any, result: {
           const originalExpected = parseFloat(redisData?.originalExpectedAmount || redisData?.amount || '0');
           const remaining = originalExpected - receivedSoFar;
           
-          console.log(`[MerchantPool] ⏸️ ${walletAddress} - PARTIAL PAYMENT in progress`);
-          console.log(`[MerchantPool]    - Received so far: ${receivedSoFar} ${walletType}`);
-          console.log(`[MerchantPool]    - Expected: ${originalExpected} ${walletType}`);
-          console.log(`[MerchantPool]    - Remaining: ${remaining} ${walletType}`);
+          cronLogger.info(`[MerchantPool] ⏸️ ${walletAddress} - PARTIAL PAYMENT in progress`);
+          cronLogger.info(`[MerchantPool]    - Received so far: ${receivedSoFar} ${walletType}`);
+          cronLogger.info(`[MerchantPool]    - Expected: ${originalExpected} ${walletType}`);
+          cronLogger.info(`[MerchantPool]    - Remaining: ${remaining} ${walletType}`);
           
           const partialTimestamp = redisData?.partialPaymentTimestamp;
           if (partialTimestamp) {
@@ -496,11 +496,11 @@ const processAddress = async (addr: any, result: {
             const minutesSincePartial = (now.getTime() - partialTime.getTime()) / 60000;
             
             if (minutesSincePartial < 20) {
-              console.log(`[MerchantPool] ⏭️ Waiting for completion - partial received ${minutesSincePartial.toFixed(1)} min ago`);
+              cronLogger.info(`[MerchantPool] ⏭️ Waiting for completion - partial received ${minutesSincePartial.toFixed(1)} min ago`);
               result.skippedTooRecent++;
               return;
             } else {
-              console.log(`[MerchantPool] ⚠️ Partial payment expired (${minutesSincePartial.toFixed(1)} min) - will process as-is`);
+              cronLogger.info(`[MerchantPool] ⚠️ Partial payment expired (${minutesSincePartial.toFixed(1)} min) - will process as-is`);
             }
           }
         }
@@ -514,15 +514,15 @@ const processAddress = async (addr: any, result: {
           const dbExpectedAmount = parseFloat(poolAddressRecord.dataValues.expected_amount || '0');
           const partialTimestamp = poolAddressRecord.dataValues.partial_payment_timestamp;
           
-          console.log(`[MerchantPool] ⏸️ ${walletAddress} - DB shows partial payment`);
-          console.log(`[MerchantPool]    - DB Received: ${dbReceivedAmount}, Expected: ${dbExpectedAmount}`);
+          cronLogger.info(`[MerchantPool] ⏸️ ${walletAddress} - DB shows partial payment`);
+          cronLogger.info(`[MerchantPool]    - DB Received: ${dbReceivedAmount}, Expected: ${dbExpectedAmount}`);
           
           if (partialTimestamp) {
             const partialTime = new Date(partialTimestamp);
             const minutesSincePartial = (now.getTime() - partialTime.getTime()) / 60000;
             
             if (minutesSincePartial < 20) {
-              console.log(`[MerchantPool] ⏭️ Waiting for completion - DB partial ${minutesSincePartial.toFixed(1)} min ago`);
+              cronLogger.info(`[MerchantPool] ⏭️ Waiting for completion - DB partial ${minutesSincePartial.toFixed(1)} min ago`);
               result.skippedTooRecent++;
               return;
             }
@@ -541,7 +541,7 @@ const processAddress = async (addr: any, result: {
           });
 
           if (existingTx) {
-            console.log(`[MerchantPool] ⏭️ ${walletAddress} - Already processed in DB (tx: ${existingTx.dataValues.transaction_reference})`);
+            cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - Already processed in DB (tx: ${existingTx.dataValues.transaction_reference})`);
             result.alreadyProcessed++;
             return;
           }
@@ -560,41 +560,41 @@ const processAddress = async (addr: any, result: {
           const hoursSinceTx = (now.getTime() - txCreatedAt.getTime()) / 3600000;
           
           if (hoursSinceTx < 1) {
-            console.log(`[MerchantPool] ⏭️ ${walletAddress} - Recent pool transaction exists (${hoursSinceTx.toFixed(1)}h ago)`);
+            cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} - Recent pool transaction exists (${hoursSinceTx.toFixed(1)}h ago)`);
             result.alreadyProcessed++;
             return;
           }
         }
 
         result.found++;
-        console.log(`[MerchantPool] ⚠️ MISSED PAYMENT DETECTED: ${walletAddress}`);
-        console.log(`[MerchantPool]   - On-chain balance: ${balance} ${walletType}`);
-        console.log(`[MerchantPool]   - Admin fee residual: ${adminFeeBalance} ${walletType}`);
-        console.log(`[MerchantPool]   - Effective new payment: ${effectiveBalance.toFixed(8)} ${walletType}`);
-        console.log(`[MerchantPool]   - Expected: ${expectedAmount} ${walletType}`);
-        console.log(`[MerchantPool]   - Payment ID: ${currentPaymentId || 'N/A'}`);
-        console.log(`[MerchantPool]   - Reserved ${minutesSinceReserved.toFixed(1)} min ago`);
+        cronLogger.info(`[MerchantPool] ⚠️ MISSED PAYMENT DETECTED: ${walletAddress}`);
+        cronLogger.info(`[MerchantPool]   - On-chain balance: ${balance} ${walletType}`);
+        cronLogger.info(`[MerchantPool]   - Admin fee residual: ${adminFeeBalance} ${walletType}`);
+        cronLogger.info(`[MerchantPool]   - Effective new payment: ${effectiveBalance.toFixed(8)} ${walletType}`);
+        cronLogger.info(`[MerchantPool]   - Expected: ${expectedAmount} ${walletType}`);
+        cronLogger.info(`[MerchantPool]   - Payment ID: ${currentPaymentId || 'N/A'}`);
+        cronLogger.info(`[MerchantPool]   - Reserved ${minutesSinceReserved.toFixed(1)} min ago`);
         
         const tolerance = expectedAmount * 0.01;
         // Use effectiveBalance (after admin fee subtraction) for underpayment comparison
         const isUnderpayment = effectiveBalance < (expectedAmount - tolerance);
         
         if (isUnderpayment && minutesSinceReserved < 25) {
-          console.log(`[MerchantPool] ⏸️ UNDERPAYMENT detected - waiting for customer to send remaining`);
-          console.log(`[MerchantPool]    - Received (effective): ${effectiveBalance.toFixed(8)} ${walletType}`);
-          console.log(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
-          console.log(`[MerchantPool]    - Shortfall: ${(expectedAmount - effectiveBalance).toFixed(8)} ${walletType}`);
-          console.log(`[MerchantPool]    - Reserved ${minutesSinceReserved.toFixed(1)} min ago (waiting until 25 min)`);
+          cronLogger.info(`[MerchantPool] ⏸️ UNDERPAYMENT detected - waiting for customer to send remaining`);
+          cronLogger.info(`[MerchantPool]    - Received (effective): ${effectiveBalance.toFixed(8)} ${walletType}`);
+          cronLogger.info(`[MerchantPool]    - Expected: ${expectedAmount} ${walletType}`);
+          cronLogger.info(`[MerchantPool]    - Shortfall: ${(expectedAmount - effectiveBalance).toFixed(8)} ${walletType}`);
+          cronLogger.info(`[MerchantPool]    - Reserved ${minutesSinceReserved.toFixed(1)} min ago (waiting until 25 min)`);
           result.skippedTooRecent++;
           return;
         }
         
         if (isUnderpayment) {
-          console.log(`[MerchantPool] ⚠️ UNDERPAYMENT - processing as partial (reservation expired)`);
-          console.log(`[MerchantPool]    - Received (effective): ${effectiveBalance.toFixed(8)} ${walletType} (${((effectiveBalance/expectedAmount)*100).toFixed(1)}% of expected)`);
+          cronLogger.info(`[MerchantPool] ⚠️ UNDERPAYMENT - processing as partial (reservation expired)`);
+          cronLogger.info(`[MerchantPool]    - Received (effective): ${effectiveBalance.toFixed(8)} ${walletType} (${((effectiveBalance/expectedAmount)*100).toFixed(1)}% of expected)`);
         }
         
-        console.log(`[MerchantPool] 🔄 Fetching transaction details from blockchain...`);
+        cronLogger.info(`[MerchantPool] 🔄 Fetching transaction details from blockchain...`);
         const incomingTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 5);
         
         if (!incomingTxs || incomingTxs.length === 0) {
@@ -611,8 +611,8 @@ const processAddress = async (addr: any, result: {
             const hasPaymentContext = !!currentPaymentId && effectiveBalance > (dustThreshold * 5); // Well above dust
             
             if (hasPaymentContext) {
-              console.log(`[MerchantPool] ⚠️ ${walletAddress} - Tatum tx lookup failed ${failCount} times BUT address has payment context and significant effective balance ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance})`);
-              console.log(`[MerchantPool] 🔄 Attempting to process using payment context (bypassing tx lookup)...`);
+              cronLogger.info(`[MerchantPool] ⚠️ ${walletAddress} - Tatum tx lookup failed ${failCount} times BUT address has payment context and significant effective balance ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance})`);
+              cronLogger.info(`[MerchantPool] 🔄 Attempting to process using payment context (bypassing tx lookup)...`);
               
               // Try to get last_payment_context from DB — use temp_address_id (unique) instead of wallet_address
               // because XRP/RLUSD share the same master address with different destination tags
@@ -623,9 +623,9 @@ const processAddress = async (addr: any, result: {
               if (lastContextRaw) {
                 try {
                   paymentContext = typeof lastContextRaw === 'string' ? JSON.parse(lastContextRaw) : lastContextRaw;
-                  console.log(`[MerchantPool] 📝 Found last_payment_context for ${walletAddress} (payment: ${paymentContext.payment_id})`);
+                  cronLogger.info(`[MerchantPool] 📝 Found last_payment_context for ${walletAddress} (payment: ${paymentContext.payment_id})`);
                 } catch (e) {
-                  console.warn(`[MerchantPool] ⚠️ Failed to parse last_payment_context for ${walletAddress}`);
+                  cronLogger.warn(`[MerchantPool] ⚠️ Failed to parse last_payment_context for ${walletAddress}`);
                 }
               }
               
@@ -677,21 +677,21 @@ const processAddress = async (addr: any, result: {
                   customer_email: paymentContext?.customer_email || null,
                 };
                 await setRedisItem(custRef, custData);
-                console.log(`[MerchantPool] 📝 Reconstructed customer data: ${custRef}`);
+                cronLogger.info(`[MerchantPool] 📝 Reconstructed customer data: ${custRef}`);
               }
               
               await setRedisItem(cryptoRedisKey, reconstructedRedis);
-              console.log(`[MerchantPool] 📝 Reconstructed Redis data for ${walletAddress} (key: ${cryptoRedisKey}) — processing via cryptoVerification`);
+              cronLogger.info(`[MerchantPool] 📝 Reconstructed Redis data for ${walletAddress} (key: ${cryptoRedisKey}) — processing via cryptoVerification`);
               
               try {
                 const verificationResult = await paymentController.cryptoVerification(walletAddress, true, cryptoRedisKey) as { duplicate?: boolean; status?: number; paymentStatus?: string };
                 
                 if (verificationResult?.duplicate) {
-                  console.log(`[MerchantPool] ⏭️ Payment already processed (duplicate)`);
+                  cronLogger.info(`[MerchantPool] ⏭️ Payment already processed (duplicate)`);
                   result.alreadyProcessed++;
                 } else if (verificationResult?.status === 200 || verificationResult?.paymentStatus === 'completed' || verificationResult?.paymentStatus === 'complete') {
-                  console.log(`[MerchantPool] ✅ MISSED PAYMENT RECOVERED (via context fallback)!`);
-                  console.log(`[MerchantPool]   - Address: ${walletAddress}, Amount: ${balance} ${walletType}`);
+                  cronLogger.info(`[MerchantPool] ✅ MISSED PAYMENT RECOVERED (via context fallback)!`);
+                  cronLogger.info(`[MerchantPool]   - Address: ${walletAddress}, Amount: ${balance} ${walletType}`);
                   result.processed++;
                   
                   cronLogger?.info?.("MISSED PAYMENT RECOVERED VIA CONTEXT", {
@@ -703,16 +703,16 @@ const processAddress = async (addr: any, result: {
                     txLookupFailed: true,
                   });
                 } else {
-                  console.log(`[MerchantPool] ⚠️ cryptoVerification returned:`, verificationResult);
+                  cronLogger.info(`[MerchantPool] ⚠️ cryptoVerification returned:`, verificationResult);
                   result.errors.push(`Context fallback verification returned unexpected result for ${walletAddress}`);
                 }
               } catch (verifyError: unknown) {
                 const err = verifyError as { paymentStatus?: string; amount?: number; message?: string };
                 if (err?.paymentStatus === 'incomplete') {
-                  console.log(`[MerchantPool] 📋 Partial payment via context fallback - ${err.amount} ${walletType} remaining`);
+                  cronLogger.info(`[MerchantPool] 📋 Partial payment via context fallback - ${err.amount} ${walletType} remaining`);
                   result.processed++;
                 } else {
-                  console.error(`[MerchantPool] ❌ Context fallback cryptoVerification failed:`, err.message || verifyError);
+                  cronLogger.error(`[MerchantPool] ❌ Context fallback cryptoVerification failed:`, err.message || verifyError);
                   result.errors.push(`Context fallback verification failed for ${walletAddress}: ${err.message}`);
                 }
               }
@@ -722,7 +722,7 @@ const processAddress = async (addr: any, result: {
             }
             
             // No payment context or effective balance too low — admin fee residual, release
-            console.log(`[MerchantPool] ⚠️ ${walletAddress} - No incoming txs found after ${failCount} checks. Effective balance ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance}) is likely pre-existing admin fee. Releasing address.`);
+            cronLogger.info(`[MerchantPool] ⚠️ ${walletAddress} - No incoming txs found after ${failCount} checks. Effective balance ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance}) is likely pre-existing admin fee. Releasing address.`);
             await merchantTempAddressModel.update(
               { status: 'AVAILABLE', current_payment_id: null, expected_amount: null, reserved_until: null, current_company_id: null },
               { where: { wallet_address: walletAddress } }
@@ -730,7 +730,7 @@ const processAddress = async (addr: any, result: {
             await deleteRedisItem(failKey);
             result.errors.push(`Released ${walletAddress} after ${failCount} failed tx lookups (dust: ${balance} ${walletType})`);
           } else {
-            console.log(`[MerchantPool] ❌ No incoming transactions found for ${walletAddress} (attempt ${failCount}/3). Will retry.`);
+            cronLogger.info(`[MerchantPool] ❌ No incoming transactions found for ${walletAddress} (attempt ${failCount}/3). Will retry.`);
             result.errors.push(`No transactions found for ${walletAddress} (attempt ${failCount}/3)`);
           }
           return;
@@ -739,32 +739,32 @@ const processAddress = async (addr: any, result: {
         const latestTx = incomingTxs[0];
         
         const totalFromTxs = incomingTxs.reduce((sum, tx) => sum + tx.amount, 0);
-        console.log(`[MerchantPool] 📝 Found ${incomingTxs.length} transaction(s): latest txId=${latestTx.txId}`);
-        console.log(`[MerchantPool]    - Latest tx amount: ${latestTx.amount} ${walletType}`);
-        console.log(`[MerchantPool]    - Total from all txs: ${totalFromTxs} ${walletType}`);
+        cronLogger.info(`[MerchantPool] 📝 Found ${incomingTxs.length} transaction(s): latest txId=${latestTx.txId}`);
+        cronLogger.info(`[MerchantPool]    - Latest tx amount: ${latestTx.amount} ${walletType}`);
+        cronLogger.info(`[MerchantPool]    - Total from all txs: ${totalFromTxs} ${walletType}`);
 
         const confirmationCheck = await tatumApi.getTransactionConfirmations(latestTx.txId, walletType);
         
         if (!confirmationCheck.confirmed) {
-          console.log(`[MerchantPool] ⏳ Transaction not yet confirmed - waiting for confirmations`);
-          console.log(`[MerchantPool]    - Current: ${confirmationCheck.confirmations}/${confirmationCheck.required} confirmations`);
-          console.log(`[MerchantPool]    - ${walletType} requires ${confirmationCheck.required} confirmation(s) before processing`);
+          cronLogger.info(`[MerchantPool] ⏳ Transaction not yet confirmed - waiting for confirmations`);
+          cronLogger.info(`[MerchantPool]    - Current: ${confirmationCheck.confirmations}/${confirmationCheck.required} confirmations`);
+          cronLogger.info(`[MerchantPool]    - ${walletType} requires ${confirmationCheck.required} confirmation(s) before processing`);
           result.skippedTooRecent++;
           return;
         }
         
-        console.log(`[MerchantPool] ✅ Transaction confirmed: ${confirmationCheck.confirmations}/${confirmationCheck.required} confirmations`);
+        cronLogger.info(`[MerchantPool] ✅ Transaction confirmed: ${confirmationCheck.confirmations}/${confirmationCheck.required} confirmations`);
 
         const processedTxKey = `processed-tx-${latestTx.txId}`;
         const alreadyProcessedTx = await getRedisItem(processedTxKey);
         if (alreadyProcessedTx && Object.keys(alreadyProcessedTx).length > 0) {
-          console.log(`[MerchantPool] ⏭️ Transaction ${latestTx.txId} already processed previously. Skipping.`);
+          cronLogger.info(`[MerchantPool] ⏭️ Transaction ${latestTx.txId} already processed previously. Skipping.`);
           result.alreadyProcessed++;
           return;
         }
 
         if (!redisData || Object.keys(redisData).length === 0) {
-          console.log(`[MerchantPool] ⚠️ No Redis data for ${walletAddress}, attempting to reconstruct...`);
+          cronLogger.info(`[MerchantPool] ⚠️ No Redis data for ${walletAddress}, attempting to reconstruct...`);
           
           redisData = {
             mode: 'CRYPTO',
@@ -787,7 +787,7 @@ const processAddress = async (addr: any, result: {
               base_currency: 'USD',
             };
             await setRedisItem(customerRef, customerData);
-            console.log(`[MerchantPool] 📝 Reconstructed customer data: ${customerRef}`);
+            cronLogger.info(`[MerchantPool] 📝 Reconstructed customer data: ${customerRef}`);
           }
           
           redisData.ref = customerRef;
@@ -814,9 +814,9 @@ const processAddress = async (addr: any, result: {
         };
         
         await setRedisItem(cryptoRedisKey, updatedRedisData);
-        console.log(`[MerchantPool] 📝 Updated Redis with txId: ${latestTx.txId} (key: ${cryptoRedisKey})`);
+        cronLogger.info(`[MerchantPool] 📝 Updated Redis with txId: ${latestTx.txId} (key: ${cryptoRedisKey})`);
         if (isPartialPayment) {
-          console.log(`[MerchantPool] 📝 Marked as partial payment - received ${receivedAmount}, expected ${expectedAmount}`);
+          cronLogger.info(`[MerchantPool] 📝 Marked as partial payment - received ${receivedAmount}, expected ${expectedAmount}`);
         }
 
         await setRedisItem(processedTxKey, {
@@ -844,26 +844,26 @@ const processAddress = async (addr: any, result: {
               amount: expectedAmount,
             }
           );
-          console.log(`[MerchantPool] 📧 Pending payment notification sent for missed payment on ${walletAddress}`);
+          cronLogger.info(`[MerchantPool] 📧 Pending payment notification sent for missed payment on ${walletAddress}`);
         } catch (notifError: unknown) {
           const notifErr = notifError as { message?: string };
-          console.warn(`[MerchantPool] ⚠️ Failed to send pending notification (non-critical): ${notifErr?.message}`);
+          cronLogger.warn(`[MerchantPool] ⚠️ Failed to send pending notification (non-critical): ${notifErr?.message}`);
         }
 
-        console.log(`[MerchantPool] 🚀 Processing missed payment via cryptoVerification...`);
+        cronLogger.info(`[MerchantPool] 🚀 Processing missed payment via cryptoVerification...`);
         
         try {
           const verificationResult = await paymentController.cryptoVerification(walletAddress, true, cryptoRedisKey) as { duplicate?: boolean; status?: number; paymentStatus?: string };
           
           if (verificationResult?.duplicate) {
-            console.log(`[MerchantPool] ⏭️ Payment was already processed (duplicate detected)`);
+            cronLogger.info(`[MerchantPool] ⏭️ Payment was already processed (duplicate detected)`);
             result.alreadyProcessed++;
           } else if (verificationResult?.status === 200 || verificationResult?.paymentStatus === 'completed' || verificationResult?.paymentStatus === 'complete') {
-            console.log(`[MerchantPool] ✅ MISSED PAYMENT SUCCESSFULLY PROCESSED!`);
-            console.log(`[MerchantPool]   - Address: ${walletAddress}`);
-            console.log(`[MerchantPool]   - Amount: ${receivedAmount} ${walletType}`);
-            console.log(`[MerchantPool]   - TxId: ${latestTx.txId}`);
-            console.log(`[MerchantPool]   - Type: ${isPartialPayment ? 'PARTIAL' : 'FULL'} payment`);
+            cronLogger.info(`[MerchantPool] ✅ MISSED PAYMENT SUCCESSFULLY PROCESSED!`);
+            cronLogger.info(`[MerchantPool]   - Address: ${walletAddress}`);
+            cronLogger.info(`[MerchantPool]   - Amount: ${receivedAmount} ${walletType}`);
+            cronLogger.info(`[MerchantPool]   - TxId: ${latestTx.txId}`);
+            cronLogger.info(`[MerchantPool]   - Type: ${isPartialPayment ? 'PARTIAL' : 'FULL'} payment`);
             result.processed++;
             
             cronLogger?.info?.("MISSED PAYMENT RECOVERED", {
@@ -877,23 +877,23 @@ const processAddress = async (addr: any, result: {
               companyId,
             });
           } else {
-            console.log(`[MerchantPool] ⚠️ cryptoVerification returned:`, verificationResult);
+            cronLogger.info(`[MerchantPool] ⚠️ cryptoVerification returned:`, verificationResult);
             result.errors.push(`Verification returned unexpected result for ${walletAddress}`);
           }
         } catch (verifyError: unknown) {
           const err = verifyError as { paymentStatus?: string; amount?: number; message?: string };
           if (err?.paymentStatus === 'incomplete') {
-            console.log(`[MerchantPool] 📋 Partial payment detected - ${err.amount} ${walletType} remaining`);
+            cronLogger.info(`[MerchantPool] 📋 Partial payment detected - ${err.amount} ${walletType} remaining`);
             result.processed++;
           } else {
-            console.error(`[MerchantPool] ❌ cryptoVerification failed:`, err.message || verifyError);
+            cronLogger.error(`[MerchantPool] ❌ cryptoVerification failed:`, err.message || verifyError);
             result.errors.push(`Verification failed for ${walletAddress}: ${err.message || 'Unknown error'}`);
           }
         }
         
       } catch (error: unknown) {
         const err = error as { message?: string };
-        console.error(`[MerchantPool] ❌ Error processing ${walletAddress}:`, err.message);
+        cronLogger.error(`[MerchantPool] ❌ Error processing ${walletAddress}:`, err.message);
         result.errors.push(`Processing failed for ${walletAddress}: ${err.message}`);
       }
 };
@@ -919,7 +919,7 @@ export const detectOrphanPayments = async (): Promise<{
   };
 
   try {
-    console.log("[OrphanDetect] 🔍 Scanning AVAILABLE addresses for orphan payments...");
+    cronLogger.info("[OrphanDetect] 🔍 Scanning AVAILABLE addresses for orphan payments...");
 
     const availableAddresses = await merchantTempAddressModel.findAll({
       where: { status: "AVAILABLE" },
@@ -930,7 +930,7 @@ export const detectOrphanPayments = async (): Promise<{
       ],
     });
 
-    console.log(`[OrphanDetect] 📋 Found ${availableAddresses.length} AVAILABLE addresses to scan`);
+    cronLogger.info(`[OrphanDetect] 📋 Found ${availableAddresses.length} AVAILABLE addresses to scan`);
 
     for (const addr of availableAddresses) {
       result.checked++;
@@ -1023,16 +1023,16 @@ export const detectOrphanPayments = async (): Promise<{
         }
 
         result.found++;
-        console.log(`[OrphanDetect] ⚠️ ORPHAN PAYMENT DETECTED on AVAILABLE address: ${walletAddress}`);
-        console.log(`[OrphanDetect]   - Balance: ${balance} ${walletType}`);
-        console.log(`[OrphanDetect]   - Known admin fees: ${existingAdminBalance}`);
-        console.log(`[OrphanDetect]   - Excess (orphan amount): ${(balance - existingAdminBalance).toFixed(8)} ${walletType}`);
-        console.log(`[OrphanDetect]   - Owner merchant: ${ownerId}`);
-        console.log(`[OrphanDetect]   - Has saved context: ${!!lastContextRaw}`);
+        cronLogger.info(`[OrphanDetect] ⚠️ ORPHAN PAYMENT DETECTED on AVAILABLE address: ${walletAddress}`);
+        cronLogger.info(`[OrphanDetect]   - Balance: ${balance} ${walletType}`);
+        cronLogger.info(`[OrphanDetect]   - Known admin fees: ${existingAdminBalance}`);
+        cronLogger.info(`[OrphanDetect]   - Excess (orphan amount): ${(balance - existingAdminBalance).toFixed(8)} ${walletType}`);
+        cronLogger.info(`[OrphanDetect]   - Owner merchant: ${ownerId}`);
+        cronLogger.info(`[OrphanDetect]   - Has saved context: ${!!lastContextRaw}`);
 
         const incomingTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 10);
         if (!incomingTxs || incomingTxs.length === 0) {
-          console.log(`[OrphanDetect] ❌ No incoming transactions found for ${walletAddress} despite balance. Skipping.`);
+          cronLogger.info(`[OrphanDetect] ❌ No incoming transactions found for ${walletAddress} despite balance. Skipping.`);
           result.errors.push(`No transactions found for ${walletAddress} despite balance ${balance}`);
           continue;
         }
@@ -1042,7 +1042,7 @@ export const detectOrphanPayments = async (): Promise<{
         const processedTxKey = `processed-tx-${latestTx.txId}`;
         const alreadyProcessedTx = await getRedisItem(processedTxKey);
         if (alreadyProcessedTx && Object.keys(alreadyProcessedTx).length > 0) {
-          console.log(`[OrphanDetect] ⏭️ Transaction ${latestTx.txId} already processed. Skipping (cached for 24h).`);
+          cronLogger.info(`[OrphanDetect] ⏭️ Transaction ${latestTx.txId} already processed. Skipping (cached for 24h).`);
           result.alreadyProcessed++;
           // FIX: Cache this skip for 24h to prevent re-detection of residual balances every cycle
           await setRedisItemWithTTL(`orphan-skip:${walletAddress}`, {
@@ -1056,7 +1056,7 @@ export const detectOrphanPayments = async (): Promise<{
 
         const confirmationCheck = await tatumApi.getTransactionConfirmations(latestTx.txId, walletType);
         if (!confirmationCheck.confirmed) {
-          console.log(`[OrphanDetect] ⏳ Tx not yet confirmed (${confirmationCheck.confirmations}/${confirmationCheck.required}). Will retry next cycle.`);
+          cronLogger.info(`[OrphanDetect] ⏳ Tx not yet confirmed (${confirmationCheck.confirmations}/${confirmationCheck.required}). Will retry next cycle.`);
           continue;
         }
 
@@ -1064,9 +1064,9 @@ export const detectOrphanPayments = async (): Promise<{
         if (lastContextRaw) {
           try {
             paymentContext = JSON.parse(lastContextRaw as string);
-            console.log(`[OrphanDetect] 📋 Loaded payment context: payment_id=${paymentContext?.payment_id}, company=${paymentContext?.company_id}`);
+            cronLogger.info(`[OrphanDetect] 📋 Loaded payment context: payment_id=${paymentContext?.payment_id}, company=${paymentContext?.company_id}`);
           } catch {
-            console.warn(`[OrphanDetect] ⚠️ Failed to parse last_payment_context for ${walletAddress}`);
+            cronLogger.warn(`[OrphanDetect] ⚠️ Failed to parse last_payment_context for ${walletAddress}`);
           }
         }
 
@@ -1123,7 +1123,7 @@ export const detectOrphanPayments = async (): Promise<{
           hadContext: !!lastContextRaw,
         });
 
-        console.log(`[OrphanDetect] 📝 Redis reconstructed. Calling cryptoVerification...`);
+        cronLogger.info(`[OrphanDetect] 📝 Redis reconstructed. Calling cryptoVerification...`);
 
         try {
           const verificationResult = await paymentController.cryptoVerification(walletAddress, true, orphanCryptoKey) as { 
@@ -1133,19 +1133,19 @@ export const detectOrphanPayments = async (): Promise<{
           };
 
           if (verificationResult?.duplicate) {
-            console.log(`[OrphanDetect] ⏭️ Payment was already processed (duplicate)`);
+            cronLogger.info(`[OrphanDetect] ⏭️ Payment was already processed (duplicate)`);
             result.alreadyProcessed++;
           } else if (
             verificationResult?.status === 200 || 
             verificationResult?.paymentStatus === 'completed' || 
             verificationResult?.paymentStatus === 'complete'
           ) {
-            console.log(`[OrphanDetect] ✅ ORPHAN PAYMENT SUCCESSFULLY RECOVERED!`);
-            console.log(`[OrphanDetect]   - Address: ${walletAddress}`);
-            console.log(`[OrphanDetect]   - Amount: ${balance} ${walletType}`);
-            console.log(`[OrphanDetect]   - TxId: ${latestTx.txId}`);
-            console.log(`[OrphanDetect]   - Original payment: ${paymentContext?.payment_id || 'unknown'}`);
-            console.log(`[OrphanDetect]   - Merchant: ${ownerId}, Company: ${companyId || 'unknown'}`);
+            cronLogger.info(`[OrphanDetect] ✅ ORPHAN PAYMENT SUCCESSFULLY RECOVERED!`);
+            cronLogger.info(`[OrphanDetect]   - Address: ${walletAddress}`);
+            cronLogger.info(`[OrphanDetect]   - Amount: ${balance} ${walletType}`);
+            cronLogger.info(`[OrphanDetect]   - TxId: ${latestTx.txId}`);
+            cronLogger.info(`[OrphanDetect]   - Original payment: ${paymentContext?.payment_id || 'unknown'}`);
+            cronLogger.info(`[OrphanDetect]   - Merchant: ${ownerId}, Company: ${companyId || 'unknown'}`);
             result.processed++;
 
             await recordPoolTransaction({
@@ -1176,9 +1176,9 @@ export const detectOrphanPayments = async (): Promise<{
                   customer_name: paymentContext?.customer_name || null,
                   customer_email: paymentContext?.customer_email || null,
                 });
-                console.log(`[OrphanDetect] 📤 Recovery webhook sent to merchant`);
+                cronLogger.info(`[OrphanDetect] 📤 Recovery webhook sent to merchant`);
               } catch (webhookError) {
-                console.warn(`[OrphanDetect] ⚠️ Recovery webhook failed (non-blocking):`, webhookError);
+                cronLogger.warn(`[OrphanDetect] ⚠️ Recovery webhook failed (non-blocking):`, webhookError);
               }
             }
 
@@ -1195,41 +1195,41 @@ export const detectOrphanPayments = async (): Promise<{
               hadContext: !!lastContextRaw,
             });
           } else {
-            console.log(`[OrphanDetect] ⚠️ cryptoVerification returned:`, verificationResult);
+            cronLogger.info(`[OrphanDetect] ⚠️ cryptoVerification returned:`, verificationResult);
             result.errors.push(`Verification returned unexpected result for ${walletAddress}`);
           }
         } catch (verifyError: unknown) {
           const err = verifyError as { paymentStatus?: string; amount?: number; message?: string };
           if (err?.paymentStatus === 'incomplete') {
-            console.log(`[OrphanDetect] 📋 Partial orphan payment - ${err.amount} remaining`);
+            cronLogger.info(`[OrphanDetect] 📋 Partial orphan payment - ${err.amount} remaining`);
             result.processed++;
             await addr.update({ last_payment_context: null });
           } else {
-            console.error(`[OrphanDetect] ❌ cryptoVerification failed:`, err.message || verifyError);
+            cronLogger.error(`[OrphanDetect] ❌ cryptoVerification failed:`, err.message || verifyError);
             result.errors.push(`Verification failed for ${walletAddress}: ${err.message || 'Unknown error'}`);
           }
         }
 
       } catch (error: unknown) {
         const err = error as { message?: string };
-        console.error(`[OrphanDetect] ❌ Error processing ${walletAddress}:`, err.message);
+        cronLogger.error(`[OrphanDetect] ❌ Error processing ${walletAddress}:`, err.message);
         result.errors.push(`Processing failed for ${walletAddress}: ${err.message}`);
       }
     }
 
-    console.log(`[OrphanDetect] ✅ Orphan payment scan complete:`);
-    console.log(`[OrphanDetect]   - Scanned: ${result.checked}`);
-    console.log(`[OrphanDetect]   - Already processed: ${result.alreadyProcessed}`);
-    console.log(`[OrphanDetect]   - Orphans found: ${result.found}`);
-    console.log(`[OrphanDetect]   - Successfully recovered: ${result.processed}`);
-    console.log(`[OrphanDetect]   - Swept to admin: ${result.sweptToAdmin}`);
+    cronLogger.info(`[OrphanDetect] ✅ Orphan payment scan complete:`);
+    cronLogger.info(`[OrphanDetect]   - Scanned: ${result.checked}`);
+    cronLogger.info(`[OrphanDetect]   - Already processed: ${result.alreadyProcessed}`);
+    cronLogger.info(`[OrphanDetect]   - Orphans found: ${result.found}`);
+    cronLogger.info(`[OrphanDetect]   - Successfully recovered: ${result.processed}`);
+    cronLogger.info(`[OrphanDetect]   - Swept to admin: ${result.sweptToAdmin}`);
     if (result.errors.length > 0) {
-      console.log(`[OrphanDetect]   - Errors: ${result.errors.length}`);
+      cronLogger.info(`[OrphanDetect]   - Errors: ${result.errors.length}`);
     }
 
   } catch (error: unknown) {
     const err = error as { message?: string };
-    console.error("[OrphanDetect] ❌ Orphan detection scan failed:", err.message);
+    cronLogger.error("[OrphanDetect] ❌ Orphan detection scan failed:", err.message);
     result.errors.push(`Global error: ${err.message}`);
   }
 

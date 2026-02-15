@@ -12,6 +12,7 @@
  */
 
 import stablecoinConversionModel from "../models/stablecoinConversionModel";
+import { cronLogger } from "../utils/loggers";
 import * as binanceService from "./binanceService";
 import { isConnected as wsBinanceConnected, getStatus as getBinanceWsStatus } from "./binanceWebSocketService";
 import { Op, fn, col, literal } from "sequelize";
@@ -29,9 +30,9 @@ const LOG_PREFIX = "[StablecoinConvert]";
 // ============================================
 // Helper: Log with prefix
 // ============================================
-const log = (msg: string) => console.log(`${LOG_PREFIX} ${msg}`);
+const log = (msg: string) => cronLogger.info(`${LOG_PREFIX} ${msg}`);
 const logError = (msg: string, err?: unknown) => {
-  console.error(`${LOG_PREFIX} ❌ ${msg}`, err instanceof Error ? err.message : err || "");
+  cronLogger.error(`${LOG_PREFIX} ❌ ${msg}`, err instanceof Error ? err.message : err || "");
 };
 
 // ============================================
