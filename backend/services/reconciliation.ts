@@ -10,7 +10,7 @@
  */
 
 import { webhookLogs } from "../utils/loggers";
-import { redis as redisClient, getRedisItem } from "../utils/redisInstance";
+import { redis as redisClient, getRedisItem, setRedisItemWithTTL } from "../utils/redisInstance";
 import { enqueueWebhook, WebhookJobData } from "./webhookQueue";
 import { captureError } from "./errorMonitoringService";
 import axios from "axios";
