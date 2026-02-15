@@ -536,3 +536,240 @@ describe("transition map completeness", () => {
     }
   });
 });
+
+// ── 14. toRedisStatus — Backward-compatible Redis status mapping ─────────────
+
+describe("toRedisStatus — backward compatibility", () => {
+  it("maps PENDING to 'pending' (what Redis stores)", () => {
+    expect(toRedisStatus(PaymentState.PENDING)).toBe("pending");
+  });
+
+  it("maps DETECTED to 'pending' (merchants don't see 'detected')", () => {
+    expect(toRedisStatus(PaymentState.DETECTED)).toBe("pending");
+  });
+
+  it("maps CONFIRMING to 'processing'", () => {
+    expect(toRedisStatus(PaymentState.CONFIRMING)).toBe("processing");
+  });
+
+  it("maps CONFIRMED to 'processing'", () => {
+    expect(toRedisStatus(PaymentState.CONFIRMED)).toBe("processing");
+  });
+
+  it("maps PROCESSING to 'processing'", () => {
+    expect(toRedisStatus(PaymentState.PROCESSING)).toBe("processing");
+  });
+
+  it("maps UNDERPAID to 'underpaid'", () => {
+    expect(toRedisStatus(PaymentState.UNDERPAID)).toBe("underpaid");
+  });
+
+  it("maps PAYOUT_COMPLETE to 'successful'", () => {
+    expect(toRedisStatus(PaymentState.PAYOUT_COMPLETE)).toBe("successful");
+  });
+
+  it("maps CONVERTED to 'successful'", () => {
+    expect(toRedisStatus(PaymentState.CONVERTED)).toBe("successful");
+  });
+
+  it("maps FAILED to 'failed'", () => {
+    expect(toRedisStatus(PaymentState.FAILED)).toBe("failed");
+  });
+
+  it("maps EXPIRED to 'failed'", () => {
+    expect(toRedisStatus(PaymentState.EXPIRED)).toBe("failed");
+  });
+
+  it("maps REFUNDED to 'successful'", () => {
+    expect(toRedisStatus(PaymentState.REFUNDED)).toBe("successful");
+  });
+
+  it("every state has a Redis mapping", () => {
+    for (const state of ALL_STATES) {
+      expect(toRedisStatus(state)).toBeDefined();
+      expect(typeof toRedisStatus(state)).toBe("string");
+    }
+  });
+});
+
+// ── 15. toExternalStatus — API response status mapping ───────────────────────
+
+describe("toExternalStatus — merchant API compatibility", () => {
+  it("maps PENDING to 'waiting' (no tx yet)", () => {
+    expect(toExternalStatus(PaymentState.PENDING)).toBe("waiting");
+  });
+
+  it("maps DETECTED to 'pending'", () => {
+    expect(toExternalStatus(PaymentState.DETECTED)).toBe("pending");
+  });
+
+  it("maps CONFIRMING to 'pending'", () => {
+    expect(toExternalStatus(PaymentState.CONFIRMING)).toBe("pending");
+  });
+
+  it("maps CONFIRMED to 'pending' (still processing internally)", () => {
+    expect(toExternalStatus(PaymentState.CONFIRMED)).toBe("pending");
+  });
+
+  it("maps PROCESSING to 'pending'", () => {
+    expect(toExternalStatus(PaymentState.PROCESSING)).toBe("pending");
+  });
+
+  it("maps UNDERPAID to 'underpaid'", () => {
+    expect(toExternalStatus(PaymentState.UNDERPAID)).toBe("underpaid");
+  });
+
+  it("maps PAYOUT_COMPLETE to 'confirmed' (what checkout shows)", () => {
+    expect(toExternalStatus(PaymentState.PAYOUT_COMPLETE)).toBe("confirmed");
+  });
+
+  it("maps CONVERTED to 'confirmed'", () => {
+    expect(toExternalStatus(PaymentState.CONVERTED)).toBe("confirmed");
+  });
+
+  it("maps FAILED to 'failed'", () => {
+    expect(toExternalStatus(PaymentState.FAILED)).toBe("failed");
+  });
+
+  it("maps EXPIRED to 'failed'", () => {
+    expect(toExternalStatus(PaymentState.EXPIRED)).toBe("failed");
+  });
+
+  it("every state has an external mapping", () => {
+    for (const state of ALL_STATES) {
+      expect(toExternalStatus(state)).toBeDefined();
+      expect(typeof toExternalStatus(state)).toBe("string");
+    }
+  });
+});
+
+// ── 16. toWebhookEvent — Merchant webhook event mapping ─────────────────────
+
+describe("toWebhookEvent — webhook event names", () => {
+  it("maps PENDING to 'payment.pending'", () => {
+    expect(toWebhookEvent(PaymentState.PENDING)).toBe("payment.pending");
+  });
+
+  it("maps DETECTED to 'payment.pending'", () => {
+    expect(toWebhookEvent(PaymentState.DETECTED)).toBe("payment.pending");
+  });
+
+  it("maps CONFIRMED to 'payment.confirmed'", () => {
+    expect(toWebhookEvent(PaymentState.CONFIRMED)).toBe("payment.confirmed");
+  });
+
+  it("maps PAYOUT_COMPLETE to 'payment.confirmed'", () => {
+    expect(toWebhookEvent(PaymentState.PAYOUT_COMPLETE)).toBe("payment.confirmed");
+  });
+
+  it("maps UNDERPAID to 'payment.underpaid'", () => {
+    expect(toWebhookEvent(PaymentState.UNDERPAID)).toBe("payment.underpaid");
+  });
+
+  it("maps FAILED to 'payment.failed'", () => {
+    expect(toWebhookEvent(PaymentState.FAILED)).toBe("payment.failed");
+  });
+
+  it("returns null for states without webhook events", () => {
+    expect(toWebhookEvent(PaymentState.CONFIRMING)).toBeNull();
+    expect(toWebhookEvent(PaymentState.PROCESSING)).toBeNull();
+    expect(toWebhookEvent(PaymentState.CONVERTED)).toBeNull();
+    expect(toWebhookEvent(PaymentState.EXPIRED)).toBeNull();
+    expect(toWebhookEvent(PaymentState.REFUNDED)).toBeNull();
+  });
+});
+
+// ── 17. validateTransition — Soft enforcement ────────────────────────────────
+
+describe("validateTransition — soft enforcement", () => {
+  it("returns valid=true with record for allowed transition", () => {
+    const result = validateTransition(
+      PaymentState.PENDING,
+      PaymentState.DETECTED,
+      "pay_soft_ok",
+      "tx detected",
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.record).toBeDefined();
+    expect(result.record!.from).toBe(PaymentState.PENDING);
+    expect(result.record!.to).toBe(PaymentState.DETECTED);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("returns valid=false with error for invalid transition (no throw)", () => {
+    const result = validateTransition(
+      PaymentState.PENDING,
+      PaymentState.PAYOUT_COMPLETE,
+      "pay_soft_bad",
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.record).toBeUndefined();
+    expect(result.error).toContain("Invalid state transition");
+    expect(result.error).toContain("pending → payout_complete");
+  });
+
+  it("does not throw on invalid transition", () => {
+    expect(() =>
+      validateTransition(PaymentState.FAILED, PaymentState.PROCESSING, "pay_no_throw")
+    ).not.toThrow();
+  });
+
+  it("includes allowed states in error message", () => {
+    const result = validateTransition(
+      PaymentState.PENDING,
+      PaymentState.CONFIRMED,
+      "pay_allowed",
+    );
+
+    expect(result.error).toContain("detected");
+    expect(result.error).toContain("expired");
+    expect(result.error).toContain("failed");
+  });
+
+  it("includes optional metadata in the record", () => {
+    const meta = { txId: "0xabc" };
+    const result = validateTransition(
+      PaymentState.DETECTED,
+      PaymentState.CONFIRMED,
+      "pay_meta",
+      "fast confirm",
+      meta,
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.record!.metadata).toEqual(meta);
+  });
+});
+
+// ── 18. Round-trip: parseState → toRedisStatus consistency ───────────────────
+
+describe("round-trip consistency", () => {
+  it("parseState(toRedisStatus(state)) returns a valid PaymentState for all states", () => {
+    for (const state of ALL_STATES) {
+      const redis = toRedisStatus(state);
+      const parsed = parseState(redis);
+      expect(parsed).toBeDefined();
+    }
+  });
+
+  it("legacy Redis statuses round-trip correctly through parseState", () => {
+    // These are the actual strings stored in Redis today
+    const legacyStatuses = ["pending", "processing", "successful", "failed", "underpaid", "retrying", "recovered", "completed"];
+    for (const legacy of legacyStatuses) {
+      const parsed = parseState(legacy);
+      expect(parsed).toBeDefined();
+    }
+  });
+
+  it("toExternalStatus matches what verifyCryptoPayment returns for each internal state", () => {
+    // The verify endpoint returns these exact strings to merchants
+    const expectedExternals = new Set(["waiting", "pending", "confirmed", "underpaid", "failed"]);
+    for (const state of ALL_STATES) {
+      const ext = toExternalStatus(state);
+      expect(expectedExternals.has(ext)).toBe(true);
+    }
+  });
+});
+
