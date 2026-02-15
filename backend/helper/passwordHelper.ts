@@ -45,9 +45,9 @@ export const verifyPassword = async (
           { password: bcryptHash },
           { where: { user_id: userId } }
         );
-        console.log(`[PasswordMigration] User ${userId} migrated from SHA-256 to bcrypt`);
+        log(`[PasswordMigration] User ${userId} migrated from SHA-256 to bcrypt`);
       } catch (err) {
-        console.error(`[PasswordMigration] Failed to migrate user ${userId}:`, err);
+        log(`[PasswordMigration] Failed to migrate user ${userId}: ${err}`, 'error');
         // Don't fail the login even if migration fails
       }
     }
