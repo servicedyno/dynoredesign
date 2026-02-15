@@ -1645,17 +1645,16 @@ const assetToOtherAddress = async ({
     }));
     const bchChangeAddress = toCashAddr(fromAddress || toAddress);
     // UTXO chains: fee should be a simple string, not the full {slow,medium,fast} object
-    // If fee is undefined/null, omit it to let Tatum auto-calculate (avoids dust change)
-    const bchFee = fee == null ? undefined
+    const bchFee = fee == null ? "0.00001"
       : typeof fee === 'object' && fee !== null
         ? (fee.slow || fee.medium || fee.fast || "0.00001")
         : fee;
-    const bchFeeStr = bchFee != null ? (typeof bchFee === 'string' ? bchFee : String(Number(bchFee).toFixed(8))) : undefined;
-    cronLogger.info(`[assetToOtherAddress] BCH: changeAddress=${bchChangeAddress}, fee=${bchFeeStr ?? 'auto'}, fromUTXO=${normalizedFromUTXO.length}, toUTXO=${normalizedToUTXO.length}`);
+    const bchFeeStr = typeof bchFee === 'string' ? bchFee : String(Number(bchFee).toFixed(8));
+    cronLogger.info(`[assetToOtherAddress] BCH: changeAddress=${bchChangeAddress}, fee=${bchFeeStr}, fromUTXO=${normalizedFromUTXO.length}, toUTXO=${normalizedToUTXO.length}`);
     transaction = await tatumSdk.blockchain.bcash.bchTransferBlockchain({
       fromUTXO: normalizedFromUTXO,
       to: normalizedToUTXO,
-      ...(bchFeeStr && { fee: bchFeeStr }),
+      fee: bchFeeStr,
       changeAddress: bchChangeAddress,
     });
   } else if (currency === "SOL") {
