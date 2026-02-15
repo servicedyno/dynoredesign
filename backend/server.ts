@@ -46,6 +46,7 @@ import { processWebhookRetryQueue } from "./utils/webhookRetry";
 import { startVolatilityMonitor, getAllMarketStates, runMonitorCycle } from "./services/volatilityMonitorService";
 import { startBinanceWebSocket, getStatus as getWsStatus } from "./services/binanceWebSocketService";
 import { detectBinanceAccess, forceProxyState, getProxyState } from "./services/binanceService";
+import { startTunnelManager, getTunnelStatus } from "./services/sshTunnelManager";
 import { getAllFeeRates, getFeeRates } from "./services/feeRateService";
 import { captureError, startErrorMonitoring, stopErrorMonitoring, getMonitoringStats, flushErrorDigest, sendErrorDigest } from "./services/errorMonitoringService";
 
