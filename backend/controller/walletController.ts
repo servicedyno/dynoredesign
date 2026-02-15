@@ -3056,10 +3056,10 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       `
         <div style="margin: 24px 0;">
           <h3 style="color: #1034a6; margin: 0 0 16px 0;">✅ Wallet Successfully Added</h3>
-          <p style="margin: 8px 0;"><strong>Company:</strong> ${companyName}</p>
-          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${currency}</p>
-          <p style="margin: 8px 0;"><strong>Wallet Address:</strong> ${maskAddress(wallet_address)}</p>
-          ${wallet_name ? `<p style="margin: 8px 0;"><strong>Wallet Name:</strong> ${wallet_name}</p>` : ''}
+          <p style="margin: 8px 0;"><strong>Company:</strong> ${escapeHtml(companyName)}</p>
+          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${escapeHtml(currency)}</p>
+          <p style="margin: 8px 0;"><strong>Wallet Address:</strong> ${escapeHtml(maskAddress(wallet_address))}</p>
+          ${wallet_name ? `<p style="margin: 8px 0;"><strong>Wallet Name:</strong> ${escapeHtml(wallet_name)}</p>` : ''}
           <div style="margin-top: 20px; padding: 12px; background-color: #f0f7ff; border-left: 4px solid #1034a6; border-radius: 4px;">
             <p style="margin: 0; font-size: 13px; color: #666;">If you did not perform this action, please contact support immediately.</p>
           </div>
