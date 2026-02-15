@@ -1,20 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="16" skipped="0" tests="19" time="2.669" timestamp="2026-02-15T10:30:35.609520+00:00" hostname="agent-env-432b49de-95c5-4eae-8e41-d3aee627f4b4"><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_tunnel_status_endpoint" time="0.298"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:33: in test_tunnel_status_endpoint
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_binance_info_endpoint" time="0.144"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:52: in test_binance_info_endpoint
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_email_preview_endpoint" time="0.100"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:64: in test_email_preview_endpoint
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_email_preview_different_templates" time="0.115"><failure message="AssertionError: Template 'payment' returned 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:84: in test_email_preview_different_templates
-    assert response.status_code == 200, f"Template '{template}' returned {response.status_code}"
-E   AssertionError: Template 'payment' returned 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_health_endpoint" time="0.212"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="19" time="2.403" timestamp="2026-02-15T10:31:29.089569+00:00" hostname="agent-env-432b49de-95c5-4eae-8e41-d3aee627f4b4"><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_tunnel_status_endpoint" time="0.139" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_binance_info_endpoint" time="0.085" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_email_preview_endpoint" time="0.093" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsEndpoints" name="test_email_preview_different_templates" time="0.413" /><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_health_endpoint" time="0.080"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
     return complexjson.loads(self.text, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 /usr/local/lib/python3.11/json/__init__.py:346: in loads
@@ -33,7 +17,7 @@ backend/tests/test_refactoring_regression.py:95: in test_health_endpoint
            ^^^^^^^^^^^^^^^
 /root/.venv/lib/python3.11/site-packages/requests/models.py:978: in json
     raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_root_endpoint" time="0.096"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_root_endpoint" time="0.105"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
     return complexjson.loads(self.text, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 /usr/local/lib/python3.11/json/__init__.py:346: in loads
@@ -52,27 +36,11 @@ backend/tests/test_refactoring_regression.py:107: in test_root_endpoint
            ^^^^^^^^^^^^^^^
 /root/.venv/lib/python3.11/site-packages/requests/models.py:978: in json
     raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_swagger_docs_accessible" time="0.084"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:116: in test_swagger_docs_accessible
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_user_endpoint_reachable" time="0.082"><failure message="AssertionError: Got 520 - controller may have import error&#10;assert 520 in [401, 400, 403]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:126: in test_user_endpoint_reachable
-    assert response.status_code in [401, 400, 403], f"Got {response.status_code} - controller may have import error"
-E   AssertionError: Got 520 - controller may have import error
-E   assert 520 in [401, 400, 403]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_wallet_endpoint_reachable" time="0.076"><failure message="AssertionError: Got 520 - controller may have import error&#10;assert 520 in [401, 400, 403]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:131: in test_wallet_endpoint_reachable
-    assert response.status_code in [401, 400, 403], f"Got {response.status_code} - controller may have import error"
-E   AssertionError: Got 520 - controller may have import error
-E   assert 520 in [401, 400, 403]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_admin_login_endpoint_structure" time="0.083"><failure message="AssertionError: Got 520&#10;assert 520 == 500&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:141: in test_admin_login_endpoint_structure
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestHealthEndpoints" name="test_swagger_docs_accessible" time="0.145" /><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_user_endpoint_reachable" time="0.092" /><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_wallet_endpoint_reachable" time="0.087" /><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_admin_login_endpoint_structure" time="0.229"><failure message="AssertionError: Got 520&#10;assert 520 == 500&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:141: in test_admin_login_endpoint_structure
     assert response.status_code == 500, f"Got {response.status_code}"
 E   AssertionError: Got 520
 E   assert 520 == 500
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_payment_endpoint_reachable" time="0.095"><failure message="AssertionError: Got unexpected 520&#10;assert 520 in [200, 400, 404, 500]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:153: in test_payment_endpoint_reachable
-    assert response.status_code in [200, 400, 404, 500], f"Got unexpected {response.status_code}"
-E   AssertionError: Got unexpected 520
-E   assert 520 in [200, 400, 404, 500]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_volatility_endpoint" time="0.094"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestControllerIntegration" name="test_payment_endpoint_reachable" time="0.083" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_volatility_endpoint" time="0.080"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
     return complexjson.loads(self.text, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 /usr/local/lib/python3.11/json/__init__.py:346: in loads
@@ -91,7 +59,7 @@ backend/tests/test_refactoring_regression.py:164: in test_volatility_endpoint
            ^^^^^^^^^^^^^^^
 /root/.venv/lib/python3.11/site-packages/requests/models.py:978: in json
     raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_fee_rates_endpoint" time="0.085"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_fee_rates_endpoint" time="0.086"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:974: in json
     return complexjson.loads(self.text, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 /usr/local/lib/python3.11/json/__init__.py:346: in loads
@@ -110,16 +78,8 @@ backend/tests/test_refactoring_regression.py:175: in test_fee_rates_endpoint
            ^^^^^^^^^^^^^^^
 /root/.venv/lib/python3.11/site-packages/requests/models.py:978: in json
     raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_conversion_email_preview" time="0.090" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_weekly_conversion_email_preview" time="0.081" /><testcase classname="backend.tests.test_refactoring_regression.TestErrorHandling" name="test_404_for_invalid_endpoint" time="0.079"><failure message="AssertionError: Got 520&#10;assert 520 in [404, 500]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:199: in test_404_for_invalid_endpoint
-    assert response.status_code in [404, 500], f"Got {response.status_code}"
-E   AssertionError: Got 520
-E   assert 520 in [404, 500]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestErrorHandling" name="test_malformed_json_handling" time="0.078"><failure message="AssertionError: Got 520&#10;assert 520 in [400, 500]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:210: in test_malformed_json_handling
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_conversion_email_preview" time="0.087" /><testcase classname="backend.tests.test_refactoring_regression.TestDiagnosticsExtended" name="test_weekly_conversion_email_preview" time="0.074" /><testcase classname="backend.tests.test_refactoring_regression.TestErrorHandling" name="test_404_for_invalid_endpoint" time="0.084" /><testcase classname="backend.tests.test_refactoring_regression.TestErrorHandling" name="test_malformed_json_handling" time="0.080"><failure message="AssertionError: Got 520&#10;assert 520 in [400, 500]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:210: in test_malformed_json_handling
     assert response.status_code in [400, 500], f"Got {response.status_code}"
 E   AssertionError: Got 520
 E   assert 520 in [400, 500]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestAPIVersioning" name="test_v1_route_works" time="0.085"><failure message="AssertionError: Got 520&#10;assert 520 in [401, 400, 403]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_refactoring_regression.py:220: in test_v1_route_works
-    assert response.status_code in [401, 400, 403], f"Got {response.status_code}"
-E   AssertionError: Got 520
-E   assert 520 in [401, 400, 403]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestAPIVersioning" name="test_diagnostics_without_api_prefix" time="0.089" /></testsuite></testsuites>
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_refactoring_regression.TestAPIVersioning" name="test_v1_route_works" time="0.078" /><testcase classname="backend.tests.test_refactoring_regression.TestAPIVersioning" name="test_diagnostics_without_api_prefix" time="0.096" /></testsuite></testsuites>
