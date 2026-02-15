@@ -140,10 +140,24 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
   - callMerchantWebhook (8 tests): URL resolution from customerData, skip when unconfigured, localhost rejection, HMAC signature inclusion/exclusion, 4xx no-retry, fiat enrichment
 
 ## Backlog
-- **P2: State Machine Refactoring** — Refactor payment lifecycle into formal state machine (pending → paid → confirmed → converted → payout_complete)
-- **P3: Enhanced Monitoring** — Add monitoring and alerting for key payment/payout stages
+- **P2: Enhanced Monitoring** — Add monitoring and alerting for key payment/payout stages
 - **P3: Dependency Injection refactoring** to decouple services from Sequelize models for better testability
-- P1: DLQ email alerting (notify admin when jobs land in dead-letter queue)
+- **P3: Integrate state machine into webhookProcessor** — Replace ad-hoc status strings with `PaymentState` enum and `transition()` calls throughout the processing pipeline
+
+### DLQ Email Alerting (Verified Existing - Feb 15, 2026)
+- Confirmed DLQ email alerting was **already implemented** in `services/webhookQueue.ts` (lines 244-302)
+- `sendDLQAlert()` sends a detailed HTML email to `ADMIN_EMAIL` when a job exhausts retries
+- Email includes: transaction ID, address, amount, error message, retry instructions via API
+
+### Payment State Machine (Completed - Feb 15, 2026)
+- Created `services/paymentStateMachine.ts` — formal state machine with 11 states and validated transitions
+- States: `pending → detected → confirming → confirmed → underpaid → processing → converted → payout_complete → failed → expired → refunded`
+- Features: `canTransition()`, `transition()` (returns audit record), `isTerminal()`, `parseState()` (with legacy alias mapping), `getTransitionMap()`
+- `InvalidTransitionError` class with from/to/paymentId for debugging
+- Legacy status mapping: `successful/completed/recovered/done` → `payout_complete`, `retrying` → `processing`, etc.
+- Created `__tests__/paymentStateMachine.test.ts` with 94 comprehensive unit tests covering:
+  - 23 valid transitions, 22 invalid transitions, success/failure cases, terminal states, lifecycle paths, legacy aliases, BFS reachability proof
+- All 473 tests passing across 15 suites
 
 ### Centralize Fee Logic (Completed - Feb 15, 2026)
 - Created `services/feeService.ts` — single import point for all platform fee calculation
