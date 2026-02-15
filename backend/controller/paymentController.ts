@@ -2955,6 +2955,7 @@ const settleCryptoTransaction = async ({
         
         // Lookup the correct UTXO output index for this address
         const utxoIndex = await tatumApi.findUtxoOutputIndex(transactionId, fromAddress, currency);
+        cronLogger.info(`[settleCryptoTransaction] UTXO math (satoshi): input=${inputSats}, output=${outputSats}, fee=${feeSats}, change=${inputSats - outputSats - feeSats}, utxoAmountToSend=${utxoAmountToSend}, exactFee=${exactFee}`);
         
         const adminTransferDetails = await withRetry(
           () => tatumApi.assetToOtherAddress({
