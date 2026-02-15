@@ -932,9 +932,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
         const platformCharge = (data.amount * Number(transaction_fee)) / 100;
         const blockchainCharge = (data.amount * Number(blockchain_fee)) / 100;
 
-        const adminWallet = await incrementAdminFee(data.currency, platformCharge + blockchainCharge);
-
-        walletLogger.info(adminWallet);
+        await incrementAdminFee(data.currency, platformCharge + blockchainCharge);
 
         const userSettledAmount = Number(
           data.amount_settled - platformCharge - blockchainCharge
