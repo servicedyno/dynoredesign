@@ -108,8 +108,8 @@ Full-stack crypto payment processing system with FastAPI proxy + Node.js/TypeScr
 - Remaining ~46 getErrorMessage(e) calls with custom logic (non-standard patterns)
 
 ### P2 - Code Duplication Hotspots (reduced from original)
-- walletController.ts: wallet increment pattern (5x), query column aliasing
-- paymentController.ts: (subscription cleanup & KYC checks already extracted to helpers in prior session)
+- walletController.ts: query column aliasing (minor — uses parseSortAndPagination already)
+- paymentController.ts: (subscription cleanup, KYC checks, wallet increments all extracted to helpers)
 
 ### P3 - Infrastructure
 - SSH tunnel auto-reconnect: DONE — managed by `sshTunnelManager.ts`
