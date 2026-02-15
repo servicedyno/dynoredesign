@@ -3542,7 +3542,7 @@ const verifyCryptoPayment = async (
     // Check if this is a partial payment scenario (incomplete flag set OR underpaid status)
     // Only return underpaid if NOT already successful
     // Redis stores values as strings, so convert to string for comparison
-    if (String(tempData?.incomplete) === "true" || redisStatus === "underpaid") {
+    if (String(tempData?.incomplete) === "true" || parsedState === PaymentState.UNDERPAID) {
       // Use originalExpectedAmount if available (set by webhook), otherwise calculate from previousAmount
       const originalExpected = parseFloat(tempData?.originalExpectedAmount || '0') || (expectedAmount + previousAmount);
       const totalPaid = previousAmount > 0 ? previousAmount : receivedAmount;
