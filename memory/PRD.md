@@ -1,56 +1,80 @@
-# DynoPay - Cryptocurrency Payment Gateway
+# DynoPay - Product Requirements Document
 
-## Original Problem Statement
-Build a cryptocurrency payment gateway that processes end-to-end payment lifecycle for multiple cryptocurrencies. The core task is ensuring payments are tracked from initial webhook, funds swept, converted via Binance, and settled to merchants.
+## Overview
+DynoPay is a full-stack cryptocurrency payment platform with a React frontend and TypeScript/Node.js backend. It handles cryptocurrency payments via the Tatum API, merchant webhook delivery, and multi-chain support.
 
-## Architecture
-- **Backend**: Node.js/Express/TypeScript (port 3300, proxied via Python/uvicorn on 8001)
-- **Database**: PostgreSQL (Railway)
-- **Cache/Lock**: Redis (Railway)
-- **Blockchain API**: Tatum
-- **Exchange**: Binance (via SSH tunnel)
-- **Email**: Brevo
+## Core Architecture
+- **Frontend**: React (port 3000)
+- **Backend**: TypeScript/Node.js/Express (internal port 3300, proxied via Python/uvicorn on port 8001)
+- **Database**: PostgreSQL (primary), Redis (caching, queues, payment state)
+- **Payments**: Tatum API for wallet generation, transaction monitoring, webhook notifications
+- **Queue**: BullMQ for persistent webhook processing
+
+## Key Features
+- Multi-chain crypto payments (BTC, ETH, XRP, RLUSD, BCH, DOGE, LTC, TRX, USDT)
+- Merchant API with webhook delivery
+- Payment links
+- Underpayment/overpayment handling
+- Admin diagnostics dashboard
+- Volatility monitoring
+- Error monitoring with email alerts
 
 ## What's Been Implemented
 
-### Session 2026-02-15 - BCH Payment Fix & All 5 Payments Verified
+### Phase: Code Cleanup (Completed)
+- Removed dead code (csrfProtection, unused middleware)
+- Archived unused scripts to `backend/scripts/_archive/`
+- Cleaned unused dependencies from package.json
+- Consolidated documentation into `/app/docs/`
 
-**Bug Fixes Applied:**
-1. **BCH CashAddr normalization** (`tatumApi.ts`): All BCH addresses normalized to CashAddr format using `bchaddrjs` library
-2. **BCH UTXO output index matching** (`tatumApi.ts`): `findUtxoOutputIndex` now compares both CashAddr and legacy format
-3. **BCH sweep dust fix** (`tatumApi.ts`): Removed explicit fee+changeAddress from `bchTransferBlockchain` call, letting Tatum auto-calculate to avoid dust change outputs
-4. **Redis null key safety** (`redisInstance.ts`): `getRedisItem` returns empty object for null/undefined keys
-5. **Currency conversion null safety** (`currencyConvert.ts`): `normalizeCurrency` defaults to 'USD' for undefined input
-6. **Company lookup fallback** (`paymentController.ts`): `cryptoVerification` falls back to `tempData.company_id` if `customerData.company_id` is undefined
-7. **UTXO fee floor** (`paymentController.ts`): BCH uses minimum 0.00001 BCH fee to avoid dust
-8. **Satoshi-level arithmetic** (`paymentController.ts`): Integer math for UTXO amounts to avoid floating-point precision issues
+### Phase: Failed Payment Recovery (Completed)
+- Investigated and recovered failed transaction for `richard@dyno.pt`
+- Created temporary recovery endpoint (now removed)
 
-**Payment Status (All 5 Test Payments):**
-| Currency | Status | Sweep TX |
-|----------|--------|----------|
-| BTC | ✅ Completed | 1056f0cf... |
-| SOL | ✅ Completed | 5Anu375i... |
-| POLYGON | ✅ Completed | 0x9c70cc... |
-| DOGE | ✅ Completed | 0811bcb2... |
-| BCH | ✅ Completed | bbdbd728... |
+### Phase: Robust Offline Payment Processing (Completed - Feb 15, 2026)
+**P0 - BullMQ Queue System:**
+- Installed BullMQ with Redis-backed persistent job queue
+- Created `services/webhookQueue.ts`: Queue definition, worker management, DLQ, health monitoring
+- Created `services/webhookProcessor.ts`: Core processing logic extracted from webhook handler
+- Refactored `webhooks/index.ts`: tatumCryptoWebHook is now a thin enqueuer (validates → enqueues → returns 200 immediately)
 
-### Previous Session Work
-- Graceful shutdown logic
-- Redis stale lock cleanup + auto-renewal
-- SOL rent-exemption fee handling
-- Binance SSH tunnel supervisor config
+**P0 - Startup Reconciliation:**
+- Created `services/reconciliation.ts`: Three reconciliation strategies
+  1. Redis scan for stuck "processing"/"retrying" payments
+  2. Redis scan for `failed-payment-*` keys
+  3. Tatum API query for failed webhook deliveries
+- Runs automatically on server startup
 
-## Key Files Modified
-- `backend/apis/tatumApi.ts` - BCH CashAddr normalization, dust fix
-- `backend/controller/paymentController.ts` - UTXO fee/amount fixes, null safety
-- `backend/helper/currencyConvert.ts` - Null safety for normalizeCurrency
-- `backend/utils/redisInstance.ts` - Null key protection
-- `backend/webhooks/index.ts` - (no changes this session)
+**P0 - Hardening & Monitoring:**
+- BullMQ retry policy: 3 attempts with exponential backoff (5s, 30s, 120s)
+- Dead-letter queue for permanently failed jobs
+- Admin diagnostic endpoints:
+  - `GET /diagnostics/webhook-queue` — queue health stats
+  - `GET /diagnostics/webhook-queue/dlq` — list DLQ items
+  - `POST /diagnostics/webhook-queue/dlq/:jobId/retry` — retry DLQ item
+  - `POST /diagnostics/webhook-queue/reconcile` — manual reconciliation trigger
+- Graceful shutdown with BullMQ cleanup
+- Worker concurrency: 5, rate-limited to 10 jobs/sec
+- Error monitoring integration (admin email alerts)
 
-## Dependencies Added
-- `bchaddrjs` - BCH address format conversion
+**P1 - Cleanup:**
+- Removed temporary `/diagnostics/recover-payment` endpoint from server.ts
 
-## Remaining / Future Items
-- **Stablecoin Conversion**: BCH conversion record #24 is PENDING_DEPOSIT (needs Binance tunnel active in production)
-- **Binance Tunnel**: Geo-blocked in this preview environment (sshpass not available). Works in production with non-US server.
-- **Original user_transaction records**: Still in `pending`/`received` status in `tbl_user_transaction` (customer_transaction table has correct `successful` status)
+### Testing
+- 23/23 backend tests passed (iteration_4.json)
+- All queue, reconciliation, auth protection, and endpoint tests verified
+
+## Credentials
+- **User**: richard@dyno.pt / Katiekendra123@
+
+## Key Files
+- `backend/services/webhookQueue.ts` — BullMQ queue, worker, DLQ
+- `backend/services/webhookProcessor.ts` — Core webhook processing logic
+- `backend/services/reconciliation.ts` — Startup reconciliation
+- `backend/webhooks/index.ts` — Webhook handlers (thin enqueuer)
+- `backend/server.ts` — Main server, startup, endpoints, shutdown
+- `backend/utils/redisInstance.ts` — Redis connection
+- `backend/utils/webhookRetry.ts` — Merchant webhook retry
+
+## Backlog
+- No pending items. All requested features have been implemented and tested.
