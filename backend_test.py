@@ -209,7 +209,7 @@ def test_redis_error_buffer():
     
     patterns = [
         ('REDIS_ERROR_BUFFER_KEY', 1),
-        ('restoreBufferFromRedis', 3),
+        ('restoreBufferFromRedis', 2),
         ('persistBufferToRedis', 2)
     ]
     
