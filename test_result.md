@@ -7724,7 +7724,7 @@ ports:
           TEST 6: server.ts calls detectBinanceAccess before startBinanceWebSocket
   - task: "Add admin sweep notification email for UTXO auto-convert and verify all auto-convert chains have sweep emails"
     implemented: true
-    working: "NA"
+    working: true
     files:
       - "/app/backend/controller/paymentController.ts"
       - "/app/backend/helper/sendEmail.ts"
