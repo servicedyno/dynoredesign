@@ -620,14 +620,16 @@ setupRefereeCodeReminderCron();
 setupPaymentLinkReminderCron();
 
 // Stablecoin Conversion: Process pending conversions via Binance
-// Runs every 5 minutes (configurable via BINANCE_CONVERT_INTERVAL_MINUTES)
+// Runs every N minutes (configurable via BINANCE_CONVERT_INTERVAL_MINUTES)
 const convertIntervalMinutes = parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "5");
 cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
-  const lockAcquired = await acquireLock("cron:stablecoinConversion", 300, 1);
+  const lockAcquired = await acquireLock("cron:stablecoinConversion", 240, 1);
   if (!lockAcquired) { log("Cron: stablecoinConversion skipped (already running)", "info"); return; }
   try {
     log("Cron: processStablecoinConversions running", "info");
-    await processStablecoinConversions();
+    // Add timeout to prevent hanging indefinitely
+    const timeout = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Stablecoin conversion timed out after 210s')), 210000));
+    await Promise.race([processStablecoinConversions(), timeout]);
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     log(`Cron: Stablecoin conversion failed: ${errMsg}`, "error");
