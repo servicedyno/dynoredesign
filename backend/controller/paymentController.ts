@@ -3357,6 +3357,7 @@ const verifyCryptoPayment = async (
     }
     
     const redisStatus = tempData?.status;
+    const parsedState = parseState(redisStatus); // Formal state from state machine
     const expectedAmount = parseFloat(tempData?.amount || '0');
     const receivedAmount = parseFloat(tempData?.receivedAmount || '0');
     const previousAmount = parseFloat(tempData?.previousAmount || '0');
