@@ -252,14 +252,6 @@ class VeriffService {
 let veriffServiceInstance: VeriffService | null = null;
 
 /**
- * Initialize Veriff service with credentials
- */
-export const initVeriffService = (apiKey: string, apiSecret: string): VeriffService => {
-  veriffServiceInstance = new VeriffService({ apiKey, apiSecret });
-  return veriffServiceInstance;
-};
-
-/**
  * Get Veriff service instance
  */
 export const getVeriffService = (): VeriffService => {
