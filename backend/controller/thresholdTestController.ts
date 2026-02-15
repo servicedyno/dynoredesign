@@ -4,6 +4,7 @@
  */
 
 import { setRedisItem, deleteRedisItem } from '../utils/redisInstance';
+import { apiLogger } from "../utils/loggers";
 // sequelize and QueryTypes imports removed - not used
 import { calculateTransactionFees } from './index';
 import { getBlockchainThreshold } from '../utils/feeConfigUtils';
@@ -119,7 +120,7 @@ export const runThresholdTests = async (): Promise<{
   for (const testCase of testCases) {
     const result = await testBlockchainThreshold(testCase.blockchain, testCase.amount);
     results.push(result);
-    console.log(result.message);
+    apiLogger.info(result.message);
   }
   
   const passed = results.filter(r => r.passed).length;
@@ -172,8 +173,8 @@ export const simulatePaymentWithRedis = async (params: {
     base_amount: amount,
   });
   
-  console.log(`✅ Redis data set for address: ${address}`);
-  console.log(`   Amount: ${amount} ${currency}`);
+  apiLogger.info(`✅ Redis data set for address: ${address}`);
+  apiLogger.info(`   Amount: ${amount} ${currency}`);
 };
 
 /**
@@ -182,7 +183,7 @@ export const simulatePaymentWithRedis = async (params: {
 export const cleanupTestRedis = async (address: string, ref: string): Promise<void> => {
   await deleteRedisItem(`crypto-${address}`);
   await deleteRedisItem(ref);
-  console.log(`🧹 Cleaned up Redis data for: ${address}`);
+  apiLogger.info(`🧹 Cleaned up Redis data for: ${address}`);
 };
 
 export default {

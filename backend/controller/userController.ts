@@ -49,7 +49,7 @@ const registerUser = async (req: express.Request, res: express.Response) => {
       .then((token) => token !== null)
       .then((isExists) => isExists);
 
-    console.log("isExists====>", isExists);
+    userLogger.info("isExists====>", isExists);
     if (isExists) {
       errorResponseHelper(res, 503, "Account Already Exists!!!");
     } else {
@@ -125,7 +125,7 @@ const registerUser = async (req: express.Request, res: express.Response) => {
           }
         } catch (refError) {
           // Log error but don't fail registration
-          console.error("Error creating referral record:", refError);
+          userLogger.error("Error creating referral record:", refError);
         }
       }
 
@@ -134,14 +134,14 @@ const registerUser = async (req: express.Request, res: express.Response) => {
         await emailService.sendWelcomeEmail(email.toLowerCase(), name);
       } catch (emailError) {
         // Log error but don't fail registration
-        console.error("Error sending welcome email:", emailError);
+        userLogger.error("Error sending welcome email:", emailError);
       }
 
       const resData = await getAccessToken(createdUser.dataValues.user_id);
 
       // Send welcome email (non-blocking)
       emailService.sendWelcomeEmail(email.toLowerCase(), name).catch(err => {
-        console.error("Failed to send welcome email:", err);
+        userLogger.error("Failed to send welcome email:", err);
         // Don't fail registration if email fails
       });
 
@@ -396,11 +396,11 @@ const login = async (req: express.Request, res: express.Response) => {
               date,
               time
             );
-            console.log(`[Login] Failed login alert sent to ${email} - ${attemptCount} attempts from ${ipAddress}`);
+            userLogger.info(`[Login] Failed login alert sent to ${email} - ${attemptCount} attempts from ${ipAddress}`);
           }
         }
       } catch (redisError) {
-        console.error("[Login] Redis error tracking failed attempts:", redisError);
+        userLogger.error("[Login] Redis error tracking failed attempts:", redisError);
       }
       
       return errorResponseHelper(res, 401, "Invalid email or password");
@@ -415,7 +415,7 @@ const login = async (req: express.Request, res: express.Response) => {
       const userAgent = req.headers['user-agent'] || 'Unknown';
       const lastLoginIp = userData.dataValues.last_login_ip;
       
-      console.log(`[Login] User ${email} - Current IP: ${ipAddress}, Last IP: ${lastLoginIp || 'none'}`);
+      userLogger.info(`[Login] User ${email} - Current IP: ${ipAddress}, Last IP: ${lastLoginIp || 'none'}`);
       
       // Send new device alert if IP changed (and not first login)
       // Use Redis to prevent duplicate alerts within 5 minutes
@@ -424,7 +424,7 @@ const login = async (req: express.Request, res: express.Response) => {
       // Check if alert was already sent - getRedisItem returns {} for cache miss
       const alertAlreadySent = alertCacheValue && Object.keys(alertCacheValue).length > 0;
       
-      console.log(`[Login] Alert check - lastLoginIp: ${!!lastLoginIp}, ipChanged: ${lastLoginIp !== ipAddress}, alertAlreadySent: ${alertAlreadySent}`);
+      userLogger.info(`[Login] Alert check - lastLoginIp: ${!!lastLoginIp}, ipChanged: ${lastLoginIp !== ipAddress}, alertAlreadySent: ${alertAlreadySent}`);
       
       if (lastLoginIp && lastLoginIp !== ipAddress && !alertAlreadySent) {
         try {
@@ -442,7 +442,7 @@ const login = async (req: express.Request, res: express.Response) => {
               location = city && country ? `${city}, ${country}` : (country || null);
             }
           } catch (geoError) {
-            console.log(`[Login] IP geolocation failed for ${ipAddress}:`, geoError.message);
+            userLogger.info(`[Login] IP geolocation failed for ${ipAddress}:`, geoError.message);
           }
           
           const { sendNewDeviceLoginEmail } = await import("../services/emailService");
@@ -458,9 +458,9 @@ const login = async (req: express.Request, res: express.Response) => {
             date,
             time
           );
-          console.log(`[Login] New device alert sent to ${email} - IP changed from ${lastLoginIp} to ${ipAddress} (${location || 'Unknown location'})`);
+          userLogger.info(`[Login] New device alert sent to ${email} - IP changed from ${lastLoginIp} to ${ipAddress} (${location || 'Unknown location'})`);
         } catch (emailError) {
-          console.error("[Login] Failed to send new device alert:", emailError);
+          userLogger.error("[Login] Failed to send new device alert:", emailError);
         }
       }
       
@@ -736,7 +736,7 @@ const updateUser = async (req: express.Request, res: express.Response) => {
         updatedFields,
         data.email && data.email !== oldEmail ? oldEmail : undefined
       ).catch(err => {
-        console.error("[UpdateUser] Failed to send notification email:", err);
+        userLogger.error("[UpdateUser] Failed to send notification email:", err);
       });
     }
     
@@ -791,10 +791,10 @@ const changePassword = async (req: express.Request, res: express.Response) => {
             date,
             time
           );
-          console.log(`[ChangePassword] Password changed notification sent to ${user.dataValues.email}`);
+          userLogger.info(`[ChangePassword] Password changed notification sent to ${user.dataValues.email}`);
         }
       } catch (emailError) {
-        console.error("[ChangePassword] Failed to send password changed email:", emailError);
+        userLogger.error("[ChangePassword] Failed to send password changed email:", emailError);
         // Don't fail the request if email fails
       }
       
@@ -827,7 +827,7 @@ const connectSocial = async (req: express.Request, res: express.Response) => {
       .then((token) => token !== null)
       .then((isExists) => isExists);
 
-    console.log("isExists====>", isExists);
+    userLogger.info("isExists====>", isExists);
     if (isExists) {
       const userData = await userModel.findOne({
         where: {
@@ -873,7 +873,7 @@ const connectSocial = async (req: express.Request, res: express.Response) => {
           await emailService.sendWelcomeEmail(email.toLowerCase(), name || "User");
         } catch (emailError) {
           // Log error but don't fail registration
-          console.error("Error sending welcome email:", emailError);
+          userLogger.error("Error sending welcome email:", emailError);
         }
       }
 
@@ -993,7 +993,7 @@ const facebookSignIn = async (req: express.Request, res: express.Response) => {
         await emailService.sendWelcomeEmail(email.toLowerCase(), name || "Facebook User");
       } catch (emailError) {
         // Log error but don't fail registration
-        console.error("Error sending welcome email:", emailError);
+        userLogger.error("Error sending welcome email:", emailError);
       }
     }
 
@@ -1145,9 +1145,9 @@ const resetPassword = async (req: express.Request, res: express.Response) => {
         date,
         time
       );
-      console.log(`[ResetPassword] Password changed notification sent to ${email}`);
+      userLogger.info(`[ResetPassword] Password changed notification sent to ${email}`);
     } catch (emailError) {
-      console.error("[ResetPassword] Failed to send password changed email:", emailError);
+      userLogger.error("[ResetPassword] Failed to send password changed email:", emailError);
       // Don't fail the request if email fails
     }
 
@@ -1275,7 +1275,7 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
       await emailService.sendWelcomeEmail(email.toLowerCase(), name || email.split("@")[0]);
     } catch (emailError) {
       // Log error but don't fail registration
-      console.error("Error sending welcome email:", emailError);
+      userLogger.error("Error sending welcome email:", emailError);
     }
 
     userLogger.info(`New user registered via Google: ${email}`);
@@ -1300,7 +1300,7 @@ const getProfile = async (req: express.Request, res: express.Response) => {
     const cacheKey = `profile:${userData.user_id}`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
-      console.log(`[Profile] Cache hit for user ${userData.user_id}`);
+      userLogger.info(`[Profile] Cache hit for user ${userData.user_id}`);
       return successResponseHelper(res, 200, "Profile retrieved successfully", cached);
     }
 
@@ -1391,7 +1391,7 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
         updatedUser?.dataValues.name || userData.name,
         updatedFields
       ).catch(err => {
-        console.error("[UpdateProfile] Failed to send notification email:", err);
+        userLogger.error("[UpdateProfile] Failed to send notification email:", err);
       });
     }
     
@@ -1815,7 +1815,7 @@ const unsubscribeFromReminders = async (req: express.Request, res: express.Respo
       { where: { code_id: codeData.code_id } }
     );
     
-    console.log(`[Unsubscribe] ${codeData.customer_email} unsubscribed from referee code reminders`);
+    userLogger.info(`[Unsubscribe] ${codeData.customer_email} unsubscribed from referee code reminders`);
     
     return successResponseHelper(res, 200, "Successfully unsubscribed from reminder emails", {
       email: codeData.customer_email,
@@ -1869,7 +1869,7 @@ const unsubscribeFromPaymentReminders = async (req: express.Request, res: expres
       { where: { link_id: linkData.link_id } }
     );
     
-    console.log(`[Unsubscribe] ${linkData.email} unsubscribed from payment link reminders (link_id: ${linkData.link_id})`);
+    userLogger.info(`[Unsubscribe] ${linkData.email} unsubscribed from payment link reminders (link_id: ${linkData.link_id})`);
     
     return successResponseHelper(res, 200, "Successfully unsubscribed from payment reminder emails", {
       email: linkData.email,
@@ -2052,7 +2052,7 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
           }
         }
       } catch (e) {
-        console.warn("[Onboarding] Could not calculate KYC grace period:", e);
+        userLogger.warn("[Onboarding] Could not calculate KYC grace period:", e);
       }
     }
     
@@ -2119,7 +2119,7 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
       next_steps: nextSteps,
     };
     
-    console.log(`[Onboarding] Status retrieved for user ${userId}: complete=${onboardingComplete}, next_steps=${nextSteps.length}`);
+    userLogger.info(`[Onboarding] Status retrieved for user ${userId}: complete=${onboardingComplete}, next_steps=${nextSteps.length}`);
     
     return successResponseHelper(res, 200, "Onboarding status retrieved successfully", onboardingStatus);
     

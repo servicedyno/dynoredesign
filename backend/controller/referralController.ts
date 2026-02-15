@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { apiLogger } from "../utils/loggers";
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Referral from '../models/referralModels/referralModel';
@@ -99,7 +100,7 @@ export const getMyReferralCode = async (_req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in getMyReferralCode:", error);
+    apiLogger.error("Error in getMyReferralCode:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -157,7 +158,7 @@ export const listMyReferrals = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in listMyReferrals:", error);
+    apiLogger.error("Error in listMyReferrals:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -244,7 +245,7 @@ export const applyReferralCode = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in applyReferralCode:", error);
+    apiLogger.error("Error in applyReferralCode:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -290,7 +291,7 @@ export const validateReferralCode = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in validateReferralCode:", error);
+    apiLogger.error("Error in validateReferralCode:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -352,7 +353,7 @@ export const getReferralEarnings = async (_req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in getReferralEarnings:", error);
+    apiLogger.error("Error in getReferralEarnings:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -420,7 +421,7 @@ export const processReferralReward = async (userId: number, transactionAmount: n
     // Referral reward = Transaction fee discount for both parties
     // The discount is applied during fee calculation in paymentController
     // based on user's referral_discount_percent in tbl_user
-    console.log(`[Referral] Reward processed for user ${referral.referrer_user_id} - Fee discount will apply on future transactions`);
+    apiLogger.info(`[Referral] Reward processed for user ${referral.referrer_user_id} - Fee discount will apply on future transactions`);
 
     return {
       referral_id: referral.referral_id,
@@ -429,7 +430,7 @@ export const processReferralReward = async (userId: number, transactionAmount: n
       currency: referral.bonus_currency,
     };
   } catch (error) {
-    console.error("Error in processReferralReward:", error);
+    apiLogger.error("Error in processReferralReward:", error);
     throw error;
   }
 };
@@ -472,7 +473,7 @@ export const getReferralLeaderboard = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in getReferralLeaderboard:", error);
+    apiLogger.error("Error in getReferralLeaderboard:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -539,7 +540,7 @@ const validateRefereeCode = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in validateRefereeCode:", error);
+    apiLogger.error("Error in validateRefereeCode:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -584,7 +585,7 @@ const redeemRefereeCode = async (req: Request, res: Response) => {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error("Error in redeemRefereeCode:", error);
+    apiLogger.error("Error in redeemRefereeCode:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -647,7 +648,7 @@ const getDiscountStatus = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in getDiscountStatus:", error);
+    apiLogger.error("Error in getDiscountStatus:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,

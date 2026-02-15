@@ -1,4 +1,5 @@
 import express from "express";
+import { apiLogger } from "../utils/loggers";
 import jwt from "jsonwebtoken";
 import { QueryTypes } from "sequelize";
 import {
@@ -87,7 +88,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     if (company_id) {
       preferredCurrency = await getCompanyBaseCurrency(company_id as string);
       if (preferredCurrency !== 'USD') {
-        console.log(`[Dashboard] Using currency ${preferredCurrency} for company ${company_id}`);
+        apiLogger.info(`[Dashboard] Using currency ${preferredCurrency} for company ${company_id}`);
       }
     }
     
@@ -95,7 +96,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const cacheKey = `dashboard:${userId}:${company_id || 'all'}:${preferredCurrency}`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
-      console.log(`[Dashboard] Cache hit for user ${userId}, currency ${preferredCurrency}`);
+      apiLogger.info(`[Dashboard] Cache hit for user ${userId}, currency ${preferredCurrency}`);
       return successResponseHelper(res, 200, "Dashboard data retrieved successfully", cached);
     }
 
@@ -171,10 +172,10 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
           totalVolume = totalVolume * conversionRate;
           currentVolume = currentVolume * conversionRate;
           lastVolume = lastVolume * conversionRate;
-          console.log(`[Dashboard] Converted volumes to ${preferredCurrency} (rate: ${conversionRate})`);
+          apiLogger.info(`[Dashboard] Converted volumes to ${preferredCurrency} (rate: ${conversionRate})`);
         }
       } catch (convErr) {
-        console.warn(`[Dashboard] Currency conversion failed, showing USD:`, convErr);
+        apiLogger.warn(`[Dashboard] Currency conversion failed, showing USD:`, convErr);
         preferredCurrency = 'USD'; // Fallback to USD
         conversionRate = 1;
       }
@@ -220,7 +221,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Dashboard error:", message);
+    apiLogger.error("Dashboard error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -240,7 +241,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     const cacheKey = `chart:${userId}:${company_id || 'all'}:${period}`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
-      console.log(`[Chart] Cache hit for user ${userId}`);
+      apiLogger.info(`[Chart] Cache hit for user ${userId}`);
       return successResponseHelper(res, 200, "Chart data retrieved successfully", cached);
     }
 
@@ -400,7 +401,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Chart data error:", message);
+    apiLogger.error("Chart data error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -492,7 +493,7 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
           conversionRate = result.amount;
         }
       } catch (e) {
-        console.warn(`[getFeeTiers] Currency conversion failed, using USD`);
+        apiLogger.warn(`[getFeeTiers] Currency conversion failed, using USD`);
         preferredCurrency = 'USD';
       }
     }
@@ -574,7 +575,7 @@ const getRecentTransactions = async (req: express.Request, res: express.Response
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Recent transactions error:", message);
+    apiLogger.error("Recent transactions error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -698,7 +699,7 @@ const getConversions = async (req: express.Request, res: express.Response) => {
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Conversions error:", message);
+    apiLogger.error("Conversions error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -796,7 +797,7 @@ const getConversionDetail = async (req: express.Request, res: express.Response) 
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Conversion detail error:", message);
+    apiLogger.error("Conversion detail error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };

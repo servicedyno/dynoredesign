@@ -135,7 +135,7 @@ const getWallets = async (_req: express.Request, res: express.Response) => {
       const userIndex = allUserWalletData.findIndex(
         (x) => x.wallet_type === currencyData[i].currency
       );
-      console.log(currentIndex);
+      adminLogger.info(currentIndex);
       const currentWallet = walletData[currentIndex].dataValues;
       const userWallet = allUserWalletData[userIndex];
 
@@ -382,7 +382,7 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
       ).toFixed(8);
     }
 
-    console.log(fees);
+    adminLogger.info(fees);
 
     const transactionDetails = await tatumApi.assetToOtherAddress({
       currency: currency,
@@ -424,7 +424,7 @@ const getFeeWalletBalance = async (
         adminFeesWallets[i]?.dataValues.wallet_type === "TRX"
           ? currentBalance?.balance / 1000000
           : currentBalance?.balance;
-      console.log("newBalance=========>", newBalance);
+      adminLogger.info("newBalance=========>", newBalance);
       if (newBalance != adminFeesWallets[i]?.dataValues.amount) {
         amount = newBalance;
         await adminFeeModel.update(
@@ -515,7 +515,7 @@ const updateEmail = async (req: express.Request, res: express.Response) => {
       }
     } else {
       const storedOtp = await getRedisItem(email + "-update-otp");
-      console.log(storedOtp);
+      adminLogger.info(storedOtp);
       if (storedOtp.otp != otp) {
         errorResponseHelper(res, 500, "OTP did not match!");
       } else {

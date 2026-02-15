@@ -113,7 +113,7 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
       } catch (apiError: unknown) {
         // Log API error but continue with fallback
         const err = apiError as { response?: { data?: { message?: string } }; message?: string };
-        console.log(`Tax API error for ${upperCountryCode}:`, err.response?.data?.message || err.message);
+        taxLogger.info(`Tax API error for ${upperCountryCode}:`, err.response?.data?.message || err.message);
       }
     }
 
@@ -155,7 +155,7 @@ const getTaxRate = async (req: express.Request, res: express.Response) => {
 
   } catch (e: unknown) {
     const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(message)) || console.error("Tax rate error:", message);
+    taxLogger?.error?.(message, {}, new Error(message)) || taxLogger.error("Tax rate error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -236,7 +236,7 @@ const validateTaxId = async (req: express.Request, res: express.Response) => {
 
   } catch (e: unknown) {
     const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(message)) || console.error("Tax validation error:", message);
+    taxLogger?.error?.(message, {}, new Error(message)) || taxLogger.error("Tax validation error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -273,7 +273,7 @@ const getTaxAcronyms = async (_req: express.Request, res: express.Response) => {
 
   } catch (e) {
     const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(e as any)) || console.error("Tax acronyms error:", message);
+    taxLogger?.error?.(message, {}, new Error(e as any)) || taxLogger.error("Tax acronyms error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -306,7 +306,7 @@ const lookupByCountryName = async (req: express.Request, res: express.Response) 
 
   } catch (e) {
     const message = getErrorMessage(e);
-    taxLogger?.error?.(message, {}, new Error(e as any)) || console.error("Tax lookup error:", message);
+    taxLogger?.error?.(message, {}, new Error(e as any)) || taxLogger.error("Tax lookup error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };

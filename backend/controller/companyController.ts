@@ -695,7 +695,7 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
           conversionRates[srcCurrency] = result.amount;
         }
       } catch (convErr) {
-        console.warn(`[getTransactions] Conversion ${srcCurrency}->${preferredCurrency} failed:`, convErr);
+        companyLogger.warn(`[getTransactions] Conversion ${srcCurrency}->${preferredCurrency} failed:`, convErr);
       }
     }
 
@@ -1486,7 +1486,7 @@ const updateAutoConvertSettings = async (
     if (!auto_convert_enabled) {
       const wasEnabled = company.dataValues.auto_convert_enabled;
       await company.update({ auto_convert_enabled: false });
-      console.log(`[AutoConvert] Company ${id} auto-convert disabled (was ${wasEnabled ? "enabled" : "already disabled"})`);
+      companyLogger.info(`[AutoConvert] Company ${id} auto-convert disabled (was ${wasEnabled ? "enabled" : "already disabled"})`);
 
       // Check wallet readiness: which volatile crypto currencies does the merchant
       // have direct wallets for? Without these, incoming payments in that currency
@@ -1610,7 +1610,7 @@ const updateAutoConvertSettings = async (
       settlement_chain,
     });
 
-    console.log(
+    companyLogger.info(
       `[AutoConvert] Company ${id} settings updated: enabled=true, currency=${settlement_currency}, chain=${settlement_chain}, wallet=${resolvedAddress.substring(0, 12)}...`
     );
 
@@ -1700,7 +1700,7 @@ const getConversionDetail = async (req: express.Request, res: express.Response) 
       data: conversion,
     });
   } catch (error) {
-    console.error('Error getting conversion detail:', error);
+    companyLogger.error('Error getting conversion detail:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -1745,7 +1745,7 @@ const retryConversion = async (req: express.Request, res: express.Response) => {
       data: conversion,
     });
   } catch (error) {
-    console.error('Error retrying conversion:', error);
+    companyLogger.error('Error retrying conversion:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

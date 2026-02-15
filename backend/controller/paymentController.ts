@@ -154,7 +154,7 @@ const convertToUSD = async (amount: number, currency: string): Promise<number> =
     if (!amount || amount <= 0) return 0;
     return await convertToUSDUtil(currency, amount);
   } catch (error) {
-    console.error(`[convertToUSD] Failed to convert ${amount} ${currency} to USD:`, error);
+    cronLogger.error(`[convertToUSD] Failed to convert ${amount} ${currency} to USD:`, error);
     return 0;
   }
 };
@@ -203,17 +203,17 @@ const withRetry = async <T>(
       
       // Check if error is retryable (soft failure like network timeout, rate limit)
       if (!isRetryable(lastError)) {
-        console.error(`[PaymentController] ❌ ${operationName} failed with non-retryable error: ${message}`);
+        cronLogger.error(`[PaymentController] ❌ ${operationName} failed with non-retryable error: ${message}`);
         throw lastError; // Don't retry hard failures
       }
       
       if (attempt < maxRetries) {
         const waitTime = RETRY_CONFIG.INITIAL_DELAY_MS * Math.pow(2, attempt - 1);
-        console.warn(`[PaymentController] ⚠️ ${operationName} failed (attempt ${attempt}/${maxRetries}): ${message}`);
-        console.warn(`[PaymentController] Retrying in ${waitTime}ms...`);
+        cronLogger.warn(`[PaymentController] ⚠️ ${operationName} failed (attempt ${attempt}/${maxRetries}): ${message}`);
+        cronLogger.warn(`[PaymentController] Retrying in ${waitTime}ms...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       } else {
-        console.error(`[PaymentController] ❌ ${operationName} failed after ${maxRetries} attempts: ${message}`);
+        cronLogger.error(`[PaymentController] ❌ ${operationName} failed after ${maxRetries} attempts: ${message}`);
       }
     }
   }
@@ -300,7 +300,7 @@ const calculateTaxForCheckout = async (
       taxRate = parseFloat(String(cachedRate.dataValues.standard_rate)) || 0;
       taxAcronym = String(cachedRate.dataValues.tax_acronym || taxAcronym);
       countryName = String(cachedRate.dataValues.country_name || countryName);
-      console.log(`[Tax] Using cached rate for ${upperCountryCode}: ${taxRate}%`);
+      cronLogger.info(`[Tax] Using cached rate for ${upperCountryCode}: ${taxRate}%`);
     } else if (TAX_DATA_API_KEY) {
       // Try to fetch from API
       try {
@@ -312,7 +312,7 @@ const calculateTaxForCheckout = async (
 
         if (response.data && response.data.standard_rate !== undefined) {
           taxRate = response.data.standard_rate;
-          console.log(`[Tax] Fetched rate from API for ${upperCountryCode}: ${taxRate}%`);
+          cronLogger.info(`[Tax] Fetched rate from API for ${upperCountryCode}: ${taxRate}%`);
           
           // Cache the result
           await taxRateModel.create({
@@ -323,13 +323,13 @@ const calculateTaxForCheckout = async (
           }).catch(() => {}); // Ignore cache errors
         }
       } catch (apiError: unknown) {
-        console.log(`[Tax] API error for ${upperCountryCode}, using fallback:`, getErrorMessage(apiError));
+        cronLogger.info(`[Tax] API error for ${upperCountryCode}, using fallback:`, getErrorMessage(apiError));
         taxRate = FALLBACK_TAX_RATES[upperCountryCode] || 0;
       }
     } else {
       // No API key, use fallback
       taxRate = FALLBACK_TAX_RATES[upperCountryCode] || 0;
-      console.log(`[Tax] Using fallback rate for ${upperCountryCode}: ${taxRate}%`);
+      cronLogger.info(`[Tax] Using fallback rate for ${upperCountryCode}: ${taxRate}%`);
     }
 
     // Calculate tax
@@ -349,7 +349,7 @@ const calculateTaxForCheckout = async (
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`[Tax] Error calculating tax:`, errorMessage);
+    cronLogger.error(`[Tax] Error calculating tax:`, errorMessage);
     return null;
   }
 };
@@ -403,7 +403,7 @@ const getData = async (req: express.Request, res: express.Response) => {
 
     // Only log for debugging when item exists or in development
     if (process.env.NODE_ENV === 'development' || (item && Object.keys(item).length > 0)) {
-      console.log("[getData] Payment lookup:", { hasItem: !!item && Object.keys(item).length > 0, dataRef: data?.substring(0, 10) + '...' });
+      cronLogger.info("[getData] Payment lookup:", { hasItem: !!item && Object.keys(item).length > 0, dataRef: data?.substring(0, 10) + '...' });
     }
     
     // Check if item exists
@@ -451,7 +451,7 @@ const getData = async (req: express.Request, res: express.Response) => {
           }
         }
       } catch (companyError) {
-        console.warn(`[getData] Failed to fetch company info:`, companyError);
+        cronLogger.warn(`[getData] Failed to fetch company info:`, companyError);
       }
     }
     
@@ -479,7 +479,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       const networkFee = await getBlockchainNetworkFee('ETH'); // Use ETH as default for USD display
       networkFeeUSD = Number(networkFee.feeInUSD) || 0;
     } catch (e) {
-      console.log('[getData] Could not fetch network fee, using 0');
+      cronLogger.info('[getData] Could not fetch network fee, using 0');
     }
     
     const totalProcessingFee = parseFloat((feeAmountPercent + fixedFee + networkFeeUSD).toFixed(2));
@@ -511,7 +511,7 @@ const getData = async (req: express.Request, res: express.Response) => {
         };
       } else {
         // Payment link has expired - return error response
-        console.log(`[getData] Payment link expired at ${item.expires_at}`);
+        cronLogger.info(`[getData] Payment link expired at ${item.expires_at}`);
         return errorResponseHelper(
           res, 
           410, 
@@ -543,10 +543,10 @@ const getData = async (req: express.Request, res: express.Response) => {
     // Tax calculation - only if merchant enabled apply_tax
     let taxInfo: TaxInfo | null = null;
     if (item.apply_tax) {
-      console.log(`[getData] Tax enabled for this payment link, detecting customer location...`);
+      cronLogger.info(`[getData] Tax enabled for this payment link, detecting customer location...`);
       
       // Log all relevant headers for debugging
-      console.log(`[getData] Headers received:`, {
+      cronLogger.info(`[getData] Headers received:`, {
         'x-forwarded-for': req.headers['x-forwarded-for'],
         'x-real-ip': req.headers['x-real-ip'],
         'cf-connecting-ip': req.headers['cf-connecting-ip'],
@@ -554,11 +554,11 @@ const getData = async (req: express.Request, res: express.Response) => {
         'true-client-ip': req.headers['true-client-ip'],
         'x-client-ip': req.headers['x-client-ip'],
       });
-      console.log(`[getData] Timezone hint from frontend: ${timezone || 'not provided'}`);
+      cronLogger.info(`[getData] Timezone hint from frontend: ${timezone || 'not provided'}`);
       
       // Get customer IP and detect country
       const clientIP = getClientIP(req);
-      console.log(`[getData] Customer IP: ${clientIP}`);
+      cronLogger.info(`[getData] Customer IP: ${clientIP}`);
       
       // Check if IP is localhost/private (unreliable for geolocation)
       const isPrivateIP = clientIP === '127.0.0.1' || 
@@ -572,7 +572,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       
       // If timezone is provided and IP is private/localhost, prefer timezone
       if (timezone && isPrivateIP) {
-        console.log(`[getData] Private/localhost IP detected (${clientIP}), using timezone: ${timezone}`);
+        cronLogger.info(`[getData] Private/localhost IP detected (${clientIP}), using timezone: ${timezone}`);
         geoLocation = getCountryFromTimezone(timezone);
       } else {
         // Try IP-based geolocation first
@@ -580,13 +580,13 @@ const getData = async (req: express.Request, res: express.Response) => {
         
         // If IP detection failed or returned unreliable result, and timezone provided, use timezone
         if ((!geoLocation || !geoLocation.country_code) && timezone) {
-          console.log(`[getData] IP detection failed, trying timezone fallback: ${timezone}`);
+          cronLogger.info(`[getData] IP detection failed, trying timezone fallback: ${timezone}`);
           geoLocation = getCountryFromTimezone(timezone);
         }
       }
       
       if (geoLocation && geoLocation.country_code) {
-        console.log(`[getData] Detected country: ${geoLocation.country_name} (${geoLocation.country_code}) via ${geoLocation.source || 'ip'}`);
+        cronLogger.info(`[getData] Detected country: ${geoLocation.country_name} (${geoLocation.country_code}) via ${geoLocation.source || 'ip'}`);
         
         // Calculate tax based on detected country
         taxInfo = await calculateTaxForCheckout(
@@ -596,10 +596,10 @@ const getData = async (req: express.Request, res: express.Response) => {
         );
         
         if (taxInfo) {
-          console.log(`[getData] Tax calculated: ${taxInfo.tax_rate}% ${taxInfo.tax_acronym} = ${taxInfo.tax_amount} ${taxInfo.currency}`);
+          cronLogger.info(`[getData] Tax calculated: ${taxInfo.tax_rate}% ${taxInfo.tax_acronym} = ${taxInfo.tax_amount} ${taxInfo.currency}`);
         }
       } else {
-        console.log(`[getData] Could not detect customer country, tax not applied`);
+        cronLogger.info(`[getData] Could not detect customer country, tax not applied`);
         taxInfo = {
           tax_enabled: true,
           country_detected: false,
@@ -722,7 +722,7 @@ const getData = async (req: express.Request, res: express.Response) => {
     } else {
       // Validate customer_id exists before calling getAccessToken
       if (!item.customer_id) {
-        console.warn(`[getData] Missing customer_id for non-createLink payment:`, item);
+        cronLogger.warn(`[getData] Missing customer_id for non-createLink payment:`, item);
         // Try to use link-style token generation as fallback
         payload = {
           amount: item.amount || item.base_amount,
@@ -831,7 +831,7 @@ const getData = async (req: express.Request, res: express.Response) => {
       }
     }
 
-    console.log(payload);
+    cronLogger.info(payload);
     successResponseHelper(res, 200, "Payment link details retrieved successfully", payload);
   } catch (e) {
     const message = getErrorMessage(e);
@@ -859,7 +859,7 @@ const getAccessToken = async (id, ref) => {
   const tokenSecret = process.env.ACCESS_TOKEN_SECRET;
 
   const { customer_id, company_id, ...userData } = user.dataValues;
-  console.log(userData);
+  cronLogger.info(userData);
   if (tokenSecret) {
     const token = jwt.sign({ ...userData, ref, pathType: "" }, tokenSecret);
     return token;
@@ -879,7 +879,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
         const items = await getRedisItem("customer-" + userData.ref);
         if (value.paymentType === paymentTypes.CARD) {
           const { paymentRes, uniqueRef } = await cardPayment(value, userData);
-          console.log(paymentRes);
+          cronLogger.info(paymentRes);
           if (paymentRes.status !== "successful") {
             finalRes = { ...paymentRes.meta.authorization, hash: uniqueRef };
             if (paymentRes.meta.authorization.mode !== "redirect") {
@@ -900,7 +900,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.BANK_TRANSFER) {
           const { paymentRes, uniqueRef } = await bankTransfer(value, userData);
-          console.log("paymentRes=============>", paymentRes, uniqueRef);
+          cronLogger.info("paymentRes=============>", paymentRes, uniqueRef);
           const { transfer_reference, ...rest } = paymentRes.meta.authorization;
           finalRes = { hash: uniqueRef, ...rest };
           await setRedisItem(uniqueRef, {
@@ -911,7 +911,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.USSD) {
           const { paymentRes, uniqueRef } = await USSD(value, userData);
-          console.log("paymentRes=============>", paymentRes, uniqueRef);
+          cronLogger.info("paymentRes=============>", paymentRes, uniqueRef);
           const ussdResponse = paymentRes as { meta?: { authorization?: { note?: string } }; data?: { payment_code?: string } };
           const { note } = ussdResponse.meta?.authorization || {};
           const { payment_code } = ussdResponse.data || {};
@@ -924,7 +924,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.MOBILE_MONEY) {
           const { paymentRes, uniqueRef } = await MobileMoney(value, userData);
-          console.log("paymentRes=============>", paymentRes, uniqueRef);
+          cronLogger.info("paymentRes=============>", paymentRes, uniqueRef);
           const mobileResponse = paymentRes as { meta?: { authorization?: Record<string, unknown> } };
           if (value.currency === "KES") {
             finalRes = { hash: uniqueRef };
@@ -938,7 +938,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
         }
         if (value.paymentType === paymentTypes.BANK_ACCOUNT) {
           const { paymentRes, uniqueRef } = await bankAccount(value, userData);
-          console.log(
+          cronLogger.info(
             "paymentRes=============>",
             paymentRes,
             uniqueRef,
@@ -955,7 +955,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
         }
         if (value.paymentType === paymentTypes.QR_CODE) {
           const { paymentRes, uniqueRef } = await QRCode(value, userData);
-          console.log(
+          cronLogger.info(
             "paymentRes=============>",
             paymentRes,
             uniqueRef,
@@ -993,7 +993,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             value,
             userData
           );
-          console.log(
+          cronLogger.info(
             "paymentRes=============>",
             paymentRes,
             uniqueRef,
@@ -1016,7 +1016,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             'RLUSD-XRPL': 'RLUSD',
           };
           if (cryptoAliasMap[value.currency]) {
-            console.log(`[addPayment] Normalizing currency: ${value.currency} → ${cryptoAliasMap[value.currency]}`);
+            cronLogger.info(`[addPayment] Normalizing currency: ${value.currency} → ${cryptoAliasMap[value.currency]}`);
             value.currency = cryptoAliasMap[value.currency];
           }
           
@@ -1026,7 +1026,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             customer_id: items.customer_id,
             company_id: items.company_id,  // Pass company_id for proper wallet filtering
           }, true);  // Use crypto-specific webhook for proper verification
-          console.log("paymentRes=============>", paymentRes, uniqueRef);
+          cronLogger.info("paymentRes=============>", paymentRes, uniqueRef);
           
           // Calculate remaining minutes for crypto invoice (uses centralized config)
           const CRYPTO_INVOICE_MINUTES = PAYMENT_TIMING.CRYPTO_INVOICE_MINUTES;
@@ -1052,9 +1052,9 @@ const addPayment = async (req: express.Request, res: express.Response) => {
                 fixedDecimal: true,
               });
               baseAmountUSD = Number(usdConversionResult?.[0]?.amount || baseAmountRaw);
-              console.log(`[addPayment] Converted ${baseAmountRaw} ${baseCurrency} → $${baseAmountUSD.toFixed(2)} USD`);
+              cronLogger.info(`[addPayment] Converted ${baseAmountRaw} ${baseCurrency} → $${baseAmountUSD.toFixed(2)} USD`);
             } catch (convErr) {
-              console.log(`[addPayment] Currency conversion failed (${baseCurrency}→USD), using raw amount:`, convErr);
+              cronLogger.info(`[addPayment] Currency conversion failed (${baseCurrency}→USD), using raw amount:`, convErr);
             }
           }
           
@@ -1082,7 +1082,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
                 }
               }
             } catch (e) {
-              console.log('[addPayment] Tax calculation failed:', e);
+              cronLogger.info('[addPayment] Tax calculation failed:', e);
             }
           }
           
@@ -1110,13 +1110,13 @@ const addPayment = async (req: express.Request, res: express.Response) => {
               merchant_amount_crypto = crypto_amount - total_fees_crypto;
             }
             
-            console.log(`[addPayment] Fee calculation:
+            cronLogger.info(`[addPayment] Fee calculation:
               - Base USD: $${baseAmountUSD}
               - Fee breakdown: $${transactionFee.toFixed(2)} (pct) + $${fixedFee.toFixed(2)} (fixed)
               - Total fee: $${totalDeduction.toFixed(2)} (${(feePercentage * 100).toFixed(2)}%)
               - Fee payer: ${fee_payer}`);
           } catch (feeError) {
-            console.error('[addPayment] Fee calculation error, using fallback:', feeError);
+            cronLogger.error('[addPayment] Fee calculation error, using fallback:', feeError);
             // Fallback to simple 2% if tier calculation fails
             const fallbackFeePercent = parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0') / 100;
             total_fees_crypto = crypto_amount * fallbackFeePercent;
@@ -1170,7 +1170,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             }),
           });
           
-          console.log(`[addPayment] Crypto payment created:
+          cronLogger.info(`[addPayment] Crypto payment created:
             - Currency: ${value.currency}
             - Amount: ${crypto_amount}
             - Fee Payer: ${fee_payer}
@@ -1197,7 +1197,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
               ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
             };
             await setRedisItem(customerSessionKey, updatedSession);
-            console.log(`[addPayment] Phase 12.1: Stored active_crypto_address in ${customerSessionKey}: ${paymentRes.address}${paymentRes.destination_tag ? `:${paymentRes.destination_tag}` : ''}`);
+            cronLogger.info(`[addPayment] Phase 12.1: Stored active_crypto_address in ${customerSessionKey}: ${paymentRes.address}${paymentRes.destination_tag ? `:${paymentRes.destination_tag}` : ''}`);
           }
         }
         successResponseHelper(res, 200, "Payment created successfully", finalRes);
@@ -1224,11 +1224,11 @@ const createCryptoPayment = async (
 ) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   const DEBUG = process.env.DEBUG_MODE === 'true';
-  if (DEBUG) console.log('[DEBUG] Step 1: JWT decoded successfully');
+  if (DEBUG) cronLogger.info('[DEBUG] Step 1: JWT decoded successfully');
   
   try {
     const data: IFundData = req.body;
-    if (DEBUG) console.log('[DEBUG] Step 2: Request body parsed:', { uniqueRef: data?.uniqueRef, currency: data?.currency });
+    if (DEBUG) cronLogger.info('[DEBUG] Step 2: Request body parsed:', { uniqueRef: data?.uniqueRef, currency: data?.currency });
     
     if (data) {
       let finalRes;
@@ -1238,11 +1238,11 @@ const createCryptoPayment = async (
       const rawRef = data.uniqueRef;
       const normalizedRef = rawRef.startsWith("customer-") ? rawRef : "customer-" + rawRef;
       
-      if (DEBUG) console.log('[DEBUG] Step 3: About to call getRedisItem with key:', normalizedRef);
+      if (DEBUG) cronLogger.info('[DEBUG] Step 3: About to call getRedisItem with key:', normalizedRef);
       
       const items = await getRedisItem(normalizedRef);
       
-      if (DEBUG) console.log('[DEBUG] Step 4: Redis item retrieved successfully:', { adm_id: items?.adm_id, company_id: items?.company_id });
+      if (DEBUG) cronLogger.info('[DEBUG] Step 4: Redis item retrieved successfully:', { adm_id: items?.adm_id, company_id: items?.company_id });
 
       // ========================================
       // KYC ENFORCEMENT: Block payment processing if merchant's KYC required but not approved
@@ -1326,7 +1326,7 @@ const createCryptoPayment = async (
               
               if (now >= gracePeriodEnd) {
                 // Grace period expired - block checkout
-                console.log(`[KYC BLOCK - Checkout] Merchant ${merchantUserId} grace period expired. Volume: $${merchantTotalVolume.toFixed(2)}, KYC status: ${merchantKycStatus}`);
+                cronLogger.info(`[KYC BLOCK - Checkout] Merchant ${merchantUserId} grace period expired. Volume: $${merchantTotalVolume.toFixed(2)}, KYC status: ${merchantKycStatus}`);
                 
                 return errorResponseHelper(
                   res,
@@ -1336,11 +1336,11 @@ const createCryptoPayment = async (
               } else {
                 // Within grace period - allow but log
                 const daysRemaining = Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                console.log(`[KYC GRACE - Checkout] Merchant ${merchantUserId} within grace period. Days remaining: ${daysRemaining}`);
+                cronLogger.info(`[KYC GRACE - Checkout] Merchant ${merchantUserId} within grace period. Days remaining: ${daysRemaining}`);
               }
             }
           } else {
-            console.log(`[KYC OK - Checkout] Merchant ${merchantUserId} KYC approved. Volume: $${merchantTotalVolume.toFixed(2)}`);
+            cronLogger.info(`[KYC OK - Checkout] Merchant ${merchantUserId} KYC approved. Volume: $${merchantTotalVolume.toFixed(2)}`);
           }
         }
       }
@@ -1353,14 +1353,14 @@ const createCryptoPayment = async (
         const expiresAt = new Date(items.expires_at);
         const now = new Date();
         if (expiresAt.getTime() <= now.getTime()) {
-          console.log(`[Expiry Check] Payment link expired at ${items.expires_at}, current time: ${now.toISOString()}`);
+          cronLogger.info(`[Expiry Check] Payment link expired at ${items.expires_at}, current time: ${now.toISOString()}`);
           return errorResponseHelper(
             res,
             410,
             "This payment link has expired and can no longer be used for payments."
           );
         }
-        console.log(`[Expiry Check] Payment link valid until ${items.expires_at}`);
+        cronLogger.info(`[Expiry Check] Payment link valid until ${items.expires_at}`);
       }
 
       // Phase 11: Validate requested currency is in available_currencies list
@@ -1388,14 +1388,14 @@ const createCryptoPayment = async (
       if (availableCurrenciesList.length > 0) {
         // Check both the original and internal currency names for validation
         if (!availableCurrenciesList.includes(requestedCurrency) && !availableCurrenciesList.includes(internalCurrency)) {
-          console.log(`[Phase 11] Currency ${requestedCurrency} (internal: ${internalCurrency}) not in available list:`, availableCurrenciesList);
+          cronLogger.info(`[Phase 11] Currency ${requestedCurrency} (internal: ${internalCurrency}) not in available list:`, availableCurrenciesList);
           return errorResponseHelper(
             res,
             400,
             `${requestedCurrency} is not available for this payment. Available currencies: ${availableCurrenciesList.join(', ')}`
           );
         }
-        console.log(`[Phase 11] Currency ${requestedCurrency} (internal: ${internalCurrency}) validated against available list:`, availableCurrenciesList);
+        cronLogger.info(`[Phase 11] Currency ${requestedCurrency} (internal: ${internalCurrency}) validated against available list:`, availableCurrenciesList);
       }
       
       // Use internal currency name for wallet lookup and payment processing
@@ -1417,7 +1417,7 @@ const createCryptoPayment = async (
           
           // If trying to switch to DIFFERENT currency - BLOCK
           if (incompletePayment.currency !== requestedCurrency) {
-            console.log(`[Phase 12] ❌ Blocking currency switch: Incomplete ${incompletePayment.currency} payment exists, requested ${requestedCurrency}`);
+            cronLogger.info(`[Phase 12] ❌ Blocking currency switch: Incomplete ${incompletePayment.currency} payment exists, requested ${requestedCurrency}`);
             return errorResponseHelper(
               res,
               400,
@@ -1427,7 +1427,7 @@ const createCryptoPayment = async (
           }
           
           // If SAME currency - return existing address info (don't create new)
-          console.log(`[Phase 12] ✓ Same currency requested, returning existing incomplete payment address`);
+          cronLogger.info(`[Phase 12] ✓ Same currency requested, returning existing incomplete payment address`);
           return successResponseHelper(res, 200, "Continue existing payment", {
             address: incompletePayment.address,
             amount: incompletePayment.pending_amount,
@@ -1441,7 +1441,7 @@ const createCryptoPayment = async (
           });
         } else {
           // Grace period expired - clear incomplete payment info and allow new payment
-          console.log(`[Phase 12] Grace period expired for incomplete payment, clearing and allowing new payment`);
+          cronLogger.info(`[Phase 12] Grace period expired for incomplete payment, clearing and allowing new payment`);
           const updatedItems = { ...items };
           delete updatedItems.incomplete_payment;
           await setRedisItem("customer-" + data.uniqueRef, updatedItems);
@@ -1457,7 +1457,7 @@ const createCryptoPayment = async (
         
         // Only return existing address if it's still pending (not completed/expired)
         if (existingRedisData && existingRedisData.status === 'pending') {
-          console.log(`[Phase 12.1] ✓ Returning existing address for same payment link + currency: ${existingAddress}${existingDestTag ? ` (tag: ${existingDestTag})` : ''}`);
+          cronLogger.info(`[Phase 12.1] ✓ Returning existing address for same payment link + currency: ${existingAddress}${existingDestTag ? ` (tag: ${existingDestTag})` : ''}`);
           return successResponseHelper(res, 200, "Using existing payment address", {
             qr_code: items.active_crypto_address.qr_code,
             address: existingAddress,
@@ -1474,7 +1474,7 @@ const createCryptoPayment = async (
           });
         } else {
           // Address exists but status changed (completed/expired) - clear and generate new
-          console.log(`[Phase 12.1] Existing address status changed, clearing active_crypto_address`);
+          cronLogger.info(`[Phase 12.1] Existing address status changed, clearing active_crypto_address`);
           const updatedItems = { ...items };
           delete updatedItems.active_crypto_address;
           await setRedisItem("customer-" + data.uniqueRef, updatedItems);
@@ -1482,14 +1482,14 @@ const createCryptoPayment = async (
       } else if (items.active_crypto_address && items.active_crypto_address.currency !== requestedCurrency) {
         // User is switching to a DIFFERENT currency (allowed since no incomplete_payment)
         // Clear the old active_crypto_address since they're changing currency
-        console.log(`[Phase 12.1] User switching from ${items.active_crypto_address.currency} to ${requestedCurrency}, clearing old active_crypto_address`);
+        cronLogger.info(`[Phase 12.1] User switching from ${items.active_crypto_address.currency} to ${requestedCurrency}, clearing old active_crypto_address`);
         const updatedItemsForSwitch = { ...items };
         delete updatedItemsForSwitch.active_crypto_address;
         await setRedisItem("customer-" + data.uniqueRef, updatedItemsForSwitch);
       }
 
       // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
-      console.log(`[Phase 10 Validation] Checking wallet for currency: ${requestedCurrency}, user_id: ${items.adm_id}, company_id: ${items.company_id}`);
+      cronLogger.info(`[Phase 10 Validation] Checking wallet for currency: ${requestedCurrency}, user_id: ${items.adm_id}, company_id: ${items.company_id}`);
       
       // Parse user_id safely
       const userId = parseInt(items.adm_id);
@@ -1511,12 +1511,12 @@ const createCryptoPayment = async (
         if (!isNaN(companyId)) {
           whereClause.company_id = companyId;
         }
-        console.log('[Phase 10 Validation] Where clause (with company_id):', JSON.stringify(whereClause));
+        cronLogger.info('[Phase 10 Validation] Where clause (with company_id):', JSON.stringify(whereClause));
         hasWallet = await userWalletModel.findOne({ where: whereClause });
         
         // MULTI-TENANT FIX: If company_id is set but no wallet found, DO NOT fallback
         if (!hasWallet) {
-          console.error(`[Phase 10 Validation] ❌ MULTI-TENANT: No wallet found for company_id ${whereClause.company_id}. NOT falling back.`);
+          cronLogger.error(`[Phase 10 Validation] ❌ MULTI-TENANT: No wallet found for company_id ${whereClause.company_id}. NOT falling back.`);
           return errorResponseHelper(
             res,
             400,
@@ -1525,16 +1525,16 @@ const createCryptoPayment = async (
         }
       } else {
         // If company_id not provided, try to find wallet with null company_id first (legacy support)
-        console.log('[Phase 10 Validation] No company_id provided, searching with null company_id');
+        cronLogger.info('[Phase 10 Validation] No company_id provided, searching with null company_id');
         
         // First try with null company_id (legacy wallets)
         whereClause.company_id = null;
-        console.log('[Phase 10 Validation] Where clause (null company_id):', JSON.stringify(whereClause));
+        cronLogger.info('[Phase 10 Validation] Where clause (null company_id):', JSON.stringify(whereClause));
         hasWallet = await userWalletModel.findOne({ where: whereClause });
         
         // If not found with null, get the FIRST company for this user and use its wallet
         if (!hasWallet) {
-          console.log('[Phase 10 Validation] No null company_id wallet, finding user default company');
+          cronLogger.info('[Phase 10 Validation] No null company_id wallet, finding user default company');
           // Parse adm_id to integer for proper SQL comparison
           const admIdInt = parseInt(String(items.adm_id), 10);
           if (isNaN(admIdInt)) {
@@ -1547,18 +1547,18 @@ const createCryptoPayment = async (
           
           if (userCompany) {
             whereClause.company_id = userCompany.dataValues.company_id;
-            console.log('[Phase 10 Validation] Using default company_id:', whereClause.company_id);
+            cronLogger.info('[Phase 10 Validation] Using default company_id:', whereClause.company_id);
             hasWallet = await userWalletModel.findOne({ where: whereClause });
             
             if (hasWallet) {
               items.company_id = userCompany.dataValues.company_id;
-              console.log('[Phase 10 Validation] Found wallet with default company_id:', items.company_id);
+              cronLogger.info('[Phase 10 Validation] Found wallet with default company_id:', items.company_id);
             }
           }
         }
       }
       
-      console.log('[Phase 10 Validation] Wallet found:', hasWallet ? 'YES' : 'NO');
+      cronLogger.info('[Phase 10 Validation] Wallet found:', hasWallet ? 'YES' : 'NO');
 
       if (!hasWallet) {
         return errorResponseHelper(
@@ -1595,9 +1595,9 @@ const createCryptoPayment = async (
             fixedDecimal: true,
           });
           baseAmountUSD = Number(usdConversion[0]?.amount || baseAmountOriginal);
-          console.log(`[createCryptoPayment] Converted ${baseAmountOriginal} ${baseCurrency} → ${baseAmountUSD} USD for fee calculation`);
+          cronLogger.info(`[createCryptoPayment] Converted ${baseAmountOriginal} ${baseCurrency} → ${baseAmountUSD} USD for fee calculation`);
         } catch (conversionError) {
-          console.warn(`[createCryptoPayment] USD conversion failed, using original amount:`, conversionError);
+          cronLogger.warn(`[createCryptoPayment] USD conversion failed, using original amount:`, conversionError);
           // Fallback to original amount if conversion fails
         }
       }
@@ -1622,14 +1622,14 @@ const createCryptoPayment = async (
       
       // TAX HANDLING: If apply_tax is enabled, calculate tax based on customer location
       if (items.apply_tax) {
-        console.log(`[createCryptoPayment] Tax enabled, detecting customer location...`);
+        cronLogger.info(`[createCryptoPayment] Tax enabled, detecting customer location...`);
         
         // Get customer IP and detect country
         const clientIP = getClientIP(req);
         const geoLocation = await getCountryFromIP(clientIP, req.headers);
         
         if (geoLocation && geoLocation.country_code) {
-          console.log(`[createCryptoPayment] Detected country: ${geoLocation.country_name} (${geoLocation.country_code})`);
+          cronLogger.info(`[createCryptoPayment] Detected country: ${geoLocation.country_name} (${geoLocation.country_code})`);
           
           // Calculate tax using the same function as getData (in original currency)
           const calculatedTax = await calculateTaxForCheckout(
@@ -1650,11 +1650,11 @@ const createCryptoPayment = async (
             } else {
               taxAmountUSD = taxAmount;
             }
-            console.log(`[createCryptoPayment] Tax calculated: ${taxInfo.tax_rate}% ${taxInfo.tax_acronym} = ${taxAmount} ${baseCurrency} (${taxAmountUSD.toFixed(2)} USD)`);
-            console.log(`[createCryptoPayment] Total with tax: ${taxInfo.total} ${baseCurrency}`);
+            cronLogger.info(`[createCryptoPayment] Tax calculated: ${taxInfo.tax_rate}% ${taxInfo.tax_acronym} = ${taxAmount} ${baseCurrency} (${taxAmountUSD.toFixed(2)} USD)`);
+            cronLogger.info(`[createCryptoPayment] Total with tax: ${taxInfo.total} ${baseCurrency}`);
           }
         } else {
-          console.log(`[createCryptoPayment] Could not detect customer country, no tax applied`);
+          cronLogger.info(`[createCryptoPayment] Could not detect customer country, no tax applied`);
         }
       }
       
@@ -1673,7 +1673,7 @@ const createCryptoPayment = async (
         const cachedRate = items?.cached_transfer_rate ? parseFloat(String(items.cached_transfer_rate)) : 0;
         const cachedCurrency = items?.cached_crypto_currency || null;
         const hasCachedRate = cachedRate > 0 && cachedCurrency === requestedCurrency && taxAmount === 0;
-        console.log(`[createCryptoPayment] Cache debug: rate=${items?.cached_transfer_rate}, currency=${items?.cached_crypto_currency}, parsed=${cachedRate}, requested=${requestedCurrency}, tax=${taxAmount}, hasCached=${hasCachedRate}`);
+        cronLogger.info(`[createCryptoPayment] Cache debug: rate=${items?.cached_transfer_rate}, currency=${items?.cached_crypto_currency}, parsed=${cachedRate}, requested=${requestedCurrency}, tax=${taxAmount}, hasCached=${hasCachedRate}`);
         
         // Stablecoin shortcut: USD ↔ USDT/USDC is exactly 1:1 (no exchange rate variance)
         const normalizedCrypto = requestedCurrency.replace(/-.*$/, '').toUpperCase(); // USDT-TRC20 → USDT
@@ -1684,12 +1684,12 @@ const createCryptoPayment = async (
           // Stablecoins are pegged 1:1 to USD — no rate conversion needed
           total_crypto_amount = totalAmountWithTax;
           exchange_rate = 1;
-          console.log(`[createCryptoPayment] 💵 Stablecoin 1:1 peg: $${totalAmountWithTax} USD = ${total_crypto_amount} ${requestedCurrency} (exact)`);
+          cronLogger.info(`[createCryptoPayment] 💵 Stablecoin 1:1 peg: $${totalAmountWithTax} USD = ${total_crypto_amount} ${requestedCurrency} (exact)`);
         } else if (hasCachedRate) {
           // Use cached rate — same currency, no tax adjustment needed
           total_crypto_amount = totalAmountWithTax * cachedRate;
           exchange_rate = cachedRate;
-          console.log(`[createCryptoPayment] Using cached exchange rate: 1 ${baseCurrency} = ${cachedRate} ${requestedCurrency} (saved ~200ms)`);
+          cronLogger.info(`[createCryptoPayment] Using cached exchange rate: 1 ${baseCurrency} = ${cachedRate} ${requestedCurrency} (saved ~200ms)`);
         } else {
           // Fresh conversion needed (different currency, tax involved, or no cache)
           const cryptoRates = await currencyConvert({
@@ -1713,7 +1713,7 @@ const createCryptoPayment = async (
           ? total_crypto_amount * (taxAmount / totalAmountWithTax)
           : 0;
         
-        console.log(`[createCryptoPayment] Crypto amount calculated:
+        cronLogger.info(`[createCryptoPayment] Crypto amount calculated:
           - Base amount: ${baseAmountOriginal} ${baseCurrency} (${baseAmountUSD.toFixed(2)} USD)
           - Tax amount: ${taxAmount} ${baseCurrency}
           - Total with tax: ${totalAmountWithTax} ${baseCurrency}
@@ -1732,7 +1732,7 @@ const createCryptoPayment = async (
         // Fee percentage for crypto conversion (based on USD fee / USD amount)
         const feePercentage = totalDeduction / baseAmountUSD;
         
-        console.log(`[createCryptoPayment] Fee calculation (USD-based for tier accuracy):
+        cronLogger.info(`[createCryptoPayment] Fee calculation (USD-based for tier accuracy):
           - Base original: ${baseAmountOriginal} ${baseCurrency}
           - Base USD: $${baseAmountUSD.toFixed(2)}
           - Fee breakdown: 1.5%=$${transactionFee.toFixed(2)} + Fixed=$${fixedFee.toFixed(2)}
@@ -1754,7 +1754,7 @@ const createCryptoPayment = async (
           merchant_amount_crypto = merchant_base_crypto + tax_amount_crypto;  // Merchant gets base + tax
           crypto_amount = merchant_base_crypto + total_fees_crypto + tax_amount_crypto;  // Customer pays base + fees + tax
           
-          console.log(`[createCryptoPayment] CUSTOMER PAYS FEES mode (with tax):
+          cronLogger.info(`[createCryptoPayment] CUSTOMER PAYS FEES mode (with tax):
             - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base + fees + tax)
             - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (base + tax)
             - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (${(feePercentage * 100).toFixed(2)}% of base)
@@ -1771,14 +1771,14 @@ const createCryptoPayment = async (
           merchant_amount_crypto = merchant_base_after_fees + tax_amount_crypto;
           total_fees_crypto = base_crypto_amount * feePercentage;
           
-          console.log(`[createCryptoPayment] COMPANY PAYS FEES mode (with tax):
+          cronLogger.info(`[createCryptoPayment] COMPANY PAYS FEES mode (with tax):
             - Customer pays: ${crypto_amount.toFixed(8)} ${requestedCurrency} (base + tax)
             - Merchant receives: ${merchant_amount_crypto.toFixed(8)} ${requestedCurrency} (${((1 - feePercentage) * 100).toFixed(2)}% base + tax)
             - Admin fees: ${total_fees_crypto.toFixed(8)} ${requestedCurrency} (${(feePercentage * 100).toFixed(2)}% of base)
             - Tax collected: ${tax_amount_crypto.toFixed(8)} ${requestedCurrency} (included in merchant amount)`);
         }
       } catch (calcError) {
-        console.error('[createCryptoPayment] Crypto/fee calculation error:', calcError);
+        cronLogger.error('[createCryptoPayment] Crypto/fee calculation error:', calcError);
         // Fallback to simple 2% if calculation fails
         crypto_amount = data.amount || 0;
         const fallbackFeePercent = parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0') / 100;
@@ -1814,7 +1814,7 @@ const createCryptoPayment = async (
         }),
       };
 
-      console.log("paymentRes=============>", paymentRes, uniqueRef, {
+      cronLogger.info("paymentRes=============>", paymentRes, uniqueRef, {
         mode: paymentTypes.CRYPTO,
         amount: crypto_amount,
         merchant_amount: merchant_amount_crypto,
@@ -1901,7 +1901,7 @@ const createCryptoPayment = async (
           ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
         };
         await setRedisItem(uniqueRef, updatedCustomerData);
-        console.log(`[Phase 12.1] Stored active_crypto_address for ${uniqueRef}: ${paymentRes.address}${paymentRes.destination_tag ? `:${paymentRes.destination_tag}` : ''}`);
+        cronLogger.info(`[Phase 12.1] Stored active_crypto_address for ${uniqueRef}: ${paymentRes.address}${paymentRes.destination_tag ? `:${paymentRes.destination_tag}` : ''}`);
       }
 
       // Also update the temp address record in database for partial payment handling
@@ -1922,7 +1922,7 @@ const createCryptoPayment = async (
       throw { message: "Please enter valid currency!" };
     }
   } catch (e) {
-    console.log("####e", e);
+    cronLogger.info("####e", e);
     const message = getErrorMessage(e);
     apiLogger.error(
       message,
@@ -1943,7 +1943,7 @@ const authStep = async (req: express.Request, res: express.Response) => {
       if (value.paymentType === paymentTypes.CARD) {
         const tempData = await getRedisItem("customer-" + userData.ref);
 
-        console.log(value.uniqueRef);
+        cronLogger.info(value.uniqueRef);
         if (value.mode === "otp") {
           const flw_ref = tempData?.flw_ref;
           const res = await flw.Charge.validate({
@@ -1951,7 +1951,7 @@ const authStep = async (req: express.Request, res: express.Response) => {
             flw_ref,
           });
 
-          console.log(res);
+          cronLogger.info(res);
           const transactionId = res.data.id;
           const { data }: IVerifyResponse = await flw.Transaction.verify({
             id: transactionId,
@@ -1968,7 +1968,7 @@ const authStep = async (req: express.Request, res: express.Response) => {
             userData,
             true
           );
-          console.log(paymentRes);
+          cronLogger.info(paymentRes);
           if (
             paymentRes.status !== "error" &&
             paymentRes.data?.status !== "successful"
@@ -2002,7 +2002,7 @@ const authStep = async (req: express.Request, res: express.Response) => {
       throw { message: "Please enter valid data!" };
     }
   } catch (e) {
-    console.log(e);
+    cronLogger.info(e);
     const message = getErrorMessage(e);
     apiLogger.error(
       message,
@@ -2021,13 +2021,13 @@ const verifyPayment = async (req: express.Request, res: express.Response) => {
     const tempData = await getRedisItem(uniqueRef);
 
     let finalRes;
-    console.log(tempData, uniqueRef);
+    cronLogger.info(tempData, uniqueRef);
     const transactionId = tempData?.id;
     if (transactionId) {
       const { data }: IVerifyResponse = await flw.Transaction.verify({
         id: transactionId,
       });
-      console.log(data);
+      cronLogger.info(data);
       finalRes = {
         txRef: uniqueRef,
       };
@@ -2054,14 +2054,14 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
 
     const tempData = await getRedisItem(uniqueRef);
 
-    console.log(tempData, uniqueRef);
+    cronLogger.info(tempData, uniqueRef);
     const transactionId = tempData?.id;
     if (transactionId) {
       if (tempData?.pathType === "createLink") {
         const { data }: IVerifyResponse = await flw.Transaction.verify({
           id: transactionId,
         });
-        console.log(data);
+        cronLogger.info(data);
 
         const linkData = (
           await paymentLinkModel.findOne({
@@ -2117,10 +2117,10 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
               data.amount_settled.toFixed(2)
             );
             
-            console.log(`[Admin Fee Notification - Card] Sent email for ${totalFee} ${data.currency} from Company ${linkData?.company_id || 'N/A'}`);
+            cronLogger.info(`[Admin Fee Notification - Card] Sent email for ${totalFee} ${data.currency} from Company ${linkData?.company_id || 'N/A'}`);
           }
         } catch (emailError) {
-          console.error("[Admin Fee Notification - Card] Email failed:", emailError);
+          cronLogger.error("[Admin Fee Notification - Card] Email failed:", emailError);
         }
 
         await userWalletModel.update(
@@ -2223,7 +2223,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           const { data }: IVerifyResponse = await flw.Transaction.verify({
             id: transactionId,
           });
-          console.log(data);
+          cronLogger.info(data);
 
           const customerPayload = {
             id: crypto.randomUUID(),
@@ -2303,10 +2303,10 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
                 data.amount_settled.toFixed(2)
               );
               
-              console.log(`[Admin Fee Notification - CreatePayment] Sent email for ${totalFee} ${data.currency} from Company ${tempData.company_id || 'N/A'}`);
+              cronLogger.info(`[Admin Fee Notification - CreatePayment] Sent email for ${totalFee} ${data.currency} from Company ${tempData.company_id || 'N/A'}`);
             }
           } catch (emailError) {
-            console.error("[Admin Fee Notification - CreatePayment] Email failed:", emailError);
+            cronLogger.error("[Admin Fee Notification - CreatePayment] Email failed:", emailError);
           }
 
           const customerWalletData = await customerWalletModel.findOne({
@@ -2381,7 +2381,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
               Number(userPayload.id),
               Number(tempData.company_id)
             ).catch(err => {
-              console.error("Failed to generate invoice:", err);
+              cronLogger.error("Failed to generate invoice:", err);
             });
           }
 
@@ -2484,7 +2484,7 @@ const cardPayment = async (
 ) => {
   const expiry = data.expiry.split("/");
   const uniqueRef = "customer-" + tokenData.ref;
-  console.log("from card=============>", data);
+  cronLogger.info("from card=============>", data);
   const payload = {
     card_number: data.number,
     expiry_month: expiry[0],
@@ -2513,7 +2513,7 @@ const cardPayment = async (
     redirect_url: (process.env.CHECKOUT_URL || '').trim() + "/pay/verify",
   };
 
-  console.log("payload==========>", payload);
+  cronLogger.info("payload==========>", payload);
 
   const paymentRes: FW_API_Response = await flw.Charge.card(payload);
 
@@ -2530,7 +2530,7 @@ const bankTransfer = async (data: IFundData, tokenData: IUserType) => {
     tx_ref: uniqueRef,
   };
 
-  console.log("payload==========>", payload);
+  cronLogger.info("payload==========>", payload);
 
   const paymentRes: FW_API_Response = await flw.Charge.bank_transfer(payload);
 
@@ -2547,7 +2547,7 @@ const bankAccount = async (data: IFundData, tokenData: IUserType) => {
     tx_ref: uniqueRef,
   };
 
-  console.log("payload==========>", payload);
+  cronLogger.info("payload==========>", payload);
 
   let paymentRes: FW_API_Response;
 
@@ -2568,7 +2568,7 @@ const bankAccount = async (data: IFundData, tokenData: IUserType) => {
         }
       );
     } catch (e) {
-      console.log(e);
+      cronLogger.info(e);
     }
   }
 
@@ -2585,7 +2585,7 @@ const googleApplePay = async (data: IFundData, tokenData: IUserType) => {
     tx_ref: uniqueRef + "_success_mock",
   };
 
-  console.log("payload==========>", payload);
+  cronLogger.info("payload==========>", payload);
 
   const type =
     data.paymentType === paymentTypes.GOOGLE_PAY ? "googlepay" : "applepay";
@@ -2617,7 +2617,7 @@ const USSD = async (data: IFundData, tokenData: IUserType) => {
     tx_ref: uniqueRef,
   };
 
-  console.log("payload==========>", payload);
+  cronLogger.info("payload==========>", payload);
 
   const paymentRes = await flw.Charge.ussd(payload);
 
@@ -2644,7 +2644,7 @@ const MobileMoney = async (data: IFundData, tokenData: IUserType) => {
     }),
   };
 
-  console.log("payload==========>", payload);
+  cronLogger.info("payload==========>", payload);
   let paymentRes;
   if (data.currency === "KES")
     paymentRes = await flw.MobileMoney.mpesa(payload);
@@ -2670,7 +2670,7 @@ const QRCode = async (data: IFundData, tokenData: IUserType) => {
     is_nqr: "1",
   };
 
-  console.log("payload==========>", payload);
+  cronLogger.info("payload==========>", payload);
 
   const resData = await axios.post(
     "https://api.flutterwave.com/v3/charges?type=qr",
@@ -2704,9 +2704,9 @@ const Crypto = async (
   
   // Use merchant pool for supported currencies
   if (MERCHANT_POOL_CRYPTO_TYPES.includes(currency)) {
-    console.log(`[Crypto] Using MERCHANT POOL for ${currency} payment`);
-    console.log(`[Crypto]   - Merchant (user_id): ${userId}`);
-    console.log(`[Crypto]   - Company: ${companyId}`);
+    cronLogger.info(`[Crypto] Using MERCHANT POOL for ${currency} payment`);
+    cronLogger.info(`[Crypto]   - Merchant (user_id): ${userId}`);
+    cronLogger.info(`[Crypto]   - Company: ${companyId}`);
     
     // Validate IDs
     if (!userId || isNaN(Number(userId))) {
@@ -2739,7 +2739,7 @@ const Crypto = async (
     
     const address = poolAddress.dataValues.wallet_address;
     const destinationTag = poolAddress.dataValues.destination_tag || null;
-    console.log(`[Crypto] ✅ Reserved merchant pool address: ${address}${destinationTag ? ` (tag: ${destinationTag})` : ''}`);
+    cronLogger.info(`[Crypto] ✅ Reserved merchant pool address: ${address}${destinationTag ? ` (tag: ${destinationTag})` : ''}`);
     
     // Generate QR code — for tag-based chains, include the destination tag in the QR
     let qr_code;
@@ -2776,7 +2776,7 @@ const Crypto = async (
       customer_id: (tokenData.customer_id && !isNaN(Number(tokenData.customer_id))) ? Number(tokenData.customer_id) : null,
       company_id: (companyId && !isNaN(Number(companyId))) ? Number(companyId) : null,
     };
-    console.log("[Crypto] Merchant pool userPayload:", JSON.stringify(userPayload));
+    cronLogger.info("[Crypto] Merchant pool userPayload:", JSON.stringify(userPayload));
     
     await userTransactionModel.create({ ...userPayload });
     
@@ -2795,7 +2795,7 @@ const Crypto = async (
   }
   
   // Fallback: Use legacy admin wallet system for unsupported currencies
-  console.log(`[Crypto] Using LEGACY admin wallet for ${currency} payment`);
+  cronLogger.info(`[Crypto] Using LEGACY admin wallet for ${currency} payment`);
   
   const adminWallet = await adminWalletModel.findOne({
     where: {
@@ -2838,10 +2838,10 @@ const Crypto = async (
 
     if (currency === "BCH") {
       address = address.split(":")[1];
-      console.log(address);
+      cronLogger.info(address);
     }
 
-    console.log("address: ", address);
+    cronLogger.info("address: ", address);
 
     // Try to create subscription, but don't fail if Tatum API has issues
     let id = null;
@@ -2852,9 +2852,9 @@ const Crypto = async (
         onlyCrypto
       );
       id = subscription.id;
-      console.log("Tatum subscription created:", id);
+      cronLogger.info("Tatum subscription created:", id);
     } catch (subscriptionError) {
-      console.log("⚠️ Tatum subscription failed (using local monitoring):", subscriptionError.message);
+      cronLogger.info("⚠️ Tatum subscription failed (using local monitoring):", subscriptionError.message);
       id = `local-${Date.now()}`; // Use local subscription ID as fallback
     }
 
@@ -2925,7 +2925,7 @@ const Crypto = async (
       customer_id: (tokenData.customer_id && !isNaN(Number(tokenData.customer_id))) ? Number(tokenData.customer_id) : null,
       company_id: (tokenData.company_id && !isNaN(Number(tokenData.company_id))) ? Number(tokenData.company_id) : null,
     };
-    console.log("Crypto userPayload:", JSON.stringify(userPayload));
+    cronLogger.info("Crypto userPayload:", JSON.stringify(userPayload));
 
     await userTransactionModel.create({ ...userPayload });
     await adminWalletModel.update(
@@ -3012,7 +3012,7 @@ const settleCryptoTransaction = async ({
     if (!userAmount || userAmount <= 0 || !userAddress) {
       // No merchant amount (under threshold or error) - nothing to transfer now
       // Admin fee stays in temp address for sweep cron
-      console.log(`[settleCryptoTransaction] No merchant transfer needed. Admin fee ${receivedAmount} ${currency} stays in temp address for sweep.`);
+      cronLogger.info(`[settleCryptoTransaction] No merchant transfer needed. Admin fee ${receivedAmount} ${currency} stays in temp address for sweep.`);
       return {
         transactionDetails: null,
         userTransactionDetails: null,
@@ -3075,7 +3075,7 @@ const settleCryptoTransaction = async ({
         merchantTransferGasUSD = Number(networkFee.feeInUSD) || 0;
         // Sweep is same type of token transfer on same chain → same gas estimate
         estimatedSweepGasUSD = merchantTransferGasUSD;
-        console.log(`[settleCryptoTransaction] Token ${currency}: Transfer gas ≈ $${merchantTransferGasUSD.toFixed(4)}, Sweep gas ≈ $${estimatedSweepGasUSD.toFixed(4)} (both deducted from merchant)`);
+        cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Transfer gas ≈ $${merchantTransferGasUSD.toFixed(4)}, Sweep gas ≈ $${estimatedSweepGasUSD.toFixed(4)} (both deducted from merchant)`);
       } catch (feeErr) {
         // Fallback: convert raw native fee to USD using price lookup
         const rawFee = Number(fees?.fast ?? fees?.slow ?? 0);
@@ -3084,11 +3084,11 @@ const settleCryptoTransaction = async ({
           const nativePrice = nativePrices[wallet_type] || 1;
           merchantTransferGasUSD = rawFee * nativePrice;
           estimatedSweepGasUSD = merchantTransferGasUSD; // Same chain, same tx type
-          console.warn(`[settleCryptoTransaction] Token ${currency}: Fallback gas: ${rawFee} ${wallet_type} × $${nativePrice} = $${merchantTransferGasUSD.toFixed(4)} per tx (×2 for transfer + sweep)`);
+          cronLogger.warn(`[settleCryptoTransaction] Token ${currency}: Fallback gas: ${rawFee} ${wallet_type} × $${nativePrice} = $${merchantTransferGasUSD.toFixed(4)} per tx (×2 for transfer + sweep)`);
         } catch {
           merchantTransferGasUSD = rawFee;
           estimatedSweepGasUSD = rawFee;
-          console.warn(`[settleCryptoTransaction] Token ${currency}: Using raw native fee ${rawFee} as token deduction (price lookup failed)`);
+          cronLogger.warn(`[settleCryptoTransaction] Token ${currency}: Using raw native fee ${rawFee} as token deduction (price lookup failed)`);
         }
       }
 
@@ -3098,7 +3098,7 @@ const settleCryptoTransaction = async ({
         throw new Error(`Merchant token amount after gas deduction is non-positive. Amount: ${userAmount}, TransferGas: ${merchantTransferGasUSD}, SweepGas: ${estimatedSweepGasUSD}`);
       }
 
-      console.log(`[settleCryptoTransaction] Token ${currency}: Merchant gets ${merchantSendAmount} (was ${userAmount}, transfer gas $${merchantTransferGasUSD.toFixed(4)} + sweep gas $${estimatedSweepGasUSD.toFixed(4)} = $${totalGasDeductionToken.toFixed(4)} total)`);
+      cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Merchant gets ${merchantSendAmount} (was ${userAmount}, transfer gas $${merchantTransferGasUSD.toFixed(4)} + sweep gas $${estimatedSweepGasUSD.toFixed(4)} = $${totalGasDeductionToken.toFixed(4)} total)`);
 
       // === SmartGas: Fund gas (TRX/ETH) to temp address BEFORE token transfer ===
       try {
@@ -3107,17 +3107,17 @@ const settleCryptoTransaction = async ({
             where: { wallet_address: fromAddress },
           });
           if (poolAddressRecord) {
-            console.log(`[settleCryptoTransaction] 🔧 SmartGas: Checking ${wallet_type} gas for ${currency} merchant transfer (${merchantSendAmount} → ${userAddress})...`);
+            cronLogger.info(`[settleCryptoTransaction] 🔧 SmartGas: Checking ${wallet_type} gas for ${currency} merchant transfer (${merchantSendAmount} → ${userAddress})...`);
             gasFundingResult = await merchantPoolService.fundGasIfNeeded(
               poolAddressRecord as unknown as { dataValues: { wallet_address: string }; update: (data: Record<string, unknown>) => Promise<void> },
               currency, merchantSendAmount, userAddress
             );
           } else {
-            console.warn(`[settleCryptoTransaction] ⚠️ Pool address record not found for ${fromAddress}, skipping SmartGas`);
+            cronLogger.warn(`[settleCryptoTransaction] ⚠️ Pool address record not found for ${fromAddress}, skipping SmartGas`);
           }
         } else {
           // Legacy temp address — use lightweight wrapper (no DB gas tracking)
-          console.log(`[settleCryptoTransaction] 🔧 SmartGas: Checking ${wallet_type} gas for legacy ${currency} transfer...`);
+          cronLogger.info(`[settleCryptoTransaction] 🔧 SmartGas: Checking ${wallet_type} gas for legacy ${currency} transfer...`);
           gasFundingResult = await merchantPoolService.fundGasIfNeeded(
             { dataValues: { wallet_address: fromAddress }, update: async () => {} },
             currency, merchantSendAmount, userAddress
@@ -3126,22 +3126,22 @@ const settleCryptoTransaction = async ({
 
         // Wait for gas funding TX to confirm before attempting the token transfer
         if (gasFundingResult.funded && gasFundingResult.txId) {
-          console.log(`[settleCryptoTransaction] ⏳ Waiting for gas funding TX ${gasFundingResult.txId} confirmation (${wallet_type})...`);
+          cronLogger.info(`[settleCryptoTransaction] ⏳ Waiting for gas funding TX ${gasFundingResult.txId} confirmation (${wallet_type})...`);
           const gasConfirmation = await tatumApi.waitForTransactionConfirmation(
             gasFundingResult.txId,
             wallet_type,
             30000  // 30s timeout — TRX ~3s blocks, ETH ~12s blocks
           );
           if (gasConfirmation.confirmed) {
-            console.log(`[settleCryptoTransaction] ✅ Gas funding confirmed in block ${gasConfirmation.blockNumber}`);
+            cronLogger.info(`[settleCryptoTransaction] ✅ Gas funding confirmed in block ${gasConfirmation.blockNumber}`);
           } else {
-            console.warn(`[settleCryptoTransaction] ⚠️ Gas funding TX not confirmed in timeout — proceeding with retry logic`);
+            cronLogger.warn(`[settleCryptoTransaction] ⚠️ Gas funding TX not confirmed in timeout — proceeding with retry logic`);
           }
         } else if (!gasFundingResult.funded && gasFundingResult.reason) {
-          console.log(`[settleCryptoTransaction] ℹ️ SmartGas: ${gasFundingResult.reason}`);
+          cronLogger.info(`[settleCryptoTransaction] ℹ️ SmartGas: ${gasFundingResult.reason}`);
         }
       } catch (gasError) {
-        console.error(`[settleCryptoTransaction] ⚠️ SmartGas funding failed: ${getErrorMessage(gasError)} — proceeding anyway (retry may succeed)`);
+        cronLogger.error(`[settleCryptoTransaction] ⚠️ SmartGas funding failed: ${getErrorMessage(gasError)} — proceeding anyway (retry may succeed)`);
       }
       // === End SmartGas ===
 
@@ -3161,7 +3161,7 @@ const settleCryptoTransaction = async ({
 
       totalBlockchainFee = Number(fees?.fast ?? 0);
       // Record the total gas deduction (transfer + sweep) for accounting
-      console.log(`[settleCryptoTransaction] Token ${currency}: totalBlockchainFee (native gas) = ${totalBlockchainFee}, totalGasDeductionFromMerchant (USD) = $${totalGasDeductionToken.toFixed(4)} (includes sweep gas)`);
+      cronLogger.info(`[settleCryptoTransaction] Token ${currency}: totalBlockchainFee (native gas) = ${totalBlockchainFee}, totalGasDeductionFromMerchant (USD) = $${totalGasDeductionToken.toFixed(4)} (includes sweep gas)`);
 
     } else {
       // Native currency transfers
@@ -3214,7 +3214,7 @@ const settleCryptoTransaction = async ({
 
         totalBlockchainFee = feeToDeduct;
         
-        console.log(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${merchantSendAmount} + admin ${adminAmount}`);
+        cronLogger.info(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${merchantSendAmount} + admin ${adminAmount}`);
 
       } else {
         // Account-based chains (ETH, TRX, BSC, SOL, XRP, POLYGON): Single transfer to merchant only
@@ -3242,7 +3242,7 @@ const settleCryptoTransaction = async ({
           throw new Error(`Merchant amount after gas deduction is non-positive. Amount: ${userAmount}, TransferGas: ${merchantTransferGas}, SweepGas: ${estimatedSweepGas}`);
         }
 
-        console.log(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (transfer gas ${merchantTransferGas} + sweep gas ${estimatedSweepGas} = ${totalGasDeduction} deducted from merchant)`);
+        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (transfer gas ${merchantTransferGas} + sweep gas ${estimatedSweepGas} = ${totalGasDeduction} deducted from merchant)`);
 
         // Retry merchant transfer for account chains (ETH, TRX, SOL, XRP, POLYGON)
         merchantTransactionDetails = await withRetry(
@@ -3259,7 +3259,7 @@ const settleCryptoTransaction = async ({
         );
 
         totalBlockchainFee = totalGasDeduction;
-        console.log(`[settleCryptoTransaction] Account chain ${currency}: totalBlockchainFee = ${totalBlockchainFee} (includes sweep gas estimate)`);
+        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: totalBlockchainFee = ${totalBlockchainFee} (includes sweep gas estimate)`);
       }
     }
 
@@ -3268,15 +3268,15 @@ const settleCryptoTransaction = async ({
     if (["ETH", "BSC", "TRX", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20", "USDT-TRC20", "SOL", "XRP", "RLUSD", "POLYGON", "USDT-POLYGON"].includes(currency)) {
       const txHash = merchantTransactionDetails?.txId;
       if (txHash) {
-        console.log(`[settleCryptoTransaction] Waiting for TX confirmation: ${txHash}`);
+        cronLogger.info(`[settleCryptoTransaction] Waiting for TX confirmation: ${txHash}`);
         const { confirmed, blockNumber } = await tatumApi.waitForTransactionConfirmation(txHash, currency, PAYMENT_TIMING.TRANSACTION_CONFIRMATION_TIMEOUT_MS);
         
         if (!confirmed) {
-          console.error(`[settleCryptoTransaction] WARNING: TX ${txHash} not confirmed within timeout!`);
+          cronLogger.error(`[settleCryptoTransaction] WARNING: TX ${txHash} not confirmed within timeout!`);
           // Don't throw - allow flow to continue but log the issue
           // The sweep will detect unspent balance and retry later
         } else {
-          console.log(`[settleCryptoTransaction] TX ${txHash} confirmed in block ${blockNumber}`);
+          cronLogger.info(`[settleCryptoTransaction] TX ${txHash} confirmed in block ${blockNumber}`);
         }
       }
     }
@@ -3315,7 +3315,7 @@ const verifyCryptoPayment = async (
     const { address, destination_tag } = req.body;
     const userData = jwt.decode(res.locals.token) as { ref?: string; transaction_id?: string; [key: string]: unknown } | null;
     
-    console.log("[verifyCryptoPayment] Checking address:", address, destination_tag ? `tag: ${destination_tag}` : '', `session: ${userData?.ref || 'unknown'}`);
+    cronLogger.info("[verifyCryptoPayment] Checking address:", address, destination_tag ? `tag: ${destination_tag}` : '', `session: ${userData?.ref || 'unknown'}`);
     
     // SECURE: Resolve destination_tag from customer session if not provided
     // For tag-based chains (XRP, RLUSD), the same master address handles many concurrent payments.
@@ -3332,10 +3332,10 @@ const verifyCryptoPayment = async (
         const sessionTag = customerSession?.active_crypto_address?.destination_tag || customerSession?.destination_tag;
         if (sessionTag) {
           resolvedTag = Number(sessionTag);
-          console.log(`[verifyCryptoPayment] Resolved destination_tag ${resolvedTag} from session ${customerSessionKey}`);
+          cronLogger.info(`[verifyCryptoPayment] Resolved destination_tag ${resolvedTag} from session ${customerSessionKey}`);
         }
       } catch (sessionErr) {
-        console.log("[verifyCryptoPayment] Session lookup error:", sessionErr);
+        cronLogger.info("[verifyCryptoPayment] Session lookup error:", sessionErr);
       }
     }
     
@@ -3343,11 +3343,11 @@ const verifyCryptoPayment = async (
     const verifyRedisKey = resolvedTag ? getCryptoRedisKey(address, resolvedTag) : `crypto-${address}`;
     const tempData = await getRedisItem(verifyRedisKey);
     
-    console.log("[verifyCryptoPayment] Redis key:", verifyRedisKey, "data:", tempData?.status, tempData?.txId ? "has txId" : "no txId");
+    cronLogger.info("[verifyCryptoPayment] Redis key:", verifyRedisKey, "data:", tempData?.status, tempData?.txId ? "has txId" : "no txId");
     
     if (!tempData || Object.keys(tempData).length === 0) {
       // No payment data found - payment hasn't been initiated or address is invalid
-      console.log("[verifyCryptoPayment] No Redis data found for address");
+      cronLogger.info("[verifyCryptoPayment] No Redis data found for address");
       return successResponseHelper(res, 200, "Waiting for payment", {
         status: "waiting",
         message: "No payment detected yet"
@@ -3390,7 +3390,7 @@ const verifyCryptoPayment = async (
           gracePeriodMinutes = Math.min(parseInt(company.dataValues.grace_period_minutes), 30); // Max 30 minutes
         }
       } catch (e) {
-        console.log("[verifyCryptoPayment] Could not fetch merchant settings:", e);
+        cronLogger.info("[verifyCryptoPayment] Could not fetch merchant settings:", e);
       }
     }
     
@@ -3407,7 +3407,7 @@ const verifyCryptoPayment = async (
       const cryptoExpiresAt = new Date(tempData.crypto_invoice_expires_at);
       const now = new Date();
       remainingSeconds = Math.max(0, Math.floor((cryptoExpiresAt.getTime() - now.getTime()) / 1000));
-      console.log(`[verifyCryptoPayment] Using crypto invoice expiry: ${tempData.crypto_invoice_expires_at}, remaining: ${remainingSeconds}s`);
+      cronLogger.info(`[verifyCryptoPayment] Using crypto invoice expiry: ${tempData.crypto_invoice_expires_at}, remaining: ${remainingSeconds}s`);
     } else {
       // Fallback: Try to get payment link expiry (legacy behavior)
       const linkId = customerData?.payment_link_id;
@@ -3442,7 +3442,7 @@ const verifyCryptoPayment = async (
             }
           }
         } catch (e) {
-          console.log("[verifyCryptoPayment] Could not fetch payment link expiry:", e);
+          cronLogger.info("[verifyCryptoPayment] Could not fetch payment link expiry:", e);
         }
       }
     }
@@ -3480,8 +3480,8 @@ const verifyCryptoPayment = async (
       
       // FIXED: Don't re-call cryptoVerification if already processed - just return the status
       // The payment was already distributed when status became "successful"
-      console.log("[verifyCryptoPayment] Payment already successful, returning confirmed status");
-      console.log(`[verifyCryptoPayment] Overpayment check: excess=${overpaymentAmount.toFixed(8)} ${currency}, excessUsd=$${overpaymentUsd.toFixed(2)}, threshold=$${merchantOverpaymentThreshold}, significant=${isSignificantOverpayment}`);
+      cronLogger.info("[verifyCryptoPayment] Payment already successful, returning confirmed status");
+      cronLogger.info(`[verifyCryptoPayment] Overpayment check: excess=${overpaymentAmount.toFixed(8)} ${currency}, excessUsd=$${overpaymentUsd.toFixed(2)}, threshold=$${merchantOverpaymentThreshold}, significant=${isSignificantOverpayment}`);
       
       // Get redirect URL from customerData if available
       let redirectUrl = null;
@@ -3531,7 +3531,7 @@ const verifyCryptoPayment = async (
       }
 
       // DEBUG: Log the exact response being sent
-      console.log("[verifyCryptoPayment] Sending CONFIRMED response:", JSON.stringify(responseData, null, 2));
+      cronLogger.info("[verifyCryptoPayment] Sending CONFIRMED response:", JSON.stringify(responseData, null, 2));
 
       return successResponseHelper(res, 200, responseData.message as string, responseData);
     }
@@ -3560,7 +3560,7 @@ const verifyCryptoPayment = async (
         remainingAmountUsd = actualBaseAmount - paidAmountUsd;
       }
       
-      console.log(`[verifyCryptoPayment] Underpayment detected:
+      cronLogger.info(`[verifyCryptoPayment] Underpayment detected:
         - Total Paid: ${totalPaid} ${currency}
         - Original Expected: ${originalExpected} ${currency}
         - Remaining: ${remainingAmount} ${currency}
@@ -3666,7 +3666,7 @@ const verifyCryptoPayment = async (
     
     // Fallback - try original verification with the resolved tag-based key
     const result = await cryptoVerification(address, false, verifyRedisKey !== `crypto-${address}` ? verifyRedisKey : undefined);
-    console.log("result===========>", result, address);
+    cronLogger.info("result===========>", result, address);
     const { message, status } = result;
     if (status === 500) {
       errorResponseHelper(res, status, message);
@@ -3708,8 +3708,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
       });
 
       if (existingTransaction) {
-        console.warn(`[cryptoVerification] ⚠️  DUPLICATE WEBHOOK DETECTED: ${transactionId}`);
-        console.warn(`[cryptoVerification] Transaction already processed, ignoring webhook`);
+        cronLogger.warn(`[cryptoVerification] ⚠️  DUPLICATE WEBHOOK DETECTED: ${transactionId}`);
+        cronLogger.warn(`[cryptoVerification] Transaction already processed, ignoring webhook`);
         await transaction.rollback();
         return {
           status: 200,
@@ -3723,9 +3723,9 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
     if (transactionId) {
       // Validate customerData exists and has required fields
       if (!customerData || !customerData.adm_id) {
-        console.warn(`[cryptoVerification] ⚠️  Missing customerData or adm_id for address: ${address}`);
-        console.warn(`[cryptoVerification] customerData:`, JSON.stringify(customerData));
-        console.warn(`[cryptoVerification] tempData:`, JSON.stringify(tempData));
+        cronLogger.warn(`[cryptoVerification] ⚠️  Missing customerData or adm_id for address: ${address}`);
+        cronLogger.warn(`[cryptoVerification] customerData:`, JSON.stringify(customerData));
+        cronLogger.warn(`[cryptoVerification] tempData:`, JSON.stringify(tempData));
         
         // Try to find payment info from merchant pool address
         const poolAddress = await merchantTempAddressModel.findOne({
@@ -3734,7 +3734,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         });
         
         if (poolAddress && poolAddress.dataValues.owner_user_id) {
-          console.log(`[cryptoVerification] Found pool address, using owner_user_id: ${poolAddress.dataValues.owner_user_id}`);
+          cronLogger.info(`[cryptoVerification] Found pool address, using owner_user_id: ${poolAddress.dataValues.owner_user_id}`);
           customerData = customerData || {};
           customerData.adm_id = poolAddress.dataValues.owner_user_id;
           customerData.company_id = poolAddress.dataValues.current_company_id;
@@ -3755,7 +3755,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         wallet_address: { [Op.not]: null },
       };
       
-      console.log(`[cryptoVerification] Wallet lookup DEBUG:
+      cronLogger.info(`[cryptoVerification] Wallet lookup DEBUG:
         - user_id (adm_id): ${customerData.adm_id}
         - wallet_type: ${tempCurrency}
         - company_id from customerData: ${customerData.company_id}
@@ -3771,7 +3771,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
       }
       // Note: If company_id not set, we don't add it to whereClause - allowing any wallet for this user
       
-      console.log(`[cryptoVerification] Final whereClause:`, JSON.stringify(whereClause));
+      cronLogger.info(`[cryptoVerification] Final whereClause:`, JSON.stringify(whereClause));
       
       let walletData = await userWalletModel.findOne({
         where: whereClause,
@@ -3780,7 +3780,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
       
       // MULTI-TENANT FIX: Do NOT fallback without company_id - log error instead
       if (!walletData && whereClause.company_id) {
-        console.error(`[cryptoVerification] ❌ MULTI-TENANT: No wallet found for company_id ${whereClause.company_id}. NOT falling back to avoid cross-company payment routing.`);
+        cronLogger.error(`[cryptoVerification] ❌ MULTI-TENANT: No wallet found for company_id ${whereClause.company_id}. NOT falling back to avoid cross-company payment routing.`);
         // Instead of removing company_id constraint, we fail safely
         await transaction.rollback();
         return {
@@ -3791,7 +3791,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         };
       }
       
-      console.log(`[cryptoVerification] walletData result:`, walletData ? walletData.dataValues : 'NULL');
+      cronLogger.info(`[cryptoVerification] walletData result:`, walletData ? walletData.dataValues : 'NULL');
       const receivedAmount = Number(tempData?.receivedAmount ?? tempData?.amount ?? 0);
 
       let product_name;
@@ -3814,7 +3814,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         fixedDecimal: false,
       });
 
-      console.log("finalAmount=========>", finalAmount[0]);
+      cronLogger.info("finalAmount=========>", finalAmount[0]);
 
       const customerPayload = {
         id: tempData?.incomplete && tempData?.customerInternalRef ? tempData.customerInternalRef : crypto.randomUUID(),
@@ -3854,7 +3854,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             where: { temp_address_id: tempData.temp_id },
           });
           isMerchantPoolAddress = true;
-          console.log(`[cryptoVerification] Found MERCHANT POOL address: ${address}`);
+          cronLogger.info(`[cryptoVerification] Found MERCHANT POOL address: ${address}`);
         } else {
           tempAddressData = await userTempAddressModel.findOne({
             where: { temp_id: tempData.temp_id },
@@ -3869,7 +3869,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         if (merchantPoolAddress) {
           tempAddressData = merchantPoolAddress.dataValues;
           isMerchantPoolAddress = true;
-          console.log(`[cryptoVerification] Found MERCHANT POOL address by wallet: ${address}`);
+          cronLogger.info(`[cryptoVerification] Found MERCHANT POOL address by wallet: ${address}`);
         } else {
           // Fallback to legacy userTempAddressModel
           const tempAddressWhereClause: Record<string, unknown> = {
@@ -3915,7 +3915,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         const expectedAmount = Number(tempData?.amount) + (tempData?.previousAmount ? Number(tempData.previousAmount) : 0);
 
         // ENHANCED LOGGING: Partial payment accumulation tracking
-        console.log(`[cryptoVerification] 📊 PARTIAL PAYMENT DETECTED:
+        cronLogger.info(`[cryptoVerification] 📊 PARTIAL PAYMENT DETECTED:
           - Address: ${address}
           - Transaction ID: ${transactionId}
           - Payment #: ${tempData?.previousTxId ? '2+' : '1'}
@@ -3974,7 +3974,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               const qrPayload = tempData.destination_tag ? `${address}?dt=${tempData.destination_tag}` : address;
               qrCode = await QR_Code.toDataURL(qrPayload, { width: 300 });
             } catch (e) {
-              console.log('[Phase 12] QR code generation failed:', e);
+              cronLogger.info('[Phase 12] QR code generation failed:', e);
             }
             
             const updatedCustomerData = {
@@ -3991,7 +3991,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               }
             };
             await setRedisItem("customer-" + customerRef, updatedCustomerData);
-            console.log(`[Phase 12] Updated customer-${customerRef} with incomplete payment info: ${pendingAmount} ${tempCurrency}${tempData.destination_tag ? ` (tag: ${tempData.destination_tag})` : ''}`);
+            cronLogger.info(`[Phase 12] Updated customer-${customerRef} with incomplete payment info: ${pendingAmount} ${tempCurrency}${tempData.destination_tag ? ` (tag: ${tempData.destination_tag})` : ''}`);
           }
         }
 
@@ -4015,7 +4015,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
 
         // ENHANCED LOGGING: Payment completion tracking
         const wasPartialPayment = tempData?.previousAmount && Number(tempData.previousAmount) > 0;
-        console.log(`[cryptoVerification] ✅ PAYMENT ${wasPartialPayment ? 'COMPLETED (after partial)' : 'RECEIVED (full)'}:
+        cronLogger.info(`[cryptoVerification] ✅ PAYMENT ${wasPartialPayment ? 'COMPLETED (after partial)' : 'RECEIVED (full)'}:
           - Address: ${address}
           - Transaction ID: ${transactionId}
           - Total Received: ${totalAmountReceived} ${tempCurrency}
@@ -4035,7 +4035,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           // Merchant receives the original base amount (merchant_amount)
           // Dynopay keeps everything else (the fees)
           
-          console.log(`[cryptoVerification] Customer pays fees mode:
+          cronLogger.info(`[cryptoVerification] Customer pays fees mode:
             - Total received: ${totalAmountReceived} ${tempCurrency}
             - Merchant should receive: ${merchant_amount} ${tempCurrency}
             - Fees for Dynopay: ${Number(totalAmountReceived) - Number(merchant_amount)} ${tempCurrency}`);
@@ -4069,7 +4069,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             Number(amountInUSD[0].amount)  // Pass USD amount for fee calculation
           );
 
-          console.log(`[cryptoVerification] Fee calculation DEBUG:
+          cronLogger.info(`[cryptoVerification] Fee calculation DEBUG:
             - Total received (crypto): ${totalAmountReceived} ${tempCurrency}
             - Total received (USD): $${amountInUSD[0].amount}
             - Fee Breakdown:
@@ -4083,7 +4083,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             // Under threshold - all to admin
             adminAmountToSend = Number(totalAmountReceived);
             userAmountToSend = 0;
-            console.log(`[cryptoVerification] UNDER THRESHOLD - all to admin: ${adminAmountToSend} ${tempCurrency}`);
+            cronLogger.info(`[cryptoVerification] UNDER THRESHOLD - all to admin: ${adminAmountToSend} ${tempCurrency}`);
           } else {
             // Normal distribution
             // Convert USD fee back to crypto amount
@@ -4091,7 +4091,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             adminAmountToSend = Number(totalAmountReceived) * feePercentage;
             userAmountToSend = Number(totalAmountReceived) - adminAmountToSend;
             
-            console.log(`[cryptoVerification] NORMAL DISTRIBUTION:
+            cronLogger.info(`[cryptoVerification] NORMAL DISTRIBUTION:
             - Admin (fees): ${adminAmountToSend.toFixed(8)} ${tempCurrency} (${(feePercentage * 100).toFixed(2)}%)
             - Merchant: ${userAmountToSend.toFixed(8)} ${tempCurrency} (${((1 - feePercentage) * 100).toFixed(2)}%)`);
           }
@@ -4130,7 +4130,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           // Admin wallet gets: admin fee portion + merchant portion (for conversion)
           const adminWalletAddr = getAdminWalletAddress(tempCurrency);
           if (adminWalletAddr) {
-            console.log(`[AutoConvert] ✅ ACTIVE for company ${customerData.company_id}:
+            cronLogger.info(`[AutoConvert] ✅ ACTIVE for company ${customerData.company_id}:
               - Source: ${userAmountToSend.toFixed(8)} ${tempCurrency}
               - Target: ${autoConvertTargetCurrency} on ${autoConvertSettlementChain}
               - Redirecting merchant portion to admin wallet: ${adminWalletAddr.substring(0, 12)}...
@@ -4140,11 +4140,11 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             adminAmountToSend = adminAmountToSend + userAmountToSend;
             userAmountToSend = 0; // Nothing goes directly to merchant
 
-            console.log(`[AutoConvert] Updated distribution:
+            cronLogger.info(`[AutoConvert] Updated distribution:
               - Admin total (fees + merchant): ${adminAmountToSend.toFixed(8)} ${tempCurrency}
               - Merchant direct: 0 (will receive ${autoConvertTargetCurrency} after conversion)`);
           } else {
-            console.warn(`[AutoConvert] ⚠️ No admin wallet for ${tempCurrency}, falling back to normal settlement`);
+            cronLogger.warn(`[AutoConvert] ⚠️ No admin wallet for ${tempCurrency}, falling back to normal settlement`);
             autoConvertEnabled = false;
           }
         }
@@ -4162,7 +4162,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           isMerchantPool: String(tempData.is_merchant_pool) === "true",  // Pass merchant pool flag as boolean
         });
         
-        console.log(`[cryptoVerification] settleCryptoTransaction result:
+        cronLogger.info(`[cryptoVerification] settleCryptoTransaction result:
           - Admin fee to retain: ${adminAmountToSend} ${tempCurrency}
           - Merchant amount sent: ${adminTransferResult.sendAmount} ${tempCurrency}
           - Merchant TX: ${adminTransferResult.transactionDetails?.txId || 'N/A'}
@@ -4205,7 +4205,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             }
             
             if (!dbTransactionId) {
-              console.warn(`[AutoConvert] ⚠️ Could not resolve integer transaction_id for UUID ${txRecordId} — skipping conversion record`);
+              cronLogger.warn(`[AutoConvert] ⚠️ Could not resolve integer transaction_id for UUID ${txRecordId} — skipping conversion record`);
             } else {
               await createConversionRecord({
                 transactionId: dbTransactionId,
@@ -4225,13 +4225,13 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               });
             }
 
-            console.log(`[AutoConvert] 📝 Conversion record created:
+            cronLogger.info(`[AutoConvert] 📝 Conversion record created:
               - TX: ${transactionId}
               - Source: ${originalUserAmount.toFixed(8)} ${tempCurrency}
               - Target: ${autoConvertTargetCurrency} on ${autoConvertSettlementChain}
               - Immediate sweep will be triggered after address release`);
           } catch (convErr) {
-            console.error(`[AutoConvert] ❌ Failed to create conversion record (non-fatal):`, convErr);
+            cronLogger.error(`[AutoConvert] ❌ Failed to create conversion record (non-fatal):`, convErr);
             // Non-fatal: the payment itself succeeded, conversion can be manually triggered
           }
         }
@@ -4255,7 +4255,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             const adminFeeEmailSent = await getRedisItem(adminFeeEmailKey);
             
             if (adminFeeEmailSent && adminFeeEmailSent.sent) {
-              console.log(`[Admin Fee Notification] Email already sent for tx: ${transactionId}, skipping duplicate`);
+              cronLogger.info(`[Admin Fee Notification] Email already sent for tx: ${transactionId}, skipping duplicate`);
             } else {
               // Set flag immediately to prevent duplicates
               await setRedisItem(adminFeeEmailKey, { sent: true, sentAt: new Date().toISOString() });
@@ -4275,7 +4275,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
                   Number(originalUserAmount).toFixed(8), // merchant portion pending conversion
                   Number(totalAmountReceived).toFixed(8)
                 );
-                console.log(`[Admin Fee Notification - AUTO-CONVERT] Sent email: fee=${(adminAmountToSend - originalUserAmount).toFixed(8)} ${tempCurrency}, merchant_for_conversion=${originalUserAmount.toFixed(8)} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
+                cronLogger.info(`[Admin Fee Notification - AUTO-CONVERT] Sent email: fee=${(adminAmountToSend - originalUserAmount).toFixed(8)} ${tempCurrency}, merchant_for_conversion=${originalUserAmount.toFixed(8)} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
               } else {
                 await sendAdminFeeReceivedEmail(
                   adminEmail,
@@ -4289,15 +4289,15 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
                 );
                 
                 if (isUnderThreshold) {
-                  console.log(`[Admin Fee Notification - UNDER THRESHOLD] Sent email: ${adminAmountToSend} ${tempCurrency} (100%) from Company ${company_data?.company_id || 'N/A'} - Payment below minimum threshold`);
+                  cronLogger.info(`[Admin Fee Notification - UNDER THRESHOLD] Sent email: ${adminAmountToSend} ${tempCurrency} (100%) from Company ${company_data?.company_id || 'N/A'} - Payment below minimum threshold`);
                 } else {
-                  console.log(`[Admin Fee Notification] Sent email for ${adminAmountToSend} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
+                  cronLogger.info(`[Admin Fee Notification] Sent email for ${adminAmountToSend} ${tempCurrency} from Company ${company_data?.company_id || 'N/A'}`);
                 }
               }
             }
           }
         } catch (emailError) {
-          console.error("[Admin Fee Notification] Email failed:", emailError);
+          cronLogger.error("[Admin Fee Notification] Email failed:", emailError);
           // Don't fail the whole transaction if email fails
         }
 
@@ -4308,7 +4308,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         // Update address status based on whether it's merchant pool or legacy
         if (tempData.is_merchant_pool) {
           // MERCHANT POOL: Release address back to pool with admin fee tracking
-          console.log(`[cryptoVerification] Releasing MERCHANT POOL address back to pool`);
+          cronLogger.info(`[cryptoVerification] Releasing MERCHANT POOL address back to pool`);
           
           await merchantPoolService.releaseAddress(
             tempAddressData.temp_address_id,
@@ -4339,14 +4339,14 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           // Only for auto-convert payments where ALL crypto goes to admin wallet (Binance)
           if (autoConvertEnabled) {
             const sweepAddressId = tempAddressData.temp_address_id;
-            console.log(`[AutoConvert] Triggering immediate sweep for address ID ${sweepAddressId} (${tempCurrency})`);
+            cronLogger.info(`[AutoConvert] Triggering immediate sweep for address ID ${sweepAddressId} (${tempCurrency})`);
 
             // Fire-and-forget: don't block the payment response
             // No need to manually set IN_USE - releaseAddress() already sets correct status
             merchantPoolService.sweepPoolAddress(sweepAddressId).then(() => {
-              console.log(`[AutoConvert] Immediate sweep completed for address ID ${sweepAddressId}`);
+              cronLogger.info(`[AutoConvert] Immediate sweep completed for address ID ${sweepAddressId}`);
             }).catch((sweepErr: unknown) => {
-              console.warn(`[AutoConvert] Immediate sweep failed (will be retried by cron):`, sweepErr instanceof Error ? sweepErr.message : sweepErr);
+              cronLogger.warn(`[AutoConvert] Immediate sweep failed (will be retried by cron):`, sweepErr instanceof Error ? sweepErr.message : sweepErr);
             });
           }
           
@@ -4394,7 +4394,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           const transactionRecordId = tempData.user_tx_id || tempData.unique_tx_id || tempData.payment_id;
           
           if (!transactionRecordId) {
-            console.error(`[cryptoVerification] ⚠️  No transaction ID found in tempData - cannot update user transaction`);
+            cronLogger.error(`[cryptoVerification] ⚠️  No transaction ID found in tempData - cannot update user transaction`);
           } else {
             if (tempData?.incomplete) {
               await userTransactionModel.create({
@@ -4406,11 +4406,11 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
                 { ...userPayload },
                 { where: { id: transactionRecordId }, transaction }
               );
-              console.log(`[cryptoVerification] Updated user transaction ${transactionRecordId}, affected rows: ${updateResult[0]}`);
+              cronLogger.info(`[cryptoVerification] Updated user transaction ${transactionRecordId}, affected rows: ${updateResult[0]}`);
               
               // If no rows affected, log warning - transaction record may not exist
               if (updateResult[0] === 0) {
-                console.warn(`[cryptoVerification] ⚠️  No user transaction updated for ID ${transactionRecordId} - record may not exist`);
+                cronLogger.warn(`[cryptoVerification] ⚠️  No user transaction updated for ID ${transactionRecordId} - record may not exist`);
               }
             }
           }
@@ -4490,7 +4490,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         // BUG FIX: Check for payment_id/unique_tx_id (from crypto- Redis key) OR transaction_id (from customer- Redis key)
         const linkTransactionId = tempData?.payment_id || tempData?.unique_tx_id || tempData?.transaction_id || customerData?.transaction_id;
         if (linkTransactionId) {
-          console.log(`[cryptoVerification] Updating payment link status for transaction_id: ${linkTransactionId}`);
+          cronLogger.info(`[cryptoVerification] Updating payment link status for transaction_id: ${linkTransactionId}`);
           await paymentLinkModel.update(
             {
               status: "successful",
@@ -4508,7 +4508,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
 
         // FIX: Also update customer transaction status to match payment link status
         if (customerPayload?.id) {
-          console.log(`[cryptoVerification] Updating customer transaction ${customerPayload.id} status to successful`);
+          cronLogger.info(`[cryptoVerification] Updating customer transaction ${customerPayload.id} status to successful`);
           await customerTransactionModel.update(
             {
               status: "successful",
@@ -4525,10 +4525,10 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         // Merchant pool addresses handle their own subscription lifecycle in releaseAddress()
         // Deleting here would remove the subscription that was just renewed in releaseAddress()
         if (!isMerchantPoolAddress && tempAddressData.subscription_id) {
-          console.log(`[cryptoVerification] Deleting subscription for legacy address: ${tempAddressData.subscription_id}`);
+          cronLogger.info(`[cryptoVerification] Deleting subscription for legacy address: ${tempAddressData.subscription_id}`);
           await tatumApi.deleteSubscription(tempAddressData.subscription_id);
         } else if (isMerchantPoolAddress) {
-          console.log(`[cryptoVerification] Skipping subscription delete for merchant pool address (handled by releaseAddress)`);
+          cronLogger.info(`[cryptoVerification] Skipping subscription delete for merchant pool address (handled by releaseAddress)`);
         }
         
         await transaction.commit();
@@ -4540,7 +4540,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           if (customerRedisData && (customerRedisData.incomplete_payment || customerRedisData.active_crypto_address)) {
             const { incomplete_payment, active_crypto_address, ...cleanCustomerData } = customerRedisData;
             await setRedisItem("customer-" + customerRef, cleanCustomerData);
-            console.log(`[Phase 12] Cleared incomplete_payment and active_crypto_address from customer-${customerRef} on successful completion`);
+            cronLogger.info(`[Phase 12] Cleared incomplete_payment and active_crypto_address from customer-${customerRef} on successful completion`);
           }
         }
         
@@ -4575,7 +4575,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             });
             totalFeeUsd = Number(feeInUsd[0]?.amount || 0);
           } catch (feeConvertError) {
-            console.warn("[cryptoVerification] Fee USD conversion failed:", feeConvertError.message);
+            cronLogger.warn("[cryptoVerification] Fee USD conversion failed:", feeConvertError.message);
           }
           
           // Build enhanced webhook payload with all relevant fields for developers
@@ -4647,16 +4647,16 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           try {
             const webhookResult = await callMerchantWebhook(customerData, enhancedWebhookPayload);
             if (webhookResult.success) {
-              console.log("[cryptoVerification] ✅ Merchant webhook sent successfully");
+              cronLogger.info("[cryptoVerification] ✅ Merchant webhook sent successfully");
             } else {
-              console.error(`[cryptoVerification] ❌ Merchant webhook failed: ${webhookResult.error}`);
+              cronLogger.error(`[cryptoVerification] ❌ Merchant webhook failed: ${webhookResult.error}`);
               if (webhookResult.url) {
-                console.error(`[cryptoVerification] Failed URL: ${webhookResult.url}`);
+                cronLogger.error(`[cryptoVerification] Failed URL: ${webhookResult.url}`);
               }
             }
-            console.log(`[cryptoVerification] Webhook payload: merchant_amount=${autoConvertEnabled ? originalUserAmount : userAmountToSend}, total_fee=${autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend}, fee_payer=${enhancedWebhookPayload.fee_payer}${autoConvertEnabled ? `, auto_convert=${autoConvertTargetCurrency}` : ''}`);
+            cronLogger.info(`[cryptoVerification] Webhook payload: merchant_amount=${autoConvertEnabled ? originalUserAmount : userAmountToSend}, total_fee=${autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend}, fee_payer=${enhancedWebhookPayload.fee_payer}${autoConvertEnabled ? `, auto_convert=${autoConvertTargetCurrency}` : ''}`);
           } catch (webhookError) {
-            console.error("[cryptoVerification] Merchant webhook failed:", webhookError.message);
+            cronLogger.error("[cryptoVerification] Merchant webhook failed:", webhookError.message);
             // Don't fail the transaction if webhook fails
           }
         } else {
@@ -4701,7 +4701,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         const paymentReceivedEmailSent = await getRedisItem(paymentReceivedEmailKey);
         
         if (paymentReceivedEmailSent && paymentReceivedEmailSent.sent) {
-          console.log(`[cryptoVerification] Payment received email already sent for tx: ${transactionId}, skipping duplicate`);
+          cronLogger.info(`[cryptoVerification] Payment received email already sent for tx: ${transactionId}, skipping duplicate`);
         } else {
           // Set flag immediately to prevent duplicates
           await setRedisItem(paymentReceivedEmailKey, { sent: true, sentAt: new Date().toISOString() });
@@ -4751,9 +4751,9 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               transactionId,
               companyName
             );
-            console.log(`[cryptoVerification] Large transaction alert sent to ${userData?.email} for $${baseAmount}`);
+            cronLogger.info(`[cryptoVerification] Large transaction alert sent to ${userData?.email} for $${baseAmount}`);
           } catch (largeAlertError) {
-            console.error("[cryptoVerification] Failed to send large transaction alert:", largeAlertError);
+            cronLogger.error("[cryptoVerification] Failed to send large transaction alert:", largeAlertError);
           }
         }
 
@@ -4783,7 +4783,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             const customerReceiptSent = await getRedisItem(customerReceiptKey);
             
             if (customerReceiptSent && customerReceiptSent.sent) {
-              console.log(`[cryptoVerification] Customer receipt email already sent for tx: ${transactionId}, skipping duplicate`);
+              cronLogger.info(`[cryptoVerification] Customer receipt email already sent for tx: ${transactionId}, skipping duplicate`);
             } else {
               // Set flag immediately to prevent duplicates
               await setRedisItem(customerReceiptKey, { sent: true, sentAt: new Date().toISOString() });
@@ -4808,14 +4808,14 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
                 tempCurrency, // Crypto currency
                 transactionId // Blockchain transaction reference
               );
-              console.log(`[cryptoVerification] Customer payment confirmation email sent to ${customerEmail} with PDF receipt`);
+              cronLogger.info(`[cryptoVerification] Customer payment confirmation email sent to ${customerEmail} with PDF receipt`);
             }
           } else {
-            console.log(`[cryptoVerification] No customer email available for payment confirmation`);
+            cronLogger.info(`[cryptoVerification] No customer email available for payment confirmation`);
           }
         } catch (customerEmailError: unknown) {
           const err = customerEmailError as { message?: string };
-          console.error("[cryptoVerification] Customer payment confirmation email failed:", err.message);
+          cronLogger.error("[cryptoVerification] Customer payment confirmation email failed:", err.message);
           // Don't fail the transaction if email fails
         }
       }
@@ -4838,7 +4838,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
       transaction.commit();
     } else {
       transaction.rollback();
-      console.log(e);
+      cronLogger.info(e);
     }
     apiLogger.error(message, new Error(e));
     return { status: e?.status ?? 500, message, resData: restData };
@@ -4893,7 +4893,7 @@ const getCurrencyRates = async (
   try {
     const { source, amount, currencyList, fixedDecimal = true, fee_payer = 'company', tax_amount = 0 } = req.body;
 
-    console.log(`[getCurrencyRates] Request params: amount=${amount}, source=${source}, fee_payer=${fee_payer}, tax_amount=${tax_amount}`);
+    cronLogger.info(`[getCurrencyRates] Request params: amount=${amount}, source=${source}, fee_payer=${fee_payer}, tax_amount=${tax_amount}`);
 
     // Convert source amount to USD if needed (for fee tier calculation)
     let amountUSD = amount;
@@ -4906,9 +4906,9 @@ const getCurrencyRates = async (
           fixedDecimal: true,
         });
         amountUSD = Number(usdConversion[0]?.amount || amount);
-        console.log(`[getCurrencyRates] Converted ${amount} ${source} → ${amountUSD.toFixed(2)} USD for fee calculation`);
+        cronLogger.info(`[getCurrencyRates] Converted ${amount} ${source} → ${amountUSD.toFixed(2)} USD for fee calculation`);
       } catch (conversionError) {
-        console.warn(`[getCurrencyRates] USD conversion failed, using original amount:`, conversionError);
+        cronLogger.warn(`[getCurrencyRates] USD conversion failed, using original amount:`, conversionError);
       }
     }
 
@@ -4921,11 +4921,11 @@ const getCurrencyRates = async (
     
     // If customer pays fees, calculate total amounts including all fees
     if (fee_payer === 'customer') {
-      console.log(`[getCurrencyRates] Customer pays fees - calculating enhanced rates with fees`);
+      cronLogger.info(`[getCurrencyRates] Customer pays fees - calculating enhanced rates with fees`);
       
       // Pre-fetch all blockchain fees in parallel for better performance
       const allBlockchainFees = await getAllBlockchainFees();
-      console.log(`[getCurrencyRates] Pre-fetched blockchain fees for ${Object.keys(allBlockchainFees).length} chains`);
+      cronLogger.info(`[getCurrencyRates] Pre-fetched blockchain fees for ${Object.keys(allBlockchainFees).length} chains`);
       
       const enhancedRates = await Promise.all(
         currencyRateList.map(async (rate: { currency: string; amount: number; transferRate?: number }) => {
@@ -4936,7 +4936,7 @@ const getCurrencyRates = async (
               // For fiat currencies, use a default crypto (ETH) to calculate fees
               // This gives us the USD equivalent fees to display
               const chain = 'ETH';
-              console.log(`[getCurrencyRates] Processing fiat ${rate.currency} - using ${chain} for fee calculation`);
+              cronLogger.info(`[getCurrencyRates] Processing fiat ${rate.currency} - using ${chain} for fee calculation`);
               
               // Use pre-fetched fees instead of individual API call
               const networkFee = allBlockchainFees[chain] || await getBlockchainNetworkFee(chain);
@@ -4965,7 +4965,7 @@ const getCurrencyRates = async (
               const usdToSourceRate = amountUSD > 0 ? amount / amountUSD : 1;
               const totalAmountSourceCurrency = parseFloat((roundedTotalAmountUSD * usdToSourceRate).toFixed(2));
               
-              console.log(`[getCurrencyRates] ${rate.currency} (fiat): base=${amount} ${source} ($${amountUSD.toFixed(2)} USD) = ${convertedBaseAmount} ${rate.currency}, tax=$${taxAmountNum.toFixed(2)} USD = ${convertedTaxAmount} ${rate.currency}, fees=$${roundedTotalFeesUSD.toFixed(2)} USD = ${convertedTotalFees} ${rate.currency}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSourceCurrency.toFixed(2)} ${source}) = ${convertedTotalAmount} ${rate.currency}`);
+              cronLogger.info(`[getCurrencyRates] ${rate.currency} (fiat): base=${amount} ${source} ($${amountUSD.toFixed(2)} USD) = ${convertedBaseAmount} ${rate.currency}, tax=$${taxAmountNum.toFixed(2)} USD = ${convertedTaxAmount} ${rate.currency}, fees=$${roundedTotalFeesUSD.toFixed(2)} USD = ${convertedTotalFees} ${rate.currency}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSourceCurrency.toFixed(2)} ${source}) = ${convertedTotalAmount} ${rate.currency}`);
               
               return {
                 ...rate,
@@ -4998,7 +4998,7 @@ const getCurrencyRates = async (
             };
             chain = chainMapping[chain] || chain;
             
-            console.log(`[getCurrencyRates] Processing ${rate.currency} -> chain: ${chain}`);
+            cronLogger.info(`[getCurrencyRates] Processing ${rate.currency} -> chain: ${chain}`);
             
             const cryptoPrice = Number(rate.amount) > 0 ? amountUSD / Number(rate.amount) : 0;
             
@@ -5030,7 +5030,7 @@ const getCurrencyRates = async (
             const processingFeeSource = parseFloat((roundedTotalFeesUSD * usdToSourceRate).toFixed(2));
             const taxAmountSource = parseFloat((taxAmountNum * usdToSourceRate).toFixed(2));
             
-            console.log(`[getCurrencyRates] ${rate.currency}: base=${amount} ${source} ($${amountUSD.toFixed(2)} USD), tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSource.toFixed(2)} ${source})`);
+            cronLogger.info(`[getCurrencyRates] ${rate.currency}: base=${amount} ${source} ($${amountUSD.toFixed(2)} USD), tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSource.toFixed(2)} ${source})`);
             
             return {
               ...rate,
@@ -5051,7 +5051,7 @@ const getCurrencyRates = async (
               amount: fixedDecimal ? totalAmountCrypto.toFixed(8) : totalAmountCrypto, // Override amount with total
             };
           } catch (feeError: unknown) {
-            console.error(`[getCurrencyRates] Fee calc error for ${rate.currency}:`, getErrorMessage(feeError));
+            cronLogger.error(`[getCurrencyRates] Fee calc error for ${rate.currency}:`, getErrorMessage(feeError));
             return {
               ...rate,
               fee_payer: 'customer',
@@ -5319,7 +5319,7 @@ const createPaymentLink = async (
           
           if (now < gracePeriodEnd) {
             // Still within grace period - allow but set warning for in-app display
-            console.log(`[KYC GRACE PERIOD] User ${userData.user_id} within grace period. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Days remaining: ${daysRemaining}`);
+            cronLogger.info(`[KYC GRACE PERIOD] User ${userData.user_id} within grace period. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Days remaining: ${daysRemaining}`);
             
             // Set in-app warning
             const urgencyType = daysRemaining <= 14 ? "critical" : daysRemaining <= 30 ? "warning" : "info";
@@ -5341,7 +5341,7 @@ const createPaymentLink = async (
             };
           } else {
             // Grace period expired - block
-            console.log(`[KYC BLOCK] User ${userData.user_id} grace period expired. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Grace period ended: ${gracePeriodEnd.toISOString()}`);
+            cronLogger.info(`[KYC BLOCK] User ${userData.user_id} grace period expired. Volume: $${totalVolume.toFixed(2)}, KYC status: ${kycStatus}, Grace period ended: ${gracePeriodEnd.toISOString()}`);
             
             return errorResponseHelper(
               res,
@@ -5351,10 +5351,10 @@ const createPaymentLink = async (
           }
         } else {
           // Couldn't determine threshold date - be lenient, allow but log warning
-          console.warn(`[KYC WARNING] Could not determine threshold date for user ${userData.user_id}. Allowing payment creation.`);
+          cronLogger.warn(`[KYC WARNING] Could not determine threshold date for user ${userData.user_id}. Allowing payment creation.`);
         }
       } else {
-        console.log(`[KYC OK] User ${userData.user_id} KYC approved. Volume: $${totalVolume.toFixed(2)}`);
+        cronLogger.info(`[KYC OK] User ${userData.user_id} KYC approved. Volume: $${totalVolume.toFixed(2)}`);
       }
     }
     // ========================================
@@ -5390,7 +5390,7 @@ const createPaymentLink = async (
     
     // Get unique list of ALL configured currencies for this company
     const allConfiguredCurrencies = [...new Set(configuredWallets.map((w) => (w.dataValues as { wallet_type: string }).wallet_type))];
-    console.log(`[Phase 11] All configured currencies for company_id ${company_id}:`, allConfiguredCurrencies);
+    cronLogger.info(`[Phase 11] All configured currencies for company_id ${company_id}:`, allConfiguredCurrencies);
     
     // Validate and process accepted_currencies if provided
     let finalAcceptedCurrencies: string[] = allConfiguredCurrencies; // Default: all configured
@@ -5423,13 +5423,13 @@ const createPaymentLink = async (
       // Use the merchant's selected currencies
       finalAcceptedCurrencies = requestedCurrencies;
       acceptedCurrenciesString = requestedCurrencies.join(',');
-      console.log(`[createPaymentLink] Merchant selected currencies: ${acceptedCurrenciesString}`);
+      cronLogger.info(`[createPaymentLink] Merchant selected currencies: ${acceptedCurrenciesString}`);
     } else {
-      console.log(`[createPaymentLink] No currencies specified, using all configured: ${allConfiguredCurrencies.join(',')}`);
+      cronLogger.info(`[createPaymentLink] No currencies specified, using all configured: ${allConfiguredCurrencies.join(',')}`);
     }
     
     const uniqueRef = crypto.randomBytes(24).toString("hex");
-    console.log("userData============>", userData);
+    cronLogger.info("userData============>", userData);
     
     // Calculate expires_at based on expire option
     // DEFAULT: 7 days if not specified (for security and cleanup)
@@ -5473,7 +5473,7 @@ const createPaymentLink = async (
       );
     }
     
-    console.log(`[createPaymentLink] Using company_id: ${company_id} for user: ${userData.user_id}`);
+    cronLogger.info(`[createPaymentLink] Using company_id: ${company_id} for user: ${userData.user_id}`);
     
     // ========================================
     // ACTIVE API KEY CHECK: Block if no active API key exists
@@ -5531,7 +5531,7 @@ const createPaymentLink = async (
       createdAt: new Date().toISOString(),  // Include creation timestamp for checkout
     };
 
-    console.log(redisPayload);
+    cronLogger.info(redisPayload);
 
     await setRedisItem("customer-" + uniqueRef, redisPayload);
 
@@ -5601,9 +5601,9 @@ ${refereeCodeSection}
           false                                                                           // showImage
         );
 
-        console.log(`[PaymentLink] Email sent to ${email}${refereeCodeData ? ` with referee code ${refereeCodeData.code}` : ''}`);
+        cronLogger.info(`[PaymentLink] Email sent to ${email}${refereeCodeData ? ` with referee code ${refereeCodeData.code}` : ''}`);
       } catch (emailError) {
-        console.error("[PaymentLink] Failed to send email:", emailError);
+        cronLogger.error("[PaymentLink] Failed to send email:", emailError);
         // Don't fail the request if email fails
       }
     }
@@ -5622,10 +5622,10 @@ ${refereeCodeSection}
           description || 'No description provided',
           expires_at ? new Date(expires_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : null
         );
-        console.log(`[PaymentLink] Merchant notification sent to ${user.dataValues.email}`);
+        cronLogger.info(`[PaymentLink] Merchant notification sent to ${user.dataValues.email}`);
       }
     } catch (merchantEmailError) {
-      console.error("[PaymentLink] Failed to send merchant notification:", merchantEmailError);
+      cronLogger.error("[PaymentLink] Failed to send merchant notification:", merchantEmailError);
       // Don't fail the request if email fails
     }
 
@@ -5663,7 +5663,7 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
   try {
     const { company_id, page, limit, paginated } = req.query;  // Added pagination params
     
-    console.log("userData============>", userData);
+    cronLogger.info("userData============>", userData);
     
     // Build where clause with optional company_id filter
     const whereClause: Record<string, unknown> = {
@@ -6041,7 +6041,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
         }
         
         updateData.accepted_currencies = requestedCurrencies.join(',');
-        console.log(`[updatePaymentLink] Updated accepted currencies: ${updateData.accepted_currencies}`);
+        cronLogger.info(`[updatePaymentLink] Updated accepted currencies: ${updateData.accepted_currencies}`);
       }
     }
     
@@ -6150,7 +6150,7 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
           };
         } else {
           // FIX: Redis key expired/evicted — reconstruct from DB to keep payment link functional
-          console.warn(`[updatePaymentLink] Redis key customer-${uniqueRef} missing, reconstructing from DB`);
+          cronLogger.warn(`[updatePaymentLink] Redis key customer-${uniqueRef} missing, reconstructing from DB`);
           
           // Fetch configured wallets for available_currencies
           const company_id = linkData.company_id;
@@ -6201,11 +6201,11 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
             updatedAt: new Date().toISOString(),
             reconstructed: true,  // Flag so we know this was rebuilt
           };
-          console.log(`[updatePaymentLink] Reconstructed Redis payload for customer-${uniqueRef}`);
+          cronLogger.info(`[updatePaymentLink] Reconstructed Redis payload for customer-${uniqueRef}`);
         }
         
         await setRedisItem("customer-" + uniqueRef, updatedRedisPayload);
-        console.log(`[updatePaymentLink] Redis updated for key: customer-${uniqueRef}`);
+        cronLogger.info(`[updatePaymentLink] Redis updated for key: customer-${uniqueRef}`);
         
         // FIX: If an active crypto address exists, update crypto-{address} Redis key too
         // This handles the edge case where merchant updates webhook_url/amount AFTER
@@ -6230,12 +6230,12 @@ const updatePaymentLink = async (req: express.Request, res: express.Response) =>
                 ...cryptoRedisData,
                 ...cryptoUpdates,
               });
-              console.log(`[updatePaymentLink] Also updated ${activeCryptoKey} with: ${Object.keys(cryptoUpdates).join(', ')}`);
+              cronLogger.info(`[updatePaymentLink] Also updated ${activeCryptoKey} with: ${Object.keys(cryptoUpdates).join(', ')}`);
             }
           }
         }
       } else {
-        console.warn(`[updatePaymentLink] Could not extract uniqueRef from payment_link: ${paymentLinkUrl}`);
+        cronLogger.warn(`[updatePaymentLink] Could not extract uniqueRef from payment_link: ${paymentLinkUrl}`);
       }
     }
 
@@ -6294,7 +6294,7 @@ const deletePaymentLink = async (
     // Also delete from Redis to prevent checkout access
     if (uniqueRef) {
       await deleteRedisItem("customer-" + uniqueRef);
-      console.log(`[deletePaymentLink] Redis deleted for key: customer-${uniqueRef}`);
+      cronLogger.info(`[deletePaymentLink] Redis deleted for key: customer-${uniqueRef}`);
     }
 
     successResponseHelper(res, 200, "Payment link deleted successfully", links);
@@ -6398,7 +6398,7 @@ const checkingUSDT = async () => {
         );
       }
     } catch (e) {
-      console.log(e);
+      cronLogger.info(e);
       const message = getErrorMessage(e);
       cronLogger.error(message, new Error(e));
     }
@@ -6411,7 +6411,7 @@ const checkingUSDT = async () => {
  * Schedule: Every 45 minutes
  */
 const sweepNativeAdminFees = async () => {
-  console.log("[sweepNativeAdminFees] Starting native ETH/TRX admin fee sweep...");
+  cronLogger.info("[sweepNativeAdminFees] Starting native ETH/TRX admin fee sweep...");
   
   try {
     // Find all temp addresses with pending native ETH/TRX admin fees
@@ -6427,14 +6427,14 @@ const sweepNativeAdminFees = async () => {
       }
     );
 
-    console.log(`[sweepNativeAdminFees] Found ${pendingAddresses.length} addresses with pending admin fees`);
+    cronLogger.info(`[sweepNativeAdminFees] Found ${pendingAddresses.length} addresses with pending admin fees`);
 
     for (let i = 0; i < pendingAddresses.length; i++) {
       try {
         const currentAddress = pendingAddresses[i];
         const wallet_type = currentAddress.wallet_type; // ETH or TRX
         
-        console.log(`[sweepNativeAdminFees] Processing ${wallet_type} address: ${currentAddress.wallet_address}`);
+        cronLogger.info(`[sweepNativeAdminFees] Processing ${wallet_type} address: ${currentAddress.wallet_address}`);
 
         // Get current balance of temp address
         const addressBalance = await tatumApi.getAddressBalance(
@@ -6448,11 +6448,11 @@ const sweepNativeAdminFees = async () => {
         const adminWalletAddress = getAdminWalletAddress(wallet_type);
 
         if (!adminWalletAddress) {
-          console.error(`[sweepNativeAdminFees] Admin fee wallet not configured in .env for ${wallet_type}`);
+          cronLogger.error(`[sweepNativeAdminFees] Admin fee wallet not configured in .env for ${wallet_type}`);
           continue;
         }
         
-        console.log(`[sweepNativeAdminFees] Will sweep to admin wallet: ${adminWalletAddress}`);
+        cronLogger.info(`[sweepNativeAdminFees] Will sweep to admin wallet: ${adminWalletAddress}`);
         let balance = Number(addressBalance?.balance ?? 0);
         
         // For TRX, convert from SUN to TRX
@@ -6460,7 +6460,7 @@ const sweepNativeAdminFees = async () => {
           balance = balance / 1000000;
         }
 
-        console.log(`[sweepNativeAdminFees] Address balance: ${balance} ${wallet_type}`);
+        cronLogger.info(`[sweepNativeAdminFees] Address balance: ${balance} ${wallet_type}`);
 
         if (balance > 0) {
           let fees, sendAmount;
@@ -6483,7 +6483,7 @@ const sweepNativeAdminFees = async () => {
           }
 
           if (sendAmount > 0) {
-            console.log(`[sweepNativeAdminFees] Sweeping ${sendAmount} ${wallet_type} to admin wallet`);
+            cronLogger.info(`[sweepNativeAdminFees] Sweeping ${sendAmount} ${wallet_type} to admin wallet`);
 
             // Decrypt private key
             const privateKey = await tatumApi.decryptSymmetric(
@@ -6544,13 +6544,13 @@ const sweepNativeAdminFees = async () => {
               where: { wallet_type },
             });
 
-            console.log(`[sweepNativeAdminFees] Successfully swept ${sendAmount} ${wallet_type} ($${usd} USD) - TX: ${transactionDetails?.txId}`);
+            cronLogger.info(`[sweepNativeAdminFees] Successfully swept ${sendAmount} ${wallet_type} ($${usd} USD) - TX: ${transactionDetails?.txId}`);
           } else {
-            console.log(`[sweepNativeAdminFees] Balance too low after gas fees: ${balance} ${wallet_type}`);
+            cronLogger.info(`[sweepNativeAdminFees] Balance too low after gas fees: ${balance} ${wallet_type}`);
           }
         } else {
           // No balance but marked as pending_sweep - might have been swept manually or balance moved
-          console.log(`[sweepNativeAdminFees] No balance found, marking as successful: ${currentAddress.wallet_address}`);
+          cronLogger.info(`[sweepNativeAdminFees] No balance found, marking as successful: ${currentAddress.wallet_address}`);
           await userTempAddressModel.update(
             {
               admin_status: "successful",
@@ -6563,15 +6563,15 @@ const sweepNativeAdminFees = async () => {
           );
         }
       } catch (e) {
-        console.error(`[sweepNativeAdminFees] Error processing address:`, e);
+        cronLogger.error(`[sweepNativeAdminFees] Error processing address:`, e);
         const message = getErrorMessage(e);
         cronLogger.error(`[sweepNativeAdminFees] ${message}`, new Error(e));
       }
     }
 
-    console.log("[sweepNativeAdminFees] Completed native ETH/TRX admin fee sweep");
+    cronLogger.info("[sweepNativeAdminFees] Completed native ETH/TRX admin fee sweep");
   } catch (e) {
-    console.error("[sweepNativeAdminFees] Fatal error:", e);
+    cronLogger.error("[sweepNativeAdminFees] Fatal error:", e);
     const message = getErrorMessage(e);
     cronLogger.error(`[sweepNativeAdminFees] ${message}`, new Error(e));
   }
@@ -6611,7 +6611,7 @@ const checkFeeBalance = async () => {
         // return 403 "Account not found" — skip gracefully instead of crashing
         if (errMsg.includes('account.not.found') || errMsg.includes('Account not found') ||
             errCode.includes('account.failed') || errMsg.includes('not.found')) {
-          console.log(`[checkFeeBalance] ⏭️ Skipping ${wallet_type} — account not activated yet (${adminFeesWallets[i]?.dataValues.wallet_address?.substring(0, 12)}...)`);
+          cronLogger.info(`[checkFeeBalance] ⏭️ Skipping ${wallet_type} — account not activated yet (${adminFeesWallets[i]?.dataValues.wallet_address?.substring(0, 12)}...)`);
           continue;
         }
         throw balErr;
@@ -6622,7 +6622,7 @@ const checkFeeBalance = async () => {
           ? currentBalance?.balance / 1000000
           : currentBalance?.balance;
       
-      console.log(`[checkFeeBalance] ${wallet_type}: currentBalance=${JSON.stringify(currentBalance)}, newBalance=${newBalance}, dbAmount=${amount}`);
+      cronLogger.info(`[checkFeeBalance] ${wallet_type}: currentBalance=${JSON.stringify(currentBalance)}, newBalance=${newBalance}, dbAmount=${amount}`);
       
       // Only update if newBalance is a valid number
       if (newBalance !== undefined && newBalance !== null && !isNaN(newBalance)) {
@@ -6641,7 +6641,7 @@ const checkFeeBalance = async () => {
 
       // Skip currency conversion if amount is null, undefined, 0, or NaN
       if (amount === null || amount === undefined || amount === 0 || isNaN(Number(amount))) {
-        console.log(`[checkFeeBalance] Skipping ${wallet_type} - no valid balance (amount=${amount})`);
+        cronLogger.info(`[checkFeeBalance] Skipping ${wallet_type} - no valid balance (amount=${amount})`);
         textData += `\n Your ${wallet_type} fee wallet has no balance or amount unavailable.`;
         continue;
       }
@@ -6682,17 +6682,17 @@ const checkFeeBalance = async () => {
             adminEmail = adminData[0].email;
           }
         } catch (dbError) {
-          console.log("[Cron] Could not fetch admin from database, using config email");
+          cronLogger.info("[Cron] Could not fetch admin from database, using config email");
         }
         
         if (!adminEmail) {
-          console.error("[Cron] No admin email configured - skipping notification");
+          cronLogger.error("[Cron] No admin email configured - skipping notification");
           return;
         }
         
         textData += `\n\n Please recharge as soon as possible.`;
         
-        console.log(`Sending low fee balance alert to: ${adminEmail}`);
+        cronLogger.info(`Sending low fee balance alert to: ${adminEmail}`);
         
         await sendEmail(
           adminEmail,
@@ -6708,13 +6708,13 @@ const checkFeeBalance = async () => {
             new Date().getTime() + Number(alert_duration) * 60 * 60 * 1000,
         });
         
-        console.log(`Fee balance alert sent successfully to ${adminEmail}`);
+        cronLogger.info(`Fee balance alert sent successfully to ${adminEmail}`);
       } else {
-        console.log("Fee balance alert already sent recently, skipping");
+        cronLogger.info("Fee balance alert already sent recently, skipping");
       }
     }
   } catch (e) {
-    console.log(e);
+    cronLogger.info(e);
     const message = getErrorMessage(e);
     cronLogger.error(message, new Error(e));
   }
@@ -6756,10 +6756,10 @@ const checkOnBlockchair = async () => {
         );
       }
     } else {
-      console.log("No pending transactions!");
+      cronLogger.info("No pending transactions!");
     }
   } catch (e) {
-    console.log(e);
+    cronLogger.info(e);
     const message = getErrorMessage(e);
     cronLogger.error(message, new Error(e));
   }
@@ -6779,7 +6779,7 @@ const removeUnwantedSubscriptions = async () => {
           await tatumApi.deleteSubscription(tempData[i].subscription_id);
         }
       } catch (e) {
-        console.log(e);
+        cronLogger.info(e);
       }
       await userTempAddressModel.update(
         {
@@ -6793,7 +6793,7 @@ const removeUnwantedSubscriptions = async () => {
       );
     }
   } catch (e) {
-    console.log(e);
+    cronLogger.info(e);
     const message = getErrorMessage(e);
     cronLogger.error(message, new Error(e));
   }
@@ -6812,7 +6812,7 @@ const processIncompletePayments = async () => {
     );
 
     if (pendingTransactions.length > 0) {
-      console.log(`[processIncompletePayments] Found ${pendingTransactions.length} partial payments older than 5 min — checking per-company grace periods...`);
+      cronLogger.info(`[processIncompletePayments] Found ${pendingTransactions.length} partial payments older than 5 min — checking per-company grace periods...`);
 
       for (const tempTx of pendingTransactions) {
         try {
@@ -6829,7 +6829,7 @@ const processIncompletePayments = async () => {
                 companyGracePeriodMinutes = Math.min(parseInt(String(companyRecord.dataValues.grace_period_minutes)), 30);
               }
             } catch (e) {
-              console.log(`[processIncompletePayments] Could not fetch company ${tempTx.company_id} grace period, using default 30 min`);
+              cronLogger.info(`[processIncompletePayments] Could not fetch company ${tempTx.company_id} grace period, using default 30 min`);
             }
           }
 
@@ -6841,7 +6841,7 @@ const processIncompletePayments = async () => {
             continue;
           }
 
-          console.log(`[processIncompletePayments] Company ${tempTx.company_id} grace: ${companyGracePeriodMinutes} min, elapsed: ${minutesSincePartial.toFixed(1)} min — processing...`);
+          cronLogger.info(`[processIncompletePayments] Company ${tempTx.company_id} grace: ${companyGracePeriodMinutes} min, elapsed: ${minutesSincePartial.toFixed(1)} min — processing...`);
           const balanceData = await tatumApi.getAddressBalance(
             tempTx.wallet_address,
             tempTx.wallet_type
@@ -6850,7 +6850,7 @@ const processIncompletePayments = async () => {
           const actualBalance = Number(balanceData?.balance || 0);
 
           if (actualBalance > 0) {
-            console.log(`Additional balance found: ${actualBalance} ${tempTx.wallet_type}. Processing final sweep...`);
+            cronLogger.info(`Additional balance found: ${actualBalance} ${tempTx.wallet_type}. Processing final sweep...`);
 
             // Get merchant wallet with multi-tenant security
             const merchantWallet = await userWalletModel.findOne({
@@ -6862,7 +6862,7 @@ const processIncompletePayments = async () => {
             });
 
             if (!merchantWallet) {
-              console.error(`Merchant wallet not found for user ${tempTx.user_id}, company ${tempTx.company_id}, wallet_type ${tempTx.wallet_type}`);
+              cronLogger.error(`Merchant wallet not found for user ${tempTx.user_id}, company ${tempTx.company_id}, wallet_type ${tempTx.wallet_type}`);
               throw new Error(`Merchant wallet not found for user ${tempTx.user_id}`);
             }
 
@@ -6883,7 +6883,7 @@ const processIncompletePayments = async () => {
                 adminAmountToSend = 0;
                 userAmountToSend = Number(totalReceived);
               }
-              console.log(`[processIncompletePayments] Customer pays fees: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
+              cronLogger.info(`[processIncompletePayments] Customer pays fees: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
             } else {
               // COMPANY PAYS FEES MODE (default)
               const { totalDeduction, minForwarding } = await calculateTransactionFees(
@@ -6894,11 +6894,11 @@ const processIncompletePayments = async () => {
               if (Number(totalReceived) < Number(minForwarding)) {
                 adminAmountToSend = Number(totalReceived);
                 userAmountToSend = 0;
-                console.log(`Total amount ${totalReceived} below threshold ${minForwarding}. Sending all to admin.`);
+                cronLogger.info(`Total amount ${totalReceived} below threshold ${minForwarding}. Sending all to admin.`);
               } else {
                 adminAmountToSend = Number(totalDeduction);
                 userAmountToSend = Number(totalReceived) - Number(totalDeduction);
-                console.log(`Splitting final amount: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
+                cronLogger.info(`Splitting final amount: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
               }
             }
 
@@ -6943,10 +6943,10 @@ const processIncompletePayments = async () => {
                   Number(totalReceived).toFixed(8)
                 );
                 
-                console.log(`[Admin Fee Notification - Partial Payment] Sent email for ${adminAmountToSend} ${tempTx.wallet_type} from Company ${tempTx.company_id || 'N/A'}`);
+                cronLogger.info(`[Admin Fee Notification - Partial Payment] Sent email for ${adminAmountToSend} ${tempTx.wallet_type} from Company ${tempTx.company_id || 'N/A'}`);
               }
             } catch (emailError) {
-              console.error("[Admin Fee Notification - Partial Payment] Email failed:", emailError);
+              cronLogger.error("[Admin Fee Notification - Partial Payment] Email failed:", emailError);
             }
 
             await userTempAddressModel.update(
@@ -6987,7 +6987,7 @@ const processIncompletePayments = async () => {
               try {
                 await tatumApi.deleteSubscription(tempTx.subscription_id);
               } catch (e) {
-                console.log(`Failed to delete subscription ${tempTx.subscription_id}:`, e.message);
+                cronLogger.info(`Failed to delete subscription ${tempTx.subscription_id}:`, e.message);
               }
             }
 
@@ -7003,9 +7003,9 @@ const processIncompletePayments = async () => {
               "completed_partial"
             );
 
-            console.log(`Incomplete payment processed successfully for ${tempTx.wallet_address}`);
+            cronLogger.info(`Incomplete payment processed successfully for ${tempTx.wallet_address}`);
           } else {
-            console.log(`No additional payment for ${tempTx.wallet_address}. Processing with existing amount ${tempTx.amount}`);
+            cronLogger.info(`No additional payment for ${tempTx.wallet_address}. Processing with existing amount ${tempTx.amount}`);
 
             // Get merchant wallet with multi-tenant security
             const merchantWallet = await userWalletModel.findOne({
@@ -7017,7 +7017,7 @@ const processIncompletePayments = async () => {
             });
 
             if (!merchantWallet) {
-              console.error(`Merchant wallet not found for user ${tempTx.user_id}, company ${tempTx.company_id}, wallet_type ${tempTx.wallet_type}`);
+              cronLogger.error(`Merchant wallet not found for user ${tempTx.user_id}, company ${tempTx.company_id}, wallet_type ${tempTx.wallet_type}`);
               throw new Error(`Merchant wallet not found for user ${tempTx.user_id}`);
             }
 
@@ -7039,7 +7039,7 @@ const processIncompletePayments = async () => {
                 adminAmountToSend = 0;
                 userAmountToSend = Number(tempTx.amount);
               }
-              console.log(`[processIncompletePayments] Customer pays fees (incomplete): Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
+              cronLogger.info(`[processIncompletePayments] Customer pays fees (incomplete): Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
             } else {
               // COMPANY PAYS FEES MODE (default)
               const { totalDeduction, minForwarding } = await calculateTransactionFees(
@@ -7050,11 +7050,11 @@ const processIncompletePayments = async () => {
               if (Number(tempTx.amount) < Number(minForwarding)) {
                 adminAmountToSend = Number(tempTx.amount);
                 userAmountToSend = 0;
-                console.log(`Amount ${tempTx.amount} below threshold. Sending all to admin.`);
+                cronLogger.info(`Amount ${tempTx.amount} below threshold. Sending all to admin.`);
               } else {
                 adminAmountToSend = Number(totalDeduction);
                 userAmountToSend = Number(tempTx.amount) - Number(totalDeduction);
-                console.log(`Splitting partial amount: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
+                cronLogger.info(`Splitting partial amount: Admin=${adminAmountToSend}, Merchant=${userAmountToSend}`);
               }
             }
 
@@ -7099,10 +7099,10 @@ const processIncompletePayments = async () => {
                   Number(tempTx.amount).toFixed(8)
                 );
                 
-                console.log(`[Admin Fee Notification - Expired Payment] Sent email for ${adminAmountToSend} ${tempTx.wallet_type} from Company ${tempTx.company_id || 'N/A'}`);
+                cronLogger.info(`[Admin Fee Notification - Expired Payment] Sent email for ${adminAmountToSend} ${tempTx.wallet_type} from Company ${tempTx.company_id || 'N/A'}`);
               }
             } catch (emailError) {
-              console.error("[Admin Fee Notification - Expired Payment] Email failed:", emailError);
+              cronLogger.error("[Admin Fee Notification - Expired Payment] Email failed:", emailError);
             }
 
             await userTempAddressModel.update(
@@ -7142,7 +7142,7 @@ const processIncompletePayments = async () => {
               try {
                 await tatumApi.deleteSubscription(tempTx.subscription_id);
               } catch (e) {
-                console.log(`Failed to delete subscription ${tempTx.subscription_id}:`, e.message);
+                cronLogger.info(`Failed to delete subscription ${tempTx.subscription_id}:`, e.message);
               }
             }
 
@@ -7158,10 +7158,10 @@ const processIncompletePayments = async () => {
               "incomplete_expired"
             );
 
-            console.log(`Partial payment processed after timeout for ${tempTx.wallet_address}`);
+            cronLogger.info(`Partial payment processed after timeout for ${tempTx.wallet_address}`);
           }
         } catch (innerError) {
-          console.error(`Failed to process incomplete payment ${tempTx.wallet_address}:`, innerError.message);
+          cronLogger.error(`Failed to process incomplete payment ${tempTx.wallet_address}:`, innerError.message);
           cronLogger.error(
             `Incomplete payment processing error for ${tempTx.wallet_address}`,
             new Error(innerError)
@@ -7169,7 +7169,7 @@ const processIncompletePayments = async () => {
         }
       }
     } else {
-      console.log("No incomplete payments found that exceeded 1-hour grace period.");
+      cronLogger.info("No incomplete payments found that exceeded 1-hour grace period.");
     }
     
     // ============================================
@@ -7187,7 +7187,7 @@ const processIncompletePayments = async () => {
       });
       
       if (poolAddresses.length > 0) {
-        console.log(`[processIncompletePayments] Found ${poolAddresses.length} merchant pool addresses IN_USE, checking for expired grace period...`);
+        cronLogger.info(`[processIncompletePayments] Found ${poolAddresses.length} merchant pool addresses IN_USE, checking for expired grace period...`);
         
         for (const poolAddr of poolAddresses) {
           try {
@@ -7203,7 +7203,7 @@ const processIncompletePayments = async () => {
               continue; // Still within grace period
             }
             
-            console.log(`[processIncompletePayments] Pool address ${walletAddress} reserved ${minutesSinceReserved.toFixed(1)} min ago — checking balance...`);
+            cronLogger.info(`[processIncompletePayments] Pool address ${walletAddress} reserved ${minutesSinceReserved.toFixed(1)} min ago — checking balance...`);
             
             // Check if already processed
             const existingTx = await customerTransactionModel.findOne({
@@ -7217,7 +7217,7 @@ const processIncompletePayments = async () => {
             });
             
             if (existingTx) {
-              console.log(`[processIncompletePayments] Pool ${walletAddress} already processed (tx: ${existingTx.dataValues.transaction_reference}). Skipping.`);
+              cronLogger.info(`[processIncompletePayments] Pool ${walletAddress} already processed (tx: ${existingTx.dataValues.transaction_reference}). Skipping.`);
               continue;
             }
             
@@ -7226,11 +7226,11 @@ const processIncompletePayments = async () => {
             const actualBalance = Number(balanceData?.balance || 0);
             
             if (actualBalance <= 0) {
-              console.log(`[processIncompletePayments] Pool ${walletAddress} has no balance. Skipping.`);
+              cronLogger.info(`[processIncompletePayments] Pool ${walletAddress} has no balance. Skipping.`);
               continue;
             }
             
-            console.log(`[processIncompletePayments] Pool ${walletAddress} has ${actualBalance} ${walletType} (expected ${expectedAmount}) — grace period expired, processing...`);
+            cronLogger.info(`[processIncompletePayments] Pool ${walletAddress} has ${actualBalance} ${walletType} (expected ${expectedAmount}) — grace period expired, processing...`);
             
             // Get or reconstruct Redis data
             const poolDestTag = poolAddr.dataValues.destination_tag || null;
@@ -7245,7 +7245,7 @@ const processIncompletePayments = async () => {
                 try {
                   paymentContext = typeof lastContextRaw === 'string' ? JSON.parse(lastContextRaw) : lastContextRaw;
                 } catch (e) {
-                  console.warn(`[processIncompletePayments] Failed to parse last_payment_context for ${walletAddress}`);
+                  cronLogger.warn(`[processIncompletePayments] Failed to parse last_payment_context for ${walletAddress}`);
                 }
               }
               
@@ -7293,7 +7293,7 @@ const processIncompletePayments = async () => {
               }
               
               await setRedisItem(poolRedisKey, redisData);
-              console.log(`[processIncompletePayments] Reconstructed Redis data for pool ${walletAddress}`);
+              cronLogger.info(`[processIncompletePayments] Reconstructed Redis data for pool ${walletAddress}`);
             } else {
               // Update existing Redis data with current balance
               redisData.status = 'processing';
@@ -7304,20 +7304,20 @@ const processIncompletePayments = async () => {
             }
             
             // Process via cryptoVerification
-            console.log(`[processIncompletePayments] 🚀 Processing pool ${walletAddress} via cryptoVerification...`);
+            cronLogger.info(`[processIncompletePayments] 🚀 Processing pool ${walletAddress} via cryptoVerification...`);
             const verificationResult = await cryptoVerification(walletAddress, true, poolRedisKey);
-            console.log(`[processIncompletePayments] ✅ Pool ${walletAddress} processed successfully`);
+            cronLogger.info(`[processIncompletePayments] ✅ Pool ${walletAddress} processed successfully`);
             
           } catch (poolError) {
-            console.error(`[processIncompletePayments] ❌ Failed to process pool address:`, poolError.message || poolError);
+            cronLogger.error(`[processIncompletePayments] ❌ Failed to process pool address:`, poolError.message || poolError);
           }
         }
       }
     } catch (poolScanError) {
-      console.error("[processIncompletePayments] Error scanning merchant pool addresses:", poolScanError.message || poolScanError);
+      cronLogger.error("[processIncompletePayments] Error scanning merchant pool addresses:", poolScanError.message || poolScanError);
     }
   } catch (e) {
-    console.error("Error in processIncompletePayments:", e);
+    cronLogger.error("Error in processIncompletePayments:", e);
     const message = getErrorMessage(e);
     cronLogger.error(message, new Error(e));
   }
@@ -7341,7 +7341,7 @@ const getNetworkFees = async (req: express.Request, res: express.Response) => {
     }
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("[getNetworkFees] Error:", message);
+    cronLogger.error("[getNetworkFees] Error:", message);
     errorResponseHelper(res, 500, message);
   }
 };
@@ -7398,7 +7398,7 @@ const calculatePaymentAmount = async (req: express.Request, res: express.Respons
     }
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("[calculatePaymentAmount] Error:", message);
+    cronLogger.error("[calculatePaymentAmount] Error:", message);
     errorResponseHelper(res, 500, message);
   }
 };
@@ -7486,7 +7486,7 @@ const getConfiguredCurrenciesForCheckout = async (
         const acceptedCurrenciesStr = paymentLink.dataValues.accepted_currencies as string | null;
         if (acceptedCurrenciesStr) {
           acceptedCurrenciesFilter = acceptedCurrenciesStr.split(',').map((c: string) => c.trim().toUpperCase());
-          console.log(`[getConfiguredCurrenciesForCheckout] Payment link has accepted_currencies restriction: ${acceptedCurrenciesFilter.join(', ')}`);
+          cronLogger.info(`[getConfiguredCurrenciesForCheckout] Payment link has accepted_currencies restriction: ${acceptedCurrenciesFilter.join(', ')}`);
         }
       }
     }
@@ -7506,7 +7506,7 @@ const getConfiguredCurrenciesForCheckout = async (
           } else if (typeof redisData.available_currencies === 'string') {
             acceptedCurrenciesFilter = redisData.available_currencies.split(',').map((c: string) => c.trim().toUpperCase());
           }
-          console.log(`[getConfiguredCurrenciesForCheckout] Redis has available_currencies: ${acceptedCurrenciesFilter?.join(', ')}`);
+          cronLogger.info(`[getConfiguredCurrenciesForCheckout] Redis has available_currencies: ${acceptedCurrenciesFilter?.join(', ')}`);
         }
       }
     }
@@ -7515,7 +7515,7 @@ const getConfiguredCurrenciesForCheckout = async (
       return errorResponseHelper(res, 400, "Invalid payment session - merchant not found");
     }
     
-    console.log(`[getConfiguredCurrenciesForCheckout] Looking up wallets for user_id: ${userId}, company_id: ${companyId}`);
+    cronLogger.info(`[getConfiguredCurrenciesForCheckout] Looking up wallets for user_id: ${userId}, company_id: ${companyId}`);
     
     // Get configured wallets for this merchant
     // IMPORTANT: Only return wallets that have a wallet_address configured
@@ -7533,7 +7533,7 @@ const getConfiguredCurrenciesForCheckout = async (
     // If merchant specified accepted_currencies, filter wallet types
     if (acceptedCurrenciesFilter && acceptedCurrenciesFilter.length > 0) {
       walletWhereClause.wallet_type = { [Op.in]: acceptedCurrenciesFilter };
-      console.log(`[getConfiguredCurrenciesForCheckout] Filtering wallets to accepted currencies: ${acceptedCurrenciesFilter.join(', ')}`);
+      cronLogger.info(`[getConfiguredCurrenciesForCheckout] Filtering wallets to accepted currencies: ${acceptedCurrenciesFilter.join(', ')}`);
     }
     
     const configuredWallets = await userWalletModel.findAll({
@@ -7556,7 +7556,7 @@ const getConfiguredCurrenciesForCheckout = async (
     // De-duplicate after normalization
     currencies = [...new Set(currencies)];
     
-    console.log(`[getConfiguredCurrenciesForCheckout] Found ${currencies.length} currencies: ${currencies.join(', ')}`);
+    cronLogger.info(`[getConfiguredCurrenciesForCheckout] Found ${currencies.length} currencies: ${currencies.join(', ')}`);
     
     let feeInfo = {
       fee_payer: feePayerFromLink,
@@ -7729,9 +7729,9 @@ const calculateCheckoutFees = async (
         });
         amountUSD = Number(usdConversion[0]?.amount || paymentAmount);
         exchangeRate = amountUSD / paymentAmount;
-        console.log(`[calculateCheckoutFees] Converted ${paymentAmount} ${fiatCurrency} → ${amountUSD.toFixed(2)} USD`);
+        cronLogger.info(`[calculateCheckoutFees] Converted ${paymentAmount} ${fiatCurrency} → ${amountUSD.toFixed(2)} USD`);
       } catch (conversionError) {
-        console.warn(`[calculateCheckoutFees] USD conversion failed, using original amount:`, conversionError);
+        cronLogger.warn(`[calculateCheckoutFees] USD conversion failed, using original amount:`, conversionError);
       }
     }
 
@@ -7747,7 +7747,7 @@ const calculateCheckoutFees = async (
       const networkFee = await getBlockchainNetworkFee(crypto);
       networkFeeUSD = Number(networkFee.feeInUSD) || 0;
     } catch (e) {
-      console.log(`[calculateCheckoutFees] Could not fetch network fee for ${crypto}, using 0`);
+      cronLogger.info(`[calculateCheckoutFees] Could not fetch network fee for ${crypto}, using 0`);
     }
 
     // Total actual fees in USD (from our fee tier system)
@@ -7821,12 +7821,12 @@ const calculateCheckoutFees = async (
       }
     };
 
-    console.log(`[calculateCheckoutFees] ${paymentAmount} ${fiatCurrency} ($${amountUSD.toFixed(2)} USD) in ${crypto}: Actual=${fiatCurrency !== 'USD' ? totalActualFees + ' ' + fiatCurrency : ''} $${totalActualFeesUSD.toFixed(2)} USD, Displayed=$${totalFeesUSD} USD (60% off), Net=$${netToMerchantUSD} USD`);
+    cronLogger.info(`[calculateCheckoutFees] ${paymentAmount} ${fiatCurrency} ($${amountUSD.toFixed(2)} USD) in ${crypto}: Actual=${fiatCurrency !== 'USD' ? totalActualFees + ' ' + fiatCurrency : ''} $${totalActualFeesUSD.toFixed(2)} USD, Displayed=$${totalFeesUSD} USD (60% off), Net=$${netToMerchantUSD} USD`);
 
     return successResponseHelper(res, 200, "Fee calculation successful", response);
   } catch (e) {
     const errorMessage = getErrorMessage(e);
-    console.error(`[calculateCheckoutFees] Error:`, errorMessage);
+    cronLogger.error(`[calculateCheckoutFees] Error:`, errorMessage);
     errorResponseHelper(res, 500, errorMessage);
   }
 };

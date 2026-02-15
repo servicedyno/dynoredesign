@@ -1,4 +1,5 @@
 import express from "express";
+import { apiLogger } from "../utils/loggers";
 import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../helper";
 import sequelize from "../utils/dbInstance";
 import { QueryTypes } from "sequelize";
@@ -45,7 +46,7 @@ const getStatus = async (_req: express.Request, res: express.Response) => {
     const cacheKey = 'system:status';
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
-      console.log('[Status] Cache hit');
+      apiLogger.info('[Status] Cache hit');
       return successResponseHelper(res, 200, "Status retrieved successfully", cached);
     }
 

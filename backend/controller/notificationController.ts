@@ -1,4 +1,5 @@
 import express from "express";
+import { apiLogger } from "../utils/loggers";
 import jwt from "jsonwebtoken";
 // Op import removed - not used
 import {
@@ -82,7 +83,7 @@ const getPreferences = async (req: express.Request, res: express.Response) => {
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Get preferences error:", message);
+    apiLogger.error("Get preferences error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -161,7 +162,7 @@ const updatePreferences = async (req: express.Request, res: express.Response) =>
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Update preferences error:", message);
+    apiLogger.error("Update preferences error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -209,7 +210,7 @@ const getNotifications = async (req: express.Request, res: express.Response) => 
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Get notifications error:", message);
+    apiLogger.error("Get notifications error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -241,7 +242,7 @@ const getUnreadCount = async (req: express.Request, res: express.Response) => {
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Get unread count error:", message);
+    apiLogger.error("Get unread count error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -278,7 +279,7 @@ const markAsRead = async (req: express.Request, res: express.Response) => {
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Mark as read error:", message);
+    apiLogger.error("Mark as read error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -313,7 +314,7 @@ const markAllAsRead = async (req: express.Request, res: express.Response) => {
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Mark all as read error:", message);
+    apiLogger.error("Mark all as read error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -347,7 +348,7 @@ const deleteNotification = async (req: express.Request, res: express.Response) =
 
   } catch (e) {
     const message = getErrorMessage(e);
-    console.error("Delete notification error:", message);
+    apiLogger.error("Delete notification error:", message);
     return errorResponseHelper(res, 500, message);
   }
 };
@@ -404,7 +405,7 @@ export const createNotification = async (
 
     return notification.dataValues;
   } catch (e) {
-    console.error("Create notification error:", e);
+    apiLogger.error("Create notification error:", e);
     return null;
   }
 };

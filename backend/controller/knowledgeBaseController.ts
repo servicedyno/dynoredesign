@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { apiLogger } from "../utils/loggers";
 import KBCategory from '../models/knowledgeBaseModels/kbCategoryModel';
 import KBArticle from '../models/knowledgeBaseModels/kbArticleModel';
 import KBArticleFeedback from '../models/knowledgeBaseModels/kbArticleFeedbackModel';
@@ -38,7 +39,7 @@ export const getCategories = async (_req: Request, res: Response) => {
       data: { categories },
     });
   } catch (error) {
-    console.error("Error in getCategories:", error);
+    apiLogger.error("Error in getCategories:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -97,7 +98,7 @@ export const getArticles = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in getArticles:", error);
+    apiLogger.error("Error in getArticles:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -143,7 +144,7 @@ export const getArticleBySlug = async (req: Request, res: Response) => {
       data: { article },
     });
   } catch (error) {
-    console.error("Error in getArticleBySlug:", error);
+    apiLogger.error("Error in getArticleBySlug:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -207,7 +208,7 @@ export const searchArticles = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in searchArticles:", error);
+    apiLogger.error("Error in searchArticles:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -242,7 +243,7 @@ export const getPopularArticles = async (req: Request, res: Response) => {
       data: { articles },
     });
   } catch (error) {
-    console.error("Error in getPopularArticles:", error);
+    apiLogger.error("Error in getPopularArticles:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -298,7 +299,7 @@ export const submitArticleFeedback = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error in submitArticleFeedback:", error);
+    apiLogger.error("Error in submitArticleFeedback:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -360,7 +361,7 @@ export const createArticle = async (req: Request, res: Response) => {
       data: { article },
     });
   } catch (error) {
-    console.error("Error in createArticle:", error);
+    apiLogger.error("Error in createArticle:", error);
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({
         message: "Article slug already exists",
@@ -407,7 +408,7 @@ export const updateArticle = async (req: Request, res: Response) => {
       data: { article },
     });
   } catch (error) {
-    console.error("Error in updateArticle:", error);
+    apiLogger.error("Error in updateArticle:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -436,7 +437,7 @@ export const deleteArticle = async (req: Request, res: Response) => {
       message: "Article deleted successfully",
     });
   } catch (error) {
-    console.error("Error in deleteArticle:", error);
+    apiLogger.error("Error in deleteArticle:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message,

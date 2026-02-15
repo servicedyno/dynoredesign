@@ -62,7 +62,7 @@ export const autoGenerateInvoice = async (
     });
 
     if (existingInvoice) {
-      console.log(`Invoice already exists for transaction ${transactionId}`);
+      apiLogger.info(`Invoice already exists for transaction ${transactionId}`);
       return existingInvoice;
     }
 
@@ -72,7 +72,7 @@ export const autoGenerateInvoice = async (
     });
 
     if (!transaction) {
-      console.error(`Transaction ${transactionId} not found`);
+      apiLogger.error(`Transaction ${transactionId} not found`);
       return null;
     }
 
@@ -84,7 +84,7 @@ export const autoGenerateInvoice = async (
     });
 
     if (!company) {
-      console.error(`Company ${companyId} not found`);
+      apiLogger.error(`Company ${companyId} not found`);
       return null;
     }
 
@@ -147,14 +147,14 @@ export const autoGenerateInvoice = async (
           if (taxRate) {
             const taxData = taxRate.dataValues;
             vatRate = parseFloat(taxData.standard_rate || 0);
-            console.log(`VAT rate for ${companyData.country}: ${vatRate}%`);
+            apiLogger.info(`VAT rate for ${companyData.country}: ${vatRate}%`);
           } else {
             // Fallback to default rate if not in database
             vatRate = 23; // Default EU VAT rate
-            console.log(`Using default VAT rate for ${companyData.country}: ${vatRate}%`);
+            apiLogger.info(`Using default VAT rate for ${companyData.country}: ${vatRate}%`);
           }
         } catch (error) {
-          console.error("Error fetching VAT rate:", error);
+          apiLogger.error("Error fetching VAT rate:", error);
           vatRate = 23; // Fallback
         }
 
@@ -180,7 +180,7 @@ export const autoGenerateInvoice = async (
           displayVatAmount = vatAmount * rate;
         }
       } catch (convErr) {
-        console.warn(`[Invoice] Currency conversion to ${preferredCurrency} failed, using base amounts`);
+        apiLogger.warn(`[Invoice] Currency conversion to ${preferredCurrency} failed, using base amounts`);
       }
     }
 
@@ -217,7 +217,7 @@ export const autoGenerateInvoice = async (
 
     const invoice = await invoiceModel.create(invoiceData);
 
-    console.log(`Invoice ${invoiceNumber} generated for transaction ${transactionId}`);
+    apiLogger.info(`Invoice ${invoiceNumber} generated for transaction ${transactionId}`);
 
     // Send invoice notification email
     try {
@@ -238,16 +238,16 @@ export const autoGenerateInvoice = async (
           invoice_url: invoiceUrl,
         });
 
-        console.log(`Invoice email sent to ${userData.email}`);
+        apiLogger.info(`Invoice email sent to ${userData.email}`);
       }
     } catch (emailError) {
-      console.error("Failed to send invoice email:", emailError);
+      apiLogger.error("Failed to send invoice email:", emailError);
       // Don't fail invoice generation if email fails
     }
 
     return invoice;
   } catch (error) {
-    console.error("Error generating invoice:", error);
+    apiLogger.error("Error generating invoice:", error);
     apiLogger.error(
       `Failed to generate invoice for transaction ${transactionId}`,
       { transactionId, companyId },

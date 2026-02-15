@@ -72,7 +72,7 @@ const invalidateWalletCache = async (userId: number): Promise<void> => {
     const walletKeys = await redis.keys(walletPattern);
     if (walletKeys.length > 0) {
       await redis.del(walletKeys);
-      console.log(`[WalletCache] Invalidated ${walletKeys.length} wallet cache keys for user ${userId}`);
+      walletLogger.info(`[WalletCache] Invalidated ${walletKeys.length} wallet cache keys for user ${userId}`);
     }
     
     // Also invalidate dashboard cache if it exists
@@ -80,14 +80,14 @@ const invalidateWalletCache = async (userId: number): Promise<void> => {
     const dashboardKeys = await redis.keys(dashboardPattern);
     if (dashboardKeys.length > 0) {
       await redis.del(dashboardKeys);
-      console.log(`[WalletCache] Invalidated ${dashboardKeys.length} dashboard cache keys for user ${userId}`);
+      walletLogger.info(`[WalletCache] Invalidated ${dashboardKeys.length} dashboard cache keys for user ${userId}`);
     }
     
     if (walletKeys.length === 0 && dashboardKeys.length === 0) {
-      console.log(`[WalletCache] No cache keys found for user ${userId}`);
+      walletLogger.info(`[WalletCache] No cache keys found for user ${userId}`);
     }
   } catch (error) {
-    console.error(`[WalletCache] Error invalidating cache for user ${userId}:`, error);
+    walletLogger.error(`[WalletCache] Error invalidating cache for user ${userId}:`, error);
     // Don't throw - cache invalidation failure shouldn't break the main operation
   }
 };
@@ -111,7 +111,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
     const cacheKey = `wallet:${userData.user_id}:${company_id || 'all'}:${preferredCurrency}:v3`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
-      console.log(`[Wallet] Cache hit for user ${userData.user_id}`);
+      walletLogger.info(`[Wallet] Cache hit for user ${userData.user_id}`);
       return successResponseHelper(res, 200, "Wallets retrieved", cached);
     }
     
@@ -171,7 +171,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
           fiatConversionRate = fiatResult.amount;
         }
       } catch (e) {
-        console.warn(`[getWallet] Currency conversion failed, using USD`);
+        walletLogger.warn(`[getWallet] Currency conversion failed, using USD`);
         preferredCurrency = 'USD';
       }
     }
@@ -291,7 +291,7 @@ const getWalletTransactions = async (
           conversionRate = result.amount;
         }
       } catch (e) {
-        console.warn(`[getWalletTransactions] Currency conversion failed`);
+        walletLogger.warn(`[getWalletTransactions] Currency conversion failed`);
         preferredCurrency = 'USD';
       }
     }
@@ -366,13 +366,13 @@ const estimateFees = async (req: express.Request, res: express.Response) => {
           ? process.env.ETH_CONTRACT
           : null;
     let data;
-    console.log("##address", address);
+    walletLogger.info("##address", address);
     if (currency === "TRX" || currency === "USDT-TRC20") {
       data = tatumApi.validateTronAddress(address);
     } else {
       data = await tatumApi.getAddressBalance(address, currency);
     }
-    console.log(data);
+    walletLogger.info(data);
 
     let tempAmount = 0,
       inputCount = 0;
@@ -387,7 +387,7 @@ const estimateFees = async (req: express.Request, res: express.Response) => {
         0
       );
 
-    console.log("####Transaction Details ---->", {
+    walletLogger.info("####Transaction Details ---->", {
       fromAddress,
       toAddress,
       totalSendAmount,
@@ -418,7 +418,7 @@ const estimateFees = async (req: express.Request, res: express.Response) => {
       totalAddress: fromAddress.length,
       bchInputs: inputCount,
     });
-    console.log("###fromAddress", fromAddress);
+    walletLogger.info("###fromAddress", fromAddress);
     const tempFees = {};
     const keys = Object.keys(batchFees);
     const tempCurrency = currency === "USDT-ERC20" ? "ETH" : currency;
@@ -451,7 +451,7 @@ const estimateFees = async (req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, "Fee estimation calculated successfully", tempFees);
   } catch (e) {
-    console.log("#############Error", e);
+    walletLogger.info("#############Error", e);
     const message = getErrorMessage(e);
     walletLogger.error(
       message,
@@ -696,7 +696,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
         let finalRes;
         if (value.paymentType === paymentTypes.CARD) {
           const { paymentRes, uniqueRef } = await cardPayment(value, userData);
-          console.log(paymentRes);
+          walletLogger.info(paymentRes);
           if (paymentRes.status !== "successful") {
             finalRes = { ...paymentRes.meta.authorization, hash: uniqueRef };
 
@@ -716,7 +716,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.BANK_TRANSFER) {
           const { paymentRes, uniqueRef } = await bankTransfer(value, userData);
-          console.log("paymentRes=============>", paymentRes, uniqueRef);
+          walletLogger.info("paymentRes=============>", paymentRes, uniqueRef);
           const { transfer_reference, ...rest } = paymentRes.meta.authorization;
           finalRes = { hash: uniqueRef, ...rest };
           await setRedisItem("flw-txt-" + uniqueRef, {
@@ -726,7 +726,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.USSD) {
           const { paymentRes, uniqueRef } = await USSD(value, userData);
-          console.log("paymentRes=============>", paymentRes, uniqueRef);
+          walletLogger.info("paymentRes=============>", paymentRes, uniqueRef);
           const ussdRes = paymentRes as { meta?: { authorization?: { note?: string } }; data?: { payment_code?: string } };
           const { note } = ussdRes.meta?.authorization || {};
           const { payment_code } = ussdRes.data || {};
@@ -738,7 +738,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.MOBILE_MONEY) {
           const { paymentRes, uniqueRef } = await MobileMoney(value, userData);
-          console.log("paymentRes=============>", paymentRes, uniqueRef);
+          walletLogger.info("paymentRes=============>", paymentRes, uniqueRef);
           const mobileRes = paymentRes as { meta?: { authorization?: Record<string, unknown> } };
           if (value.currency === "KES") {
             finalRes = { hash: uniqueRef };
@@ -751,7 +751,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
         }
         if (value.paymentType === paymentTypes.BANK_ACCOUNT) {
           const { paymentRes, uniqueRef } = await bankAccount(value, userData);
-          console.log(
+          walletLogger.info(
             "paymentRes=============>",
             paymentRes,
             uniqueRef,
@@ -767,7 +767,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
         }
         if (value.paymentType === paymentTypes.QR_CODE) {
           const { paymentRes, uniqueRef } = await QRCode(value, userData);
-          console.log(
+          walletLogger.info(
             "paymentRes=============>",
             paymentRes,
             uniqueRef,
@@ -781,7 +781,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.CRYPTO) {
           const { paymentRes, uniqueRef } = await Crypto(value, userData);
-          console.log("paymentRes=============>", paymentRes, uniqueRef);
+          walletLogger.info("paymentRes=============>", paymentRes, uniqueRef);
           finalRes = { hash: uniqueRef, ...paymentRes };
           await setRedisItem("crypto-" + paymentRes.address, {
             mode: paymentTypes.CRYPTO,
@@ -803,7 +803,7 @@ const addFunds = async (req: express.Request, res: express.Response) => {
             value,
             userData
           );
-          console.log(
+          walletLogger.info(
             "paymentRes=============>",
             paymentRes,
             uniqueRef,
@@ -847,7 +847,7 @@ const authStep = async (req: express.Request, res: express.Response) => {
 
         await deleteRedisItem("flw-txt-" + value.uniqueRef);
 
-        console.log("flw-txt-" + value.uniqueRef);
+        walletLogger.info("flw-txt-" + value.uniqueRef);
         if (value.mode === "otp") {
           const flw_ref = tempData?.flw_ref;
           const res = await flw.Charge.validate({
@@ -855,7 +855,7 @@ const authStep = async (req: express.Request, res: express.Response) => {
             flw_ref,
           });
 
-          console.log(res);
+          walletLogger.info(res);
           const transactionId = res.data.id;
           const { data }: IVerifyResponse = await flw.Transaction.verify({
             id: transactionId,
@@ -872,7 +872,7 @@ const authStep = async (req: express.Request, res: express.Response) => {
             userData,
             true
           );
-          console.log(paymentRes);
+          walletLogger.info(paymentRes);
           if (
             paymentRes.status !== "error" &&
             paymentRes.data?.status !== "successful"
@@ -922,14 +922,14 @@ const verifyPayment = async (req: express.Request, res: express.Response) => {
     const tempData = await getRedisItem("flw-txt-" + uniqueRef);
 
     let finalRes;
-    console.log(tempData, uniqueRef);
+    walletLogger.info(tempData, uniqueRef);
     const transactionId = tempData?.id;
     if (transactionId) {
       // await deleteRedisItem("flw-txt-" + uniqueRef);
       const { data }: IVerifyResponse = await flw.Transaction.verify({
         id: transactionId,
       });
-      console.log(data);
+      walletLogger.info(data);
       finalRes = {
         txRef: uniqueRef,
       };
@@ -952,14 +952,14 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
 
     const tempData = await getRedisItem("flw-txt-" + uniqueRef);
 
-    console.log(tempData, uniqueRef);
+    walletLogger.info(tempData, uniqueRef);
     const transactionId = tempData?.id;
     if (transactionId) {
       if (tempData.mode !== paymentTypes.CRYPTO) {
         const { data }: IVerifyResponse = await flw.Transaction.verify({
           id: transactionId,
         });
-        console.log(data);
+        walletLogger.info(data);
         const walletData = await userWalletModel.findOne({
           where: {
             user_id: userData.user_id,
@@ -967,7 +967,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           },
           transaction,
         });
-        console.log(walletData);
+        walletLogger.info(walletData);
         const transaction_fee = await getTransactionFee();
         const blockchain_fee = await getBlockchainFee();
         const platformCharge = (data.amount * Number(transaction_fee)) / 100;
@@ -978,7 +978,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
           where: { wallet_type: data.currency },
         });
 
-        console.log(adminWallet[0]);
+        walletLogger.info(adminWallet[0]);
 
         const userSettledAmount = Number(
           data.amount_settled - platformCharge - blockchainCharge
@@ -1045,7 +1045,7 @@ const verifyCryptoPayment = async (
 
     const tempData = await getRedisItem("crypto-" + address);
 
-    console.log(tempData, address);
+    walletLogger.info(tempData, address);
     const transactionId = tempData?.txId;
 
     const adminWalletData = await adminWalletModel.findOne({
@@ -1071,7 +1071,7 @@ const verifyCryptoPayment = async (
         },
         transaction,
       });
-      console.log(walletData);
+      walletLogger.info(walletData);
       const transaction_fee = await getTransactionFee();
       const blockchain_fee = await getBlockchainFee();
       const receivedAmount = tempData?.receivedAmount ?? tempData?.amount;
@@ -1080,7 +1080,7 @@ const verifyCryptoPayment = async (
       const blockchainCharge =
         (Number(receivedAmount) * Number(blockchain_fee)) / 100;
       const admin_wallet_id = adminWalletData.dataValues.wallet_account_id;
-      console.log(
+      walletLogger.info(
         "platformCharge=========>",
         admin_wallet_id,
         walletData.dataValues.wallet_account_id,
@@ -1101,7 +1101,7 @@ const verifyCryptoPayment = async (
         Number(receivedAmount) - platformCharge - blockchainCharge
       ).toFixed(8);
 
-      console.log(adminWallet[0], userSettledAmount);
+      walletLogger.info(adminWallet[0], userSettledAmount);
 
       let fees: unknown;
       let sendAmount: string | number = Number(receivedAmount);
@@ -1149,7 +1149,7 @@ const verifyCryptoPayment = async (
           ).toFixed(8);
         }
 
-        console.log(fees);
+        walletLogger.info(fees);
 
         try {
           const fromUTXO = [],
@@ -1188,9 +1188,9 @@ const verifyCryptoPayment = async (
             toUTXO,
           });
 
-          console.log(transactionDetails);
+          walletLogger.info(transactionDetails);
         } catch (e) {
-          console.log(e);
+          walletLogger.info(e);
           const message = getErrorMessage(e);
           walletLogger.error(message, new Error(e));
         }
@@ -1242,7 +1242,7 @@ const cardPayment = async (
 ) => {
   const expiry = data.expiry.split("/");
   const uniqueRef = crypto.randomBytes(24).toString("hex");
-  console.log("from card=============>", data);
+  walletLogger.info("from card=============>", data);
   const payload = {
     card_number: data.number,
     expiry_month: expiry[0],
@@ -1271,7 +1271,7 @@ const cardPayment = async (
     redirect_url: `${process.env.FRONTEND_URL || process.env.REACT_APP_FRONTEND_URL || ''}/payment/verify`,
   };
 
-  console.log("payload==========>", payload);
+  walletLogger.info("payload==========>", payload);
 
   const paymentRes: FW_API_Response = await flw.Charge.card(payload);
 
@@ -1288,7 +1288,7 @@ const bankTransfer = async (data: IFundData, tokenData: IUserType) => {
     tx_ref: uniqueRef,
   };
 
-  console.log("payload==========>", payload);
+  walletLogger.info("payload==========>", payload);
 
   const paymentRes: FW_API_Response = await flw.Charge.bank_transfer(payload);
 
@@ -1305,7 +1305,7 @@ const bankAccount = async (data: IFundData, tokenData: IUserType) => {
     tx_ref: uniqueRef,
   };
 
-  console.log("payload==========>", payload);
+  walletLogger.info("payload==========>", payload);
 
   let paymentRes: FW_API_Response;
 
@@ -1339,7 +1339,7 @@ const googleApplePay = async (data: IFundData, tokenData: IUserType) => {
     tx_ref: uniqueRef + "_success_mock",
   };
 
-  console.log("payload==========>", payload);
+  walletLogger.info("payload==========>", payload);
 
   const type =
     data.paymentType === paymentTypes.GOOGLE_PAY ? "googlepay" : "applepay";
@@ -1371,7 +1371,7 @@ const USSD = async (data: IFundData, tokenData: IUserType) => {
     tx_ref: uniqueRef,
   };
 
-  console.log("payload==========>", payload);
+  walletLogger.info("payload==========>", payload);
 
   const paymentRes = await flw.Charge.ussd(payload);
 
@@ -1380,7 +1380,7 @@ const USSD = async (data: IFundData, tokenData: IUserType) => {
 
 const MobileMoney = async (data: IFundData, tokenData: IUserType) => {
   const uniqueRef = crypto.randomBytes(24).toString("hex");
-  console.log(tokenData);
+  walletLogger.info(tokenData);
   const payload = {
     currency: data.currency,
     amount: data.amount,
@@ -1399,7 +1399,7 @@ const MobileMoney = async (data: IFundData, tokenData: IUserType) => {
     }),
   };
 
-  console.log("payload==========>", payload);
+  walletLogger.info("payload==========>", payload);
   let paymentRes;
   if (data.currency === "KES")
     paymentRes = await flw.MobileMoney.mpesa(payload);
@@ -1425,7 +1425,7 @@ const QRCode = async (data: IFundData, tokenData: IUserType) => {
     is_nqr: "1",
   };
 
-  console.log("payload==========>", payload);
+  walletLogger.info("payload==========>", payload);
 
   const resData = await axios.post(
     "https://api.flutterwave.com/v3/charges?type=qr",
@@ -1475,7 +1475,7 @@ const Crypto = async (data: IFundData, tokenData: IUserType) => {
   let cryptoData = walletDetails.wallet_address;
   if (currency === "BCH") {
     cryptoData = walletDetails.wallet_address.split(":")[1];
-    console.log(cryptoData);
+    walletLogger.info(cryptoData);
   }
   let qr_code;
 
@@ -1563,7 +1563,7 @@ const getTempAddressBatches = async (
     );
   }
 
-  console.log("####addressBalance", addressBalance);
+  walletLogger.info("####addressBalance", addressBalance);
 
   let tempAddresses = await userTempAddressModel.findAll({
     where: {
@@ -1589,7 +1589,7 @@ const getTempAddressBatches = async (
   } else if (addressBalance?.incoming && addressBalance?.outgoing) {
     const amount =
       Number(addressBalance?.incoming) - Number(addressBalance?.outgoing);
-    console.log("amount============>", amount);
+    walletLogger.info("amount============>", amount);
     if (amount > 0) {
       const tempData: Record<string, unknown> = {
         dataValues: {
@@ -1600,7 +1600,7 @@ const getTempAddressBatches = async (
       tempAddressBalances.push(tempData);
     }
   }
-  console.log("###tempAddressBalances", tempAddressBalances);
+  walletLogger.info("###tempAddressBalances", tempAddressBalances);
   if (["USDT-TRC20", "USDT-ERC20", "ETH", "TRX"].indexOf(currency) === -1) {
     for (let address of tempAddresses) {
       if (currency === "TRX") {
@@ -1625,7 +1625,7 @@ const getTempAddressBatches = async (
       } else if (addressBalance?.incoming && addressBalance?.outgoing) {
         const amount =
           Number(addressBalance?.incoming) - Number(addressBalance?.outgoing);
-        console.log("amount============>", amount);
+        walletLogger.info("amount============>", amount);
         if (amount > 0) {
           const tempData: Record<string, unknown> = {
             dataValues: {
@@ -1643,7 +1643,7 @@ const getTempAddressBatches = async (
   const allUserAddress = [...tempAddressBalances].sort(
     (a, b) => b.dataValues.amount - a.dataValues.amount
   );
-  console.log(
+  walletLogger.info(
     "###allUserAddress",
     allUserAddress.map((a) => ({
       amount: a.dataValues.amount,
@@ -1656,7 +1656,7 @@ const getTempAddressBatches = async (
     (acc, addr) => acc + addr.dataValues.amount,
     0
   );
-  console.log("###totalTempAmount=======>", { totalTempAmount, sendAmount });
+  walletLogger.info("###totalTempAmount=======>", { totalTempAmount, sendAmount });
 
   // Step 4: Check if the total amount is sufficient for the withdrawal
   if (totalTempAmount < sendAmount) {
@@ -1707,9 +1707,9 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
   try {
     const { currency, amount, address, feeType, feeToPay, otp, saveAddress } =
       req.body;
-    console.log(req.body);
+    walletLogger.info(req.body);
     const storedOtp = await getRedisItem(userData.email + "-withdrawal-otp");
-    console.log(storedOtp);
+    walletLogger.info(storedOtp);
     if (storedOtp.otp != otp) {
       errorResponseHelper(res, 500, "OTP did not match!");
     } else {
@@ -1809,7 +1809,7 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
           toUTXO,
         });
 
-      console.log("###transactionDetails", transactionDetails);
+      walletLogger.info("###transactionDetails", transactionDetails);
 
       // if (transactionDetails) {
       //   // Step 5: Deduct the amount from temporary addresses and user's wallet
@@ -1930,7 +1930,7 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
         transaction_type: "DEBIT",
         status: "success",
       };
-      console.log(userPayload);
+      walletLogger.info(userPayload);
 
       await selfTransactionModel.create({ ...userPayload });
       if (saveAddress) {
@@ -1966,7 +1966,7 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
       successResponseHelper(res, 200, "Amount withdrawed!", transactionIds);
     }
   } catch (e) {
-    console.log("###Error: ", e);
+    walletLogger.info("###Error: ", e);
     const message = getErrorMessage(e);
     walletLogger.error(
       message,
@@ -2145,7 +2145,7 @@ const exchangeCreate = async (req: express.Request, res: express.Response) => {
           customer_id,
         };
       }
-      console.log(
+      walletLogger.info(
         "secondUser=============>",
         mobile,
         email,
@@ -2201,7 +2201,7 @@ const exchangeCreate = async (req: express.Request, res: express.Response) => {
         const wallet2_usd = await convertToUSD(user2Wallet.dataValues.wallet_type, user2Wallet.dataValues.amount);
         const wallet2_balance = [{ amount: wallet2_usd }];
 
-        console.log("wallet_1", wallet1_balance, "wallet_2", wallet2_balance);
+        walletLogger.info("wallet_1", wallet1_balance, "wallet_2", wallet2_balance);
 
         if (wallet1_balance[0].amount < amount_in_usd) {
           errorResponseHelper(
@@ -2274,7 +2274,7 @@ const exchangeCreate = async (req: express.Request, res: express.Response) => {
       errorResponseHelper(res, 404, "user not found!");
     }
   } catch (e) {
-    console.log(e);
+    walletLogger.info(e);
     const message = getErrorMessage(e);
     walletLogger.error(
       message,
@@ -2301,7 +2301,7 @@ const getExchange = async (req: express.Request, res: express.Response) => {
     );
     successResponseHelper(res, 200, "Exchange fetched successfully!", resData);
   } catch (e) {
-    console.log(e);
+    walletLogger.info(e);
     const message = getErrorMessage(e);
     walletLogger.error(
       message,
@@ -2377,7 +2377,7 @@ const confirmExchange = async (req: express.Request, res: express.Response) => {
           const w2Result = await convertToFiat(user2_exchange_wallet.dataValues.wallet_type, 'USD', user2_exchange_wallet.dataValues.amount);
           const wallet2_balance = [{ amount: w2Result.amount, transferRate: w2Result.rate }];
 
-          console.log("wallet_1", wallet1_balance, "wallet_2", wallet2_balance);
+          walletLogger.info("wallet_1", wallet1_balance, "wallet_2", wallet2_balance);
 
           if (wallet1_balance[0].amount < Number(amount_in_usd)) {
             throw {
@@ -2435,7 +2435,7 @@ const confirmExchange = async (req: express.Request, res: express.Response) => {
             transaction_type: "CREDIT",
             status: "success",
           };
-          console.log(user1Payload1);
+          walletLogger.info(user1Payload1);
 
           await selfTransactionModel.create(
             { ...user1Payload1 },
@@ -2468,7 +2468,7 @@ const confirmExchange = async (req: express.Request, res: express.Response) => {
             transaction_type: "DEBIT",
             status: "success",
           };
-          console.log(user1Payload2);
+          walletLogger.info(user1Payload2);
 
           await selfTransactionModel.create(
             { ...user1Payload2 },
@@ -2513,7 +2513,7 @@ const confirmExchange = async (req: express.Request, res: express.Response) => {
             transaction_type: "CREDIT",
             status: "success",
           };
-          console.log(user2Payload1);
+          walletLogger.info(user2Payload1);
 
           await selfTransactionModel.create(
             { ...user2Payload1 },
@@ -2545,7 +2545,7 @@ const confirmExchange = async (req: express.Request, res: express.Response) => {
             transaction_type: "DEBIT",
             status: "success",
           };
-          console.log(user2Payload2);
+          walletLogger.info(user2Payload2);
 
           await selfTransactionModel.create(
             { ...user2Payload2 },
@@ -2606,7 +2606,7 @@ const confirmExchange = async (req: express.Request, res: express.Response) => {
       };
     }
   } catch (e) {
-    console.log(e);
+    walletLogger.info(e);
     const message = getErrorMessage(e);
     transaction.rollback();
     if (!e?.ignore) {
@@ -2758,7 +2758,7 @@ const getUserAnalytics = async (
 
     successResponseHelper(res, 200, "Analytics data retrieved successfully", returnData);
   } catch (e) {
-    console.log(e);
+    walletLogger.info(e);
     const message = getErrorMessage(e);
     walletLogger.error(
       message,
@@ -2875,7 +2875,7 @@ const validateWallet = async (
       } else {
         balance = await tatumApi.getAddressBalance(wallet_address, currency);
       }
-      console.log(balance);
+      walletLogger.info(balance);
 
       await updateOtp(userData, wallet_address, currency);
 
@@ -3040,13 +3040,13 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
     try {
       const MERCHANT_POOL_CRYPTO_TYPES = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'];
       if (MERCHANT_POOL_CRYPTO_TYPES.includes(currency)) {
-        console.log(`[verifyOtp] Initializing merchant pool for user ${user_id}, currency ${currency}...`);
+        walletLogger.info(`[verifyOtp] Initializing merchant pool for user ${user_id}, currency ${currency}...`);
         await merchantPoolService.initializeMerchantPool(user_id, currency);
-        console.log(`[verifyOtp] ✅ Merchant pool initialized for ${currency}`);
+        walletLogger.info(`[verifyOtp] ✅ Merchant pool initialized for ${currency}`);
       }
     } catch (poolError) {
       // Log but don't fail - pool can be initialized lazily on first payment
-      console.warn(`[verifyOtp] ⚠️ Merchant pool initialization skipped:`, poolError.message);
+      walletLogger.warn(`[verifyOtp] ⚠️ Merchant pool initialization skipped:`, poolError.message);
     }
     
     await sendEmail(
@@ -3176,9 +3176,9 @@ const deleteWalletAddress = async (
           date,
           time
         );
-        console.log(`[Wallet] Deletion notification sent to ${userData.email} for ${deletedWalletType}`);
+        walletLogger.info(`[Wallet] Deletion notification sent to ${userData.email} for ${deletedWalletType}`);
       } catch (emailError) {
-        console.error("[Wallet] Failed to send deletion notification:", emailError);
+        walletLogger.error("[Wallet] Failed to send deletion notification:", emailError);
       }
     }
 

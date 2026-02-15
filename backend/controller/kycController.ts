@@ -4,6 +4,7 @@
  */
 
 import express from "express";
+import { apiLogger } from "../utils/loggers";
 import jwt from "jsonwebtoken";
 import { QueryTypes } from "sequelize";
 import sequelize from "../utils/dbInstance";
@@ -90,7 +91,7 @@ const getKYCStatus = async (req: express.Request, res: express.Response) => {
     });
 
   } catch (error: unknown) {
-    console.error("Get KYC status error:", error);
+    apiLogger.error("Get KYC status error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
   }
@@ -142,7 +143,7 @@ const getKYCRequirements = async (_req: express.Request, res: express.Response) 
     });
 
   } catch (error: unknown) {
-    console.error("Get KYC requirements error:", error);
+    apiLogger.error("Get KYC requirements error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
   }
@@ -281,7 +282,7 @@ const startKYCVerification = async (req: express.Request, res: express.Response)
     });
 
   } catch (error: unknown) {
-    console.error("Start KYC verification error:", error);
+    apiLogger.error("Start KYC verification error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
   }
@@ -302,7 +303,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
     const isValid = veriffService.verifyWebhookSignature(payload, signature);
 
     if (!isValid) {
-      console.error("Invalid Veriff webhook signature");
+      apiLogger.error("Invalid Veriff webhook signature");
       return errorResponseHelper(res, 401, "Invalid webhook signature");
     }
 
@@ -310,7 +311,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
     const webhookData = veriffService.parseWebhookPayload(payload);
     const { verificationId, status, decision, decisionCode, reason } = webhookData;
 
-    console.log("Veriff webhook received:", { verificationId, decision, status });
+    apiLogger.info("Veriff webhook received:", { verificationId, decision, status });
 
     // Find KYC record
     const kycRecord = await kycModel.findOne({
@@ -320,7 +321,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
     });
 
     if (!kycRecord) {
-      console.error("KYC record not found for verification:", verificationId);
+      apiLogger.error("KYC record not found for verification:", verificationId);
       return errorResponseHelper(res, 404, "KYC record not found");
     }
 
@@ -405,7 +406,7 @@ const handleVeriffWebhook = async (req: express.Request, res: express.Response) 
     return successResponseHelper(res, 200, "Webhook processed successfully", {});
 
   } catch (error: unknown) {
-    console.error("Veriff webhook error:", error);
+    apiLogger.error("Veriff webhook error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
   }
@@ -499,7 +500,7 @@ export const checkVolumeAndTriggerKYC = async (
           gracePeriodEnd.setDate(gracePeriodEnd.getDate() + gracePeriodDays);
           daysRemaining = Math.max(0, Math.ceil((gracePeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
         } catch (e) {
-          console.warn("[KYC] Could not calculate grace period, using default");
+          apiLogger.warn("[KYC] Could not calculate grace period, using default");
         }
 
         // MONTHLY NOTIFICATION: Send reminder every 30 days until KYC is approved
@@ -537,12 +538,12 @@ export const checkVolumeAndTriggerKYC = async (
           // Send KYC required email with urgency based on remaining days
           await sendKYCRequiredEmail(userEmail, userName, totalVolume.toFixed(2));
           
-          console.log(`[KYC NOTIFICATION] Sent monthly reminder to user ${userId}. Volume: $${totalVolume.toFixed(2)}, Days remaining: ${daysRemaining}`);
+          apiLogger.info(`[KYC NOTIFICATION] Sent monthly reminder to user ${userId}. Volume: $${totalVolume.toFixed(2)}, Days remaining: ${daysRemaining}`);
         }
       }
     }
   } catch (error) {
-    console.error("Check volume and trigger KYC error:", error);
+    apiLogger.error("Check volume and trigger KYC error:", error);
     // Don't throw error to avoid breaking transaction flow
   }
 };
@@ -646,7 +647,7 @@ const resubmitKYC = async (req: express.Request, res: express.Response) => {
     });
 
   } catch (error: unknown) {
-    console.error("Resubmit KYC error:", error);
+    apiLogger.error("Resubmit KYC error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
   }
@@ -678,7 +679,7 @@ const getKYCHistory = async (req: express.Request, res: express.Response) => {
     });
 
   } catch (error: unknown) {
-    console.error("Get KYC history error:", error);
+    apiLogger.error("Get KYC history error:", error);
     const message = getErrorMessage(error);
     return errorResponseHelper(res, 500, message);
   }
