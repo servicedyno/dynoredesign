@@ -60,9 +60,34 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
 **P1 - Cleanup:**
 - Removed temporary `/diagnostics/recover-payment` endpoint from server.ts
 
-### Testing
-- 23/23 backend tests passed (iteration_4.json)
-- All queue, reconciliation, auth protection, and endpoint tests verified
+### Phase: Unit Testing Framework (Completed - Feb 15, 2026)
+**Phase 1 — Foundation (7 test suites, 168 tests):**
+- Integrated Jest for backend unit testing (`jest.config.ts`)
+- Created `__tests__/__mocks__/` for DB/Redis/model isolation
+- Test suites: adminWalletMapping, confirmationRequirements, cryptoClassification, feeCalculation, feeConfigUtils, merchantPoolConfig, settlementMath
+- Fixed bugs discovered via tests:
+  - `calculateFee.ts`: Missing BTC fee rates returned 0 instead of error
+  - `calculateUnderpayment.ts`: Precision issue misclassifying underpayments (Big.js fix)
+
+**Phase 2 — Webhook Processor Tests (1 test suite, 52 tests):**
+- Comprehensive test coverage for `webhookProcessor.ts` — the most critical business logic
+- 12 test categories covering the full pipeline:
+  1. Duplicate detection (processed-tx key)
+  2. Atomic lock acquisition/release
+  3. Internal wallet filter (admin/fee wallets)
+  4. Address resolution (BCH normalization, XRP destination tags, fallbacks)
+  5. Amount validation (zero, negative, NaN)
+  6. Status checks (already-successful payments)
+  7. Crash recovery for stale "processing" payments
+  8. New transaction handling + completion payments
+  9. Underpayment logic (payment link wait vs direct API immediate)
+  10. Minor underpayment threshold acceptance
+  11. CryptoVerification with retries + non-retryable error handling
+  12. Query param enrichment + full pipeline integration test
+
+### Testing Summary
+- **Total: 220 tests passing across 8 suites**
+- All previous tests (iteration_4.json) + new webhook processor tests verified
 
 ## Credentials
 - **User**: richard@dyno.pt / Katiekendra123@
@@ -89,5 +114,8 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
 - Data Architecture: https://static.prod-images.emergentagent.com/jobs/c586ec27-53a2-4d4a-9555-00021f104f43/images/ea99c4f101c12bdd9cb07f3607b6399da07e4f5d8f576eb3b2862a52094ea2c1.png
 
 ## Backlog
+- **P1: Phase 3 — Core Payment & Fee Service Testing**: Unit tests for `payment.service.ts` and `fee.service.ts` (payment state management, fee application)
+- **P2: Phase 4 — Redis Service & Data Consistency Testing**: Tests for Redis atomicity, race conditions, locking mechanisms
+- **P2: Phase 5 — API Endpoint Integration Testing**: Full request-response cycle tests for `/get-data`, `/webhook/tatum`
+- **P3: Dependency Injection refactoring** to decouple services from Sequelize models for better testability
 - P1: DLQ email alerting (notify admin when jobs land in dead-letter queue)
-- No other pending items.
