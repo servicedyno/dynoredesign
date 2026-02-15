@@ -624,6 +624,9 @@ async function handleNewTransaction(
     const err = verifyError as { message?: string };
     webhookLogs.error("[WebhookProcessor] cryptoVerification failed after retries:", verifyError);
 
+    // Soft-enforce: processing → failed (PROCESSING → FAILED)
+    softValidate("processing", "failed", paymentId, "crypto-verification-failure");
+
     await setRedisItem(redisKey, {
       ...items, status: "failed", receivedAmount: incomingAmount,
       txId: payload.txId, failedAt: new Date().toISOString(),
