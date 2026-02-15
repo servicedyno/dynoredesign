@@ -562,6 +562,7 @@ describe('Webhook Processor — processWebhookJob', () => {
       seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
         amount: '100',
+        base_amount: '100', // $100 USD — makes 30% shortfall = $30 > $1 threshold
         link_id: 'link-001',
       }));
       seedRedis('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
@@ -584,6 +585,7 @@ describe('Webhook Processor — processWebhookJob', () => {
       seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
         amount: '100',
+        base_amount: '100',
         link_id: 'link-001',
       }));
       seedRedis('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
@@ -606,6 +608,7 @@ describe('Webhook Processor — processWebhookJob', () => {
       seedRedis('crypto-0xTestAddress', createRedisPaymentData({
         txId: undefined,
         amount: '100',
+        base_amount: '100',
         link_id: 'link-001',
       }));
       seedRedis('ref-001', { adm_id: 1, company_id: 1, link_id: 'link-001' });
