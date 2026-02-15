@@ -4536,8 +4536,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         if (customerData?.pathType?.includes("addFund") || overPayment) {
           if (customerData?.pathType?.includes("createPayment") && overPayment) {
             // FIX: Only delete subscription for legacy addresses, not merchant pool
-            if (!isMerchantPoolAddress && tempAddressData.subscription_id) {
-              await tatumApi.deleteSubscription(tempAddressData.subscription_id);
+            if (!isMerchantPoolAddress) {
+              await safeDeleteSubscription(tempAddressData.subscription_id, 'legacy address overpayment');
             }
             await transaction.commit();
             // FIXED: Use soft delete with TTL for checkout status polling
