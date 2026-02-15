@@ -155,7 +155,7 @@ export const calculateTransactionFees = async (
   const effectiveTier = matchingTier || (() => {
     const sortedTiers = [...tiers].sort((a: FeeTier, b: FeeTier) => a.min_amount - b.min_amount);
     if (sortedTiers[0] && amount > 0) {
-      console.warn(`[calculateTransactionFees] No exact tier for amount ${amount}, using lowest tier (min=${sortedTiers[0].min_amount})`);
+      log(`[calculateTransactionFees] No exact tier for amount ${amount}, using lowest tier (min=${sortedTiers[0].min_amount})`, 'warn');
       return sortedTiers[0];
     }
     return null;
@@ -213,7 +213,7 @@ export const calculateTransactionFeesWithDiscount = async (
   const effectiveTierDiscount = matchingTierDiscount || (() => {
     const sortedTiers = [...tiers].sort((a: FeeTierDiscount, b: FeeTierDiscount) => a.min_amount - b.min_amount);
     if (sortedTiers[0] && amount > 0) {
-      console.warn(`[calculateTransactionFeesWithDiscount] No exact tier for amount ${amount}, using lowest tier (min=${sortedTiers[0].min_amount})`);
+      log(`[calculateTransactionFeesWithDiscount] No exact tier for amount ${amount}, using lowest tier (min=${sortedTiers[0].min_amount})`, 'warn');
       return sortedTiers[0];
     }
     return null;
