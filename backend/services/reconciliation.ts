@@ -229,10 +229,16 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
         const webhookData = typeof webhook.data === "string" ? JSON.parse(webhook.data) : webhook.data;
         if (!webhookData?.txId) continue;
 
-        // Check if we already processed this transaction
+        // Check if we already processed OR already reconciled this transaction
         const processedKey = `processed-tx-${webhookData.txId}`;
+        const reconciledKey = `reconciled-tx-${webhookData.txId}`;
         const alreadyProcessed = await getRedisItem(processedKey);
         if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
+          skippedProcessed++;
+          continue;
+        }
+        const alreadyReconciled = await getRedisItem(reconciledKey);
+        if (alreadyReconciled && Object.keys(alreadyReconciled).length > 0) {
           skippedProcessed++;
           continue;
         }
@@ -251,6 +257,9 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
           receivedAt: new Date().toISOString(),
           source: "reconciliation",
         });
+
+        // Mark as reconciled with 30-day TTL to prevent re-queuing on future restarts
+        await setRedisItemWithTTL(reconciledKey, { reconciledAt: new Date().toISOString(), source: "tatum-failed-webhook" }, 30 * 24 * 60 * 60);
         count++;
       } catch (parseErr) {
         webhookLogs.error(`[Reconciliation] Failed to parse Tatum webhook:`, parseErr);
