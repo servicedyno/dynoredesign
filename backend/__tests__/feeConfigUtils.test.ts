@@ -80,10 +80,9 @@ describe('feeConfigUtils', () => {
       expect(getTransactionFeePercent()).toBe(1.5);
     });
 
-    it('handles zero fee (returns default due to || operator)', () => {
+    it('handles zero fee (returns 0 when explicitly set)', () => {
       process.env.TRANSACTION_FEE_PERCENT = '0';
-      // POTENTIAL BUG: cannot set 0% fee due to || fallback
-      expect(getTransactionFeePercent()).toBe(1.5);
+      expect(getTransactionFeePercent()).toBe(0);
     });
   });
 
