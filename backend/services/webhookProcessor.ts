@@ -411,6 +411,7 @@ async function handleNewTransaction(
         currency: items?.currency || payload.asset,
         payment_id: items?.payment_id || items?.unique_tx_id,
         status: "pending",
+        payment_status: "pending",
         base_amount: customerData?.base_amount || items?.base_amount_usd || null,
         base_currency: customerData?.base_currency || "USD",
         customer_name: customerData?.customer_name || null,
