@@ -1142,13 +1142,7 @@ const verifyCryptoPayment = async (
           walletLogger.error(message, new Error(e));
         }
       }
-      await userWalletModel.increment("amount", {
-        by: Number(userSettledAmount),
-        where: {
-          wallet_id: walletData.dataValues.wallet_id,
-        },
-        transaction,
-      });
+      await incrementUserWallet(walletData.dataValues.wallet_id, Number(userSettledAmount), transaction);
 
       const userPayload = {
         id: tempData.ref,
