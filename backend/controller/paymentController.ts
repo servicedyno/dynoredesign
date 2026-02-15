@@ -6411,10 +6411,7 @@ const sweepNativeAdminFees = async () => {
             );
 
             // Increment admin wallet fee balance (for tracking)
-            await adminWalletModel.increment("fee", {
-              by: sendAmount,
-              where: { wallet_type },
-            });
+            await incrementAdminFee(wallet_type, sendAmount);
 
             cronLogger.info(`[sweepNativeAdminFees] Successfully swept ${sendAmount} ${wallet_type} ($${usd} USD) - TX: ${transactionDetails?.txId}`);
           } else {
