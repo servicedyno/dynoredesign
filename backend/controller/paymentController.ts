@@ -3726,6 +3726,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           customerData.adm_id = poolAddress.dataValues.owner_user_id;
           customerData.company_id = poolAddress.dataValues.current_company_id;
         } else {
+          transactionFinished = true;
           await transaction.rollback();
           return {
             status: 400,
@@ -3769,6 +3770,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
       if (!walletData && whereClause.company_id) {
         cronLogger.error(`[cryptoVerification] ❌ MULTI-TENANT: No wallet found for company_id ${whereClause.company_id}. NOT falling back to avoid cross-company payment routing.`);
         // Instead of removing company_id constraint, we fail safely
+        transactionFinished = true;
         await transaction.rollback();
         return {
           status: 400,
