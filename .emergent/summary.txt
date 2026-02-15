@@ -1,54 +1,90 @@
 <analysis>**original_problem_statement:**
-1.  Create a 0 ETH and a 0 LTC payment for  (richard@dyno.p) using the direct merchant crypto API for testing.
-2.  Check if the Binance proxy is enabled and working. If not, enable it.
-3.  Monitor the status of the created payments by checking the logs.
-4.  After the user sent the LTC payment, investigate why it was not being processed.
-5.  Create another round of payments: 0 LTC, 0 XRP, and 0 ETH.
-6.  Monitor the status of the new payments.
+The user's initial request was to  a cryptocurrency payment gateway. Following the setup, the user made several requests:
+1.  **QR Code Enhancement**: Add currency logos to the center of generated QR codes.
+2.  **Bug Fix**: Handle invalid JSON errors in the API gracefully instead of causing a 500 error.
+3.  **Alerting System**: Ensure error alerts are sent via email using a provided Brevo API key.
+4.  **Binance Connectivity**: Turn on SSH and verify that the Binance API is reachable.
+5.  **Payment Creation**: Create five 0 test payments (for SOL, POLYGON, DOGE, BCH, BTC) using the merchant API for the 'bozzmail' company.
+6.  **Display Address**: Make the crypto addresses visible in the payment creation summary.
+7.  **Payment Tracking**: After sending funds to the generated addresses, the user requested to start tracking and ensure it completes through binance coversion and distribtions and any bug detected fixed. see logs.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a full-stack crypto payment processing system with a FastAPI backend and React frontend. It uses MongoDB as its database. The system is integrated with Tatum for blockchain interactions (creating addresses, checking balances, broadcasting transactions) and Binance for swapping crypto assets to stablecoins (USDT). A critical piece of infrastructure is a SOCKS5 proxy via an SSH tunnel to a German VPS, which is required to bypass geo-restrictions for the Binance API. The backend runs cron jobs to scan for incoming payments, sweep funds, and manage conversions.
+The project is a Node.js/Express/TypeScript-based cryptocurrency payment gateway. The initial setup and user requests for QR codes, error handling, alerting, and Binance connectivity are complete. Five test payments have been created. The agent has been actively debugging the end-to-end payment processing lifecycle, which involves receiving webhook notifications from Tatum, sweeping funds, and converting them to stablecoins via the Binance API. A critical bug related to floating-point precision in BTC/DOGE/LTC transaction amounts has been identified and fixed.
 
 **Last working item**:
--   Last item agent was working: The agent was checking the status of the second round of payments (XRP, LTC, ETH) by inspecting the backend logs. It had just provided a status update to the user.
--   Status: IN PROGRESS
--   Agent Testing Done: Y
--   Which testing method agent to use? manual testing by curl
--   User Testing Done: N
+-   **Last item agent was working**: The agent was debugging why the BTC test payment was stuck. After fixing a decimal precision bug that caused the initial failure, the agent found that reprocessing was blocked by a duplicate transaction check in Redis. The user then said continue, and the agent's last action was to devise a plan to clear the Redis lock and manually re-trigger the webhook for the BTC transaction.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: manual testing by curl. The agent needs to clear the Redis key and then re-submit the original webhook payload to the  endpoint to verify the fix.
+-   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-There are no pending issues. A critical bug related to UTXO payment processing was identified and fixed during this session.
+-   **Issue 1: (P0)** Re-process the stuck BTC payment to validate the decimal precision fix.
+-   **Issue 2: (P1)** Investigate and fix the stuck SOL payment sweep.
+-   **Issue 3: (P2)** Investigate why the webhook for the BCH payment has not been received/processed.
+
+**Issues Detail**:
+-   **Issue 1: Re-process stuck BTC payment**
+    -   **Attempted fixes**: The underlying decimal precision bug was fixed in . The reprocessing attempt was blocked by a Redis key () intended to prevent duplicate webhook processing.
+    -   **Next debug checklist**:
+        1.  Find the  of the failed BTC payment from the logs.
+        2.  Execute a Redis command to  the key: .
+        3.  Find the original webhook payload for the BTC transaction from the logs.
+        4.  Use  to  the payload to the  endpoint to simulate the webhook.
+        5.  Check backend logs to confirm the BTC payment is successfully processed and settled.
+    -   **Why fix this issue and what will be achieved with the fix?**: To confirm the decimal precision bug is resolved and to complete the BTC payment lifecycle as requested by the user.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N (The root cause is fixed, but manual intervention is needed for this specific transaction).
+    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Blocked on other issue**: None
+
+-   **Issue 2: Investigate stuck SOL payment**
+    -   **Attempted fixes**: None.
+    -   **Next debug checklist**:
+        1.  Logs show the sweep for the SOL payment failed with a  error, leaving funds in the temporary address.
+        2.  Investigate the  function in .
+        3.  Check API keys and permissions for the sweep provider (likely Tatum or a direct node connection).
+        4.  Determine the cause of the  error and resolve it.
+    -   **Why fix this issue and what will be achieved with the fix?**: The funds for the SOL payment are currently stuck. This must be fixed to complete the payment lifecycle.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y (If there is a configuration/permission issue, it will affect all future SOL sweeps).
+    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Blocked on other issue**: None
+
+-   **Issue 3: Investigate missing BCH payment webhook**
+    -   **Attempted fixes**: None.
+    -   **Next debug checklist**:
+        1.  The system has not received a webhook notification for the BCH payment.
+        2.  Verify on a block explorer that the transaction was confirmed.
+        3.  Check the Tatum dashboard to see if a webhook notification was ever sent for the subscribed BCH address.
+        4.  Review the address subscription logic in the application to ensure it was created correctly.
+    -   **Why fix this issue and what will be achieved with the fix?**: The BCH payment cannot be processed without the initial webhook trigger.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y (If subscriptions are failing, no BCH/BTC payments will be processed).
+    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Blocked on other issue**: None
 
 **In progress Task List**:
--   **Task 1: Monitor Second Round of Payments** (P0)
-    -   Where to resume: The user has just asked to check the logs again. The agent should re-examine the backend logs to see if the status of the new ETH, LTC, and XRP payments has changed since the last update.
-    -   What will be achieved with this? This will confirm if the new payments are being processed correctly and verify that the previously implemented bug fixes are holding up.
-    -   Status: IN PROGRESS
-    -   Should Test frontend/backend/both after fix? backend
-    -   Blocked on something: Waiting for the user (or an external process) to send funds to the newly created ETH and LTC addresses.
+-   **Task 1: Complete end-to-end payment tracking for all 5 test payments**
+    -   **Where to resume**: Start by resolving Issue 1: Re-process stuck BTC payment. Then, address the stuck SOL payment (Issue 2) and the missing BCH webhook (Issue 3). Monitor the DOGE and POLYGON payments to ensure they complete their full cycles.
+    -   **What will be achieved with this?**: This will validate the entire payment processing pipeline for multiple currencies, from deposit detection to final settlement, fulfilling the user's core request.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Blocked on something**: The three pending issues listed above.
 
 **Upcoming and Future Tasks**
-There are no explicit upcoming or future tasks defined by the user at this moment. The current focus is on testing and verifying the end-to-end payment flow for different cryptocurrencies.
+None were explicitly discussed. The entire focus is on completing and verifying the current payment processing flow.
 
 **Completed work in this session**
--   **Environment Setup**: Installed all frontend and backend dependencies and started the services.
--   **Binance Proxy Enabled**: Diagnosed that the Binance proxy was inactive because the required SSH tunnel was not running. Started the tunnel and restarted the backend to successfully enable proxy functionality.
--   **Initial Payments Created**: Created the first round of test payments for ETH and LTC.
--   **UTXO Payment Bug Fixed**:
-    -   Identified a critical bug preventing the sweeping of funds for UTXO-based chains (LTC, BTC, DOGE).
-    -   The bug had three parts:
-        1.  Incorrect balance parsing from the Tatum API (was expecting  instead of calculating  - ).
-        2.  Incorrect fee format passed to the Tatum SDK (was passing a JSON object instead of a string).
-        3.  Failure to deduct the transaction fee from the sweep amount, causing broadcast failures.
-    -   Fixed the logic in  for LTC, and proactively applied the same fix for BTC and DOGE.
--   **Payment Processing Verified**: Monitored and confirmed the successful end-to-end processing of the first ETH and LTC payments (the LTC payment succeeded after the bug fix).
--   **Second Round of Payments Created**: Created a new set of payments for XRP, LTC, and ETH as requested by the user.
--   **XRP Payment Verified**: Monitored the new XRP payment, confirming it was received, swept, and sent to the Binance conversion pipeline.
+-   **Payment Creation & Address Visibility**: Created 5 crypto payments (SOL, POLYGON, DOGE, BCH, BTC) and displayed their addresses in the summary as requested.
+-   **Binance Connectivity Verification**: Confirmed that the SSH tunnel is active and that both REST and WebSocket connections to the Binance API are functioning correctly through the proxy.
+-   **Floating-Point Precision Bug Fix**: Identified and fixed a bug in  where JavaScript floating-point errors caused BTC, DOGE, and LTC transaction amounts to exceed the 8-decimal limit, leading to API rejections.
+-   **Stuck Cron Investigation**: Diagnosed and observed the recovery from stuck cron jobs, which were caused by persistent Redis locks from killed processes blocking new ones until the TTL expired.
 
 **Earlier issues found/mentioned but not fixed**
-None. All issues identified in this session were resolved.
+None. All identified issues are captured in the pending list.
 
 **Known issue recurrence from previous fork**
 None.
@@ -57,55 +93,72 @@ None.
 
 
 **Key Technical Concepts**
--   **Crypto Payments**: The application manages the full lifecycle of a crypto payment.
--   **Tatum API**: Used for blockchain operations like address generation, balance checking, and transaction broadcasting across multiple chains (ETH, LTC, XRP, etc.).
--   **Binance API**: Used for swapping received cryptocurrencies into a stablecoin (USDT).
--   **SOCKS5 Proxy & SSH Tunnel**: A tunnel to a non-US server is required to bypass Binance's geo-restrictions. The application is configured to use this proxy.
--   **UTXO vs. Account-based models**: The session revealed different handling logic is required for UTXO chains (like BTC, LTC) versus account-based chains (like ETH).
--   **Cron Jobs**: The backend relies on scheduled tasks (run by a cron-like scheduler) to periodically check for payments and process them.
+-   **Backend**: Node.js, Express, TypeScript
+-   **Database/State**: MongoDB, Redis
+-   **Asynchronous Payment Processing**: Tracking payment states across multiple asynchronous steps: Tatum Webhook -> DB Update -> Cron Job Sweep -> Cron Job Conversion -> Binance API.
+-   **Distributed Locking**: Using Redis () to ensure cron jobs and webhook handlers do not run concurrently for the same resource.
+-   **Floating-Point Precision**: Handling cryptocurrency values carefully to avoid JavaScript's native floating-point inaccuracies, which can lead to API errors with strict decimal limits.
+-   **Networking**: Using an SSH tunnel with a SOCKS5 proxy () to bypass geo-restrictions for the Binance API.
 
 **key DB schema**
-Based on logs, the following collections are in use:
--   **crypto_payments**: Stores details of each payment, including , ,  (RESERVED, PAID, SWEPT), , .
--   **crypto_conversions**: Tracks the status of asset swaps on Binance, with states like , .
--   **crypto_addresses**: Manages the pool of merchant addresses, with states like , .
+-   **Payments**: Collection storing payment details, including , , , , and .
+-   **Conversions**: Collection tracking the state of converting received crypto to a stablecoin, linked to a payment.
+-   **Redis Keys**: Used for application state and locking.
+    -   : Prevents concurrent execution of cron jobs.
+    -   : Prevents duplicate processing of the same transaction webhook.
+
+**changes in tech stack**
+-   No new technologies were added in this session.
 
 **All files of reference**
--   : **MODIFIED**. This file contains the core logic for checking balances and sweeping funds. It was edited to fix bugs related to UTXO chain payment processing.
--   : **VIEWED**. Checked for the  configuration.
--   : **MODIFIED**. Used a script to manually update the status of a stuck payment in the MongoDB database to re-trigger processing after the code fix.
+-   : Modified to fix a critical decimal precision bug for BTC, DOGE, and LTC transactions. This is the main file for payment processing logic.
+-   : Investigated for stuck cron issues related to Redis locks.
+-   : Location of the  function that was a focus of debugging.
+
+**Areas that need refactoring**
+-   The cron job locking mechanism is brittle. A process kill during a locked operation can halt all future cron executions until the lock's TTL expires. A more robust startup procedure that clears stale locks or a heartbeat-based lock renewal system would improve reliability.
+
+**key api endpoints**
+-   : Creates a crypto payment request.
+-   : Webhook endpoint that receives payment notifications from Tatum. This is the entry point for the entire backend processing flow and the endpoint that needs to be manually called to retry the stuck BTC payment.
 
 **Critical Info for New Agent**
--   **Binance Proxy is Essential**: The Binance API will fail without the SOCKS5 proxy. The proxy depends on an active SSH tunnel to the German VPS (). If Binance-related tasks fail, the first step is to check the status of this tunnel (root         138  0.0  0.0   4332  3016 ?        S    19:57   0:00 /bin/bash -c mkdir -p /app/.emergent && echo "<analysis>**original_problem_statement:** 1.  Create a $10 ETH and a $10 LTC payment for `bozzmail.com` (richard@dyno.p) using the direct merchant crypto API for testing. 2.  Check if the Binance proxy is enabled and working. If not, enable it. 3.  Monitor the status of the created payments by checking the logs. 4.  After the user sent the LTC payment, investigate why it was not being processed. 5.  Create another round of payments: $10 LTC, $10 XRP, and $10 ETH. 6.  Monitor the status of the new payments.  **User's preferred language**: English  **what currently exists?** The application is a full-stack crypto payment processing system with a FastAPI backend and React frontend. It uses MongoDB as its database. The system is integrated with Tatum for blockchain interactions (creating addresses, checking balances, broadcasting transactions) and Binance for swapping crypto assets to stablecoins (USDT). A critical piece of infrastructure is a SOCKS5 proxy via an SSH tunnel to a German VPS, which is required to bypass geo-restrictions for the Binance API. The backend runs cron jobs to scan for incoming payments, sweep funds, and manage conversions.  **Last working item**: -   Last item agent was working: The agent was checking the status of the second round of payments (XRP, LTC, ETH) by inspecting the backend logs. It had just provided a status update to the user. -   Status: IN PROGRESS -   Agent Testing Done: Y -   Which testing method agent to use? manual testing by curl -   User Testing Done: N  **All Pending/In progress Issue list**: There are no pending issues. A critical bug related to UTXO payment processing was identified and fixed during this session.  **In progress Task List**: -   **Task 1: Monitor Second Round of Payments** (P0)     -   Where to resume: The user has just asked to check the logs again. The agent should re-examine the backend logs to see if the status of the new ETH, LTC, and XRP payments has changed since the last update.     -   What will be achieved with this? This will confirm if the new payments are being processed correctly and verify that the previously implemented bug fixes are holding up.     -   Status: IN PROGRESS     -   Should Test frontend/backend/both after fix? backend     -   Blocked on something: Waiting for the user (or an external process) to send funds to the newly created ETH and LTC addresses.  **Upcoming and Future Tasks** There are no explicit upcoming or future tasks defined by the user at this moment. The current focus is on testing and verifying the end-to-end payment flow for different cryptocurrencies.  **Completed work in this session** -   **Environment Setup**: Installed all frontend and backend dependencies and started the services. -   **Binance Proxy Enabled**: Diagnosed that the Binance proxy was inactive because the required SSH tunnel was not running. Started the tunnel and restarted the backend to successfully enable proxy functionality. -   **Initial Payments Created**: Created the first round of test payments for ETH and LTC. -   **UTXO Payment Bug Fixed**:     -   Identified a critical bug preventing the sweeping of funds for UTXO-based chains (LTC, BTC, DOGE).     -   The bug had three parts:         1.  Incorrect balance parsing from the Tatum API (was expecting `balance` instead of calculating `incoming` - `outgoing`).         2.  Incorrect fee format passed to the Tatum SDK (was passing a JSON object instead of a string).         3.  Failure to deduct the transaction fee from the sweep amount, causing broadcast failures.     -   Fixed the logic in `backend/services/crypto_payments/scanner.py` for LTC, and proactively applied the same fix for BTC and DOGE. -   **Payment Processing Verified**: Monitored and confirmed the successful end-to-end processing of the first ETH and LTC payments (the LTC payment succeeded after the bug fix). -   **Second Round of Payments Created**: Created a new set of payments for XRP, LTC, and ETH as requested by the user. -   **XRP Payment Verified**: Monitored the new XRP payment, confirming it was received, swept, and sent to the Binance conversion pipeline.  **Earlier issues found/mentioned but not fixed** None. All issues identified in this session were resolved.  **Known issue recurrence from previous fork** None.  **Code Architecture** ``` /app/ ├── backend/         # FastAPI backend │   ├── services/ │   │   └── crypto_payments/ │   │       └── scanner.py  # Core logic for scanning/sweeping payments │   ├── .env │   └── requirements.txt ├── frontend/        # React frontend └── ...              # Other standard project directories ```  **Key Technical Concepts** -   **Crypto Payments**: The application manages the full lifecycle of a crypto payment. -   **Tatum API**: Used for blockchain operations like address generation, balance checking, and transaction broadcasting across multiple chains (ETH, LTC, XRP, etc.). -   **Binance API**: Used for swapping received cryptocurrencies into a stablecoin (USDT). -   **SOCKS5 Proxy & SSH Tunnel**: A tunnel to a non-US server is required to bypass Binance's geo-restrictions. The application is configured to use this proxy. -   **UTXO vs. Account-based models**: The session revealed different handling logic is required for UTXO chains (like BTC, LTC) versus account-based chains (like ETH). -   **Cron Jobs**: The backend relies on scheduled tasks (run by a cron-like scheduler) to periodically check for payments and process them.  **key DB schema** Based on logs, the following collections are in use: -   **crypto_payments**: Stores details of each payment, including `txid`, `address`, `status` (RESERVED, PAID, SWEPT), `amount`, `currency`. -   **crypto_conversions**: Tracks the status of asset swaps on Binance, with states like `PENDING_DEPOSIT`, `COMPLETED`. -   **crypto_addresses**: Manages the pool of merchant addresses, with states like `AVAILABLE`, `IN_USE`.  **All files of reference** -   `backend/services/crypto_payments/scanner.py`: **MODIFIED**. This file contains the core logic for checking balances and sweeping funds. It was edited to fix bugs related to UTXO chain payment processing. -   `backend/.env`: **VIEWED**. Checked for the `BINANCE_PROXY_URL` configuration. -   `backend/database/database.py`: **MODIFIED**. Used a script to manually update the status of a stuck payment in the MongoDB database to re-trigger processing after the code fix.  **Critical Info for New Agent** -   **Binance Proxy is Essential**: The Binance API will fail without the SOCKS5 proxy. The proxy depends on an active SSH tunnel to the German VPS (`95.179.167.16`). If Binance-related tasks fail, the first step is to check the status of this tunnel (`ps aux | grep ssh`). -   **UTXO Bug Fix**: A major bug in `backend/services/crypto_payments/scanner.py` related to balance calculation and fee handling for UTXO chains (BTC, LTC, DOGE) was fixed. Be aware of this context if any new issues arise with these currencies. The fix involved changing how balance is read from Tatum (`incoming - outgoing`) and how fees are formatted and deducted.  **documents and test reports created in this job** None.  **Last 10 User Messages and any pending HUMAN messages** 1.  **user**: check log for status again (PENDING) 2.  **agent**: Replied with the status of all active payments. 3.  **user**: SEE LOG and see status (COMPLETED) 4.  **agent**: Replied with details of 3 newly created payments (LTC, XRP, ETH). 5.  **user**: create another payment for LTC and XRP $10 eth (COMPLETED) 6.  **agent**: Replied with the final status of the first two payments (ETH & LTC) and a summary of the bugs that were fixed. 7.  **user**: i sent LTC payment also (COMPLETED) 8.  **agent**: Replied with the full status of both initial payments, noting the ETH payment was progressing but the LTC was still awaiting funds. 9.  **user**: see log and see status of the two payments (COMPLETED) 10. **agent**: Confirmed the Binance proxy was fully active and operational.  **Project Health Check:** -   **Working**: The core payment processing pipeline is now functional for both account-based (ETH, XRP) and UTXO-based (LTC) cryptocurrencies after a critical bug fix. -   **Brittle**: The dependency on the external SSH tunnel for the Binance proxy is a potential point of failure. If the tunnel drops, conversions will fail.  **3rd Party Integrations** -   **Tatum**: Used for blockchain interactions (address creation, balance checks, sweeps). -   **Binance**: Used for converting received crypto into stablecoins (USDT).  **Testing status** -   Testing agent used after significant changes: NO -   Troubleshoot agent used after agent stuck in loop: NO -   Test files created: None. -   Known regressions: None.</analysis>" > /app/.emergent/summary.txt
-root         172  0.0  0.0   4332  1600 ?        S    19:57   0:00 /bin/bash -c mkdir -p /app/.emergent && echo "<analysis>**original_problem_statement:** 1.  Create a $10 ETH and a $10 LTC payment for `bozzmail.com` (richard@dyno.p) using the direct merchant crypto API for testing. 2.  Check if the Binance proxy is enabled and working. If not, enable it. 3.  Monitor the status of the created payments by checking the logs. 4.  After the user sent the LTC payment, investigate why it was not being processed. 5.  Create another round of payments: $10 LTC, $10 XRP, and $10 ETH. 6.  Monitor the status of the new payments.  **User's preferred language**: English  **what currently exists?** The application is a full-stack crypto payment processing system with a FastAPI backend and React frontend. It uses MongoDB as its database. The system is integrated with Tatum for blockchain interactions (creating addresses, checking balances, broadcasting transactions) and Binance for swapping crypto assets to stablecoins (USDT). A critical piece of infrastructure is a SOCKS5 proxy via an SSH tunnel to a German VPS, which is required to bypass geo-restrictions for the Binance API. The backend runs cron jobs to scan for incoming payments, sweep funds, and manage conversions.  **Last working item**: -   Last item agent was working: The agent was checking the status of the second round of payments (XRP, LTC, ETH) by inspecting the backend logs. It had just provided a status update to the user. -   Status: IN PROGRESS -   Agent Testing Done: Y -   Which testing method agent to use? manual testing by curl -   User Testing Done: N  **All Pending/In progress Issue list**: There are no pending issues. A critical bug related to UTXO payment processing was identified and fixed during this session.  **In progress Task List**: -   **Task 1: Monitor Second Round of Payments** (P0)     -   Where to resume: The user has just asked to check the logs again. The agent should re-examine the backend logs to see if the status of the new ETH, LTC, and XRP payments has changed since the last update.     -   What will be achieved with this? This will confirm if the new payments are being processed correctly and verify that the previously implemented bug fixes are holding up.     -   Status: IN PROGRESS     -   Should Test frontend/backend/both after fix? backend     -   Blocked on something: Waiting for the user (or an external process) to send funds to the newly created ETH and LTC addresses.  **Upcoming and Future Tasks** There are no explicit upcoming or future tasks defined by the user at this moment. The current focus is on testing and verifying the end-to-end payment flow for different cryptocurrencies.  **Completed work in this session** -   **Environment Setup**: Installed all frontend and backend dependencies and started the services. -   **Binance Proxy Enabled**: Diagnosed that the Binance proxy was inactive because the required SSH tunnel was not running. Started the tunnel and restarted the backend to successfully enable proxy functionality. -   **Initial Payments Created**: Created the first round of test payments for ETH and LTC. -   **UTXO Payment Bug Fixed**:     -   Identified a critical bug preventing the sweeping of funds for UTXO-based chains (LTC, BTC, DOGE).     -   The bug had three parts:         1.  Incorrect balance parsing from the Tatum API (was expecting `balance` instead of calculating `incoming` - `outgoing`).         2.  Incorrect fee format passed to the Tatum SDK (was passing a JSON object instead of a string).         3.  Failure to deduct the transaction fee from the sweep amount, causing broadcast failures.     -   Fixed the logic in `backend/services/crypto_payments/scanner.py` for LTC, and proactively applied the same fix for BTC and DOGE. -   **Payment Processing Verified**: Monitored and confirmed the successful end-to-end processing of the first ETH and LTC payments (the LTC payment succeeded after the bug fix). -   **Second Round of Payments Created**: Created a new set of payments for XRP, LTC, and ETH as requested by the user. -   **XRP Payment Verified**: Monitored the new XRP payment, confirming it was received, swept, and sent to the Binance conversion pipeline.  **Earlier issues found/mentioned but not fixed** None. All issues identified in this session were resolved.  **Known issue recurrence from previous fork** None.  **Code Architecture** ``` /app/ ├── backend/         # FastAPI backend │   ├── services/ │   │   └── crypto_payments/ │   │       └── scanner.py  # Core logic for scanning/sweeping payments │   ├── .env │   └── requirements.txt ├── frontend/        # React frontend └── ...              # Other standard project directories ```  **Key Technical Concepts** -   **Crypto Payments**: The application manages the full lifecycle of a crypto payment. -   **Tatum API**: Used for blockchain operations like address generation, balance checking, and transaction broadcasting across multiple chains (ETH, LTC, XRP, etc.). -   **Binance API**: Used for swapping received cryptocurrencies into a stablecoin (USDT). -   **SOCKS5 Proxy & SSH Tunnel**: A tunnel to a non-US server is required to bypass Binance's geo-restrictions. The application is configured to use this proxy. -   **UTXO vs. Account-based models**: The session revealed different handling logic is required for UTXO chains (like BTC, LTC) versus account-based chains (like ETH). -   **Cron Jobs**: The backend relies on scheduled tasks (run by a cron-like scheduler) to periodically check for payments and process them.  **key DB schema** Based on logs, the following collections are in use: -   **crypto_payments**: Stores details of each payment, including `txid`, `address`, `status` (RESERVED, PAID, SWEPT), `amount`, `currency`. -   **crypto_conversions**: Tracks the status of asset swaps on Binance, with states like `PENDING_DEPOSIT`, `COMPLETED`. -   **crypto_addresses**: Manages the pool of merchant addresses, with states like `AVAILABLE`, `IN_USE`.  **All files of reference** -   `backend/services/crypto_payments/scanner.py`: **MODIFIED**. This file contains the core logic for checking balances and sweeping funds. It was edited to fix bugs related to UTXO chain payment processing. -   `backend/.env`: **VIEWED**. Checked for the `BINANCE_PROXY_URL` configuration. -   `backend/database/database.py`: **MODIFIED**. Used a script to manually update the status of a stuck payment in the MongoDB database to re-trigger processing after the code fix.  **Critical Info for New Agent** -   **Binance Proxy is Essential**: The Binance API will fail without the SOCKS5 proxy. The proxy depends on an active SSH tunnel to the German VPS (`95.179.167.16`). If Binance-related tasks fail, the first step is to check the status of this tunnel (`ps aux | grep ssh`). -   **UTXO Bug Fix**: A major bug in `backend/services/crypto_payments/scanner.py` related to balance calculation and fee handling for UTXO chains (BTC, LTC, DOGE) was fixed. Be aware of this context if any new issues arise with these currencies. The fix involved changing how balance is read from Tatum (`incoming - outgoing`) and how fees are formatted and deducted.  **documents and test reports created in this job** None.  **Last 10 User Messages and any pending HUMAN messages** 1.  **user**: check log for status again (PENDING) 2.  **agent**: Replied with the status of all active payments. 3.  **user**: SEE LOG and see status (COMPLETED) 4.  **agent**: Replied with details of 3 newly created payments (LTC, XRP, ETH). 5.  **user**: create another payment for LTC and XRP $10 eth (COMPLETED) 6.  **agent**: Replied with the final status of the first two payments (ETH & LTC) and a summary of the bugs that were fixed. 7.  **user**: i sent LTC payment also (COMPLETED) 8.  **agent**: Replied with the full status of both initial payments, noting the ETH payment was progressing but the LTC was still awaiting funds. 9.  **user**: see log and see status of the two payments (COMPLETED) 10. **agent**: Confirmed the Binance proxy was fully active and operational.  **Project Health Check:** -   **Working**: The core payment processing pipeline is now functional for both account-based (ETH, XRP) and UTXO-based (LTC) cryptocurrencies after a critical bug fix. -   **Brittle**: The dependency on the external SSH tunnel for the Binance proxy is a potential point of failure. If the tunnel drops, conversions will fail.  **3rd Party Integrations** -   **Tatum**: Used for blockchain interactions (address creation, balance checks, sweeps). -   **Binance**: Used for converting received crypto into stablecoins (USDT).  **Testing status** -   Testing agent used after significant changes: NO -   Troubleshoot agent used after agent stuck in loop: NO -   Test files created: None. -   Known regressions: None.</analysis>" > /app/.emergent/summary.txt
-root         174  0.0  0.0   3500  1796 ?        S    19:57   0:00 grep ssh).
--   **UTXO Bug Fix**: A major bug in  related to balance calculation and fee handling for UTXO chains (BTC, LTC, DOGE) was fixed. Be aware of this context if any new issues arise with these currencies. The fix involved changing how balance is read from Tatum () and how fees are formatted and deducted.
+-   **Primary Goal**: Your main objective is to fix the remaining issues (stuck BTC, stuck SOL, missing BCH webhook) to ensure all 5 test payments complete the full end-to-end lifecycle successfully.
+-   **Tech Stack**: The backend is **Node.js/Express/TypeScript**. Do not use Python/FastAPI tools.
+-   **Stale Redis Locks**: Be aware that Redis locks can persist if the server restarts unexpectedly. If crons or webhooks seem stuck, your first step should be to check for and potentially clear stale locks in Redis (e.g.,  and ).
+-   **BTC Payment is Blocked**: The path to fixing the BTC payment is clear: you must manually delete the  key from Redis and then re-post the original webhook data to .
 
 **documents and test reports created in this job**
 None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **user**: check log for status again (PENDING)
-2.  **agent**: Replied with the status of all active payments.
-3.  **user**: SEE LOG and see status (COMPLETED)
-4.  **agent**: Replied with details of 3 newly created payments (LTC, XRP, ETH).
-5.  **user**: create another payment for LTC and XRP 0 eth (COMPLETED)
-6.  **agent**: Replied with the final status of the first two payments (ETH & LTC) and a summary of the bugs that were fixed.
-7.  **user**: i sent LTC payment also (COMPLETED)
-8.  **agent**: Replied with the full status of both initial payments, noting the ETH payment was progressing but the LTC was still awaiting funds.
-9.  **user**: see log and see status of the two payments (COMPLETED)
-10. **agent**: Confirmed the Binance proxy was fully active and operational.
+-   user: continue (COMPLETED - agent continued debugging)
+-   user: payment sent to all 5 addresses, start tracking and ensure it completes through binance coversion and distribtions and any bug detected fixed. see logs (IN PROGRESS - this is the core task)
+-   agent: (Provides summary of created payments with addresses) (COMPLETED)
+-   user: make the addresses visible (COMPLETED)
+-   ... (previous messages related to creating the payments)
 
 **Project Health Check:**
--   **Working**: The core payment processing pipeline is now functional for both account-based (ETH, XRP) and UTXO-based (LTC) cryptocurrencies after a critical bug fix.
--   **Brittle**: The dependency on the external SSH tunnel for the Binance proxy is a potential point of failure. If the tunnel drops, conversions will fail.
+-   **Broken**: The payment processing pipeline is partially non-functional. Funds for the SOL payment are stuck, and the BTC and BCH payments require manual intervention or investigation to proceed.
+-   **Mocked**: No services are mocked.
 
 **3rd Party Integrations**
--   **Tatum**: Used for blockchain interactions (address creation, balance checks, sweeps).
--   **Binance**: Used for converting received crypto into stablecoins (USDT).
+-   **Brevo (Email)**: For error alert emails.
+-   **Binance (Crypto Exchange)**: For converting cryptocurrencies to stablecoins. Accessed via an SSH tunnel.
+-   **Redis (In-memory DB)**: Used for distributed locking and caching.
+-   **Tatum (Blockchain API)**: For creating crypto addresses and receiving payment notifications via webhooks.
 
 **Testing status**
--   Testing agent used after significant changes: NO
--   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: None.
--   Known regressions: None.</analysis>
+-   **Testing agent used after significant changes**: NO
+-   **Troubleshoot agent used after agent stuck in loop**: NO
+-   **Test files created**: None. All debugging was done via logs and manual API/Redis commands.
+-   **Known regressions**: None.
+
+**Credentials to test flow:**
+-   **Merchant User**: 
+-   **Merchant Password**: 
+-   **Company**: 
+-   The agent will need to re-authenticate this user to get an  and query the database for the   to use protected endpoints.
+
+**What agent forgot to execute**
+-   The agent was about to execute the final step of its plan to fix the stuck BTC payment: clearing the Redis lock and re-sending the webhook. The session ended before this action could be taken.</analysis>
