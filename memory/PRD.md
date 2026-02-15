@@ -50,17 +50,28 @@ Full-stack crypto payment processing system with FastAPI proxy + Node.js/TypeScr
 
 ### Previous: UTXO Payment Bug Fix + LTC Sweep Fix
 
+### Session Feb 2026: Email Service Merge
+- Merged `helper/sendEmail.ts` (1232 lines) + `services/emailService.ts` (1451 lines) into single unified `services/emailService.ts` (2382 lines)
+- `helper/sendEmail.ts` reduced to 25-line re-export shim for backwards compatibility
+- Eliminated 3 duplicate functions: sendPaymentReceivedEmail, sendWeeklySummaryEmail, sendSecurityAlertEmail
+- Eliminated duplicate dynoPayEmailTemplate; exported `dynoPayGreetingTemplate` for greeting-style emails
+- Converted several payment functions to use shared template components (infoBox, dataRow, statusBadge)
+- Net reduction: 276 lines, single source of truth for all 35+ email functions
+- TypeScript compilation: zero errors
+
 ## Prioritized Backlog
+
+### P1 - Pending Issues
+- UTXO auto-convert sweep notification: user verification pending (trigger $10 LTC payment to test)
+- Merchant email deliverability: check Brevo sender domain verification + delivery logs for `richard@dyno.pt`
 
 ### P2 - Remaining Code Quality
 - 65 console.log in standalone scripts/model inits (low priority)
-- Email service duplication: `helper/sendEmail.ts` (1231 lines) and `services/emailService.ts` (1450 lines) overlap
 - Remaining ~46 getErrorMessage(e) calls with custom logic (non-standard patterns)
 
 ### P2 - Code Duplication Hotspots (reduced from original)
 - walletController.ts: wallet increment pattern (5x), query column aliasing
 - paymentController.ts: subscription cleanup (8x), threshold KYC check (4x)
-- Cross-file email template duplication
 
 ### P3 - Infrastructure
 - SSH tunnel auto-reconnect (keepalive running but not supervisor-managed)
