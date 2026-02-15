@@ -4834,16 +4834,26 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         currency = data.dataValues.wallet_type;
       }
       const paymentStatus = await tatumApi.getCurrentPaymentStatus(address, currency);
-      transaction.rollback();
+      transactionFinished = true;
+      await transaction.rollback();
       return paymentStatus;
     }
   } catch (e) {
     const { commit, ...restData } = e;
     const message = getErrorMessage(e);
-    if (e?.commit) {
-      transaction.commit();
-    } else {
-      transaction.rollback();
+    // Only attempt rollback/commit if transaction hasn't been finished yet
+    if (!transactionFinished) {
+      try {
+        if (e?.commit) {
+          await transaction.commit();
+        } else {
+          await transaction.rollback();
+        }
+      } catch (txError) {
+        cronLogger.error(`[cryptoVerification] Transaction cleanup failed (already ${transactionFinished ? 'finished' : 'active'}):`, getErrorMessage(txError));
+      }
+    }
+    if (!e?.commit) {
       cronLogger.info(e);
     }
     apiLogger.error(message, new Error(e));
