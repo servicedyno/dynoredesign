@@ -422,13 +422,13 @@ const tatumWebHook = async (req: express.Request, res: express.Response) => {
     ) {
       newPayload = {
         ...items,
-        status: "successful",
+        status: toRedisStatus(PaymentState.PAYOUT_COMPLETE),
       };
       webhookLogs.info("here payload");
     } else {
       newPayload = {
         ...items,
-        status: "failed",
+        status: toRedisStatus(PaymentState.FAILED),
         message: "your amount is less then required amount!",
       };
     }
