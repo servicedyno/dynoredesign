@@ -2964,7 +2964,7 @@ const settleCryptoTransaction = async ({
             privateKey: privateKey,
             amount: utxoAmountToSend,
             // Fee = full UTXO input - output, ensuring zero change (avoids dust)
-            fee: String(Number((receivedAmount - utxoAmountToSend).toFixed(8))),
+            fee: String(exactFee),
             fromUTXO: [
               {
                 txHash: transactionId,
