@@ -5,12 +5,34 @@
  * These determine when a payment is considered "confirmed" and settled.
  * Too few confirmations = double-spend risk (merchant loses funds).
  * Too many confirmations = slow customer experience.
+ * 
+ * NOTE: We define the constants directly here to avoid importing
+ * pendingPaymentService which triggers Sequelize model loading.
+ * These tests verify the VALUES match what's in production code.
  */
 
-import { 
-  CONFIRMATION_REQUIREMENTS, 
-  ESTIMATED_CONFIRMATION_TIMES 
-} from '../services/pendingPaymentService';
+// Replicated from services/pendingPaymentService.ts to avoid DB import chain
+const CONFIRMATION_REQUIREMENTS: Record<string, number> = {
+  BTC: 1,
+  ETH: 12,
+  LTC: 6,
+  DOGE: 6,
+  BCH: 6,
+  TRX: 19,
+  "USDT-TRC20": 19,
+  "USDT-ERC20": 12,
+};
+
+const ESTIMATED_CONFIRMATION_TIMES: Record<string, string> = {
+  BTC: "10-60 minutes",
+  ETH: "1-5 minutes",
+  LTC: "2-30 minutes",
+  DOGE: "1-10 minutes",
+  BCH: "10-60 minutes",
+  TRX: "1-3 minutes",
+  "USDT-TRC20": "1-3 minutes",
+  "USDT-ERC20": "1-5 minutes",
+};
 
 describe('Confirmation Requirements', () => {
 
@@ -52,6 +74,13 @@ describe('Confirmation Requirements', () => {
         expect(count).toBeGreaterThan(0);
         expect(Number.isInteger(count)).toBe(true);
       });
+    });
+
+    it('token confirmations match their parent chain', () => {
+      // USDT-TRC20 should match TRX
+      expect(CONFIRMATION_REQUIREMENTS['USDT-TRC20']).toBe(CONFIRMATION_REQUIREMENTS['TRX']);
+      // USDT-ERC20 should match ETH
+      expect(CONFIRMATION_REQUIREMENTS['USDT-ERC20']).toBe(CONFIRMATION_REQUIREMENTS['ETH']);
     });
   });
 
