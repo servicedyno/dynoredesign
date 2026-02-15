@@ -86,8 +86,10 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
   12. Query param enrichment + full pipeline integration test
 
 ### Testing Summary
-- **Total: 220 tests passing across 8 suites**
-- All previous tests (iteration_4.json) + new webhook processor tests verified
+- **Total: 286 tests passing across 11 suites**
+- Phase 1: 168 tests (7 suites) — foundation + bug fixes
+- Phase 2: 52 tests (1 suite) — webhook processor pipeline
+- Phase 3: 66 tests (3 suites) — payment fees, blockchain fees, fee rates
 
 ## Credentials
 - **User**: richard@dyno.pt / Katiekendra123@
@@ -113,8 +115,12 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
 - Webhook Processing Pipeline: https://static.prod-images.emergentagent.com/jobs/c586ec27-53a2-4d4a-9555-00021f104f43/images/369d9e1997696cde84ad4f7850fe1b685432f287899a2057b15388770cca4043.png
 - Data Architecture: https://static.prod-images.emergentagent.com/jobs/c586ec27-53a2-4d4a-9555-00021f104f43/images/ea99c4f101c12bdd9cb07f3607b6399da07e4f5d8f576eb3b2862a52094ea2c1.png
 
+**Phase 3 — Core Payment & Fee Service Tests (3 test suites, 66 tests):**
+- `paymentFees.test.ts` (23 tests): calculateTransactionFees, calculateTransactionFeesWithDiscount, getTransactionFee, getDiscountedTransactionFee, getBlockchainFee, getBlockchainConfig — tests real service layer with mocked DB/Redis
+- `blockchainFeeService.test.ts` (25 tests): getBlockchainNetworkFee (UTXO/EVM/TRON/account-based chain routing, cache hits/misses, fee math), calculateCustomerPaymentAmount
+- `feeRateService.test.ts` (18 tests): getFeeRates (API fallbacks, caching), estimateSweepCostUSD (BTC/ETH/LTC/default sweep cost estimation)
+
 ## Backlog
-- **P1: Phase 3 — Core Payment & Fee Service Testing**: Unit tests for `payment.service.ts` and `fee.service.ts` (payment state management, fee application)
 - **P2: Phase 4 — Redis Service & Data Consistency Testing**: Tests for Redis atomicity, race conditions, locking mechanisms
 - **P2: Phase 5 — API Endpoint Integration Testing**: Full request-response cycle tests for `/get-data`, `/webhook/tatum`
 - **P3: Dependency Injection refactoring** to decouple services from Sequelize models for better testability
