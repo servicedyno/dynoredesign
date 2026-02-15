@@ -32,7 +32,7 @@ const escapeHtml = (str: string): string => {
  * Used by getWalletTransactions and exportTransactions.
  */
 function buildTransactionFilters(
-  userId: string,
+  userId: string | number,
   filters: { date_from?: string; date_to?: string; status?: string; currency?: string; search?: string; company_id?: string }
 ): { whereConditions: string; replacements: Record<string, unknown> } {
   const replacements: Record<string, unknown> = { user_id: userId };
@@ -1089,7 +1089,7 @@ const verifyCryptoPayment = async (
         Number(receivedAmount) - platformCharge - blockchainCharge
       ).toFixed(8);
 
-      walletLogger.info(adminWallet[0], userSettledAmount);
+      walletLogger.info("adminWallet and settled amount", { adminWallet: JSON.stringify(adminWallet[0]), userSettledAmount });
 
       let fees: unknown;
       let sendAmount: string | number = Number(receivedAmount);

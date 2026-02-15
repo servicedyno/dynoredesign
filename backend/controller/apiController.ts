@@ -230,7 +230,7 @@ const addApi = async (req: express.Request, res: express.Response) => {
 
     successResponseHelper(res, 200, successMessage, {
       ...resData.dataValues,
-      ...company_data.dataValues,
+      ...companyData.dataValues,
       permissions: apiPermissions,
       environment,
       currency_synced: devKeyUpdated,
