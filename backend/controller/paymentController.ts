@@ -3617,7 +3617,7 @@ const verifyCryptoPayment = async (
       });
     }
     
-    if (redisStatus === "pending" && tempData?.txId) {
+    if (parsedState === PaymentState.PENDING && tempData?.txId) {
       // Transaction detected but not yet processed (legacy state)
       return successResponseHelper(res, 200, "Payment pending", {
         status: "pending",
