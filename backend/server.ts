@@ -485,6 +485,15 @@ app.post("/diagnostics/webhook-queue/reconcile", adminAuthMiddleware, async (_re
   }
 });
 
+app.post("/diagnostics/clear-stale-reconciliation", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
+  try {
+    const stats = await clearStaleTatumWebhooks();
+    res.status(200).json({ success: true, ...stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
 // OPTIMIZED: Reduced from */30 to every 2h — legacy system, rarely has pending addresses
 cron.schedule("0 */2 * * *", function () {
   log("Cron: USDT check running", "info");
