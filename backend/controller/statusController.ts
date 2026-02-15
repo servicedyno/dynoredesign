@@ -1,5 +1,6 @@
 import express from "express";
 import { apiLogger } from "../utils/loggers";
+import { handleControllerError } from "../helper/controllerErrorHandler";
 import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../helper";
 import sequelize from "../utils/dbInstance";
 import { QueryTypes } from "sequelize";

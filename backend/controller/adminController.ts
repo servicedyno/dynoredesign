@@ -5,6 +5,7 @@ import {
   sendEmail,
   successResponseHelper,
 } from "../helper";
+import { handleControllerError } from "../helper/controllerErrorHandler";
 import { convertToMultiple, convertToUSD, convertToFiat } from "../utils/currencyUtils";
 import { adminLogger } from "../utils/loggers";
 import {

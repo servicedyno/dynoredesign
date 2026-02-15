@@ -4,6 +4,7 @@ import {
   getErrorMessage,
   successResponseHelper,
 } from "../helper";
+import { handleControllerError } from "../helper/controllerErrorHandler";
 import jwt from "jsonwebtoken";
 import { IUserType } from "../utils/types";
 import { planModel } from "../models";
