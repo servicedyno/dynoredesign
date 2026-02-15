@@ -2,21 +2,21 @@ const { Client } = require('pg');
 
 // Source database (yamanote)
 const sourceConfig = {
-  host: 'yamanote.proxy.rlwy.net',
-  port: 42097,
-  database: 'db_bozzwallet',
-  user: 'postgres',
-  password: 'oMHQMHfnrFyWgkhYaiXbhjDEMZSWOapc',
+  host: process.env.SOURCE_DB_HOST,
+  port: parseInt(process.env.SOURCE_DB_PORT || '5432', 10),
+  database: process.env.SOURCE_DB_NAME || 'db_bozzwallet',
+  user: process.env.SOURCE_DB_USER || 'postgres',
+  password: process.env.SOURCE_DB_PASSWORD,
   connectionTimeoutMillis: 30000
 };
 
 // Destination database (shortline)
 const destConfig = {
-  host: 'shortline.proxy.rlwy.net',
-  port: 44579,
-  database: 'db_bozzwallet',
-  user: 'postgres',
-  password: 'JqdkVTjQujJaEOyUJJHmWMYEWgtAXTfO',
+  host: process.env.DEST_DB_HOST,
+  port: parseInt(process.env.DEST_DB_PORT || '5432', 10),
+  database: process.env.DEST_DB_NAME || 'db_bozzwallet',
+  user: process.env.DEST_DB_USER || 'postgres',
+  password: process.env.DEST_DB_PASSWORD,
   connectionTimeoutMillis: 30000
 };
 
