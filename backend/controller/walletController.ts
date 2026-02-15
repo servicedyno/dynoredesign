@@ -77,6 +77,7 @@ import {
 import { paymentTypes } from "../utils/enums";
 import axios from "axios";
 import QR_Code from "qrcode";
+import { generateQRCodeWithLogo } from "../utils/qrCodeWithLogo";
 import { adminWalletModel, userWalletModel, companyModel } from "../models";
 import { validateCompanyOwnership } from "../utils/validateCompanyOwnership";
 import { walletLogger } from "../utils/loggers";
