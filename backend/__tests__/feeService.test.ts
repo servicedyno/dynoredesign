@@ -79,6 +79,11 @@ function clearFeeEnv() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Reset mock implementation queues to prevent cross-test leaks
+  (getRedisItem as jest.Mock).mockReset().mockResolvedValue({});
+  (setRedisItem as jest.Mock).mockReset().mockResolvedValue(undefined);
+  (feesModel.findOne as jest.Mock).mockReset();
+  mockUserFindByPk.mockReset();
   clearFeeEnv();
   setDefaultFeeEnv();
 });
