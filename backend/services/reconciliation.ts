@@ -66,7 +66,7 @@ export async function runStartupReconciliation(): Promise<{
   if (total > 0) {
     captureError(
       new Error(`Reconciliation found ${total} items to process`),
-      "reconciliation",
+      "system",
       {
         severity: total > 5 ? "high" : "low",
         extraContext: JSON.stringify(stats),

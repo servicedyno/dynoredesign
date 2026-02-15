@@ -150,7 +150,7 @@ export function startWebhookWorker(
           originalJobId: job.id,
         });
         
-        captureError(error, "webhook-queue", {
+        captureError(error, "webhook", {
           severity: "high",
           requestContext: `DLQ: tx=${job.data.payload.txId}`,
           extraContext: `Job ${job.id} failed after ${job.attemptsMade} attempts`,
