@@ -958,7 +958,9 @@ export const sweepByTime = async (): Promise<number> => {
 };
 
 /**
- * Master sweep function - runs both threshold and time-based sweeps
+ * Master sweep function - runs both threshold and time-based sweeps.
+ * Uses per-address locking so multiple addresses can be swept concurrently
+ * without blocking the entire sweep pipeline on one slow chain.
  */
 export const performScheduledSweeps = async (): Promise<void> => {
   try {
