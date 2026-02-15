@@ -6848,13 +6848,7 @@ const removeUnwantedSubscriptions = async () => {
     );
 
     for (let i = 0; i < tempData.length; i++) {
-      try {
-        if (tempData[i]?.subscription_id) {
-          await tatumApi.deleteSubscription(tempData[i].subscription_id);
-        }
-      } catch (e) {
-        cronLogger.info(e);
-      }
+      await safeDeleteSubscription(tempData[i]?.subscription_id, 'removeUnwantedSubscriptions');
       await userTempAddressModel.update(
         {
           subscription_id: null,
