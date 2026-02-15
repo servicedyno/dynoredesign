@@ -2,7 +2,7 @@ const { createClient } = require('redis');
 
 async function main() {
   const client = createClient({ 
-    url: 'redis://default:nGRWpSIBrXftcfgRCQDxtAJGowmXlgUg@turntable.proxy.rlwy.net:21752',
+    url: process.env.REDIS_PUBLIC_URL,
     socket: { connectTimeout: 10000 }
   });
   
