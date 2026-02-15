@@ -6,11 +6,13 @@ export interface FeeTier {
 
 export const getBlockchainThreshold = (blockchain: string): number => {
     const envKey = `${blockchain.replace(/-/g, '_').toUpperCase()}_THRESHOLD`;
-    return Number(process.env[envKey]) || 5;
+    const val = Number(process.env[envKey]);
+    return isNaN(val) ? 5 : val;
 };
 
 export const getTransactionFeePercent = (): number => {
-    return Number(process.env.TRANSACTION_FEE_PERCENT) || 1.5;
+    const val = Number(process.env.TRANSACTION_FEE_PERCENT);
+    return isNaN(val) ? 1.5 : val;
 };
 
 export const getFeeTiers = (): FeeTier[] => {
