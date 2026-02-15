@@ -1,49 +1,49 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="12" skipped="0" tests="23" time="3.359" timestamp="2026-02-15T01:07:14.329559+00:00" hostname="agent-env-94409f1f-3468-484a-9b88-3a3cea44e44b"><testcase classname="tests.test_controller_refactoring.TestHealthEndpoints" name="test_health_endpoint_responds" time="0.325"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:41: in test_health_endpoint_responds
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="12" skipped="0" tests="23" time="1.462" timestamp="2026-02-15T01:08:08.154733+00:00" hostname="agent-env-94409f1f-3468-484a-9b88-3a3cea44e44b"><testcase classname="tests.test_controller_refactoring.TestHealthEndpoints" name="test_health_endpoint_responds" time="0.799"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:42: in test_health_endpoint_responds
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestHealthEndpoints" name="test_root_health_endpoint" time="0.147"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:57: in test_root_health_endpoint
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestHealthEndpoints" name="test_root_health_endpoint" time="0.003"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:58: in test_root_health_endpoint
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestStatusEndpoints" name="test_status_endpoint_returns_valid_json" time="0.119"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:69: in test_status_endpoint_returns_valid_json
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestStatusEndpoints" name="test_status_endpoint_returns_valid_json" time="0.003"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:70: in test_status_endpoint_returns_valid_json
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestStatusEndpoints" name="test_services_status_endpoint" time="0.195"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:86: in test_services_status_endpoint
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestStatusEndpoints" name="test_services_status_endpoint" time="0.003"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:87: in test_services_status_endpoint
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestStatusEndpoints" name="test_uptime_endpoint" time="0.100"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:94: in test_uptime_endpoint
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestStatusEndpoints" name="test_uptime_endpoint" time="0.072"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:95: in test_uptime_endpoint
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestStatusEndpoints" name="test_incidents_endpoint" time="0.177"><failure message="AssertionError: Expected 200, got 520&#10;assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:102: in test_incidents_endpoint
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestStatusEndpoints" name="test_incidents_endpoint" time="0.004"><failure message="AssertionError: Expected 200, got 503&#10;assert 503 == 200&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:103: in test_incidents_endpoint
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-E   AssertionError: Expected 200, got 520
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_root_api_endpoint" time="0.194"><failure message="AssertionError: Unexpected status: 520&#10;assert 520 in [200, 301, 302, 307, 308]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:115: in test_root_api_endpoint
+E   AssertionError: Expected 200, got 503
+E   assert 503 == 200
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_root_api_endpoint" time="0.003"><failure message="AssertionError: Unexpected status: 503&#10;assert 503 in [200, 301, 302, 307, 308]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:116: in test_root_api_endpoint
     assert response.status_code in [200, 301, 302, 307, 308], f"Unexpected status: {response.status_code}"
-E   AssertionError: Unexpected status: 520
-E   assert 520 in [200, 301, 302, 307, 308]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_user_endpoints_accessible" time="0.122" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_company_endpoints_accessible" time="0.087" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_wallet_endpoints_accessible" time="0.095" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_admin_endpoints_accessible" time="0.104" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_payment_endpoints_accessible" time="0.099" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_api_key_endpoints_accessible" time="0.130" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_notification_endpoints_accessible" time="0.087" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_invoice_endpoints_accessible" time="0.088" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_subscription_endpoints_accessible" time="0.089" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_tax_endpoints_accessible" time="0.082" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_dashboard_endpoints_accessible" time="0.115" /><testcase classname="tests.test_controller_refactoring.TestErrorHandling" name="test_invalid_endpoint_returns_404" time="0.117"><failure message="AssertionError: Expected 404, got 520&#10;assert 520 == 404&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:193: in test_invalid_endpoint_returns_404
+E   AssertionError: Unexpected status: 503
+E   assert 503 in [200, 301, 302, 307, 308]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_user_endpoints_accessible" time="0.003" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_company_endpoints_accessible" time="0.002" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_wallet_endpoints_accessible" time="0.002" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_admin_endpoints_accessible" time="0.002" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_payment_endpoints_accessible" time="0.002" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_api_key_endpoints_accessible" time="0.003" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_notification_endpoints_accessible" time="0.002" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_invoice_endpoints_accessible" time="0.064" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_subscription_endpoints_accessible" time="0.002" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_tax_endpoints_accessible" time="0.002" /><testcase classname="tests.test_controller_refactoring.TestControllerRoutes" name="test_dashboard_endpoints_accessible" time="0.002" /><testcase classname="tests.test_controller_refactoring.TestErrorHandling" name="test_invalid_endpoint_returns_404" time="0.002"><failure message="AssertionError: Expected 404, got 503&#10;assert 503 == 404&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:194: in test_invalid_endpoint_returns_404
     assert response.status_code == 404, f"Expected 404, got {response.status_code}"
-E   AssertionError: Expected 404, got 520
-E   assert 520 == 404
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestErrorHandling" name="test_malformed_request_handled_gracefully" time="0.148"><failure message="AssertionError: Expected error handling response, got 520&#10;assert 520 in [400, 401, 403, 404, 422]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:204: in test_malformed_request_handled_gracefully
+E   AssertionError: Expected 404, got 503
+E   assert 503 == 404
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestErrorHandling" name="test_malformed_request_handled_gracefully" time="0.003"><failure message="AssertionError: Expected error handling response, got 503&#10;assert 503 in [400, 401, 403, 404, 422]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:205: in test_malformed_request_handled_gracefully
     assert response.status_code in [400, 401, 403, 404, 422], \
-E   AssertionError: Expected error handling response, got 520
-E   assert 520 in [400, 401, 403, 404, 422]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestDiagnosticsEndpoints" name="test_volatility_diagnostic" time="0.103"><failure message="AssertionError: Unexpected status: 520&#10;assert 520 in [200, 401, 403]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:215: in test_volatility_diagnostic
+E   AssertionError: Expected error handling response, got 503
+E   assert 503 in [400, 401, 403, 404, 422]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestDiagnosticsEndpoints" name="test_volatility_diagnostic" time="0.002"><failure message="AssertionError: Unexpected status: 503&#10;assert 503 in [200, 401, 403]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:216: in test_volatility_diagnostic
     assert response.status_code in [200, 401, 403], f"Unexpected status: {response.status_code}"
-E   AssertionError: Unexpected status: 520
-E   assert 520 in [200, 401, 403]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestDiagnosticsEndpoints" name="test_fee_rates_diagnostic" time="0.084"><failure message="AssertionError: Unexpected status: 520&#10;assert 520 in [200, 401, 403]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:221: in test_fee_rates_diagnostic
+E   AssertionError: Unexpected status: 503
+E   assert 503 in [200, 401, 403]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestDiagnosticsEndpoints" name="test_fee_rates_diagnostic" time="0.075"><failure message="AssertionError: Unexpected status: 503&#10;assert 503 in [200, 401, 403]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:222: in test_fee_rates_diagnostic
     assert response.status_code in [200, 401, 403], f"Unexpected status: {response.status_code}"
-E   AssertionError: Unexpected status: 520
-E   assert 520 in [200, 401, 403]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestSwaggerDocs" name="test_swagger_docs_accessible" time="0.096"><failure message="AssertionError: Swagger docs inaccessible: 520&#10;assert 520 in [200, 301, 302]&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_controller_refactoring.py:232: in test_swagger_docs_accessible
+E   AssertionError: Unexpected status: 503
+E   assert 503 in [200, 401, 403]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase><testcase classname="tests.test_controller_refactoring.TestSwaggerDocs" name="test_swagger_docs_accessible" time="0.003"><failure message="AssertionError: Swagger docs inaccessible: 503&#10;assert 503 in [200, 301, 302]&#10; +  where 503 = &lt;Response [503]&gt;.status_code">tests/test_controller_refactoring.py:233: in test_swagger_docs_accessible
     assert response.status_code in [200, 301, 302], f"Swagger docs inaccessible: {response.status_code}"
-E   AssertionError: Swagger docs inaccessible: 520
-E   assert 520 in [200, 301, 302]
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase></testsuite></testsuites>
+E   AssertionError: Swagger docs inaccessible: 503
+E   assert 503 in [200, 301, 302]
+E    +  where 503 = &lt;Response [503]&gt;.status_code</failure></testcase></testsuite></testsuites>
