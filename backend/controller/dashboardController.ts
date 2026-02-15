@@ -1,5 +1,6 @@
 import express from "express";
 import { apiLogger } from "../utils/loggers";
+import { handleControllerErrorReturn } from "../helper/controllerErrorHandler";
 import jwt from "jsonwebtoken";
 import { QueryTypes } from "sequelize";
 import {
@@ -220,9 +221,9 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     return successResponseHelper(res, 200, "Dashboard data retrieved successfully", dashboardData);
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error("Dashboard error:", message);
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, apiLogger);
   }
 };
 
@@ -400,9 +401,9 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     return successResponseHelper(res, 200, "Chart data retrieved successfully", responseData);
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error("Chart data error:", message);
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, apiLogger);
   }
 };
 
@@ -527,8 +528,8 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
       },
     });
   } catch (e) {
-    const message = getErrorMessage(e);
-    return errorResponseHelper(res, 500, message);
+
+      return handleControllerErrorReturn(res, e, apiLogger);
   }
 };
 
@@ -574,9 +575,9 @@ const getRecentTransactions = async (req: express.Request, res: express.Response
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error("Recent transactions error:", message);
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, apiLogger);
   }
 };
 
@@ -698,9 +699,9 @@ const getConversions = async (req: express.Request, res: express.Response) => {
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error("Conversions error:", message);
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, apiLogger);
   }
 };
 
@@ -796,9 +797,9 @@ const getConversionDetail = async (req: express.Request, res: express.Response) 
     });
 
   } catch (e) {
-    const message = getErrorMessage(e);
-    apiLogger.error("Conversion detail error:", message);
-    return errorResponseHelper(res, 500, message);
+
+
+      return handleControllerErrorReturn(res, e, apiLogger);
   }
 };
 
