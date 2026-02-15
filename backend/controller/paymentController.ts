@@ -1766,7 +1766,7 @@ const createCryptoPayment = async (
         base_amount_usd: baseAmountUSD,           // Converted USD amount (for fee tier)
         total_amount_original: totalAmountWithTax, // Total in original currency (with tax)
         total_amount_usd: baseAmountUSD + (taxAmountUSD || 0),  // Total USD amount (with tax if applicable)
-        status: "pending",
+        status: toRedisStatus(PaymentState.PENDING),
         ref: uniqueRef,
         currency: data.currency,
         payment_id: paymentRes.transaction_id,  // Internal payment ID (NOT blockchain txId)
