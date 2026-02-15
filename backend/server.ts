@@ -111,8 +111,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ─── Body Parser Error Handler ──────────────────────────────────────────────
 // Catches malformed JSON (SyntaxError from body-parser) and returns 400 instead of 500
+// Still captures the error for monitoring so digest emails include it
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (err instanceof SyntaxError && 'body' in err && (err as any).type === 'entity.parse.failed') {
+    // Track in error monitoring (low severity — these are bot/scanner noise)
+    captureError(err, 'api', {
+      severity: 'low',
+      requestContext: `${req.method} ${req.originalUrl}`,
+      extraContext: `IP: ${req.ip} | Malformed JSON body`,
+    });
     return res.status(400).json({
       success: false,
       message: "Invalid JSON in request body",
