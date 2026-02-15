@@ -1,5 +1,6 @@
 // Model associations for referral and knowledge base models
 // Using a flag to ensure associations are only set up once
+import { apiLogger } from '../utils/loggers';
 import User from './userModels/userModel';
 import Referral from './referralModels/referralModel';
 import ReferralReward from './referralModels/referralRewardModel';
@@ -53,7 +54,7 @@ if (!associationsSetUp) {
   SecurityLog.belongsTo(User, { foreignKey: 'user_id', as: 'security_user' });
   User.hasMany(SecurityLog, { foreignKey: 'user_id', as: 'security_logs' });
   
-  console.log('Model associations set up successfully');
+  apiLogger.info('Model associations set up successfully');
 }
 
 // Export models for easy access
