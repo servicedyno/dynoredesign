@@ -80,18 +80,20 @@ def test_sendadminfeesweep_import_usage():
         occurrences = content.count("sendAdminFeeSweepEmail")
         
         if occurrences >= 2:
-            log(f"✅ TEST 3 PASSED: Found {occurrences} occurrences of 'sendAdminFeeSweepEmail' (>= 2 required)")
+            # Check for import in first 20 lines
+            first_20_lines = '\n'.join(content.split('\n')[0:20])
+            has_import = "sendAdminFeeSweepEmail" in first_20_lines
             
-            # Check for import
-            has_import = "sendAdminFeeSweepEmail" in content.split('\n')[0:20]
-            # Check for usage
+            # Check for usage (function call)
             has_usage = "sendAdminFeeSweepEmail(" in content
             
             if has_import and has_usage:
-                log("   ✓ Both import and usage found")
+                log(f"✅ TEST 3 PASSED: Found {occurrences} occurrences with both import and usage")
+                log("   ✓ Import found in first 20 lines")
+                log("   ✓ Function call found")
                 return True
             else:
-                log(f"   ⚠️ Found {occurrences} total occurrences but missing import or usage")
+                log(f"❌ TEST 3 FAILED: Found {occurrences} total occurrences but missing import ({has_import}) or usage ({has_usage})")
                 return False
         else:
             log(f"❌ TEST 3 FAILED: Found only {occurrences} occurrences of 'sendAdminFeeSweepEmail' (need >= 2)")
