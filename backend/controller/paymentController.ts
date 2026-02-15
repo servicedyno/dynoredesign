@@ -1146,6 +1146,10 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             base_amount_usd: baseAmountUSD,           // Original USD amount
             total_amount_usd: baseAmountUSD + taxAmount, // Total USD with tax
             status: toRedisStatus(PaymentState.PENDING),
+            ref: uniqueRef,
+            currency: value.currency,
+            // FIX: Use payment link's transaction_id for linking, and user_tx_id for user transaction
+            payment_id: items.transaction_id,         // Payment link's transaction_id (for updating payment link)
             unique_tx_id: items.transaction_id,       // Payment link's transaction_id
             user_tx_id: paymentRes.transaction_id,    // User transaction ID (for updating tbl_user_transaction)
             walletType: "customer",
