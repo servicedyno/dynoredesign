@@ -1,283 +1,348 @@
 #!/usr/bin/env python3
 """
-Backend Testing for Fix Stale Tatum Reconciliation Re-queuing Feature
-Testing based on the review request requirements.
+DynoPay Backend Testing Suite - Payment Status Normalization
+Tests for additive payment_status field implementation across all merchant-facing endpoints.
 """
 
 import subprocess
 import sys
+import os
 import requests
+import re
 import json
-from typing import Dict, Any
+from pathlib import Path
 
-def run_test(test_name: str, test_func) -> bool:
-    """Run a test and return success status"""
-    print(f"\n{'='*60}")
-    print(f"🧪 {test_name}")
-    print('='*60)
+def run_command(cmd, description="", cwd=None, capture_output=True):
+    """Run a shell command and return the result"""
+    print(f"\n📋 {description}")
+    print(f"💻 Running: {cmd}")
     
-    try:
-        result = test_func()
-        if result:
-            print(f"✅ PASS: {test_name}")
-            return True
-        else:
-            print(f"❌ FAIL: {test_name}")
-            return False
-    except Exception as e:
-        print(f"❌ ERROR in {test_name}: {str(e)}")
-        return False
+    if isinstance(cmd, str):
+        # For shell commands that need shell parsing
+        result = subprocess.run(cmd, shell=True, capture_output=capture_output, text=True, cwd=cwd)
+    else:
+        # For command arrays
+        result = subprocess.run(cmd, capture_output=capture_output, text=True, cwd=cwd)
+    
+    if result.returncode == 0:
+        print("✅ SUCCESS")
+        if result.stdout and capture_output:
+            print(f"📄 Output:\n{result.stdout}")
+        return True, result.stdout
+    else:
+        print(f"❌ FAILED (exit code: {result.returncode})")
+        if result.stderr and capture_output:
+            print(f"🚨 Error:\n{result.stderr}")
+        if result.stdout and capture_output:
+            print(f"📄 Output:\n{result.stdout}")
+        return False, result.stderr
 
-def test_backend_health() -> bool:
-    """TEST 1: Backend Health Check"""
-    # Use the URL from review request (localhost:8001) for internal testing
-    url = "http://localhost:8001/health"
+def test_backend_health():
+    """TEST 1: Backend healthy"""
     try:
-        response = requests.get(url, timeout=10)
-        print(f"GET {url}")
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
+        response = requests.get("http://localhost:8001/health", timeout=10)
         if response.status_code == 200:
             data = response.json()
-            if data.get('status') == 'healthy':
-                print("✅ Backend is healthy")
+            if data.get("status") == "healthy":
+                print("✅ TEST 1: Backend health check PASSED")
                 return True
             else:
-                print(f"❌ Backend status is not healthy: {data}")
+                print(f"❌ TEST 1: Backend status is not 'healthy': {data}")
                 return False
         else:
-            print(f"❌ Expected status 200, got {response.status_code}")
+            print(f"❌ TEST 1: Backend health check failed with status {response.status_code}")
             return False
-            
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Request failed: {e}")
+    except Exception as e:
+        print(f"❌ TEST 1: Backend health check failed with error: {e}")
         return False
 
-def test_reconciled_tx_occurrences() -> bool:
-    """TEST 2: Check reconciled-tx tracking in code"""
-    try:
-        result = subprocess.run(
-            ["grep", "reconciled-tx", "/app/backend/services/reconciliation.ts"],
-            capture_output=True, text=True
-        )
-        
-        lines = result.stdout.strip().split('\n') if result.stdout.strip() else []
-        count = len([line for line in lines if line.strip()])
-        
-        print(f"Found {count} occurrences of 'reconciled-tx' in reconciliation.ts")
-        for line in lines:
-            print(f"  {line.strip()}")
-        
-        if count >= 5:
-            print(f"✅ Found {count} occurrences (>= 5 required)")
+def test_typescript_compilation():
+    """TEST 2: TypeScript compiles clean for all modified files"""
+    success, output = run_command(
+        "cd /app/backend && npx tsc --noEmit 2>&1 | grep -E 'paymentController|walletController|webhookProcessor|merchantApiRouter|webhooks/index|paymentStateMachine'",
+        "TEST 2: Checking TypeScript compilation for modified files"
+    )
+    
+    # If grep finds nothing (exit code 1), that means no errors in our target files
+    if not success:  # grep returns 1 when no matches found
+        print("✅ TEST 2: TypeScript compilation clean for target files")
+        return True
+    else:
+        print(f"❌ TEST 2: TypeScript errors found in target files:\n{output}")
+        return False
+
+def test_state_machine_tests():
+    """TEST 3: State machine tests still pass"""
+    success, output = run_command(
+        'cd /app/backend && NODE_OPTIONS="--max-old-space-size=1024" npx jest __tests__/paymentStateMachine.test.ts --forceExit --maxWorkers=1',
+        "TEST 3: Running state machine tests"
+    )
+    
+    if success and "132 tests" in output:
+        print("✅ TEST 3: State machine tests PASSED (132 tests)")
+        return True
+    else:
+        print(f"❌ TEST 3: State machine tests FAILED")
+        return False
+
+def test_webhook_processor_tests():
+    """TEST 4: Webhook processor tests still pass"""
+    success, output = run_command(
+        'cd /app/backend && NODE_OPTIONS="--max-old-space-size=1024" npx jest __tests__/webhookProcessor.test.ts --forceExit --maxWorkers=1',
+        "TEST 4: Running webhook processor tests"
+    )
+    
+    if success and "52 tests" in output:
+        print("✅ TEST 4: Webhook processor tests PASSED (52 tests)")
+        return True
+    else:
+        print(f"❌ TEST 4: Webhook processor tests FAILED")
+        return False
+
+def test_payment_status_in_webhook_processor():
+    """TEST 5: Verify payment_status field exists in webhookProcessor webhook payloads"""
+    success, output = run_command(
+        "grep -c 'payment_status' /app/backend/services/webhookProcessor.ts",
+        "TEST 5: Checking payment_status field in webhookProcessor"
+    )
+    
+    if success and output.strip():
+        count = int(output.strip())
+        if count >= 4:
+            print(f"✅ TEST 5: payment_status found {count} times in webhookProcessor (>= 4 required)")
             return True
         else:
-            print(f"❌ Found only {count} occurrences (>= 5 required)")
+            print(f"❌ TEST 5: payment_status found only {count} times in webhookProcessor (< 4 required)")
             return False
-            
-    except Exception as e:
-        print(f"❌ Error running grep: {e}")
+    else:
+        print("❌ TEST 5: payment_status not found in webhookProcessor")
         return False
 
-def test_set_redis_item_with_ttl() -> bool:
-    """TEST 3: Check setRedisItemWithTTL usage"""
-    try:
-        result = subprocess.run(
-            ["grep", "setRedisItemWithTTL", "/app/backend/services/reconciliation.ts"],
-            capture_output=True, text=True
-        )
-        
-        lines = result.stdout.strip().split('\n') if result.stdout.strip() else []
-        count = len([line for line in lines if line.strip()])
-        
-        print(f"Found {count} occurrences of 'setRedisItemWithTTL' in reconciliation.ts")
-        for line in lines:
-            print(f"  {line.strip()}")
-        
+def test_payment_status_in_payment_controller():
+    """TEST 6: Verify payment_status field exists in verify endpoint responses"""
+    success, output = run_command(
+        "grep -c 'payment_status' /app/backend/controller/paymentController.ts",
+        "TEST 6: Checking payment_status field in paymentController"
+    )
+    
+    if success and output.strip():
+        count = int(output.strip())
+        if count >= 7:
+            print(f"✅ TEST 6: payment_status found {count} times in paymentController (>= 7 required)")
+            return True
+        else:
+            print(f"❌ TEST 6: payment_status found only {count} times in paymentController (< 7 required)")
+            return False
+    else:
+        print("❌ TEST 6: payment_status not found in paymentController")
+        return False
+
+def test_payment_status_in_merchant_api():
+    """TEST 7: Verify payment_status field exists in merchant API endpoints"""
+    success, output = run_command(
+        "grep -c 'payment_status' /app/backend/routes/merchantApiRouter.ts",
+        "TEST 7: Checking payment_status field in merchantApiRouter"
+    )
+    
+    if success and output.strip():
+        count = int(output.strip())
         if count >= 2:
-            print(f"✅ Found {count} occurrences (>= 2 required)")
+            print(f"✅ TEST 7: payment_status found {count} times in merchantApiRouter (>= 2 required)")
             return True
         else:
-            print(f"❌ Found only {count} occurrences (>= 2 required)")
+            print(f"❌ TEST 7: payment_status found only {count} times in merchantApiRouter (< 2 required)")
             return False
-            
-    except Exception as e:
-        print(f"❌ Error running grep: {e}")
+    else:
+        print("❌ TEST 7: payment_status not found in merchantApiRouter")
         return False
 
-def test_clear_stale_tatum_webhooks_export() -> bool:
-    """TEST 4: Check clearStaleTatumWebhooks export"""
-    try:
-        result = subprocess.run(
-            ["grep", "clearStaleTatumWebhooks", "/app/backend/services/reconciliation.ts"],
-            capture_output=True, text=True
-        )
-        
-        lines = result.stdout.strip().split('\n') if result.stdout.strip() else []
-        
-        print(f"Found {len(lines)} occurrences of 'clearStaleTatumWebhooks' in reconciliation.ts")
-        for line in lines:
-            print(f"  {line.strip()}")
-        
-        # Look for export function definition
-        export_found = any("export" in line and "clearStaleTatumWebhooks" in line for line in lines)
-        
-        if export_found:
-            print("✅ Found clearStaleTatumWebhooks export function")
+def test_display_status_in_merchant_api():
+    """TEST 8: Verify display_status exists for auto-convert in merchant API"""
+    success, output = run_command(
+        "grep -c 'display_status' /app/backend/routes/merchantApiRouter.ts",
+        "TEST 8: Checking display_status field in merchantApiRouter"
+    )
+    
+    if success and output.strip():
+        count = int(output.strip())
+        if count >= 2:
+            print(f"✅ TEST 8: display_status found {count} times in merchantApiRouter (>= 2 required)")
             return True
         else:
-            print("❌ clearStaleTatumWebhooks export function not found")
+            print(f"❌ TEST 8: display_status found only {count} times in merchantApiRouter (< 2 required)")
             return False
-            
-    except Exception as e:
-        print(f"❌ Error running grep: {e}")
+    else:
+        print("❌ TEST 8: display_status not found in merchantApiRouter")
         return False
 
-def test_server_integration() -> bool:
-    """TEST 5: Check server.ts integration"""
-    try:
-        # Check for import and endpoint in server.ts
-        result1 = subprocess.run(
-            ["grep", "clearStaleTatumWebhooks", "/app/backend/server.ts"],
-            capture_output=True, text=True
-        )
-        
-        result2 = subprocess.run(
-            ["grep", "clear-stale-reconciliation", "/app/backend/server.ts"],
-            capture_output=True, text=True
-        )
-        
-        lines1 = result1.stdout.strip().split('\n') if result1.stdout.strip() else []
-        lines2 = result2.stdout.strip().split('\n') if result2.stdout.strip() else []
-        
-        print("clearStaleTatumWebhooks in server.ts:")
-        for line in lines1:
-            print(f"  {line.strip()}")
-            
-        print("\nclear-stale-reconciliation endpoint in server.ts:")
-        for line in lines2:
-            print(f"  {line.strip()}")
-        
-        if len(lines1) > 0 and len(lines2) > 0:
-            print("✅ Found both import and endpoint in server.ts")
-            return True
-        else:
-            print("❌ Missing import or endpoint in server.ts")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Error running grep: {e}")
+def test_conversion_display_status_export():
+    """TEST 9: Verify toConversionDisplayStatus is exported from state machine"""
+    success, output = run_command(
+        "grep 'export function toConversionDisplayStatus' /app/backend/services/paymentStateMachine.ts",
+        "TEST 9: Checking toConversionDisplayStatus export"
+    )
+    
+    if success and "export function toConversionDisplayStatus" in output:
+        print("✅ TEST 9: toConversionDisplayStatus export found in paymentStateMachine")
+        return True
+    else:
+        print("❌ TEST 9: toConversionDisplayStatus export not found in paymentStateMachine")
         return False
 
-def test_zero_requeued_logs() -> bool:
-    """TEST 6: Verify latest reconciliation shows 0 re-queued"""
-    try:
-        result = subprocess.run(
-            ["grep", "Tatum webhooks: 0 re-queued", "/var/log/supervisor/backend.out.log"],
-            capture_output=True, text=True
-        )
-        
-        lines = result.stdout.strip().split('\n') if result.stdout.strip() else []
-        count = len([line for line in lines if line.strip()])
-        
-        print(f"Found {count} occurrences of 'Tatum webhooks: 0 re-queued' in backend logs")
-        
-        if count >= 1:
-            print(f"✅ Found {count} occurrences - latest reconciliation shows 0 re-queued")
-            # Show the latest few entries
-            print("Recent log entries:")
-            for line in lines[-3:]:
-                print(f"  {line.strip()}")
-            return True
-        else:
-            print("❌ No logs found showing 0 re-queued webhooks")
-            # Show what reconciliation logs we do have
-            print("Checking for any reconciliation logs...")
-            result2 = subprocess.run(
-                ["grep", "Tatum webhooks:", "/var/log/supervisor/backend.out.log"],
-                capture_output=True, text=True
-            )
-            lines2 = result2.stdout.strip().split('\n') if result2.stdout.strip() else []
-            print(f"Found {len(lines2)} total reconciliation log entries:")
-            for line in lines2[-5:]:  # Show last 5
-                print(f"  {line.strip()}")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Error checking logs: {e}")
+def test_crash_recovery_bug_fix():
+    """TEST 10: Verify crash recovery webhook bug is fixed"""
+    # Check that payment.confirmed no longer sends status: "processing"
+    success1, output1 = run_command(
+        "grep -A5 'event: \"payment.confirmed\"' /app/backend/services/webhookProcessor.ts | grep 'status: \"processing\"'",
+        "TEST 10a: Checking payment.confirmed doesn't send status: processing"
+    )
+    
+    # Check that payment.confirmed now sends status: "successful"
+    success2, output2 = run_command(
+        "grep -A5 'event: \"payment.confirmed\"' /app/backend/services/webhookProcessor.ts | grep 'status: \"successful\"'",
+        "TEST 10b: Checking payment.confirmed sends status: successful"
+    )
+    
+    # First check should return empty (no matches found - success is False for grep)
+    # Second check should return matches (success is True for grep)
+    if not success1 and success2:
+        print("✅ TEST 10: Crash recovery bug fix VERIFIED - payment.confirmed sends 'successful' not 'processing'")
+        return True
+    else:
+        print("❌ TEST 10: Crash recovery bug fix FAILED")
+        if success1:
+            print(f"  Still found 'processing' status: {output1}")
+        if not success2:
+            print("  Did not find 'successful' status")
         return False
 
-def test_admin_endpoint() -> bool:
-    """TEST 8: Verify the admin clear endpoint returns proper response format"""
-    url = "http://localhost:8001/diagnostics/clear-stale-reconciliation"
-    try:
-        response = requests.post(url, timeout=10)
-        print(f"POST {url}")
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        # Should return 401/403 without auth, proving endpoint exists
-        if response.status_code in [401, 403]:
-            print("✅ Endpoint exists and requires authentication (401/403 response)")
+def test_legacy_tatum_webhook():
+    """TEST 11: Verify legacy tatumWebHook uses state machine"""
+    success, output = run_command(
+        "grep 'toRedisStatus(PaymentState' /app/backend/webhooks/index.ts",
+        "TEST 11: Checking legacy tatumWebHook uses state machine"
+    )
+    
+    if success and output.strip():
+        count = len(output.strip().split('\n'))
+        if count >= 2:
+            print(f"✅ TEST 11: toRedisStatus(PaymentState found {count} matches in webhooks/index.ts (>= 2 required)")
             return True
-        elif response.status_code == 200:
-            # If it returns 200, check the response format
-            try:
-                data = response.json()
-                print("✅ Endpoint accessible and returned JSON response")
-                return True
-            except:
-                print("✅ Endpoint accessible")
-                return True
         else:
-            print(f"❌ Unexpected status code: {response.status_code}")
+            print(f"❌ TEST 11: toRedisStatus(PaymentState found only {count} matches (< 2 required)")
             return False
-            
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Request failed: {e}")
+    else:
+        print("❌ TEST 11: toRedisStatus(PaymentState not found in webhooks/index.ts")
+        return False
+
+def test_backward_compatibility():
+    """TEST 12: Backward compatibility - existing status field still present"""
+    success, output = run_command(
+        "grep 'status:.*\"confirmed\"\\|status:.*\"waiting\"\\|status:.*\"pending\"\\|status:.*\"failed\"\\|status:.*\"underpaid\"' /app/backend/controller/paymentController.ts | head -10",
+        "TEST 12: Checking backward compatibility - existing status field preserved"
+    )
+    
+    if success and output.strip():
+        lines = output.strip().split('\n')
+        if len(lines) >= 5:
+            print(f"✅ TEST 12: Backward compatibility VERIFIED - found {len(lines)} status field references")
+            return True
+        else:
+            print(f"❌ TEST 12: Found only {len(lines)} status field references")
+            return False
+    else:
+        print("❌ TEST 12: No status field references found - backward compatibility issue")
+        return False
+
+def test_conversion_display_status_mapping():
+    """TEST 13: Conversion display status mapping is correct"""
+    test_script = """
+import { toConversionDisplayStatus } from './services/paymentStateMachine';
+console.log(toConversionDisplayStatus('PENDING_DEPOSIT') === 'pending' ? 'OK' : 'FAIL');
+console.log(toConversionDisplayStatus('CONVERTING') === 'converting' ? 'OK' : 'FAIL');
+console.log(toConversionDisplayStatus('COMPLETED') === 'settled' ? 'OK' : 'FAIL');
+console.log(toConversionDisplayStatus('FAILED') === 'failed' ? 'OK' : 'FAIL');
+"""
+    
+    success, output = run_command(
+        f'cd /app/backend && npx ts-node --transpile-only -e "{test_script}"',
+        "TEST 13: Testing conversion display status mapping"
+    )
+    
+    if success and output.strip():
+        results = output.strip().split('\n')
+        if len(results) == 4 and all(result == 'OK' for result in results):
+            print("✅ TEST 13: Conversion display status mapping CORRECT - all 4 mappings OK")
+            return True
+        else:
+            print(f"❌ TEST 13: Conversion display status mapping FAILED - results: {results}")
+            return False
+    else:
+        print("❌ TEST 13: Failed to test conversion display status mapping")
         return False
 
 def main():
-    """Run all tests"""
-    print("🚀 STARTING STALE TATUM RECONCILIATION RE-QUEUING FIX TESTS")
-    print("="*80)
+    """Run all tests for payment_status normalization"""
+    print("🚀 DynoPay Backend Testing Suite - Payment Status Normalization")
+    print("=" * 80)
     
+    # Define all tests
     tests = [
-        ("TEST 1: Backend Health Check", test_backend_health),
-        ("TEST 2: Check reconciled-tx tracking (>=5 occurrences)", test_reconciled_tx_occurrences),
-        ("TEST 3: Check setRedisItemWithTTL usage (>=2 occurrences)", test_set_redis_item_with_ttl),
-        ("TEST 4: Check clearStaleTatumWebhooks export", test_clear_stale_tatum_webhooks_export),
-        ("TEST 5: Check server.ts integration", test_server_integration),
-        ("TEST 6: Verify latest reconciliation shows 0 re-queued", test_zero_requeued_logs),
-        ("TEST 8: Verify admin clear endpoint", test_admin_endpoint),
+        ("Backend Health Check", test_backend_health),
+        ("TypeScript Compilation", test_typescript_compilation),
+        ("State Machine Tests", test_state_machine_tests),
+        ("Webhook Processor Tests", test_webhook_processor_tests),
+        ("Payment Status in WebhookProcessor", test_payment_status_in_webhook_processor),
+        ("Payment Status in PaymentController", test_payment_status_in_payment_controller),
+        ("Payment Status in MerchantAPI", test_payment_status_in_merchant_api),
+        ("Display Status in MerchantAPI", test_display_status_in_merchant_api),
+        ("toConversionDisplayStatus Export", test_conversion_display_status_export),
+        ("Crash Recovery Bug Fix", test_crash_recovery_bug_fix),
+        ("Legacy TatumWebHook State Machine", test_legacy_tatum_webhook),
+        ("Backward Compatibility", test_backward_compatibility),
+        ("Conversion Display Status Mapping", test_conversion_display_status_mapping),
     ]
     
+    passed = 0
+    failed = 0
     results = []
+    
+    # Run each test
     for test_name, test_func in tests:
-        result = run_test(test_name, test_func)
-        results.append((test_name, result))
+        print(f"\n{'=' * 20} {test_name} {'=' * 20}")
+        try:
+            result = test_func()
+            if result:
+                passed += 1
+                results.append(f"✅ {test_name}")
+            else:
+                failed += 1
+                results.append(f"❌ {test_name}")
+        except Exception as e:
+            print(f"🔥 EXCEPTION in {test_name}: {e}")
+            failed += 1
+            results.append(f"💥 {test_name} (Exception)")
     
     # Summary
-    print(f"\n{'='*80}")
-    print("📊 TEST SUMMARY")
-    print("="*80)
+    print("\n" + "=" * 80)
+    print("📊 PAYMENT STATUS NORMALIZATION TEST SUMMARY")
+    print("=" * 80)
     
-    passed = sum(1 for _, result in results if result)
-    total = len(results)
+    for result in results:
+        print(result)
     
-    for test_name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status}: {test_name}")
+    print(f"\n🎯 Total Tests: {len(tests)}")
+    print(f"✅ Passed: {passed}")
+    print(f"❌ Failed: {failed}")
+    print(f"📈 Success Rate: {(passed/len(tests)*100):.1f}%")
     
-    print(f"\n🏆 FINAL RESULT: {passed}/{total} tests passed")
-    
-    if passed == total:
-        print("🎉 ALL TESTS PASSED - Feature is working correctly!")
+    if failed == 0:
+        print("\n🎉 ALL TESTS PASSED! Payment status normalization is working correctly.")
         return 0
     else:
-        print("⚠️  Some tests failed - Feature needs attention")
+        print(f"\n⚠️  {failed} test(s) failed. Please check the implementation.")
         return 1
 
 if __name__ == "__main__":
-    sys.exit(main())
+    exit_code = main()
+    sys.exit(exit_code)
