@@ -524,6 +524,7 @@ async function handleNewTransaction(
           currency: items?.currency || payload.asset,
           payment_id: items?.payment_id || items?.unique_tx_id,
           status: "underpaid",
+          payment_status: "underpaid",
           grace_period_minutes: merchantGracePeriodMinutes,
           timestamp: new Date().toISOString(),
         });
