@@ -155,6 +155,9 @@ export function startWebhookWorker(
           requestContext: `DLQ: tx=${job.data.payload.txId}`,
           extraContext: `Job ${job.id} failed after ${job.attemptsMade} attempts`,
         });
+
+        // Send dedicated DLQ alert email with payment details and retry instructions
+        sendDLQAlert(job.data, job.id, job.attemptsMade, error.message).catch(() => {});
       } catch (dlqError) {
         webhookLogs.error(`[WebhookQueue] Failed to add job to DLQ: ${(dlqError as Error).message}`);
       }
