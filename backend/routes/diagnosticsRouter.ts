@@ -5,6 +5,7 @@
 
 import express from "express";
 import * as binanceService from "../services/binanceService";
+import { getTunnelStatus } from "../services/sshTunnelManager";
 import { dynoPayEmailTemplate } from "../helper/sendEmail";
 import { baseEmailTemplate, infoBox, dataRow, statusBadge, p, otpBlock } from "../utils/emailTemplate";
 
