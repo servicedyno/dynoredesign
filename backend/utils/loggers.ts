@@ -25,11 +25,6 @@ export const log = (message: string, level: 'info' | 'error' | 'warn' | 'debug' 
   }
 };
 
-// Alias for common use cases
-export const logInfo = (message: string) => log(message, 'info');
-export const logError = (message: string) => log(message, 'error');
-export const logWarn = (message: string) => log(message, 'warn');
-export const logDebug = (message: string) => log(message, 'debug');
 
 // Check if running on Railway or in production
 const isRailway = !!process.env.RAILWAY_ENVIRONMENT;

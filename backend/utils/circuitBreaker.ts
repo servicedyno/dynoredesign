@@ -181,20 +181,5 @@ export const TatumCircuitBreaker = new CircuitBreaker({
   resetTimeout: 30000   // 30 seconds
 });
 
-export const BinanceCircuitBreaker = new CircuitBreaker({
-  name: 'Binance API',
-  failureThreshold: 3,
-  successThreshold: 2,
-  timeout: 5000,
-  resetTimeout: 60000   // 1 minute
-});
-
-export const EmailCircuitBreaker = new CircuitBreaker({
-  name: 'Email Service',
-  failureThreshold: 10,
-  successThreshold: 3,
-  timeout: 10000,       // 10 seconds
-  resetTimeout: 120000  // 2 minutes
-});
 
 export default CircuitBreaker;

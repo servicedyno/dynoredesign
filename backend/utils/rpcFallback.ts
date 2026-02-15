@@ -116,16 +116,3 @@ export async function withSdkFallback<T>(
   }
 }
 
-/**
- * Get fallback diagnostics for monitoring
- */
-export function getFallbackDiagnostics(): Record<string, { count: number; lastAt: Date }> {
-  return { ...fallbackMetrics };
-}
-
-/**
- * Reset fallback metrics (for testing)
- */
-export function resetFallbackMetrics(): void {
-  Object.keys(fallbackMetrics).forEach(key => delete fallbackMetrics[key]);
-}

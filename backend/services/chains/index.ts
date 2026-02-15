@@ -77,16 +77,4 @@ export const resolveChainGroup = (currency: string): ChainGroup | null => {
   return currencyToGroup[currency] || null;
 };
 
-/**
- * Get all supported currencies across all strategies.
- */
-export const getAllSupportedCurrencies = (): string[] => {
-  return Object.keys(currencyToGroup);
-};
 
-/**
- * Get all strategies.
- */
-export const getAllStrategies = (): Record<ChainGroup, ChainStrategy> => {
-  return { ...strategyRegistry };
-};
