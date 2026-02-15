@@ -324,3 +324,27 @@ export function getTransitionMap(): Record<string, string[]> {
  * All defined payment states.
  */
 export const ALL_STATES = Object.values(PaymentState);
+
+// ── Auto-Conversion Status Mapping ───────────────────────────────────────────
+// Maps raw DB conversion statuses (tbl_stablecoin_conversion.status) to
+// merchant-facing display statuses. Keeps raw `status` for backward compat;
+// the new `display_status` is the normalized version.
+
+const CONVERSION_DISPLAY_MAP: Record<string, string> = {
+  PENDING_DEPOSIT:   "pending",
+  DEPOSIT_CREDITED:  "processing",
+  CONVERTING:        "converting",
+  CONVERTED:         "converted",
+  WITHDRAWING:       "settling",
+  COMPLETED:         "settled",
+  FAILED:            "failed",
+};
+
+/**
+ * Convert raw DB auto-conversion status to a merchant-facing display status.
+ * Returns the normalized string, or the raw input (lowercased) if unknown.
+ */
+export function toConversionDisplayStatus(rawDbStatus: string | null | undefined): string {
+  if (!rawDbStatus) return "unknown";
+  return CONVERSION_DISPLAY_MAP[rawDbStatus.toUpperCase()] ?? rawDbStatus.toLowerCase();
+}
