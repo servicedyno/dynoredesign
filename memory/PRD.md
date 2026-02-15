@@ -105,3 +105,12 @@ Full-stack crypto payment processing system with FastAPI proxy + Node.js/TypeScr
 - SSH tunnel auto-reconnect: DONE — managed by `sshTunnelManager.ts`
 - Sub-dependency axios vulnerability tracking (@tatumio, tronweb, flutterwave)
 - Monitor LTC conversion #16 completion
+
+## Key Files
+- `services/sshTunnelManager.ts` — SSH tunnel lifecycle manager
+- `services/emailService.ts` — Unified email service (35+ functions)
+- `helper/controllerErrorHandler.ts` — Shared error handling
+- `helper/queryHelpers.ts` — Sort/pagination logic
+- `helper/subscriptionHelpers.ts` — Subscription cleanup
+- `helper/kycEnforcement.ts` — KYC threshold checks
+- `utils/loggers.ts` — Winston logger (single source for console output)
