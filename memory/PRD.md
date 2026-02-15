@@ -86,10 +86,12 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
   12. Query param enrichment + full pipeline integration test
 
 ### Testing Summary
-- **Total: 286 tests passing across 11 suites**
+- **Total: 351 tests passing across 13 suites**
 - Phase 1: 168 tests (7 suites) — foundation + bug fixes
 - Phase 2: 52 tests (1 suite) — webhook processor pipeline
 - Phase 3: 66 tests (3 suites) — payment fees, blockchain fees, fee rates
+- Phase 4: 40 tests (1 suite) — Redis cache operations, distributed locking, stale cleanup
+- Phase 5: 25 tests (1 suite) — webhook handlers, merchant webhook delivery, HMAC verification
 
 ## Credentials
 - **User**: richard@dyno.pt / Katiekendra123@
@@ -120,8 +122,22 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
 - `blockchainFeeService.test.ts` (25 tests): getBlockchainNetworkFee (UTXO/EVM/TRON/account-based chain routing, cache hits/misses, fee math), calculateCustomerPaymentAmount
 - `feeRateService.test.ts` (18 tests): getFeeRates (API fallbacks, caching), estimateSweepCostUSD (BTC/ETH/LTC/default sweep cost estimation)
 
+**Phase 4 — Redis Service & Data Consistency Tests (1 test suite, 40 tests) — Completed Feb 15, 2026:**
+- `redisInstance.test.ts` (40 tests): Tests the REAL redisInstance module with mocked Redis client
+  - Cache operations: setRedisItem (JSON storage, hash cleanup), setRedisItemWithTTL, setRedisTTL, getRedisItem (JSON-first with hash fallback, parse error recovery), deleteRedisItem, softDeleteRedisItem
+  - Distributed locking: acquireLock (NX+TTL, retries, PID in lock value, auto-renewal with heartbeat timer), releaseLock (Lua atomic compare-and-delete, stolen lock detection, fallback del, timer cleanup)
+  - withLock: success/failure/throw paths, default/custom TTL
+  - cleanupStaleLocks: dead PID detection, alive PID preservation, Redis error handling
+  - Jest config updated to `projects` architecture: 'unit' project (mocked Redis) + 'redis' project (real module)
+
+**Phase 5 — Webhook Handler Integration Tests (1 test suite, 25 tests) — Completed Feb 15, 2026:**
+- `webhookHandlers.test.ts` (25 tests): Tests the webhook Express handler functions
+  - tatumCryptoWebHook (6 tests): enqueue flow, missing txId skip, duplicate detection, query param passing, error resilience (always 200), timestamp metadata
+  - tatumWebHook (5 tests): Redis state update, counterAddress fallback, no-match handling, duplicate txId skip, zero-amount edge case
+  - flutterwaveWebHook (3 tests): secret hash verification (missing/wrong/correct)
+  - verifyWebhookSignature (3 tests): valid/tampered/wrong-secret HMAC-SHA256 verification
+  - callMerchantWebhook (8 tests): URL resolution from customerData, skip when unconfigured, localhost rejection, HMAC signature inclusion/exclusion, 4xx no-retry, fiat enrichment
+
 ## Backlog
-- **P2: Phase 4 — Redis Service & Data Consistency Testing**: Tests for Redis atomicity, race conditions, locking mechanisms
-- **P2: Phase 5 — API Endpoint Integration Testing**: Full request-response cycle tests for `/get-data`, `/webhook/tatum`
 - **P3: Dependency Injection refactoring** to decouple services from Sequelize models for better testability
 - P1: DLQ email alerting (notify admin when jobs land in dead-letter queue)
