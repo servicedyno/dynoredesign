@@ -1627,15 +1627,34 @@ const assetToOtherAddress = async ({
       changeAddress: toUTXO.length > 0 ? fromAddress : (fromMaster ? fromAddress : toAddress),
     });
   } else if (currency === "BCH") {
+    // Normalize ALL BCH addresses to CashAddr format (bitcoincash:q...)
+    // Legacy addresses (starting with 1 or 3) cause Tatum validation errors
+    const toCashAddr = (addr: string): string => {
+      if (!addr) return addr;
+      try {
+        return bchaddr.toCashAddress(addr);
+      } catch {
+        // Already in CashAddr or invalid — return as-is
+        return addr.startsWith('bitcoincash:') ? addr : `bitcoincash:${addr}`;
+      }
+    };
+    const normalizedFromUTXO = fromUTXO.map((u: any) => ({ ...u }));
+    const normalizedToUTXO = toUTXO.map((o: any) => ({
+      ...o,
+      address: toCashAddr(o.address),
+    }));
+    const bchChangeAddress = toCashAddr(fromAddress || toAddress);
+    // UTXO chains: fee should be a simple string, not the full {slow,medium,fast} object
+    const bchFee = typeof fee === 'object' && fee !== null
+      ? (fee.slow || fee.medium || fee.fast || "0.00001")
+      : fee;
+    const bchFeeStr = typeof bchFee === 'string' ? bchFee : String(Number(bchFee).toFixed(8));
+    cronLogger.info(`[assetToOtherAddress] BCH: changeAddress=${bchChangeAddress}, fee=${bchFeeStr}, fromUTXO=${normalizedFromUTXO.length}, toUTXO=${normalizedToUTXO.length}`);
     transaction = await tatumSdk.blockchain.bcash.bchTransferBlockchain({
-      fromUTXO,
-      to: toUTXO,
-      fee: fee,
-      changeAddress: fromMaster
-        ? fromAddress
-        : toAddress?.includes("bitcoincash")
-        ? toAddress
-        : "bitcoincash:" + toAddress,
+      fromUTXO: normalizedFromUTXO,
+      to: normalizedToUTXO,
+      fee: bchFeeStr,
+      changeAddress: bchChangeAddress,
     });
   } else if (currency === "SOL") {
     // Solana native transfer
