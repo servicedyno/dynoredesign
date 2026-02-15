@@ -4073,13 +4073,19 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
     const { id } = req.params;
     const { company_id } = req.query;
 
-    // Build company filter
+    // Build parameterized query
+    const replacements: Record<string, unknown> = {
+      user_id: userData.user_id,
+      id_str: id,
+      id_num: parseInt(id as string, 10) || 0,
+    };
     let companyFilter = '';
     if (company_id) {
-      companyFilter = `AND ut.company_id = ${parseInt(company_id as string)}`;
+      companyFilter = `AND ut.company_id = :company_id`;
+      replacements.company_id = parseInt(company_id as string, 10);
     }
 
-    // Fetch transaction with all related data
+    // Fetch transaction with all related data (parameterized)
     const transaction = await sequelize.query(
       `
       SELECT 
@@ -4094,12 +4100,12 @@ const getTransactionDetails = async (req: express.Request, res: express.Response
       LEFT JOIN tbl_customer c ON c.customer_id = ut.customer_id
       LEFT JOIN tbl_company cm ON cm.company_id = ut.company_id
       LEFT JOIN tbl_user_wallet uw ON uw.wallet_id = ut.wallet_id
-      WHERE ut.user_id = ${userData.user_id} 
-        AND (ut.id = '${id}' OR ut.transaction_id = ${parseInt(id) || 0})
+      WHERE ut.user_id = :user_id 
+        AND (ut.id = :id_str OR ut.transaction_id = :id_num)
         ${companyFilter}
       LIMIT 1
       `,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT, replacements }
     );
 
     if (transaction.length === 0) {
