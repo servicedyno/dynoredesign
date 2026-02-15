@@ -3792,11 +3792,11 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
 
       const customerPayload = {
         id: tempData?.incomplete && tempData?.customerInternalRef ? tempData.customerInternalRef : crypto.randomUUID(),
-        company_id: Number(customerData.company_id),
+        company_id: Number(customerData.company_id || tempData?.company_id),
         customer_id: customerData.customer_id ? Number(customerData.customer_id) : null,
         payment_mode: "CRYPTO",
         base_amount: Number(finalAmount[0].amount).toFixed(2),
-        base_currency: customerData.base_currency,
+        base_currency: baseCurrency,
         paid_amount: Number(receivedAmount).toFixed(6),
         paid_currency: tempCurrency,
         transaction_reference: transactionId,
