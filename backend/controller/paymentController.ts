@@ -6785,10 +6785,7 @@ const processIncompletePayments = async () => {
               merchantDestinationTag: merchantWallet.dataValues.destination_tag || null,
             });
 
-            await adminWalletModel.increment("fee", {
-              by: adminAmountToSend,
-              where: { wallet_type: tempTx.wallet_type },
-            });
+            await incrementAdminFee(tempTx.wallet_type, adminAmountToSend);
 
             // Send admin fee notification email for partial payment processing
             try {
@@ -6829,12 +6826,7 @@ const processIncompletePayments = async () => {
             );
 
             if (userAmountToSend > 0) {
-              await userWalletModel.increment("amount", {
-                by: Number(userAmountToSend),
-                where: {
-                  wallet_id: merchantWallet.dataValues.wallet_id,
-                },
-              });
+              await incrementUserWallet(merchantWallet.dataValues.wallet_id, Number(userAmountToSend));
 
               await userTransactionModel.create({
                 wallet_id: merchantWallet.dataValues.wallet_id,
