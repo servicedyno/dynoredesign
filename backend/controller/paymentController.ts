@@ -70,6 +70,7 @@ import {
   merchantTempAddressModel,
 } from "../models";
 import QR_Code from "qrcode";
+import { generateQRCodeWithLogo } from "../utils/qrCodeWithLogo";
 import tatumApi from "../apis/tatumApi";
 import blockchairApi from "../apis/blockchairApi";
 import { getAdminWalletAddress } from "../utils/adminUtils";
