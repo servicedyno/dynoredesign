@@ -13,61 +13,75 @@ Full-stack crypto payment processing system with FastAPI proxy + Node.js/TypeScr
 
 ## What's Been Implemented
 
+### Session Feb 15, 2026: P1/P2 Security & Code Quality
+
+**P1 - Subresource Integrity (SRI)**
+- Added `integrity="sha384-..."` and `crossorigin="anonymous"` to external script in `frontend/public/index.html`
+
+**P1 - Sub-dependency Vulnerability Fixes**
+- Ran `npm audit fix`: Fixed `node-forge` (in flutterwave-node-v3) and `qs` vulnerabilities
+- Remaining 4 high-severity are unfixable sub-dependencies in `@tatumio/api-client`, `flutterwave-node-v3`, `tronweb` (axios <=1.13.4)
+
+**P2 - Structured Logging Migration (1371 replacements)**
+- Replaced all `console.log/error/warn` calls with proper Winston logger calls across:
+  - 15 controller files (504 replacements)
+  - 21 service/helper/util files (333 replacements)  
+  - 9 additional service/route files (453 replacements)
+  - 9 remaining production files (81 replacements)
+- Logger mapping: cronLogger (cron/blockchain ops), apiLogger (API/general), walletLogger, webhookLogs, etc.
+- Fixed broken import patterns in tatumApi.ts, merchantPoolSweep.ts caused by script injection
+- Added missing imports in circuitBreaker.ts, merchantPoolValidator.ts
+- Remaining 65 console.log in standalone scripts, model inits, middleware setup (acceptable)
+
+**Infrastructure**
+- Restarted Binance SOCKS5 proxy SSH tunnel (port 1080)
+- Started SSH tunnel keepalive script in background
+
 ### Session Feb 14-15, 2026: Security Audit Fixes
 
 **P0 - SQL Injection Fixes (6 locations)**
-- `walletController.ts` line 301: Parameterized `wallet_id`, `column`, `sortType`, `offset`, `limit` via Sequelize replacements
-- `walletController.ts` line 511: Parameterized WHERE conditions (`date_from`, `date_to`, `status`, `currency`, `search`, `company_id`) + whitelisted ORDER BY columns
-- `walletController.ts` line 4057: Parameterized transaction detail query (`id`, `company_id`, `user_id`)
-- `walletController.ts` line 4203: Parameterized export query (same pattern as 511)
-- `companyController.ts` line 662: Parameterized `company_id` in getTransactions
-- `adminController.ts` line 644: Parameterized + whitelisted ORDER BY columns
+- `walletController.ts` lines 301, 511, 4057, 4203: Parameterized queries
+- `companyController.ts` line 662: Parameterized
+- `adminController.ts` line 644: Parameterized + whitelisted ORDER BY
 
 **P0 - TLS Verification Fix**
-- `dbInstance.ts`: Changed `rejectUnauthorized: false` to `rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'` (configurable, defaults to true)
+- `dbInstance.ts`: Configurable `rejectUnauthorized` via `DB_SSL_REJECT_UNAUTHORIZED`
 
 **P0 - Hardcoded Secrets Removed (6 files)**
-- `scripts/debug/check_stuck_payment.js`: Redis URL → `process.env.REDIS_PUBLIC_URL`
-- `scripts/debug/clear_stuck_txid.js`: Redis URL → `process.env.REDIS_PUBLIC_URL`
-- `scripts/migration/fix_redis_for_retry.js`: Redis URL → `process.env.REDIS_PUBLIC_URL`
-- `scripts/manual_sweep_usdt_trc20.ts`: Encrypted key → `process.env.USDT_TRC20_ENCRYPTED_KEY`
-- `scripts/migration/migrate_john_user.js`: DB credentials → env vars
-- `verify_private_key.ts`: Encrypted key → `process.env.VERIFY_ENCRYPTED_KEY`
+- Redis URLs, encrypted keys, DB credentials → env vars
 
 **P1 - XSS Prevention (6 locations in walletController.ts)**
-- Added `escapeHtml()` utility function
-- Applied to all email template interpolations (wallet added/updated/removed emails)
-- Escapes companyName, currency, wallet_address, wallet_name, wallet_type
+- Added `escapeHtml()` utility, applied to email template interpolations
 
 **P1 - Package Upgrades**
-- `axios`: 1.4.0 → 1.13.5
-- `nodemailer`: 6.9.3 → 8.0.1  
-- `multer`: 1.4.5-lts.1 → 1.4.5-lts.2 (kept v1 for API compat, fixes DoS vulnerabilities)
+- `axios`: 1.4.0 → 1.13.5, `nodemailer`: 6.9.3 → 8.0.1, `multer`: security fix
 
 **Bug Fixes**
-- `merchantPoolConfig.ts`: Fixed `parseSweepConfig` to check env var overrides BEFORE defaulting UTXO chains to "batch" mode
-- `merchantPoolSweep.ts`: Added UTXO balance rounding to 8 decimal places to prevent Tatum API validation errors from floating point imprecision
-- LTC sweep successfully executed: TX `51665a57dd5c2b9d68a8782cf61b7fa38b8cff12775ffe1f1708aae007168288`
+- `merchantPoolConfig.ts`: Fixed sweep config env var precedence
+- `merchantPoolSweep.ts`: UTXO balance rounding to 8 decimal places
+- LTC sweep TX: `51665a57dd5c2b9d68a8782cf61b7fa38b8cff12775ffe1f1708aae007168288`
 
 ### Previous Session: UTXO Payment Bug Fix
-- Fixed balance parsing for UTXO chains (incoming - outgoing instead of balance field)
-- Fixed fee format for Tatum SDK (string vs object)
+- Fixed balance parsing for UTXO chains
+- Fixed fee format for Tatum SDK
 - Fixed fee deduction from sweep amount
 
 ## Prioritized Backlog
 
-### P1 - Remaining from Security Audit
-- SRI attribute for external scripts in `frontend/public/index.html`
-- Remaining SCA: axios sub-dependency in @tatumio and tronweb (no direct fix)
+### P2 - Remaining Code Quality
+- 65 console.log in standalone scripts/model inits (low priority)
+- Email service duplication: `helper/sendEmail.ts` (1231 lines) and `services/emailService.ts` (1450 lines) overlap
+- Error handling pattern duplication across controllers (try/catch boilerplate)
+- 108 potentially unused exports identified across codebase
+- Remaining code smells, dead code (reduced from original 1115/501)
 
-### P2 - Code Quality (from audit report)
-- 1115 code smells (await in loops, missing radix, string concatenation)
-- 501 lines dead code
-- 7180 lines duplicate code across 173 groups
-- 247 functions missing docstrings
-- Accessibility issues in frontend components
+### P2 - Code Duplication Hotspots
+- `walletController.ts`: 256 duplicated blocks
+- `paymentController.ts`: 214 duplicated blocks  
+- `helper/sendEmail.ts`: 83 duplicated blocks
+- `routes/diagnosticsRouter.ts`: 73 duplicated blocks
 
 ### P3 - Infrastructure
-- SSH tunnel auto-reconnect on container restart (currently manual)
-- Redis lock TTL monitoring to prevent stale lock accumulation
-- Stablecoin conversion lock hanging investigation
+- SSH tunnel auto-reconnect on container restart (keepalive script running but not supervisor-managed)
+- Redis lock TTL monitoring
+- Sub-dependency axios vulnerability in @tatumio, tronweb, flutterwave (requires upstream fixes)
