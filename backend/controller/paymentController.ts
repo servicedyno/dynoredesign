@@ -4538,9 +4538,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           cronLogger.info(`[cryptoVerification] Skipping subscription delete for merchant pool address (handled by releaseAddress)`);
         }
         
+        transactionFinished = true;
         await transaction.commit();
-        
-        // PHASE 12: Clear incomplete_payment and active_crypto_address from customer Redis key on successful completion
         const customerRef = tempData.ref;
         if (customerRef) {
           const customerRedisData = await getRedisItem("customer-" + customerRef);
