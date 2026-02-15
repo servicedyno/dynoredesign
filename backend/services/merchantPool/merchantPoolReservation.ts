@@ -465,7 +465,7 @@ export const releaseAddress = async (
     reserved_until: null,
     locked_at: null,
     last_used_at: new Date(),
-    last_merchant_payout: isUTXO ? null : new Date(),
+    last_merchant_payout: (isUTXO && !pendingSweep) ? null : new Date(),
     last_payment_context: null,
   });
 
