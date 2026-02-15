@@ -3606,6 +3606,7 @@ const verifyCryptoPayment = async (
       // Payment initiated but no transaction detected yet
       return successResponseHelper(res, 200, "Waiting for payment", {
         status: "waiting",
+        payment_status: "waiting",
         message: "Payment address generated, waiting for transaction",
         expected_amount: expectedAmount.toFixed(6),
         currency: currency,
@@ -3623,6 +3624,7 @@ const verifyCryptoPayment = async (
       // Transaction detected but not yet processed (legacy state)
       return successResponseHelper(res, 200, "Payment pending", {
         status: "pending",
+        payment_status: "pending",
         message: "Payment detected, awaiting confirmation",
         txId: tempData.txId,
         amount: tempData.receivedAmount || tempData.amount,
@@ -3642,6 +3644,7 @@ const verifyCryptoPayment = async (
       // Transaction detected and being processed
       return successResponseHelper(res, 200, "Payment pending", {
         status: "pending",
+        payment_status: "pending",
         message: "Payment detected, awaiting confirmation",
         txId: tempData.txId,
         amount: tempData.receivedAmount || tempData.amount,
@@ -3660,6 +3663,7 @@ const verifyCryptoPayment = async (
     if (parsedState === PaymentState.FAILED) {
       return successResponseHelper(res, 200, "Payment failed", {
         status: "failed",
+        payment_status: "failed",
         message: tempData.lastError || "Payment processing failed",
         txId: tempData.txId,
         // Timer and settings (for consistency)
