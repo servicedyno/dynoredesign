@@ -4374,13 +4374,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         }
 
         if (userAmountToSend > 0) {
-          await userWalletModel.increment("amount", {
-            by: Number(userAmountToSend),
-            where: {
-              wallet_id: walletData.dataValues.wallet_id,
-            },
-            transaction,
-          });
+          await incrementUserWallet(walletData.dataValues.wallet_id, Number(userAmountToSend), transaction);
 
           const userPayload = {
             wallet_id: walletData.dataValues.wallet_id,
