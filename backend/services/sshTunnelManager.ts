@@ -66,6 +66,15 @@ export const startTunnelManager = (): void => {
     return;
   }
 
+  // Verify sshpass is available before entering the connect/retry loop
+  try {
+    const { execSync } = require("child_process");
+    execSync("which sshpass", { encoding: "utf-8", stdio: "pipe" });
+  } catch {
+    cronLogger.warn("[SSHTunnel] sshpass not found on PATH — tunnel manager disabled. Install sshpass to enable.");
+    return;
+  }
+
   enabled = true;
   cronLogger.info(`[SSHTunnel] Manager starting (host=${SSH_HOST}, localPort=${LOCAL_PORT}).`);
 
