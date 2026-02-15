@@ -3938,11 +3938,11 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         if (customerRef) {
           const customerData = await getRedisItem("customer-" + customerRef);
           if (customerData) {
-            // Generate QR code for the address — include destination tag for XRP/RLUSD
+            // Generate QR code with currency logo — include destination tag for XRP/RLUSD
             let qrCode;
             try {
               const qrPayload = tempData.destination_tag ? `${address}?dt=${tempData.destination_tag}` : address;
-              qrCode = await QR_Code.toDataURL(qrPayload, { width: 300 });
+              qrCode = await generateQRCodeWithLogo(qrPayload, tempCurrency, 400);
             } catch (e) {
               cronLogger.info('[Phase 12] QR code generation failed:', e);
             }
