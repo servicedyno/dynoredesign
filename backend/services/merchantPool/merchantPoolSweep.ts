@@ -377,6 +377,8 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     let actualBalance: number;
     if (balanceData?.incoming !== undefined && balanceData?.outgoing !== undefined) {
       actualBalance = parseFloat(balanceData.incoming || "0") - parseFloat(balanceData.outgoing || "0");
+      // Round to 8 decimal places to avoid floating point precision issues
+      actualBalance = Math.round(actualBalance * 100000000) / 100000000;
       console.log(`[MerchantPool] UTXO balance: incoming=${balanceData.incoming}, outgoing=${balanceData.outgoing}, net=${actualBalance}`);
     } else {
       actualBalance = parseFloat(balanceData?.balance || "0");
