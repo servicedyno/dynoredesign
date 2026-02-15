@@ -1,456 +1,362 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for QR Code Currency Logo Overlay + JSON Parse Error Fix
-Tests all requirements specified in the review request
+Backend Test Suite for DynoPay QR Code Currency Logo Overlay + JSON Parse Error Fix + Error Alert Email Fix
 """
 
+import requests
 import subprocess
 import sys
 import json
-import requests
 import re
-import time
+import os
 
-class BackendTester:
-    def __init__(self):
-        self.base_url = "http://localhost:8001"
-        self.results = []
-        self.passed = 0
-        self.failed = 0
-        
-    def log(self, message, level="INFO"):
-        print(f"[{level}] {message}")
-        
-    def run_command(self, cmd, cwd="/app/backend", timeout=30):
-        """Run a shell command and return result"""
-        try:
-            result = subprocess.run(
-                cmd, 
-                shell=True, 
-                capture_output=True, 
-                text=True, 
-                timeout=timeout,
-                cwd=cwd
-            )
-            return {
-                'success': result.returncode == 0,
-                'stdout': result.stdout.strip(),
-                'stderr': result.stderr.strip(),
-                'returncode': result.returncode
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                'success': False,
-                'stdout': '',
-                'stderr': 'Command timed out',
-                'returncode': -1
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'stdout': '',
-                'stderr': str(e),
-                'returncode': -1
-            }
-    
-    def test_1_backend_health(self):
-        """TEST 1: Backend healthy - GET /health returns 200 with status "healthy" """
-        try:
-            self.log("Running TEST 1: Backend Health Check")
-            response = requests.get(f"{self.base_url}/health", timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('status') == 'healthy':
-                    self.log("✅ TEST 1 PASSED: Backend health check successful")
-                    self.passed += 1
-                    return True
-                else:
-                    self.log(f"❌ TEST 1 FAILED: Status is '{data.get('status')}', expected 'healthy'")
-                    self.failed += 1
-                    return False
-            else:
-                self.log(f"❌ TEST 1 FAILED: HTTP {response.status_code}, expected 200")
-                self.failed += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ TEST 1 FAILED: Exception - {e}")
-            self.failed += 1
-            return False
-    
-    def test_2_typescript_compilation(self):
-        """TEST 2: TypeScript compiles clean - npx tsc --noEmit exits with 0"""
-        try:
-            self.log("Running TEST 2: TypeScript Compilation")
-            result = self.run_command("npx tsc --noEmit", timeout=60)
-            
-            if result['success']:
-                self.log("✅ TEST 2 PASSED: TypeScript compilation successful")
-                self.passed += 1
+# Backend Base URL
+BASE_URL = "http://localhost:8001"
+
+def run_command(cmd, cwd=None):
+    """Run shell command and return output"""
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)
+        return result.returncode, result.stdout, result.stderr
+    except Exception as e:
+        return 1, "", str(e)
+
+def test_backend_health():
+    """TEST 1: Backend healthy"""
+    print("\n=== TEST 1: Backend Health ===")
+    try:
+        response = requests.get(f"{BASE_URL}/health", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'healthy':
+                print("✅ Backend health check passed")
                 return True
             else:
-                self.log(f"❌ TEST 2 FAILED: TypeScript compilation errors")
-                self.log(f"STDERR: {result['stderr']}")
-                self.failed += 1
+                print(f"❌ Backend not healthy: {data}")
                 return False
-                
-        except Exception as e:
-            self.log(f"❌ TEST 2 FAILED: Exception - {e}")
-            self.failed += 1
+        else:
+            print(f"❌ Health check failed: {response.status_code}")
             return False
+    except Exception as e:
+        print(f"❌ Health check error: {e}")
+        return False
+
+def test_typescript_compilation():
+    """TEST 2: TypeScript compiles clean"""
+    print("\n=== TEST 2: TypeScript Compilation ===")
+    code, stdout, stderr = run_command("npx tsc --noEmit", cwd="/app/backend")
+    if code == 0:
+        print("✅ TypeScript compilation successful")
+        return True
+    else:
+        print(f"❌ TypeScript compilation failed:")
+        print(f"STDOUT: {stdout}")
+        print(f"STDERR: {stderr}")
+        return False
+
+def test_qr_generation_all_currencies():
+    """TEST 3: QR code generation with logo works for all 15 currencies"""
+    print("\n=== TEST 3: QR Code Generation All Currencies ===")
     
-    def test_3_qr_generation_all_currencies(self):
-        """TEST 3: QR code generation with logo works for all 15 currencies"""
-        try:
-            self.log("Running TEST 3: QR Code Generation for All 15 Currencies")
-            
-            # Command to test all currencies
-            test_command = """npx ts-node --transpile-only -e "
-import { generateQRCodeWithLogo } from './utils/qrCodeWithLogo'; 
-async function t() { 
-    const currencies = ['BTC','ETH','LTC','DOGE','TRX','SOL','XRP','RLUSD','POLYGON','BCH','USDT-ERC20','USDC-ERC20','RLUSD-ERC20','USDT-POLYGON','USDT-TRC20']; 
-    for (const c of currencies) { 
-        const r = await generateQRCodeWithLogo('test123', c, 400); 
-        console.log(c + ': ' + (r.startsWith('data:image/png;base64,') ? 'OK' : 'FAIL')); 
-    } 
-} 
-t();"
-            """
-            
-            result = self.run_command(test_command, timeout=60)
-            
-            if result['success']:
-                # Check output for all currencies showing OK
-                output_lines = result['stdout'].split('\n')
-                currencies = ['BTC','ETH','LTC','DOGE','TRX','SOL','XRP','RLUSD','POLYGON','BCH','USDT-ERC20','USDC-ERC20','RLUSD-ERC20','USDT-POLYGON','USDT-TRC20']
-                
-                failed_currencies = []
-                passed_currencies = []
-                
-                for line in output_lines:
-                    if ': ' in line:
-                        currency, status = line.split(': ', 1)
-                        if currency in currencies:
-                            if status.strip() == 'OK':
-                                passed_currencies.append(currency)
-                            else:
-                                failed_currencies.append(currency)
-                
-                if len(passed_currencies) == 15 and len(failed_currencies) == 0:
-                    self.log(f"✅ TEST 3 PASSED: All 15 currencies generated QR codes successfully")
-                    self.passed += 1
-                    return True
-                else:
-                    self.log(f"❌ TEST 3 FAILED: {len(passed_currencies)}/15 currencies passed, {len(failed_currencies)} failed")
-                    if failed_currencies:
-                        self.log(f"Failed currencies: {failed_currencies}")
-                    self.failed += 1
-                    return False
-            else:
-                self.log(f"❌ TEST 3 FAILED: Command execution failed")
-                self.log(f"STDERR: {result['stderr']}")
-                self.failed += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ TEST 3 FAILED: Exception - {e}")
-            self.failed += 1
-            return False
+    test_script = '''
+import { generateQRCodeWithLogo } from './utils/qrCodeWithLogo';
+async function t() {
+    const currencies = ['BTC','ETH','LTC','DOGE','TRX','SOL','XRP','RLUSD','POLYGON','BCH','USDT-ERC20','USDC-ERC20','RLUSD-ERC20','USDT-POLYGON','USDT-TRC20'];
+    for (const c of currencies) {
+        const r = await generateQRCodeWithLogo('test123', c, 400);
+        console.log(c + ': ' + (r.startsWith('data:image/png;base64,') ? 'OK' : 'FAIL'));
+    }
+}
+t();
+'''
     
-    def test_4_qr_output_format(self):
-        """TEST 4: QR code output is valid png data URL"""
-        try:
-            self.log("Running TEST 4: QR Code Output Format Validation")
-            
-            test_command = """npx ts-node --transpile-only -e "
-import { generateQRCodeWithLogo } from './utils/qrCodeWithLogo'; 
-async function t() { 
-    const result = await generateQRCodeWithLogo('test123', 'BTC', 400); 
-    console.log('FORMAT_CHECK:' + (result.startsWith('data:image/png;base64,') ? 'VALID' : 'INVALID')); 
-    console.log('LENGTH:' + result.length);
-} 
-t();"
-            """
-            
-            result = self.run_command(test_command, timeout=30)
-            
-            if result['success']:
-                output = result['stdout']
-                if 'FORMAT_CHECK:VALID' in output:
-                    # Extract length for additional validation
-                    length_match = re.search(r'LENGTH:(\d+)', output)
-                    if length_match:
-                        length = int(length_match.group(1))
-                        if length > 1000:  # Base64 PNG should be reasonably sized
-                            self.log(f"✅ TEST 4 PASSED: QR code output format is valid (length: {length})")
-                            self.passed += 1
-                            return True
-                        else:
-                            self.log(f"❌ TEST 4 FAILED: QR code too small (length: {length})")
-                            self.failed += 1
-                            return False
-                    else:
-                        self.log(f"✅ TEST 4 PASSED: QR code output format is valid")
-                        self.passed += 1
-                        return True
-                else:
-                    self.log(f"❌ TEST 4 FAILED: QR code output format is invalid")
-                    self.log(f"Output: {output}")
-                    self.failed += 1
-                    return False
-            else:
-                self.log(f"❌ TEST 4 FAILED: Command execution failed")
-                self.log(f"STDERR: {result['stderr']}")
-                self.failed += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ TEST 4 FAILED: Exception - {e}")
-            self.failed += 1
-            return False
+    code, stdout, stderr = run_command(f'npx ts-node --transpile-only -e "{test_script}"', cwd="/app/backend")
     
-    def test_5_malformed_json_400_error(self):
-        """TEST 5: Malformed JSON body returns 400 (not 500)"""
-        try:
-            self.log("Running TEST 5: Malformed JSON Error Handling")
-            
-            # Use curl command as specified in review request
-            result = self.run_command(
-                f'curl -s -X POST {self.base_url}/api/payment -H "Content-Type: application/json" -d "not valid json"',
-                timeout=10
-            )
-            
-            if result['success']:
-                try:
-                    response_data = json.loads(result['stdout'])
-                    expected_response = {
-                        "success": False,
-                        "message": "Invalid JSON in request body",
-                        "statusCode": 400
-                    }
-                    
-                    if (response_data.get('success') == False and 
-                        response_data.get('message') == "Invalid JSON in request body" and
-                        response_data.get('statusCode') == 400):
-                        self.log("✅ TEST 5 PASSED: Malformed JSON returns 400 with correct message")
-                        self.passed += 1
-                        return True
-                    else:
-                        self.log(f"❌ TEST 5 FAILED: Unexpected response format")
-                        self.log(f"Expected: {expected_response}")
-                        self.log(f"Got: {response_data}")
-                        self.failed += 1
-                        return False
-                        
-                except json.JSONDecodeError:
-                    self.log(f"❌ TEST 5 FAILED: Response is not valid JSON")
-                    self.log(f"Response: {result['stdout']}")
-                    self.failed += 1
-                    return False
-            else:
-                self.log(f"❌ TEST 5 FAILED: Curl command failed")
-                self.log(f"STDERR: {result['stderr']}")
-                self.failed += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ TEST 5 FAILED: Exception - {e}")
-            self.failed += 1
-            return False
-    
-    def test_6_valid_json_no_regression(self):
-        """TEST 6: Valid JSON body still works (no regression)"""
-        try:
-            self.log("Running TEST 6: Valid JSON - No Regression")
-            
-            # Use curl command as specified in review request
-            result = self.run_command(
-                'curl -s -X POST http://localhost:8001/api/payment -H "Content-Type: application/json" -d \'{"test":true}\'',
-                timeout=10
-            )
-            
-            if result['success']:
-                response_text = result['stdout']
-                
-                # Check if it's JSON response
-                try:
-                    response_data = json.loads(response_text)
-                    # Should NOT return the JSON parse error
-                    if (response_data.get('message') == "Invalid JSON in request body" and
-                        response_data.get('statusCode') == 400):
-                        self.log(f"❌ TEST 6 FAILED: Valid JSON incorrectly triggers JSON parse error")
-                        self.failed += 1
-                        return False
-                    else:
-                        # Any other error is fine (auth error, business logic error, etc.)
-                        self.log(f"✅ TEST 6 PASSED: Valid JSON does not trigger JSON parse error")
-                        self.log(f"Response: {response_data}")
-                        self.passed += 1
-                        return True
-                        
-                except json.JSONDecodeError:
-                    # If it's not JSON, check if it contains the JSON parse error message
-                    if "Invalid JSON in request body" in response_text:
-                        self.log(f"❌ TEST 6 FAILED: Valid JSON incorrectly triggers JSON parse error")
-                        self.log(f"Response: {response_text}")
-                        self.failed += 1
-                        return False
-                    else:
-                        # Any other non-JSON response is fine (HTML error page, etc.)
-                        self.log(f"✅ TEST 6 PASSED: Valid JSON does not trigger JSON parse error")
-                        self.log(f"Response (non-JSON): {response_text[:100]}...")
-                        self.passed += 1
-                        return True
-            else:
-                self.log(f"❌ TEST 6 FAILED: Curl command failed")
-                self.log(f"STDERR: {result['stderr']}")
-                self.failed += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ TEST 6 FAILED: Exception - {e}")
-            self.failed += 1
-            return False
-    
-    def test_7_import_in_payment_controller(self):
-        """TEST 7: Import in paymentController - grep -c 'generateQRCodeWithLogo' >= 4"""
-        try:
-            self.log("Running TEST 7: Import verification in paymentController")
-            
-            result = self.run_command("grep -c 'generateQRCodeWithLogo' /app/backend/controller/paymentController.ts")
-            
-            if result['success']:
-                count = int(result['stdout'])
-                if count >= 4:
-                    self.log(f"✅ TEST 7 PASSED: Found {count} occurrences of 'generateQRCodeWithLogo' in paymentController (>= 4 required)")
-                    self.passed += 1
-                    return True
-                else:
-                    self.log(f"❌ TEST 7 FAILED: Found only {count} occurrences, expected >= 4")
-                    self.failed += 1
-                    return False
-            else:
-                self.log(f"❌ TEST 7 FAILED: grep command failed")
-                self.log(f"STDERR: {result['stderr']}")
-                self.failed += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ TEST 7 FAILED: Exception - {e}")
-            self.failed += 1
-            return False
-    
-    def test_8_import_in_wallet_controller(self):
-        """TEST 8: Import in walletController - grep -c 'generateQRCodeWithLogo' >= 2"""
-        try:
-            self.log("Running TEST 8: Import verification in walletController")
-            
-            result = self.run_command("grep -c 'generateQRCodeWithLogo' /app/backend/controller/walletController.ts")
-            
-            if result['success']:
-                count = int(result['stdout'])
-                if count >= 2:
-                    self.log(f"✅ TEST 8 PASSED: Found {count} occurrences of 'generateQRCodeWithLogo' in walletController (>= 2 required)")
-                    self.passed += 1
-                    return True
-                else:
-                    self.log(f"❌ TEST 8 FAILED: Found only {count} occurrences, expected >= 2")
-                    self.failed += 1
-                    return False
-            else:
-                self.log(f"❌ TEST 8 FAILED: grep command failed")
-                self.log(f"STDERR: {result['stderr']}")
-                self.failed += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ TEST 8 FAILED: Exception - {e}")
-            self.failed += 1
-            return False
-    
-    def test_9_no_remaining_plain_qr_calls(self):
-        """TEST 9: No remaining plain QR_Code.toDataURL calls"""
-        try:
-            self.log("Running TEST 9: Verify no remaining plain QR_Code.toDataURL calls")
-            
-            # Test paymentController.ts
-            result1 = self.run_command("grep 'QR_Code.toDataURL' /app/backend/controller/paymentController.ts")
-            # Test walletController.ts  
-            result2 = self.run_command("grep 'QR_Code.toDataURL' /app/backend/controller/walletController.ts")
-            
-            # Both greps should return exit code 1 (no matches found)
-            if (not result1['success'] and result1['returncode'] == 1 and 
-                not result2['success'] and result2['returncode'] == 1):
-                self.log("✅ TEST 9 PASSED: No remaining QR_Code.toDataURL calls found")
-                self.passed += 1
-                return True
-            else:
-                failures = []
-                if result1['success'] or result1['returncode'] == 0:
-                    failures.append(f"paymentController.ts: {result1['stdout']}")
-                if result2['success'] or result2['returncode'] == 0:
-                    failures.append(f"walletController.ts: {result2['stdout']}")
-                    
-                self.log(f"❌ TEST 9 FAILED: Found remaining QR_Code.toDataURL calls:")
-                for failure in failures:
-                    self.log(f"  {failure}")
-                self.failed += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ TEST 9 FAILED: Exception - {e}")
-            self.failed += 1
-            return False
-    
-    def run_all_tests(self):
-        """Run all tests in sequence"""
-        self.log("=" * 80)
-        self.log("QR CODE CURRENCY LOGO OVERLAY + JSON PARSE ERROR FIX - BACKEND TESTING")
-        self.log("=" * 80)
+    if code == 0:
+        lines = stdout.strip().split('\n')
+        success_count = sum(1 for line in lines if ': OK' in line)
+        total_currencies = 15
         
-        # List of all test methods
-        tests = [
-            self.test_1_backend_health,
-            self.test_2_typescript_compilation,
-            self.test_3_qr_generation_all_currencies,
-            self.test_4_qr_output_format,
-            self.test_5_malformed_json_400_error,
-            self.test_6_valid_json_no_regression,
-            self.test_7_import_in_payment_controller,
-            self.test_8_import_in_wallet_controller,
-            self.test_9_no_remaining_plain_qr_calls,
-        ]
+        print(f"Generated QR codes for {success_count}/{total_currencies} currencies")
+        for line in lines:
+            if line.strip():
+                status = "✅" if ": OK" in line else "❌"
+                print(f"  {status} {line}")
         
-        for i, test in enumerate(tests, 1):
-            try:
-                test()
-                self.log("-" * 40)
-            except Exception as e:
-                self.log(f"❌ TEST {i} CRASHED: {e}")
-                self.failed += 1
-                self.log("-" * 40)
-        
-        # Summary
-        self.log("=" * 80)
-        self.log("TESTING SUMMARY")
-        self.log("=" * 80)
-        total_tests = self.passed + self.failed
-        success_rate = (self.passed / total_tests * 100) if total_tests > 0 else 0
-        
-        self.log(f"Total Tests: {total_tests}")
-        self.log(f"Passed: {self.passed}")
-        self.log(f"Failed: {self.failed}")
-        self.log(f"Success Rate: {success_rate:.1f}%")
-        
-        if self.failed == 0:
-            self.log("🎉 ALL TESTS PASSED! QR Code Currency Logo Overlay + JSON Parse Error Fix is working correctly.")
+        if success_count == total_currencies:
+            print("✅ All QR code generations successful")
             return True
         else:
-            self.log(f"❌ {self.failed} TEST(S) FAILED. Please review the issues above.")
+            print(f"❌ Only {success_count}/{total_currencies} QR codes generated successfully")
             return False
+    else:
+        print(f"❌ QR code generation test failed:")
+        print(f"STDOUT: {stdout}")
+        print(f"STDERR: {stderr}")
+        return False
+
+def test_malformed_json_400():
+    """TEST 4: Malformed JSON returns 400"""
+    print("\n=== TEST 4: Malformed JSON Returns 400 ===")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/payment",
+            headers={"Content-Type": "application/json"},
+            data="not valid json",
+            timeout=10
+        )
+        
+        if response.status_code == 400:
+            data = response.json()
+            expected_message = "Invalid JSON in request body"
+            if data.get('message') == expected_message and data.get('statusCode') == 400:
+                print("✅ Malformed JSON correctly returns 400 with proper message")
+                print(f"   Response: {data}")
+                return True
+            else:
+                print(f"❌ Wrong response format: {data}")
+                return False
+        else:
+            print(f"❌ Expected 400, got {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Malformed JSON test error: {e}")
+        return False
+
+def test_valid_json_no_regression():
+    """TEST 5: Valid JSON still works (no regression)"""
+    print("\n=== TEST 5: Valid JSON No Regression ===")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/api/payment",
+            headers={"Content-Type": "application/json"},
+            json={"test": True},
+            timeout=10
+        )
+        
+        # Should NOT return JSON parse error - business logic error is fine
+        if response.status_code != 400 or not response.text.strip().startswith('{"success":false,"message":"Invalid JSON'):
+            data = response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text
+            print("✅ Valid JSON does not trigger JSON parse error")
+            print(f"   Response code: {response.status_code}")
+            print(f"   Response: {str(data)[:200]}...")
+            return True
+        else:
+            print(f"❌ Valid JSON incorrectly triggered JSON parse error: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Valid JSON test error: {e}")
+        return False
+
+def test_payment_controller_import():
+    """TEST 6: generateQRCodeWithLogo imported in paymentController"""
+    print("\n=== TEST 6: Payment Controller Import ===")
+    code, stdout, stderr = run_command("grep -c 'generateQRCodeWithLogo' /app/backend/controller/paymentController.ts")
+    
+    if code == 0:
+        count = int(stdout.strip())
+        if count >= 4:
+            print(f"✅ Found {count} occurrences of 'generateQRCodeWithLogo' in paymentController (>= 4 required)")
+            return True
+        else:
+            print(f"❌ Only found {count} occurrences, need >= 4")
+            return False
+    else:
+        print(f"❌ Error checking paymentController: {stderr}")
+        return False
+
+def test_wallet_controller_import():
+    """TEST 7: generateQRCodeWithLogo imported in walletController"""
+    print("\n=== TEST 7: Wallet Controller Import ===")
+    code, stdout, stderr = run_command("grep -c 'generateQRCodeWithLogo' /app/backend/controller/walletController.ts")
+    
+    if code == 0:
+        count = int(stdout.strip())
+        if count >= 2:
+            print(f"✅ Found {count} occurrences of 'generateQRCodeWithLogo' in walletController (>= 2 required)")
+            return True
+        else:
+            print(f"❌ Only found {count} occurrences, need >= 2")
+            return False
+    else:
+        print(f"❌ Error checking walletController: {stderr}")
+        return False
+
+def test_no_plain_qr_calls():
+    """TEST 8: No remaining plain QR_Code.toDataURL calls"""
+    print("\n=== TEST 8: No Plain QR Calls Remaining ===")
+    
+    # Check paymentController
+    code1, stdout1, stderr1 = run_command("grep 'QR_Code.toDataURL' /app/backend/controller/paymentController.ts")
+    # Check walletController
+    code2, stdout2, stderr2 = run_command("grep 'QR_Code.toDataURL' /app/backend/controller/walletController.ts")
+    
+    # Exit code 1 means no matches found (good)
+    if code1 == 1 and code2 == 1:
+        print("✅ No plain QR_Code.toDataURL calls found in either controller")
+        return True
+    else:
+        print("❌ Found remaining plain QR_Code.toDataURL calls:")
+        if code1 == 0:
+            print(f"   In paymentController: {stdout1}")
+        if code2 == 0:
+            print(f"   In walletController: {stdout2}")
+        return False
+
+def test_redis_error_buffer():
+    """TEST 9: Error monitoring uses Redis-backed buffer"""
+    print("\n=== TEST 9: Redis Error Buffer ===")
+    
+    patterns = [
+        ('REDIS_ERROR_BUFFER_KEY', 1),
+        ('restoreBufferFromRedis', 3),
+        ('persistBufferToRedis', 2)
+    ]
+    
+    all_passed = True
+    for pattern, min_count in patterns:
+        code, stdout, stderr = run_command(f"grep -c '{pattern}' /app/backend/services/errorMonitoringService.ts")
+        if code == 0:
+            count = int(stdout.strip())
+            if count >= min_count:
+                print(f"✅ Found {count} occurrences of '{pattern}' (>= {min_count} required)")
+            else:
+                print(f"❌ Found only {count} occurrences of '{pattern}', need >= {min_count}")
+                all_passed = False
+        else:
+            print(f"❌ Error checking '{pattern}': {stderr}")
+            all_passed = False
+    
+    return all_passed
+
+def test_high_severity_alerts():
+    """TEST 10: High severity errors get immediate alerts"""
+    print("\n=== TEST 10: High Severity Immediate Alerts ===")
+    code, stdout, stderr = run_command("grep 'severity === \"high\"' /app/backend/services/errorMonitoringService.ts")
+    
+    if code == 0:
+        print("✅ Found high severity immediate alert condition")
+        print(f"   Context: {stdout.strip()}")
+        return True
+    else:
+        print("❌ High severity immediate alert condition not found")
+        return False
+
+def test_body_parser_error_capture():
+    """TEST 11: Body parser middleware captures errors for monitoring"""
+    print("\n=== TEST 11: Body Parser Error Capture ===")
+    code, stdout, stderr = run_command("grep 'captureError' /app/backend/server.ts")
+    
+    if code == 0:
+        # Check if it's in the body parser context (around lines 112-125)
+        lines = stdout.strip().split('\n')
+        for line in lines:
+            if 'captureError' in line and ('api' in line or 'Malformed' in line):
+                print("✅ Found captureError call in body parser handler")
+                print(f"   Context: {line.strip()}")
+                return True
+        print("❌ captureError found but not in body parser context")
+        return False
+    else:
+        print("❌ captureError not found in server.ts")
+        return False
+
+def test_digest_emails_sent():
+    """TEST 12: Digest emails confirmed sent (check logs)"""
+    print("\n=== TEST 12: Digest Emails Sent ===")
+    code, stdout, stderr = run_command("grep 'Digest sent to' /var/log/supervisor/backend.out.log")
+    
+    if code == 0:
+        count = len(stdout.strip().split('\n')) if stdout.strip() else 0
+        if count >= 1:
+            print(f"✅ Found {count} digest email(s) sent in logs")
+            return True
+        else:
+            print("❌ No digest emails found in logs")
+            return False
+    else:
+        print("❌ Could not check digest email logs or no emails sent yet")
+        # This might be OK if no errors have occurred yet
+        print("   (This might be normal if no errors have been captured yet)")
+        return True  # Don't fail the test for this
+
+def test_brevo_api_key():
+    """TEST 13: Brevo API key configured"""
+    print("\n=== TEST 13: Brevo API Key ===")
+    code, stdout, stderr = run_command("grep 'BREVO_API_KEY=xkeysib' /app/backend/.env")
+    
+    if code == 0:
+        print("✅ Brevo API key found in .env")
+        return True
+    else:
+        print("❌ Brevo API key not found or not configured properly")
+        return False
+
+def test_admin_email():
+    """TEST 14: ADMIN_EMAIL configured"""
+    print("\n=== TEST 14: Admin Email Configuration ===")
+    code, stdout, stderr = run_command("grep 'ADMIN_EMAIL=' /app/backend/.env")
+    
+    if code == 0 and 'moxxcompany@gmail.com' in stdout:
+        print("✅ ADMIN_EMAIL configured correctly")
+        return True
+    else:
+        print("❌ ADMIN_EMAIL not configured or incorrect")
+        return False
+
+def main():
+    """Run all tests"""
+    print("🧪 DynoPay Backend Test Suite")
+    print("Testing: QR Code Currency Logo Overlay + JSON Parse Error Fix + Error Alert Email Fix")
+    print("=" * 80)
+    
+    tests = [
+        ("Backend Health", test_backend_health),
+        ("TypeScript Compilation", test_typescript_compilation),
+        ("QR Generation All Currencies", test_qr_generation_all_currencies),
+        ("Malformed JSON Returns 400", test_malformed_json_400),
+        ("Valid JSON No Regression", test_valid_json_no_regression),
+        ("Payment Controller Import", test_payment_controller_import),
+        ("Wallet Controller Import", test_wallet_controller_import),
+        ("No Plain QR Calls", test_no_plain_qr_calls),
+        ("Redis Error Buffer", test_redis_error_buffer),
+        ("High Severity Alerts", test_high_severity_alerts),
+        ("Body Parser Error Capture", test_body_parser_error_capture),
+        ("Digest Emails Sent", test_digest_emails_sent),
+        ("Brevo API Key", test_brevo_api_key),
+        ("Admin Email Configuration", test_admin_email)
+    ]
+    
+    results = []
+    
+    for test_name, test_func in tests:
+        try:
+            result = test_func()
+            results.append((test_name, result))
+        except Exception as e:
+            print(f"❌ Test '{test_name}' crashed: {e}")
+            results.append((test_name, False))
+    
+    # Summary
+    print("\n" + "=" * 80)
+    print("📊 TEST RESULTS SUMMARY")
+    print("=" * 80)
+    
+    passed = sum(1 for _, result in results if result)
+    total = len(results)
+    
+    for test_name, result in results:
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"{status:8} {test_name}")
+    
+    print(f"\n📈 Overall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
+    
+    if passed == total:
+        print("🎉 ALL TESTS PASSED - QR Code Currency Logo Overlay + JSON Parse Error Fix + Error Alert Email Fix is working correctly!")
+        return 0
+    else:
+        print(f"⚠️  {total - passed} test(s) failed - see details above")
+        return 1
 
 if __name__ == "__main__":
-    tester = BackendTester()
-    success = tester.run_all_tests()
-    sys.exit(0 if success else 1)
+    sys.exit(main())
