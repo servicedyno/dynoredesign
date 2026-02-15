@@ -86,12 +86,13 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
   12. Query param enrichment + full pipeline integration test
 
 ### Testing Summary
-- **Total: 351 tests passing across 13 suites**
+- **Total: 379 tests passing across 14 suites**
 - Phase 1: 168 tests (7 suites) — foundation + bug fixes
 - Phase 2: 52 tests (1 suite) — webhook processor pipeline
 - Phase 3: 66 tests (3 suites) — payment fees, blockchain fees, fee rates
 - Phase 4: 40 tests (1 suite) — Redis cache operations, distributed locking, stale cleanup
 - Phase 5: 25 tests (1 suite) — webhook handlers, merchant webhook delivery, HMAC verification
+- Fee Service: 28 tests (1 suite) — centralized fee calculation logic
 
 ## Credentials
 - **User**: richard@dyno.pt / Katiekendra123@
@@ -139,5 +140,16 @@ DynoPay is a full-stack cryptocurrency payment platform with a React frontend an
   - callMerchantWebhook (8 tests): URL resolution from customerData, skip when unconfigured, localhost rejection, HMAC signature inclusion/exclusion, 4xx no-retry, fiat enrichment
 
 ## Backlog
+- **P2: State Machine Refactoring** — Refactor payment lifecycle into formal state machine (pending → paid → confirmed → converted → payout_complete)
+- **P3: Enhanced Monitoring** — Add monitoring and alerting for key payment/payout stages
 - **P3: Dependency Injection refactoring** to decouple services from Sequelize models for better testability
 - P1: DLQ email alerting (notify admin when jobs land in dead-letter queue)
+
+### Centralize Fee Logic (Completed - Feb 15, 2026)
+- Created `services/feeService.ts` — single import point for all platform fee calculation
+- Migrated 6 functions from `controller/index.ts`: getTransactionFee, getDiscountedTransactionFee, getBlockchainFee, getBlockchainConfig, calculateTransactionFees, calculateTransactionFeesWithDiscount
+- Extracted shared `findMatchingTier()` helper (was duplicated between two functions)
+- Updated 4 consumers to import directly from feeService: paymentController, walletController, thresholdTestController, server.ts
+- Controller re-exports for backward compatibility (existing tests + imports unaffected)
+- Created `__tests__/feeService.test.ts` with 28 comprehensive unit tests
+- All 379 tests passing across 14 suites
