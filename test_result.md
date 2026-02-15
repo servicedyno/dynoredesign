@@ -7,6 +7,54 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
+  - task: "P0: Wire validateTransition() into webhookProcessor.ts + P1: Hard-Enforce State Machine Across Codebase"
+    implemented: true
+    working: true
+    files:
+      - "/app/backend/services/webhookProcessor.ts"
+      - "/app/backend/services/paymentStateMachine.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/controller/walletController.ts"
+      - "/app/backend/services/reconciliation.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          ✅ P0 + P1 STATE MACHINE INTEGRATION COMPLETED: 511/511 tests pass (0 regressions)
+          
+          P0 — Soft-Enforcement in webhookProcessor.ts:
+          - Imported validateTransition, parseState, PaymentState from paymentStateMachine
+          - Created softValidate() helper — wraps validateTransition for non-breaking audit logging
+          - Added 13 softValidate() calls before ALL status write points:
+            1. crash-recovery-success: processing → successful
+            2. crash-recovery-fallback: processing → recovered
+            3. direct-api-underpayment: pending → processing
+            4. payment-link-underpayment: pending → underpaid
+            5. pre-crypto-verification: varies → processing
+            6. crypto-verification-retry: processing → retrying
+            7. crypto-verification-success: processing → successful
+            8. crypto-verification-success-ref: custData → successful
+            9. crypto-verification-failure: processing → failed
+          - Replaced terminal state check (L185) with parseState() + PaymentState.PAYOUT_COMPLETE
+          - Replaced stale processing check (L193) with parseState() + PaymentState.PROCESSING
+          
+          P1 — Hard-Enforce State Machine Across Codebase:
+          - paymentController.ts: Imported PaymentState, parseState, toRedisStatus, toExternalStatus, isTerminal
+            - Verify endpoint: All 6 status comparisons use parsedState === PaymentState.XXX
+            - Redis writes: "pending" → toRedisStatus(PaymentState.PENDING), "successful" → toRedisStatus(PaymentState.PAYOUT_COMPLETE)
+            - Link status: parseState(linkData.status) === PaymentState.PAYOUT_COMPLETE (catches "completed" + "successful")
+            - Address reuse check: parseState() for pending detection
+          - walletController.ts: Redis "pending" write → toRedisStatus(PaymentState.PENDING)
+          - reconciliation.ts: Stuck payment detection uses parseState() + PaymentState.PROCESSING (catches "processing" + "retrying")
+          
+          DB writes intentionally left as magic strings (different domain from Redis payment state).
+          Legacy aliases ("recovered", "retrying") kept for diagnostic value — parseState() maps them correctly.
+          
+          Base URL: http://localhost:8001
+
   - task: "QR Code Currency Logo Overlay + JSON Parse Error Fix + Error Alert Email Fix"
     implemented: true
     working: true
