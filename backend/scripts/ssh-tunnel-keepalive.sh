@@ -1,16 +1,15 @@
 #!/bin/bash
 # SSH SOCKS5 Tunnel Keep-Alive for Binance Proxy
-# Runs as a background process, checks tunnel every 30 seconds
+# Fallback script — primary management is via sshTunnelManager.ts in Node.js
 # Usage: bash /app/backend/scripts/ssh-tunnel-keepalive.sh &
 
-VPS_IP="95.179.167.16"
-VPS_USER="root"
-VPS_PASS="E9o,RRotPdX_d7fC"
-LOCAL_PORT=1080
+VPS_IP="${SSH_TUNNEL_HOST:-95.179.167.16}"
+VPS_USER="${SSH_TUNNEL_USER:-root}"
+VPS_PASS="${SSH_TUNNEL_PASS:-E9o,RRotPdX_d7fC}"
+LOCAL_PORT="${SSH_TUNNEL_LOCAL_PORT:-1080}"
 CHECK_INTERVAL=30
 
 ensure_tunnel() {
-    # Check if tunnel is alive by testing the SOCKS port
     if ! lsof -i:${LOCAL_PORT} >/dev/null 2>&1; then
         echo "[$(date)] SSH tunnel down, reconnecting..."
         sshpass -p "${VPS_PASS}" ssh \
