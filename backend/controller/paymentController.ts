@@ -2929,7 +2929,8 @@ const settleCryptoTransaction = async ({
         );
         
         const utxoFeeToDeduct = Number(utxoFees?.fast ?? utxoFees?.slow ?? 0);
-        const utxoAmountToSend = Number((receivedAmount - utxoFeeToDeduct).toFixed(8));
+        // Use integer arithmetic to avoid floating-point precision issues (Tatum rejects >8 decimal places)
+        const utxoAmountToSend = Math.floor((receivedAmount - utxoFeeToDeduct) * 1e8) / 1e8;
         
         if (utxoAmountToSend <= 0) {
           cronLogger.warn(`[settleCryptoTransaction] UTXO auto-convert: Amount after fee is non-positive. Balance: ${receivedAmount}, Fee: ${utxoFeeToDeduct}`);
