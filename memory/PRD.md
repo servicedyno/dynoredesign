@@ -119,6 +119,7 @@ Full-stack crypto payment processing system with FastAPI proxy + Node.js/TypeScr
 ## Key Files
 - `services/sshTunnelManager.ts` — SSH tunnel lifecycle manager
 - `services/emailService.ts` — Unified email service (35+ functions)
+- `helper/walletHelpers.ts` — Centralized wallet increment operations
 - `helper/controllerErrorHandler.ts` — Shared error handling
 - `helper/queryHelpers.ts` — Sort/pagination logic
 - `helper/subscriptionHelpers.ts` — Subscription cleanup
