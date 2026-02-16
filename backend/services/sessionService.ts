@@ -261,14 +261,14 @@ export const revokeAllOtherSessions = async (userId: number, currentSessionId?: 
 /**
  * Get login history for a user
  */
-export const getLoginHistory = async (userId: number, limit: number = 20) => {
+export const getLoginHistory = async (userId: number, limit: number = 20): Promise<Record<string, unknown>[]> => {
   const history = await LoginHistory.findAll({
     where: { user_id: userId },
     order: [["login_at", "DESC"]],
     limit,
     attributes: ["history_id", "ip_address", "device_type", "browser", "os", "location", "login_method", "status", "login_at"],
   });
-  return history.map((h) => h.dataValues);
+  return history.map((h) => h.dataValues as Record<string, unknown>);
 };
 
 /**
