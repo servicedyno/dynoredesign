@@ -2,18 +2,13 @@
  * Two-Factor Authentication Service
  * 
  * Implements TOTP-based 2FA with backup codes.
- * Uses otplib for TOTP generation/verification.
+ * Uses otplib v13 functional API for TOTP generation/verification.
  */
-import { authenticator } from "otplib";
+import { generateSecret, generateURI, verifySync } from "otplib";
 import crypto from "crypto";
 import User2FA from "../models/securityModels/user2FAModel";
 import { userLogger } from "../utils/loggers";
 import QRCode from "qrcode";
-
-// Configuration
-authenticator.options = {
-  window: 1, // Allow 1 step tolerance (30 seconds before/after)
-};
 
 const APP_NAME = process.env.APP_NAME || "DynoPay";
 const BACKUP_CODE_COUNT = 10;
@@ -26,7 +21,6 @@ const LOCKOUT_DURATION_MINUTES = 15;
 const generateBackupCodes = (): string[] => {
   const codes: string[] = [];
   for (let i = 0; i < BACKUP_CODE_COUNT; i++) {
-    // Format: XXXX-XXXX (8 chars with dash)
     const raw = crypto.randomBytes(4).toString("hex").toUpperCase();
     codes.push(`${raw.slice(0, 4)}-${raw.slice(4, 8)}`);
   }
@@ -43,6 +37,17 @@ const hashBackupCodes = (codes: string[]): string[] => {
 };
 
 /**
+ * Verify a TOTP token against a secret with window tolerance
+ */
+const verifyTOTP = (token: string, secret: string): boolean => {
+  try {
+    return verifySync({ token, secret, strategy: "totp", window: 1 });
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Setup 2FA for a user — generates secret and QR code
  * Does NOT enable 2FA yet — user must verify first
  */
@@ -50,24 +55,24 @@ export const setup2FA = async (
   userId: number,
   email: string
 ): Promise<{ secret: string; qr_code: string; backup_codes: string[] }> => {
-  // Check if already enabled
   const existing = await User2FA.findOne({ where: { user_id: userId } });
   if (existing && existing.is_enabled) {
     throw new Error("2FA is already enabled. Disable it first to reconfigure.");
   }
 
-  // Generate TOTP secret
-  const secret = authenticator.generateSecret();
-  const otpauth = authenticator.keyuri(email, APP_NAME, secret);
+  const secret = generateSecret();
+  const otpauth = generateURI({
+    secret,
+    issuer: APP_NAME,
+    account: email,
+    strategy: "totp",
+  });
 
-  // Generate QR code as data URL
   const qr_code = await QRCode.toDataURL(otpauth);
 
-  // Generate backup codes
   const plainBackupCodes = generateBackupCodes();
   const hashedBackupCodes = hashBackupCodes(plainBackupCodes);
 
-  // Upsert 2FA record (not enabled yet)
   if (existing) {
     await existing.update({
       secret,
@@ -90,9 +95,9 @@ export const setup2FA = async (
   userLogger.info(`[2FA] Setup initiated for user ${userId}`);
 
   return {
-    secret, // For manual entry
-    qr_code, // Data URL for QR code
-    backup_codes: plainBackupCodes, // Show ONCE to user
+    secret,
+    qr_code,
+    backup_codes: plainBackupCodes,
   };
 };
 
@@ -104,7 +109,7 @@ export const verify2FASetup = async (userId: number, token: string): Promise<boo
   if (!record) throw new Error("2FA setup not found. Please initiate setup first.");
   if (record.is_enabled) throw new Error("2FA is already enabled.");
 
-  const isValid = authenticator.verify({ token, secret: record.secret });
+  const isValid = verifyTOTP(token, record.secret);
 
   if (!isValid) {
     throw new Error("Invalid verification code. Please try again with a fresh code from your authenticator app.");
@@ -129,17 +134,16 @@ export const validate2FAToken = async (
 ): Promise<{ valid: boolean; method: string }> => {
   const record = await User2FA.findOne({ where: { user_id: userId } });
   if (!record || !record.is_enabled) {
-    return { valid: true, method: "none" }; // 2FA not enabled, skip
+    return { valid: true, method: "none" };
   }
 
-  // Check lockout
   if (record.locked_until && new Date() < new Date(record.locked_until)) {
     const remaining = Math.ceil((new Date(record.locked_until).getTime() - Date.now()) / 60000);
     throw new Error(`2FA verification locked. Try again in ${remaining} minutes.`);
   }
 
   // Try TOTP first
-  const isTOTPValid = authenticator.verify({ token, secret: record.secret });
+  const isTOTPValid = verifyTOTP(token, record.secret);
 
   if (isTOTPValid) {
     await record.update({
@@ -155,7 +159,6 @@ export const validate2FAToken = async (
   const hashedToken = crypto.createHash("sha256").update(normalizedToken).digest("hex");
 
   if (record.backup_codes && record.backup_codes.includes(hashedToken)) {
-    // Remove used backup code
     const updatedCodes = record.backup_codes.filter((c) => c !== hashedToken);
     await record.update({
       backup_codes: updatedCodes,
