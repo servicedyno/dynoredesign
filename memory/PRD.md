@@ -8,6 +8,7 @@ DynoPay is a crypto payment gateway that enables merchants to accept cryptocurre
 - **Database**: PostgreSQL (Sequelize ORM) + Redis (caching, rate limiting, locks)
 - **Frontend**: React
 - **Infrastructure**: Kubernetes, Railway deployment support
+- **Testing**: Jest + Supertest (integration tests in `__tests__/api/`)
 
 ## Core Features (Implemented)
 - User authentication (email/password, Google OAuth, Facebook, Telegram, Phone/OTP)
@@ -38,23 +39,39 @@ DynoPay is a crypto payment gateway that enables merchants to accept cryptocurre
 - Input Sanitization (XSS prevention)
 - Webhook HMAC signature verification
 
-## What's Been Implemented
+## Real-Time Features (Implemented)
+- **SSE Service**: Full Server-Sent Events with multi-channel support (payments, prices, notifications, admin, dashboard)
+- **Push Notification Service**: Unified notification delivery via SSE + DB persistence
+- **Admin Broadcast**: System-wide announcements to all connected clients
+- **Admin Push**: Targeted notification delivery to specific users
+- **Admin Monitoring Events**: Custom events to admin channel subscribers
+- **Alert Service**: Slack/Discord webhook alerts with deduplication and retry
 
-### Feb 16, 2026 — API Documentation Update (P0)
-- Created Swagger path files for 19 new endpoints:
-  - `swagger/paths/security.ts` — CSRF token, 2FA (6 endpoints), sessions (5 endpoints), login history
-  - `swagger/paths/analytics.ts` — Revenue, user growth, cohort, funnel analytics (4 endpoints)
-  - `swagger/paths/events.ts` — SSE stream and stats (2 endpoints)
-  - Updated `swagger/paths/admin.ts` — Added user detail, ban/suspend/activate, unlock account (3 endpoints)
-- Added new Swagger tags: "Security", "Real-Time Events"
-- Updated `swagger/index.ts` to import and merge all new path modules
-- Total documented endpoints: 219
+## Incident Response
+- **Incident Playbook**: `/incident-playbook.md` — operational runbook covering SEV-1 through SEV-4 incidents
+- **Diagnostics**: `/diagnostics/error-monitor`, `/diagnostics/webhook-queue`, `/diagnostics/volatility`
 
-### Previous Session — Backend Feature Implementation
-- Security: Refresh Token Rotation, Session Management, Account Lockout, 2FA (TOTP), CSRF Protection
-- Admin & Analytics: User management (ban/suspend/unlock), revenue analytics, cohort analysis, payment funnel
-- Real-Time: SSE service, push notification service (stub)
-- DevOps: Alerting service (webhook-based), error monitoring with digest emails
+## Key API Endpoints
+- **Auth**: POST /api/user/login, POST /api/user/registerUser
+- **2FA**: POST /api/user/2fa/setup, /verify-setup, /validate, /disable, /regenerate-backup-codes, GET /status
+- **Sessions**: POST /api/user/refresh-token, GET /api/user/sessions, DELETE /api/user/sessions/:id, GET /api/user/login-history
+- **Admin Users**: GET /api/admin/users/:userId, PUT /api/admin/users/:userId/ban, POST /api/admin/users/unlock
+- **Admin Alerts**: GET /api/admin/alerts/health, POST /api/admin/alerts/test
+- **Analytics**: GET /api/admin/analytics/revenue, /users, /cohorts, /funnel
+- **CSRF**: GET /api/csrf-token
+- **SSE**: GET /api/events/stream, GET /api/events/stats, GET /api/events/push-stats
+- **Real-Time Admin**: POST /api/events/broadcast, POST /api/events/push, POST /api/events/admin-event
+- **Swagger Docs**: GET /api/docs, GET /api/docs.json
+
+## Integration Test Suite
+All tests in `backend/__tests__/api/`:
+- `authFlows.test.ts` — Registration, login, token refresh, sessions, 2FA status
+- `adminFlows.test.ts` — Admin login, user management, alert service, analytics
+- `coreServices.test.ts` — Health, status, CSRF, SSE stats, Swagger docs
+- `paymentWalletFlows.test.ts` — Payment/wallet auth guards, company, dashboard
+- `realTimeEvents.test.ts` — Push stats, broadcast, push notification, admin events
+
+Run: `cd /app/backend && npx jest --config jest.config.ts --selectProjects integration --forceExit`
 
 ## Prioritized Backlog
 
@@ -63,23 +80,14 @@ DynoPay is a crypto payment gateway that enables merchants to accept cryptocurre
 - User settings page for session management (view/revoke sessions)
 - CSRF token handling for state-changing requests
 - Admin dashboard for user management (ban, suspend, unlock)
+- Real-time notification UI (consuming SSE events)
 
-### P2 — Incident Playbook
-- Create `incident-playbook.md` for operational runbook
+### P2 — Advanced Features
+- Firebase Cloud Messaging (FCM) for mobile push notifications
+- Email notification delivery channel in push notification service
+- Dashboard live data channel (transaction count updates, revenue tickers)
+- Webhook retry dashboard UI
 
-### P2 — Full Real-Time Features
-- Integrate push notification service with FCM
-- Expand SSE usage for additional real-time UI updates
-
-### P3 — Integration Testing
-- Create dedicated `supertest` integration test files
-
-## Key API Endpoints
-- **Auth**: POST /api/user/login, POST /api/user/registerUser
-- **2FA**: POST /api/user/2fa/setup, /verify-setup, /validate, /disable, /regenerate-backup-codes, GET /status
-- **Sessions**: POST /api/user/refresh-token, GET /api/user/sessions, DELETE /api/user/sessions/:id, GET /api/user/login-history
-- **Admin Users**: GET /api/admin/users/:userId, PUT /api/admin/users/:userId/ban, POST /api/admin/users/unlock
-- **Analytics**: GET /api/admin/analytics/revenue, /users, /cohorts, /funnel
-- **CSRF**: GET /api/csrf-token
-- **SSE**: GET /api/events/stream, GET /api/events/stats
-- **Swagger Docs**: GET /api/docs, GET /api/docs.json
+## Admin Credentials
+- Email: moxxcompany@gmail.com
+- Password: Katiekendra123@
