@@ -1,63 +1,85 @@
 # DynoPay - Product Requirements Document
 
 ## Overview
-DynoPay is a full-stack cryptocurrency payment platform with a React frontend and TypeScript/Node.js backend. It handles cryptocurrency payments via the Tatum API, merchant webhook delivery, and multi-chain support.
+DynoPay is a crypto payment gateway that enables merchants to accept cryptocurrency payments with ease. It provides a comprehensive API for payment processing, wallet management, and business analytics.
 
-## Core Architecture
-- **Frontend**: React (port 3000)
-- **Backend**: TypeScript/Node.js/Express (ts-node, proxied via Python/uvicorn on port 8001)
-- **Database**: PostgreSQL (primary), Redis (caching, queues, payment state)
-- **Payments**: Tatum API for wallet generation, transaction monitoring, webhook notifications
-- **Queue**: BullMQ for persistent webhook processing
+## Tech Stack
+- **Backend**: Node.js/TypeScript (Express) — proxied through Python/uvicorn for Kubernetes compatibility
+- **Database**: PostgreSQL (Sequelize ORM) + Redis (caching, rate limiting, locks)
+- **Frontend**: React
+- **Infrastructure**: Kubernetes, Railway deployment support
 
-## Credentials
-- **User**: richard@dyno.pt / Katiekendra123@
-- **Company ID**: 38 (Bozzmail)
+## Core Features (Implemented)
+- User authentication (email/password, Google OAuth, Facebook, Telegram, Phone/OTP)
+- Company management and multi-tenant architecture
+- Crypto wallet management (15 cryptocurrencies across 7 networks)
+- Payment links and direct API payments
+- Webhook delivery with retry, DLQ, and signature verification
+- Admin panel with user/transaction management
+- KYC integration (Veriff)
+- Subscription management
+- Tax rate calculations
+- Invoice generation (PDF)
+- Referral system (user codes + referee codes)
+- Knowledge base system
+- Status page / service health monitoring
+- Auto-stablecoin conversion via Binance
+- Merchant pool address system
+- Volatility monitoring
+- Error monitoring and alerting
+
+## Security Features (Implemented)
+- Two-Factor Authentication (2FA/TOTP) with backup codes
+- Refresh Token Rotation
+- Session Management (list, revoke, login history)
+- Account Lockout (Redis-based, with admin unlock)
+- CSRF Protection (Double Submit Cookie pattern)
+- Rate Limiting (per-IP, per-email, per-endpoint)
+- Input Sanitization (XSS prevention)
+- Webhook HMAC signature verification
 
 ## What's Been Implemented
 
-### Payment State Machine (Completed - Feb 15, 2026)
-- `services/paymentStateMachine.ts` — 11 states, soft + hard enforcement
-- API status normalization: `payment_status` + `display_status` (additive, non-breaking)
-- 132 unit tests, 511+ total tests passing
+### Feb 16, 2026 — API Documentation Update (P0)
+- Created Swagger path files for 19 new endpoints:
+  - `swagger/paths/security.ts` — CSRF token, 2FA (6 endpoints), sessions (5 endpoints), login history
+  - `swagger/paths/analytics.ts` — Revenue, user growth, cohort, funnel analytics (4 endpoints)
+  - `swagger/paths/events.ts` — SSE stream and stats (2 endpoints)
+  - Updated `swagger/paths/admin.ts` — Added user detail, ban/suspend/activate, unlock account (3 endpoints)
+- Added new Swagger tags: "Security", "Real-Time Events"
+- Updated `swagger/index.ts` to import and merge all new path modules
+- Total documented endpoints: 219
 
-### Binance Conversion Reliability Overhaul (Completed - Feb 16, 2026)
-- `MAX_RETRIES` increased 5 → 30 for slow chains (BTC confirmations)
-- Transient API errors (geo-block, SOCKS, timeout) no longer burn retry count in all 3 phases
-- Added `recoverTransientFailures()` — auto-resurrects FAILED records when Binance reconnects (72h window)
-- `markExhaustedAsFailed()` skipped when Binance is unreachable
-- Error messages now include actual text in logs
+### Previous Session — Backend Feature Implementation
+- Security: Refresh Token Rotation, Session Management, Account Lockout, 2FA (TOTP), CSRF Protection
+- Admin & Analytics: User management (ban/suspend/unlock), revenue analytics, cohort analysis, payment funnel
+- Real-Time: SSE service, push notification service (stub)
+- DevOps: Alerting service (webhook-based), error monitoring with digest emails
 
-### TypeScript Error Fixes (Completed - Feb 16, 2026)
-- Fixed `ErrorComponent` type mismatches in `reconciliation.ts` and `webhookQueue.ts`
-- Fixed Redis `scan()` cursor type (string → number) in `reconciliation.ts`
-- Zero TypeScript errors across entire codebase
+## Prioritized Backlog
 
-### Test Payments (Completed - Feb 16, 2026)
-- $10 BTC payment → #27, address: bc1qh2hhcesallu4fpfkvvhus3z3tkqmrtzn8n5rc9
-- $10 ETH payment → #26, address: 0xdb0c01c41879d877654050002e6e6f283841c9c3
-- Both received, swept, and conversion pipeline triggered
-- ETH #26: COMPLETED end-to-end
-- BTC #27: DEPOSIT_CREDITED (insufficient Binance BTC balance — not a code issue)
+### P1 — Frontend Integration
+- 2FA setup and verification flow
+- User settings page for session management (view/revoke sessions)
+- CSRF token handling for state-changing requests
+- Admin dashboard for user management (ban, suspend, unlock)
 
-### Previously Completed
-- Robust Offline Payment Processing (BullMQ + reconciliation)
-- Unit Testing Framework (511+ tests, 15 suites)
-- Auto-Stablecoin Conversion (Binance service, cron pipeline)
-- Security Hardening, Fee Service, QR Code overlay, Error Alerts
-- See CHANGELOG.md for full history
+### P2 — Incident Playbook
+- Create `incident-playbook.md` for operational runbook
 
-## Key Files
-- `services/conversionService.ts` — Auto-conversion pipeline (deposit→convert→withdraw)
-- `services/paymentStateMachine.ts` — Payment state machine
-- `services/webhookProcessor.ts` — Core webhook processing
-- `services/reconciliation.ts` — Startup reconciliation
-- `services/webhookQueue.ts` — BullMQ queue + worker
-- `services/binanceService.ts` — Binance API client
-- `controller/paymentController.ts` — Payment endpoints
-- `webhooks/index.ts` — Webhook handlers
+### P2 — Full Real-Time Features
+- Integrate push notification service with FCM
+- Expand SSE usage for additional real-time UI updates
 
-## Backlog
-- **P2: Enhanced Monitoring** — Alerting for state machine audit logs
-- **P2: Scaling for 500 payments** — Pool pre-warming, DB pool increase, BullMQ concurrency, Node.js clustering
-- **P3: Dependency Injection** — Decouple services for testability
+### P3 — Integration Testing
+- Create dedicated `supertest` integration test files
+
+## Key API Endpoints
+- **Auth**: POST /api/user/login, POST /api/user/registerUser
+- **2FA**: POST /api/user/2fa/setup, /verify-setup, /validate, /disable, /regenerate-backup-codes, GET /status
+- **Sessions**: POST /api/user/refresh-token, GET /api/user/sessions, DELETE /api/user/sessions/:id, GET /api/user/login-history
+- **Admin Users**: GET /api/admin/users/:userId, PUT /api/admin/users/:userId/ban, POST /api/admin/users/unlock
+- **Analytics**: GET /api/admin/analytics/revenue, /users, /cohorts, /funnel
+- **CSRF**: GET /api/csrf-token
+- **SSE**: GET /api/events/stream, GET /api/events/stats
+- **Swagger Docs**: GET /api/docs, GET /api/docs.json
