@@ -42,7 +42,8 @@ const logError = (msg: string, err?: unknown) => {
 // ============================================
 
 const markExhaustedAsFailed = async (): Promise<number> => {
-  const [affectedCount] = await stablecoinConversionModel.update(
+  // Mark records that exceeded retry limit
+  const [retryExhausted] = await stablecoinConversionModel.update(
     {
       status: "FAILED",
       error_message: `Exceeded maximum retries (${MAX_RETRIES})`,
@@ -54,10 +55,26 @@ const markExhaustedAsFailed = async (): Promise<number> => {
       },
     }
   );
-  if (affectedCount > 0) {
-    logError(`Marked ${affectedCount} exhausted records as FAILED`);
-  }
-  return affectedCount;
+
+  // Mark records that are too old (deposit never arrived)
+  const ageThreshold = new Date(Date.now() - MAX_PENDING_AGE_HOURS * 60 * 60 * 1000);
+  const [ageExpired] = await stablecoinConversionModel.update(
+    {
+      status: "FAILED",
+      error_message: `Expired: deposit not received within ${MAX_PENDING_AGE_HOURS}h — no further retries`,
+    },
+    {
+      where: {
+        status: "PENDING_DEPOSIT",
+        createdAt: { [Op.lt]: ageThreshold },
+      },
+    }
+  );
+
+  const total = retryExhausted + ageExpired;
+  if (retryExhausted > 0) logError(`Marked ${retryExhausted} records as FAILED (exceeded ${MAX_RETRIES} retries)`);
+  if (ageExpired > 0) logError(`Marked ${ageExpired} records as FAILED (exceeded ${MAX_PENDING_AGE_HOURS}h age limit)`);
+  return total;
 };
 
 /**
