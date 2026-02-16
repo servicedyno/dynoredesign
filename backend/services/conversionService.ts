@@ -23,6 +23,7 @@ import { sendAutoConversionPayoutEmail, sendWeeklyConversionSummaryEmail } from 
 
 const MAX_RETRIES = 30;           // ~30 checks after 30-min age gate ≈ hours of patience for slow chains (BTC)
 const MAX_API_ERROR_RETRIES = 60; // Transient Binance API failures — much higher since these aren't the deposit's fault
+const MAX_PENDING_AGE_HOURS = parseInt(process.env.MAX_PENDING_AGE_HOURS || "24", 10); // Max hours a conversion can stay in PENDING_DEPOSIT
 const LOG_PREFIX = "[StablecoinConvert]";
 
 // Estimated Binance withdrawal fees by network (in USDT)
