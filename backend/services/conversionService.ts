@@ -605,6 +605,10 @@ export const processStablecoinConversions = async (): Promise<{
   // First, mark any records that exceeded retries as FAILED
   await markExhaustedAsFailed();
 
+  // Recover FAILED records that were killed by transient Binance errors —
+  // now that Binance is confirmed reachable, give them another chance
+  await recoverTransientFailures();
+
   const depositsChecked = await processPendingDeposits();
   const conversions = await processConversions();
   const withdrawals = await processWithdrawals();
