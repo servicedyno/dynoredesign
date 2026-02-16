@@ -204,13 +204,13 @@ export const rotateRefreshToken = async (
 /**
  * Get all active sessions for a user
  */
-export const getUserSessions = async (userId: number) => {
+export const getUserSessions = async (userId: number): Promise<Record<string, unknown>[]> => {
   const sessions = await UserSession.findAll({
     where: { user_id: userId, is_active: true },
     attributes: ["session_id", "ip_address", "device_type", "device_name", "browser", "os", "location", "last_activity", "created_at"],
     order: [["last_activity", "DESC"]],
   });
-  return sessions.map((s) => s.dataValues);
+  return sessions.map((s) => s.dataValues as Record<string, unknown>);
 };
 
 /**
