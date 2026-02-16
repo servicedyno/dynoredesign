@@ -134,12 +134,33 @@ const processPendingDeposits = async (): Promise<number> => {
         }
       }
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       logError(`Error checking deposit for conversion #${data.conversion_id}`, err);
-      await record.update({
-        retry_count: data.retry_count + 1,
-        last_retry_at: new Date(),
-        error_message: err instanceof Error ? err.message : String(err),
-      });
+
+      // Distinguish transient API errors (network/geo-block) from real failures
+      const isTransient = errMsg.includes("restricted location") ||
+        errMsg.includes("ECONNREFUSED") ||
+        errMsg.includes("ETIMEDOUT") ||
+        errMsg.includes("ENOTFOUND") ||
+        errMsg.includes("Service unavailable") ||
+        errMsg.includes("socket hang up") ||
+        errMsg.includes("SOCKS");
+
+      if (isTransient) {
+        // Don't increment retry_count for transient API errors — the deposit may still arrive
+        // Just log the error so we can track connectivity issues
+        await record.update({
+          last_retry_at: new Date(),
+          error_message: errMsg,
+        });
+        log(`⚠️ Transient API error for #${data.conversion_id} — NOT counting toward retry limit`);
+      } else {
+        await record.update({
+          retry_count: data.retry_count + 1,
+          last_retry_at: new Date(),
+          error_message: errMsg,
+        });
+      }
     }
   }
 
