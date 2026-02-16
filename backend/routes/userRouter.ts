@@ -7,6 +7,8 @@ import {
   loginRateLimiter,
   otpRateLimiter 
 } from "../middleware/rateLimitMiddleware";
+import sessionController from "../controller/sessionController";
+import twoFactorController from "../controller/twoFactorController";
 const userRouter = express.Router();
 
 // Registration endpoints - moderate rate limiting (10 per 15 min per IP)
