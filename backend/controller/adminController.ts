@@ -830,6 +830,113 @@ const getAllUsers = async (_req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * PUT /api/admin/users/:userId/ban
+ * Ban or suspend a user account
+ */
+const banUser = async (req: express.Request, res: express.Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const { reason, action } = req.body; // action: 'ban' | 'suspend' | 'activate'
+
+    if (isNaN(userId)) {
+      return errorResponseHelper(res, 400, "Invalid user ID");
+    }
+
+    const validActions = ["ban", "suspend", "activate"];
+    const selectedAction = action || "ban";
+    if (!validActions.includes(selectedAction)) {
+      return errorResponseHelper(res, 400, `Invalid action. Must be one of: ${validActions.join(", ")}`);
+    }
+
+    const user = await userModel.findOne({ where: { user_id: userId } });
+    if (!user) {
+      return errorResponseHelper(res, 404, "User not found");
+    }
+
+    const statusMap: Record<string, string> = {
+      ban: "banned",
+      suspend: "suspended",
+      activate: "active",
+    };
+    const newStatus = statusMap[selectedAction];
+
+    await userModel.update(
+      { status: newStatus },
+      { where: { user_id: userId } }
+    );
+
+    adminLogger.info(`[Admin] User ${userId} status changed to '${newStatus}' by admin. Reason: ${reason || "N/A"}`);
+
+    successResponseHelper(res, 200, `User ${selectedAction}${selectedAction === "activate" ? "d" : "ned"} successfully`, {
+      user_id: userId,
+      new_status: newStatus,
+      reason: reason || null,
+    });
+  } catch (e) {
+    handleControllerError(res, e, adminLogger);
+  }
+};
+
+/**
+ * POST /api/admin/users/:userId/unlock
+ * Unlock a locked-out account
+ */
+const unlockUser = async (req: express.Request, res: express.Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return errorResponseHelper(res, 400, "Email is required");
+    }
+
+    const unlocked = await adminUnlockAccount(email);
+
+    if (unlocked) {
+      successResponseHelper(res, 200, `Account ${email} unlocked successfully`);
+    } else {
+      errorResponseHelper(res, 500, "Failed to unlock account");
+    }
+  } catch (e) {
+    handleControllerError(res, e, adminLogger);
+  }
+};
+
+/**
+ * GET /api/admin/users/:userId
+ * Get detailed user info for admin
+ */
+const getUserDetail = async (req: express.Request, res: express.Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) {
+      return errorResponseHelper(res, 400, "Invalid user ID");
+    }
+
+    const user = await userModel.findOne({
+      where: { user_id: userId },
+      attributes: { exclude: ["password"] },
+    });
+
+    if (!user) {
+      return errorResponseHelper(res, 404, "User not found");
+    }
+
+    // Get transaction count
+    const [txCount] = await sequelize.query<{ count: string }>(
+      "SELECT COUNT(*) as count FROM tbl_user_transaction WHERE user_id = :userId",
+      { replacements: { userId }, type: QueryTypes.SELECT }
+    );
+
+    successResponseHelper(res, 200, "User details retrieved", {
+      ...user.dataValues,
+      transaction_count: parseInt(txCount?.count || "0"),
+    });
+  } catch (e) {
+    handleControllerError(res, e, adminLogger);
+  }
+};
+
 export default {
   createWallets,
   login,
@@ -846,4 +953,7 @@ export default {
   updateFeeLimits,
   updateTransferFees,
   getTransferFees,
+  banUser,
+  unlockUser,
+  getUserDetail,
 };
