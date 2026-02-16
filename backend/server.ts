@@ -154,6 +154,12 @@ app.use(requestLoggerMiddleware);
 // XSS sanitization middleware — strips malicious HTML/JS from all inputs
 app.use(sanitizeInputMiddleware);
 
+// CSRF Protection — lightweight double-submit cookie pattern
+import cookieParser from "cookie-parser";
+import { csrfProtection, generateCsrfToken } from "./middleware/csrfMiddleware";
+app.use(cookieParser());
+app.use(csrfProtection);
+
 // Static files — served via /api/static prefix so K8s ingress routes to backend (port 8001)
 const uploadsPath = process.env.UPLOAD_PATH || path.join(__dirname, '../uploads');
 app.use("/api/static", express.static("public"));
