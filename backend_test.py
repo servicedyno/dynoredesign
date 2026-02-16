@@ -1,349 +1,364 @@
 #!/usr/bin/env python3
+
 """
-DynoPay Backend Testing Suite - Payment Status Normalization
-Tests for additive payment_status field implementation across all merchant-facing endpoints.
+DynoPay Backend Security, Real-time, Analytics, Admin, and DevOps Enhancement Testing
+Testing Agent verification script for comprehensive backend testing.
 """
 
+import requests
+import json
 import subprocess
 import sys
 import os
-import requests
-import re
-import json
-from pathlib import Path
+import time
+from typing import Dict, Tuple, Any
 
-def run_command(cmd, description="", cwd=None, capture_output=True):
-    """Run a shell command and return the result"""
-    print(f"\n📋 {description}")
-    print(f"💻 Running: {cmd}")
-    
-    if isinstance(cmd, str):
-        # For shell commands that need shell parsing
-        result = subprocess.run(cmd, shell=True, capture_output=capture_output, text=True, cwd=cwd)
-    else:
-        # For command arrays
-        result = subprocess.run(cmd, capture_output=capture_output, text=True, cwd=cwd)
-    
-    if result.returncode == 0:
-        print("✅ SUCCESS")
-        if result.stdout and capture_output:
-            print(f"📄 Output:\n{result.stdout}")
-        return True, result.stdout
-    else:
-        print(f"❌ FAILED (exit code: {result.returncode})")
-        if result.stderr and capture_output:
-            print(f"🚨 Error:\n{result.stderr}")
-        if result.stdout and capture_output:
-            print(f"📄 Output:\n{result.stdout}")
-        return False, result.stderr
+class DynoPayBackendTester:
+    def __init__(self):
+        # Use the environment variable for the backend URL, fallback to localhost
+        self.backend_url = os.getenv('REACT_APP_BACKEND_URL', 'http://localhost:8001')
+        if self.backend_url == "https://get-started-29.preview.emergentagent.com":
+            # This is the external URL, we need the internal localhost for some tests
+            self.internal_url = "http://localhost:8001"
+        else:
+            self.internal_url = self.backend_url
+            
+        print(f"🔧 Backend URL: {self.backend_url}")
+        print(f"🔧 Internal URL: {self.internal_url}")
+        
+        self.session = requests.Session()
+        self.results = {}
+        self.failed_tests = []
 
-def test_backend_health():
-    """TEST 1: Backend healthy"""
-    try:
-        response = requests.get("http://localhost:8001/health", timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status") == "healthy":
-                print("✅ TEST 1: Backend health check PASSED")
+    def test_1_health_endpoint(self) -> bool:
+        """TEST 1: GET /health returns 200 with status "healthy" """
+        print("\n✅ TEST 1: Backend Health Check")
+        try:
+            response = self.session.get(f"{self.internal_url}/health", timeout=30)
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                print(f"   Response: {json.dumps(data, indent=2)}")
+                
+                if data.get('status') == 'healthy':
+                    print("   ✅ Health endpoint working correctly")
+                    return True
+                else:
+                    print(f"   ❌ Status is not 'healthy': {data.get('status')}")
+                    return False
+            else:
+                print(f"   ❌ Unexpected status code: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ Health endpoint failed: {str(e)}")
+            return False
+
+    def test_2_csrf_token_endpoint(self) -> bool:
+        """TEST 2: GET /api/csrf-token returns JSON with csrf_token field"""
+        print("\n✅ TEST 2: CSRF Token Endpoint")
+        try:
+            response = self.session.get(f"{self.internal_url}/api/csrf-token", timeout=30)
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                print(f"   Response keys: {list(data.keys())}")
+                
+                if 'csrf_token' in data:
+                    print(f"   ✅ CSRF token found: {data['csrf_token'][:20]}...")
+                    return True
+                else:
+                    print(f"   ❌ csrf_token field not found in response")
+                    return False
+            else:
+                print(f"   ❌ Unexpected status code: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ CSRF token endpoint failed: {str(e)}")
+            return False
+
+    def test_3_events_stats_sse(self) -> bool:
+        """TEST 3: GET /api/events/stats returns SSE stats with total_clients field"""
+        print("\n✅ TEST 3: Events Stats SSE Endpoint")
+        try:
+            # For SSE endpoint, we expect text/plain or text/event-stream
+            response = self.session.get(f"{self.internal_url}/api/events/stats", 
+                                      timeout=10, 
+                                      headers={'Accept': 'text/event-stream'})
+            print(f"   Status Code: {response.status_code}")
+            print(f"   Content-Type: {response.headers.get('content-type', 'N/A')}")
+            
+            if response.status_code == 200:
+                content = response.text
+                print(f"   Response preview: {content[:200]}...")
+                
+                if 'total_clients' in content:
+                    print("   ✅ total_clients field found in SSE response")
+                    return True
+                else:
+                    print("   ❌ total_clients field not found in SSE response")
+                    return False
+            else:
+                print(f"   ❌ Unexpected status code: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ Events stats SSE endpoint failed: {str(e)}")
+            return False
+
+    def test_4_admin_analytics_auth(self) -> bool:
+        """TEST 4: GET /api/admin/analytics/revenue without auth returns 403"""
+        print("\n✅ TEST 4: Admin Analytics Auth Protection")
+        try:
+            # Create new session without auth for this test
+            unauth_session = requests.Session()
+            response = unauth_session.get(f"{self.internal_url}/api/admin/analytics/revenue", timeout=30)
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code == 403:
+                print("   ✅ Admin endpoint properly protected with 403 Forbidden")
+                return True
+            elif response.status_code == 401:
+                print("   ✅ Admin endpoint properly protected with 401 Unauthorized")
                 return True
             else:
-                print(f"❌ TEST 1: Backend status is not 'healthy': {data}")
+                print(f"   ❌ Expected 403/401 but got: {response.status_code}")
+                try:
+                    print(f"   Response: {response.text}")
+                except:
+                    pass
                 return False
-        else:
-            print(f"❌ TEST 1: Backend health check failed with status {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ TEST 1: Backend health check failed with error: {e}")
-        return False
-
-def test_typescript_compilation():
-    """TEST 2: TypeScript compiles clean for all modified files"""
-    success, output = run_command(
-        "cd /app/backend && npx tsc --noEmit 2>&1 | grep -E 'paymentController|walletController|webhookProcessor|merchantApiRouter|webhooks/index|paymentStateMachine'",
-        "TEST 2: Checking TypeScript compilation for modified files"
-    )
-    
-    # If grep finds nothing (exit code 1), that means no errors in our target files
-    if not success:  # grep returns 1 when no matches found
-        print("✅ TEST 2: TypeScript compilation clean for target files")
-        return True
-    else:
-        print(f"❌ TEST 2: TypeScript errors found in target files:\n{output}")
-        return False
-
-def test_state_machine_tests():
-    """TEST 3: State machine tests still pass"""
-    success, output = run_command(
-        'cd /app/backend && npx jest __tests__/paymentStateMachine.test.ts --passWithNoTests 2>&1 | grep -E "Tests:|passed|failed|total"',
-        "TEST 3: Running state machine tests"
-    )
-    
-    if success and ("132 passed" in output or "132 tests" in output):
-        print("✅ TEST 3: State machine tests PASSED (132 tests)")
-        return True
-    else:
-        print(f"❌ TEST 3: State machine tests FAILED")
-        return False
-
-def test_webhook_processor_tests():
-    """TEST 4: Webhook processor tests still pass"""
-    success, output = run_command(
-        'cd /app/backend && npx jest __tests__/webhookProcessor.test.ts --passWithNoTests 2>&1 | grep -E "Tests:|passed|failed|total"',
-        "TEST 4: Running webhook processor tests"
-    )
-    
-    if success and ("52 passed" in output or "52 tests" in output):
-        print("✅ TEST 4: Webhook processor tests PASSED (52 tests)")
-        return True
-    else:
-        print(f"❌ TEST 4: Webhook processor tests FAILED")
-        return False
-
-def test_payment_status_in_webhook_processor():
-    """TEST 5: Verify payment_status field exists in webhookProcessor webhook payloads"""
-    success, output = run_command(
-        "grep -c 'payment_status' /app/backend/services/webhookProcessor.ts",
-        "TEST 5: Checking payment_status field in webhookProcessor"
-    )
-    
-    if success and output.strip():
-        count = int(output.strip())
-        if count >= 4:
-            print(f"✅ TEST 5: payment_status found {count} times in webhookProcessor (>= 4 required)")
-            return True
-        else:
-            print(f"❌ TEST 5: payment_status found only {count} times in webhookProcessor (< 4 required)")
-            return False
-    else:
-        print("❌ TEST 5: payment_status not found in webhookProcessor")
-        return False
-
-def test_payment_status_in_payment_controller():
-    """TEST 6: Verify payment_status field exists in verify endpoint responses"""
-    success, output = run_command(
-        "grep -c 'payment_status' /app/backend/controller/paymentController.ts",
-        "TEST 6: Checking payment_status field in paymentController"
-    )
-    
-    if success and output.strip():
-        count = int(output.strip())
-        if count >= 7:
-            print(f"✅ TEST 6: payment_status found {count} times in paymentController (>= 7 required)")
-            return True
-        else:
-            print(f"❌ TEST 6: payment_status found only {count} times in paymentController (< 7 required)")
-            return False
-    else:
-        print("❌ TEST 6: payment_status not found in paymentController")
-        return False
-
-def test_payment_status_in_merchant_api():
-    """TEST 7: Verify payment_status field exists in merchant API endpoints"""
-    success, output = run_command(
-        "grep -c 'payment_status' /app/backend/routes/merchantApiRouter.ts",
-        "TEST 7: Checking payment_status field in merchantApiRouter"
-    )
-    
-    if success and output.strip():
-        count = int(output.strip())
-        if count >= 2:
-            print(f"✅ TEST 7: payment_status found {count} times in merchantApiRouter (>= 2 required)")
-            return True
-        else:
-            print(f"❌ TEST 7: payment_status found only {count} times in merchantApiRouter (< 2 required)")
-            return False
-    else:
-        print("❌ TEST 7: payment_status not found in merchantApiRouter")
-        return False
-
-def test_display_status_in_merchant_api():
-    """TEST 8: Verify display_status exists for auto-convert in merchant API"""
-    success, output = run_command(
-        "grep -c 'display_status' /app/backend/routes/merchantApiRouter.ts",
-        "TEST 8: Checking display_status field in merchantApiRouter"
-    )
-    
-    if success and output.strip():
-        count = int(output.strip())
-        if count >= 2:
-            print(f"✅ TEST 8: display_status found {count} times in merchantApiRouter (>= 2 required)")
-            return True
-        else:
-            print(f"❌ TEST 8: display_status found only {count} times in merchantApiRouter (< 2 required)")
-            return False
-    else:
-        print("❌ TEST 8: display_status not found in merchantApiRouter")
-        return False
-
-def test_conversion_display_status_export():
-    """TEST 9: Verify toConversionDisplayStatus is exported from state machine"""
-    success, output = run_command(
-        "grep 'export function toConversionDisplayStatus' /app/backend/services/paymentStateMachine.ts",
-        "TEST 9: Checking toConversionDisplayStatus export"
-    )
-    
-    if success and "export function toConversionDisplayStatus" in output:
-        print("✅ TEST 9: toConversionDisplayStatus export found in paymentStateMachine")
-        return True
-    else:
-        print("❌ TEST 9: toConversionDisplayStatus export not found in paymentStateMachine")
-        return False
-
-def test_crash_recovery_bug_fix():
-    """TEST 10: Verify crash recovery webhook bug is fixed"""
-    # Check that payment.confirmed no longer sends status: "processing"
-    success1, output1 = run_command(
-        "grep -A5 'event: \"payment.confirmed\"' /app/backend/services/webhookProcessor.ts | grep 'status: \"processing\"'",
-        "TEST 10a: Checking payment.confirmed doesn't send status: processing"
-    )
-    
-    # Check that payment.confirmed now sends status: "successful"
-    success2, output2 = run_command(
-        "grep -A5 'event: \"payment.confirmed\"' /app/backend/services/webhookProcessor.ts | grep 'status: \"successful\"'",
-        "TEST 10b: Checking payment.confirmed sends status: successful"
-    )
-    
-    # First check should return empty (no matches found - success is False for grep)
-    # Second check should return matches (success is True for grep)
-    if not success1 and success2:
-        print("✅ TEST 10: Crash recovery bug fix VERIFIED - payment.confirmed sends 'successful' not 'processing'")
-        return True
-    else:
-        print("❌ TEST 10: Crash recovery bug fix FAILED")
-        if success1:
-            print(f"  Still found 'processing' status: {output1}")
-        if not success2:
-            print("  Did not find 'successful' status")
-        return False
-
-def test_legacy_tatum_webhook():
-    """TEST 11: Verify legacy tatumWebHook uses state machine"""
-    success, output = run_command(
-        "grep 'toRedisStatus(PaymentState' /app/backend/webhooks/index.ts",
-        "TEST 11: Checking legacy tatumWebHook uses state machine"
-    )
-    
-    if success and output.strip():
-        count = len(output.strip().split('\n'))
-        if count >= 2:
-            print(f"✅ TEST 11: toRedisStatus(PaymentState found {count} matches in webhooks/index.ts (>= 2 required)")
-            return True
-        else:
-            print(f"❌ TEST 11: toRedisStatus(PaymentState found only {count} matches (< 2 required)")
-            return False
-    else:
-        print("❌ TEST 11: toRedisStatus(PaymentState not found in webhooks/index.ts")
-        return False
-
-def test_backward_compatibility():
-    """TEST 12: Backward compatibility - existing status field still present"""
-    success, output = run_command(
-        "grep 'status:.*\"confirmed\"\\|status:.*\"waiting\"\\|status:.*\"pending\"\\|status:.*\"failed\"\\|status:.*\"underpaid\"' /app/backend/controller/paymentController.ts | head -10",
-        "TEST 12: Checking backward compatibility - existing status field preserved"
-    )
-    
-    if success and output.strip():
-        lines = output.strip().split('\n')
-        if len(lines) >= 5:
-            print(f"✅ TEST 12: Backward compatibility VERIFIED - found {len(lines)} status field references")
-            return True
-        else:
-            print(f"❌ TEST 12: Found only {len(lines)} status field references")
-            return False
-    else:
-        print("❌ TEST 12: No status field references found - backward compatibility issue")
-        return False
-
-def test_conversion_display_status_mapping():
-    """TEST 13: Conversion display status mapping is correct"""
-    test_script = """
-import { toConversionDisplayStatus } from './services/paymentStateMachine';
-console.log(toConversionDisplayStatus('PENDING_DEPOSIT') === 'pending' ? 'OK' : 'FAIL');
-console.log(toConversionDisplayStatus('CONVERTING') === 'converting' ? 'OK' : 'FAIL');
-console.log(toConversionDisplayStatus('COMPLETED') === 'settled' ? 'OK' : 'FAIL');
-console.log(toConversionDisplayStatus('FAILED') === 'failed' ? 'OK' : 'FAIL');
-"""
-    
-    success, output = run_command(
-        f'cd /app/backend && npx ts-node --transpile-only -e "{test_script}" 2>/dev/null',
-        "TEST 13: Testing conversion display status mapping"
-    )
-    
-    if success and output.strip():
-        # Filter out Winston initialization logs and keep only the OK/FAIL results
-        results = [line.strip() for line in output.strip().split('\n') if line.strip() in ['OK', 'FAIL']]
-        if len(results) == 4 and all(result == 'OK' for result in results):
-            print("✅ TEST 13: Conversion display status mapping CORRECT - all 4 mappings OK")
-            return True
-        else:
-            print(f"❌ TEST 13: Conversion display status mapping FAILED - results: {results}")
-            return False
-    else:
-        print("❌ TEST 13: Failed to test conversion display status mapping")
-        return False
-
-def main():
-    """Run all tests for payment_status normalization"""
-    print("🚀 DynoPay Backend Testing Suite - Payment Status Normalization")
-    print("=" * 80)
-    
-    # Define all tests
-    tests = [
-        ("Backend Health Check", test_backend_health),
-        ("TypeScript Compilation", test_typescript_compilation),
-        ("State Machine Tests", test_state_machine_tests),
-        ("Webhook Processor Tests", test_webhook_processor_tests),
-        ("Payment Status in WebhookProcessor", test_payment_status_in_webhook_processor),
-        ("Payment Status in PaymentController", test_payment_status_in_payment_controller),
-        ("Payment Status in MerchantAPI", test_payment_status_in_merchant_api),
-        ("Display Status in MerchantAPI", test_display_status_in_merchant_api),
-        ("toConversionDisplayStatus Export", test_conversion_display_status_export),
-        ("Crash Recovery Bug Fix", test_crash_recovery_bug_fix),
-        ("Legacy TatumWebHook State Machine", test_legacy_tatum_webhook),
-        ("Backward Compatibility", test_backward_compatibility),
-        ("Conversion Display Status Mapping", test_conversion_display_status_mapping),
-    ]
-    
-    passed = 0
-    failed = 0
-    results = []
-    
-    # Run each test
-    for test_name, test_func in tests:
-        print(f"\n{'=' * 20} {test_name} {'=' * 20}")
-        try:
-            result = test_func()
-            if result:
-                passed += 1
-                results.append(f"✅ {test_name}")
-            else:
-                failed += 1
-                results.append(f"❌ {test_name}")
+                
         except Exception as e:
-            print(f"🔥 EXCEPTION in {test_name}: {e}")
-            failed += 1
-            results.append(f"💥 {test_name} (Exception)")
-    
-    # Summary
-    print("\n" + "=" * 80)
-    print("📊 PAYMENT STATUS NORMALIZATION TEST SUMMARY")
-    print("=" * 80)
-    
-    for result in results:
-        print(result)
-    
-    print(f"\n🎯 Total Tests: {len(tests)}")
-    print(f"✅ Passed: {passed}")
-    print(f"❌ Failed: {failed}")
-    print(f"📈 Success Rate: {(passed/len(tests)*100):.1f}%")
-    
-    if failed == 0:
-        print("\n🎉 ALL TESTS PASSED! Payment status normalization is working correctly.")
-        return 0
-    else:
-        print(f"\n⚠️  {failed} test(s) failed. Please check the implementation.")
-        return 1
+            print(f"   ❌ Admin analytics auth test failed: {str(e)}")
+            return False
+
+    def test_5_typescript_compilation(self) -> bool:
+        """TEST 5: cd /app/backend && npx tsc --noEmit should compile cleanly (0 errors)"""
+        print("\n✅ TEST 5: TypeScript Compilation Check")
+        try:
+            os.chdir('/app/backend')
+            result = subprocess.run(['npx', 'tsc', '--noEmit'], 
+                                 capture_output=True, text=True, timeout=120)
+            
+            print(f"   Exit Code: {result.returncode}")
+            
+            if result.returncode == 0:
+                print("   ✅ TypeScript compilation successful (0 errors)")
+                if result.stderr:
+                    print(f"   Warnings: {result.stderr}")
+                return True
+            else:
+                print(f"   ❌ TypeScript compilation failed")
+                print(f"   STDOUT: {result.stdout}")
+                print(f"   STDERR: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ TypeScript compilation test failed: {str(e)}")
+            return False
+
+    def test_6_refresh_token_validation(self) -> bool:
+        """TEST 6: POST /api/user/refresh-token with empty body returns 400"""
+        print("\n✅ TEST 6: Refresh Token Validation")
+        try:
+            response = self.session.post(f"{self.internal_url}/api/user/refresh-token", 
+                                       json={}, timeout=30)
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code == 400:
+                print("   ✅ Refresh token endpoint properly validates empty body with 400")
+                try:
+                    data = response.json()
+                    print(f"   Response: {data}")
+                except:
+                    print(f"   Response text: {response.text}")
+                return True
+            else:
+                print(f"   ❌ Expected 400 but got: {response.status_code}")
+                try:
+                    print(f"   Response: {response.text}")
+                except:
+                    pass
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ Refresh token validation test failed: {str(e)}")
+            return False
+
+    def test_7_2fa_status_auth(self) -> bool:
+        """TEST 7: GET /api/user/2fa/status without auth returns 401/403"""
+        print("\n✅ TEST 7: 2FA Status Auth Protection")
+        try:
+            # Create new session without auth for this test
+            unauth_session = requests.Session()
+            response = unauth_session.get(f"{self.internal_url}/api/user/2fa/status", timeout=30)
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code in [401, 403]:
+                print(f"   ✅ 2FA status endpoint properly protected with {response.status_code}")
+                return True
+            else:
+                print(f"   ❌ Expected 401/403 but got: {response.status_code}")
+                try:
+                    print(f"   Response: {response.text}")
+                except:
+                    pass
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ 2FA status auth test failed: {str(e)}")
+            return False
+
+    def test_8_admin_users_ban_auth(self) -> bool:
+        """TEST 8: PUT /api/admin/users/999/ban without auth returns 401/403"""
+        print("\n✅ TEST 8: Admin User Ban Auth Protection")
+        try:
+            # Create new session without auth for this test
+            unauth_session = requests.Session()
+            response = unauth_session.put(f"{self.internal_url}/api/admin/users/999/ban", 
+                                        json={}, timeout=30)
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code in [401, 403]:
+                print(f"   ✅ Admin user ban endpoint properly protected with {response.status_code}")
+                return True
+            else:
+                print(f"   ❌ Expected 401/403 but got: {response.status_code}")
+                try:
+                    print(f"   Response: {response.text}")
+                except:
+                    pass
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ Admin user ban auth test failed: {str(e)}")
+            return False
+
+    def test_9_session_routes_exist(self) -> bool:
+        """TEST 9: Verify session routes exist: grep for refresh-token, sessions, login-history, 2fa"""
+        print("\n✅ TEST 9: Session Routes Verification")
+        try:
+            result = subprocess.run([
+                'grep', '-E', 'refresh-token|sessions|login-history|2fa', 
+                '/app/backend/routes/userRouter.ts'
+            ], capture_output=True, text=True)
+            
+            lines = result.stdout.strip().split('\n') if result.stdout.strip() else []
+            line_count = len([line for line in lines if line.strip()])
+            
+            print(f"   Found {line_count} matching lines:")
+            for line in lines:
+                if line.strip():
+                    print(f"     {line.strip()}")
+            
+            if line_count >= 10:
+                print(f"   ✅ Found {line_count} session route references (>= 10 required)")
+                return True
+            else:
+                print(f"   ❌ Found only {line_count} session route references (< 10 required)")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ Session routes verification failed: {str(e)}")
+            return False
+
+    def test_10_slack_alert_integration(self) -> bool:
+        """TEST 10: Verify Slack alert integration: grep for slackAlertService"""
+        print("\n✅ TEST 10: Slack Alert Integration Verification")
+        try:
+            result = subprocess.run([
+                'grep', 'slackAlertService', 
+                '/app/backend/services/errorMonitoringService.ts'
+            ], capture_output=True, text=True)
+            
+            lines = result.stdout.strip().split('\n') if result.stdout.strip() else []
+            line_count = len([line for line in lines if line.strip()])
+            
+            print(f"   Found {line_count} slackAlertService references:")
+            for line in lines:
+                if line.strip():
+                    print(f"     {line.strip()}")
+            
+            if line_count >= 1:
+                print(f"   ✅ Found {line_count} slackAlertService references")
+                return True
+            else:
+                print(f"   ❌ slackAlertService not found in errorMonitoringService.ts")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ Slack alert integration verification failed: {str(e)}")
+            return False
+
+    def run_all_tests(self) -> Dict[str, bool]:
+        """Run all verification tests and return results"""
+        print("🚀 Starting DynoPay Backend Security, Real-time, Analytics, Admin, and DevOps Enhancement Testing...")
+        print("=" * 80)
+        
+        tests = [
+            ("test_1_health_endpoint", self.test_1_health_endpoint),
+            ("test_2_csrf_token_endpoint", self.test_2_csrf_token_endpoint), 
+            ("test_3_events_stats_sse", self.test_3_events_stats_sse),
+            ("test_4_admin_analytics_auth", self.test_4_admin_analytics_auth),
+            ("test_5_typescript_compilation", self.test_5_typescript_compilation),
+            ("test_6_refresh_token_validation", self.test_6_refresh_token_validation),
+            ("test_7_2fa_status_auth", self.test_7_2fa_status_auth),
+            ("test_8_admin_users_ban_auth", self.test_8_admin_users_ban_auth),
+            ("test_9_session_routes_exist", self.test_9_session_routes_exist),
+            ("test_10_slack_alert_integration", self.test_10_slack_alert_integration),
+        ]
+        
+        results = {}
+        for test_name, test_func in tests:
+            try:
+                results[test_name] = test_func()
+                if not results[test_name]:
+                    self.failed_tests.append(test_name)
+            except Exception as e:
+                print(f"❌ {test_name} failed with exception: {str(e)}")
+                results[test_name] = False
+                self.failed_tests.append(test_name)
+        
+        return results
+
+    def print_summary(self, results: Dict[str, bool]):
+        """Print test summary"""
+        print("\n" + "=" * 80)
+        print("📊 TEST SUMMARY")
+        print("=" * 80)
+        
+        passed = sum(1 for result in results.values() if result)
+        total = len(results)
+        success_rate = (passed / total) * 100 if total > 0 else 0
+        
+        print(f"✅ Tests Passed: {passed}/{total} ({success_rate:.1f}%)")
+        print(f"❌ Tests Failed: {total - passed}/{total}")
+        
+        if self.failed_tests:
+            print("\n❌ FAILED TESTS:")
+            for i, test in enumerate(self.failed_tests, 1):
+                print(f"  {i}. {test}")
+        
+        print("\n📋 DETAILED RESULTS:")
+        for test_name, result in results.items():
+            status = "✅ PASSED" if result else "❌ FAILED"
+            print(f"  {test_name}: {status}")
+        
+        return success_rate
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    tester = DynoPayBackendTester()
+    results = tester.run_all_tests()
+    success_rate = tester.print_summary(results)
+    
+    # Exit with appropriate code
+    if success_rate == 100:
+        print("\n🎉 ALL TESTS PASSED! Backend enhancements are working correctly.")
+        sys.exit(0)
+    else:
+        print(f"\n⚠️  {len(tester.failed_tests)} tests failed. Please review and fix the issues.")
+        sys.exit(1)
