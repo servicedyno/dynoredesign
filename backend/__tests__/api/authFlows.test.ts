@@ -37,7 +37,8 @@ describe("Auth Flow Integration Tests", () => {
   it("POST /api/user/registerUser should create a new user", async () => {
     const res = await request
       .post("/api/user/registerUser")
-      .send(TEST_USER);
+      .send(TEST_USER)
+      .timeout({ response: 10000 });
 
     // Accept 200 (success) or 400 (duplicate email from previous test run)
     expect([200, 400]).toContain(res.status);
