@@ -330,12 +330,19 @@ const processConversions = async (): Promise<number> => {
 
       converted++;
     } catch (err) {
-      logError(`Error converting #${data.conversion_id}`, err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      logError(`Error converting #${data.conversion_id}: ${errMsg}`);
+
+      const isTransient = errMsg.includes("restricted location") ||
+        errMsg.includes("ECONNREFUSED") || errMsg.includes("ETIMEDOUT") ||
+        errMsg.includes("ENOTFOUND") || errMsg.includes("Service unavailable") ||
+        errMsg.includes("socket hang up") || errMsg.includes("SOCKS");
+
       await record.update({
         status: "DEPOSIT_CREDITED", // Reset back so it can retry
-        retry_count: data.retry_count + 1,
+        retry_count: isTransient ? data.retry_count : data.retry_count + 1,
         last_retry_at: new Date(),
-        error_message: err instanceof Error ? err.message : String(err),
+        error_message: errMsg,
       });
     }
   }
