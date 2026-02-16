@@ -1,0 +1,110 @@
+/**
+ * CSRF Protection Middleware
+ * 
+ * Implements Double Submit Cookie pattern for state-changing requests.
+ * 
+ * For JWT-based APIs (Authorization header), CSRF is inherently mitigated
+ * because browsers don't auto-send Authorization headers cross-origin.
+ * 
+ * This middleware adds an extra layer for scenarios where cookies might
+ * be used (e.g., refresh tokens via cookies in future).
+ * 
+ * Behavior:
+ * - GET /api/csrf-token → Sets CSRF cookie + returns token
+ * - All state-changing requests (POST/PUT/DELETE/PATCH) check:
+ *   1. If Bearer token in Authorization header → SKIP (JWT-based, safe)
+ *   2. If no Bearer token → Verify CSRF token in header matches cookie
+ * 
+ * Exemptions:
+ * - Webhook endpoints (Tatum, external)
+ * - API key-authenticated endpoints (x-api-key header)
+ * - Health check
+ */
+import { Request, Response, NextFunction } from "express";
+import crypto from "crypto";
+import { apiLogger } from "../utils/loggers";
+
+const CSRF_COOKIE_NAME = "dynopay_csrf";
+const CSRF_HEADER_NAME = "x-csrf-token";
+const CSRF_TOKEN_EXPIRY_HOURS = 24;
+
+// Paths that are exempt from CSRF checks
+const EXEMPT_PATHS = [
+  "/health",
+  "/api/v1/webhook",
+  "/api/webhook",
+  "/api/veriff",
+  "/api/kb/webhook",
+  "/api/admin/login",
+  "/api/user/login",
+  "/api/user/registerUser",
+  "/api/user/registerPhone",
+  "/api/user/google-signin",
+  "/api/user/facebook-signin",
+  "/api/user/refresh-token",
+  "/api/user/forgot-password",
+  "/api/user/reset-password",
+  "/api/user/generateOTP",
+  "/api/user/confirmOTP",
+  "/api/user/2fa/validate",
+  "/api/events/stream",
+];
+
+/**
+ * Generate CSRF token
+ */
+export const generateCsrfToken = (_req: Request, res: Response): void => {
+  const token = crypto.randomBytes(32).toString("hex");
+
+  // Set cookie (httpOnly: false so JavaScript can read it)
+  res.cookie(CSRF_COOKIE_NAME, token, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: CSRF_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.json({ csrf_token: token });
+};
+
+/**
+ * CSRF verification middleware
+ */
+export const csrfProtection = (req: Request, res: Response, next: NextFunction): void => {
+  // Skip safe methods
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    return next();
+  }
+
+  // Skip exempt paths
+  const path = req.path.toLowerCase();
+  if (EXEMPT_PATHS.some((exempt) => path.startsWith(exempt.toLowerCase()))) {
+    return next();
+  }
+
+  // Skip if JWT Bearer token present (browser doesn't auto-send these)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return next();
+  }
+
+  // Skip if API key authentication
+  if (req.headers["x-api-key"]) {
+    return next();
+  }
+
+  // For cookie-based auth — verify CSRF token
+  const cookieToken = req.cookies?.[CSRF_COOKIE_NAME];
+  const headerToken = req.headers[CSRF_HEADER_NAME] as string;
+
+  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    apiLogger.warn(`[CSRF] Blocked request to ${req.path} from ${req.ip} — token mismatch`);
+    res.status(403).json({ error: "CSRF token validation failed" });
+    return;
+  }
+
+  next();
+};
+
+export default { generateCsrfToken, csrfProtection };
