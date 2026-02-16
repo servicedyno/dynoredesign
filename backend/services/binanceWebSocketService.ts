@@ -20,7 +20,7 @@ import axios from "axios";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import { setRedisItemWithTTL, getRedisItem } from "../utils/redisInstance";
 import { captureError } from "./errorMonitoringService";
-import { getEffectiveProxyAgent, detectBinanceAccess } from "./binanceService";
+import { getEffectiveProxyAgent, detectBinanceAccess, setProxyStateChangeCallback } from "./binanceService";
 import { cronLogger } from "../utils/loggers";
 
 // SOCKS5 proxy for bypassing geo-blocks — uses smart detection from binanceService
