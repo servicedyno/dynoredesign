@@ -74,4 +74,19 @@ userRouter.get("/unsubscribe-reminders/:token", userController.unsubscribeFromRe
 userRouter.post("/unsubscribe-payment-reminders", userController.unsubscribeFromPaymentReminders);
 userRouter.get("/unsubscribe-payment-reminders/:token", userController.unsubscribeFromPaymentReminders);
 
+// ── Session Management ──────────────────────────────────────────────────────
+userRouter.post("/refresh-token", moderateRateLimiter, sessionController.refreshToken);
+userRouter.get("/sessions", authMiddleware, sessionController.listSessions);
+userRouter.delete("/sessions/:id", authMiddleware, sessionController.revokeSessionEndpoint);
+userRouter.delete("/sessions", authMiddleware, sessionController.revokeAllOtherSessionsEndpoint);
+userRouter.get("/login-history", authMiddleware, sessionController.loginHistory);
+
+// ── Two-Factor Authentication ────────────────────────────────────────────────
+userRouter.post("/2fa/setup", authMiddleware, twoFactorController.setupEndpoint);
+userRouter.post("/2fa/verify-setup", authMiddleware, twoFactorController.verifySetupEndpoint);
+userRouter.post("/2fa/validate", strictRateLimiter, twoFactorController.validateEndpoint);
+userRouter.post("/2fa/disable", authMiddleware, twoFactorController.disableEndpoint);
+userRouter.post("/2fa/regenerate-backup-codes", authMiddleware, twoFactorController.regenerateBackupCodesEndpoint);
+userRouter.get("/2fa/status", authMiddleware, twoFactorController.statusEndpoint);
+
 export default userRouter;
