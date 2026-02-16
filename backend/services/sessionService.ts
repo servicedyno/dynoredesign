@@ -181,7 +181,7 @@ export const rotateRefreshToken = async (
   const { password, telegram_id, ...userData } = users[0];
 
   // Generate new tokens
-  const newAccessToken = jwt.sign(userData, tokenSecret, { expiresIn: ACCESS_TOKEN_EXPIRY });
+  const newAccessToken = jwt.sign(userData, tokenSecret, { expiresIn: "1h" } as jwt.SignOptions);
   const newRefreshToken = generateRefreshToken();
   const hashedNewRefreshToken = crypto.createHash("sha256").update(newRefreshToken).digest("hex");
 
