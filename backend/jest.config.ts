@@ -52,6 +52,22 @@ const config: Config = {
       verbose: true,
       testTimeout: 10000,
     },
+    // Integration project: hits the live running server via supertest (no mocks)
+    {
+      displayName: 'integration',
+      preset: 'ts-jest',
+      testEnvironment: 'node',
+      roots: ['<rootDir>/__tests__/api'],
+      testMatch: ['**/*.test.ts'],
+      moduleFileExtensions: ['ts', 'js', 'json'],
+      transform: {
+        '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
+      },
+      // No moduleNameMapper — integration tests hit the real server
+      setupFiles: [],
+      verbose: true,
+      testTimeout: 30000,
+    },
   ],
 };
 
