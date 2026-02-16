@@ -115,4 +115,33 @@ adminRouter.post(
 //   adminController.updateFeeTier
 // );
 
+// ── Alert Service Endpoints ─────────────────────────────────────────────────
+import alertService, { sendAlert, getHealth as getAlertHealth } from "../services/slackAlertService";
+
+adminRouter.get("/alerts/health", adminAuthMiddleware, (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Alert service health",
+    data: getAlertHealth(),
+  });
+});
+
+adminRouter.post("/alerts/test", adminAuthMiddleware, async (_req, res) => {
+  try {
+    const result = await sendAlert({
+      title: "Test Alert",
+      message: "This is a test alert from DynoPay admin panel.",
+      severity: "info",
+      fields: { "Triggered by": "Admin test endpoint" },
+    });
+    res.status(200).json({
+      success: true,
+      message: "Test alert sent",
+      data: { delivered: result },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to send test alert", error: (err as Error).message });
+  }
+});
+
 export default adminRouter;
