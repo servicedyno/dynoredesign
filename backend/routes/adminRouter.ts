@@ -117,6 +117,9 @@ adminRouter.post(
 
 // ── Alert Service Endpoints ─────────────────────────────────────────────────
 import alertService, { sendAlert, getHealth as getAlertHealth } from "../services/slackAlertService";
+import { getTunnelStatus } from "../services/sshTunnelManager";
+import { getProxyState } from "../services/binanceService";
+import { getStatus as getWsStatus } from "../services/binanceWebSocketService";
 
 adminRouter.get("/alerts/health", adminAuthMiddleware, (_req, res) => {
   res.status(200).json({
@@ -142,6 +145,18 @@ adminRouter.post("/alerts/test", adminAuthMiddleware, async (_req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to send test alert", error: (err as Error).message });
   }
+});
+
+// ── SSH Tunnel & Binance Status ──────────────────────────────────────────────
+adminRouter.get("/tunnel/status", adminAuthMiddleware, (_req, res) => {
+  const tunnel = getTunnelStatus();
+  const proxy = getProxyState();
+  const websocket = getWsStatus();
+  res.status(200).json({
+    success: true,
+    message: "Tunnel and Binance status",
+    data: { tunnel, proxy, websocket },
+  });
 });
 
 export default adminRouter;
