@@ -66,7 +66,7 @@ export const createSession = async (
   const { password, telegram_id, ...userData } = user;
 
   // Generate tokens
-  const accessToken = jwt.sign(userData, tokenSecret, { expiresIn: ACCESS_TOKEN_EXPIRY });
+  const accessToken = jwt.sign(userData, tokenSecret, { expiresIn: "1h" } as jwt.SignOptions);
   const refreshToken = generateRefreshToken();
 
   // Parse request info
