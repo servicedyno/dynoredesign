@@ -1,140 +1,234 @@
-<analysis>**original_problem_statement:**
-The user's initial request was to set up the project environment. After the setup, the user provided a detailed set of requirements to implement a payment state machine to manage payment statuses and eliminate the use of magic strings.
-
-PRODUCT REQUIREMENTS:
-- **P0 — Soft Enforcement:** Wire a new  into the . This should only log invalid state transitions as warnings (soft-enforcement) without throwing errors or breaking the payment flow.
-- **P1 — Hard Enforcement:** Refactor the entire codebase (, , etc.) to replace all magic string statuses with the new  enum and helper functions from the state machine.
-- **API Consistency:** Following the implementation, the user questioned the consistency of statuses between different API endpoints (e.g.,  vs. ) and for different payment types (auto-conversion vs. standard). This led to a new requirement to normalize all merchant-facing statuses.
-- **Non-Breaking Changes:** The status normalization must be implemented in an additive, non-breaking way. New, consistent status fields (, ) should be added to API responses and webhooks, while preserving the old  field for backward compatibility.
-- **Testing:** Create test payments (BTC and ETH) for a specific merchant to verify the implementation.
+<analysis>**original_problem_statement**:
+The user's initial request was to set up a full-stack application environment. Following setup, the user provided a comprehensive feature list and requested the implementation of all missing backend features, explicitly excluding real-time chat functionalities. This led to a major backend enhancement. Subsequent requests included creating API documentation for the new features, resetting the admin password, and finally, implementing another batch of backend-only tasks including an incident playbook, integration tests, and hardening the alerting service.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is a TypeScript/Node.js backend with a React frontend. All dependencies are installed, and the services are running.
-
-A full state machine for payment processing has been implemented and integrated:
-1.  **Soft Enforcement (P0 - Complete):** The  now uses  from the state machine to log any invalid status changes, providing audit data without interrupting payments.
-2.  **Hard Enforcement (P1 - Complete):** Magic strings for payment statuses have been replaced across the codebase (e.g., ) with enums and helper functions (, ) from the state machine.
-3.  **API Consistency (Complete):** All merchant-facing API endpoints (, , ) and webhook payloads now include two new fields for consistency:
-    *   : A normalized, consistent status (e.g., confirmed).
-    *   : A human-readable status for auto-conversions (e.g., settled).
-    *   The original  field is preserved to ensure backward compatibility for existing integrations.
-4.  A bug in the crash-recovery webhook that sent an incorrect status has been fixed.
-5.  The entire suite of 511+ tests passes, and the changes have been further verified by the backend testing agent.
+A full-stack application with a React frontend and a Node.js/TypeScript backend. The backend is feature-rich, including JWT authentication, 2FA, session management, CSRF protection, and admin functionalities. A comprehensive Swagger API documentation has been generated for all backend endpoints. The agent has just written the code for an incident playbook, hardened the alerting service with new test endpoints, and created an integration test suite for it. This work was interrupted by a system crash before it could be tested.
 
 **Last working item**:
--   **Last item agent was working:** The agent was about to begin the user's latest request: to turn on the Binance SSH proxy and create two test payments (one BTC, one ETH) for a specific merchant to test the newly implemented logic in a real-world scenario.
--   **Status:** NOT STARTED
--   **Agent Testing Done:** Y (for the previous state machine implementation)
--   **Which testing method agent to use?** Manual testing by curl. The next task requires creating payments via API calls, which is best done using  commands constructed with the credentials provided.
--   **User Testing Done:** N
+-   **Last item agent was working**: The agent was implementing a batch of four backend tasks: creating an , adding health/test endpoints to the alerting service, creating / integration tests for those endpoints, and updating the Swagger documentation. The implementation code was fully written, but the environment crashed due to a memory limit error just as the agent was about to run the tests.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: backend testing agent. The agent should first run the integration tests it just created using the command: .
+-   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-There are no pending issues or bugs from the completed work. The next focus is on the new task requested by the user.
+-   **Issue 1: Complete and Verify Backend Task Batch (Priority: P0)**
+    -   **Description**: The agent was implementing several backend tasks (incident playbook, alert service hardening, integration tests, docs update) when the environment crashed due to a memory limit error. The work was implemented but not tested.
+    -   **Details**:
+        -   **Attempted fixes**: All necessary code and files were created, but testing was interrupted.
+        -   **Next debug checklist**:
+            1.  The pod was re-initialized. First, verify the backend service is running correctly. Check backend                          RUNNING   pid 42, uptime 0:00:22 and ==> /var/log/supervisor/backend.err.log <==
+WARNING:  WatchFiles detected changes in 'tests/test_active_api_key_enforcement.py', 'tests/test_p0_p1_features.py', 'tests/test_p0_bug_fixes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [60]
+INFO:     Started server process [213]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+
+==> /var/log/supervisor/backend.out.log <==
+Stopping Backend...
+
++----------------------------------------------------------+
+|  DynoPay - Node.js Backend with Python Launcher          |
+|  Pure Node.js/TypeScript backend via lightweight proxy   |
++----------------------------------------------------------+
+
+🚀 Starting Node.js Backend (internal port 3300)...
+[Backend] [2026-02-16T02:00:59.804Z] ✅ Winston loggers initialized (file logging enabled)
+✅ Node.js Backend running (PID: 215)
+Proxy ready on port 8001 -> Node.js on port 3300
+[Backend] [2026-02-16T02:01:05.952Z] ✅ Validating environment configuration...
+[Backend] [2026-02-16T02:01:05.952Z] ✅ All required environment variables validated
+[Backend] [2026-02-16T02:01:05.952Z] ✅ Environment validation complete
+[Backend] {
+[Backend]   message: '[2026-02-16T02:01:06.018Z] ✅ Dynopay Backend Starting...',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:06.019Z'
+[Backend] }
+[Backend] {
+[Backend]   message: '[2026-02-16T02:01:06.021Z] ✅ Environment: development',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:06.021Z'
+[Backend] }
+[Backend] {
+[Backend]   message: '[2026-02-16T02:01:06.021Z] ✅ Railway Environment: not detected',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:06.021Z'
+[Backend] }
+[Backend] [2026-02-16T02:01:06.033Z] ✅ Swagger documentation available at /api/docs
+[Backend] [2026-02-16T02:01:06.051Z] ✅ Weekly Summary Cron Job scheduled for every Monday at 9:00 AM UTC
+[Backend] {
+[Backend]   message: '[2026-02-16T02:01:06.051Z] ✅ Weekly Conversion Summary Cron Job scheduled for every Monday at 9:30 AM UTC',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:06.051Z'
+[Backend] }
+[Backend] [2026-02-16T02:01:06.059Z] ✅ Wallet Reminder Cron Job scheduled for every hour
+[Backend] [2026-02-16T02:01:06.059Z] ✅ Health Check Cron Job scheduled for every 15 minutes
+[Backend] [2026-02-16T02:01:06.060Z] ✅ Health Check Retention Cleanup scheduled daily at 3:00 AM UTC (7-day retention)
+[Backend] [2026-02-16T02:01:06.060Z] ✅ Session Cleanup Cron Job scheduled every 6 hours
+[Backend] [2026-02-16T02:01:06.060Z] ✅ Referee Code Reminder Cron Job scheduled for daily at 10:00 AM UTC
+[Backend] [2026-02-16T02:01:06.061Z] ✅ Payment Link Reminder Cron Job scheduled for every hour
+[Backend] {
+[Backend]   message: '[2026-02-16T02:01:06.062Z] ✅ Connecting to Redis...',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:06.062Z'
+[Backend] }
+[Backend] [2026-02-16T02:01:06.306Z] ✅ Redis connection ready
+[Backend] [2026-02-16T02:01:06.306Z] ✅ Redis connected
+[Backend] {
+[Backend]   message: '[2026-02-16T02:01:06.306Z] ✅ Redis connected successfully',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:06.306Z'
+[Backend] }
+[Backend] {
+[Backend]   message: '[2026-02-16T02:01:06.416Z] ✅ Connecting to PostgreSQL...',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:06.416Z'
+[Backend] }
+[Backend] {
+[Backend]   message: '[2026-02-16T02:01:07.538Z] ✅ PostgreSQL Connection has been established successfully.',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:07.538Z'
+[Backend] }
+[Backend] {
+[Backend]   message: 'tbl_service_health table ready',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:08.962Z'
+[Backend] }
+[Backend] {
+[Backend]   message: 'tbl_customer_transaction synced',
+[Backend]   level: 'info',
+[Backend]   service: 'apiLogger',
+[Backend]   timestamp: '2026-02-16T02:01:09.616Z'
+[Backend] } for errors.
+            2.  Execute the newly created integration tests via .
+            3.  If tests fail, debug the changes in , , and the test file .
+            4.  Once tests pass, verify the new endpoints (, ) are visible in the Swagger UI.
+        -   **Why fix this issue and what will be achieved with the fix?**: This will complete the user's requested tasks, delivering a robust and testable alerting service, a clear incident response guide, and a foundational integration test suite.
+        -   **Status**: IN PROGRESS
+        -   **Is recurring issue?**: N
+        -   **Should Test frontend/backend/both after fix?**: backend
+        -   **Blocked on other issue**: No.
 
 **In progress Task List**:
-There are no tasks currently in progress.
+-   **Task 1: Backend Task Batch Implementation (Priority: P0)**
+    -   **Where to resume**: The pod has restarted. Resume by verifying the backend service's health and then running the integration test suite that was just created to validate the new alerting features.
+    -   **What will be achieved with this?**: A hardened alerting service, a documented incident playbook, an integration test suite for the alerting system, and updated API documentation.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: backend
+    -   **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks (P0 - Highest Priority):**
-    1.  Turn on the Binance SSH proxy.
-    2.  Use the direct merchant user API crypto endpoint to create a 0 BTC payment for company ID 38 (). Credentials are in .
-    3.  Create a 0 ETH payment for the same merchant.
-    4.  Provide the resulting payment addresses to the user for testing.
-
--   **Future Tasks (P2):**
-    -   **Enhanced Monitoring:** Implement monitoring and alerting for the audit logs generated by the state machine's  function to track invalid state transitions and identify unusual payment patterns.
+-   **Upcoming Tasks**:
+    -   **P1: Real-time Feature Implementation**: Implement the full functionality for , likely by integrating with Firebase Cloud Messaging (FCM), and expand the use of the Server-Sent Events service ().
+-   **Future Tasks**:
+    -   **P2: Frontend Integration**: Update the frontend to consume the numerous backend features already built (e.g., 2FA setup flow, user session management page, admin dashboard for user actions). The user has confirmed this is a lower priority.
 
 **Completed work in this session**
--   **Initial Project Setup:** Installed all Node.js and Python dependencies and confirmed that all services (frontend, backend) are running correctly.
--   **State Machine Soft-Enforcement (P0):** Integrated  into  for audit logging.
--   **State Machine Hard-Enforcement (P1):** Replaced magic string statuses with state machine enums and helpers in , , and .
--   **API Status Consistency Fix:** Implemented a non-breaking, additive solution by adding  and  fields to all relevant API responses and webhooks. This involved changes in , , , and .
--   **Bug Fix:** Corrected an issue in the crash recovery webhook that was sending an incorrect payment status.
--   **Full Regression Testing:** Successfully ran all 511+ automated tests in batches to ensure no regressions were introduced.
--   **Formal Verification:** Used the backend testing agent () to formally verify the correctness of the new implementation.
+-   Generated comprehensive Swagger API documentation for 19 new backend endpoints related to Security, Admin, and Real-Time Events.
+-   Verified admin credentials for  and reset the password in the PostgreSQL database upon user request.
+-   Wrote the code to implement a batch of backend tasks:
+    -   Created .
+    -   Hardened  with health check and test methods/endpoints.
+    -   Established an integration test suite with  and , creating the first test for the alerting service.
+    -   Updated  with an  script.
+    -   Updated Swagger docs to include the new alert endpoints.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Pre-existing TypeScript Errors:**
-    -   **Description:** The  command revealed existing type errors in  and .
-    -   **Reason not fixed:** These errors were present before the current session's work began and were deemed out-of-scope to avoid derailing the primary task of implementing the state machine.
-    -   **Should Test frontend/backend/both after fix:** Backend.
+-   None.
 
 **Known issue recurrence from previous fork**
--   None. This job started from a fresh setup.
+-   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend:** TypeScript / Node.js
--   **Database:** MongoDB (for persistent records) and Redis (for ephemeral payment state).
--   **State Management:** A custom-built, finite state machine () now governs the lifecycle of payments.
--   **API Design:** An additive, non-breaking approach was used to enhance API responses, ensuring backward compatibility for existing integrators.
--   **Testing:** The project relies on a comprehensive Jest test suite (~511 tests).
+-   **Backend**: Node.js, TypeScript, Express.js
+-   **Database**: PostgreSQL for admin authentication (), MongoDB for application data (users, sessions, 2FA).
+-   **Authentication**: JWT with role-based access control (RBAC).
+-   **API Documentation**: Swagger/OpenAPI, dynamically served.
+-   **Testing**: Jest and Supertest for backend integration testing.
+-   **Real-Time**: Server-Sent Events (SSE) stub.
 
 **key DB schema**
--   **Redis:** A hash is stored for each payment ID, containing the current  which is managed by the state machine.
--   **MongoDB:**
-    -   : Contains final transaction records. Includes a  field like successful or completed.
-    -   : A nested object within transaction documents detailing the status of an auto-conversion (e.g., , ).
+-   **tbl_admin (PostgreSQL)**: 
+-   **User (MongoDB)**: User profile information, roles, and status (e.g., ).
+-   **User2FA (MongoDB)**: Stores 2FA secret and verification status for users.
+-   **UserSession (MongoDB)**: Tracks active user sessions for security monitoring.
+
+**changes in tech stack**
+-   **Added**:  and  dependencies for creating a backend integration test suite.
+-   **Configuration**: A new  was added to manage the integration test environment separately.
 
 **All files of reference**
--   : The core state machine logic. Was updated to include mappings for auto-conversion statuses.
--   : Where soft-enforcement was added and webhook payloads were updated.
--   : The main controller for payments; was heavily refactored for hard-enforcement and API consistency.
--   : Refactored to remove magic strings from the legacy .
--   : Updated to reflect completed tasks and testing results.
--   : Updated with descriptions of the completed P0 and P1 tasks.
+-   **New Files**:
+    -   : A guide for handling service incidents.
+    -   : Integration test for the alerting service.
+    -   : Jest configuration for the integration test suite.
+    -   , , : New Swagger documentation files.
+-   **Modified Files**:
+    -   : Added  and  methods.
+    -   : Added  and  routes.
+    -   : Updated with new alert endpoints.
+    -   : Updated to include new documentation tags and paths.
+    -   : Added  script.
+
+**Areas that need refactoring**:
+-   None identified.
 
 **key api endpoints**
--   : Endpoint to create a direct crypto payment. (This will be used in the next task).
--   : Retrieves a list of transactions for a merchant.
--   : Retrieves a single transaction.
--   : Verifies the status of a payment.
--   : Endpoint for handling webhooks from Tatum.
+-   **New Endpoints Added & Implemented**:
+    -   : Health check for the alerting service.
+    -   : Triggers a test alert to configured webhooks.
+-   **Admin Credentials**:
+    -   
 
 **Critical Info for New Agent**
--   **The backend is TypeScript/Node.js**, not Python/FastAPI. Ignore any conflicting information in the system prompt.
--   **Respect Backward Compatibility:** All recent changes were additive (adding  while keeping ). Do not introduce breaking changes to API responses or webhook payloads.
--   **Test Suite:** The test suite is large (511+ tests). To avoid Out-Of-Memory errors, run tests in smaller, targeted batches using .
--   **Next Task:** The immediate priority is to execute the user's request to create test payments using the credentials found in .
+-   **The pod crashed and was restarted.** Your immediate priority is to verify the last set of changes (alerting service, integration tests, incident playbook) by checking the service status and running the newly created tests.
+-   The user wants to focus **exclusively on backend tasks**. Do not suggest or start any frontend work.
+-   An integration test suite has been established. Use the command  to run tests. This should be your first action after ensuring the backend is running.
+-   Admin credentials are confirmed:  / .
 
 **documents and test reports created in this job**
--    (updated)
--    (updated)
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **user:** turn on binance ssh proxy... create 0 BTC and ETH each and share address... (PENDING)
-2.  **agent:** (Summary of additive approach recommendation) Shall I proceed with this additive approach?
-3.  **user:** yes
-4.  **agent:** (Recommendation to use additive approach to avoid breaking changes)
-5.  **user:** what do you recommend?
-6.  **agent:** (Explaining breaking vs. non-breaking changes and asking user for a decision)
-7.  **user:** does that mean developer who already implemented our api... need not make any changes?
-8.  **agent:** (Presents plan to fix all status inconsistencies) Shall I proceed to fix all of these?
-9.  **user:** yes implement all
-10. **agent:** (Audit of GET transaction endpoints)
-
-The most recent and pending user request is to turn on a proxy and create test BTC and ETH payments.
+-   **Last User Message**:  followed by a list of backend tasks. **Status: IN PROGRESS**
+-   Previous messages confirmed a password reset, provided credentials for testing, and clarified task priorities (backend-only).
 
 **Project Health Check:**
--   **Broken:** None.
--   **Mocked:** None.
+-   **Broken**: The backend service's state is unknown following a pod crash. It must be verified.
+-   **Mocked**:  is a non-functional stub.  relies on  and  environment variables, which may be unset.
 
 **3rd Party Integrations**
--   **Tatum:** Used for receiving blockchain event webhooks.
+-   **Slack/Discord**: Alerting via webhooks is implemented but depends on environment variables for the webhook URLs.
+-   **Firebase Cloud Messaging (FCM)**: Planned for push notifications, but only a placeholder service exists.
+-   **Jest & Supertest**: Used for the backend integration testing suite.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES
--   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
--   **Known regressions:** None
+-   **Testing agent used after significant changes**: NO (for the most recent changes, as it was interrupted).
+-   **Troubleshoot agent used after agent stuck in loop**: NO.
+-   **Test files created**: 
+-   **Known regressions**: None.
 
 **Credentials to test flow:**
--   Credentials for merchant  (Company ID: 38) are located in .
+-   **Admin User**:
+    -   email: 
+    -   password: 
 
 **What agent forgot to execute**
--   The agent has not yet started the most recent user request to turn on the proxy and create test payments.
--   The agent intentionally did not fix pre-existing TypeScript errors in  and  to stay focused on the primary assigned task.</analysis>
+-   The agent was interrupted by a system crash before it could execute the integration tests it had just created. This is the immediate next step to validate the last batch of work.</analysis>
