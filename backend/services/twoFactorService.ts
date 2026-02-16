@@ -11,9 +11,9 @@ import { userLogger } from "../utils/loggers";
 import QRCode from "qrcode";
 
 const APP_NAME = process.env.APP_NAME || "DynoPay";
-const BACKUP_CODE_COUNT = 10;
-const MAX_2FA_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MINUTES = 15;
+const BACKUP_CODE_COUNT = parseInt(process.env.BACKUP_CODE_COUNT || "10", 10);
+const MAX_2FA_FAILED_ATTEMPTS = parseInt(process.env.MAX_2FA_FAILED_ATTEMPTS || "5", 10);
+const LOCKOUT_DURATION_MINUTES = parseInt(process.env.LOCKOUT_DURATION_MINUTES || "15", 10);
 
 /**
  * Generate backup codes
