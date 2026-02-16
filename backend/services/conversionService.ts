@@ -65,7 +65,7 @@ const markExhaustedAsFailed = async (): Promise<number> => {
  * Only recovers records < 24h old where the error clearly indicates a transient issue.
  */
 const recoverTransientFailures = async (): Promise<number> => {
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
   const [recoveredCount] = await stablecoinConversionModel.update(
     {
       status: "PENDING_DEPOSIT",
@@ -75,7 +75,7 @@ const recoverTransientFailures = async (): Promise<number> => {
     {
       where: {
         status: "FAILED",
-        createdAt: { [Op.gte]: oneDayAgo },
+        createdAt: { [Op.gte]: threeDaysAgo },
         deposit_confirmed_at: null, // Never had a confirmed deposit
         [Op.or]: [
           { error_message: { [Op.like]: "%restricted location%" } },
