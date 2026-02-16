@@ -1,6 +1,8 @@
 import express from "express";
 import { apiLogger } from "../utils/loggers";
 import userRouter from "./userRouter";
+import eventsRouter from "./eventsRouter";
+import analyticsRouter from "./analyticsRouter";
 import companyRouter from "./companyRouter";
 import walletRouter from "./walletRouter";
 import taxRouter from "./taxRouter";
