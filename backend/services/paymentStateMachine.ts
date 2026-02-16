@@ -168,6 +168,29 @@ export function transition(
     (reason ? ` (${reason})` : "")
   );
 
+  // Emit SSE event for real-time payment updates
+  try {
+    const sseService = require("./sseService");
+    if (metadata?.user_id) {
+      sseService.emitPaymentUpdate(metadata.user_id as number, {
+        transaction_id: paymentId,
+        status: toExternalStatus(nextState),
+        payment_status: nextState,
+        amount: metadata?.amount as number | undefined,
+        currency: metadata?.currency as string | undefined,
+      });
+    }
+    // Also broadcast to the 'payments' channel
+    sseService.sendToChannel("payments", "payment_status_change", {
+      transaction_id: paymentId,
+      from: toExternalStatus(currentState),
+      to: toExternalStatus(nextState),
+      timestamp: record.timestamp,
+    });
+  } catch (sseErr) {
+    // SSE is best-effort, never block payment processing
+  }
+
   return record;
 }
 
