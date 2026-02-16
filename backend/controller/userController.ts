@@ -339,6 +339,13 @@ const login = async (req: express.Request, res: express.Response) => {
       return errorResponseHelper(res, 400, "Email and password are required");
     }
     
+    // ── Account Lockout Check ──────────────────────────────────────────────────
+    const lockoutStatus = await isAccountLocked(email);
+    if (lockoutStatus.locked) {
+      const minutes = Math.ceil(lockoutStatus.remaining_seconds / 60);
+      return errorResponseHelper(res, 429, `Account temporarily locked due to too many failed attempts. Try again in ${minutes} minutes.`);
+    }
+    
     const newPassword_unused = null; // Legacy sha256 removed — bcrypt used via verifyPassword
     
     // Step 1: Find user by email only (bcrypt hashes can't be queried directly)
@@ -354,14 +361,16 @@ const login = async (req: express.Request, res: express.Response) => {
       : false;
     
     if (!userData || !isPasswordValid) {
-      // Track failed login attempt
+      // ── Record failed attempt & check lockout ─────────────────────────────
       const rawIp = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
-      const ipAddress = rawIp.split(',')[0].trim().substring(0, 45); // Get first IP and limit length
-      const cacheKey = `failed_logins:${email.toLowerCase()}`;
+      const ipAddress = rawIp.split(',')[0].trim().substring(0, 45);
       
+      const lockoutResult = await recordFailedAttempt(email, ipAddress);
+      
+      // Send alert email after 3 failed attempts (existing behavior)
       try {
+        const cacheKey = `failed_logins:${email.toLowerCase()}`;
         const failedAttempts = await getRedisItem(cacheKey);
-        // Handle Redis returning object, string, number, or null
         let attemptCount = 1;
         if (failedAttempts !== null && failedAttempts !== undefined) {
           if (typeof failedAttempts === 'number') {
@@ -370,7 +379,6 @@ const login = async (req: express.Request, res: express.Response) => {
             const parsed = parseInt(failedAttempts, 10);
             attemptCount = isNaN(parsed) ? 1 : parsed + 1;
           } else if (typeof failedAttempts === 'object') {
-            // Handle object case - might be {value: number} or similar
             const val = (failedAttempts as Record<string, unknown>).value || (failedAttempts as Record<string, unknown>).count;
             if (typeof val === 'number') {
               attemptCount = val + 1;
@@ -381,9 +389,8 @@ const login = async (req: express.Request, res: express.Response) => {
           }
         }
         await setRedisItem(cacheKey, attemptCount);
-        await setRedisTTL(cacheKey, 3600); // 1 hour expiry
+        await setRedisTTL(cacheKey, 3600);
         
-        // Send alert after 3 failed attempts
         if (attemptCount >= 3) {
           const existingUser = await userModel.findOne({ where: { email: email.toLowerCase() } });
           if (existingUser) {
@@ -406,36 +413,55 @@ const login = async (req: express.Request, res: express.Response) => {
         userLogger.error("[Login] Redis error tracking failed attempts:", redisError);
       }
       
+      // Return lockout warning if close to limit
+      if (lockoutResult.locked) {
+        return errorResponseHelper(res, 429, `Account locked for ${lockoutResult.lockout_minutes} minutes after ${lockoutResult.attempts} failed attempts.`);
+      }
+      
+      const remainingAttempts = lockoutResult.max_attempts - lockoutResult.attempts;
+      if (remainingAttempts <= 2 && remainingAttempts > 0) {
+        return errorResponseHelper(res, 401, `Invalid email or password. ${remainingAttempts} attempt(s) remaining before account lockout.`);
+      }
+      
       return errorResponseHelper(res, 401, "Invalid email or password");
     } else {
-      // Clear failed login attempts on successful login
+      // ── Successful Login ──────────────────────────────────────────────────
+      // Clear lockout and failed attempts
+      await clearFailedAttempts(email);
       const cacheKey = `failed_logins:${email.toLowerCase()}`;
       await deleteRedisItem(cacheKey);
       
+      // Check if 2FA is required
+      const needs2FA = await is2FARequired(userData.dataValues.user_id);
+      if (needs2FA) {
+        // Return partial response — client must complete 2FA
+        return successResponseHelper(res, 200, "2FA verification required", {
+          requires_2fa: true,
+          user_id: userData.dataValues.user_id,
+          message: "Please provide your 2FA code to complete login.",
+        });
+      }
+      
       // Check for new device/IP login
       const rawIp = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
-      const ipAddress = rawIp.split(',')[0].trim().substring(0, 45); // Get first IP and limit length
+      const ipAddress = rawIp.split(',')[0].trim().substring(0, 45);
       const userAgent = req.headers['user-agent'] || 'Unknown';
       const lastLoginIp = userData.dataValues.last_login_ip;
       
       userLogger.info(`[Login] User ${email} - Current IP: ${ipAddress}, Last IP: ${lastLoginIp || 'none'}`);
       
       // Send new device alert if IP changed (and not first login)
-      // Use Redis to prevent duplicate alerts within 5 minutes
       const alertCacheKey = `new_device_alert:${userData.dataValues.user_id}:${ipAddress}`;
       const alertCacheValue = await getRedisItem(alertCacheKey);
-      // Check if alert was already sent - getRedisItem returns {} for cache miss
       const alertAlreadySent = alertCacheValue && Object.keys(alertCacheValue).length > 0;
       
       userLogger.info(`[Login] Alert check - lastLoginIp: ${!!lastLoginIp}, ipChanged: ${lastLoginIp !== ipAddress}, alertAlreadySent: ${alertAlreadySent}`);
       
       if (lastLoginIp && lastLoginIp !== ipAddress && !alertAlreadySent) {
         try {
-          // Mark alert as sent immediately to prevent duplicates
           await setRedisItem(alertCacheKey, 'sent');
-          await setRedisTTL(alertCacheKey, 300); // 5 minute cooldown
+          await setRedisTTL(alertCacheKey, 300);
           
-          // Get location from IP using free geolocation API
           let location: string | null = null;
           try {
             const axios = (await import("axios")).default;
@@ -473,7 +499,20 @@ const login = async (req: express.Request, res: express.Response) => {
         { where: { user_id: userData.dataValues.user_id } }
       );
       
-      const resData = await getAccessToken(userData.dataValues.user_id);
+      // ── Create Session with Refresh Token ──────────────────────────────────
+      const sessionData = await createSession(userData.dataValues, req as any);
+      
+      // Build response (backward compatible + new fields)
+      const { password: _pw, telegram_id: _tid, ...userDataClean } = userData.dataValues;
+      const resData = {
+        userData: userDataClean,
+        accessToken: sessionData.accessToken,
+        refreshToken: sessionData.refreshToken,
+        expiresIn: sessionData.expiresIn,
+        session_id: sessionData.session_id,
+        token_type: "Bearer",
+      };
+      
       successResponseHelper(res, 200, "Login Successful!", resData);
     }
   } catch (e) {
