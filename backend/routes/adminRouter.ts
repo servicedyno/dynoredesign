@@ -80,6 +80,23 @@ adminRouter.get(
   adminController.getTransactionFee
 );
 
+// ── User Management ──────────────────────────────────────────────────────────
+adminRouter.get(
+  "/users/:userId",
+  adminAuthMiddleware,
+  adminController.getUserDetail
+);
+adminRouter.put(
+  "/users/:userId/ban",
+  adminAuthMiddleware,
+  adminController.banUser
+);
+adminRouter.post(
+  "/users/unlock",
+  adminAuthMiddleware,
+  adminController.unlockUser
+);
+
 // adminRouter.get(
 //   "/getBlockchainFeeConfigs",
 //   adminAuthMiddleware,
