@@ -561,8 +561,8 @@ export const processStablecoinConversions = async (): Promise<{
       } else {
         log(`⚠️ Proxy still unavailable. Skipping conversion/withdrawal phases — will retry next cycle.`);
 
-        // Still mark exhausted records to prevent infinite loops
-        await markExhaustedAsFailed();
+        // Do NOT mark exhausted records as failed when Binance is unreachable —
+        // they may succeed once connectivity is restored
 
         // Attempt deposit check as a connectivity probe
         let depositsChecked = 0;
