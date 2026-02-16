@@ -32,6 +32,7 @@ import {
   userModel,
   userTransactionModel,
 } from "../models/userModels";
+import { adminUnlockAccount } from "../services/accountLockoutService";
 
 const getTransactionFee = async (
   _req: express.Request,
