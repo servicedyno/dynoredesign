@@ -66,6 +66,19 @@ const markExhaustedAsFailed = async (): Promise<number> => {
  */
 const recoverTransientFailures = async (): Promise<number> => {
   const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+
+  // Debug: count how many FAILED records exist in the recovery window
+  const failedCount = await stablecoinConversionModel.count({
+    where: {
+      status: "FAILED",
+      createdAt: { [Op.gte]: threeDaysAgo },
+      deposit_confirmed_at: null,
+    },
+  });
+  if (failedCount > 0) {
+    log(`[Recovery] Found ${failedCount} FAILED records in last 72h with no deposit — checking for transient errors`);
+  }
+
   const [recoveredCount] = await stablecoinConversionModel.update(
     {
       status: "PENDING_DEPOSIT",
@@ -76,7 +89,7 @@ const recoverTransientFailures = async (): Promise<number> => {
       where: {
         status: "FAILED",
         createdAt: { [Op.gte]: threeDaysAgo },
-        deposit_confirmed_at: null, // Never had a confirmed deposit
+        deposit_confirmed_at: null,
         [Op.or]: [
           { error_message: { [Op.like]: "%restricted location%" } },
           { error_message: { [Op.like]: "%ECONNREFUSED%" } },
@@ -91,6 +104,8 @@ const recoverTransientFailures = async (): Promise<number> => {
   );
   if (recoveredCount > 0) {
     log(`🔄 Recovered ${recoveredCount} FAILED records (transient errors) — retrying deposit check`);
+  } else if (failedCount > 0) {
+    log(`[Recovery] ${failedCount} FAILED records found but none matched transient error patterns`);
   }
   return recoveredCount;
 };
