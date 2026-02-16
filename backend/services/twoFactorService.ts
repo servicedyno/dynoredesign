@@ -65,7 +65,7 @@ export const setup2FA = async (
   const otpauth = generateURI({
     secret,
     issuer: APP_NAME,
-    account: email,
+    label: email,
     strategy: "totp",
   });
 
