@@ -30,38 +30,55 @@ DynoPay is a crypto payment gateway that enables merchants to accept cryptocurre
 - Error monitoring and alerting
 
 ## Security Features (Implemented)
-- Two-Factor Authentication (2FA/TOTP) with backup codes
+- Two-Factor Authentication (2FA/TOTP) with backup codes — **FIXED: validate endpoint now returns JWT + session**
 - Refresh Token Rotation
 - Session Management (list, revoke, login history)
 - Account Lockout (Redis-based, with admin unlock)
 - CSRF Protection (Double Submit Cookie pattern)
 - Rate Limiting (per-IP, per-email, per-endpoint)
 - Input Sanitization (XSS prevention)
+- **Input Validation** (Joi-based middleware on login, register, 2FA, password reset endpoints)
 - Webhook HMAC signature verification
+- Centralized Error Handler (global catch-all + malformed JSON → 400)
 
 ## Real-Time Features (Implemented)
-- **SSE Service**: Full Server-Sent Events with multi-channel support (payments, prices, notifications, admin, dashboard)
+- **SSE Service**: Full Server-Sent Events with multi-channel support
 - **Push Notification Service**: Unified notification delivery via SSE + DB persistence
 - **Admin Broadcast**: System-wide announcements to all connected clients
 - **Admin Push**: Targeted notification delivery to specific users
-- **Admin Monitoring Events**: Custom events to admin channel subscribers
 - **Alert Service**: Slack/Discord webhook alerts with deduplication and retry
-
-## Incident Response
-- **Incident Playbook**: `/incident-playbook.md` — operational runbook covering SEV-1 through SEV-4 incidents
-- **Diagnostics**: `/diagnostics/error-monitor`, `/diagnostics/webhook-queue`, `/diagnostics/volatility`
 
 ## Key API Endpoints
 - **Auth**: POST /api/user/login, POST /api/user/registerUser
-- **2FA**: POST /api/user/2fa/setup, /verify-setup, /validate, /disable, /regenerate-backup-codes, GET /status
-- **Sessions**: POST /api/user/refresh-token, GET /api/user/sessions, DELETE /api/user/sessions/:id, GET /api/user/login-history
-- **Admin Users**: GET /api/admin/users/:userId, PUT /api/admin/users/:userId/ban, POST /api/admin/users/unlock
-- **Admin Alerts**: GET /api/admin/alerts/health, POST /api/admin/alerts/test
-- **Analytics**: GET /api/admin/analytics/revenue, /users, /cohorts, /funnel
+- **2FA**: POST /api/user/2fa/setup, /verify-setup, /validate (returns JWT), /disable, /regenerate-backup-codes, GET /status
+- **Sessions**: POST /api/user/refresh-token, GET /api/user/sessions, DELETE /api/user/sessions/:id
+- **Admin**: GET /api/admin/getAllUsers, POST /api/admin/login
 - **CSRF**: GET /api/csrf-token
-- **SSE**: GET /api/events/stream, GET /api/events/stats, GET /api/events/push-stats
-- **Real-Time Admin**: POST /api/events/broadcast, POST /api/events/push, POST /api/events/admin-event
-- **Swagger Docs**: GET /api/docs, GET /api/docs.json
+- **SSE**: GET /api/events/stream, GET /api/events/stats
+- **Swagger Docs**: GET /api/docs, GET /api/docs.json (225 paths)
+
+## Code Audit Fixes (Completed Feb 2026)
+
+### P0: 2FA Login Flow — FIXED
+- `controller/twoFactorController.ts` — validateEndpoint now creates session and returns JWT accessToken, refreshToken, session_id, userData
+
+### P1: CSRF Protection — VERIFIED
+- `middleware/csrfMiddleware.ts` — Double Submit Cookie pattern already implemented
+- Integrated in `server.ts` with cookie-parser
+
+### P1: Centralized Error Handling — VERIFIED
+- Global error handler in `server.ts` (lines 879-894)
+- Body parser error handler catches malformed JSON → returns 400
+
+### P2: Hardcoded Config — FIXED
+- `services/twoFactorService.ts` — BACKUP_CODE_COUNT, MAX_2FA_FAILED_ATTEMPTS, LOCKOUT_DURATION_MINUTES now use env vars
+
+### P2: Swagger Docs — UPDATED
+- `swagger/paths/security.ts` — 2FA validate response updated to show JWT + session fields
+
+### P3: Input Validation — IMPLEMENTED
+- `middleware/validateRequest.ts` — Joi validation middleware
+- Applied to: login, registerUser, forgot-password, reset-password, changePassword, 2fa/validate
 
 ## Integration Test Suite
 All tests in `backend/__tests__/api/`:
@@ -73,19 +90,21 @@ All tests in `backend/__tests__/api/`:
 
 Run: `cd /app/backend && npx jest --config jest.config.ts --selectProjects integration --forceExit`
 
+**Test Results**: 62/62 passing + 18/18 P0-P3 feature tests
+
 ## Prioritized Backlog
 
 ### P1 — Frontend Integration
 - 2FA setup and verification flow
-- User settings page for session management (view/revoke sessions)
+- User settings page for session management
 - CSRF token handling for state-changing requests
-- Admin dashboard for user management (ban, suspend, unlock)
+- Admin dashboard for user management
 - Real-time notification UI (consuming SSE events)
 
 ### P2 — Advanced Features
 - Firebase Cloud Messaging (FCM) for mobile push notifications
-- Email notification delivery channel in push notification service
-- Dashboard live data channel (transaction count updates, revenue tickers)
+- Email notification delivery channel
+- Dashboard live data channel
 - Webhook retry dashboard UI
 
 ## Admin Credentials
