@@ -163,16 +163,109 @@ export const alertSecurityEvent = async (event: string, details: Record<string, 
   });
 };
 
+// ── Rate Limiting & Deduplication ────────────────────────────────────────────
+const alertHistory = new Map<string, { count: number; firstSeen: number; lastSent: number }>();
+const DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_ALERTS_PER_WINDOW = 3; // max identical alerts per window
+
+/**
+ * Generate a dedup key from alert payload
+ */
+const dedupKey = (payload: AlertPayload): string =>
+  `${payload.severity}:${payload.title}:${payload.message}`.substring(0, 200);
+
+/**
+ * Check if alert should be suppressed (dedup + rate limit)
+ */
+const shouldSuppress = (payload: AlertPayload): boolean => {
+  const key = dedupKey(payload);
+  const now = Date.now();
+  const entry = alertHistory.get(key);
+
+  if (!entry || now - entry.firstSeen > DEDUP_WINDOW_MS) {
+    alertHistory.set(key, { count: 1, firstSeen: now, lastSent: now });
+    return false;
+  }
+
+  entry.count++;
+  if (entry.count <= MAX_ALERTS_PER_WINDOW) {
+    entry.lastSent = now;
+    return false;
+  }
+
+  return true; // suppress
+};
+
+/**
+ * Periodically clean stale dedup entries (every 10 min)
+ */
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of alertHistory) {
+    if (now - entry.firstSeen > DEDUP_WINDOW_MS * 2) {
+      alertHistory.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
+
+/**
+ * Send alert with retry (exponential backoff, max 2 retries)
+ */
+const sendWithRetry = async (
+  fn: (payload: AlertPayload) => Promise<boolean>,
+  payload: AlertPayload,
+  retries = 2
+): Promise<boolean> => {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const result = await fn(payload);
+    if (result) return true;
+    if (attempt < retries) {
+      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+    }
+  }
+  return false;
+};
+
+/**
+ * Send alert to all configured channels (with dedup + retry)
+ */
+export const sendAlertSafe = async (payload: AlertPayload): Promise<{ slack: boolean; discord: boolean; suppressed: boolean }> => {
+  if (shouldSuppress(payload)) {
+    apiLogger.warn(`[Alert] Suppressed duplicate: ${payload.title}`);
+    return { slack: false, discord: false, suppressed: true };
+  }
+
+  const [slack, discord] = await Promise.all([
+    sendWithRetry(sendSlackAlert, payload),
+    sendWithRetry(sendDiscordAlert, payload),
+  ]);
+  return { slack, discord, suppressed: false };
+};
+
 export const isConfigured = (): { slack: boolean; discord: boolean } => ({
   slack: !!SLACK_WEBHOOK_URL,
   discord: !!DISCORD_WEBHOOK_URL,
 });
 
+/**
+ * Get alert service health status
+ */
+export const getHealth = () => ({
+  configured: isConfigured(),
+  environment: APP_ENV,
+  dedup_window_seconds: DEDUP_WINDOW_MS / 1000,
+  max_alerts_per_window: MAX_ALERTS_PER_WINDOW,
+  active_dedup_entries: alertHistory.size,
+  channel: ALERT_CHANNEL,
+});
+
 export default {
   sendAlert,
+  sendAlertSafe,
   alertPaymentFailure,
   alertServiceDown,
   alertHighErrorRate,
   alertSecurityEvent,
   isConfigured,
+  getHealth,
 };
