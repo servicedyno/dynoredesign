@@ -22,6 +22,9 @@ import { webhookPaths } from "./paths/webhooks";
 import { dashboardPaths } from "./paths/dashboard";
 import { invoicePaths } from "./paths/invoice";
 import { statusPaths } from "./paths/status";
+import { securityPaths } from "./paths/security";
+import { analyticsPaths } from "./paths/analytics";
+import { eventsPaths } from "./paths/events";
 
 // Merge all paths
 const allPaths = {
@@ -43,6 +46,9 @@ const allPaths = {
   ...dashboardPaths,
   ...invoicePaths,
   ...statusPaths,
+  ...securityPaths,
+  ...analyticsPaths,
+  ...eventsPaths,
 };
 
 const options: swaggerJsdoc.Options = {
