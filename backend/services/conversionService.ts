@@ -59,6 +59,42 @@ const markExhaustedAsFailed = async (): Promise<number> => {
   return affectedCount;
 };
 
+/**
+ * Recover FAILED records that were caused by transient Binance API errors
+ * (geo-block, network timeout, etc.) rather than genuine deposit failures.
+ * Only recovers records < 24h old where the error clearly indicates a transient issue.
+ */
+const recoverTransientFailures = async (): Promise<number> => {
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [recoveredCount] = await stablecoinConversionModel.update(
+    {
+      status: "PENDING_DEPOSIT",
+      retry_count: 0,
+      error_message: null,
+    },
+    {
+      where: {
+        status: "FAILED",
+        createdAt: { [Op.gte]: oneDayAgo },
+        deposit_confirmed_at: null, // Never had a confirmed deposit
+        [Op.or]: [
+          { error_message: { [Op.like]: "%restricted location%" } },
+          { error_message: { [Op.like]: "%ECONNREFUSED%" } },
+          { error_message: { [Op.like]: "%ETIMEDOUT%" } },
+          { error_message: { [Op.like]: "%Service unavailable%" } },
+          { error_message: { [Op.like]: "%socket hang up%" } },
+          { error_message: { [Op.like]: "%SOCKS%" } },
+          { error_message: { [Op.like]: "%Exceeded maximum retries%" } },
+        ],
+      },
+    }
+  );
+  if (recoveredCount > 0) {
+    log(`🔄 Recovered ${recoveredCount} FAILED records (transient errors) — retrying deposit check`);
+  }
+  return recoveredCount;
+};
+
 const processPendingDeposits = async (): Promise<number> => {
   const pending = await stablecoinConversionModel.findAll({
     where: {
