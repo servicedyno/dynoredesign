@@ -26,6 +26,9 @@ import axios from "axios";
 // tatumApi import removed - not used in this controller
 import { userLogger } from "../utils/loggers";
 import { getRedisItem, setRedisItem, setRedisTTL, deleteRedisItem } from "../utils/redisInstance";
+import { isAccountLocked, recordFailedAttempt, clearFailedAttempts } from "../services/accountLockoutService";
+import { createSession } from "../services/sessionService";
+import { is2FARequired } from "../services/twoFactorService";
 
 // Cache TTL for profile data (60 seconds)
 const PROFILE_CACHE_TTL = 60;
