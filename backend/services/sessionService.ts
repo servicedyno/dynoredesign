@@ -268,7 +268,7 @@ export const getLoginHistory = async (userId: number, limit: number = 20): Promi
     limit,
     attributes: ["history_id", "ip_address", "device_type", "browser", "os", "location", "login_method", "status", "login_at"],
   });
-  return history.map((h) => h.dataValues as Record<string, unknown>);
+  return history.map((h) => h.dataValues as unknown as Record<string, unknown>);
 };
 
 /**
