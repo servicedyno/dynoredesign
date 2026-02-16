@@ -506,11 +506,35 @@ const syncToRedis = async () => {
 // ============================================
 
 /**
+ * Force-reconnect the WebSocket (used when proxy state changes).
+ */
+export const reconnectBinanceWebSocket = () => {
+  log("Proxy state changed — forcing WebSocket reconnect with new proxy settings...");
+  if (ws) {
+    ws.removeAllListeners();
+    ws.close();
+    ws = null;
+  }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  isConnecting = false;
+  reconnectAttempts = 0;
+  geoBlocked = false;
+  connect();
+};
+
+/**
  * Start the Binance WebSocket price stream.
  * Should be called once during server startup.
  */
 export const startBinanceWebSocket = () => {
   log("Starting Binance WebSocket price stream...");
+
+  // Register callback so proxy state changes (tunnel up/down) trigger WS reconnect
+  setProxyStateChangeCallback(reconnectBinanceWebSocket);
+
   connect();
 
   // Sync to Redis every 10 seconds
