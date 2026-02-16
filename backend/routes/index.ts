@@ -119,6 +119,8 @@ router.use("/subscriptions", subscriptionRouter); // Subscription management
 router.use("/test", testRouter); // Test endpoints for development
 router.use("/referral", referralRouter); // Referral system endpoints
 router.use("/kb", knowledgeBaseRouter); // Knowledge Base endpoints
+router.use("/events", eventsRouter); // SSE real-time events
+router.use("/admin/analytics", analyticsRouter); // Admin analytics (revenue, cohorts, funnels)
 router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
 router.post("/webhook", strictRateLimiter, flutterwaveWebHook);
