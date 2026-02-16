@@ -57,6 +57,7 @@ userRouter.put(
 userRouter.put(
   "/changePassword",
   authMiddleware,
+  validate(changePasswordSchema),
   userMiddleware,
   userController.changePassword
 );
