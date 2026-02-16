@@ -80,21 +80,22 @@ const markExhaustedAsFailed = async (): Promise<number> => {
 /**
  * Recover FAILED records that were caused by transient Binance API errors
  * (geo-block, network timeout, etc.) rather than genuine deposit failures.
- * Only recovers records < 24h old where the error clearly indicates a transient issue.
+ * Only recovers records < 6h old where the error clearly indicates a transient issue.
+ * Does NOT recover age-expired or retry-exhausted records — those are terminal.
  */
 const recoverTransientFailures = async (): Promise<number> => {
-  const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+  const recoverWindow = new Date(Date.now() - 6 * 60 * 60 * 1000); // 6h window
 
   // Debug: count how many FAILED records exist in the recovery window
   const failedCount = await stablecoinConversionModel.count({
     where: {
       status: "FAILED",
-      createdAt: { [Op.gte]: threeDaysAgo },
+      createdAt: { [Op.gte]: recoverWindow },
       deposit_confirmed_at: null,
     },
   });
   if (failedCount > 0) {
-    log(`[Recovery] Found ${failedCount} FAILED records in last 72h with no deposit — checking for transient errors`);
+    log(`[Recovery] Found ${failedCount} FAILED records in last 6h with no deposit — checking for transient errors`);
   }
 
   const [recoveredCount] = await stablecoinConversionModel.update(
@@ -106,8 +107,15 @@ const recoverTransientFailures = async (): Promise<number> => {
     {
       where: {
         status: "FAILED",
-        createdAt: { [Op.gte]: threeDaysAgo },
+        createdAt: { [Op.gte]: recoverWindow },
         deposit_confirmed_at: null,
+        // Only recover transient API errors — NOT retry-exhausted or age-expired
+        error_message: {
+          [Op.and]: [
+            { [Op.notLike]: "%Exceeded maximum retries%" },
+            { [Op.notLike]: "%no further retries%" },
+          ],
+        },
         [Op.or]: [
           { error_message: { [Op.like]: "%restricted location%" } },
           { error_message: { [Op.like]: "%ECONNREFUSED%" } },
@@ -115,7 +123,6 @@ const recoverTransientFailures = async (): Promise<number> => {
           { error_message: { [Op.like]: "%Service unavailable%" } },
           { error_message: { [Op.like]: "%socket hang up%" } },
           { error_message: { [Op.like]: "%SOCKS%" } },
-          { error_message: { [Op.like]: "%Exceeded maximum retries%" } },
         ],
       },
     }
