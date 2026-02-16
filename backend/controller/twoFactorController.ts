@@ -77,7 +77,8 @@ const verifySetupEndpoint = async (req: express.Request, res: express.Response) 
 /**
  * POST /api/user/2fa/validate
  * Body: { user_id: number, token: "123456" }
- * Used during login when 2FA is required
+ * Used during login when 2FA is required.
+ * On success, creates a session and returns JWT + refresh token (same as login).
  */
 const validateEndpoint = async (req: express.Request, res: express.Response) => {
   try {
@@ -93,9 +94,26 @@ const validateEndpoint = async (req: express.Request, res: express.Response) => 
       return errorResponseHelper(res, 401, "Invalid 2FA code. Please try again.");
     }
 
-    successResponseHelper(res, 200, "2FA verification successful", {
+    // Fetch user to create a full session (same as login flow)
+    const user = await userModel.findOne({ where: { user_id } });
+    if (!user) {
+      return errorResponseHelper(res, 404, "User not found");
+    }
+
+    // Create session with JWT + refresh token
+    const sessionData = await createSession(user.dataValues, req as any);
+
+    const { password: _pw, telegram_id: _tid, ...userDataClean } = user.dataValues;
+
+    successResponseHelper(res, 200, "2FA verification successful. Login complete.", {
       valid: true,
       method: result.method,
+      userData: userDataClean,
+      accessToken: sessionData.accessToken,
+      refreshToken: sessionData.refreshToken,
+      expiresIn: sessionData.expiresIn,
+      session_id: sessionData.session_id,
+      token_type: "Bearer",
     });
   } catch (e) {
     if ((e as Error).message.includes("locked")) {
