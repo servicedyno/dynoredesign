@@ -187,7 +187,7 @@ export const rotateRefreshToken = async (
 
   // Update session with new tokens
   await session.update({
-    session_token: newAccessToken.substring(newAccessToken.length - 32),
+    session_token: String(newAccessToken).substring(String(newAccessToken).length - 32),
     refresh_token: hashedNewRefreshToken,
     last_activity: new Date(),
   });
