@@ -102,7 +102,7 @@ export const createSession = async (
   // Create session record
   const session = await UserSession.create({
     user_id: user.user_id,
-    session_token: accessToken.substring(accessToken.length - 32), // Store last 32 chars as fingerprint
+    session_token: String(accessToken).substring(String(accessToken).length - 32), // Store last 32 chars as fingerprint
     refresh_token: crypto.createHash("sha256").update(refreshToken).digest("hex"), // Store hashed
     ip_address: ipAddress,
     user_agent: userAgent,
