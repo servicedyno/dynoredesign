@@ -719,5 +719,89 @@ export const adminPaths = {
         500: { description: 'Failed to unlock account' }
       }
     }
+  },
+
+  // ── Alert Service ─────────────────────────────────────────────────────────
+  '/api/admin/alerts/health': {
+    get: {
+      tags: ['Admin'],
+      summary: 'Alert service health',
+      description: `Check the configuration and health of the alerting service (Slack/Discord webhooks).
+
+Returns whether each channel is configured, deduplication settings, and active state.`,
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'Alert health status',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Alert service health' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      configured: {
+                        type: 'object',
+                        properties: {
+                          slack: { type: 'boolean', example: false },
+                          discord: { type: 'boolean', example: false }
+                        }
+                      },
+                      environment: { type: 'string', example: 'production' },
+                      dedup_window_seconds: { type: 'integer', example: 300 },
+                      max_alerts_per_window: { type: 'integer', example: 3 },
+                      active_dedup_entries: { type: 'integer', example: 0 },
+                      channel: { type: 'string', example: '#dynopay-alerts' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Admin authentication required' }
+      }
+    }
+  },
+  '/api/admin/alerts/test': {
+    post: {
+      tags: ['Admin'],
+      summary: 'Send test alert',
+      description: 'Send a test alert to all configured channels (Slack/Discord) to verify webhook integration.',
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'Test alert sent',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Test alert sent' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      delivered: {
+                        type: 'object',
+                        properties: {
+                          slack: { type: 'boolean', example: true },
+                          discord: { type: 'boolean', example: false }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Admin authentication required' },
+        500: { description: 'Failed to send test alert' }
+      }
+    }
   }
 };
