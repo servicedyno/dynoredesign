@@ -570,6 +570,7 @@ export const stopBinanceWebSocket = () => {
 export default {
   startBinanceWebSocket,
   stopBinanceWebSocket,
+  reconnectBinanceWebSocket,
   getPrice,
   getAllPrices,
   getTickerData,
