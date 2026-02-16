@@ -175,6 +175,7 @@ setupSwagger(app);
 // API Versioning: Mount routes at both /api (backward compat) and /api/v1 (versioned)
 // Existing merchants keep using /api/... — no code changes needed
 // New integrations can use /api/v1/... for explicit versioning
+app.get("/api/csrf-token", generateCsrfToken); // CSRF token endpoint
 app.use("/api", router);
 app.use("/api/v1", router);
 
