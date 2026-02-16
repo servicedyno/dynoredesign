@@ -210,7 +210,7 @@ export const getUserSessions = async (userId: number): Promise<Record<string, un
     attributes: ["session_id", "ip_address", "device_type", "device_name", "browser", "os", "location", "last_activity", "created_at"],
     order: [["last_activity", "DESC"]],
   });
-  return sessions.map((s) => s.dataValues as Record<string, unknown>);
+  return sessions.map((s) => s.dataValues as unknown as Record<string, unknown>);
 };
 
 /**
