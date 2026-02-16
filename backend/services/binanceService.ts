@@ -73,6 +73,14 @@ export const getProxyState = (): { proxyNeeded: boolean | null; proxyDetectionFa
   return { proxyNeeded, proxyDetectionFailed, proxyUrl: BINANCE_PROXY_URL, proxyAvailable: !!proxyAgent };
 };
 
+/** Callback invoked when proxy state changes (e.g., tunnel comes up) so WS can reconnect */
+let onProxyStateChange: (() => void) | null = null;
+
+/** Register a callback for proxy state changes (used by WebSocket service) */
+export const setProxyStateChangeCallback = (cb: () => void): void => {
+  onProxyStateChange = cb;
+};
+
 /**
  * Auto-detect whether Binance API is directly accessible from this server.
  * Re-detects if the previous detection failed (e.g., proxy tunnel was down at startup).
@@ -82,6 +90,7 @@ export const detectBinanceAccess = async (): Promise<void> => {
   // Skip if already successfully detected (direct access or proxy working)
   if (proxyNeeded !== null && !proxyDetectionFailed) return;
 
+  const previousProxyNeeded = proxyNeeded;
   const directUrl = `${BINANCE_BASE_URL}/api/v3/ping`;
   try {
     // Test direct access (no proxy) with a short timeout
@@ -126,6 +135,12 @@ export const detectBinanceAccess = async (): Promise<void> => {
       proxyDetectionFailed = true; // Allow retry
       cronLogger.warn(`[Binance] ⚠️ Direct ping failed (${axiosErr.message}), defaulting to no proxy. Will retry detection on next cycle.`);
     }
+  }
+
+  // If proxy state changed (e.g., tunnel came up after initial failure), reconnect WS
+  if (proxyNeeded !== previousProxyNeeded && proxyNeeded !== null && onProxyStateChange) {
+    cronLogger.info(`[Binance] Proxy state changed (${previousProxyNeeded} → ${proxyNeeded}). Triggering WebSocket reconnect.`);
+    onProxyStateChange();
   }
 };
 
