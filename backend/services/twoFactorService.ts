@@ -41,7 +41,8 @@ const hashBackupCodes = (codes: string[]): string[] => {
  */
 const verifyTOTP = (token: string, secret: string): boolean => {
   try {
-    return verifySync({ token, secret, strategy: "totp", window: 1 });
+    const result = verifySync({ token, secret, strategy: "totp", epochTolerance: 30 });
+    return result?.valid === true;
   } catch {
     return false;
   }
