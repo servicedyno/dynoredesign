@@ -1181,6 +1181,8 @@ function verifyWebhookSignature(payload, signature, secret) {
       { name: "Status", description: "System health and infrastructure monitoring" },
       { name: "Knowledge Base", description: "Help articles and documentation" },
       { name: "Admin", description: "Platform administration (super-admin only)" },
+      { name: "Security", description: "Two-Factor Authentication (2FA), session management, CSRF tokens, and account lockout" },
+      { name: "Real-Time Events", description: "Server-Sent Events (SSE) for live payment, price, and notification updates" },
       
       // === REFERRALS ===
       { name: "Referral - User Code", description: "User referral codes (DYNO format)" },
