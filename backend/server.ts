@@ -829,15 +829,18 @@ const startServer = async () => {
     // Must start BEFORE detectBinanceAccess so the tunnel is available for probe
     startTunnelManager();
 
-    // Detect Binance access mode (direct vs proxy) BEFORE starting WebSocket
-    // Non-US deployments get direct access (no proxy overhead)
-    detectBinanceAccess().then(() => {
-      // Start Binance WebSocket price stream (replaces REST polling for live prices)
-      startBinanceWebSocket();
-    }).catch(err => {
-      log(`Binance access detection failed: ${err.message}, starting WebSocket anyway`, "error");
-      startBinanceWebSocket();
-    });
+    // Wait for SSH tunnel to come up (takes ~3-5s) before probing Binance access.
+    // This prevents the race condition where proxy detection fails because the
+    // tunnel isn't ready yet, causing the WebSocket to start without proxy.
+    const tunnelWaitMs = process.env.SSH_TUNNEL_HOST ? 6000 : 0;
+    setTimeout(() => {
+      detectBinanceAccess().then(() => {
+        startBinanceWebSocket();
+      }).catch(err => {
+        log(`Binance access detection failed: ${err.message}, starting WebSocket anyway`, "error");
+        startBinanceWebSocket();
+      });
+    }, tunnelWaitMs);
 
     // Start volatility monitor (now reads from WebSocket cache — zero REST calls)
     startVolatilityMonitor();
