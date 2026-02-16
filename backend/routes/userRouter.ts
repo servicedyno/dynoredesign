@@ -31,8 +31,8 @@ userRouter.post("/confirmOTP", otpRateLimiter, userController.confirmOTP);
 userRouter.post("/connectSocial", moderateRateLimiter, userController.connectSocial);
 
 // Password reset endpoints - strict rate limiting (5 per 15 min per IP) to prevent abuse
-userRouter.post("/forgot-password", strictRateLimiter, userController.forgotPassword);
-userRouter.post("/reset-password", strictRateLimiter, userController.resetPassword);
+userRouter.post("/forgot-password", strictRateLimiter, validate(forgotPasswordSchema), userController.forgotPassword);
+userRouter.post("/reset-password", strictRateLimiter, validate(resetPasswordSchema), userController.resetPassword);
 
 // Social Sign-In endpoints - moderate rate limiting (10 per 15 min per IP)
 userRouter.post("/google-signin", moderateRateLimiter, userController.googleSignIn);
