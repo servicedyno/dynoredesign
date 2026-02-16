@@ -24,6 +24,7 @@ import {
 import { verifyPassword } from "../helper/passwordHelper";
 import { userModel } from "../models";
 import { IUserType } from "../utils/types";
+import { createSession } from "../services/sessionService";
 
 /**
  * POST /api/user/2fa/setup
