@@ -7,17 +7,18 @@ import {
   loginRateLimiter,
   otpRateLimiter 
 } from "../middleware/rateLimitMiddleware";
+import { validate, loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema, twoFAValidateSchema } from "../middleware/validateRequest";
 import sessionController from "../controller/sessionController";
 import twoFactorController from "../controller/twoFactorController";
 const userRouter = express.Router();
 
 // Registration endpoints - moderate rate limiting (10 per 15 min per IP)
-userRouter.post("/registerUser", moderateRateLimiter, userMiddleware, userController.registerUser);
+userRouter.post("/registerUser", moderateRateLimiter, validate(registerSchema), userMiddleware, userController.registerUser);
 userRouter.post("/registerPhone", moderateRateLimiter, userController.registerPhoneStep1);
 userRouter.post("/registerPhone/verify", moderateRateLimiter, userController.registerPhoneStep2);
 
 // Login endpoint - strict rate limiting (5 per 15 min per IP+email combo) to prevent brute force
-userRouter.post("/login", loginRateLimiter, userMiddleware, userController.login);
+userRouter.post("/login", loginRateLimiter, validate(loginSchema), userMiddleware, userController.login);
 
 // Email check - moderate rate limiting
 userRouter.get("/checkEmail", moderateRateLimiter, userController.checkEmail);
