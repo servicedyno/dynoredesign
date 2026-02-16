@@ -431,6 +431,21 @@ export const setupHealthCheckCron = () => {
 
   log("Health Check Cron Job scheduled for every 15 minutes", "info");
   log("Health Check Retention Cleanup scheduled daily at 3:00 AM UTC (7-day retention)", "info");
+
+  // Session Cleanup - every 6 hours
+  cron.schedule("0 */6 * * *", async () => {
+    try {
+      const { cleanupExpiredSessions } = require("../services/sessionService");
+      const cleaned = await cleanupExpiredSessions();
+      if (cleaned > 0) {
+        cronLogger.info(`[SessionCleanup] Cleaned ${cleaned} expired sessions`);
+      }
+    } catch (e) {
+      log(`Session Cleanup Error: ${e}`, "error");
+      captureError(e, 'cron', { extraContext: 'cleanupExpiredSessions' });
+    }
+  });
+  log("Session Cleanup Cron Job scheduled every 6 hours", "info");
 };
 
 /**
