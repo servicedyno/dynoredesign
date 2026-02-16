@@ -274,9 +274,10 @@ class TestAdminLogin:
         
         if response.status_code == 200:
             data = response.json()
-            assert data.get("success") == True
-            assert "data" in data
+            # Admin login returns data.accessToken and message, not necessarily success: true
+            assert "data" in data, f"Response should include data: {data}"
             assert "accessToken" in data.get("data", {}), f"Response should include accessToken: {data}"
+            assert "message" in data, f"Response should include message: {data}"
             print(f"✓ Admin login successful, token received")
             return data["data"]["accessToken"]
         else:
