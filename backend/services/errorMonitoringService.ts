@@ -596,6 +596,26 @@ export const sendErrorDigest = async (): Promise<void> => {
  */
 const sendImmediateAlert = async (entry: ErrorEntry): Promise<void> => {
   const adminEmail = getAdminEmail();
+
+  // Send to Slack/Discord (non-blocking)
+  try {
+    const { sendAlert } = await import("./slackAlertService");
+    await sendAlert({
+      title: `${entry.component.toUpperCase()} Error`,
+      message: entry.message.substring(0, 200),
+      severity: entry.severity === "critical" ? "critical" : "warning",
+      fields: {
+        Component: entry.component,
+        Severity: entry.severity,
+        ...(entry.code ? { Code: entry.code } : {}),
+        ...(entry.statusCode ? { "HTTP Status": String(entry.statusCode) } : {}),
+        ...(entry.extraContext ? { Context: entry.extraContext } : {}),
+      },
+    });
+  } catch (slackErr) {
+    cronLogger.error(`[ErrorMonitor] Slack/Discord alert failed: ${(slackErr as Error).message}`);
+  }
+
   if (!adminEmail) return;
 
   try {
