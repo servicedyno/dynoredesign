@@ -165,19 +165,25 @@ export const securityPaths = {
       },
       responses: {
         200: {
-          description: '2FA validation successful',
+          description: '2FA validation successful — returns JWT + session (same as login)',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: '2FA verification successful' },
+                  message: { type: 'string', example: '2FA verification successful. Login complete.' },
                   data: {
                     type: 'object',
                     properties: {
                       valid: { type: 'boolean', example: true },
                       method: { type: 'string', enum: ['totp', 'backup_code'], example: 'totp' },
+                      userData: { $ref: '#/components/schemas/User' },
+                      accessToken: { type: 'string', description: 'JWT access token' },
+                      refreshToken: { type: 'string', description: 'Refresh token for token rotation' },
+                      expiresIn: { type: 'integer', example: 3600, description: 'Access token expiry in seconds' },
+                      session_id: { type: 'integer', example: 42 },
+                      token_type: { type: 'string', example: 'Bearer' },
                     },
                   },
                 },
@@ -187,6 +193,7 @@ export const securityPaths = {
         },
         400: { description: 'user_id and token are required' },
         401: { description: 'Invalid 2FA code' },
+        404: { description: 'User not found' },
         429: { description: 'Account temporarily locked due to too many failed attempts' },
       },
     },
