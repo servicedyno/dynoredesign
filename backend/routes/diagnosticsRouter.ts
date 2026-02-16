@@ -8,14 +8,15 @@ import * as binanceService from "../services/binanceService";
 import { getTunnelStatus } from "../services/sshTunnelManager";
 import { dynoPayEmailTemplate } from "../helper/sendEmail";
 import { baseEmailTemplate, infoBox, dataRow, statusBadge, p, otpBlock } from "../utils/emailTemplate";
+import adminAuthMiddleware from "../middleware/adminAuthMiddleware";
 
 const router = express.Router();
 
 /**
  * GET /diagnostics/tunnel-status
- * SSH SOCKS5 tunnel health and diagnostics
+ * SSH SOCKS5 tunnel health and diagnostics (admin only)
  */
-router.get("/tunnel-status", (_req: express.Request, res: express.Response) => {
+router.get("/tunnel-status", adminAuthMiddleware, (_req: express.Request, res: express.Response) => {
   const status = getTunnelStatus();
   const proxyState = binanceService.getProxyState();
   res.status(200).json({
