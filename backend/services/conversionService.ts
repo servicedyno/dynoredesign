@@ -583,7 +583,7 @@ export const processStablecoinConversions = async (): Promise<{
     } catch (detectErr) {
       log(`⚠️ Proxy re-detection failed. Skipping conversion/withdrawal phases — will retry next cycle.`);
 
-      await markExhaustedAsFailed();
+      // Do NOT mark exhausted records as failed when Binance is unreachable
 
       let depositsChecked = 0;
       try {
