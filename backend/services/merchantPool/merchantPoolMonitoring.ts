@@ -718,7 +718,9 @@ const processAddress = async (addr: any, result: {
               
               await setRedisItem(cryptoRedisKey, reconstructedRedis);
               cronLogger.info(`[MerchantPool] 📝 Reconstructed Redis data for ${walletAddress} (key: ${cryptoRedisKey}) — processing via cryptoVerification`);
+              } // end: reconstruction else block
               
+              // Call cryptoVerification (shared by both valid-Redis and reconstruction paths)
               try {
                 const verificationResult = await paymentController.cryptoVerification(walletAddress, true, cryptoRedisKey) as { duplicate?: boolean; status?: number; paymentStatus?: string };
                 
@@ -755,7 +757,6 @@ const processAddress = async (addr: any, result: {
               
               await deleteRedisItem(failKey);
               return;
-            } // end: existingRedisIsValid else block
             } // end: hasPaymentContext
             
             // No payment context or effective balance too low — admin fee residual, release
