@@ -614,6 +614,32 @@ const processAddress = async (addr: any, result: {
               cronLogger.info(`[MerchantPool] ⚠️ ${walletAddress} - Tatum tx lookup failed ${failCount} times BUT address has payment context and significant effective balance ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance})`);
               cronLogger.info(`[MerchantPool] 🔄 Attempting to process using payment context (bypassing tx lookup)...`);
               
+              // FIRST: Check if valid Redis data already exists for the CURRENT payment
+              // This prevents stale last_payment_context from overwriting correct data
+              const existingRedisData = await getRedisItem(cryptoRedisKey);
+              const existingRedisIsValid = existingRedisData 
+                && existingRedisData.payment_id === currentPaymentId 
+                && existingRedisData.webhook_url;
+              
+              if (existingRedisIsValid) {
+                cronLogger.info(`[MerchantPool] ✅ Existing Redis data is valid for current payment ${currentPaymentId} (webhook: ${existingRedisData.webhook_url}). Skipping reconstruction from last_payment_context.`);
+                
+                // Update status and amounts, but preserve the correct webhook_url and other payment-specific fields
+                const updatedRedisData = {
+                  ...existingRedisData,
+                  status: 'processing',
+                  receivedAmount: String(effectiveBalance),
+                  originalExpectedAmount: String(expectedAmount),
+                  processedByFallback: 'true',
+                  txLookupFailed: 'true',
+                  lastAttempt: new Date().toISOString(),
+                };
+                await setRedisItem(cryptoRedisKey, updatedRedisData);
+                cronLogger.info(`[MerchantPool] 📝 Updated existing Redis data for ${walletAddress} (preserved webhook_url) — processing via cryptoVerification`);
+              } else {
+                // No valid Redis data exists — reconstruct from last_payment_context as fallback
+                cronLogger.warn(`[MerchantPool] ⚠️ No valid Redis data for current payment ${currentPaymentId}. Falling back to last_payment_context reconstruction.`);
+              
               // Try to get last_payment_context from DB — use temp_address_id (unique) instead of wallet_address
               // because XRP/RLUSD share the same master address with different destination tags
               const addrRecord = await merchantTempAddressModel.findOne({ where: { temp_address_id: addr.dataValues.temp_address_id } });
@@ -624,6 +650,16 @@ const processAddress = async (addr: any, result: {
                 try {
                   paymentContext = typeof lastContextRaw === 'string' ? JSON.parse(lastContextRaw) : lastContextRaw;
                   cronLogger.info(`[MerchantPool] 📝 Found last_payment_context for ${walletAddress} (payment: ${paymentContext.payment_id})`);
+                  
+                  // SAFETY CHECK: Warn if last_payment_context is for a DIFFERENT payment than current
+                  if (paymentContext.payment_id && paymentContext.payment_id !== currentPaymentId) {
+                    cronLogger.warn(`[MerchantPool] ⚠️ STALE CONTEXT DETECTED: last_payment_context is for payment ${paymentContext.payment_id} but current payment is ${currentPaymentId}. Webhook URL may be incorrect!`);
+                    // Clear stale context fields that are payment-specific to avoid cross-contamination
+                    paymentContext.webhook_url = null;
+                    paymentContext.callback_url = null;
+                    paymentContext.ref = null;
+                    paymentContext.link_id = null;
+                  }
                 } catch (e) {
                   cronLogger.warn(`[MerchantPool] ⚠️ Failed to parse last_payment_context for ${walletAddress}`);
                 }
