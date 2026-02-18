@@ -755,7 +755,8 @@ const processAddress = async (addr: any, result: {
               
               await deleteRedisItem(failKey);
               return;
-            }
+            } // end: existingRedisIsValid else block
+            } // end: hasPaymentContext
             
             // No payment context or effective balance too low — admin fee residual, release
             cronLogger.info(`[MerchantPool] ⚠️ ${walletAddress} - No incoming txs found after ${failCount} checks. Effective balance ${effectiveBalance.toFixed(8)} ${walletType} (on-chain: ${balance}, admin_fee: ${adminFeeBalance}) is likely pre-existing admin fee. Releasing address.`);
