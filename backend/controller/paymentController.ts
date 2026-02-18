@@ -4625,8 +4625,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             payment_type: paymentType,
             payment_id: webhookPaymentId,
             transaction_reference: transactionId,
-            status: customerPayload.status,
-            payment_status: toExternalStatus(parseState(customerPayload.status) || PaymentState.PAYOUT_COMPLETE),
+            status: "successful",
+            payment_status: "confirmed",
             
             // Amount received (crypto) — use original merchant amount if auto-converting
             amount: autoConvertEnabled ? originalUserAmount : userAmountToSend,
