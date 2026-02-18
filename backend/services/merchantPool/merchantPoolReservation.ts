@@ -111,6 +111,7 @@ export const reserveAddress = async (
           reserved_until: reservedUntil,
           locked_at: new Date(),
           subscription_id: subscriptionId,
+          last_payment_context: null, // Clear stale context from previous payment to prevent webhook URL mismatch
         },
         { transaction }
       );
