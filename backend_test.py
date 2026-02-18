@@ -17,7 +17,7 @@ class DynoPayBackendTester:
     def __init__(self):
         # Use the environment variable for the backend URL, fallback to localhost
         self.backend_url = os.getenv('REACT_APP_BACKEND_URL', 'http://localhost:8001')
-        if self.backend_url == "https://security-hardening-5.preview.emergentagent.com":
+        if self.backend_url == "https://deploy-logs-analyzer.preview.emergentagent.com":
             # This is the external URL, we need the internal localhost for some tests
             self.internal_url = "http://localhost:8001"
         else:
