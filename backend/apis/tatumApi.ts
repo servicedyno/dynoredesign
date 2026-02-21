@@ -1485,10 +1485,13 @@ const assetToOtherAddress = async ({
 }) => {
   let transaction;
   const tatumSdk = await getTatumSDK();
-  // Safe truncation to N decimal places using integer arithmetic (avoids floating-point serialization issues)
+  // Safe rounding to N decimal places using integer arithmetic (avoids floating-point serialization issues)
+  // CRITICAL: Uses Math.round (NOT Math.floor) to prevent off-by-one satoshi errors.
+  // Math.floor truncates DOWN, which can lose 1 sat when JS floating-point represents
+  // e.g. 34338/1e8 as 0.000343379999... → floor gives 34337 sats instead of 34338.
   const truncateDecimals = (n: number, places: number = 8): number => {
     const factor = Math.pow(10, places);
-    return Math.floor(n * factor) / factor;
+    return Math.round(n * factor) / factor;
   };
   if (currency === "BTC") {
     // When toUTXO is provided (merchant + admin split), use multi-output; otherwise single output
