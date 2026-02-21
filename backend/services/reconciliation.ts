@@ -197,6 +197,70 @@ async function reconcileFailedPayments(): Promise<number> {
 }
 
 /**
+ * Strategy 4: Direct scan of crypto-* Redis keys for "failed" status.
+ * 
+ * This is the ultimate fallback for payments that:
+ * - Had their failed-payment-* key consumed by a previous reconciliation
+ * - Were re-queued but the job hit the old duplicate check and did nothing
+ * - Have no remaining failed-payment-* key, but the crypto-* source-of-truth still shows "failed"
+ * 
+ * Scans the actual payment state keys and re-queues any with status "failed" that have a txId.
+ */
+async function reconcileFailedStatePayments(): Promise<number> {
+  let count = 0;
+  const maxAgeMs = 7 * 24 * 60 * 60 * 1000; // Recover failures up to 7 days old
+
+  let cursor = 0;
+  do {
+    const result = await redisClient.scan(cursor, { MATCH: "crypto-*:json", COUNT: 100 });
+    cursor = result.cursor;
+
+    for (const key of result.keys) {
+      try {
+        const rawData = await redisClient.get(key);
+        if (!rawData) continue;
+
+        const data = JSON.parse(rawData);
+        const parsedStatus = parseState(data.status);
+
+        // Only target payments in FAILED state that have a txId (were partially processed)
+        if (parsedStatus !== PaymentState.FAILED || !data.txId) continue;
+
+        // Check age — failedAt or lastAttempt timestamp
+        const failedAt = data.failedAt ? new Date(data.failedAt).getTime()
+          : data.lastAttempt ? new Date(data.lastAttempt).getTime()
+          : 0;
+        if (failedAt > 0 && (Date.now() - failedAt) > maxAgeMs) continue;
+
+        const address = key.replace("crypto-", "").replace(":json", "");
+        webhookLogs.info(`[Reconciliation] Strategy 4: Found failed-state payment: ${address}, txId=${data.txId}, failedAt=${data.failedAt || "unknown"}, error=${data.lastError || "unknown"}`);
+
+        await enqueueWebhook({
+          payload: {
+            address,
+            amount: data.receivedAmount || data.amount || "0",
+            txId: data.txId,
+            asset: data.currency,
+          },
+          queryParams: {
+            company_id: data.company_id ? Number(data.company_id) : undefined,
+          },
+          receivedAt: new Date().toISOString(),
+          source: "reconciliation",
+        });
+        count++;
+      } catch (parseErr) {
+        // Skip malformed keys
+      }
+    }
+  } while (cursor !== 0);
+
+  return count;
+}
+
+
+
+/**
  * Strategy 3: Query Tatum for failed webhook deliveries.
  * Tatum stores failed webhook attempts and exposes them via API.
  */
