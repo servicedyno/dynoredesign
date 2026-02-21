@@ -646,6 +646,47 @@ async function handleNewTransaction(
       error: err.message, failed_at: new Date().toISOString(),
     });
 
+    // ── Send payment.failed webhook to merchant ───────────────────────────
+    // Previously missing: merchant was never notified when settlement failed.
+    try {
+      let failedCustomerData = await getRedisItem(items?.ref);
+      if (!failedCustomerData || Object.keys(failedCustomerData).length === 0) {
+        failedCustomerData = {};
+      }
+      // Merge webhook info from items
+      if (!failedCustomerData.webhook_url && items?.webhook_url) failedCustomerData.webhook_url = items.webhook_url;
+      if (!failedCustomerData.callback_url && items?.callback_url) failedCustomerData.callback_url = items.callback_url;
+      if (!failedCustomerData.webhook_secret && items?.webhook_secret) failedCustomerData.webhook_secret = items.webhook_secret;
+      if (!failedCustomerData.company_id && items?.company_id) failedCustomerData.company_id = items.company_id;
+      if (!failedCustomerData.link_id && items?.link_id) failedCustomerData.link_id = items.link_id;
+
+      if (failedCustomerData.webhook_url || failedCustomerData.callback_url) {
+        const failedLinkId = failedCustomerData?.link_id || items?.link_id || null;
+        const failedPaymentType = failedLinkId ? "payment_link" : "direct_api";
+
+        await callMerchantWebhook(failedCustomerData, {
+          event: "payment.failed",
+          payment_type: failedPaymentType,
+          address,
+          txId: payload.txId,
+          amount: incomingAmount,
+          currency: items?.currency || payload.asset,
+          payment_id: items?.payment_id || items?.unique_tx_id,
+          status: "failed",
+          payment_status: "failed",
+          error: err.message || "Settlement failed",
+          base_amount: failedCustomerData?.base_amount || items?.base_amount_usd || null,
+          base_currency: failedCustomerData?.base_currency || "USD",
+          link_id: failedLinkId,
+          fee_payer: failedCustomerData?.fee_payer || items?.fee_payer || "company",
+          timestamp: new Date().toISOString(),
+        });
+        webhookLogs.info(`[WebhookProcessor] ✅ payment.failed webhook sent for payment ${paymentId}`);
+      }
+    } catch (webhookErr) {
+      webhookLogs.error("[WebhookProcessor] Error sending payment.failed webhook:", webhookErr);
+    }
+
     throw verifyError; // Let BullMQ retry the entire job
   }
 }
