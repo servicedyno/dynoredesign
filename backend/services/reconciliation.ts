@@ -23,10 +23,11 @@ import axios from "axios";
 export async function runStartupReconciliation(): Promise<{
   stuckPayments: number;
   failedPayments: number;
+  failedStatePayments: number;
   tatumMissed: number;
   errors: string[];
 }> {
-  const stats = { stuckPayments: 0, failedPayments: 0, tatumMissed: 0, errors: [] as string[] };
+  const stats = { stuckPayments: 0, failedPayments: 0, failedStatePayments: 0, tatumMissed: 0, errors: [] as string[] };
 
   webhookLogs.info("[Reconciliation] Starting startup reconciliation...");
 
@@ -40,7 +41,7 @@ export async function runStartupReconciliation(): Promise<{
     webhookLogs.error(`[Reconciliation] ${msg}`);
   }
 
-  // ── Strategy 2: Redis failed payments ───────────────────────────────────────
+  // ── Strategy 2: Redis failed payments (failed-payment-* keys) ───────────────
   try {
     stats.failedPayments = await reconcileFailedPayments();
     webhookLogs.info(`[Reconciliation] Failed payments re-queued: ${stats.failedPayments}`);
@@ -60,7 +61,20 @@ export async function runStartupReconciliation(): Promise<{
     webhookLogs.error(`[Reconciliation] ${msg}`);
   }
 
-  const total = stats.stuckPayments + stats.failedPayments + stats.tatumMissed;
+  // ── Strategy 4: Direct crypto-* key scan for "failed" status ────────────────
+  // Fallback for when failed-payment-* keys were consumed but the re-queued job
+  // didn't actually fix the payment (e.g., duplicate check blocked recovery).
+  // This scans the source-of-truth crypto-* keys directly.
+  try {
+    stats.failedStatePayments = await reconcileFailedStatePayments();
+    webhookLogs.info(`[Reconciliation] Failed-state payments re-queued: ${stats.failedStatePayments}`);
+  } catch (err) {
+    const msg = `Failed-state reconciliation failed: ${(err as Error).message}`;
+    stats.errors.push(msg);
+    webhookLogs.error(`[Reconciliation] ${msg}`);
+  }
+
+  const total = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments + stats.tatumMissed;
   webhookLogs.info(`[Reconciliation] Complete. Total re-queued: ${total}, Errors: ${stats.errors.length}`);
 
   if (total > 0) {
