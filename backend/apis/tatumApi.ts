@@ -3258,7 +3258,7 @@ const findUtxoOutputIndex = async (
 
     if (txData?.vout) {
       // For BCH, compare both CashAddr and legacy formats
-      const addressVariants = [address];
+      const addressVariants = [address, address.toLowerCase()];
       if (currency === 'BCH') {
         try {
           addressVariants.push(bchaddr.toCashAddress(address));
@@ -3266,7 +3266,13 @@ const findUtxoOutputIndex = async (
         } catch { /* invalid address, just use original */ }
       }
       for (const output of txData.vout) {
-        if (output.scriptPubKey?.addresses?.some((a: string) => addressVariants.includes(a))) {
+        // Check scriptPubKey.addresses (array, used by legacy/P2SH)
+        const addrArray = output.scriptPubKey?.addresses || [];
+        // Also check scriptPubKey.address (singular, used by SegWit/bech32 in modern APIs)
+        const addrSingular = (output.scriptPubKey as any)?.address;
+        if (addrSingular) addrArray.push(addrSingular);
+
+        if (addrArray.some((a: string) => addressVariants.includes(a) || addressVariants.includes(a.toLowerCase()))) {
           const idx = output.n ?? 0;
           cronLogger.info(`[findUtxoOutputIndex] Found output index ${idx} for ${address} in tx ${txHash}`);
           return idx;
