@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://deploy-logs-analyzer.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://quickstart-hub-1.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {
