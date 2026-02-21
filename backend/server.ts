@@ -167,6 +167,20 @@ app.use("/api/static", express.static("public"));
 app.use(express.static("public")); // Keep backward compat for internal access
 app.use("/api/static/images", express.static(path.join(uploadsPath, "images")));
 app.use("/images", express.static(path.join(uploadsPath, "images")));
+
+// FIX: Fallback for missing images — serve a 1x1 transparent PNG instead of 404
+// This prevents noisy 404 logs for deleted/missing user avatars and company logos
+const TRANSPARENT_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64"
+);
+const imageFallbackHandler = (_req: express.Request, res: express.Response) => {
+  res.set("Content-Type", "image/png");
+  res.set("Cache-Control", "public, max-age=86400"); // Cache 24h to reduce repeat requests
+  res.status(200).send(TRANSPARENT_PNG);
+};
+app.get("/api/static/images/*", imageFallbackHandler);
+app.get("/images/*", imageFallbackHandler);
 app.use("/api/static/videos", express.static(path.join(uploadsPath, "videos")));
 app.use("/videos", express.static(path.join(uploadsPath, "videos")));
 
