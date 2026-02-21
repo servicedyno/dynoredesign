@@ -9,6 +9,7 @@ import axios from "axios";
 import { cronLogger } from "../utils/loggers";
 import { getRedisItem, setRedisItem } from "../utils/redisInstance";
 import { getTronNetworkParams } from "./tronEnergyService";
+import { getPrice as getBinancePrice } from "./binanceWebSocketService";
 
 // Tatum API base URL
 const TATUM_API_URL = "https://api.tatum.io/v3";
