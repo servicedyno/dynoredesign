@@ -240,7 +240,12 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
     }
 
     // ── 7. Crash recovery for stale "processing" payments ─────────────────────
-    const isStaleProcessing = currentParsedState === PaymentState.PROCESSING
+    // Re-derive state flags after potential failed-payment recovery (items may have been reset)
+    const effectiveIsFirstTransaction = !items.txId;
+    const effectiveIsCompletionPayment = String(items.incomplete) === "true" && items.txId !== payload.txId;
+    const effectiveParsedState = parseState(items.status);
+
+    const isStaleProcessing = effectiveParsedState === PaymentState.PROCESSING
       && !!items.txId
       && items.lastAttempt
       && (Date.now() - new Date(items.lastAttempt as string).getTime()) > 60000;
@@ -252,10 +257,10 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
     }
 
     // ── 8. Main processing path ───────────────────────────────────────────────
-    if ((isFirstTransaction || isCompletionPayment) && incomingAmount > 0) {
+    if ((effectiveIsFirstTransaction || effectiveIsCompletionPayment) && incomingAmount > 0) {
       await handleNewTransaction(
         address, redisKey, items, payload,
-        incomingAmount, isCompletionPayment, isFirstTransaction,
+        incomingAmount, effectiveIsCompletionPayment, effectiveIsFirstTransaction,
         queryCompanyId
       );
     } else {
