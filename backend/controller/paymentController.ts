@@ -3177,9 +3177,16 @@ const settleCryptoTransaction = async ({
 
         const adminAmount = adminSats / 1e8;
         merchantSendAmount = merchantSats / 1e8;
-        const exactFee = feeSats / 1e8;
 
-        cronLogger.info(`[settleCryptoTransaction] UTXO multi-output math (satoshi): totalInput=${totalInputSats}, admin=${adminSats}, merchant=${merchantSats}, fee=${feeSats}, change=${totalInputSats - adminSats - merchantSats - feeSats}`);
+        // CRITICAL: Round-trip safety — re-derive the actual satoshi values that Tatum will use
+        // after its Math.round(value * 1e8) conversion. If floating-point representation of
+        // merchantSendAmount or adminAmount drifts by 1 sat, the fee must absorb it.
+        const actualMerchantSats = Math.round(merchantSendAmount * 1e8);
+        const actualAdminSats = Math.round(adminAmount * 1e8);
+        const actualFeeSats = totalInputSats - actualMerchantSats - actualAdminSats;
+        const exactFee = actualFeeSats / 1e8;
+
+        cronLogger.info(`[settleCryptoTransaction] UTXO multi-output math (satoshi): totalInput=${totalInputSats}, admin=${actualAdminSats}, merchant=${actualMerchantSats}, fee=${actualFeeSats}, change=${totalInputSats - actualAdminSats - actualMerchantSats - actualFeeSats}`);
 
         // Lookup the correct UTXO output index for this address (instead of assuming index 0)
         const utxoIndex = await tatumApi.findUtxoOutputIndex(transactionId, fromAddress, currency);
