@@ -7087,8 +7087,34 @@ const processIncompletePayments = async () => {
             const walletType = poolAddr.dataValues.wallet_type;
             const expectedAmount = parseFloat(poolAddr.dataValues.expected_amount || '0');
             const paymentId = poolAddr.dataValues.current_payment_id;
-            const reservedAt = new Date(poolAddr.dataValues.reserved_at || poolAddr.dataValues.updatedAt);
-            const minutesSinceReserved = (Date.now() - reservedAt.getTime()) / 60000;
+            // FIX: Use reserved_until (the actual column) instead of non-existent reserved_at.
+            // reserved_until = reservation time + timeout. We derive "time since reserved" from it.
+            const reservedUntil = poolAddr.dataValues.reserved_until
+              ? new Date(poolAddr.dataValues.reserved_until)
+              : null;
+            const updatedAt = poolAddr.dataValues.updatedAt
+              ? new Date(poolAddr.dataValues.updatedAt)
+              : null;
+
+            let minutesSinceReserved: number;
+            if (reservedUntil && !isNaN(reservedUntil.getTime())) {
+              // reserved_until is set: minutes past expiry = how long after it should have expired
+              // If the address is still IN_USE, reserved_until has already passed.
+              const minutesPastExpiry = (Date.now() - reservedUntil.getTime()) / 60000;
+              // Reservation timeout is typically 30-45 min, so total time = timeout + minutesPastExpiry
+              minutesSinceReserved = minutesPastExpiry + 30; // conservative estimate of reservation age
+            } else if (updatedAt && !isNaN(updatedAt.getTime())) {
+              minutesSinceReserved = (Date.now() - updatedAt.getTime()) / 60000;
+            } else {
+              cronLogger.warn(`[processIncompletePayments] Pool address ${walletAddress} has no valid reserved_until or updatedAt — skipping`);
+              continue;
+            }
+
+            // Guard against NaN from invalid date math
+            if (isNaN(minutesSinceReserved)) {
+              cronLogger.warn(`[processIncompletePayments] Pool address ${walletAddress} has NaN reservation age — skipping`);
+              continue;
+            }
             
             // Only process if reserved for more than 60 minutes (grace period expired)
             if (minutesSinceReserved < 60) {
