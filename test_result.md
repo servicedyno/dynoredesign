@@ -4931,6 +4931,73 @@ metadata:
   run_ui: false
 
 current_test_task:
+  - task: "Fix BTC UTXO Fee Off-by-One, payment.failed/confirmed Webhook, Failed Payment Retry, SegWit UTXO Index, Dust Threshold"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/services/webhookProcessor.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          6 FIXES FOR BTC TX 84c1b20fa2223a1316e55c277d39740092fee1397866a249c5dcd3d97701ccb8:
+          
+          FIX 1 (ROOT CAUSE): UTXO Fee Off-by-One Satoshi — truncateDecimals in tatumApi.ts
+          - Changed Math.floor → Math.round in truncateDecimals (line 1491)
+          - Math.floor(34337.999...) = 34337 (lost 1 sat), Math.round gives 34338 (correct)
+          - This caused "Unspent value is 256 but specified fee is 255" broadcast rejection
+          
+          FIX 1b: Round-trip safe fee calculation in paymentController.ts
+          - Both UTXO multi-output (line ~3178) and auto-convert (line ~2940) paths
+          - After computing BTC output amounts, re-derive actual sats via Math.round(amount * 1e8)
+          - Fee = totalInputSats - sum(actualOutputSats) — guarantees zero mismatch
+          
+          FIX 2: findUtxoOutputIndex SegWit support in tatumApi.ts
+          - Added fallback check for scriptPubKey.address (singular) field
+          - SegWit (bech32/bc1q) addresses use this instead of scriptPubKey.addresses (array)
+          - Also added case-insensitive matching
+          
+          FIX 3: payment.failed webhook in webhookProcessor.ts
+          - Added callMerchantWebhook("payment.failed") in the cryptoVerification catch block
+          - Merchant is now notified when settlement fails (was silently dropped before)
+          
+          FIX 4: payment.confirmed webhook in webhookProcessor.ts
+          - Added callMerchantWebhook("payment.confirmed") after successful cryptoVerification
+          - Previously only crash recovery path sent this webhook — normal path did NOT
+          
+          FIX 5: Failed payment retry in webhookProcessor.ts
+          - When status="failed" and same txId → reset to pending, clear txId, allow re-processing
+          - Previously: hasTxId=true → "Duplicate transaction, ignoring" → permanent dead end
+          - BullMQ retries and reconciliation can now recover failed settlements
+          
+          FIX 6: Dust underpayment threshold in webhookProcessor.ts
+          - Shortfalls ≤ 0.1% of expected OR ≤ 100 base units (sats) treated as full payment
+          - 17 sats ($0.002) will no longer trigger payment.underpaid
+          
+          Pre-test results: TypeScript compiles clean, 184 existing tests pass (132 + 52)
+          
+          TESTS TO RUN:
+          TEST 1: GET http://localhost:8001/health returns 200 with status "healthy"
+          TEST 2: TypeScript compiles clean - cd /app/backend && npx tsc --noEmit exits 0
+          TEST 3: State machine tests pass - cd /app/backend && npx jest __tests__/paymentStateMachine.test.ts --no-coverage --forceExit — 132 tests
+          TEST 4: Webhook processor tests pass - cd /app/backend && npx jest __tests__/webhookProcessor.test.ts --no-coverage --forceExit — 52 tests
+          TEST 5: truncateDecimals uses Math.round - grep 'Math.round' /app/backend/apis/tatumApi.ts should find it in truncateDecimals
+          TEST 6: No Math.floor in truncateDecimals - grep 'Math.floor' /app/backend/apis/tatumApi.ts should NOT find it near truncateDecimals
+          TEST 7: Round-trip fee calc in multi-output - grep 'actualMerchantSats\|actualAdminSats\|actualFeeSats' /app/backend/controller/paymentController.ts finds >= 6 occurrences
+          TEST 8: Round-trip fee calc in auto-convert - grep 'actualOutputSats\|actualFeeSats' /app/backend/controller/paymentController.ts finds >= 4 occurrences
+          TEST 9: findUtxoOutputIndex handles SegWit - grep 'scriptPubKey.*address' /app/backend/apis/tatumApi.ts finds singular address check
+          TEST 10: payment.failed webhook exists - grep 'payment.failed' /app/backend/services/webhookProcessor.ts finds callMerchantWebhook usage
+          TEST 11: payment.confirmed webhook exists in normal path - grep 'payment.confirmed' /app/backend/services/webhookProcessor.ts finds at least 2 occurrences (crash recovery + normal path)
+          TEST 12: Failed payment recovery logic - grep 'FAILED PAYMENT RECOVERY' /app/backend/services/webhookProcessor.ts finds the recovery handler
+          TEST 13: Dust threshold check - grep 'isDustShortfall\|DUST_THRESHOLD' /app/backend/services/webhookProcessor.ts finds threshold constants and check
+          TEST 14: Failed payment resets txId - grep 'txId: undefined' /app/backend/services/webhookProcessor.ts finds the reset in failed recovery
+          
+          Base URL: http://localhost:8001
   - task: "Binance WebSocket Price Stream + Rate-Limit Fix"
     implemented: true
     working: true
