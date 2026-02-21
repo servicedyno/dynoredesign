@@ -7,6 +7,21 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
+  - task: "Fix 6 Remaining Railway Log Issues: NaN processIncompletePayments, Unparseable undefined status, Missing image 404, Legacy webhook auth hardening, BlockchainFeeService rate limiting, TronEnergy token activation retry"
+    implemented: true
+    working: pending
+    files:
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/services/webhookProcessor.ts"
+      - "/app/backend/server.ts"
+      - "/app/backend/routes/index.ts"
+      - "/app/backend/services/blockchainFeeService.ts"
+      - "/app/backend/services/tronEnergyService.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history: []
+
   - task: "Backend Security, Real-time, Analytics, Admin, and DevOps Enhancements - Comprehensive Testing"
     implemented: true
     working: true
