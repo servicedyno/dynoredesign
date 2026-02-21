@@ -883,8 +883,8 @@ const startServer = async () => {
     // ── Run startup reconciliation (catch missed webhooks during downtime) ────
     runStartupReconciliation()
       .then(stats => {
-        const total = stats.stuckPayments + stats.failedPayments + stats.tatumMissed;
-        log(`Reconciliation complete: ${total} items re-queued (stuck=${stats.stuckPayments}, failed=${stats.failedPayments}, tatum=${stats.tatumMissed})`, 'info');
+        const total = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments + stats.tatumMissed;
+        log(`Reconciliation complete: ${total} items re-queued (stuck=${stats.stuckPayments}, failed=${stats.failedPayments}, failedState=${stats.failedStatePayments}, tatum=${stats.tatumMissed})`, 'info');
         if (stats.errors.length > 0) {
           log(`Reconciliation warnings: ${stats.errors.join('; ')}`, 'warn');
         }
