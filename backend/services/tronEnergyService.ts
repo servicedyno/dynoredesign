@@ -266,24 +266,63 @@ export const isRecipientActivatedForToken = async (
   }
 
   try {
-    const response = await axios.get(
-      `${TRONGRID_API}/v1/accounts/${recipientAddress}/tokens/trc20?contract_address=${tokenContractAddress}&limit=1`,
-      { timeout: 8000 }
-    );
-
-    const tokens = response.data?.data || [];
-    const activated = tokens.length > 0 && parseFloat(tokens[0]?.balance || "0") > 0;
-
-    // Only cache if activated (permanent state)
-    if (activated) {
+    // FIX: Add retry logic with exponential backoff and TronScan fallback
+    let lastError: unknown;
+    
+    // Attempt 1: TronGrid API (primary)
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        await setRedisItem(cacheKey, { activated: true });
-      } catch (_e) {
-        // Non-critical
+        const response = await axios.get(
+          `${TRONGRID_API}/v1/accounts/${recipientAddress}/tokens/trc20?contract_address=${tokenContractAddress}&limit=1`,
+          { timeout: 10000 } // FIX: Increased timeout from 8s → 10s
+        );
+
+        const tokens = response.data?.data || [];
+        const activated = tokens.length > 0 && parseFloat(tokens[0]?.balance || "0") > 0;
+
+        // Only cache if activated (permanent state)
+        if (activated) {
+          try {
+            await setRedisItem(cacheKey, { activated: true });
+          } catch (_e) {
+            // Non-critical
+          }
+        }
+
+        return activated;
+      } catch (err: unknown) {
+        lastError = err;
+        if (attempt === 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1s backoff before retry
+        }
       }
     }
 
-    return activated;
+    // Attempt 2: TronScan API fallback
+    try {
+      const tronscanResponse = await axios.get(
+        `https://apilist.tronscanapi.com/api/account/tokens?address=${recipientAddress}&token=${tokenContractAddress}&start=0&limit=1`,
+        { timeout: 8000, headers: { 'Accept': 'application/json' } }
+      );
+      
+      const tronscanTokens = tronscanResponse.data?.data || tronscanResponse.data?.tokens || [];
+      const activated = tronscanTokens.length > 0;
+      
+      if (activated) {
+        try {
+          await setRedisItem(cacheKey, { activated: true });
+        } catch (_e) { /* Non-critical */ }
+      }
+      
+      cronLogger.info(`[TronEnergy] Token activation check succeeded via TronScan fallback for ${recipientAddress}: ${activated}`);
+      return activated;
+    } catch (_tronscanErr) {
+      // Both APIs failed
+    }
+
+    // Default to existing recipient (cheaper estimate, safer)
+    cronLogger.warn(`[TronEnergy] ⚠️ Could not check token activation for ${recipientAddress} after retries, assuming existing`);
+    return true;
 
   } catch (_error: unknown) {
     // Default to existing recipient (cheaper estimate, safer)
