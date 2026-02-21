@@ -2941,7 +2941,11 @@ const settleCryptoTransaction = async ({
         const feeSats = Math.round(utxoFeeToDeduct * 1e8);
         const outputSats = inputSats - feeSats;
         const utxoAmountToSend = outputSats / 1e8;
-        const exactFee = (inputSats - outputSats) / 1e8; // Guarantees zero change
+        // CRITICAL: Round-trip safety — re-derive the actual satoshi value that Tatum will
+        // use after its Math.round(value * 1e8) conversion. Fee absorbs any rounding drift.
+        const actualOutputSats = Math.round(utxoAmountToSend * 1e8);
+        const actualFeeSats = inputSats - actualOutputSats;
+        const exactFee = actualFeeSats / 1e8; // Guarantees zero change
         
         if (utxoAmountToSend <= 0) {
           cronLogger.warn(`[settleCryptoTransaction] UTXO auto-convert: Amount after fee is non-positive. Balance: ${receivedAmount}, Fee: ${utxoFeeToDeduct}`);
