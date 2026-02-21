@@ -214,6 +214,31 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
       return;
     }
 
+    // ── 6b. Failed payment recovery ──────────────────────────────────────────
+    // When a previous attempt set txId but failed settlement (e.g., UTXO fee mismatch),
+    // allow re-processing instead of treating as duplicate. The txId exists in Redis but
+    // the payment never completed — BullMQ retries and reconciliation must be able to retry.
+    const isFailedPayment = currentParsedState === PaymentState.FAILED
+      && !!items.txId
+      && items.txId === payload.txId;
+
+    if (isFailedPayment) {
+      webhookLogs.info(`[WebhookProcessor] FAILED PAYMENT RECOVERY: Retrying settlement for payment ${items.payment_id || items.ref}, previous error: ${items.lastError || "unknown"}`);
+
+      // Reset status to allow re-processing through the normal flow
+      await setRedisItem(redisKey, {
+        ...items,
+        status: "pending",
+        txId: undefined,  // Clear txId so isFirstTransaction = true
+        lastError: undefined,
+        failedAt: undefined,
+        retryCount: String((parseInt(items.retryCount || "0") || 0) + 1),
+        lastRetryAt: new Date().toISOString(),
+      });
+      // Re-read the updated items
+      items = await getRedisItem(redisKey) || items;
+    }
+
     // ── 7. Crash recovery for stale "processing" payments ─────────────────────
     const isStaleProcessing = currentParsedState === PaymentState.PROCESSING
       && !!items.txId
