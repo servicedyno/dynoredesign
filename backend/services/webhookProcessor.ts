@@ -466,7 +466,22 @@ async function handleNewTransaction(
     expectedAmount = parseFloat(items?.originalExpectedAmount || "0") || (expectedAmount + previousAmount);
   }
 
-  const isUnderpayment = totalReceivedAmount < expectedAmount && expectedAmount > 0;
+  // Dust threshold: if the shortfall is ≤ 0.1% of the expected amount OR ≤ 100 base units
+  // (satoshis/litoshis/etc.), treat as fully paid. Tiny differences are caused by
+  // Bitcoin network fee rounding at the sender's wallet (e.g., 17 sats = $0.002).
+  const shortfallRaw = expectedAmount - totalReceivedAmount;
+  const shortfallPercentage = expectedAmount > 0 ? (shortfallRaw / expectedAmount) * 100 : 0;
+  const shortfallBaseUnits = Math.round(shortfallRaw * 1e8);
+  const DUST_THRESHOLD_PERCENT = 0.1;   // 0.1% of expected amount
+  const DUST_THRESHOLD_UNITS = 100;     // 100 satoshis/litoshis (≈$0.07 at $68k BTC)
+  const isDustShortfall = shortfallRaw > 0
+    && (shortfallPercentage <= DUST_THRESHOLD_PERCENT || shortfallBaseUnits <= DUST_THRESHOLD_UNITS);
+
+  if (isDustShortfall) {
+    webhookLogs.info(`[WebhookProcessor] Dust shortfall accepted: ${shortfallBaseUnits} base units (${shortfallPercentage.toFixed(4)}%) — treating as full payment`);
+  }
+
+  const isUnderpayment = totalReceivedAmount < expectedAmount && expectedAmount > 0 && !isDustShortfall;
 
   // Fetch merchant underpayment threshold
   let underpaymentThresholdUsd = 1;
