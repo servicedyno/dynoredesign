@@ -608,7 +608,10 @@ async function handleNewTransaction(
       const custData = await getRedisItem(items.ref);
       if (custData && Object.keys(custData).length > 0) {
         // Soft-enforce: ref data — processing → successful
-        softValidate(custData.status, "successful", paymentId, "crypto-verification-success-ref");
+        // FIX: custData.status may be undefined for reconciliation-sourced payments
+        // that didn't go through the normal webhook flow. Default to "processing".
+        const refStatus = custData.status || "processing";
+        softValidate(refStatus, "successful", paymentId, "crypto-verification-success-ref");
 
         await setRedisItem(items.ref, {
           ...custData, status: "successful", txId: payload.txId,
