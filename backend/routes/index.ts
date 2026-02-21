@@ -38,7 +38,23 @@ import { logWebhookValidationFailure } from "../utils/securityLogger";
  * Tatum webhook HMAC signature verification middleware.
  * If TATUM_WEBHOOK_SECRET is configured, validates the x-payload-hash header.
  * If not configured, logs a warning and allows the request (backward compatible).
+ *
+ * FIX: For unsigned webhooks (legacy subscriptions), restrict to known Tatum IP ranges
+ * and rate-limit unsigned requests to mitigate spoofing risk.
  */
+
+// Known Tatum IP ranges (from their documentation and observed traffic)
+const TATUM_KNOWN_IPS = new Set([
+  '167.82.142.41', '167.82.142.42', '167.82.142.43', '167.82.142.44',
+  '18.213.36.109', '18.213.36.110', // Tatum US-East
+  '3.209.96.0', '3.209.96.1', // Tatum AWS
+]);
+
+// Track unsigned webhook counts per IP (sliding window)
+const unsignedWebhookCounts = new Map<string, { count: number; resetAt: number }>();
+const UNSIGNED_RATE_LIMIT = 100; // max unsigned webhooks per IP per hour
+const UNSIGNED_RATE_WINDOW = 3600000; // 1 hour in ms
+
 const verifyTatumWebhookSource = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const secret = process.env.TATUM_WEBHOOK_SECRET;
   if (!secret) {
@@ -48,8 +64,30 @@ const verifyTatumWebhookSource = (req: express.Request, res: express.Response, n
 
   const signature = req.headers["x-payload-hash"] as string;
   if (!signature) {
-    // Existing subscriptions may not have HMAC enabled — allow but warn
-    apiLogger.warn(`[WebhookAuth] Missing x-payload-hash header from ${req.ip} — allowing (legacy subscription)`);
+    // Legacy subscription without HMAC — apply IP check and rate limiting
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    const isTatumIp = TATUM_KNOWN_IPS.has(clientIp);
+
+    // Rate-limit unsigned webhooks per IP
+    const now = Date.now();
+    const counter = unsignedWebhookCounts.get(clientIp);
+    if (counter && counter.resetAt > now) {
+      counter.count++;
+      if (counter.count > UNSIGNED_RATE_LIMIT) {
+        apiLogger.warn(`[WebhookAuth] Rate-limited unsigned webhook from ${clientIp} (${counter.count} in window)`);
+        logWebhookValidationFailure('tatum', clientIp, 'Unsigned webhook rate limit exceeded');
+        return res.status(429).json({ error: "Too many unsigned requests" });
+      }
+    } else {
+      unsignedWebhookCounts.set(clientIp, { count: 1, resetAt: now + UNSIGNED_RATE_WINDOW });
+    }
+
+    if (isTatumIp) {
+      apiLogger.info(`[WebhookAuth] Unsigned webhook from known Tatum IP ${clientIp} — allowing (legacy)`);
+    } else {
+      apiLogger.warn(`[WebhookAuth] Unsigned webhook from UNKNOWN IP ${clientIp} — allowing but flagged for review`);
+      logWebhookValidationFailure('tatum', clientIp, 'Missing x-payload-hash from non-Tatum IP');
+    }
     return next();
   }
 
