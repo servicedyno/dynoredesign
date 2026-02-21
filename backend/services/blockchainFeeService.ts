@@ -163,8 +163,8 @@ const getCryptoPrice = async (symbol: string): Promise<number> => {
   const cacheKey = `price_${symbol}`;
   const cached = await getRedisItem(cacheKey) as { price?: string | number; timestamp?: string | number } | null;
   
-  // Check cache - use 5 minute cache to reduce API calls
-  if (cached?.price && Number(cached?.timestamp) > Date.now() - 300000) {
+  // FIX: Increased cache TTL from 5 min → 15 min to reduce CoinGecko rate-limit hits
+  if (cached?.price && Number(cached?.timestamp) > Date.now() - 900000) {
     return Number(cached.price);
   }
 
@@ -179,6 +179,29 @@ const getCryptoPrice = async (symbol: string): Promise<number> => {
     'BCH': 450,
     'USDC': 1,
   };
+
+  // FIX: Try Binance WebSocket prices first (already running, no extra API calls)
+  try {
+    const binancePrice = await getBinancePrice(symbol);
+    if (binancePrice > 0) {
+      await setRedisItem(cacheKey, { price: binancePrice, timestamp: Date.now() });
+      return binancePrice;
+    }
+  } catch (_binanceErr) {
+    // Binance WS unavailable — fall through to CoinGecko
+  }
+
+  // FIX: Per-symbol request throttling to prevent burst CoinGecko calls
+  const throttleKey = `price_throttle_${symbol}`;
+  const throttled = await getRedisItem(throttleKey) as { ts?: number } | null;
+  if (throttled?.ts && Date.now() - throttled.ts < 60000) {
+    // Already requested this symbol in the last 60s — use cached or fallback
+    if (cached?.price) {
+      return Number(cached.price);
+    }
+    return fallbackPrices[symbol] || 0;
+  }
+  await setRedisItem(throttleKey, { ts: Date.now() });
 
   try {
     // Use CoinGecko free API for prices
