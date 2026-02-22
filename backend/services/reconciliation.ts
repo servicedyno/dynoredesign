@@ -166,6 +166,15 @@ async function reconcileFailedPayments(): Promise<number> {
         const failedAt = data.failed_at ? new Date(data.failed_at).getTime() : 0;
 
         if (failedAt > 0 && (Date.now() - failedAt) < maxAgeMs && data.txId) {
+          // Skip known unrecoverable errors (balance=0, funds already moved)
+          const lastError = data.error || "";
+          if (/balance \[0\]|token balance \[0\]|Insufficient.*balance/i.test(lastError)) {
+            webhookLogs.info(`[Reconciliation] Skipping permanently unrecoverable: ${key}`);
+            await redisClient.del(key);
+            await redisClient.del(key.replace(":json", ""));
+            continue;
+          }
+
           webhookLogs.info(`[Reconciliation] Found failed payment: ${key}, txId=${data.txId}`);
 
           await enqueueWebhook({
