@@ -208,7 +208,12 @@ async function reconcileFailedPayments(): Promise<number> {
  */
 async function reconcileFailedStatePayments(): Promise<number> {
   let count = 0;
+  let skippedPermanent = 0;
+  let skippedRetryLimit = 0;
+  let skippedRecent = 0;
   const maxAgeMs = 7 * 24 * 60 * 60 * 1000; // Recover failures up to 7 days old
+  const MIN_AGE_MS = 5 * 60 * 1000; // Skip failures < 5 min old (likely being processed already)
+  const MAX_RETRY_COUNT = 3; // Don't re-queue if already retried this many times
 
   let cursor = 0;
   do {
@@ -224,7 +229,24 @@ async function reconcileFailedStatePayments(): Promise<number> {
         const parsedStatus = parseState(data.status);
 
         // Only target payments in FAILED state that have a txId (were partially processed)
-        if (parsedStatus !== PaymentState.FAILED || !data.txId) continue;
+        // Skip permanently_failed payments (they've exhausted all recovery options)
+        if (!data.txId) continue;
+        if (parsedStatus !== PaymentState.FAILED) continue;
+        if (data.status === "permanently_failed") { skippedPermanent++; continue; }
+
+        // Skip if already retried too many times
+        const retryCount = parseInt(data.retryCount || "0") || 0;
+        if (retryCount >= MAX_RETRY_COUNT) {
+          skippedRetryLimit++;
+          continue;
+        }
+
+        // Skip known unrecoverable errors (balance=0, funds already moved)
+        const lastError = data.lastError || "";
+        if (/balance \[0\]|token balance \[0\]|Insufficient.*balance/i.test(lastError)) {
+          skippedPermanent++;
+          continue;
+        }
 
         // Check age — failedAt or lastAttempt timestamp
         const failedAt = data.failedAt ? new Date(data.failedAt).getTime()
@@ -232,8 +254,14 @@ async function reconcileFailedStatePayments(): Promise<number> {
           : 0;
         if (failedAt > 0 && (Date.now() - failedAt) > maxAgeMs) continue;
 
+        // Skip recently failed payments — they're likely still being retried by BullMQ or other strategies
+        if (failedAt > 0 && (Date.now() - failedAt) < MIN_AGE_MS) {
+          skippedRecent++;
+          continue;
+        }
+
         const address = key.replace("crypto-", "").replace(":json", "");
-        webhookLogs.info(`[Reconciliation] Strategy 4: Found failed-state payment: ${address}, txId=${data.txId}, failedAt=${data.failedAt || "unknown"}, error=${data.lastError || "unknown"}`);
+        webhookLogs.info(`[Reconciliation] Strategy 4: Found failed-state payment: ${address}, txId=${data.txId}, retryCount=${retryCount}, failedAt=${data.failedAt || "unknown"}, error=${(data.lastError || "unknown").slice(0, 100)}`);
 
         await enqueueWebhook({
           payload: {
@@ -254,6 +282,10 @@ async function reconcileFailedStatePayments(): Promise<number> {
       }
     }
   } while (cursor !== 0);
+
+  if (skippedPermanent > 0 || skippedRetryLimit > 0 || skippedRecent > 0) {
+    webhookLogs.info(`[Reconciliation] Strategy 4: Skipped ${skippedPermanent} permanent, ${skippedRetryLimit} retry-limit, ${skippedRecent} recent`);
+  }
 
   return count;
 }
