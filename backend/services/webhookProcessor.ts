@@ -223,7 +223,29 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
       && items.txId === payload.txId;
 
     if (isFailedPayment) {
-      webhookLogs.info(`[WebhookProcessor] FAILED PAYMENT RECOVERY: Retrying settlement for payment ${items.payment_id || items.ref}, previous error: ${items.lastError || "unknown"}`);
+      const retryCount = parseInt(items.retryCount || "0") || 0;
+      const MAX_RECOVERY_RETRIES = 3;
+
+      // ── Permanent failure detection ─────────────────────────────────────────
+      // Some errors are permanently unrecoverable (balance=0, funds already moved).
+      // Don't waste API calls retrying these.
+      const lastError = items.lastError || "";
+      const isBalanceZero = /balance \[0\]|token balance \[0\]|Insufficient.*balance/i.test(lastError);
+      const isPermanentlyFailed = retryCount >= MAX_RECOVERY_RETRIES || isBalanceZero;
+
+      if (isPermanentlyFailed) {
+        webhookLogs.info(`[WebhookProcessor] PERMANENTLY FAILED: Payment ${items.payment_id || items.ref} — retryCount=${retryCount}, balanceZero=${isBalanceZero}, error: ${lastError.slice(0, 150)}`);
+        // Mark as permanently_failed to stop all future retry attempts
+        await setRedisItem(redisKey, {
+          ...items,
+          status: "permanently_failed",
+          permanentlyFailedAt: new Date().toISOString(),
+          permanentFailReason: isBalanceZero ? "temp_address_balance_zero" : "max_retries_exceeded",
+        });
+        return; // Do NOT retry — this payment is dead
+      }
+
+      webhookLogs.info(`[WebhookProcessor] FAILED PAYMENT RECOVERY: Retrying settlement for payment ${items.payment_id || items.ref} (attempt ${retryCount + 1}/${MAX_RECOVERY_RETRIES}), previous error: ${lastError || "unknown"}`);
 
       // Reset status to allow re-processing through the normal flow
       await setRedisItem(redisKey, {
@@ -232,7 +254,7 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
         txId: undefined,  // Clear txId so isFirstTransaction = true
         lastError: undefined,
         failedAt: undefined,
-        retryCount: String((parseInt(items.retryCount || "0") || 0) + 1),
+        retryCount: String(retryCount + 1),
         lastRetryAt: new Date().toISOString(),
       });
       // Re-read the updated items
