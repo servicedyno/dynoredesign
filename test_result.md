@@ -7,37 +7,31 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
-  - task: "Fix All 9 Bugs from Railway Production Log Analysis (Feb 23, 2026)"
+  - task: "Fix 6 Bugs: Duplicate Webhooks, Double Admin Emails, Outgoing TX False Triggers, Reconciliation Re-processing, Stale DOGE Address"
     implemented: true
-    working: true
+    working: pending
     files:
-      - "/app/backend/services/paymentStateMachine.ts"
-      - "/app/backend/apis/tatumApi.ts"
       - "/app/backend/controller/paymentController.ts"
       - "/app/backend/services/webhookProcessor.ts"
-      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
-      - "/app/backend/routes/index.ts"
-      - "/app/backend/services/conversionService.ts"
       - "/app/backend/webhooks/index.ts"
+      - "/app/backend/services/reconciliation.ts"
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: pending
         agent: "main"
         comment: |
-          9 bugs fixed from Railway production log analysis:
-          BUG 4: State machine — added pending→processing and pending→underpaid transitions
-          BUG 5: Double payout_complete — added idempotent self-transition  
-          BUG 9: findUtxoOutputIndex — added desc field parsing, vout debug logging, returns -1 on failure
-          BUG 2: BTC broadcast fee off-by-one — callers handle -1 with +1 sat tolerance
-          BUG 6: Unparseable "undefined" status — checks for string "undefined"/"null"
-          BUG 7: DOGE NaN reserved_until — auto-releases stuck addresses
-          BUG 8: Tatum IP allowlist — added GCP IPs observed in production
-          BUG 1: PENDING_DEPOSIT timeout — reduced to 6h, added sweep failure detection
-          BUG 3: Webhook 404 tracking — consecutive failure counter with admin alert
-          TypeScript: Clean compilation. Backend: healthy.
-      - working: true
+          6 bugs fixed from Railway production log analysis (Feb 23 session):
+          BUG 1: Duplicate payment.confirmed webhook — Redis dedup flag in both cryptoVerification and webhookProcessor
+          BUG 2: Double admin email — Skip "Platform Fee Received" for non-UTXO merchant pool addresses (sweep email suffices)
+          BUG 3: Settlement TX false Tatum webhooks — Mark outgoing TX in Redis, filter in webhook handler
+          BUG 4: Sweep TX false Tatum webhooks — Mark sweep TX as outgoing in Redis, same filter
+          BUG 5: Reconciliation re-processing — Added outgoing-tx check before re-enqueue
+          BUG 6: Persistent stale DOGE address — Auto-release addresses with NULL reserved_until after 2h (was just skipping)
+          Backend: healthy, no compilation errors, all services running.
         agent: "testing"
         comment: |
           ✅ 9 PRODUCTION BUG FIXES TESTING COMPLETED: 100% SUCCESS (5/5 core tests passed)
