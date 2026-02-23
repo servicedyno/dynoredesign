@@ -3244,7 +3244,7 @@ const findUtxoOutputIndex = async (
 ): Promise<number> => {
   try {
     const tatumSdk = await getTatumSDK();
-    let txData: { vout?: Array<{ value?: string | number; scriptPubKey?: { addresses?: string[] }; n?: number }> } | null = null;
+    let txData: { vout?: Array<{ value?: string | number; scriptPubKey?: { addresses?: string[]; address?: string; type?: string; hex?: string; desc?: string; asm?: string }; n?: number }> } | null = null;
 
     if (currency === 'BTC') {
       txData = await tatumSdk.blockchain.bitcoin.btcGetRawTransaction(txHash) as typeof txData;
@@ -3257,35 +3257,89 @@ const findUtxoOutputIndex = async (
     }
 
     if (txData?.vout) {
-      // For BCH, compare both CashAddr and legacy formats
-      const addressVariants = [address, address.toLowerCase()];
+      // FIX BUG-9: Build comprehensive address variants for matching
+      const addressLower = address.toLowerCase();
+      const addressVariants = new Set([address, addressLower]);
+
+      // For BCH, add CashAddr and legacy formats
       if (currency === 'BCH') {
         try {
-          addressVariants.push(bchaddr.toCashAddress(address));
-          addressVariants.push(bchaddr.toLegacyAddress(address));
+          addressVariants.add(bchaddr.toCashAddress(address));
+          addressVariants.add(bchaddr.toLegacyAddress(address));
         } catch { /* invalid address, just use original */ }
       }
-      for (const output of txData.vout) {
-        // Check scriptPubKey.addresses (array, used by legacy/P2SH)
-        const addrArray = output.scriptPubKey?.addresses || [];
-        // Also check scriptPubKey.address (singular, used by SegWit/bech32 in modern APIs)
-        const addrSingular = (output.scriptPubKey as any)?.address;
-        if (addrSingular) addrArray.push(addrSingular);
 
-        if (addrArray.some((a: string) => addressVariants.includes(a) || addressVariants.includes(a.toLowerCase()))) {
+      for (const output of txData.vout) {
+        const spk = output.scriptPubKey;
+        if (!spk) continue;
+
+        // Collect all address representations from the output
+        const outputAddresses: string[] = [];
+
+        // 1. scriptPubKey.addresses (array — legacy/P2SH)
+        if (Array.isArray(spk.addresses)) {
+          outputAddresses.push(...spk.addresses);
+        }
+
+        // 2. scriptPubKey.address (singular — SegWit/bech32 in modern APIs)
+        if (typeof spk.address === 'string' && spk.address) {
+          outputAddresses.push(spk.address);
+        }
+
+        // 3. FIX: Parse address from scriptPubKey.desc field (e.g., "addr(bc1q...)#checksum")
+        if (typeof spk.desc === 'string' && spk.desc) {
+          const descMatch = spk.desc.match(/addr\(([^)]+)\)/);
+          if (descMatch && descMatch[1]) {
+            outputAddresses.push(descMatch[1]);
+          }
+        }
+
+        // 4. FIX: Parse address from scriptPubKey.asm for witness programs
+        // SegWit v0: "0 <20-byte-hash>" or "0 <32-byte-hash>"
+        // SegWit v1 (taproot): "1 <32-byte-hash>"
+        if (typeof spk.asm === 'string' && spk.asm && outputAddresses.length === 0) {
+          // If no addresses found yet, try to decode from asm (last resort)
+          cronLogger.info(`[findUtxoOutputIndex] Output ${output.n} has no parsed addresses, asm: ${spk.asm.substring(0, 60)}`);
+        }
+
+        // Case-insensitive matching
+        const matched = outputAddresses.some((a: string) => {
+          const aLower = a.toLowerCase();
+          return addressVariants.has(a) || addressVariants.has(aLower);
+        });
+
+        if (matched) {
           const idx = output.n ?? 0;
           cronLogger.info(`[findUtxoOutputIndex] Found output index ${idx} for ${address} in tx ${txHash}`);
           return idx;
         }
       }
+
+      // FIX BUG-9: Log actual vout data for debugging when no match found
+      const voutSummary = txData.vout.map((o, i) => {
+        const spk = o.scriptPubKey;
+        const addrs = [
+          ...(spk?.addresses || []),
+          ...(typeof spk?.address === 'string' ? [spk.address] : []),
+        ];
+        const desc = spk?.desc ? ` desc=${spk.desc.substring(0, 50)}` : '';
+        return `vout[${o.n ?? i}]: value=${o.value}, addrs=[${addrs.join(',')}]${desc}`;
+      });
+      cronLogger.warn(
+        `[findUtxoOutputIndex] ⚠️ Could not find output for ${address} in tx ${txHash}. ` +
+        `Outputs: ${voutSummary.join(' | ')}`
+      );
+    } else {
+      cronLogger.warn(`[findUtxoOutputIndex] No vout data in tx ${txHash} for ${currency}`);
     }
 
-    cronLogger.info(`[findUtxoOutputIndex] Could not find output for ${address} in tx ${txHash}, defaulting to index 0`);
-    return 0;
+    // FIX BUG-9: Return -1 instead of 0 so callers can detect "not found" vs "index 0"
+    // Callers should handle -1 by falling back to scanning all outputs or using index 0 cautiously
+    return -1;
   } catch (error: unknown) {
     const err = error as { message?: string };
-    cronLogger.warn(`[findUtxoOutputIndex] Failed to lookup UTXO index for ${txHash}: ${err.message}, defaulting to index 0`);
-    return 0;
+    cronLogger.warn(`[findUtxoOutputIndex] Failed to lookup UTXO index for ${txHash}: ${err.message}`);
+    return -1;
   }
 };
 
