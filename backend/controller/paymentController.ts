@@ -2982,9 +2982,9 @@ const settleCryptoTransaction = async ({
             fromAddress: fromAddress,
             toAddress: adminWalletAddress,
             privateKey: privateKey,
-            amount: utxoAmountToSend,
+            amount: resolvedUtxoAmount,
             // Fee = full UTXO input - output, ensuring zero change (avoids dust)
-            fee: String(exactFee),
+            fee: String(resolvedExactFee),
             fromUTXO: [
               {
                 txHash: transactionId,
@@ -2995,14 +2995,14 @@ const settleCryptoTransaction = async ({
             toUTXO: [
               {
                 address: adminWalletAddress,
-                value: utxoAmountToSend,
+                value: resolvedUtxoAmount,
               },
             ],
           }),
           `UTXO admin-only transfer (${currency})`
         );
         
-        cronLogger.info(`[settleCryptoTransaction] ✅ UTXO auto-convert TX sent: ${adminTransferDetails?.txId} (${utxoAmountToSend} ${currency} → admin wallet, fee: ${utxoFeeToDeduct})`);
+        cronLogger.info(`[settleCryptoTransaction] ✅ UTXO auto-convert TX sent: ${adminTransferDetails?.txId} (${resolvedUtxoAmount} ${currency} → admin wallet, fee: ${resolvedExactFee})`);
         
         return {
           transactionDetails: adminTransferDetails,
