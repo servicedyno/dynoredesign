@@ -369,9 +369,11 @@ describe("getTransitionMap", () => {
     expect(map[PaymentState.REFUNDED]).toEqual([]);
   });
 
-  it("payout_complete only allows refunded", () => {
+  it("payout_complete allows self-transition and refunded", () => {
     const map = getTransitionMap();
-    expect(map[PaymentState.PAYOUT_COMPLETE]).toEqual([PaymentState.REFUNDED]);
+    expect(map[PaymentState.PAYOUT_COMPLETE]).toContain(PaymentState.PAYOUT_COMPLETE); // BUG-5 fix
+    expect(map[PaymentState.PAYOUT_COMPLETE]).toContain(PaymentState.REFUNDED);
+    expect(map[PaymentState.PAYOUT_COMPLETE]).toHaveLength(2);
   });
 });
 
