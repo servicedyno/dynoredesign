@@ -7200,7 +7200,22 @@ const processIncompletePayments = async () => {
             } else if (updatedAt && !isNaN(updatedAt.getTime())) {
               minutesSinceReserved = (Date.now() - updatedAt.getTime()) / 60000;
             } else {
-              cronLogger.warn(`[processIncompletePayments] Pool address ${walletAddress} has no valid reserved_until or updatedAt — skipping`);
+              // BUG-6 DEFINITIVE FIX: Auto-release pool addresses stuck with no valid timestamps.
+              // These addresses are permanently stuck — just skipping them means they stay stuck forever.
+              cronLogger.warn(`[processIncompletePayments] BUG-6 FIX: Pool address ${walletAddress} has no valid reserved_until or updatedAt — auto-releasing`);
+              
+              await merchantTempAddressModel.update(
+                { 
+                  status: 'AVAILABLE', 
+                  current_payment_id: null, 
+                  expected_amount: null, 
+                  reserved_until: null, 
+                  current_company_id: null,
+                  admin_fee_balance: 0,
+                },
+                { where: { wallet_address: walletAddress } }
+              );
+              cronLogger.info(`[processIncompletePayments] ✅ BUG-6 FIX: Released stuck address ${walletAddress} — now AVAILABLE`);
               continue;
             }
 
