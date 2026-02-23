@@ -364,6 +364,14 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
           continue;
         }
 
+        // BUG-5 FIX: Also skip outgoing transactions (settlement/sweep TXs)
+        const outgoingTxKey = `outgoing-tx-${webhookData.txId}`;
+        const isOutgoing = await getRedisItem(outgoingTxKey);
+        if (isOutgoing && Object.keys(isOutgoing).length > 0) {
+          skippedProcessed++;
+          continue;
+        }
+
         webhookLogs.info(`[Reconciliation] Re-queuing Tatum failed webhook: txId=${webhookData.txId}`);
 
         await enqueueWebhook({
