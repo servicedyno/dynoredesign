@@ -263,9 +263,11 @@ describe("getAllowedTransitions", () => {
     expect(getAllowedTransitions(PaymentState.REFUNDED)).toEqual([]);
   });
 
-  it("PAYOUT_COMPLETE can only go to REFUNDED", () => {
+  it("PAYOUT_COMPLETE can go to PAYOUT_COMPLETE (idempotent) or REFUNDED", () => {
     const allowed = getAllowedTransitions(PaymentState.PAYOUT_COMPLETE);
-    expect(allowed).toEqual([PaymentState.REFUNDED]);
+    expect(allowed).toContain(PaymentState.PAYOUT_COMPLETE); // BUG-5 fix: idempotent self-transition
+    expect(allowed).toContain(PaymentState.REFUNDED);
+    expect(allowed).toHaveLength(2);
   });
 });
 
