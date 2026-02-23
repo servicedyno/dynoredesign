@@ -240,9 +240,11 @@ describe("getAllowedTransitions", () => {
   it("returns correct transitions for PENDING", () => {
     const allowed = getAllowedTransitions(PaymentState.PENDING);
     expect(allowed).toContain(PaymentState.DETECTED);
+    expect(allowed).toContain(PaymentState.PROCESSING);  // BUG-4 fix: fast-confirm chains skip DETECTED
+    expect(allowed).toContain(PaymentState.UNDERPAID);    // BUG-4 fix: partial payments
     expect(allowed).toContain(PaymentState.EXPIRED);
     expect(allowed).toContain(PaymentState.FAILED);
-    expect(allowed).toHaveLength(3);
+    expect(allowed).toHaveLength(5);
   });
 
   it("returns correct transitions for DETECTED", () => {
