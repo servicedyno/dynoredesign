@@ -34,10 +34,10 @@ class DynoPayBackendTester:
     def test_backend_health(self) -> bool:
         """
         TEST 1: Verify backend health endpoint
-        Expected: GET /health returns 200 with status="healthy"
+        Expected: GET /api/status/health returns 200 with status="healthy"
         """
         try:
-            response = self.session.get(f"{self.base_url}/health", timeout=10)
+            response = self.session.get(f"{self.base_url}/api/status/health", timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
