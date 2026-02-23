@@ -4717,13 +4717,28 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           };
           
           try {
-            const webhookResult = await callMerchantWebhook(customerData, enhancedWebhookPayload);
-            if (webhookResult.success) {
-              cronLogger.info("[cryptoVerification] ✅ Merchant webhook sent successfully");
+            // BUG-1 FIX: Use Redis dedup flag to prevent duplicate payment.confirmed webhooks.
+            // Both cryptoVerification and webhookProcessor used to send this webhook independently.
+            const confirmedWebhookKey = `confirmed-webhook-sent-${webhookPaymentId || transactionId}`;
+            const alreadySentConfirmed = await getRedisItem(confirmedWebhookKey);
+            
+            if (alreadySentConfirmed && alreadySentConfirmed.sent) {
+              cronLogger.info(`[cryptoVerification] payment.confirmed webhook already sent for ${webhookPaymentId || transactionId}, skipping duplicate`);
             } else {
-              cronLogger.error(`[cryptoVerification] ❌ Merchant webhook failed: ${webhookResult.error}`);
-              if (webhookResult.url) {
-                cronLogger.error(`[cryptoVerification] Failed URL: ${webhookResult.url}`);
+              // Set flag BEFORE sending to prevent race conditions
+              await setRedisItem(confirmedWebhookKey, { sent: true, sentAt: new Date().toISOString(), source: "cryptoVerification" });
+              await setRedisTTL(confirmedWebhookKey, 86400); // 24 hour TTL
+              
+              const webhookResult = await callMerchantWebhook(customerData, enhancedWebhookPayload);
+              if (webhookResult.success) {
+                cronLogger.info("[cryptoVerification] ✅ Merchant webhook sent successfully");
+              } else {
+                cronLogger.error(`[cryptoVerification] ❌ Merchant webhook failed: ${webhookResult.error}`);
+                if (webhookResult.url) {
+                  cronLogger.error(`[cryptoVerification] Failed URL: ${webhookResult.url}`);
+                }
+                // Clear flag so webhookProcessor can retry
+                await setRedisItem(confirmedWebhookKey, { sent: false });
               }
             }
             cronLogger.info(`[cryptoVerification] Webhook payload: merchant_amount=${autoConvertEnabled ? originalUserAmount : userAmountToSend}, total_fee=${autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend}, fee_payer=${enhancedWebhookPayload.fee_payer}${autoConvertEnabled ? `, auto_convert=${autoConvertTargetCurrency}` : ''}`);
