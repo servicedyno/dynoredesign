@@ -291,6 +291,12 @@ const callUrlWithPayload = async (
         
         webhookLogs.info(`[callMerchantWebhook] ✅ ${urlType} sent successfully, status: ${response.status}`);
         
+        // FIX BUG-3: Reset failure counter on success
+        const successFailKey = `webhook-failures:${url}`;
+        if (webhookFailureTracker.has(successFailKey)) {
+          webhookFailureTracker.delete(successFailKey);
+        }
+        
         // Log successful delivery
         if (companyId) {
           await logWebhookDelivery(
