@@ -286,7 +286,37 @@ const processAddress = async (addr: any, result: {
       const now = new Date();
       
       if (!reservedUntil) {
-        cronLogger.info(`[MerchantPool] ⏭️ Skipping ${walletAddress} - no reserved_until timestamp`);
+        // BUG-6 DEFINITIVE FIX: Instead of just skipping, auto-release addresses
+        // stuck in IN_USE with no reserved_until timestamp. This address is permanently 
+        // stuck and will never expire on its own. The previous fix (BUG-7) only handled 
+        // NaN dates but not NULL dates — this closes that gap.
+        const updatedAtCheck = addr.dataValues.updatedAt ? new Date(addr.dataValues.updatedAt) : null;
+        const updatedAtMs = updatedAtCheck ? updatedAtCheck.getTime() : 0;
+        const stuckDurationMs = updatedAtMs > 0 ? (Date.now() - updatedAtMs) : Infinity;
+        const stuckMinutes = stuckDurationMs / 60000;
+        
+        // Auto-release if stuck for more than 2 hours with no reserved_until
+        if (stuckMinutes > 120) {
+          cronLogger.warn(`[MerchantPool] ⚠️ BUG-6 FIX: ${walletAddress} (${walletType}) stuck IN_USE with no reserved_until for ${stuckMinutes > 1440 ? (stuckMinutes/1440).toFixed(1) + ' days' : stuckMinutes.toFixed(0) + ' min'} — auto-releasing`);
+          const MerchantTempAddress = require("../../models/merchantPoolModels/merchantTempAddressModel").default;
+          
+          // Clear all reservation fields and set status to AVAILABLE
+          await MerchantTempAddress.update(
+            { 
+              status: 'AVAILABLE', 
+              current_payment_id: null, 
+              expected_amount: null, 
+              reserved_until: null, 
+              current_company_id: null,
+              admin_fee_balance: 0,
+            },
+            { where: { wallet_address: walletAddress } }
+          );
+          cronLogger.info(`[MerchantPool] ✅ BUG-6 FIX: Released stuck address ${walletAddress} — now AVAILABLE`);
+          result.released++;
+        } else {
+          cronLogger.info(`[MerchantPool] ⏭️ Skipping ${walletAddress} - no reserved_until but updated recently (${stuckMinutes.toFixed(0)} min ago)`);
+        }
         return;
       }
       
