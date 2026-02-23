@@ -2960,7 +2960,17 @@ const settleCryptoTransaction = async ({
         
         // Lookup the correct UTXO output index for this address
         const utxoIndex = await tatumApi.findUtxoOutputIndex(transactionId, fromAddress, currency);
-        cronLogger.info(`[settleCryptoTransaction] UTXO math (satoshi): input=${inputSats}, output=${outputSats}, fee=${feeSats}, change=${inputSats - outputSats - feeSats}, utxoAmountToSend=${utxoAmountToSend}, exactFee=${exactFee}`);
+        // FIX BUG-2/9: If output index not found (-1), log error and fall back to index 0 with fee tolerance
+        const resolvedUtxoIndex = utxoIndex >= 0 ? utxoIndex : 0;
+        if (utxoIndex < 0) {
+          cronLogger.warn(`[settleCryptoTransaction] ⚠️ UTXO output index not found for ${fromAddress} in tx ${transactionId}. Falling back to index 0 with +1 sat fee tolerance.`);
+          // Add 1 satoshi tolerance to avoid off-by-one fee rejection
+          feeSats = feeSats + 1;
+          exactFee = feeSats / 1e8;
+          outputSats = inputSats - feeSats;
+          utxoAmountToSend = outputSats / 1e8;
+        }
+        cronLogger.info(`[settleCryptoTransaction] UTXO math (satoshi): input=${inputSats}, output=${outputSats}, fee=${feeSats}, change=${inputSats - outputSats - feeSats}, utxoAmountToSend=${utxoAmountToSend}, exactFee=${exactFee}, utxoIndex=${resolvedUtxoIndex}`);
         
         const adminTransferDetails = await withRetry(
           () => tatumApi.assetToOtherAddress({
