@@ -293,6 +293,18 @@ const processAddress = async (addr: any, result: {
       const minutesUntilExpiry = (reservedUntil.getTime() - now.getTime()) / 60000;
       const minutesSinceReserved = POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES - minutesUntilExpiry;
       
+      // FIX BUG-7: Handle NaN reserved_until (invalid date in DB) — auto-release the stuck address
+      if (isNaN(minutesSinceReserved) || isNaN(minutesUntilExpiry)) {
+        cronLogger.warn(`[MerchantPool] ⚠️ BUG-7 FIX: ${walletAddress} (${walletType}) has NaN reserved_until — releasing stuck address`);
+        const MerchantTempAddress = require("../../models/merchantPoolModels/merchantTempAddressModel").default;
+        await MerchantTempAddress.update(
+          { status: 'AVAILABLE', current_payment_id: null, expected_amount: null, reserved_until: null, current_company_id: null },
+          { where: { wallet_address: walletAddress } }
+        );
+        cronLogger.info(`[MerchantPool] ✅ Released stuck address ${walletAddress} — now AVAILABLE`);
+        return;
+      }
+      
       if (minutesSinceReserved < WEBHOOK_GRACE_PERIOD_MINUTES) {
         result.skippedTooRecent++;
         if (minutesSinceReserved > 5) {
