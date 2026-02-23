@@ -7,6 +7,37 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
+  - task: "Fix All 9 Bugs from Railway Production Log Analysis (Feb 23, 2026)"
+    implemented: true
+    working: pending_verification
+    files:
+      - "/app/backend/services/paymentStateMachine.ts"
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/services/webhookProcessor.ts"
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/routes/index.ts"
+      - "/app/backend/services/conversionService.ts"
+      - "/app/backend/webhooks/index.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: pending
+        agent: "main"
+        comment: |
+          9 bugs fixed from Railway production log analysis:
+          BUG 4: State machine — added pending→processing and pending→underpaid transitions
+          BUG 5: Double payout_complete — added idempotent self-transition  
+          BUG 9: findUtxoOutputIndex — added desc field parsing, vout debug logging, returns -1 on failure
+          BUG 2: BTC broadcast fee off-by-one — callers handle -1 with +1 sat tolerance
+          BUG 6: Unparseable "undefined" status — checks for string "undefined"/"null"
+          BUG 7: DOGE NaN reserved_until — auto-releases stuck addresses
+          BUG 8: Tatum IP allowlist — added GCP IPs observed in production
+          BUG 1: PENDING_DEPOSIT timeout — reduced to 6h, added sweep failure detection
+          BUG 3: Webhook 404 tracking — consecutive failure counter with admin alert
+          TypeScript: Clean compilation. Backend: healthy.
+
   - task: "Fix 6 Remaining Railway Log Issues: NaN processIncompletePayments, Unparseable undefined status, Missing image 404, Legacy webhook auth hardening, BlockchainFeeService rate limiting, TronEnergy token activation retry"
     implemented: true
     working: true
