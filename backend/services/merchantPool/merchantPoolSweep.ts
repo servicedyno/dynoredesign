@@ -597,6 +597,23 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       throw new Error("Sweep transaction failed - no txId/txHash returned");
     }
 
+    // BUG-4 FIX: Mark sweep TX as outgoing to prevent Tatum webhook re-processing
+    try {
+      const { setRedisItem, setRedisTTL } = require("../../utils/redisUtility");
+      await setRedisItem(`outgoing-tx-${sweepTxId}`, {
+        type: "sweep",
+        fromAddress: poolAddress.dataValues.wallet_address,
+        toAddress: adminWallet,
+        amount: amountToSend,
+        currency: walletType,
+        markedAt: new Date().toISOString(),
+      });
+      await setRedisTTL(`outgoing-tx-${sweepTxId}`, 7200); // 2 hour TTL
+      cronLogger.info(`[MerchantPool] Marked sweep TX ${sweepTxId} as outgoing`);
+    } catch (markErr) {
+      cronLogger.warn(`[MerchantPool] Failed to mark sweep TX as outgoing (non-critical):`, markErr);
+    }
+
     // Fetch actual on-chain gas cost (TX is confirmed, so this should succeed)
     let actualGasUsed = isAccountChain ? (actualBalance - amountToSend) : 0;
     if (sweepTxId) {
