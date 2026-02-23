@@ -3004,6 +3004,14 @@ const settleCryptoTransaction = async ({
         
         cronLogger.info(`[settleCryptoTransaction] ✅ UTXO auto-convert TX sent: ${adminTransferDetails?.txId} (${resolvedUtxoAmount} ${currency} → admin wallet, fee: ${resolvedExactFee})`);
         
+        // BUG-3 FIX: Mark UTXO auto-convert TX as outgoing
+        if (adminTransferDetails?.txId) {
+          await setRedisItem(`outgoing-tx-${adminTransferDetails.txId}`, {
+            type: "utxo-auto-convert", currency, markedAt: new Date().toISOString(),
+          });
+          await setRedisTTL(`outgoing-tx-${adminTransferDetails.txId}`, 7200);
+        }
+
         return {
           transactionDetails: adminTransferDetails,
           userTransactionDetails: null,
