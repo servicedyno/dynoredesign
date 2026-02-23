@@ -270,7 +270,7 @@ export const checkMissedPayments = async (): Promise<{
  */
 const processAddress = async (addr: any, result: {
   checked: number; found: number; processed: number; alreadyProcessed: number;
-  skippedTooRecent: number; errors: string[];
+  skippedTooRecent: number; released: number; errors: string[];
 }): Promise<void> => {
     result.checked++;
       
