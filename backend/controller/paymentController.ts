@@ -3304,6 +3304,32 @@ const settleCryptoTransaction = async ({
       }
     }
 
+    // BUG-3 FIX: Mark the settlement TX as outgoing in Redis BEFORE confirmation wait.
+    // This prevents Tatum webhooks for our own outgoing TXs from being processed as incoming payments.
+    const settlementTxHash = merchantTransactionDetails?.txId;
+    if (settlementTxHash) {
+      await setRedisItem(`outgoing-tx-${settlementTxHash}`, {
+        type: "settlement",
+        fromAddress: fromAddress,
+        toAddress: userAddress,
+        amount: merchantSendAmount,
+        currency,
+        markedAt: new Date().toISOString(),
+      });
+      await setRedisTTL(`outgoing-tx-${settlementTxHash}`, 7200); // 2 hour TTL
+      cronLogger.info(`[settleCryptoTransaction] Marked TX ${settlementTxHash} as outgoing (settlement)`);
+    }
+
+    // Also mark gas funding TX as outgoing (SmartGas)
+    if (gasFundingResult.txId) {
+      await setRedisItem(`outgoing-tx-${gasFundingResult.txId}`, {
+        type: "gas-funding",
+        currency,
+        markedAt: new Date().toISOString(),
+      });
+      await setRedisTTL(`outgoing-tx-${gasFundingResult.txId}`, 7200);
+    }
+
     // FIX: Verify merchant transaction was actually mined for account-based chains
     // This prevents marking payment complete when TX is stuck due to low gas
     if (["ETH", "BSC", "TRX", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20", "USDT-TRC20", "SOL", "XRP", "RLUSD", "POLYGON", "USDT-POLYGON"].includes(currency)) {
