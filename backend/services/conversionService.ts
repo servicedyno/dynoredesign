@@ -200,7 +200,18 @@ const processPendingDeposits = async (): Promise<number> => {
           // Increment retry counter if deposit not found at all after some time
           const ageMinutes = (Date.now() - new Date(data.createdAt).getTime()) / 60000;
           log(`[DEBUG] No deposit found for #${data.conversion_id}, age=${ageMinutes.toFixed(1)}min, pendingDeposits=${pendingDeposits.length}`);
-          if (ageMinutes > 30) {
+
+          // FIX BUG-1: Detect stuck conversions where sweep failed (balance is dust)
+          // If conversion is old enough and no deposit found on Binance, check if sweep failed
+          if (ageMinutes > 60 && data.retry_count >= 5) {
+            log(`⚠️ BUG-1 FIX: Conversion #${data.conversion_id} stuck for ${ageMinutes.toFixed(0)}min with ${data.retry_count} retries — likely sweep failure (funds never reached Binance)`);
+            // Mark with descriptive error so admin can investigate
+            await record.update({
+              retry_count: data.retry_count + 1,
+              last_retry_at: new Date(),
+              error_message: `Sweep likely failed: deposit not found on Binance after ${ageMinutes.toFixed(0)} minutes and ${data.retry_count + 1} retries. Check if source address was swept successfully.`,
+            });
+          } else if (ageMinutes > 30) {
             await record.update({
               retry_count: data.retry_count + 1,
               last_retry_at: new Date(),
