@@ -43,6 +43,8 @@ export enum PaymentState {
 const VALID_TRANSITIONS: Record<PaymentState, Set<PaymentState>> = {
   [PaymentState.PENDING]: new Set([
     PaymentState.DETECTED,
+    PaymentState.PROCESSING,  // FIX BUG-4: Webhook flow skips DETECTED on fast-confirm chains
+    PaymentState.UNDERPAID,   // FIX BUG-4: Partial payments go directly to UNDERPAID
     PaymentState.EXPIRED,
     PaymentState.FAILED,
   ]),
