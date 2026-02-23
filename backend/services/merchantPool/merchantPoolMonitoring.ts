@@ -185,6 +185,7 @@ export const checkMissedPayments = async (): Promise<{
     processed: 0,
     alreadyProcessed: 0,
     skippedTooRecent: 0,
+    released: 0,
     errors: [] as string[],
     timing: { totalMs: 0, avgPerAddressMs: 0 },
   };
