@@ -3204,6 +3204,19 @@ const settleCryptoTransaction = async ({
 
         // Lookup the correct UTXO output index for this address (instead of assuming index 0)
         const utxoIndex = await tatumApi.findUtxoOutputIndex(transactionId, fromAddress, currency);
+        // FIX BUG-2/9: Handle unresolved output index with fee tolerance
+        const resolvedUtxoIndex = utxoIndex >= 0 ? utxoIndex : 0;
+        let finalFeeSats = actualFeeSats;
+        let finalMerchantSats = actualMerchantSats;
+        let finalMerchantSendAmount = merchantSendAmount;
+        if (utxoIndex < 0) {
+          cronLogger.warn(`[settleCryptoTransaction] ⚠️ UTXO output index not found for ${fromAddress} in tx ${transactionId}. Adding +1 sat fee tolerance.`);
+          // Add 1 satoshi to fee to absorb potential off-by-one
+          finalFeeSats = actualFeeSats + 1;
+          finalMerchantSats = actualMerchantSats - 1;
+          finalMerchantSendAmount = finalMerchantSats / 1e8;
+        }
+        const exactFeeResolved = finalFeeSats / 1e8;
 
         // Retry merchant transfer for UTXO chains
         merchantTransactionDetails = await withRetry(
@@ -3212,19 +3225,19 @@ const settleCryptoTransaction = async ({
             fromAddress: fromAddress,
             toAddress: userAddress,  // Primary recipient is merchant
             privateKey: privateKey,
-            amount: merchantSendAmount,
-            fee: String(exactFee),
+            amount: finalMerchantSendAmount,
+            fee: String(exactFeeResolved),
             fromUTXO: [
               {
                 txHash: transactionId,
-                index: utxoIndex,
+                index: resolvedUtxoIndex,
                 privateKey: privateKey,  // BCH requires privateKey in fromUTXO
               },
             ],
             toUTXO: [
               {
                 address: userAddress,
-                value: merchantSendAmount,
+                value: finalMerchantSendAmount,
               },
               {
                 address: adminWalletAddress,
@@ -3235,9 +3248,10 @@ const settleCryptoTransaction = async ({
           `UTXO merchant transfer (${currency})`
         );
 
-        totalBlockchainFee = exactFee;
+        totalBlockchainFee = exactFeeResolved;
+        merchantSendAmount = finalMerchantSendAmount;
         
-        cronLogger.info(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${merchantSendAmount} + admin ${adminAmount} (fee: ${exactFee})`);
+        cronLogger.info(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${finalMerchantSendAmount} + admin ${adminAmount} (fee: ${exactFeeResolved}, utxoIndex: ${resolvedUtxoIndex})`);
 
       } else {
         // Account-based chains (ETH, TRX, BSC, SOL, XRP, POLYGON): Single transfer to merchant only
