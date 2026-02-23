@@ -72,7 +72,13 @@ const verifyTatumWebhookSource = (req: express.Request, res: express.Response, n
   if (!signature) {
     // Legacy subscription without HMAC — apply IP check and rate limiting
     const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-    const isTatumIp = TATUM_KNOWN_IPS.has(clientIp);
+    // FIX BUG-8: Check both exact match and prefix match for IP ranges
+    const isTatumIp = TATUM_KNOWN_IPS.has(clientIp) || 
+      Array.from(TATUM_KNOWN_IPS).some(knownIp => 
+        knownIp.endsWith('.0') || knownIp.endsWith('.0.0') 
+          ? clientIp.startsWith(knownIp.replace(/\.0(\.0)?$/, '.'))
+          : false
+      );
 
     // Rate-limit unsigned webhooks per IP
     const now = Date.now();
