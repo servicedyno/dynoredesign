@@ -695,43 +695,55 @@ async function handleNewTransaction(
     });
     await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
 
-    // ── Send payment.confirmed webhook to merchant ──────────────────────────
+    // ── Send payment.confirmed webhook to merchant (with BUG-1 FIX dedup) ──
     try {
-      let confirmedCustomerData = await getRedisItem(items?.ref);
-      if (!confirmedCustomerData || Object.keys(confirmedCustomerData).length === 0) {
-        confirmedCustomerData = {};
-      }
-      // Merge webhook info from items
-      if (!confirmedCustomerData.webhook_url && items?.webhook_url) confirmedCustomerData.webhook_url = items.webhook_url;
-      if (!confirmedCustomerData.callback_url && items?.callback_url) confirmedCustomerData.callback_url = items.callback_url;
-      if (!confirmedCustomerData.webhook_secret && items?.webhook_secret) confirmedCustomerData.webhook_secret = items.webhook_secret;
-      if (!confirmedCustomerData.company_id && items?.company_id) confirmedCustomerData.company_id = items.company_id;
-      if (!confirmedCustomerData.link_id && items?.link_id) confirmedCustomerData.link_id = items.link_id;
+      // BUG-1 FIX: Check if cryptoVerification already sent the confirmed webhook
+      const confirmedWebhookKey = `confirmed-webhook-sent-${paymentId}`;
+      const alreadySentConfirmed = await getRedisItem(confirmedWebhookKey);
+      
+      if (alreadySentConfirmed && alreadySentConfirmed.sent) {
+        webhookLogs.info(`[WebhookProcessor] payment.confirmed webhook already sent by cryptoVerification for ${paymentId}, skipping duplicate`);
+      } else {
+        let confirmedCustomerData = await getRedisItem(items?.ref);
+        if (!confirmedCustomerData || Object.keys(confirmedCustomerData).length === 0) {
+          confirmedCustomerData = {};
+        }
+        // Merge webhook info from items
+        if (!confirmedCustomerData.webhook_url && items?.webhook_url) confirmedCustomerData.webhook_url = items.webhook_url;
+        if (!confirmedCustomerData.callback_url && items?.callback_url) confirmedCustomerData.callback_url = items.callback_url;
+        if (!confirmedCustomerData.webhook_secret && items?.webhook_secret) confirmedCustomerData.webhook_secret = items.webhook_secret;
+        if (!confirmedCustomerData.company_id && items?.company_id) confirmedCustomerData.company_id = items.company_id;
+        if (!confirmedCustomerData.link_id && items?.link_id) confirmedCustomerData.link_id = items.link_id;
 
-      if (confirmedCustomerData.webhook_url || confirmedCustomerData.callback_url) {
-        const confirmedLinkId = confirmedCustomerData?.link_id || items?.link_id || null;
-        const confirmedPaymentType = confirmedLinkId ? "payment_link" : "direct_api";
+        if (confirmedCustomerData.webhook_url || confirmedCustomerData.callback_url) {
+          const confirmedLinkId = confirmedCustomerData?.link_id || items?.link_id || null;
+          const confirmedPaymentType = confirmedLinkId ? "payment_link" : "direct_api";
 
-        await callMerchantWebhook(confirmedCustomerData, {
-          event: "payment.confirmed",
-          payment_type: confirmedPaymentType,
-          address,
-          txId: payload.txId,
-          amount: finalReceivedAmount,
-          currency: items?.currency || payload.asset,
-          payment_id: items?.payment_id || items?.unique_tx_id,
-          status: "successful",
-          payment_status: "confirmed",
-          base_amount: confirmedCustomerData?.base_amount || items?.base_amount_usd || null,
-          base_currency: confirmedCustomerData?.base_currency || "USD",
-          customer_name: confirmedCustomerData?.customer_name || null,
-          customer_email: confirmedCustomerData?.email || null,
-          description: confirmedCustomerData?.description || null,
-          link_id: confirmedLinkId,
-          fee_payer: confirmedCustomerData?.fee_payer || items?.fee_payer || "company",
-          completed_at: new Date().toISOString(),
-        });
-        webhookLogs.info(`[WebhookProcessor] ✅ payment.confirmed webhook sent for payment ${paymentId}`);
+          // Set dedup flag before sending
+          await setRedisItem(confirmedWebhookKey, { sent: true, sentAt: new Date().toISOString(), source: "webhookProcessor" });
+          await setRedisTTL(confirmedWebhookKey, 86400);
+
+          await callMerchantWebhook(confirmedCustomerData, {
+            event: "payment.confirmed",
+            payment_type: confirmedPaymentType,
+            address,
+            txId: payload.txId,
+            amount: finalReceivedAmount,
+            currency: items?.currency || payload.asset,
+            payment_id: items?.payment_id || items?.unique_tx_id,
+            status: "successful",
+            payment_status: "confirmed",
+            base_amount: confirmedCustomerData?.base_amount || items?.base_amount_usd || null,
+            base_currency: confirmedCustomerData?.base_currency || "USD",
+            customer_name: confirmedCustomerData?.customer_name || null,
+            customer_email: confirmedCustomerData?.email || null,
+            description: confirmedCustomerData?.description || null,
+            link_id: confirmedLinkId,
+            fee_payer: confirmedCustomerData?.fee_payer || items?.fee_payer || "company",
+            completed_at: new Date().toISOString(),
+          });
+          webhookLogs.info(`[WebhookProcessor] ✅ payment.confirmed webhook sent for payment ${paymentId}`);
+        }
       }
     } catch (confirmedWebhookErr) {
       webhookLogs.error("[WebhookProcessor] Error sending payment.confirmed webhook:", confirmedWebhookErr);
