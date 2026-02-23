@@ -75,17 +75,16 @@ describe("canTransition — invalid transitions", () => {
   const invalidCases: [PaymentState, PaymentState][] = [
     // Can't skip states
     [PaymentState.PENDING, PaymentState.CONFIRMED],
-    [PaymentState.PENDING, PaymentState.PROCESSING],
+    // FIX: pending → processing and pending → underpaid are now VALID (BUG-4 fix)
     [PaymentState.PENDING, PaymentState.PAYOUT_COMPLETE],
     [PaymentState.PENDING, PaymentState.CONVERTED],
     [PaymentState.PENDING, PaymentState.REFUNDED],
-    [PaymentState.PENDING, PaymentState.UNDERPAID],
     // Can't go backward
     [PaymentState.DETECTED, PaymentState.PENDING],
     [PaymentState.CONFIRMED, PaymentState.DETECTED],
     [PaymentState.PROCESSING, PaymentState.CONFIRMED],
     [PaymentState.PAYOUT_COMPLETE, PaymentState.PROCESSING],
-    // Terminal states can't transition (except payout→refunded)
+    // Terminal states can't transition (except payout→refunded and payout→payout)
     [PaymentState.FAILED, PaymentState.PENDING],
     [PaymentState.FAILED, PaymentState.PROCESSING],
     [PaymentState.FAILED, PaymentState.PAYOUT_COMPLETE],
@@ -93,7 +92,7 @@ describe("canTransition — invalid transitions", () => {
     [PaymentState.EXPIRED, PaymentState.DETECTED],
     [PaymentState.REFUNDED, PaymentState.PAYOUT_COMPLETE],
     [PaymentState.REFUNDED, PaymentState.PENDING],
-    // Self-transitions not allowed
+    // Self-transitions not allowed (except payout_complete which is idempotent)
     [PaymentState.PENDING, PaymentState.PENDING],
     [PaymentState.PROCESSING, PaymentState.PROCESSING],
     [PaymentState.FAILED, PaymentState.FAILED],
