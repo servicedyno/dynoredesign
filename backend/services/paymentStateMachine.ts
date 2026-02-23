@@ -81,6 +81,7 @@ const VALID_TRANSITIONS: Record<PaymentState, Set<PaymentState>> = {
   ]),
   // Terminal states — no outgoing transitions (except refund from payout_complete)
   [PaymentState.PAYOUT_COMPLETE]: new Set([
+    PaymentState.PAYOUT_COMPLETE,  // FIX BUG-5: Idempotent self-transition (reconciliation + webhook race)
     PaymentState.REFUNDED,
   ]),
   [PaymentState.FAILED]:   new Set(),
