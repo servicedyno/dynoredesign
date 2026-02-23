@@ -250,7 +250,7 @@ export const checkMissedPayments = async (): Promise<{
     cronLogger.info(`[MerchantPool] ✅ Missed payment check complete:`);
     cronLogger.info(`[MerchantPool]   - Checked: ${result.checked}/${totalAddresses}`);
     cronLogger.info(`[MerchantPool]   - Found: ${result.found}, Processed: ${result.processed}, Already: ${result.alreadyProcessed}`);
-    cronLogger.info(`[MerchantPool]   - Skipped (recent): ${result.skippedTooRecent}`);
+    cronLogger.info(`[MerchantPool]   - Skipped (recent): ${result.skippedTooRecent}, Released (stuck): ${result.released}`);
     cronLogger.info(`[MerchantPool]   - Timing: ${result.timing.totalMs}ms total, ${result.timing.avgPerAddressMs}ms avg/addr`);
     if (result.errors.length > 0) {
       cronLogger.info(`[MerchantPool]   - Errors: ${result.errors.length}`);
