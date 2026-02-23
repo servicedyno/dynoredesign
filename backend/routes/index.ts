@@ -43,11 +43,17 @@ import { logWebhookValidationFailure } from "../utils/securityLogger";
  * and rate-limit unsigned requests to mitigate spoofing risk.
  */
 
-// Known Tatum IP ranges (from their documentation and observed traffic)
+// Known Tatum IP ranges (from their documentation, observed traffic, and production logs)
 const TATUM_KNOWN_IPS = new Set([
   '167.82.142.41', '167.82.142.42', '167.82.142.43', '167.82.142.44',
   '18.213.36.109', '18.213.36.110', // Tatum US-East
   '3.209.96.0', '3.209.96.1', // Tatum AWS
+  // FIX BUG-8: Google Cloud IPs observed sending Tatum webhooks in production
+  '34.82.77.148',    // GCP us-west1 — confirmed Tatum webhook source
+  '35.185.216.99',   // GCP us-central1 — confirmed Tatum webhook source
+  '34.82.0.0',       // GCP us-west1 range (Tatum infrastructure)
+  '35.185.0.0',      // GCP us-central1 range (Tatum infrastructure)
+  '34.107.0.0',      // GCP additional webhook IPs
 ]);
 
 // Track unsigned webhook counts per IP (sliding window)
