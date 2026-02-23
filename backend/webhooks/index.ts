@@ -330,6 +330,18 @@ const callUrlWithPayload = async (
           if (responseBodyStr) {
             webhookLogs.error(`[callMerchantWebhook] ❌ Response body: ${responseBodyStr.substring(0, 500)}`);
           }
+          // FIX BUG-3: Track consecutive webhook failures per URL and alert admin
+          if (finalResponseStatus === 404) {
+            const failKey = `webhook-failures:${url}`;
+            const failCount = webhookFailureTracker.get(failKey) || 0;
+            webhookFailureTracker.set(failKey, failCount + 1);
+            if (failCount + 1 >= 3) {
+              webhookLogs.error(
+                `[callMerchantWebhook] 🚨 ALERT: Webhook URL "${url}" has returned 404 for ${failCount + 1} consecutive attempts. ` +
+                `Company ${companyId} will NOT receive payment notifications. Merchant should update their webhook URL.`
+              );
+            }
+          }
           // Include response body in error message for caller
           if (responseBodyStr) {
             errorMessage = `${errorMessage} - Server response: ${responseBodyStr.substring(0, 200)}`;
