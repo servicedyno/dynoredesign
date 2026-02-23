@@ -510,6 +510,16 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
+    // BUG-3/4 FIX: Skip webhooks for our own outgoing transactions (settlement/sweep TXs).
+    // When DynoPay sends settlement or sweep TXs, Tatum fires webhooks back to us.
+    // These are false positives — not incoming payments — and should be ignored.
+    const outgoingTxKey = `outgoing-tx-${payload.txId}`;
+    const isOutgoingTx = await getRedisItem(outgoingTxKey);
+    if (isOutgoingTx && Object.keys(isOutgoingTx).length > 0) {
+      webhookLogs.info(`[tatumCryptoWebHook] Outgoing TX detected (${isOutgoingTx.type || 'unknown'}), skipping: ${payload.txId}`);
+      return res.status(200).end();
+    }
+
     // Enqueue for async processing by BullMQ worker
     await enqueueWebhook({
       payload: {
