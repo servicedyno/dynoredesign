@@ -22,6 +22,10 @@ const INTERNAL_WALLETS = new Set(
     .map(addr => addr.toLowerCase())
 );
 
+// FIX BUG-3: Track consecutive webhook delivery failures per URL
+// Resets on successful delivery. Alerts admin after 3+ consecutive failures.
+const webhookFailureTracker = new Map<string, number>();
+
 /**
  * Generate HMAC-SHA256 signature for webhook payload
  * @param payload - The webhook payload object
