@@ -15,7 +15,7 @@ import time
 from typing import Dict, Any
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://quick-setup-62.preview.emergentagent.com"
+BACKEND_URL = "https://setup-guide-38.preview.emergentagent.com"
 LOCAL_BACKEND_URL = "http://localhost:8001"
 
 def run_command(cmd: str, cwd: str = "/app/backend") -> tuple:
