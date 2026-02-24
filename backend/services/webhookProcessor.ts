@@ -666,8 +666,11 @@ async function handleNewTransaction(
         }
 
         if (attempt < maxRetries) {
-          const waitTime = 2000 * Math.pow(2, attempt - 1);
-          webhookLogs.warn(`[WebhookProcessor] Retry ${attempt}/${maxRetries}: ${err.message}, waiting ${waitTime}ms`);
+          // Gas-related errors need longer waits (gas TX may still be confirming on-chain)
+          const isGasError = GAS_RACE_RETRYABLE_PATTERNS.some((p) => (err.message || "").toLowerCase().includes(p.toLowerCase()));
+          const baseWait = isGasError ? 15000 : 2000; // 15s base for gas errors vs 2s for others
+          const waitTime = baseWait * Math.pow(2, attempt - 1);
+          webhookLogs.warn(`[WebhookProcessor] Retry ${attempt}/${maxRetries}: ${err.message}, waiting ${waitTime}ms${isGasError ? " (gas-related, extended wait)" : ""}`);
 
           // Soft-enforce: processing → retrying (self-transition via legacy map)
           softValidate("processing", "retrying", paymentId, `crypto-verification-retry-${attempt}`);
