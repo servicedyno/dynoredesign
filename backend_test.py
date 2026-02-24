@@ -194,7 +194,7 @@ def test_fix_4_bullmq_retry_delay() -> bool:
     # Check for correct BullMQ delay configuration
     patterns = [
         r'delay:\s*30000',  # Initial delay is 30000ms, not 5000ms
-        r'backoff.*exponential'  # Uses exponential backoff
+        r'type.*exponential'  # Uses exponential backoff
     ]
     
     success, found = check_file_content("/app/backend/services/webhookQueue.ts", patterns)
