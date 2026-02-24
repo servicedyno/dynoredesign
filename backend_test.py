@@ -11,7 +11,7 @@ import sys
 from typing import Dict, Any, List
 
 class DynoPayBackendTester:
-    def __init__(self, base_url: str = "https://setup-wizard-116.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://quick-setup-62.preview.emergentagent.com"):
         self.base_url = base_url.rstrip('/')
         self.api_base = f"{self.base_url}/api"
         self.session = requests.Session()
@@ -298,7 +298,7 @@ def main():
     """Main testing function"""
     
     # Read backend URL from frontend/.env if available
-    backend_url = "https://setup-wizard-116.preview.emergentagent.com"  # Default
+    backend_url = "https://quick-setup-62.preview.emergentagent.com"  # Default
     
     try:
         with open("/app/frontend/.env", "r") as f:
