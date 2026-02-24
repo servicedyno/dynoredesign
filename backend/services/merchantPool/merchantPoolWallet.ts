@@ -18,6 +18,25 @@ import { getErrorMessage } from "../../helper";
 import { POOL_CONFIG, RLUSD_CONFIG, isTagBasedChain, XRP_MASTER_ADDRESS, getCryptoRedisKey } from "./merchantPoolConfig";
 import { adminFeeModel } from "../../models";
 import { getRedisItem, setRedisItemWithTTL } from "../../utils/redisInstance";
+import { generateQRCodeWithLogo } from "../../utils/qrCodeWithLogo";
+
+/**
+ * PERF: Pre-generate QR code for a pool address and cache it in DB.
+ * Called after address creation — saves ~250ms at payment time.
+ */
+const cacheQRCode = async (address: string, walletType: string, destinationTag?: number | null): Promise<void> => {
+  try {
+    const qrPayload = destinationTag ? `${address}?dt=${destinationTag}` : address;
+    const qrCode = await generateQRCodeWithLogo(qrPayload, walletType, 400);
+    await merchantTempAddressModel.update(
+      { cached_qr_code: qrCode },
+      { where: { wallet_address: address, ...(destinationTag ? { destination_tag: destinationTag } : {}) } }
+    );
+    cronLogger.info(`[MerchantPool] ✅ QR code pre-cached for ${address}${destinationTag ? `:${destinationTag}` : ''}`);
+  } catch (err) {
+    cronLogger.warn(`[MerchantPool] QR pre-cache failed (non-critical):`, (err as Error).message);
+  }
+};
 
 /**
  * Generate a unique destination tag for XRP-based payments.
