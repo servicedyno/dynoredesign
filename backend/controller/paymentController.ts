@@ -1745,10 +1745,9 @@ const createCryptoPayment = async (
         ...(taxInfo && { tax_enabled: true, tax_amount: taxAmount }),
       });
 
-      // Clear any existing data for this address before setting new payment data
-      // This is important when an address is reused for a new payment
+      // PERF: Removed redundant deleteRedisItem — setRedisItem already overwrites :json key
+      // and deletes hash key, so explicit delete before set was 2 extra Redis round-trips (~200ms)
       const directCryptoRedisKey = getCryptoRedisKey(paymentRes.address, paymentRes.destination_tag);
-      await deleteRedisItem(directCryptoRedisKey);
       
       // FIX: Store crypto invoice expiry timestamp (15 minutes from now)
       // This is separate from payment link expiry - crypto invoice has shorter window
