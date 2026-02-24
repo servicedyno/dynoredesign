@@ -2644,32 +2644,57 @@ const Crypto = async (
     
     const address = poolAddress.dataValues.wallet_address;
     const destinationTag = poolAddress.dataValues.destination_tag || null;
-    cronLogger.info(`[Crypto] ✅ Reserved merchant pool address: ${address}${destinationTag ? ` (tag: ${destinationTag})` : ''}`);
+    const cachedQR = poolAddress.dataValues.cached_qr_code;
+    cronLogger.info(`[Crypto] ✅ Reserved merchant pool address: ${address}${destinationTag ? ` (tag: ${destinationTag})` : ''} (QR cached: ${!!cachedQR})`);
     
-    // PERF: Parallelize QR generation + wallet lookup — both are independent and each takes ~200-580ms
-    // Previously ran sequentially (~780ms total), now runs concurrently (~580ms — the slower of the two)
-    const merchantWalletLookup: Record<string, unknown> = {
-      user_id: Number(userId),
-      wallet_type: currency,
-    };
-    if (companyId && !isNaN(Number(companyId))) {
-      merchantWalletLookup.company_id = Number(companyId);
+    // PERF: Use pre-generated QR from pool DB if available (saves ~250ms sharp processing)
+    // Fallback to generation only if cache miss (first-time addresses before pre-warm ran)
+    let qr_code: string | undefined;
+    let walletId: number | null = null;
+
+    if (cachedQR) {
+      // QR already cached — just do wallet lookup (fast, ~50-95ms)
+      const merchantWalletLookup: Record<string, unknown> = {
+        user_id: Number(userId),
+        wallet_type: currency,
+      };
+      if (companyId && !isNaN(Number(companyId))) {
+        merchantWalletLookup.company_id = Number(companyId);
+      }
+      const walletDetails = await userWalletModel.findOne({ where: merchantWalletLookup });
+      walletId = walletDetails?.dataValues.wallet_id ? Number(walletDetails.dataValues.wallet_id) : null;
+      qr_code = cachedQR;
+    } else {
+      // Cache miss — parallelize QR generation + wallet lookup (existing optimization)
+      const merchantWalletLookup: Record<string, unknown> = {
+        user_id: Number(userId),
+        wallet_type: currency,
+      };
+      if (companyId && !isNaN(Number(companyId))) {
+        merchantWalletLookup.company_id = Number(companyId);
+      }
+      const qrPayload = address ? (destinationTag ? `${address}?dt=${destinationTag}` : address) : null;
+      const [qrResult, walletDetails] = await Promise.all([
+        qrPayload ? generateQRCodeWithLogo(qrPayload, currency, 400) : Promise.resolve(undefined),
+        userWalletModel.findOne({ where: merchantWalletLookup }),
+      ]);
+      qr_code = qrResult;
+      walletId = walletDetails?.dataValues.wallet_id ? Number(walletDetails.dataValues.wallet_id) : null;
+      
+      // Cache the generated QR for next time (fire-and-forget)
+      if (qr_code && address) {
+        merchantTempAddressModel.update(
+          { cached_qr_code: qr_code },
+          { where: { wallet_address: address, ...(destinationTag ? { destination_tag: destinationTag } : {}) } }
+        ).catch(() => {/* non-critical */});
+      }
     }
-
-    const qrPayload = address ? (destinationTag ? `${address}?dt=${destinationTag}` : address) : null;
-
-    const [qr_code, walletDetails] = await Promise.all([
-      // QR code with currency logo — for tag-based chains, include destination tag
-      qrPayload ? generateQRCodeWithLogo(qrPayload, currency, 400) : Promise.resolve(undefined),
-      // Wallet lookup for transaction record FK
-      userWalletModel.findOne({ where: merchantWalletLookup }),
-    ]);
     
-    const walletId = walletDetails?.dataValues.wallet_id;
-    
+    // PERF: Defer DB transaction create to post-response (saves ~125ms on critical path)
+    // Transaction record is needed for bookkeeping but not for payment flow — webhook uses Redis data
     const userPayload = {
       id: paymentId,
-      wallet_id: walletId ? Number(walletId) : null,
+      wallet_id: walletId,
       user_id: Number(userId),
       payment_mode: "CRYPTO",
       base_amount: isNaN(Number(data.amount)) ? 0 : Number(data.amount),
@@ -2681,7 +2706,10 @@ const Crypto = async (
     };
     cronLogger.info("[Crypto] Merchant pool userPayload:", JSON.stringify(userPayload));
     
-    await userTransactionModel.create({ ...userPayload });
+    // Fire-and-forget: DB write happens in background (~125ms saved from critical path)
+    userTransactionModel.create({ ...userPayload }).catch((err: unknown) => {
+      cronLogger.error("[Crypto] Deferred transaction create failed:", (err as Error).message);
+    });
     
     const paymentRes = {
       qr_code,
