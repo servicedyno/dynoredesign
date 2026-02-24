@@ -9,7 +9,7 @@ user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → pa
 current_test_task:
   - task: "Fix USDT-ERC20 gas funding race condition — 5 fixes: chain-aware gas timeout, retryable gas errors, permanent failure detection, BullMQ retry delay, stranded funds recovery"
     implemented: true
-    working: pending_testing
+    working: true
     files:
       - "/app/backend/controller/paymentController.ts"
       - "/app/backend/services/webhookProcessor.ts"
