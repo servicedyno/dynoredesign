@@ -306,7 +306,8 @@ export const addAddressToMerchantPool = async (
     );
 
     cronLogger.info(`[MerchantPool] ✅ Added ${walletType} address to merchant ${userId}'s pool: ${addressData.address}`);
-
+    // PERF: Pre-generate QR code in background (fire-and-forget)
+    cacheQRCode(addressData.address, walletType);
     return poolAddress;
   } catch (error) {
     const message = getErrorMessage(error);
