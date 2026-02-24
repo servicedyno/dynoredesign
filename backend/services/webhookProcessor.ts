@@ -57,14 +57,36 @@ const INTERNAL_WALLETS = new Set(
 );
 
 // Hard failures that should NOT be retried
+// NOTE: "403" removed — Tatum returns 403 for temporary gas-related "Insufficient funds" on ERC-20 transfers.
+// These are retryable when gas funding TX is in-flight. "401" kept (auth errors are permanent).
 const NON_RETRYABLE_ERRORS = [
-  "invalid address", "invalid private key", "insufficient balance",
+  "invalid address", "invalid private key",
   "nonce too low", "already known", "bad request",
-  "400", "401", "403", "404",
+  "400", "401", "404",
+];
+
+// Errors that look non-retryable but ARE retryable when caused by gas funding race conditions.
+// e.g. Tatum's "Insufficient funds send transaction from account 0x... -> available balance is 0"
+// during eth.tx.preparation means ETH gas hasn't arrived yet — temporary, not permanent.
+const GAS_RACE_RETRYABLE_PATTERNS = [
+  "eth.tx.preparation",
+  "insufficient funds send transaction",
+  "available balance is 0, required balance",
 ];
 
 const isRetryable = (error: Error): boolean => {
   const message = error.message?.toLowerCase() || "";
+
+  // Gas race condition errors are ALWAYS retryable (gas TX may still be confirming)
+  if (GAS_RACE_RETRYABLE_PATTERNS.some((p) => message.includes(p.toLowerCase()))) {
+    return true;
+  }
+
+  // "insufficient balance" is non-retryable UNLESS it's a gas race condition (handled above)
+  if (message.includes("insufficient balance")) {
+    return false;
+  }
+
   return !NON_RETRYABLE_ERRORS.some((pattern) => message.includes(pattern.toLowerCase()));
 };
 
