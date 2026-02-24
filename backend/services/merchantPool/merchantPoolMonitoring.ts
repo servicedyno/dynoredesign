@@ -446,9 +446,11 @@ const processAddress = async (addr: any, result: {
           if (isFailedRecoverable) {
             const savedTxId = redisData.txId;
             const savedReceivedAmount = parseFloat(redisData.receivedAmount || '0');
-            cronLogger.info(`[MerchantPool] ⚠️ ${walletAddress} - FAILED PAYMENT RECOVERY (txId: ${savedTxId})`);
+            cronLogger.info(`[MerchantPool] ⚠️ ${walletAddress} - ${redisData.status === 'permanently_failed' ? 'PERMANENTLY ' : ''}FAILED PAYMENT RECOVERY (txId: ${savedTxId})`);
+            cronLogger.info(`[MerchantPool]   - Status: ${redisData.status}`);
+            cronLogger.info(`[MerchantPool]   - Permanent fail reason: ${redisData.permanentFailReason || 'N/A'}`);
             cronLogger.info(`[MerchantPool]   - Error: ${redisData.lastError || 'unknown'}`);
-            cronLogger.info(`[MerchantPool]   - Failed at: ${redisData.failedAt || 'unknown'}`);
+            cronLogger.info(`[MerchantPool]   - Failed at: ${redisData.failedAt || redisData.permanentlyFailedAt || 'unknown'}`);
             cronLogger.info(`[MerchantPool]   - Received amount: ${savedReceivedAmount} ${walletType}`);
             cronLogger.info(`[MerchantPool] 🔄 Directly reprocessing with preserved payment context...`);
             
