@@ -1753,7 +1753,8 @@ const createCryptoPayment = async (
       // This is separate from payment link expiry - crypto invoice has shorter window
       const cryptoInvoiceExpiresAt = new Date(Date.now() + CRYPTO_INVOICE_MINUTES * 60 * 1000).toISOString();
       
-      await setRedisItem(directCryptoRedisKey, {
+      // Build the crypto address Redis payload (needed for webhook processing)
+      const cryptoRedisPayload = {
         mode: paymentTypes.CRYPTO,
         amount: crypto_amount,                  // Crypto amount customer should pay (includes tax)
         merchant_amount: merchant_amount_crypto, // Amount merchant should receive (includes tax)
@@ -1778,9 +1779,6 @@ const createCryptoPayment = async (
         // FIX: Store crypto invoice expiry for polling countdown
         crypto_invoice_expires_at: cryptoInvoiceExpiresAt,
         // BUGFIX: Store merchant webhook info directly in crypto-{address}
-        // Previously only stored in customer-{ref}, which made webhook delivery fragile.
-        // If customer-{ref} was lost (Redis eviction, DB reconstruction fallback),
-        // callMerchantWebhook would find NO webhook URL and silently skip notification.
         webhook_url: items?.webhook_url || null,
         callback_url: items?.callback_url || null,
         webhook_secret: items?.webhook_secret || null,
@@ -1795,34 +1793,20 @@ const createCryptoPayment = async (
           tax_rate: taxInfo.tax_rate,
           tax_country_code: taxInfo.country_code,
         }),
-      });
+      };
 
-      // PHASE 12.1: Store active crypto address in customer Redis key
-      // This prevents generating multiple addresses for the same payment link when customer refreshes
-      // Note: uniqueRef already has "customer-" prefix, so use it directly
-      const customerRedisData = await getRedisItem(uniqueRef);
-      if (customerRedisData) {
-        const updatedCustomerData = {
-          ...customerRedisData,
-          active_crypto_address: {
-            currency: data.currency,
-            address: paymentRes.address,
-            qr_code: paymentRes.qr_code,
-            payment_id: paymentRes.transaction_id,
-            created_at: new Date().toISOString(),
-            // XRP/RLUSD: Store destination tag for tag-based chains
-            ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
-          },
-          // Also store destination_tag at top level for direct access by verifyCryptoPayment
-          ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
-        };
-        await setRedisItem(uniqueRef, updatedCustomerData);
-        cronLogger.info(`[Phase 12.1] Stored active_crypto_address for ${uniqueRef}: ${paymentRes.address}${paymentRes.destination_tag ? `:${paymentRes.destination_tag}` : ''}`);
-      }
-
+      // ═══════════════════════════════════════════════════════════════
+      // PERF: Send response FIRST, then do Redis writes in background
+      // Blockchain confirmation takes 3+ minutes; Redis write takes ~200ms
+      // This moves ~700ms of Redis I/O off the critical path
+      // ═══════════════════════════════════════════════════════════════
+      
       // Also update the temp address record in database for partial payment handling
       // Note: Only update if NOT a merchant pool address (userTempAddressModel is for legacy addresses)
       if (!paymentRes.is_merchant_pool) {
+        // Legacy path: keep sync for safety since it's not on the fast path
+        await setRedisItem(directCryptoRedisKey, cryptoRedisPayload);
+        
         await userTempAddressModel.update(
           {
             fee_payer: fee_payer,
@@ -1831,6 +1815,63 @@ const createCryptoPayment = async (
           },
           { where: { temp_id: paymentRes.temp_id } }
         );
+        
+        // Customer Redis update (sync for legacy)
+        const customerRedisData = await getRedisItem(uniqueRef);
+        if (customerRedisData) {
+          const updatedCustomerData = {
+            ...customerRedisData,
+            active_crypto_address: {
+              currency: data.currency,
+              address: paymentRes.address,
+              qr_code: paymentRes.qr_code,
+              payment_id: paymentRes.transaction_id,
+              created_at: new Date().toISOString(),
+              ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
+            },
+            ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
+          };
+          await setRedisItem(uniqueRef, updatedCustomerData);
+        }
+      } else {
+        // ═══════════════════════════════════════════════════════════
+        // MERCHANT POOL FAST PATH: Fire-and-forget background writes
+        // ═══════════════════════════════════════════════════════════
+        
+        // Send HTTP response immediately (sub-500ms target)
+        successResponseHelper(res, 200, "Payment created successfully", finalRes);
+        
+        // Background writes — these MUST complete but don't block the response
+        // Safety: blockchain TX takes 3+ min to confirm, Redis write takes ~200ms
+        (async () => {
+          try {
+            // Critical: crypto address data (needed for webhook processing)
+            await setRedisItem(directCryptoRedisKey, cryptoRedisPayload);
+            
+            // Non-critical: customer Redis update (prevents duplicate address generation)
+            const customerRedisData = await getRedisItem(uniqueRef);
+            if (customerRedisData) {
+              const updatedCustomerData = {
+                ...customerRedisData,
+                active_crypto_address: {
+                  currency: data.currency,
+                  address: paymentRes.address,
+                  qr_code: paymentRes.qr_code,
+                  payment_id: paymentRes.transaction_id,
+                  created_at: new Date().toISOString(),
+                  ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
+                },
+                ...(paymentRes.destination_tag && { destination_tag: paymentRes.destination_tag }),
+              };
+              await setRedisItem(uniqueRef, updatedCustomerData);
+              cronLogger.info(`[Phase 12.1] Stored active_crypto_address for ${uniqueRef}: ${paymentRes.address}${paymentRes.destination_tag ? `:${paymentRes.destination_tag}` : ''}`);
+            }
+          } catch (bgErr) {
+            cronLogger.error(`[CRITICAL] Background Redis write failed for ${directCryptoRedisKey}:`, (bgErr as Error).message);
+          }
+        })();
+        
+        return; // Response already sent above
       }
 
       successResponseHelper(res, 200, "Payment created successfully", finalRes);
