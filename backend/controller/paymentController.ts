@@ -3203,17 +3203,26 @@ const settleCryptoTransaction = async ({
         }
 
         // Wait for gas funding TX to confirm before attempting the token transfer
+        // Chain-aware timeouts: ETH is slow (~12s blocks + mempool), TRX is fast (~3s blocks)
         if (gasFundingResult.funded && gasFundingResult.txId) {
-          cronLogger.info(`[settleCryptoTransaction] ⏳ Waiting for gas funding TX ${gasFundingResult.txId} confirmation (${wallet_type})...`);
+          const gasTimeouts: Record<string, number> = {
+            ETH: 120000,   // 120s — ETH blocks ~12s, mempool can delay significantly
+            MATIC: 45000,  // 45s  — Polygon blocks ~2s but can have congestion
+            TRX: 15000,    // 15s  — TRX blocks ~3s, fast finality
+            BSC: 30000,    // 30s  — BSC blocks ~3s
+          };
+          const chainKey = wallet_type.toUpperCase().replace(/-.*$/, '');
+          const gasTimeout = gasTimeouts[chainKey] || 60000; // Default 60s for unknown chains
+          cronLogger.info(`[settleCryptoTransaction] ⏳ Waiting for gas funding TX ${gasFundingResult.txId} confirmation (${wallet_type}, timeout=${gasTimeout / 1000}s)...`);
           const gasConfirmation = await tatumApi.waitForTransactionConfirmation(
             gasFundingResult.txId,
             wallet_type,
-            30000  // 30s timeout — TRX ~3s blocks, ETH ~12s blocks
+            gasTimeout
           );
           if (gasConfirmation.confirmed) {
             cronLogger.info(`[settleCryptoTransaction] ✅ Gas funding confirmed in block ${gasConfirmation.blockNumber}`);
           } else {
-            cronLogger.warn(`[settleCryptoTransaction] ⚠️ Gas funding TX not confirmed in timeout — proceeding with retry logic`);
+            cronLogger.warn(`[settleCryptoTransaction] ⚠️ Gas funding TX ${gasFundingResult.txId} not confirmed in ${gasTimeout / 1000}s timeout — marking as gas_pending for BullMQ retry`);
           }
         } else if (!gasFundingResult.funded && gasFundingResult.reason) {
           cronLogger.info(`[settleCryptoTransaction] ℹ️ SmartGas: ${gasFundingResult.reason}`);
