@@ -249,6 +249,8 @@ export const addAddressToMerchantPool = async (
       );
 
       cronLogger.info(`[MerchantPool] ✅ Added tag-based ${walletType} address for merchant ${userId}: ${XRP_MASTER_ADDRESS}:${destinationTag}`);
+      // PERF: Pre-generate QR code in background (fire-and-forget)
+      cacheQRCode(XRP_MASTER_ADDRESS, walletType, destinationTag);
       return poolAddress;
     }
 
