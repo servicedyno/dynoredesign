@@ -51,6 +51,7 @@ const TATUM_KNOWN_IPS = new Set([
   // FIX BUG-8: Google Cloud IPs observed sending Tatum webhooks in production
   '34.82.77.148',    // GCP us-west1 — confirmed Tatum webhook source
   '35.185.216.99',   // GCP us-central1 — confirmed Tatum webhook source
+  '34.83.123.121',   // GCP us-west1 — confirmed Tatum webhook source (Railway log 2026-02-24)
   '34.82.0.0',       // GCP us-west1 range (Tatum infrastructure)
   '35.185.0.0',      // GCP us-central1 range (Tatum infrastructure)
   '34.107.0.0',      // GCP additional webhook IPs
