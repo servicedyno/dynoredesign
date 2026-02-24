@@ -7,13 +7,14 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
-  - task: "Fix USDT-ERC20 gas funding race condition — 4 fixes: chain-aware gas timeout, retryable gas errors, permanent failure detection, BullMQ retry delay"
+  - task: "Fix USDT-ERC20 gas funding race condition — 5 fixes: chain-aware gas timeout, retryable gas errors, permanent failure detection, BullMQ retry delay, stranded funds recovery"
     implemented: true
-    working: true
+    working: pending_testing
     files:
       - "/app/backend/controller/paymentController.ts"
       - "/app/backend/services/webhookProcessor.ts"
       - "/app/backend/services/webhookQueue.ts"
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
     stuck_count: 0
     priority: "critical"
     needs_retesting: false
