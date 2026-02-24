@@ -502,9 +502,16 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
-    // Quick duplicate check (fast-path reject, worker also checks)
+    // PERF: Parallelize the two Redis dedup checks — saves ~100-200ms per webhook
+    // (Railway Redis round-trip is ~100-200ms, running sequentially doubled that)
     const processedTxKey = `processed-tx-${payload.txId}`;
-    const alreadyProcessed = await getRedisItem(processedTxKey);
+    const outgoingTxKey = `outgoing-tx-${payload.txId}`;
+    const [alreadyProcessed, isOutgoingTx] = await Promise.all([
+      getRedisItem(processedTxKey),
+      getRedisItem(outgoingTxKey),
+    ]);
+
+    // Quick duplicate check (fast-path reject, worker also checks)
     if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
       webhookLogs.info("[tatumCryptoWebHook] Already processed, skipping:", payload.txId);
       return res.status(200).end();
@@ -513,8 +520,6 @@ const tatumCryptoWebHook = async (
     // BUG-3/4 FIX: Skip webhooks for our own outgoing transactions (settlement/sweep TXs).
     // When DynoPay sends settlement or sweep TXs, Tatum fires webhooks back to us.
     // These are false positives — not incoming payments — and should be ignored.
-    const outgoingTxKey = `outgoing-tx-${payload.txId}`;
-    const isOutgoingTx = await getRedisItem(outgoingTxKey);
     if (isOutgoingTx && Object.keys(isOutgoingTx).length > 0) {
       webhookLogs.info(`[tatumCryptoWebHook] Outgoing TX detected (${isOutgoingTx.type || 'unknown'}), skipping: ${payload.txId}`);
       return res.status(200).end();
