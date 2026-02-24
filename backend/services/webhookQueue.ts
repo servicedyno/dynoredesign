@@ -38,7 +38,7 @@ export const webhookQueue = new Queue("tatum-webhooks", {
     attempts: 3,
     backoff: {
       type: "exponential",
-      delay: 5000, // 5s, 30s, 120s
+      delay: 30000, // 30s, 60s, 120s — gives gas funding TXs time to confirm on-chain
     },
     removeOnComplete: {
       age: 86400, // Keep completed jobs for 24h (for debugging)
