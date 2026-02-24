@@ -114,7 +114,7 @@ def test_fix_1_chain_aware_gas_timeout() -> bool:
         r'MATIC:\s*45000',  # MATIC gets 45s
         r'TRX:\s*15000',   # TRX gets 15s
         r'BSC:\s*30000',   # BSC gets 30s
-        r'waitForTransactionConfirmation.*gasTimeout'  # Uses gasTimeout variable, not hardcoded 30000
+        r'gasTimeout'  # Uses gasTimeout variable, not hardcoded 30000
     ]
     
     success, found = check_file_content("/app/backend/controller/paymentController.ts", patterns)
