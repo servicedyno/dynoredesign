@@ -261,6 +261,11 @@ const merchantTempAddressModel = sequelize.define(
       allowNull: true,
       comment: "JSON snapshot of payment context saved before reservation expiry (for orphan payment recovery)",
     },
+    cached_qr_code: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Pre-generated QR code with currency logo (data:image/png;base64,...). Generated at pool creation, reused at payment time to save ~250ms.",
+    },
   },
   {
     tableName: "tbl_merchant_temp_address",
