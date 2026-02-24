@@ -571,9 +571,9 @@ cron.schedule("*/5 * * * *", async function () {
   }
 });
 
-// Merchant Pool: Release expired reservations every 2 minutes
-// Retry once on transient DB errors (Railway PG proxy can drop connections)
-cron.schedule("*/2 * * * *", function () {
+// Merchant Pool: Release expired reservations every 5 minutes
+// PERF: Increased from 2min to 5min — reservations have 30min TTL, 5min check is fine
+cron.schedule("*/5 * * * *", function () {
   log("Cron: releaseMerchantPoolExpiredReservations running", "info");
   merchantPoolService.releaseExpiredReservations().catch(async (err) => {
     const errMsg = err.message || '';
