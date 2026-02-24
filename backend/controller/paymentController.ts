@@ -2681,7 +2681,7 @@ const Crypto = async (
       parsedCompanyId || 0,  // Pass 0 if no company_id (will be treated as null in DB)
       Number(data.amount) || 0
     );
-    const poolAddress = poolAddressResult as { dataValues: { wallet_address: string; temp_address_id: number; destination_tag?: number } };
+    const poolAddress = poolAddressResult as { dataValues: { wallet_address: string; temp_address_id: number; destination_tag?: number; cached_qr_code?: string } };
     
     const address = poolAddress.dataValues.wallet_address;
     const destinationTag = poolAddress.dataValues.destination_tag || null;
