@@ -436,10 +436,14 @@ const processAddress = async (addr: any, result: {
         let redisData = await getRedisItem(cryptoRedisKey);
         
         if (redisData?.txId) {
-          // BUG FIX: If status is "failed", the webhook fired but settlement FAILED.
+          // BUG FIX: If status is "failed" or "permanently_failed", the webhook fired but settlement FAILED.
           // We already have the txId, receivedAmount, and full payment context in Redis.
           // Directly reprocess instead of waiting for Tatum tx discovery (which may fail for ERC20 tokens).
-          if (redisData?.status === 'failed') {
+          // NOTE: "permanently_failed" can be caused by gas race conditions (eth.tx.preparation)
+          //   where gas funding TX was in-flight during settlement. By now, gas should be on-chain.
+          //   The pool monitor runs every 5 min — plenty of time for ETH gas to confirm.
+          const isFailedRecoverable = redisData?.status === 'failed' || redisData?.status === 'permanently_failed';
+          if (isFailedRecoverable) {
             const savedTxId = redisData.txId;
             const savedReceivedAmount = parseFloat(redisData.receivedAmount || '0');
             cronLogger.info(`[MerchantPool] ⚠️ ${walletAddress} - FAILED PAYMENT RECOVERY (txId: ${savedTxId})`);
