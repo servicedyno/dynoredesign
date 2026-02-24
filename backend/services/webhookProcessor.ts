@@ -251,8 +251,10 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
       // ── Permanent failure detection ─────────────────────────────────────────
       // Some errors are permanently unrecoverable (balance=0, funds already moved).
       // Don't waste API calls retrying these.
+      // IMPORTANT: Gas-related errors (eth.tx.preparation) are NOT permanent — gas TX may still be confirming.
       const lastError = items.lastError || "";
-      const isBalanceZero = /balance \[0\]|token balance \[0\]|Insufficient.*balance/i.test(lastError);
+      const isGasRaceCondition = GAS_RACE_RETRYABLE_PATTERNS.some((p) => lastError.toLowerCase().includes(p.toLowerCase()));
+      const isBalanceZero = !isGasRaceCondition && /balance \[0\]|token balance \[0\]/i.test(lastError);
       const isPermanentlyFailed = retryCount >= MAX_RECOVERY_RETRIES || isBalanceZero;
 
       if (isPermanentlyFailed) {
