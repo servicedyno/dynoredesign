@@ -7,6 +7,40 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
+  - task: "Fix USDT-ERC20 gas funding race condition — 4 fixes: chain-aware gas timeout, retryable gas errors, permanent failure detection, BullMQ retry delay"
+    implemented: true
+    working: pending_testing
+    files:
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/services/webhookProcessor.ts"
+      - "/app/backend/services/webhookQueue.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    changes_summary: |
+      == Fix 1: Chain-aware gas confirmation timeout (paymentController.ts) ==
+      - ETH: 30s → 120s (ETH blocks ~12s, mempool delays can be significant)
+      - MATIC: 45s, TRX: 15s, BSC: 30s, Default: 60s
+      - Prevents premature token transfer when gas TX is still unconfirmed
+
+      == Fix 2: Gas race condition errors are now retryable (webhookProcessor.ts) ==
+      - Removed "403" from NON_RETRYABLE_ERRORS (too broad — catches temporary gas errors)
+      - Added GAS_RACE_RETRYABLE_PATTERNS: ["eth.tx.preparation", "insufficient funds send transaction", "available balance is 0, required balance"]
+      - isRetryable() now returns TRUE for gas race conditions, allowing inner retry loop to work
+
+      == Fix 3: Fixed isBalanceZero permanent failure detection (webhookProcessor.ts) ==
+      - Old regex: /balance \[0\]|token balance \[0\]|Insufficient.*balance/i — matched gas balance errors (WRONG)
+      - New: Checks GAS_RACE_RETRYABLE_PATTERNS first; only /balance \[0\]|token balance \[0\]/ triggers permanent failure
+      - Gas-related "Insufficient funds" no longer causes PERMANENTLY FAILED state
+
+      == Fix 4: Increased BullMQ retry delay (webhookQueue.ts) ==
+      - Initial delay: 5000ms → 30000ms (retries at 30s, 60s, 120s)
+      - Inner retry loop: gas errors get 15s base wait (15s, 30s) vs 2s for normal errors
+      - Gives gas funding TXs more time to confirm between retries
+
+      TypeScript compilation: CLEAN
+      Backend health: HEALTHY
+
   - task: "Railway billing optimization + Payment creation <500ms + IP allowlist fix"
     implemented: true
     working: true
