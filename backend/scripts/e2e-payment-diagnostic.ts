@@ -855,7 +855,7 @@ async function checkStablecoinConversion() {
   // Failed last 48h
   const failed = await query<{ cnt: string }>(
     `SELECT COUNT(*) as cnt FROM tbl_stablecoin_conversion 
-     WHERE status = 'failed' AND "createdAt" > NOW() - INTERVAL '48 hours'`
+     WHERE status = 'FAILED' AND "createdAt" > NOW() - INTERVAL '48 hours'`
   );
   if (parseInt(failed[0].cnt) > 0) {
     warn(`${failed[0].cnt} failed conversion(s) in 48h`);
