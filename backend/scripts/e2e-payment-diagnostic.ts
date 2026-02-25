@@ -730,6 +730,7 @@ async function checkWalletHealth() {
   const trxFW = feeWallets.find(w => w.wallet_type === "TRX");
   if (trxFW) {
     try {
+      await new Promise(r => setTimeout(r, 500));
       const res = await axios.get(`https://api.tatum.io/v4/tron/account/${trxFW.wallet_address}`, {
         headers: { "x-api-key": process.env.TATUM_KEY || "" }, timeout: 10000, validateStatus: () => true,
       });
@@ -738,9 +739,12 @@ async function checkWalletHealth() {
         if (bal < 10) fail(`TRX fee wallet LOW: ${bal.toFixed(2)} TRX`, `${trxFW.wallet_address} — need 15-30 TRX per sweep`);
         else if (bal < 50) warn(`TRX fee wallet: ${bal.toFixed(2)} TRX — getting low`);
         else pass(`TRX fee wallet: ${bal.toFixed(2)} TRX`);
+      } else {
+        warn(`TRX fee wallet check returned status ${res.status}`);
       }
     } catch (e: any) { warn(`Could not check TRX fee wallet: ${e.message?.substring(0, 60)}`); }
-    await new Promise(r => setTimeout(r, 500));
+  } else {
+    warn("No TRX fee wallet found in DB");
   }
 
   // 9c. ETH fee wallet balance
