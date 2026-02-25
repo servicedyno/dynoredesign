@@ -627,4 +627,244 @@ router.get("/weekly-conversion-email-preview", async (_req: express.Request, res
   res.send(html);
 });
 
+// ─── STUCK PAYMENT RECOVERY ──────────────────────────────────────────────────
+
+import tatumApi from "../apis/tatumApi";
+import { getRedisItem, setRedisItem } from "../utils/redisInstance";
+import { customerTransactionModel, paymentLinkModel } from "../models";
+import { fundGasIfNeeded } from "../services/merchantPool/merchantPoolSweep";
+import { calculateDynamicTRC20Fee } from "../services/tronEnergyService";
+import { getAdminWalletAddress } from "../utils/adminUtils";
+import { cronLogger } from "../utils/loggers";
+
+/**
+ * POST /diagnostics/recover-stuck-payment
+ * Re-triggers settlement for a payment stuck due to OUT_OF_ENERGY or similar failures.
+ * Requires admin auth. Body: { payment_id: string }
+ * 
+ * Flow:
+ * 1. Looks up the payment in Redis and DB
+ * 2. Checks on-chain balance of the temp address
+ * 3. Re-funds gas if needed (using energy-aware estimation)
+ * 4. Re-triggers the transfer from temp address to merchant/admin
+ */
+router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  const { payment_id } = req.body;
+  
+  if (!payment_id) {
+    return res.status(400).json({ error: "payment_id is required" });
+  }
+
+  const steps: { step: string; status: string; details?: unknown }[] = [];
+
+  try {
+    // Step 1: Find the payment in DB
+    const payment = await customerTransactionModel.findOne({
+      where: { payment_id },
+    });
+    
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found", payment_id });
+    }
+    
+    const paymentData = payment.dataValues;
+    steps.push({ step: "find_payment", status: "ok", details: {
+      payment_id: paymentData.payment_id,
+      status: paymentData.payment_status,
+      currency: paymentData.payment_currency,
+      amount: paymentData.total_amount,
+      temp_address: paymentData.temp_address,
+      wallet_address: paymentData.wallet_address,
+    }});
+
+    const tempAddress = paymentData.temp_address;
+    const currency = paymentData.payment_currency;
+    
+    if (!tempAddress) {
+      return res.status(400).json({ error: "No temp address found for this payment", steps });
+    }
+
+    // Step 2: Check on-chain balance of temp address
+    const isTRC20 = currency?.includes("TRC20");
+    const isERC20Token = currency?.includes("ERC20") || currency?.includes("POLYGON");
+    const gasToken = isTRC20 ? "TRX" : isERC20Token ? "ETH" : currency;
+    
+    let tokenBalance = 0;
+    let gasBalance = 0;
+    
+    try {
+      // Get gas balance
+      const gasBalanceResult = await tatumApi.getAddressBalance(tempAddress, gasToken);
+      gasBalance = Number(gasBalanceResult?.balance ?? 0);
+      
+      // Get token balance (for TRC20/ERC20)
+      if (isTRC20 || isERC20Token) {
+        const tokenBalanceResult = await tatumApi.getAddressBalance(tempAddress, currency);
+        tokenBalance = Number(tokenBalanceResult?.balance ?? 0);
+      } else {
+        tokenBalance = gasBalance;
+      }
+    } catch (balErr) {
+      steps.push({ step: "check_balance", status: "error", details: String(balErr) });
+    }
+    
+    steps.push({ step: "check_balance", status: "ok", details: {
+      temp_address: tempAddress,
+      token_balance: `${tokenBalance} ${currency}`,
+      gas_balance: `${gasBalance} ${gasToken}`,
+    }});
+
+    if (tokenBalance <= 0) {
+      return res.status(400).json({ 
+        error: "No token balance in temp address — funds may have already been transferred",
+        steps 
+      });
+    }
+
+    // Step 3: For TRC20 — estimate energy and re-fund gas
+    if (isTRC20) {
+      try {
+        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress);
+        steps.push({ step: "energy_estimation", status: "ok", details: {
+          required_trx: dynamicFee.fast,
+          current_trx: gasBalance,
+          energy_needed: dynamicFee.energyNeeded,
+          energy_available: dynamicFee.energyAvailable,
+          energy_price_sun: dynamicFee.energyPrice,
+          needs_refunding: gasBalance < dynamicFee.fast,
+        }});
+
+        if (gasBalance < dynamicFee.fast) {
+          cronLogger.info(`[RecoverPayment] Re-funding gas for ${tempAddress}: need ${dynamicFee.fast} TRX, have ${gasBalance} TRX`);
+          
+          const fundResult = await fundGasIfNeeded(
+            { dataValues: { wallet_address: tempAddress }, update: async () => {} },
+            currency,
+            tokenBalance,
+            paymentData.wallet_address
+          );
+          
+          steps.push({ step: "gas_refund", status: fundResult.funded ? "ok" : "skipped", details: fundResult });
+          
+          if (fundResult.funded) {
+            // Wait for gas TX to confirm
+            await new Promise(resolve => setTimeout(resolve, 6000));
+          }
+        }
+      } catch (energyErr) {
+        steps.push({ step: "energy_estimation", status: "error", details: String(energyErr) });
+      }
+    }
+
+    // Step 4: Look up Redis data for this payment
+    let redisKey = `crypto-${tempAddress}`;
+    let redisData = await getRedisItem(redisKey);
+    
+    if (!redisData) {
+      // Try alternate key formats
+      redisKey = `payment-${payment_id}`;
+      redisData = await getRedisItem(redisKey);
+    }
+    
+    steps.push({ step: "redis_lookup", status: redisData ? "ok" : "not_found", details: {
+      key: redisKey,
+      has_data: !!redisData,
+      redis_data: redisData ? {
+        currency: redisData.currency,
+        expectedAmount: redisData.expectedAmount || redisData.amount,
+        payment_id: redisData.payment_id,
+        hasTxId: redisData.hasTxId,
+        status: redisData.status,
+      } : null,
+    }});
+
+    // Step 5: Attempt recovery transfer
+    const merchantWallet = paymentData.wallet_address;
+    const adminWallet = getAdminWalletAddress(currency);
+    
+    if (!merchantWallet && !adminWallet) {
+      return res.status(400).json({ 
+        error: "No destination wallet found (neither merchant nor admin)",
+        steps 
+      });
+    }
+
+    const destination = merchantWallet || adminWallet;
+    
+    // For the recovery, we need the private key from the temp address
+    // This should be stored encrypted — check Redis or DB
+    let privateKey = redisData?.privateKey || redisData?.private_key;
+    
+    if (!privateKey) {
+      steps.push({ step: "private_key", status: "not_found", details: "Private key not found in Redis. Manual recovery needed — use Tatum dashboard or provide private key." });
+      return res.status(200).json({
+        status: "partial_recovery",
+        message: "Gas funded but private key not available in Redis for automatic transfer. The next reconciliation cron job should pick this up, or trigger manual transfer.",
+        payment_id,
+        temp_address: tempAddress,
+        token_balance: tokenBalance,
+        gas_balance: gasBalance,
+        destination,
+        steps,
+      });
+    }
+
+    // Determine contract address for token transfers
+    let contractAddress = "";
+    if (currency === "USDT-TRC20") contractAddress = process.env.TRX_CONTRACT || "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+    else if (currency === "USDT-ERC20") contractAddress = process.env.ETH_CONTRACT || "";
+    else if (currency === "USDC-ERC20") contractAddress = process.env.USDC_CONTRACT || "";
+    
+    try {
+      // Get fee estimate for the transfer
+      let fees: Record<string, number> = {};
+      if (isTRC20) {
+        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress);
+        fees = { fast: dynamicFee.fast };
+      }
+
+      const transferResult = await tatumApi.assetToOtherAddress({
+        currency,
+        fromAddress: tempAddress,
+        toAddress: destination!,
+        privateKey,
+        amount: tokenBalance,
+        fee: fees,
+        _contractAddress: contractAddress,
+      });
+      
+      steps.push({ step: "transfer", status: "ok", details: {
+        tx_id: transferResult?.txId || transferResult?.id || transferResult,
+        from: tempAddress,
+        to: destination,
+        amount: tokenBalance,
+        currency,
+      }});
+
+      return res.status(200).json({
+        status: "recovered",
+        message: `Successfully transferred ${tokenBalance} ${currency} from ${tempAddress} to ${destination}`,
+        payment_id,
+        steps,
+      });
+
+    } catch (transferErr) {
+      steps.push({ step: "transfer", status: "error", details: String(transferErr) });
+      return res.status(500).json({
+        status: "transfer_failed",
+        message: `Transfer failed: ${String(transferErr)}. Gas was funded. The reconciliation cron should retry automatically.`,
+        payment_id,
+        steps,
+      });
+    }
+
+  } catch (err) {
+    return res.status(500).json({
+      error: `Recovery failed: ${String(err)}`,
+      payment_id,
+      steps,
+    });
+  }
+});
+
 export default router;
