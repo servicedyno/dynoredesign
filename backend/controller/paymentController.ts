@@ -92,6 +92,7 @@ import { isStablecoin, isVolatileCrypto } from "../services/binanceService";
 import { createConversionRecord } from "../services/conversionService";
 import { stablecoinConversionModel } from "../models";
 import { PaymentState, parseState, toRedisStatus, toExternalStatus, isTerminal } from "../services/paymentStateMachine";
+import { calculateDynamicTRC20Fee } from "../services/tronEnergyService";
 
 // ============================================
 // CENTRALIZED TIMING CONFIGURATION
