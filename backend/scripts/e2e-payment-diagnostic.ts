@@ -488,20 +488,32 @@ async function checkMerchantPool() {
     pass("No expired RESERVED addresses");
   }
 
-  // 6c. AVAILABLE but with non-zero balance (unswept)
-  const unsweptAvailable = await query<{ temp_address_id: number; wallet_type: string; admin_fee_balance: string; wallet_address: string }>(
+  // 6c. AVAILABLE but with significant unswept balance (>$5 worth)
+  const unsweptCritical = await query<{ temp_address_id: number; wallet_type: string; admin_fee_balance: string; wallet_address: string }>(
     `SELECT temp_address_id, wallet_type, admin_fee_balance, wallet_address
      FROM tbl_merchant_temp_address 
-     WHERE status = 'AVAILABLE' AND CAST(admin_fee_balance AS DECIMAL) > 0
+     WHERE status = 'AVAILABLE' AND CAST(admin_fee_balance AS DECIMAL) > 5
      LIMIT 10`
   );
-  if (unsweptAvailable.length > 0) {
-    fail(`${unsweptAvailable.length} AVAILABLE address(es) with unswept balance!`,
-      unsweptAvailable.map(a =>
+  const unsweptSmall = await query<{ temp_address_id: number; wallet_type: string; admin_fee_balance: string }>(
+    `SELECT temp_address_id, wallet_type, admin_fee_balance
+     FROM tbl_merchant_temp_address 
+     WHERE status = 'AVAILABLE' AND CAST(admin_fee_balance AS DECIMAL) > 0 AND CAST(admin_fee_balance AS DECIMAL) <= 5
+     LIMIT 10`
+  );
+  if (unsweptCritical.length > 0) {
+    fail(`${unsweptCritical.length} AVAILABLE address(es) with significant unswept balance (>$5)!`,
+      unsweptCritical.map(a =>
         `#${a.temp_address_id} ${a.wallet_type} bal=${a.admin_fee_balance} ${a.wallet_address.substring(0, 16)}...`
       ).join("\n     "));
   } else {
-    pass("No AVAILABLE addresses with unswept balances");
+    pass("No AVAILABLE addresses with significant unswept balances");
+  }
+  if (unsweptSmall.length > 0) {
+    info(`${unsweptSmall.length} AVAILABLE address(es) with small balance (will accumulate until sweep threshold):`);
+    for (const a of unsweptSmall) {
+      console.log(`     #${a.temp_address_id} ${a.wallet_type} bal=${a.admin_fee_balance}`);
+    }
   }
 
   // 6d. IN_USE with zero balance and no recent activity
