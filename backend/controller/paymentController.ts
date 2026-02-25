@@ -4193,49 +4193,34 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         
         let adminAmountToSend, userAmountToSend;
         
-        if (fee_payer === 'customer' && merchant_amount) {
-          // CUSTOMER PAYS FEES MODE
-          // Customer already paid extra to cover fees
-          // Merchant receives the original base amount (merchant_amount)
-          // Dynopay keeps everything else (the fees)
-          
-          cronLogger.info(`[cryptoVerification] Customer pays fees mode:
-            - Total received: ${totalAmountReceived} ${tempCurrency}
-            - Merchant should receive: ${merchant_amount} ${tempCurrency}
-            - Fees for Dynopay: ${Number(totalAmountReceived) - Number(merchant_amount)} ${tempCurrency}`);
-          
-          userAmountToSend = Number(merchant_amount);
-          adminAmountToSend = Number(totalAmountReceived) - Number(merchant_amount);
-          
-          // Ensure we don't send negative or more than received
-          if (adminAmountToSend < 0) {
-            adminAmountToSend = 0;
-            userAmountToSend = Number(totalAmountReceived);
-          }
-          if (userAmountToSend > Number(totalAmountReceived)) {
-            userAmountToSend = Number(totalAmountReceived);
-            adminAmountToSend = 0;
-          }
-        } else {
-          // COMPANY PAYS FEES MODE (default)
-          // Standard fee deduction from received amount
-          
-          // Convert crypto amount to USD for fee calculation
-          const amountInUSD = await currencyConvert({
-            sourceCurrency: tempCurrency,
-            currency: [customerData?.base_currency || "USD"],
-            amount: totalAmountReceived,
-            fixedDecimal: false,
-          });
-          
-          const { totalDeduction, minForwarding, fixedFee, transactionFee } = await calculateTransactionFees(
-            tempCurrency,
-            Number(amountInUSD[0].amount)  // Pass USD amount for fee calculation
-          );
+        // ── UNIFIED FEE CALCULATION: Always based on actual received amount ──
+        // Both 'customer' and 'company' fee_payer modes now calculate fees from
+        // totalAmountReceived. This ensures overpayments are distributed correctly
+        // instead of capping the merchant at a pre-calculated amount.
+        //
+        // Previous bug: In 'customer' mode, merchant_amount was pre-calculated at
+        // payment creation (e.g., 8.85 for a $10 expected). If customer overpaid
+        // (e.g., sent 19 USDT), the merchant still only got 8.85 and the entire
+        // overpayment (10.15) went to admin as "fees". Now both modes recalculate
+        // fees from the actual received amount.
 
-          cronLogger.info(`[cryptoVerification] Fee calculation DEBUG:
+        // Convert crypto amount to USD for fee calculation
+        const amountInUSD = await currencyConvert({
+          sourceCurrency: tempCurrency,
+          currency: [customerData?.base_currency || "USD"],
+          amount: totalAmountReceived,
+          fixedDecimal: false,
+        });
+        
+        const { totalDeduction, minForwarding, fixedFee, transactionFee } = await calculateTransactionFees(
+          tempCurrency,
+          Number(amountInUSD[0].amount)  // Pass USD amount for fee calculation
+        );
+
+        cronLogger.info(`[cryptoVerification] Fee calculation (fee_payer=${fee_payer}):
             - Total received (crypto): ${totalAmountReceived} ${tempCurrency}
             - Total received (USD): $${amountInUSD[0].amount}
+            - Pre-calculated merchant_amount: ${merchant_amount || 'N/A'} ${tempCurrency}
             - Fee Breakdown:
               • Fixed Fee: $${fixedFee?.toFixed(2) || 'N/A'} (Tier-based)
               • Transaction Fee (1.5%): $${transactionFee?.toFixed(2) || 'N/A'}
@@ -4243,22 +4228,20 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             - Min forwarding threshold: $${minForwarding}
             - Effective Fee %: ${(totalDeduction / Number(amountInUSD[0].amount) * 100).toFixed(2)}%`);
 
-          if (Number(amountInUSD[0].amount) < Number(minForwarding)) {
-            // Under threshold - all to admin
-            adminAmountToSend = Number(totalAmountReceived);
-            userAmountToSend = 0;
-            cronLogger.info(`[cryptoVerification] UNDER THRESHOLD - all to admin: ${adminAmountToSend} ${tempCurrency}`);
-          } else {
-            // Normal distribution
-            // Convert USD fee back to crypto amount
-            const feePercentage = totalDeduction / Number(amountInUSD[0].amount);
-            adminAmountToSend = Number(totalAmountReceived) * feePercentage;
-            userAmountToSend = Number(totalAmountReceived) - adminAmountToSend;
-            
-            cronLogger.info(`[cryptoVerification] NORMAL DISTRIBUTION:
+        if (Number(amountInUSD[0].amount) < Number(minForwarding)) {
+          // Under threshold - all to admin
+          adminAmountToSend = Number(totalAmountReceived);
+          userAmountToSend = 0;
+          cronLogger.info(`[cryptoVerification] UNDER THRESHOLD - all to admin: ${adminAmountToSend} ${tempCurrency}`);
+        } else {
+          // Normal distribution: fee on actual received, merchant gets the rest
+          const feePercentage = totalDeduction / Number(amountInUSD[0].amount);
+          adminAmountToSend = Number(totalAmountReceived) * feePercentage;
+          userAmountToSend = Number(totalAmountReceived) - adminAmountToSend;
+          
+          cronLogger.info(`[cryptoVerification] ${fee_payer === 'customer' ? 'CUSTOMER' : 'COMPANY'} PAYS FEES — DISTRIBUTION:
             - Admin (fees): ${adminAmountToSend.toFixed(8)} ${tempCurrency} (${(feePercentage * 100).toFixed(2)}%)
             - Merchant: ${userAmountToSend.toFixed(8)} ${tempCurrency} (${((1 - feePercentage) * 100).toFixed(2)}%)`);
-          }
         }
 
         // ============================================
