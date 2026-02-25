@@ -822,11 +822,11 @@ async function checkTatumSubscriptions() {
 async function checkStablecoinConversion() {
   startSection("11. Stablecoin Conversion Pipeline");
 
-  // Stuck conversions >1h
+  // Stuck conversions >1h (using actual enum values)
   const stuck = await query<{ conversion_id: string; status: string; source_currency: string; source_amount: string; "updatedAt": string }>(
     `SELECT conversion_id, status, source_currency, source_amount, "updatedAt"
      FROM tbl_stablecoin_conversion 
-     WHERE status IN ('pending', 'processing', 'deposit_pending', 'converting')
+     WHERE status IN ('PENDING_DEPOSIT', 'DEPOSIT_CREDITED', 'CONVERTING', 'WITHDRAWING')
      AND "updatedAt" < NOW() - INTERVAL '1 hour'
      ORDER BY "updatedAt" ASC LIMIT 10`
   );
