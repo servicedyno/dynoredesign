@@ -842,7 +842,7 @@ async function checkStablecoinConversion() {
 
   // Stats 7 days
   const stats = await query<{ status: string; cnt: string }>(
-    `SELECT status, COUNT(*) as cnt FROM tbl_stablecoin_conversion 
+    `SELECT status::text, COUNT(*) as cnt FROM tbl_stablecoin_conversion 
      WHERE "createdAt" > NOW() - INTERVAL '7 days' GROUP BY status`
   );
   if (stats.length > 0) {
