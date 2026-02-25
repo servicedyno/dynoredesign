@@ -935,19 +935,20 @@ async function checkReconciliation() {
     pass("No pending payments with received funds");
   }
 
-  // 12c. Orphaned pool transactions
+  // 12c. Orphaned pool transactions (non-completed only — completed are normal)
   const orphaned = await query<{ cnt: string }>(
     `SELECT COUNT(*) as cnt FROM tbl_merchant_pool_transaction mpt
      WHERE NOT EXISTS (
        SELECT 1 FROM tbl_customer_transaction ct 
        WHERE ct.transaction_id = mpt.payment_reference
      )
+     AND mpt.status != 'completed'
      AND mpt.created_at > NOW() - INTERVAL '7 days'`
   );
   if (parseInt(orphaned[0].cnt) > 0) {
-    warn(`${orphaned[0].cnt} orphaned pool tx(s) — no matching customer transaction (7 days)`);
+    warn(`${orphaned[0].cnt} orphaned non-completed pool tx(s) — no matching customer transaction (7 days)`);
   } else {
-    pass("No orphaned pool transactions");
+    pass("No orphaned pool transactions needing attention");
   }
 
   // 12d. Payment links that expired but were never cleaned up
