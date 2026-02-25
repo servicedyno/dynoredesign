@@ -3235,7 +3235,7 @@ const settleCryptoTransaction = async ({
 
       // Retry merchant transfer for token transfers
       // Enhanced with OUT_OF_ENERGY recovery for TRON TRC20 transfers
-      const isTRC20 = currency.includes("TRC20") || (currency === "TRX" && contractAddress);
+      const isTRC20 = currency.includes("TRC20") || (String(currency) === "TRX" && !!contractAddress);
       const MAX_TRANSFER_ATTEMPTS = isTRC20 ? 3 : 1; // Extra retries for TRC20 energy issues
       
       for (let transferAttempt = 1; transferAttempt <= MAX_TRANSFER_ATTEMPTS; transferAttempt++) {
