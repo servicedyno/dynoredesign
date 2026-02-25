@@ -594,8 +594,8 @@ async function checkOnChainBalances() {
         }
       }
 
+      const dbBal = parseFloat(addr.admin_fee_balance);
       if (onChainBal !== null) {
-        const dbBal = parseFloat(addr.admin_fee_balance);
         if (Math.abs(onChainBal - dbBal) > 0.01) {
           warn(`Balance mismatch #${addr.temp_address_id} (${wt}): DB=${dbBal}, Chain=${onChainBal}`,
             addr.wallet_address);
@@ -604,6 +604,8 @@ async function checkOnChainBalances() {
           pass(`#${addr.temp_address_id} ${wt}: DB=${dbBal}, Chain=${onChainBal}`);
           verified++;
         }
+      } else {
+        info(`#${addr.temp_address_id} ${wt}: DB=${dbBal} (could not fetch on-chain)`);
       }
 
       await new Promise(r => setTimeout(r, 400));
