@@ -3275,7 +3275,7 @@ const settleCryptoTransaction = async ({
               // Re-fund gas from fee wallet
               const feeWalletAddress = getAdminWalletAddress("TRX") || process.env.TRX_FEE_WALLET || "";
               if (feeWalletAddress) {
-                await fundGasIfNeeded({
+                await merchantPoolService.fundGasIfNeeded({
                   tempAddress: fromAddress,
                   walletType: currency,
                   gasToken: "TRX",
