@@ -3273,8 +3273,7 @@ const settleCryptoTransaction = async ({
               cronLogger.info(`[settleCryptoTransaction] 🔋 Energy-aware re-funding: ${extraGasNeeded} TRX (energy: ${dynamicFee.energyNeeded} needed, ${dynamicFee.energyAvailable} available, price: ${dynamicFee.energyPrice} SUN/unit)`);
               
               // Re-fund gas from fee wallet
-              const feeWalletAddress = getAdminWalletAddress("TRX") || process.env.TRX_FEE_WALLET || "";
-              if (feeWalletAddress) {
+              if (true) {
                 await merchantPoolService.fundGasIfNeeded(
                   { dataValues: { wallet_address: fromAddress }, update: async () => {} },
                   currency,
