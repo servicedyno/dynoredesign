@@ -3234,18 +3234,69 @@ const settleCryptoTransaction = async ({
       // === End SmartGas ===
 
       // Retry merchant transfer for token transfers
-      merchantTransactionDetails = await withRetry(
-        () => tatumApi.assetToOtherAddress({
-          currency,
-          fromAddress: fromAddress,
-          toAddress: userAddress,
-          privateKey: privateKey,
-          amount: merchantSendAmount,
-          fee: fees,
-          _contractAddress: contractAddress,
-        }),
-        `Token merchant transfer (${currency})`
-      );
+      // Enhanced with OUT_OF_ENERGY recovery for TRON TRC20 transfers
+      const isTRC20 = currency.includes("TRC20") || (currency === "TRX" && contractAddress);
+      const MAX_TRANSFER_ATTEMPTS = isTRC20 ? 3 : 1; // Extra retries for TRC20 energy issues
+      
+      for (let transferAttempt = 1; transferAttempt <= MAX_TRANSFER_ATTEMPTS; transferAttempt++) {
+        try {
+          merchantTransactionDetails = await withRetry(
+            () => tatumApi.assetToOtherAddress({
+              currency,
+              fromAddress: fromAddress,
+              toAddress: userAddress,
+              privateKey: privateKey,
+              amount: merchantSendAmount,
+              fee: fees,
+              _contractAddress: contractAddress,
+            }),
+            `Token merchant transfer (${currency}) [attempt ${transferAttempt}/${MAX_TRANSFER_ATTEMPTS}]`
+          );
+          
+          cronLogger.info(`[settleCryptoTransaction] ✅ Token transfer succeeded on attempt ${transferAttempt}`);
+          break; // Success — exit retry loop
+          
+        } catch (transferError: unknown) {
+          const errMsg = getErrorMessage(transferError);
+          const isEnergyError = errMsg.toLowerCase().includes('out_of_energy') ||
+            errMsg.toLowerCase().includes('energy') ||
+            errMsg.toLowerCase().includes('fee_limit');
+          
+          if (isTRC20 && isEnergyError && transferAttempt < MAX_TRANSFER_ATTEMPTS) {
+            cronLogger.warn(`[settleCryptoTransaction] ⚡ OUT_OF_ENERGY detected for TRC20 transfer (attempt ${transferAttempt}/${MAX_TRANSFER_ATTEMPTS}). Re-funding gas with energy-aware estimation...`);
+            
+            try {
+              // Use tronEnergyService for accurate energy estimation
+              const dynamicFee = await calculateDynamicTRC20Fee(fromAddress);
+              const extraGasNeeded = dynamicFee.fast;
+              
+              cronLogger.info(`[settleCryptoTransaction] 🔋 Energy-aware re-funding: ${extraGasNeeded} TRX (energy: ${dynamicFee.energyNeeded} needed, ${dynamicFee.energyAvailable} available, price: ${dynamicFee.energyPrice} SUN/unit)`);
+              
+              // Re-fund gas from fee wallet
+              const feeWalletAddress = getAdminWalletAddress("TRX") || process.env.TRX_FEE_WALLET || "";
+              if (feeWalletAddress) {
+                await fundGasIfNeeded({
+                  tempAddress: fromAddress,
+                  walletType: currency,
+                  gasToken: "TRX",
+                  feeWalletAddress,
+                  transferAmount: merchantSendAmount,
+                  recipientAddress: userAddress,
+                });
+                
+                // Wait for gas funding TX to confirm
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                cronLogger.info(`[settleCryptoTransaction] 🔋 Gas re-funded. Retrying transfer...`);
+              }
+            } catch (refundError) {
+              cronLogger.error(`[settleCryptoTransaction] ❌ Gas re-funding failed: ${getErrorMessage(refundError)}`);
+            }
+          } else {
+            // Non-energy error or last attempt — propagate
+            throw transferError;
+          }
+        }
+      }
 
       totalBlockchainFee = Number(fees?.fast ?? 0);
       // Record the total gas deduction (transfer + sweep) for accounting
