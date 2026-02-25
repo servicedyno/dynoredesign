@@ -124,38 +124,45 @@ export const fundGasIfNeeded = async (
     // Standard fee estimation (skipped if Energy optimization already set estimatedGas)
     if (estimatedGas === 0) {
       try {
-        let contractAddress: string | undefined;
-        if (walletType === 'USDT-ERC20') {
-          contractAddress = process.env.ETH_CONTRACT;
-        } else if (walletType === 'USDC-ERC20') {
-          contractAddress = process.env.USDC_CONTRACT;
-        } else if (walletType === 'USDT-TRC20') {
-          contractAddress = process.env.TRX_CONTRACT;
-        } else if (walletType === 'USDT-POLYGON') {
-          contractAddress = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
-        } else if (walletType === 'RLUSD-ERC20') {
-          contractAddress = process.env.RLUSD_ERC20_CONTRACT || "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD";
-        }
-        
-        const estimationRecipient = recipientAddress || feeWalletAddress;
-        const estimationAmount = transferAmount || 100;
-        
-        const feeEstimate = await tatumApi.feeEstimation(
-          walletType,
-          tempAddress,
-          estimationRecipient,
-          estimationAmount,
-          contractAddress
-        );
-        
-        if (gasToken === "ETH") {
-          estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? feeEstimate?.slow ?? 0);
-        } else if (gasToken === "TRX") {
-          estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 5);
-        } else if (gasToken === "XRP") {
-          estimatedGas = Number(feeEstimate?.fast ?? 0.00005);
-        } else if (gasToken === "POLYGON") {
-          estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 0.01);
+        // FIX: Use energy-aware tronEnergyService for TRC20 tokens instead of
+        // tatumApi.feeEstimation() which returns stale/underestimated values.
+        // This prevents OUT_OF_ENERGY failures on TRON.
+        if (gasToken === "TRX" && TOKEN_CHAINS.includes(walletType) && walletType.includes("TRC20")) {
+          const dynamicFee = await calculateDynamicTRC20Fee(tempAddress);
+          estimatedGas = dynamicFee.fast;
+          cronLogger.info(`[SmartGas] 🔋 TRC20 energy-aware gas: ${estimatedGas} TRX (energy: ${dynamicFee.energyNeeded} needed, ${dynamicFee.energyAvailable} available, price: ${dynamicFee.energyPrice} SUN/unit)`);
+        } else {
+          let contractAddress: string | undefined;
+          if (walletType === 'USDT-ERC20') {
+            contractAddress = process.env.ETH_CONTRACT;
+          } else if (walletType === 'USDC-ERC20') {
+            contractAddress = process.env.USDC_CONTRACT;
+          } else if (walletType === 'USDT-POLYGON') {
+            contractAddress = process.env.USDT_POLYGON_CONTRACT || "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
+          } else if (walletType === 'RLUSD-ERC20') {
+            contractAddress = process.env.RLUSD_ERC20_CONTRACT || "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD";
+          }
+          
+          const estimationRecipient = recipientAddress || feeWalletAddress;
+          const estimationAmount = transferAmount || 100;
+          
+          const feeEstimate = await tatumApi.feeEstimation(
+            walletType,
+            tempAddress,
+            estimationRecipient,
+            estimationAmount,
+            contractAddress
+          );
+          
+          if (gasToken === "ETH") {
+            estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? feeEstimate?.slow ?? 0);
+          } else if (gasToken === "TRX") {
+            estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 5);
+          } else if (gasToken === "XRP") {
+            estimatedGas = Number(feeEstimate?.fast ?? 0.00005);
+          } else if (gasToken === "POLYGON") {
+            estimatedGas = Number(feeEstimate?.fast ?? feeEstimate?.medium ?? 0.01);
+          }
         }
         
         cronLogger.info(`[SmartGas] Estimated gas for ${walletType} transfer: ${estimatedGas} ${gasToken}`);
