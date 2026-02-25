@@ -28,7 +28,7 @@ export const POOL_CONFIG = {
   GAS_SAFETY_BUFFER: 1.3,  // 30% extra to ensure transaction success
   
   // Minimum gas to maintain (fallback if estimation fails)
-  TRX_GAS_FALLBACK: 15,
+  TRX_GAS_FALLBACK: 30,
   ETH_GAS_FALLBACK: 0.001,
   XRP_GAS_FALLBACK: 0.001,    // XRP for gas only (tx fee ~12 drops / 0.000012 XRP). Reserve handled separately in sweep.
   POLYGON_GAS_FALLBACK: 0.05, // POL for gas (Polygon gas can spike to 500+ Gwei)
