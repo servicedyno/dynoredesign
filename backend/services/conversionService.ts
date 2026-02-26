@@ -835,7 +835,7 @@ export const createConversionRecord = async ({
     target_currency: targetCurrency,
     settlement_wallet_address: settlementWalletAddress,
     settlement_chain: settlementChain,
-    deposit_tx_hash: depositTxHash,
+    deposit_tx_hash: depositTxHash || null,
     admin_wallet_address: adminWalletAddress,
     status: "PENDING_DEPOSIT",
     conversion_fee: platformFeeUsd || null,
