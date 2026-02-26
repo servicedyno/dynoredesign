@@ -1120,8 +1120,32 @@ export const detectOrphanPayments = async (): Promise<{
 
         const incomingTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 10);
         if (!incomingTxs || incomingTxs.length === 0) {
-          cronLogger.info(`[OrphanDetect] ❌ No incoming transactions found for ${walletAddress} despite balance. Skipping.`);
-          result.errors.push(`No transactions found for ${walletAddress} despite balance ${balance}`);
+          // BUG-1 FIX: Instead of skipping, attempt a direct sweep to admin wallet.
+          // Some TRC20/ERC20 transactions may not appear in Tatum's transaction list
+          // (e.g., old TXs pruned from their index), but balance is confirmed on-chain.
+          const orphanAmount = balance - existingAdminBalance;
+          if (orphanAmount > 0) {
+            cronLogger.info(`[OrphanDetect] ⚠️ No incoming TXs from Tatum for ${walletAddress}. Marking for admin sweep (${orphanAmount.toFixed(8)} ${walletType}).`);
+            // Store context so scheduled sweep picks it up
+            try {
+              await setRedisItemWithTTL(`orphan-sweep:${walletAddress}`, {
+                balance: orphanAmount,
+                walletType,
+                tempAddressId,
+                ownerId,
+                detectedAt: new Date().toISOString(),
+                reason: 'no_tatum_txs_but_balance_confirmed',
+              }, 86400); // 24 hours
+              result.sweptToAdmin++;
+              cronLogger.info(`[OrphanDetect] ✅ Flagged ${walletAddress} for orphan sweep (${orphanAmount.toFixed(8)} ${walletType})`);
+            } catch (sweepErr) {
+              cronLogger.error(`[OrphanDetect] ❌ Failed to flag orphan sweep for ${walletAddress}:`, sweepErr instanceof Error ? sweepErr.message : sweepErr);
+              result.errors.push(`Failed to flag sweep for ${walletAddress}: ${sweepErr instanceof Error ? sweepErr.message : sweepErr}`);
+            }
+          } else {
+            cronLogger.info(`[OrphanDetect] ❌ No incoming transactions found for ${walletAddress} despite balance. Orphan amount ≤ 0 after admin fee deduction. Skipping.`);
+            result.errors.push(`No transactions found for ${walletAddress} despite balance ${balance} (all admin fees)`);
+          }
           continue;
         }
 
