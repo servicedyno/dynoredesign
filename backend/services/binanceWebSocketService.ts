@@ -213,12 +213,16 @@ const connect = () => {
   ws.on("close", (code, reason) => {
     isConnecting = false;
     clearInterval(pingTimer as NodeJS.Timeout);
+    clearTimeout(pongTimeoutTimer as NodeJS.Timeout);
+    clearInterval(staleCheckTimer as NodeJS.Timeout);
     log(`🔌 Connection closed (code=${code}, reason=${reason?.toString() || "none"})`);
     scheduleReconnect();
   });
 
   ws.on("pong", () => {
-    // Connection alive
+    // Connection alive — clear pong timeout and record timestamp
+    lastPongTime = Date.now();
+    clearTimeout(pongTimeoutTimer as NodeJS.Timeout);
   });
 };
 
