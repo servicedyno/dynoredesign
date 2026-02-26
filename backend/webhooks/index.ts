@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { apiLogger, webhookLogs} from "../utils/loggers";
 import { getErrorMessage } from "../helper";
 import { ITatumWebHook, IWebHook } from "../utils/types";
-import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisTTL, setRedisItemWithTTL } from "../utils/redisInstance";
 import axios from "axios";
 import { paymentController } from "../controller";
 import { sendPendingPaymentNotification } from "../services/pendingPaymentService";
