@@ -795,7 +795,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
 
                 // Set dedup key so it won't be sent again
                 await setRedisItem(emailKey, { sent: true, sentAt: new Date().toISOString(), recoveredBySweep: true });
-                await setRedisTTL(emailKey, 86400);
+                await setRedisTTL(emailKey, 2592000); // 30 day TTL (was 24h — caused false-positive duplicate emails)
 
                 cronLogger.info(`[MerchantPool] 📧 [Sweep Recovery] Sent missed payment-received email to ${userData.email} for ${poolAddress.dataValues.wallet_address}`);
               }
