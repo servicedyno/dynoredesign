@@ -594,6 +594,14 @@ export const stopBinanceWebSocket = () => {
     clearInterval(pingTimer);
     pingTimer = null;
   }
+  if (pongTimeoutTimer) {
+    clearTimeout(pongTimeoutTimer);
+    pongTimeoutTimer = null;
+  }
+  if (staleCheckTimer) {
+    clearInterval(staleCheckTimer);
+    staleCheckTimer = null;
+  }
   if (redisSyncTimer) {
     clearInterval(redisSyncTimer);
     redisSyncTimer = null;
