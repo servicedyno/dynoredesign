@@ -571,7 +571,6 @@ cron.schedule("0 */24 * * *", function () {
 // ===========================================
 // MERCHANT POOL: Per-merchant pool cron jobs
 // ===========================================
-import * as merchantPoolService from "./services/merchantPoolService";
 
 // Merchant Pool: Sweep accumulated admin fees every 5 minutes
 // Handles both threshold-based ($30 USD) and time-based (3 min for ETH/TRX) sweeps
