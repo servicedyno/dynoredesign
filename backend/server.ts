@@ -759,6 +759,8 @@ cron.schedule("*/2 * * * *", async function () {
   }
 });
 
+} // end if (enableBackgroundJobs) — cron jobs block
+
 const startServer = async () => {
   log('Connecting to Redis...', 'info');
   await connectRedis();
