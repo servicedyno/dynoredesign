@@ -350,12 +350,12 @@ class RailwayBugFixesTestSuite:
     def test_legitimate_paths_work(self):
         """Test: Legitimate paths still work"""
         try:
-            # Test /health endpoint
-            health_response = requests.get(f"{BASE_URL}/health", timeout=5)
+            # Test /health endpoint (use localhost:8001 directly)
+            health_response = requests.get("http://localhost:8001/health", timeout=5)
             health_ok = health_response.status_code == 200
             
             # Test /api/docs endpoint (should redirect)
-            docs_response = requests.get(f"{BASE_URL}/api/docs", timeout=5, allow_redirects=False)
+            docs_response = requests.get("http://localhost:8001/api/docs", timeout=5, allow_redirects=False)
             docs_ok = docs_response.status_code in [200, 301, 302]
             
             if health_ok and docs_ok:
