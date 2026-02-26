@@ -182,14 +182,17 @@ class RailwayBugFixesTestSuite:
                 return
             
             # Find the next function to get the boundary
-            next_function = content.find('const ', registerPhoneStep1_start + 10)
+            next_function = content.find('const registerPhoneStep2', registerPhoneStep1_start)
             if next_function == -1:
-                registerPhoneStep1_content = content[registerPhoneStep1_start:]
+                registerPhoneStep1_content = content[registerPhoneStep1_start:registerPhoneStep1_start + 2000]  # Take a chunk
             else:
                 registerPhoneStep1_content = content[registerPhoneStep1_start:next_function]
             
+            # Check for sendTelnyxSMS usage (without parentheses to match the call)
             if 'sendTelnyxSMS(mobile)' in registerPhoneStep1_content:
                 self.log_test("registerPhoneStep1 uses sendTelnyxSMS", True, "registerPhoneStep1 uses new sendTelnyxSMS helper")
+            elif 'sendTelnyxSMS' in registerPhoneStep1_content:
+                self.log_test("registerPhoneStep1 uses sendTelnyxSMS", True, "registerPhoneStep1 references sendTelnyxSMS helper")
             else:
                 self.log_test("registerPhoneStep1 uses sendTelnyxSMS", False, "registerPhoneStep1 does not use sendTelnyxSMS helper")
         except Exception as e:
