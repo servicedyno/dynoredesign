@@ -502,6 +502,18 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
+    // BUG-10 FIX: Short-lived receiver-level dedup to reject duplicate Tatum webhooks
+    // that arrive within milliseconds of each other (same txId sent twice by Tatum).
+    // This is separate from the processed-tx dedup which checks fully processed TXs.
+    const receiverDedupKey = `recv-dedup-${payload.txId}`;
+    const [alreadyReceived] = await Promise.all([getRedisItem(receiverDedupKey)]);
+    if (alreadyReceived && Object.keys(alreadyReceived).length > 0) {
+      webhookLogs.info(`[tatumCryptoWebHook] Duplicate webhook at receiver level, skipping: ${payload.txId}`);
+      return res.status(200).end();
+    }
+    // Mark as received with 30s TTL (covers the duplicate window without blocking legitimate retries)
+    await setRedisItemWithTTL(receiverDedupKey, { received: Date.now() }, 30);
+
     // PERF: Parallelize the two Redis dedup checks — saves ~100-200ms per webhook
     // (Railway Redis round-trip is ~100-200ms, running sequentially doubled that)
     const processedTxKey = `processed-tx-${payload.txId}`;
