@@ -962,7 +962,19 @@ export const sweepByTime = async (): Promise<number> => {
       // in the address (pendingSweep safety net). Always sweep these regardless of mode.
       const isUTXOAutoConvertRecovery = UTXO_CHAINS.includes(walletType);
       
-      if (sweepConfig.mode !== "time" && !isUTXOAutoConvertRecovery) {
+      // SAFETY NET: Stale IN_USE token addresses that have been sitting for > 24 hours
+      // should be force-swept regardless of sweep mode. This catches threshold-mode tokens
+      // that accumulated fees below threshold but have been stuck for too long.
+      const isStaleTokenAddress = TOKEN_CHAINS.includes(walletType) && timeSincePayout > 1440; // 24 hours
+      
+      if (sweepConfig.mode !== "time" && !isUTXOAutoConvertRecovery && !isStaleTokenAddress) {
+        continue;
+      }
+      
+      // For stale token addresses, override the time threshold check — sweep immediately
+      if (isStaleTokenAddress) {
+        cronLogger.info(`[MerchantPool] ⚠️ Stale token sweep: ${address.dataValues.wallet_address} (${walletType}): ${cryptoAmount}, IN_USE for ${timeSincePayout} min — force sweeping`);
+        eligibleAddresses.push(address);
         continue;
       }
       
