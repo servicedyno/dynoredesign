@@ -1118,6 +1118,19 @@ export const detectOrphanPayments = async (): Promise<{
         cronLogger.info(`[OrphanDetect]   - Owner merchant: ${ownerId}`);
         cronLogger.info(`[OrphanDetect]   - Has saved context: ${!!lastContextRaw}`);
 
+        // RECONCILIATION FIX: If on-chain balance > DB admin_fee_balance for token addresses,
+        // update the DB to reflect actual on-chain state. This ensures the threshold sweep
+        // sees the real balance and can trigger when combined fees reach threshold.
+        if (TOKEN_CHAINS.includes(walletType) && balance > existingAdminBalance * 1.05) {
+          cronLogger.info(`[OrphanDetect] 🔧 Reconciling admin_fee_balance: DB=${existingAdminBalance} → on-chain=${balance} for ${walletAddress}`);
+          try {
+            await addr.update({ admin_fee_balance: balance });
+            cronLogger.info(`[OrphanDetect] ✅ admin_fee_balance updated to ${balance} for ${walletAddress} (was ${existingAdminBalance})`);
+          } catch (reconcileErr) {
+            cronLogger.error(`[OrphanDetect] ❌ Failed to reconcile admin_fee_balance for ${walletAddress}:`, reconcileErr instanceof Error ? reconcileErr.message : reconcileErr);
+          }
+        }
+
         const incomingTxs = await tatumApi.getIncomingTransactions(walletAddress, walletType, 10);
         if (!incomingTxs || incomingTxs.length === 0) {
           // BUG-1 FIX: Instead of skipping, attempt a direct sweep to admin wallet.
