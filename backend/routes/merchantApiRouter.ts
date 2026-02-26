@@ -851,10 +851,10 @@ router.get("/getSingleTransaction/:id", legacyApiAuthMiddleware, async (req, res
     const baseCurrency = apiKeyData?.base_currency || "USD";
     const { id } = req.params;
     
-    if (!id) {
+    if (!id || id === 'undefined' || id === 'null') {
       return res.status(400).json({
         success: false,
-        message: "Please provide a valid transaction_id!"
+        message: "Please provide a valid transaction_id (received: " + id + ")"
       });
     }
     
