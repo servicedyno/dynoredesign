@@ -1717,19 +1717,7 @@ const createCryptoPayment = async (
         }),
       };
 
-      cronLogger.info("paymentRes=============>", paymentRes, uniqueRef, {
-        mode: paymentTypes.CRYPTO,
-        amount: crypto_amount,
-        merchant_amount: merchant_amount_crypto,
-        fees: total_fees_crypto,
-        status: "pending",
-        ref: uniqueRef,
-        currency: data.currency,
-        walletType: "customer",
-        fee_payer,
-        // Tax info for logging
-        ...(taxInfo && { tax_enabled: true, tax_amount: taxAmount }),
-      });
+      cronLogger.info(`[addPayment] crypto direct response, ref: ${uniqueRef}, currency: ${data.currency}, amount: ${crypto_amount}`);
 
       // PERF: Removed redundant deleteRedisItem — setRedisItem already overwrites :json key
       // and deletes hash key, so explicit delete before set was 2 extra Redis round-trips (~200ms)
