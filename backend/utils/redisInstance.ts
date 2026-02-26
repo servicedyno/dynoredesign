@@ -218,6 +218,42 @@ const acquireLock = async (
         const holder = await redisClient.get(fullKey);
         const ttl = await redisClient.ttl(fullKey);
         cronLogger.info(`[Lock] ${lockKey} held by ${holder}, TTL: ${ttl}s (current PID: ${process.pid})`);
+
+        // BUG-5 FIX: Steal stale locks with expired TTL (negative or zero)
+        // This happens when the previous holder crashed without releasing,
+        // and Redis TTL has already expired but the key persists (race window)
+        // or the key was set without TTL by a bug.
+        if (ttl <= 0 && holder) {
+          cronLogger.warn(`[Lock] Stealing stale lock ${lockKey} (TTL: ${ttl}s, old holder: ${holder})`);
+          // Force-set the lock with our value and TTL (overwrites stale key)
+          const stealResult = await redisClient.set(fullKey, lockValue, { EX: ttlSeconds });
+          if (stealResult === 'OK') {
+            lockOwners.set(fullKey, lockValue);
+            cronLogger.info(`[Lock] Stolen & acquired: ${lockKey} (TTL: ${ttlSeconds}s, autoRenew: ${autoRenew})`);
+            if (autoRenew) {
+              const renewInterval = Math.floor(ttlSeconds * 500);
+              const timer = setInterval(async () => {
+                try {
+                  const extended = await redisClient.eval(EXTEND_LOCK_SCRIPT, {
+                    keys: [fullKey],
+                    arguments: [lockValue, String(ttlSeconds)],
+                  });
+                  if (extended === 1) {
+                    cronLogger.info(`[Lock] Renewed: ${lockKey} (+${ttlSeconds}s)`);
+                  } else {
+                    clearInterval(timer);
+                    lockRenewTimers.delete(fullKey);
+                  }
+                } catch {
+                  clearInterval(timer);
+                  lockRenewTimers.delete(fullKey);
+                }
+              }, renewInterval);
+              lockRenewTimers.set(fullKey, timer);
+            }
+            return true;
+          }
+        }
       }
     } catch (err) {
       cronLogger.error(`[Lock] Redis error during acquire ${lockKey}: ${err instanceof Error ? err.message : String(err)}`);
