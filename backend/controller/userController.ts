@@ -566,73 +566,139 @@ const getAccessToken = async (id: number) => {
   }
 };
 
+/**
+ * Helper: Send OTP via email and store in Redis.
+ * Returns true on success, false on failure.
+ */
+const sendEmailOTP = async (email: string, name: string): Promise<boolean> => {
+  try {
+    const randomNumberOTP = Math.floor(100000 + Math.random() * 900000);
+    await sendEmail(
+      email,
+      name,
+      "OTP for login",
+      "Here is your login code: " + randomNumberOTP
+    );
+    // Store OTP in Redis with 10-minute TTL
+    const otpKey = `otp:${email}`;
+    await setRedisItem(otpKey, {
+      otp: randomNumberOTP.toString(),
+      createdAt: new Date().toISOString(),
+    });
+    await setRedisTTL(otpKey, 600); // 10 minutes TTL
+    return true;
+  } catch (err) {
+    userLogger.error("[generateOTP] Email OTP send failed", { email, error: (err as Error).message });
+    return false;
+  }
+};
+
+/**
+ * Helper: Send OTP via Telnyx SMS with retry.
+ * Retries once after 1s delay on 401/5xx errors.
+ * Returns true on success, false on failure.
+ */
+const sendTelnyxSMS = async (mobile: string, maxRetries: number = 1): Promise<boolean> => {
+  const telnyxApiKey = process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN;
+  const verifyProfileId = process.env.TELNYX_VERIFY_PROFILE_ID || process.env.PROFILE_ID;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      await axios.post(
+        "https://api.telnyx.com/v2/verifications/sms",
+        {
+          phone_number: "+" + mobile,
+          verify_profile_id: verifyProfileId,
+          timeout_secs: 600,
+        },
+        {
+          headers: {
+            Authorization: "Bearer " + telnyxApiKey,
+          },
+          timeout: 10000, // 10s timeout
+        }
+      );
+      return true; // Success
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const errMsg = err?.response?.data?.errors?.[0]?.detail || err?.message || "Unknown error";
+      userLogger.error(`[generateOTP] Telnyx SMS attempt ${attempt + 1}/${maxRetries + 1} failed`, {
+        mobile: mobile.slice(0, 4) + "****", // Mask PII
+        status,
+        error: errMsg,
+      });
+
+      // Only retry on 401 (auth flake) or 5xx (server errors)
+      if (attempt < maxRetries && (status === 401 || status === 429 || (status >= 500 && status < 600))) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))); // 1s, 2s backoff
+        continue;
+      }
+      return false; // Non-retryable or exhausted retries
+    }
+  }
+  return false;
+};
+
 const generateOTP = async (req: express.Request, res: express.Response) => {
   try {
     const { email, mobile } = req.body;
     if (mobile) {
-      const isExists = await userModel
-        .findOne({
-          where: {
-            mobile,
-          },
-        })
-        .then((token) => token !== null)
-        .then((isExists) => isExists);
-      if (isExists) {
-        await axios.post(
-          "https://api.telnyx.com/v2/verifications/sms",
-          {
-            phone_number: "+" + mobile,
-            verify_profile_id: process.env.TELNYX_VERIFY_PROFILE_ID || process.env.PROFILE_ID,
-            timeout_secs: 600,
-          },
-          {
-            headers: {
-              Authorization: "Bearer " + (process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN),
-            },
-          }
-        );
-        successResponseHelper(res, 200, "OTP sent successfully!");
+      // Mobile-based OTP with Telnyx SMS + email fallback
+      const userData = await userModel.findOne({
+        where: { mobile },
+        attributes: ['mobile', 'email', 'name'],
+      });
+
+      if (!userData) {
+        return errorResponseHelper(res, 404, "Please enter a registered mobile number!");
+      }
+
+      // Attempt 1: Send via Telnyx SMS (with built-in retry)
+      const smsSent = await sendTelnyxSMS(mobile);
+      if (smsSent) {
+        return successResponseHelper(res, 200, "OTP sent successfully via SMS!");
+      }
+
+      // Attempt 2: Fall back to email if user has one registered
+      const userEmail = userData.dataValues?.email;
+      const userName = userData.dataValues?.name || "User";
+      if (userEmail) {
+        userLogger.info(`[generateOTP] Telnyx SMS failed, falling back to email for mobile user`, {
+          mobile: mobile.slice(0, 4) + "****",
+          email: userEmail,
+        });
+        const emailSent = await sendEmailOTP(userEmail, userName);
+        if (emailSent) {
+          return successResponseHelper(res, 200, "SMS unavailable. OTP sent to your registered email instead.");
+        }
+      }
+
+      // Both channels failed
+      userLogger.error("[generateOTP] All OTP channels failed", {
+        mobile: mobile.slice(0, 4) + "****",
+        hasEmail: !!userEmail,
+      });
+      return errorResponseHelper(res, 503, "Unable to send OTP at this time. Please try again shortly.");
+
+    } else if (email) {
+      // Email-based OTP
+      const userData = await userModel.findOne({
+        where: { email },
+      });
+      if (userData?.dataValues) {
+        const sent = await sendEmailOTP(email, userData.dataValues.name);
+        if (sent) {
+          return successResponseHelper(res, 200, "OTP sent successfully!");
+        }
+        return errorResponseHelper(res, 503, "Unable to send OTP email. Please try again shortly.");
       } else {
-        errorResponseHelper(
-          res,
-          500,
-          "Please enter a registered mobile number!"
-        );
+        return errorResponseHelper(res, 404, "Please enter a registered email!");
       }
     } else {
-      if (email) {
-        const userData = await userModel.findOne({
-          where: {
-            email,
-          },
-        });
-        if (userData?.dataValues) {
-          const randomNumberOTP = Math.floor(100000 + Math.random() * 900000);
-          await sendEmail(
-            email,
-            userData?.dataValues?.name,
-            "OTP for login",
-            "Here is your login code: " + randomNumberOTP
-          );
-          // Store OTP in Redis with 10-minute TTL (more secure than file-based localStorage)
-          const otpKey = `otp:${email}`;
-          await setRedisItem(otpKey, {
-            otp: randomNumberOTP.toString(),
-            createdAt: new Date().toISOString(),
-          });
-          await setRedisTTL(otpKey, 600); // 10 minutes TTL
-          successResponseHelper(res, 200, "OTP sent successfully!");
-        } else {
-          errorResponseHelper(res, 404, "Please enter a registered email!");
-        }
-      } else {
-        errorResponseHelper(res, 400, "Please add any number or email!");
-      }
+      return errorResponseHelper(res, 400, "Please add any number or email!");
     }
   } catch (e) {
-
-      handleControllerError(res, e, userLogger);
+    handleControllerError(res, e, userLogger);
   }
 };
 
