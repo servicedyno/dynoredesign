@@ -907,6 +907,8 @@ const startServer = async () => {
     }
 
     // ── Run startup reconciliation (catch missed webhooks during downtime) ────
+    // SAFETY: Only on production — dev instances shouldn't re-queue production payments
+    if (enableBackgroundJobs) {
     runStartupReconciliation()
       .then(stats => {
         const total = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments + stats.tatumMissed;
@@ -918,6 +920,9 @@ const startServer = async () => {
       .catch(err => {
         log(`Reconciliation failed: ${(err as Error).message}`, 'error');
       });
+    } else {
+      log('⚠️  Skipping startup reconciliation (background jobs disabled)', 'warn');
+    }
   });
 
   // ─── Global Error Handler (must be AFTER all routes) ─────────────────────────
