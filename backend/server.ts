@@ -53,6 +53,7 @@ import { detectBinanceAccess, forceProxyState, getProxyState } from "./services/
 import { startTunnelManager, getTunnelStatus } from "./services/sshTunnelManager";
 import { getAllFeeRates, getFeeRates } from "./services/feeRateService";
 import { captureError, startErrorMonitoring, stopErrorMonitoring, getMonitoringStats, flushErrorDigest, sendErrorDigest } from "./services/errorMonitoringService";
+import * as merchantPoolService from "./services/merchantPoolService";
 
 // ============================================
 // RAILWAY LOGGING FIX: Disable output buffering
