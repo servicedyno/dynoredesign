@@ -1018,7 +1018,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             customer_id: items.customer_id,
             company_id: items.company_id,  // Pass company_id for proper wallet filtering
           }, true);  // Use crypto-specific webhook for proper verification
-          cronLogger.info("paymentRes=============>", paymentRes, uniqueRef);
+          cronLogger.info(`[addPayment] crypto response, ref: ${uniqueRef}`);
           
           // Calculate remaining minutes for crypto invoice (uses centralized config)
           const CRYPTO_INVOICE_MINUTES = PAYMENT_TIMING.CRYPTO_INVOICE_MINUTES;
