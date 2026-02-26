@@ -7,9 +7,16 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
-  - task: "Fix 10 bugs identified from Railway production logs (deployment 60dc6a41, Feb 26 2026): (1) Orphan recovery fallback when no Tatum TXs, (2) tx=undefined in conversion records, (3) Merchant webhook 404 acknowledged transient, (4) Binance conversion cron interval floor + fast-poll cascade guard, (5) Stale Redis lock stealing for negative TTL, (6) PII data redaction from logs, (7) getSingleTransaction/undefined validation, (8) Photo URL missing slash fix, (9) TRX rate 403 already handled, (10) Duplicate webhook receiver-level dedup"
+  - task: "Fix admin fee sweep deadlock for token addresses (USDT-TRC20, USDT-ERC20, USDC-ERC20): (1) sweepByThreshold now checks both AVAILABLE and IN_USE addresses, (2) stale IN_USE safety net in sweepByTime for tokens stuck > 24h, (3) orphan detection reconciles DB admin_fee_balance with on-chain balance, (4) revert conversion interval floor to respect Railway env setting"
     implemented: true
-    working: true
+    working: pending_test
+    files:
+      - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/server.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
     files:
       - "/app/backend/utils/redisInstance.ts"
       - "/app/backend/controller/paymentController.ts"
