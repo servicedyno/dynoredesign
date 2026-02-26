@@ -122,6 +122,22 @@ const botProtectionMiddleware = (req: Request, res: Response, next: NextFunction
   const path = req.originalUrl || req.url || "";
   const ua = (req.headers["user-agent"] || "") as string;
 
+  // Skip for internal/health check paths (always allow)
+  if (path === "/health" || path === "/api/health" || path.startsWith("/api/docs")) {
+    return next();
+  }
+
+  // Skip for loopback/internal IPs (monitoring, health checks, etc.)
+  if (ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1" || ip === "localhost") {
+    // Still check scanner patterns for loopback but DON'T auto-block
+    const pathMatch = SCANNER_PATH_PATTERNS.some(pattern => pattern.test(path));
+    if (pathMatch) {
+      res.status(403).json({ success: false, message: "Forbidden", statusCode: 403 });
+      return;
+    }
+    return next();
+  }
+
   // Check 1: Is this IP already auto-blocked?
   const ipRecord = ipTracker.get(ip);
   if (ipRecord?.blocked) {
