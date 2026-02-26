@@ -530,6 +530,11 @@ app.post("/diagnostics/clear-stale-reconciliation", adminAuthMiddleware, async (
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CRON JOBS — Only run on production or when ENABLE_BACKGROUND_JOBS=true
+// ═══════════════════════════════════════════════════════════════════════════
+if (enableBackgroundJobs) {
+
 // OPTIMIZED: Reduced from */30 to every 2h — legacy system, rarely has pending addresses
 cron.schedule("0 */2 * * *", function () {
   log("Cron: USDT check running", "info");
