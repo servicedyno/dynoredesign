@@ -9,6 +9,7 @@ import router from "./routes";
 import { setupSwagger } from "./swagger";
 import sanitizeInputMiddleware from "./middleware/sanitizeInput";
 import requestLoggerMiddleware from "./middleware/requestLogger";
+import botProtectionMiddleware from "./middleware/botProtection";
 import adminAuthMiddleware from "./middleware/adminAuthMiddleware";
 import authMiddleware from "./middleware/authMiddleware";
 
