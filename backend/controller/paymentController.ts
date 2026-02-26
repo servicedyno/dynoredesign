@@ -4912,8 +4912,10 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           cronLogger.info(`[cryptoVerification] Payment received email already sent for tx: ${transactionId}, skipping duplicate`);
         } else {
           // Set flag immediately to prevent duplicates
+          // TTL = 30 days (was 24h — too short; sweep recovery sends false-positive duplicate emails
+          // when sweeps happen >24h after the original payment, because the dedup key has expired)
           await setRedisItem(paymentReceivedEmailKey, { sent: true, sentAt: new Date().toISOString() });
-          await setRedisTTL(paymentReceivedEmailKey, 86400); // 24 hour TTL
+          await setRedisTTL(paymentReceivedEmailKey, 2592000); // 30 day TTL
           
           // Send email notification for payment received
           const companyName = company_data?.company_name ?? "";
