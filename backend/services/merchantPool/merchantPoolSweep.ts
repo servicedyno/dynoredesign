@@ -954,6 +954,7 @@ export const sweepByTime = async (): Promise<number> => {
       const walletType = address.dataValues.wallet_type;
       const cryptoAmount = parseFloat(address.dataValues.admin_fee_balance);
       const lastPayout = new Date(address.dataValues.last_merchant_payout);
+      const timeSincePayout = Math.floor((new Date().getTime() - lastPayout.getTime()) / 60000);
       
       const sweepConfig = getSweepConfig(walletType);
       
@@ -981,8 +982,6 @@ export const sweepByTime = async (): Promise<number> => {
       const timeThresholdMinutes = sweepConfig.value || 10;
       const timeThreshold = new Date();
       timeThreshold.setMinutes(timeThreshold.getMinutes() - timeThresholdMinutes);
-      
-      const timeSincePayout = Math.floor((new Date().getTime() - lastPayout.getTime()) / 60000);
       
       if (lastPayout < timeThreshold) {
         cronLogger.info(`[MerchantPool] ✅ ${address.dataValues.wallet_address} (${walletType}): ${cryptoAmount}, ${timeSincePayout} min since payout — sweeping`);
