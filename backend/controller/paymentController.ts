@@ -907,7 +907,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.BANK_TRANSFER) {
           const { paymentRes, uniqueRef } = await bankTransfer(value, userData);
-          cronLogger.info("paymentRes=============>", paymentRes, uniqueRef);
+          cronLogger.info(`[addPayment] bankTransfer response, ref: ${uniqueRef}`);
           const { transfer_reference, ...rest } = paymentRes.meta.authorization;
           finalRes = { hash: uniqueRef, ...rest };
           await setRedisItem(uniqueRef, {
@@ -918,7 +918,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.USSD) {
           const { paymentRes, uniqueRef } = await USSD(value, userData);
-          cronLogger.info("paymentRes=============>", paymentRes, uniqueRef);
+          cronLogger.info(`[addPayment] USSD response, ref: ${uniqueRef}`);
           const ussdResponse = paymentRes as { meta?: { authorization?: { note?: string } }; data?: { payment_code?: string } };
           const { note } = ussdResponse.meta?.authorization || {};
           const { payment_code } = ussdResponse.data || {};
@@ -931,7 +931,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
 
         if (value.paymentType === paymentTypes.MOBILE_MONEY) {
           const { paymentRes, uniqueRef } = await MobileMoney(value, userData);
-          cronLogger.info("paymentRes=============>", paymentRes, uniqueRef);
+          cronLogger.info(`[addPayment] MobileMoney response, ref: ${uniqueRef}`);
           const mobileResponse = paymentRes as { meta?: { authorization?: Record<string, unknown> } };
           if (value.currency === "KES") {
             finalRes = { hash: uniqueRef };
@@ -945,12 +945,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
         }
         if (value.paymentType === paymentTypes.BANK_ACCOUNT) {
           const { paymentRes, uniqueRef } = await bankAccount(value, userData);
-          cronLogger.info(
-            "paymentRes=============>",
-            paymentRes,
-            uniqueRef,
-            paymentRes.data?.meta
-          );
+          cronLogger.info(`[addPayment] bankAccount response, ref: ${uniqueRef}`);
           finalRes = {
             hash: uniqueRef,
             ...paymentRes.data?.meta?.authorization,
@@ -962,12 +957,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
         }
         if (value.paymentType === paymentTypes.QR_CODE) {
           const { paymentRes, uniqueRef } = await QRCode(value, userData);
-          cronLogger.info(
-            "paymentRes=============>",
-            paymentRes,
-            uniqueRef,
-            paymentRes.data?.meta
-          );
+          cronLogger.info(`[addPayment] QRCode response, ref: ${uniqueRef}`);
           finalRes = { hash: uniqueRef, ...paymentRes?.meta?.authorization };
           await setRedisItem(uniqueRef, {
             ...items,
