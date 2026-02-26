@@ -80,9 +80,12 @@ export interface KlineCandle {
 let ws: WebSocket | null = null;
 let reconnectTimer: NodeJS.Timeout | null = null;
 let pingTimer: NodeJS.Timeout | null = null;
+let pongTimeoutTimer: NodeJS.Timeout | null = null;
+let staleCheckTimer: NodeJS.Timeout | null = null;
 let reconnectAttempts = 0;
 let isConnecting = false;
 let lastMessageTime = 0;
+let lastPongTime = 0;
 let geoBlocked = false; // True when we detect 451 / region-blocked
 
 /** Real-time price cache: { "BTC": TickerData, ... } */
