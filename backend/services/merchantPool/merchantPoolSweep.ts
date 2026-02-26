@@ -873,7 +873,7 @@ export const sweepByThreshold = async (): Promise<number> => {
   // Skip logging entirely when nothing to check
   if (addressesWithFees.length === 0) return 0;
 
-  cronLogger.info(`[MerchantPool] 💰 Threshold sweep: checking ${addressesWithFees.length} AVAILABLE addresses...`);
+  cronLogger.info(`[MerchantPool] 💰 Threshold sweep: checking ${addressesWithFees.length} addresses with admin fees (AVAILABLE + IN_USE)...`);
 
   const eligibleAddresses = [];
   
