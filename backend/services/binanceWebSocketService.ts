@@ -146,15 +146,41 @@ const connect = () => {
     reconnectAttempts = 0;
     geoBlocked = false; // Connection succeeded — not geo-blocked
     lastMessageTime = Date.now();
+    lastPongTime = Date.now();
     log(`✅ Connected — tracking ${TRACKED_ASSETS.length} assets`);
 
-    // Start ping/pong keep-alive every 3 minutes (Binance closes idle after 5 min)
+    // Start ping/pong keep-alive every 30 seconds
+    // Binance closes idle connections after ~5 min, but intermediate proxies/firewalls
+    // may drop connections sooner. 30s ping prevents code=1006 abnormal closures.
     clearInterval(pingTimer as NodeJS.Timeout);
+    clearTimeout(pongTimeoutTimer as NodeJS.Timeout);
     pingTimer = setInterval(() => {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.ping();
+        // Set a pong timeout — if no pong within 10s, connection is dead
+        clearTimeout(pongTimeoutTimer as NodeJS.Timeout);
+        pongTimeoutTimer = setTimeout(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const silenceMs = Date.now() - lastPongTime;
+            logWarn(`⏱️ Pong timeout (${(silenceMs / 1000).toFixed(0)}s since last pong) — forcing reconnect`);
+            ws.terminate(); // Force close, will trigger 'close' event → scheduleReconnect
+          }
+        }, 10000);
       }
-    }, 3 * 60 * 1000);
+    }, 30 * 1000); // 30 seconds
+
+    // Stale message detector — if no data messages for 90s, force reconnect
+    // (Binance streams at ~100ms intervals, so 90s silence = connection is zombie)
+    clearInterval(staleCheckTimer as NodeJS.Timeout);
+    staleCheckTimer = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN && lastMessageTime > 0) {
+        const silenceMs = Date.now() - lastMessageTime;
+        if (silenceMs > 90 * 1000) {
+          logWarn(`📡 No data for ${(silenceMs / 1000).toFixed(0)}s — forcing reconnect (stale connection)`);
+          ws.terminate();
+        }
+      }
+    }, 30 * 1000);
   });
 
   ws.on("message", (raw: WebSocket.Data) => {
