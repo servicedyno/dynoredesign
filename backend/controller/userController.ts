@@ -189,30 +189,12 @@ const registerPhoneStep1 = async (req: express.Request, res: express.Response) =
       return errorResponseHelper(res, 400, "Phone number already registered");
     }
     
-    // Send OTP via Telnyx
-    try {
-      await axios.post(
-        "https://api.telnyx.com/v2/verifications/sms",
-        {
-          phone_number: "+" + mobile,
-          verify_profile_id: process.env.TELNYX_VERIFY_PROFILE_ID || process.env.PROFILE_ID,
-          timeout_secs: 600,
-        },
-        {
-          headers: {
-            Authorization: "Bearer " + (process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN),
-          },
-        }
-      );
-      
-      // Store registration data temporarily (will be completed on OTP verification)
-      // In production, you might want to use Redis for this
-      successResponseHelper(res, 200, "OTP sent to your phone. Please verify to complete registration.");
-      
-    } catch (telnyxError) {
-      userLogger.error("Telnyx OTP send failed", telnyxError);
-      errorResponseHelper(res, 500, "Failed to send OTP. Please try again.");
+    // Send OTP via Telnyx (with retry logic)
+    const smsSent = await sendTelnyxSMS(mobile);
+    if (smsSent) {
+      return successResponseHelper(res, 200, "OTP sent to your phone. Please verify to complete registration.");
     }
+    return errorResponseHelper(res, 503, "Failed to send OTP. Please try again shortly.");
     
   } catch (e) {
 
