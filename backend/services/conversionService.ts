@@ -719,11 +719,14 @@ export const processStablecoinConversions = async (): Promise<{
   log(`✅ Cycle complete: ${JSON.stringify(summary)}`);
 
   // Adaptive fast-polling: if there are active records that need monitoring,
-  // schedule an extra check in 30 seconds instead of waiting for the full cron interval
+  // schedule an extra check in 30 seconds instead of waiting for the full cron interval.
+  // Guard: Only schedule ONE fast-poll at a time to prevent cascade.
   const hasActiveWork = await hasActiveConversions();
-  if (hasActiveWork && (depositsChecked > 0 || conversions > 0 || withdrawals > 0)) {
-    log(`⚡ Active conversions detected — scheduling fast re-check in 30s`);
+  if (hasActiveWork && (depositsChecked > 0 || conversions > 0 || withdrawals > 0) && !fastPollScheduled) {
+    fastPollScheduled = true;
+    log(`⚡ Active conversions detected — scheduling fast re-check in 60s`);
     setTimeout(async () => {
+      fastPollScheduled = false;
       try {
         log(`⚡ Fast re-check starting...`);
         await markExhaustedAsFailed();
@@ -735,7 +738,7 @@ export const processStablecoinConversions = async (): Promise<{
       } catch (err) {
         logError("Fast re-check failed", err);
       }
-    }, 30_000);
+    }, 60_000);
   }
 
   return summary;
