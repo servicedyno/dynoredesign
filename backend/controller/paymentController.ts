@@ -5581,7 +5581,7 @@ const createPaymentLink = async (
     }
     
     const uniqueRef = crypto.randomBytes(24).toString("hex");
-    cronLogger.info("userData============>", userData);
+    cronLogger.info(`[createPaymentLink] user_id=${userData.user_id}, company_id=${company_id}`);
     
     // Calculate expires_at based on expire option
     // DEFAULT: 7 days if not specified (for security and cleanup)
