@@ -51,6 +51,12 @@ const EXEMPT_PATHS = [
   "/api/user/confirmOTP",
   "/api/user/2fa/validate",
   "/api/events/stream",
+  // Public checkout endpoints — called cross-origin by hosted checkout frontend
+  // before any auth token is available. Protected by their own auth middleware after getData.
+  "/api/pay/getData",
+  "/api/pay/calculateFees",
+  "/api/pay/calculate-payment",
+  "/api/pay/network-fees",
 ];
 
 /**
