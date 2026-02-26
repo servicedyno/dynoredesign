@@ -7,9 +7,18 @@
 user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → payment link → auto-stablecoin conversion → downloadable tax-ready report"
 
 current_test_task:
-  - task: "Fix admin fee sweep deadlock for token addresses (USDT-TRC20, USDT-ERC20, USDC-ERC20): (1) sweepByThreshold now checks both AVAILABLE and IN_USE addresses, (2) stale IN_USE safety net in sweepByTime for tokens stuck > 24h, (3) orphan detection reconciles DB admin_fee_balance with on-chain balance, (4) revert conversion interval floor to respect Railway env setting"
+  - task: "Fix 3 Railway production bugs: (1) generateOTP 500 errors - add Telnyx SMS retry with email fallback, (2) BinanceWS code=1006 disconnections - tune keepalive to 30s ping + 10s pong timeout + 90s stale detection, (3) WordPress scanner bot - add bot protection middleware with auto-IP-blocking"
     implemented: true
-    working: true
+    working: pending_verification
+    files:
+      - "/app/backend/controller/userController.ts"
+      - "/app/backend/services/binanceWebSocketService.ts"
+      - "/app/backend/middleware/botProtection.ts"
+      - "/app/backend/server.ts"
+      - "/app/backend/.env"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
     files:
       - "/app/backend/services/merchantPool/merchantPoolSweep.ts"
       - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
