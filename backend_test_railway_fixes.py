@@ -56,7 +56,8 @@ class RailwayBugFixesTestSuite:
     def test_backend_health(self):
         """Test: Backend Health Check"""
         try:
-            health_url = f"{BASE_URL}/health"
+            # Use localhost:8001 directly since that's where server runs
+            health_url = "http://localhost:8001/health"
             response = requests.get(health_url, timeout=10)
             
             if response.status_code == 200:
