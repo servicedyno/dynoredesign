@@ -5810,7 +5810,7 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
   try {
     const { company_id, page, limit, paginated } = req.query;  // Added pagination params
     
-    cronLogger.info("userData============>", userData);
+    cronLogger.info(`[getPaymentLinks] user_id=${userData.user_id}, company_id=${company_id || 'all'}`);
     
     // Build where clause with optional company_id filter
     const whereClause: Record<string, unknown> = {
