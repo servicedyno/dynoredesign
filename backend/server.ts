@@ -885,6 +885,8 @@ const startServer = async () => {
     startErrorMonitoring();
 
     // Migrate stale webhook URLs from previous deployments (runs once on startup)
+    // SAFETY: Only on production — dev instances would overwrite production webhook URLs
+    if (enableBackgroundJobs) {
     migrateWebhookUrls()
       .then(stats => {
         log(`Webhook URL migration complete: ${stats.updated} updated, ${stats.alreadyCorrect} already correct, ${stats.errors} errors (of ${stats.total} total)`, "info");
@@ -892,6 +894,9 @@ const startServer = async () => {
       .catch(err => {
         log(`Webhook URL migration failed: ${err.message}`, "error");
       });
+    } else {
+      log('⚠️  Skipping webhook URL migration (background jobs disabled)', 'warn');
+    }
 
     // ── Start BullMQ webhook worker ───────────────────────────────────────────
     try {
