@@ -156,7 +156,7 @@ const botProtectionMiddleware = (req: Request, res: Response, next: NextFunction
 
     // Track in error monitoring (low severity)
     if (record.hits <= 2) {
-      captureError(new Error(`Scanner probe: ${path}`), "security", {
+      captureError(new Error(`Scanner probe: ${path}`), "api", {
         severity: "low",
         requestContext: `${req.method} ${path}`,
         extraContext: `IP: ${ip} | UA: ${ua.substring(0, 80)} | Hits: ${record.hits}`,
