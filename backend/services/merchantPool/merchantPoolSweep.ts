@@ -857,11 +857,15 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
 
 /**
  * Sweep addresses by USD threshold
+ * BUG FIX: Now checks BOTH 'AVAILABLE' AND 'IN_USE' addresses with admin_fee_balance > 0.
+ * Previously only checked AVAILABLE, which caused token addresses (USDT-TRC20, USDT-ERC20, USDC-ERC20)
+ * to be permanently stuck — releaseAddress sets tokens to IN_USE when they have admin fees,
+ * but sweepByThreshold only checked AVAILABLE, creating a deadlock.
  */
 export const sweepByThreshold = async (): Promise<number> => {
   const addressesWithFees = await merchantTempAddressModel.findAll({
     where: {
-      status: "AVAILABLE",
+      status: { [Op.in]: ["AVAILABLE", "IN_USE"] },
       admin_fee_balance: { [Op.gt]: 0 },
     },
   });
