@@ -990,12 +990,7 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             value,
             userData
           );
-          cronLogger.info(
-            "paymentRes=============>",
-            paymentRes,
-            uniqueRef,
-            paymentRes.data?.meta
-          );
+          cronLogger.info(`[addPayment] fiatPayment response, ref: ${uniqueRef}`);
           finalRes = {
             hash: uniqueRef,
             ...paymentRes.data?.meta?.authorization,
