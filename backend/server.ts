@@ -164,6 +164,10 @@ app.use(helmet({
 }));
 app.options("*", cors());
 
+// Bot & scanner protection — blocks WordPress/CMS vulnerability scanners early
+// Reduces log noise and saves middleware pipeline cycles
+app.use(botProtectionMiddleware);
+
 // Request-level logging middleware (response time, correlation ID, method/url/status)
 app.use(requestLoggerMiddleware);
 
