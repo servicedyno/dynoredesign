@@ -332,7 +332,8 @@ class RailwayBugFixesTestSuite:
         
         for path in scanner_paths:
             try:
-                url = f"{BASE_URL}{path}"
+                # Use localhost:8001 directly since that's where the server is running
+                url = f"http://localhost:8001{path}"
                 response = requests.get(url, timeout=5)
                 if response.status_code == 403:
                     passed_paths += 1
