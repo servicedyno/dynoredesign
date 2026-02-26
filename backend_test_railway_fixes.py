@@ -96,10 +96,17 @@ class RailwayBugFixesTestSuite:
             with open('/app/backend/.env', 'r') as f:
                 env_content = f.read()
             
-            # Check TELNYX_API_KEY does NOT contain the old key
-            old_key_pattern = "KEY019B6F591AACFAF1451A80C66809193A"
-            if old_key_pattern in env_content:
-                self.log_test("Telnyx ENV Updated", False, f"Still contains old TELNYX_API_KEY: {old_key_pattern}")
+            # Check TELNYX_API_KEY does NOT contain the old key (old key is in ACCESS_TOKEN which is OK)
+            # The important check is that TELNYX_API_KEY itself has the new key
+            telnyx_key_match = re.search(r'TELNYX_API_KEY=([^\n]+)', env_content)
+            if telnyx_key_match:
+                telnyx_key = telnyx_key_match.group(1).strip()
+                old_key_pattern = "KEY019B6F591AACFAF1451A80C66809193A"
+                if old_key_pattern in telnyx_key:
+                    self.log_test("Telnyx ENV Updated", False, f"TELNYX_API_KEY still contains old key: {old_key_pattern}")
+                    return
+            else:
+                self.log_test("Telnyx ENV Updated", False, "TELNYX_API_KEY not found in .env")
                 return
             
             # Check TELNYX_VERIFY_PROFILE_ID is the correct new one
