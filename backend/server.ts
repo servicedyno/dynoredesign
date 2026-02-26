@@ -59,6 +59,19 @@ import { captureError, startErrorMonitoring, stopErrorMonitoring, getMonitoringS
 // This ensures logs appear immediately in Railway's deploy logs
 // ============================================
 const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
+// SAFETY: Only run background jobs (cron, sweeps, webhook migration, reconciliation) on production.
+// Non-production instances (Emergent preview, local dev) sharing the same DB/Redis can cause:
+//   1. Cron jobs competing for locks and executing real financial transactions (sweeps)
+//   2. Webhook URL migration overwriting production URLs with dev URLs
+//   3. Duplicate email notifications via sweep recovery
+// Set ENABLE_BACKGROUND_JOBS=true explicitly to override (e.g., for staging).
+const enableBackgroundJobs = process.env.ENABLE_BACKGROUND_JOBS === 'true' || 
+  (process.env.ENABLE_BACKGROUND_JOBS !== 'false' && isProduction);
+if (!enableBackgroundJobs) {
+  log('⚠️  BACKGROUND JOBS DISABLED — cron jobs, webhook migration, and reconciliation will NOT run on this instance', 'warn');
+  log(`   Reason: ENABLE_BACKGROUND_JOBS=${process.env.ENABLE_BACKGROUND_JOBS || 'not set'}, isProduction=${isProduction}`, 'warn');
+  log('   Set ENABLE_BACKGROUND_JOBS=true in .env to enable on non-production instances', 'warn');
+}
 if (isProduction) {
   // Force unbuffered output for Railway
   if (process.stdout.isTTY === false) {
