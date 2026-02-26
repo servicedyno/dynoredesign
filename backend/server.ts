@@ -708,8 +708,8 @@ setupPaymentLinkReminderCron();
 
 // Stablecoin Conversion: Process pending conversions via Binance
 // Runs every N minutes (configurable via BINANCE_CONVERT_INTERVAL_MINUTES)
-// Minimum 5 minutes to prevent Binance API rate limiting / IP bans
-const convertIntervalMinutes = Math.max(5, parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "10") || 10);
+// Warning: Setting to 1 min may cause Binance API rate limiting / IP bans
+const convertIntervalMinutes = parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "10") || 10;
 cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
   const lockAcquired = await acquireLock("cron:stablecoinConversion", 240, 1, 100, true);
   if (!lockAcquired) { log("Cron: stablecoinConversion skipped (already running)", "info"); return; }
