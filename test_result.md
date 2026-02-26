@@ -9,7 +9,7 @@ user_problem_statement: "Auto-Stablecoin Conversion — One-click invoice → pa
 current_test_task:
   - task: "Fix 10 bugs identified from Railway production logs (deployment 60dc6a41, Feb 26 2026): (1) Orphan recovery fallback when no Tatum TXs, (2) tx=undefined in conversion records, (3) Merchant webhook 404 acknowledged transient, (4) Binance conversion cron interval floor + fast-poll cascade guard, (5) Stale Redis lock stealing for negative TTL, (6) PII data redaction from logs, (7) getSingleTransaction/undefined validation, (8) Photo URL missing slash fix, (9) TRX rate 403 already handled, (10) Duplicate webhook receiver-level dedup"
     implemented: true
-    working: pending_test
+    working: true
     files:
       - "/app/backend/utils/redisInstance.ts"
       - "/app/backend/controller/paymentController.ts"
