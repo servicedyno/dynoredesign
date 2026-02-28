@@ -251,13 +251,17 @@ export const checkMissedPayments = async (): Promise<{
       avgPerAddressMs: result.checked > 0 ? Math.round((Date.now() - startTime) / result.checked) : 0,
     };
 
-    cronLogger.info(`[MerchantPool] ✅ Missed payment check complete:`);
-    cronLogger.info(`[MerchantPool]   - Checked: ${result.checked}/${totalAddresses}`);
-    cronLogger.info(`[MerchantPool]   - Found: ${result.found}, Processed: ${result.processed}, Already: ${result.alreadyProcessed}`);
-    cronLogger.info(`[MerchantPool]   - Skipped (recent): ${result.skippedTooRecent}, Released (stuck): ${result.released}`);
-    cronLogger.info(`[MerchantPool]   - Timing: ${result.timing.totalMs}ms total, ${result.timing.avgPerAddressMs}ms avg/addr`);
-    if (result.errors.length > 0) {
-      cronLogger.info(`[MerchantPool]   - Errors: ${result.errors.length}`);
+    // Quiet mode: only log detailed stats when something meaningful happened
+    const hasActivity = result.found > 0 || result.processed > 0 || result.released > 0 || result.errors.length > 0;
+    if (hasActivity) {
+      cronLogger.info(`[MerchantPool] ✅ Missed payment check complete:`);
+      cronLogger.info(`[MerchantPool]   - Checked: ${result.checked}/${totalAddresses}`);
+      cronLogger.info(`[MerchantPool]   - Found: ${result.found}, Processed: ${result.processed}, Already: ${result.alreadyProcessed}`);
+      cronLogger.info(`[MerchantPool]   - Skipped (recent): ${result.skippedTooRecent}, Released (stuck): ${result.released}`);
+      cronLogger.info(`[MerchantPool]   - Timing: ${result.timing.totalMs}ms total, ${result.timing.avgPerAddressMs}ms avg/addr`);
+      if (result.errors.length > 0) {
+        cronLogger.info(`[MerchantPool]   - Errors: ${result.errors.length}`);
+      }
     }
     
   } catch (error: unknown) {
