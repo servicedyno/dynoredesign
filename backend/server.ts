@@ -746,10 +746,9 @@ cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
 });
 
 // Webhook Retry Queue: Process failed webhooks with exponential backoff
-// Runs every 2 minutes to retry webhooks that failed to deliver
-cron.schedule("*/2 * * * *", async function () {
+// PERF: Increased from 2min to 10min — queue is almost always empty
+cron.schedule("*/10 * * * *", async function () {
   try {
-    log("Cron: processWebhookRetryQueue running", "info");
     const stats = await processWebhookRetryQueue();
     if (stats.processed > 0) {
       log(`Cron: Webhook retries - ${stats.succeeded} succeeded, ${stats.failed} failed`, "info");
