@@ -7241,7 +7241,7 @@ const processIncompletePayments = async () => {
         }
       }
     } else {
-      cronLogger.info("No incomplete payments found that exceeded 1-hour grace period.");
+      // Quiet mode: suppress "no incomplete payments" log (runs every 30 min, almost always empty)
     }
     
     // ============================================
