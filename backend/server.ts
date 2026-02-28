@@ -548,7 +548,6 @@ cron.schedule("0 */2 * * *", function () {
 });
 
 cron.schedule("*/15 * * * *", function () {
-  log("Cron: sweepNativeAdminFees running", "info");
   paymentController.sweepNativeAdminFees();
 });
 
