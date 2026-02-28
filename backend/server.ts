@@ -684,10 +684,10 @@ cron.schedule("*/15 * * * *", function () {
   });
 });
 
-// Background rate cache: Refresh crypto rates every 5 minutes via Tatum
-// PERF: Increased from 120s to 300s — saves ~60% Tatum API calls (~8,000/day → ~3,500/day)
+// Background rate cache: Refresh crypto rates every 15 minutes via Tatum
+// PERF: Increased from 5min to 15min — saves ~7,200 Tatum API calls/day
 // Rates are used for display purposes and payment creation caches its own rate
-cron.schedule("*/5 * * * *", function () {
+cron.schedule("*/15 * * * *", function () {
   refreshBackgroundRateCache().catch(err => {
     log(`Cron: Background rate cache refresh failed: ${err.message}`, "error");
   });
