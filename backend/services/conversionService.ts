@@ -720,7 +720,10 @@ export const processStablecoinConversions = async (): Promise<{
   const completed = await monitorWithdrawals();
 
   const summary = { depositsChecked, conversions, withdrawals, completed };
-  log(`✅ Cycle complete: ${JSON.stringify(summary)}`);
+  // Quiet mode: only log cycle result when actual work was done
+  if (depositsChecked > 0 || conversions > 0 || withdrawals > 0 || completed > 0) {
+    log(`✅ Cycle complete: ${JSON.stringify(summary)}`);
+  }
 
   // Adaptive fast-polling: if there are active records that need monitoring,
   // schedule an extra check in 30 seconds instead of waiting for the full cron interval.
