@@ -615,7 +615,6 @@ cron.schedule("*/15 * * * *", function () {
 
 // Merchant Pool: Cleanup stuck addresses every 15 minutes (safety net)
 cron.schedule("*/15 * * * *", function () {
-  log("Cron: cleanupStaleMerchantPoolAddresses running", "info");
   merchantPoolService.cleanupStaleAddresses();
 });
 
