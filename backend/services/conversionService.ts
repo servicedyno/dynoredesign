@@ -641,7 +641,8 @@ export const processStablecoinConversions = async (): Promise<{
   completed: number;
   skipped_reason?: string;
 }> => {
-  log("🔄 Starting conversion cycle...");
+  // Quiet mode: only log cycle start/complete when there's actual work
+  // (reduces ~1,440 empty log lines/day to near zero)
 
   // ── Binance Availability Guard ──
   // Before making any signed Binance API calls, check if Binance is reachable.
