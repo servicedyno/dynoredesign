@@ -428,7 +428,10 @@ export const prewarmPoolAddresses = async (): Promise<{
       }
     }
 
-    cronLogger.info(`[PreWarm] Complete: checked=${result.checked}, created=${result.created}, errors=${result.errors.length}`);
+    // Quiet mode: only log when addresses were created or errors occurred
+    if (result.created > 0 || result.errors.length > 0) {
+      cronLogger.info(`[PreWarm] Complete: checked=${result.checked}, created=${result.created}, errors=${result.errors.length}`);
+    }
   } catch (error) {
     const msg = getErrorMessage(error);
     cronLogger.error(`[PreWarm] ❌ Pre-warming failed:`, msg);
