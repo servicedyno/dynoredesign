@@ -729,7 +729,7 @@ cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
   const lockAcquired = await acquireLock("cron:stablecoinConversion", 240, 1, 100, true);
   if (!lockAcquired) { log("Cron: stablecoinConversion skipped (already running)", "info"); return; }
   try {
-    log("Cron: processStablecoinConversions running", "info");
+    // Quiet mode: only log start when there's potential work (logged inside service)
     // Add timeout to prevent hanging indefinitely
     const timeout = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Stablecoin conversion timed out after 210s')), 210000));
     await Promise.race([processStablecoinConversions(), timeout]);
