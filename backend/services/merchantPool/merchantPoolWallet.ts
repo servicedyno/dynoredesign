@@ -388,7 +388,10 @@ export const prewarmPoolAddresses = async (): Promise<{
       raw: true,
     }) as unknown as Array<{ owner_user_id: number; wallet_type: string }>;
 
-    cronLogger.info(`[PreWarm] Checking ${activePoolGroups.length} merchant+chain combinations...`);
+    // Quiet mode: skip logging when nothing to check
+    if (activePoolGroups.length > 0) {
+      cronLogger.info(`[PreWarm] Checking ${activePoolGroups.length} merchant+chain combinations...`);
+    }
 
     for (const group of activePoolGroups) {
       result.checked++;
