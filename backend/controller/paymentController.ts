@@ -6514,8 +6514,6 @@ const checkingUSDT = async () => {
  * Schedule: Every 45 minutes
  */
 const sweepNativeAdminFees = async () => {
-  cronLogger.info("[sweepNativeAdminFees] Starting native ETH/TRX admin fee sweep...");
-  
   try {
     // Find all temp addresses with pending native ETH/TRX admin fees
     const pendingAddresses: ITemporaryAddress[] = await sequelize.query(
@@ -6530,6 +6528,8 @@ const sweepNativeAdminFees = async () => {
       }
     );
 
+    // Quiet mode: only log when there are addresses to sweep
+    if (pendingAddresses.length === 0) return;
     cronLogger.info(`[sweepNativeAdminFees] Found ${pendingAddresses.length} addresses with pending admin fees`);
 
     for (let i = 0; i < pendingAddresses.length; i++) {
