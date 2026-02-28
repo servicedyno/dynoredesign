@@ -204,6 +204,10 @@ export const checkMissedPayments = async (): Promise<{
       ],
     });
 
+    // Quiet mode: only log when there are reserved addresses to check or actual results
+    if (reservedAddresses.length === 0) {
+      return result;
+    }
     cronLogger.info(`[MerchantPool] 📋 Found ${reservedAddresses.length} reserved addresses to check (concurrency: ${CONCURRENCY_LIMIT}, timeout: ${PER_ADDRESS_TIMEOUT_MS}ms)`);
 
     // Process addresses in batches with concurrency limit
