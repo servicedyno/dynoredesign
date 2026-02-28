@@ -6722,7 +6722,10 @@ const checkFeeBalance = async () => {
           ? currentBalance?.balance / 1000000
           : currentBalance?.balance;
       
-      cronLogger.info(`[checkFeeBalance] ${wallet_type}: currentBalance=${JSON.stringify(currentBalance)}, newBalance=${newBalance}, dbAmount=${amount}`);
+      // Quiet mode: only log when balance changes, not every check cycle
+      if (Math.abs(Number(newBalance) - Number(adminFeesWallets[i]?.dataValues.amount)) > 0.000001) {
+        cronLogger.info(`[checkFeeBalance] ${wallet_type}: balance changed ${amount} → ${newBalance}`);
+      }
       
       // Only update if newBalance is a valid number
       if (newBalance !== undefined && newBalance !== null && !isNaN(newBalance)) {
