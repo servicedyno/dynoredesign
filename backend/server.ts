@@ -593,10 +593,9 @@ cron.schedule("*/15 * * * *", async function () {
   }
 });
 
-// Merchant Pool: Release expired reservations every 5 minutes
-// PERF: Increased from 2min to 5min — reservations have 30min TTL, 5min check is fine
-cron.schedule("*/5 * * * *", function () {
-  log("Cron: releaseMerchantPoolExpiredReservations running", "info");
+// Merchant Pool: Release expired reservations every 15 minutes
+// PERF: Increased from 5min to 15min — reservations have 30min TTL, 15min check is safe
+cron.schedule("*/15 * * * *", function () {
   merchantPoolService.releaseExpiredReservations().catch(async (err) => {
     const errMsg = err.message || '';
     // Retry once for transient connection errors
