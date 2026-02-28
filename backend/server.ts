@@ -577,14 +577,13 @@ cron.schedule("0 */24 * * *", function () {
 // MERCHANT POOL: Per-merchant pool cron jobs
 // ===========================================
 
-// Merchant Pool: Sweep accumulated admin fees every 5 minutes
+// Merchant Pool: Sweep accumulated admin fees every 15 minutes
 // Handles both threshold-based ($30 USD) and time-based (3 min for ETH/TRX) sweeps
-// PERF: Increased from 2min to 5min — reduces Redis lock churn by 60% (~648/day → ~288/day)
-cron.schedule("*/5 * * * *", async function () {
+// PERF: Increased from 5min to 15min — idle system rarely accumulates fees between checks
+cron.schedule("*/15 * * * *", async function () {
   const lockAcquired = await acquireLock("cron:performScheduledSweeps", 180, 1, 100, true);
-  if (!lockAcquired) { log("Cron: performScheduledSweeps skipped (already running)", "info"); return; }
+  if (!lockAcquired) return; // silent skip — lock contention is normal
   try {
-    log("Cron: performMerchantPoolScheduledSweeps running", "info");
     await merchantPoolService.performScheduledSweeps();
   } catch (err) {
     log(`Cron: Sweep failed, will retry next cycle: ${err.message}`, "error");
