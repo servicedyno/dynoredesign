@@ -669,7 +669,6 @@ cron.schedule("0 * * * *", async function () {
 // Eliminates ~3-4s Tatum API call bottleneck during payment creation
 // OPTIMIZED: Reduced from 3 min to 15 min — pool rarely needs new addresses
 cron.schedule("*/15 * * * *", function () {
-  log("Cron: prewarmPoolAddresses running", "info");
   merchantPoolService.prewarmPoolAddresses().catch(err => {
     log(`Cron: Pool pre-warming failed: ${err.message}`, "error");
     captureError(err, 'cron', { extraContext: 'prewarmPoolAddresses' });
