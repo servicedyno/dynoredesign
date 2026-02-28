@@ -552,11 +552,10 @@ cron.schedule("*/15 * * * *", function () {
   paymentController.sweepNativeAdminFees();
 });
 
-cron.schedule("*/10 * * * *", async () => {
+cron.schedule("*/30 * * * *", async () => {
   const lockAcquired = await acquireLock("cron:processIncompletePayments", 540, 1, 100, true);
-  if (!lockAcquired) { log("Cron: processIncompletePayments skipped (already running)", "info"); return; }
+  if (!lockAcquired) return; // silent skip
   try {
-    log("Cron: processIncompletePayments running", "info");
     await paymentController.processIncompletePayments();
   } finally {
     await releaseLock("cron:processIncompletePayments");
