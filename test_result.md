@@ -5465,6 +5465,56 @@ metadata:
   run_ui: false
 
 current_test_task:
+  - task: "Railway cost optimization: Reduce cron intervals + quiet-mode logging (Fixes 2-5)"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/server.ts"
+      - "/app/backend/services/conversionService.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+      - "/app/backend/services/merchantPool/merchantPoolWallet.ts"
+      - "/app/backend/services/volatilityMonitorService.ts"
+    stuck_count: 0
+    priority: "performance"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          RAILWAY COST OPTIMIZATION — 4 FIXES IMPLEMENTED:
+          
+          FIX 2: Rate cache interval */5 → */15 (saves ~7,200 Tatum API calls/day)
+          FIX 3: Webhook retry interval */2 → */10 (saves ~570 empty cycles/day)
+          FIX 4: Quiet-mode logging across 6 files:
+            - server.ts: Removed "Cron: X running" logs for 9 idle crons
+            - conversionService.ts: Suppressed "Starting/Cycle complete" when all zeros
+            - paymentController.ts: checkFeeBalance only logs balance changes, sweepNativeAdminFees early-return on 0, processIncompletePayments suppresses "No incomplete" 
+            - merchantPoolMonitoring.ts: Suppresses all-zero stats for missed payment checks
+            - merchantPoolWallet.ts: PreWarm only logs when addresses created
+            - volatilityMonitorService.ts: Suppresses "insufficient data" spam when WS geo-blocked
+          FIX 5: Increased sweep/cleanup intervals:
+            - performScheduledSweeps: */5 → */15
+            - releaseMerchantPoolExpiredReservations: */5 → */15
+            - processIncompletePayments: */10 → */30
+            - checkMissedPayments: */10 → */20
+          
+          TypeScript: Clean compilation
+          Backend: Healthy (database connected, Redis connected)
+          
+          TESTS TO RUN:
+          1. Backend health: GET http://localhost:8001/health → 200
+          2. TypeScript compilation: cd /app/backend && npx tsc --noEmit --skipLibCheck → exit 0
+          3. Verify cron intervals in server.ts:
+             - grep "*/15 * * * *" server.ts → should find rate cache, sweeps, expired reservations, cleanup, prewarm, sweepNative, checkFeeBalance
+             - grep "*/10 * * * *" server.ts → should find webhook retry only
+             - grep "*/30 * * * *" server.ts → should find processIncompletePayments
+             - grep "*/20 * * * *" server.ts → should find checkMissedPayments
+             - grep "*/2 * * * *" server.ts → should find 0 matches (old webhook retry removed)
+          4. Verify quiet mode: grep "Cron: processWebhookRetryQueue running" server.ts → 0 matches
+          5. Verify quiet mode: grep "Cron: performMerchantPoolScheduledSweeps running" server.ts → 0 matches
+          6. Verify conversionService quiet: grep 'Starting conversion cycle' conversionService.ts → 0 matches
+          7. Verify volatility quiet: In volatilityMonitorService.ts, the "insufficient data" log is wrapped in "if (wsStatus.connected)"
   - task: "Fix BTC UTXO Fee Off-by-One, payment.failed/confirmed Webhook, Failed Payment Retry, SegWit UTXO Index, Dust Threshold"
     implemented: true
     working: true
