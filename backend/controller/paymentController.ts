@@ -6744,7 +6744,7 @@ const checkFeeBalance = async () => {
 
       // Skip currency conversion if amount is null, undefined, 0, or NaN
       if (amount === null || amount === undefined || amount === 0 || isNaN(Number(amount))) {
-        cronLogger.info(`[checkFeeBalance] Skipping ${wallet_type} - no valid balance (amount=${amount})`);
+        // Quiet mode: skip logging for zero-balance wallets
         textData += `\n Your ${wallet_type} fee wallet has no balance or amount unavailable.`;
         continue;
       }
