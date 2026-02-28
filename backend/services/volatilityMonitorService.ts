@@ -239,10 +239,13 @@ export const runMonitorCycle = async (): Promise<MarketState[]> => {
     }
   }
 
-  // Log WebSocket health alongside results
+  // Log WebSocket health alongside results — but only when WS is connected
+  // (when geo-blocked, all assets always fail — no point logging every 30s)
   if (failedAssets.length > 0) {
     const wsStatus = wsGetStatus();
-    log(`⚠️ ${failedAssets.length} assets had insufficient data: ${failedAssets.join(", ")} | WS connected: ${wsStatus.connected}, cached klines: ${wsStatus.cachedKlines}`);
+    if (wsStatus.connected) {
+      log(`⚠️ ${failedAssets.length} assets had insufficient data: ${failedAssets.join(", ")} | WS connected: ${wsStatus.connected}, cached klines: ${wsStatus.cachedKlines}`);
+    }
   }
 
   return results;
