@@ -519,10 +519,14 @@ const processSingleCurrency = async (
 
   const isCryptoConversion = CRYPTO_CURRENCIES.includes(source) || CRYPTO_CURRENCIES.includes(currentCurrency);
 
+  // PERF FIX 4: Check short-lived request rate cache first (30s TTL, saves ~200ms)
+  const cachedRate = getCachedRequestRate(source, currentCurrency);
+  if (cachedRate) {
+    rate = cachedRate;
+  }
+
   // Strategy 1: FastForex — only for fiat↔fiat conversions (150-300ms)
-  // FIX: FastForex is a forex API and doesn't support crypto symbols (MATIC, BTC, etc.)
-  // Calling it with crypto wastes an API call and generates noisy error logs
-  if (!isCryptoConversion) {
+  if (!rate && !isCryptoConversion) {
     const fastForexResult = await getFastForexRate(source, currentCurrency, amount);
     if (fastForexResult) {
       rate = fastForexResult.rate;
