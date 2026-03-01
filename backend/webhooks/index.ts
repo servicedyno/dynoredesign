@@ -355,16 +355,39 @@ const callUrlWithPayload = async (
           if (responseBodyStr) {
             webhookLogs.error(`[callMerchantWebhook] ❌ Response body: ${responseBodyStr.substring(0, 500)}`);
           }
-          // FIX BUG-3: Track consecutive webhook failures per URL and alert admin
+          // BUG-1 FIX: Track consecutive 404 failures in Redis and auto-disable after threshold
           if (finalResponseStatus === 404) {
-            const failKey = `webhook-failures:${url}`;
-            const failCount = webhookFailureTracker.get(failKey) || 0;
-            webhookFailureTracker.set(failKey, failCount + 1);
-            if (failCount + 1 >= 3) {
-              webhookLogs.error(
-                `[callMerchantWebhook] 🚨 ALERT: Webhook URL "${url}" has returned 404 for ${failCount + 1} consecutive attempts. ` +
-                `Company ${companyId} will NOT receive payment notifications. Merchant should update their webhook URL.`
-              );
+            try {
+              const failKey = `webhook-404-failures:${url}`;
+              const existing = await getRedisItem(failKey);
+              const prevCount = (existing && typeof existing.count === 'number') ? existing.count : 0;
+              const newCount = prevCount + 1;
+              await setRedisItemWithTTL(failKey, { count: newCount, lastFailedAt: new Date().toISOString(), url }, 86400);
+
+              if (newCount >= MAX_CONSECUTIVE_404_FAILURES) {
+                // Auto-disable this URL
+                const disabledKey = `webhook-disabled:${url}`;
+                await setRedisItemWithTTL(disabledKey, {
+                  disabled: true,
+                  failCount: newCount,
+                  disabledAt: new Date().toISOString(),
+                  companyId,
+                  reason: `${newCount} consecutive 404 responses`,
+                }, WEBHOOK_DISABLE_TTL_SECONDS);
+
+                webhookLogs.error(
+                  `[callMerchantWebhook] 🚫 AUTO-DISABLED: Webhook URL "${url}" disabled after ${newCount} consecutive 404s. ` +
+                  `Company ${companyId} will NOT receive ${urlType} notifications until the URL is fixed. ` +
+                  `URL will be re-enabled automatically in 24 hours or when merchant updates their webhook URL.`
+                );
+              } else {
+                webhookLogs.error(
+                  `[callMerchantWebhook] 🚨 ALERT: Webhook URL "${url}" returned 404 (${newCount}/${MAX_CONSECUTIVE_404_FAILURES} before auto-disable). ` +
+                  `Company ${companyId} should update their webhook URL.`
+                );
+              }
+            } catch (trackErr) {
+              webhookLogs.error(`[callMerchantWebhook] Failed to track 404 failure: ${(trackErr as Error).message}`);
             }
           }
           // Include response body in error message for caller
