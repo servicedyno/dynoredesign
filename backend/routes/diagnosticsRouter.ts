@@ -631,8 +631,8 @@ router.get("/weekly-conversion-email-preview", async (_req: express.Request, res
 
 import tatumApi from "../apis/tatumApi";
 import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
-import { customerTransactionModel, paymentLinkModel } from "../models";
-import { merchantTempAddressModel } from "../models/merchantPoolModels";
+import { userWalletModel } from "../models";
+import { merchantTempAddressModel, merchantPoolTransactionModel } from "../models/merchantPoolModels";
 import { fundGasIfNeeded } from "../services/merchantPool/merchantPoolSweep";
 import { calculateDynamicTRC20Fee } from "../services/tronEnergyService";
 import { getAdminWalletAddress } from "../utils/adminUtils";
@@ -641,51 +641,120 @@ import { cronLogger } from "../utils/loggers";
 /**
  * POST /diagnostics/recover-stuck-payment
  * Re-triggers settlement for a payment stuck due to OUT_OF_ENERGY or similar failures.
- * Requires admin auth. Body: { payment_id: string }
+ * Requires admin auth. Body: { payment_id: string } OR { temp_address: string }
+ * 
+ * Also accepts optional overrides:
+ *   merchant_wallet: string  — override destination wallet
+ *   merchant_amount: number  — override amount to send
  * 
  * Flow:
- * 1. Looks up the payment in Redis and DB
- * 2. Checks on-chain balance of the temp address
- * 3. Re-funds gas if needed (using energy-aware estimation)
- * 4. Re-triggers the transfer from temp address to merchant/admin
+ * 1. Looks up the temp address record in merchantTempAddressModel
+ * 2. Checks on-chain balance
+ * 3. Re-funds gas if needed (energy-aware)
+ * 4. Re-triggers the transfer to merchant wallet
  */
 router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
-  const { payment_id } = req.body;
+  const { payment_id, temp_address, merchant_wallet: overrideMerchantWallet, merchant_amount: overrideMerchantAmount } = req.body;
   
-  if (!payment_id) {
-    return res.status(400).json({ error: "payment_id is required" });
+  if (!payment_id && !temp_address) {
+    return res.status(400).json({ error: "payment_id or temp_address is required" });
   }
 
   const steps: { step: string; status: string; details?: unknown }[] = [];
 
   try {
-    // Step 1: Find the payment in DB
-    const payment = await customerTransactionModel.findOne({
-      where: { payment_id },
-    });
+    // Step 1: Find the merchant temp address record
+    let tempAddrRecord: any = null;
     
-    if (!payment) {
-      return res.status(404).json({ error: "Payment not found", payment_id });
+    if (temp_address) {
+      tempAddrRecord = await merchantTempAddressModel.findOne({
+        where: { wallet_address: temp_address },
+      });
     }
     
-    const paymentData = payment.dataValues;
-    steps.push({ step: "find_payment", status: "ok", details: {
-      payment_id: paymentData.payment_id,
-      status: paymentData.payment_status,
-      currency: paymentData.payment_currency,
-      amount: paymentData.total_amount,
-      temp_address: paymentData.temp_address,
-      wallet_address: paymentData.wallet_address,
+    if (!tempAddrRecord && payment_id) {
+      tempAddrRecord = await merchantTempAddressModel.findOne({
+        where: { current_payment_id: payment_id },
+      });
+    }
+    
+    if (!tempAddrRecord) {
+      return res.status(404).json({ 
+        error: "Temp address not found for this payment",
+        payment_id,
+        temp_address,
+      });
+    }
+    
+    const tempData = tempAddrRecord.dataValues;
+    const tempAddress = tempData.wallet_address;
+    const currency = tempData.wallet_type;
+    const ownerUserId = tempData.owner_user_id;
+    
+    steps.push({ step: "find_temp_address", status: "ok", details: {
+      temp_address_id: tempData.temp_address_id,
+      wallet_address: tempAddress,
+      wallet_type: currency,
+      status: tempData.status,
+      current_payment_id: tempData.current_payment_id,
+      admin_fee_balance: tempData.admin_fee_balance,
+      owner_user_id: ownerUserId,
     }});
 
-    const tempAddress = paymentData.temp_address;
-    const currency = paymentData.payment_currency;
-    
-    if (!tempAddress) {
-      return res.status(400).json({ error: "No temp address found for this payment", steps });
+    // Step 2: Look up the pool transaction record to get merchant_amount
+    let poolTx: any = null;
+    if (payment_id) {
+      poolTx = await merchantPoolTransactionModel.findOne({
+        where: { payment_reference: payment_id },
+      });
     }
+    if (!poolTx && tempData.current_payment_id) {
+      poolTx = await merchantPoolTransactionModel.findOne({
+        where: { payment_reference: tempData.current_payment_id },
+      });
+    }
+    if (!poolTx) {
+      poolTx = await merchantPoolTransactionModel.findOne({
+        where: { temp_address_id: tempData.temp_address_id },
+        order: [['created_at', 'DESC']],
+      });
+    }
+    
+    steps.push({ step: "find_pool_transaction", status: poolTx ? "ok" : "not_found", details: poolTx ? {
+      pool_tx_id: poolTx.dataValues.pool_tx_id,
+      payment_reference: poolTx.dataValues.payment_reference,
+      merchant_amount: poolTx.dataValues.merchant_amount,
+      admin_fee_amount: poolTx.dataValues.admin_fee_amount,
+      payment_amount: poolTx.dataValues.payment_amount,
+      status: poolTx.dataValues.status,
+    } : null });
 
-    // Step 2: Check on-chain balance of temp address
+    // Step 3: Find the merchant destination wallet
+    let merchantWallet = overrideMerchantWallet || null;
+    
+    if (!merchantWallet && ownerUserId) {
+      const merchantWalletRecord = await userWalletModel.findOne({
+        where: { user_id: ownerUserId, wallet_type: currency },
+      });
+      merchantWallet = merchantWalletRecord?.dataValues?.wallet_address || null;
+    }
+    
+    const adminWallet = getAdminWalletAddress(currency);
+    
+    if (!merchantWallet && !adminWallet) {
+      return res.status(400).json({ 
+        error: "No destination wallet found (neither merchant nor admin)",
+        steps,
+      });
+    }
+    
+    steps.push({ step: "find_merchant_wallet", status: merchantWallet ? "ok" : "fallback_admin", details: {
+      merchant_wallet: merchantWallet,
+      admin_wallet: adminWallet,
+      source: overrideMerchantWallet ? "override" : "db_lookup",
+    }});
+
+    // Step 4: Check on-chain balance of temp address
     const isTRC20 = currency?.includes("TRC20");
     const isERC20Token = currency?.includes("ERC20") || currency?.includes("POLYGON");
     const gasToken = isTRC20 ? "TRX" : isERC20Token ? "ETH" : currency;
@@ -694,11 +763,9 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
     let gasBalance = 0;
     
     try {
-      // Get gas balance
       const gasBalanceResult = await tatumApi.getAddressBalance(tempAddress, gasToken);
       gasBalance = Number(gasBalanceResult?.balance ?? 0);
       
-      // Get token balance (for TRC20/ERC20)
       if (isTRC20 || isERC20Token) {
         const tokenBalanceResult = await tatumApi.getAddressBalance(tempAddress, currency);
         tokenBalance = Number(tokenBalanceResult?.balance ?? 0);
@@ -718,11 +785,11 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
     if (tokenBalance <= 0) {
       return res.status(400).json({ 
         error: "No token balance in temp address — funds may have already been transferred",
-        steps 
+        steps,
       });
     }
 
-    // Step 3: For TRC20 — estimate energy and re-fund gas
+    // Step 5: For TRC20 — estimate energy and re-fund gas
     if (isTRC20) {
       try {
         const dynamicFee = await calculateDynamicTRC20Fee(tempAddress);
@@ -742,13 +809,12 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
             { dataValues: { wallet_address: tempAddress }, update: async () => {} },
             currency,
             tokenBalance,
-            paymentData.wallet_address
+            merchantWallet || adminWallet
           );
           
           steps.push({ step: "gas_refund", status: fundResult.funded ? "ok" : "skipped", details: fundResult });
           
           if (fundResult.funded) {
-            // Wait for gas TX to confirm
             await new Promise(resolve => setTimeout(resolve, 6000));
           }
         }
@@ -757,12 +823,11 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
       }
     }
 
-    // Step 4: Look up Redis data for this payment
+    // Step 6: Look up Redis data for additional context
     let redisKey = `crypto-${tempAddress}`;
     let redisData = await getRedisItem(redisKey);
     
-    if (!redisData) {
-      // Try alternate key formats
+    if (!redisData && payment_id) {
       redisKey = `payment-${payment_id}`;
       redisData = await getRedisItem(redisKey);
     }
@@ -770,55 +835,31 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
     steps.push({ step: "redis_lookup", status: redisData ? "ok" : "not_found", details: {
       key: redisKey,
       has_data: !!redisData,
-      redis_data: redisData ? {
-        currency: redisData.currency,
-        expectedAmount: redisData.expectedAmount || redisData.amount,
-        payment_id: redisData.payment_id,
-        hasTxId: redisData.hasTxId,
-        status: redisData.status,
-      } : null,
     }});
 
-    // Step 5: Attempt recovery transfer
-    // SMART RECOVERY: Only send the merchant's portion, NOT the full balance.
-    // The admin fees should remain on the temp address for the normal sweep process.
-    const merchantWallet = paymentData.wallet_address;
-    const adminWallet = getAdminWalletAddress(currency);
-    
-    if (!merchantWallet && !adminWallet) {
-      return res.status(400).json({ 
-        error: "No destination wallet found (neither merchant nor admin)",
-        steps 
-      });
-    }
-
-    // Determine the correct merchant amount to send
-    // Look up from DB: merchant_amount field, or calculate from total - fees
-    const dbMerchantAmount = paymentData.merchant_amount ? Number(paymentData.merchant_amount) : null;
-    const dbTotalAmount = paymentData.total_amount ? Number(paymentData.total_amount) : null;
-    const dbFeeAmount = paymentData.admin_fee ? Number(paymentData.admin_fee) : null;
-    const dbGasDeduction = paymentData.gas_deduction ? Number(paymentData.gas_deduction) : null;
-    
-    // Calculate: What we should send to merchant (total received minus fees minus gas)
+    // Step 7: Calculate merchant send amount
     let merchantSendAmount: number;
-    if (dbMerchantAmount && dbMerchantAmount > 0) {
-      merchantSendAmount = dbMerchantAmount;
-    } else if (dbTotalAmount && dbFeeAmount) {
-      merchantSendAmount = dbTotalAmount - dbFeeAmount - (dbGasDeduction || 0);
+    
+    if (overrideMerchantAmount && Number(overrideMerchantAmount) > 0) {
+      merchantSendAmount = Number(overrideMerchantAmount);
+    } else if (poolTx?.dataValues?.merchant_amount && Number(poolTx.dataValues.merchant_amount) > 0) {
+      merchantSendAmount = Number(poolTx.dataValues.merchant_amount);
     } else {
-      // Fallback: calculate from on-chain balance minus DB admin_fee_balance
-      const tempAddr = await merchantTempAddressModel.findOne({
-        where: { wallet_address: tempAddress },
-      });
-      const dbAdminFee = tempAddr ? Number(tempAddr.dataValues.admin_fee_balance || 0) : 0;
+      // Fallback: on-chain balance minus DB admin_fee_balance
+      const dbAdminFee = Number(tempData.admin_fee_balance || 0);
       merchantSendAmount = tokenBalance - dbAdminFee;
     }
     
     if (merchantSendAmount <= 0 || merchantSendAmount > tokenBalance) {
       return res.status(400).json({
-        error: `Invalid merchant amount: ${merchantSendAmount} (on-chain balance: ${tokenBalance}). Cannot recover automatically.`,
+        error: `Invalid merchant amount: ${merchantSendAmount} (on-chain balance: ${tokenBalance}). Use merchant_amount override if needed.`,
         steps,
-        debug: { dbMerchantAmount, dbTotalAmount, dbFeeAmount, dbGasDeduction, tokenBalance },
+        debug: { 
+          poolTxMerchantAmount: poolTx?.dataValues?.merchant_amount,
+          adminFeeBalance: tempData.admin_fee_balance,
+          tokenBalance,
+          overrideMerchantAmount,
+        },
       });
     }
 
@@ -828,19 +869,34 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
       merchant_send_amount: merchantSendAmount,
       admin_fee_remaining: tokenBalance - merchantSendAmount,
       destination,
-      source: dbMerchantAmount ? "db_merchant_amount" : dbTotalAmount ? "calculated" : "balance_minus_admin",
+      source: overrideMerchantAmount ? "override" : poolTx ? "pool_transaction" : "balance_minus_admin",
     }});
     
-    // For the recovery, we need the private key from the temp address
-    // This should be stored encrypted — check Redis or DB
-    let privateKey = redisData?.privateKey || redisData?.private_key;
+    // Step 8: Get the private key — from DB (encrypted) or Redis
+    let encryptedPrivateKey = tempData.private_key;
+    let privateKey: string | null = null;
+    
+    if (encryptedPrivateKey) {
+      try {
+        privateKey = await tatumApi.decryptSymmetric(encryptedPrivateKey, process.env.TEMP_KEY_ID);
+      } catch (decryptErr) {
+        steps.push({ step: "decrypt_private_key", status: "error", details: String(decryptErr) });
+      }
+    }
+    
+    // Fallback to Redis
+    if (!privateKey) {
+      const redisPrivateKey = redisData?.privateKey || redisData?.private_key;
+      if (redisPrivateKey) {
+        privateKey = redisPrivateKey;
+      }
+    }
     
     if (!privateKey) {
-      steps.push({ step: "private_key", status: "not_found", details: "Private key not found in Redis. Manual recovery needed — use Tatum dashboard or provide private key." });
       return res.status(200).json({
         status: "partial_recovery",
-        message: "Gas funded but private key not available in Redis for automatic transfer. The next reconciliation cron job should pick this up, or trigger manual transfer.",
-        payment_id,
+        message: "Private key not available for automatic transfer. Gas may have been funded. Use Tatum dashboard or provide private key manually.",
+        payment_id: payment_id || tempData.current_payment_id,
         temp_address: tempAddress,
         token_balance: tokenBalance,
         merchant_amount: merchantSendAmount,
@@ -850,15 +906,16 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
         steps,
       });
     }
+    
+    steps.push({ step: "private_key", status: "ok", details: "Decrypted successfully" });
 
-    // Determine contract address for token transfers
+    // Step 9: Execute the transfer
     let contractAddress = "";
     if (currency === "USDT-TRC20") contractAddress = process.env.TRX_CONTRACT || "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
     else if (currency === "USDT-ERC20") contractAddress = process.env.ETH_CONTRACT || "";
     else if (currency === "USDC-ERC20") contractAddress = process.env.USDC_CONTRACT || "";
     
     try {
-      // Get fee estimate for the transfer
       let fees: Record<string, number> = {};
       if (isTRC20) {
         const dynamicFee = await calculateDynamicTRC20Fee(tempAddress);
@@ -885,7 +942,7 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
           toAddress: destination,
           amount: merchantSendAmount,
           currency,
-          payment_id,
+          payment_id: payment_id || tempData.current_payment_id,
           markedAt: new Date().toISOString(),
         });
         await setRedisTTL(`outgoing-tx-${recoveryTxId}`, 7200);
@@ -894,7 +951,7 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
       // Verify the recovery TX for TRON
       let txVerified = false;
       if (isTRC20 && recoveryTxId) {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for block inclusion
+        await new Promise(resolve => setTimeout(resolve, 5000));
         const verifyResult = await tatumApi.waitForTransactionConfirmation(recoveryTxId, currency, 60000);
         txVerified = verifyResult.confirmed;
         steps.push({ step: "verify_recovery_tx", status: txVerified ? "ok" : "pending", details: {
@@ -905,7 +962,7 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
         }});
       }
       
-      // Update the temp address admin_fee_balance in DB to reflect the actual remaining balance
+      // Update the temp address admin_fee_balance
       const adminFeeRemaining = tokenBalance - merchantSendAmount;
       if (adminFeeRemaining > 0) {
         try {
@@ -921,6 +978,16 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
         }
       }
       
+      // Update pool transaction status if found
+      if (poolTx) {
+        try {
+          await merchantPoolTransactionModel.update(
+            { status: "merchant_sent", merchant_tx_id: recoveryTxId },
+            { where: { pool_tx_id: poolTx.dataValues.pool_tx_id } }
+          );
+        } catch (_) { /* best effort */ }
+      }
+      
       steps.push({ step: "transfer", status: "ok", details: {
         tx_id: recoveryTxId,
         from: tempAddress,
@@ -934,7 +1001,7 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
       return res.status(200).json({
         status: "recovered",
         message: `Successfully transferred ${merchantSendAmount} ${currency} from ${tempAddress} to ${destination}. Admin fee ${adminFeeRemaining} ${currency} remains for sweep.`,
-        payment_id,
+        payment_id: payment_id || tempData.current_payment_id,
         tx_id: recoveryTxId,
         steps,
       });
@@ -944,7 +1011,7 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
       return res.status(500).json({
         status: "transfer_failed",
         message: `Transfer failed: ${String(transferErr)}. Gas was funded. The reconciliation cron should retry automatically.`,
-        payment_id,
+        payment_id: payment_id || tempData.current_payment_id,
         steps,
       });
     }
