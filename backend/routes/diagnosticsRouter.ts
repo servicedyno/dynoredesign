@@ -630,8 +630,9 @@ router.get("/weekly-conversion-email-preview", async (_req: express.Request, res
 // ─── STUCK PAYMENT RECOVERY ──────────────────────────────────────────────────
 
 import tatumApi from "../apis/tatumApi";
-import { getRedisItem, setRedisItem } from "../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 import { customerTransactionModel, paymentLinkModel } from "../models";
+import { merchantTempAddressModel } from "../models/merchantPoolModels";
 import { fundGasIfNeeded } from "../services/merchantPool/merchantPoolSweep";
 import { calculateDynamicTRC20Fee } from "../services/tronEnergyService";
 import { getAdminWalletAddress } from "../utils/adminUtils";
