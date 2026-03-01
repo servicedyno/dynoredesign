@@ -4577,6 +4577,12 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           );
           
           // Record pool transaction for audit
+          // FIX: Store actual post-gas merchant amount (sendAmount) instead of pre-gas (userAmountToSend)
+          // sendAmount reflects what was actually transferred on-chain after gas deductions
+          const actualMerchantAmount = adminTransferResult.sendAmount > 0
+            ? adminTransferResult.sendAmount
+            : Number(userAmountToSend);
+          
           await merchantPoolService.recordPoolTransaction({
             tempAddressId: tempAddressData.temp_address_id,
             ownerUserId: tempAddressData.owner_user_id,
@@ -4585,7 +4591,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             paymentReference: transactionId,
             walletType: tempCurrency,
             paymentAmount: Number(totalAmountReceived),
-            merchantAmount: Number(userAmountToSend),
+            merchantAmount: actualMerchantAmount,
             adminFeeAmount: Number(adminAmountToSend),
             gasFunded: adminTransferResult.gasFunded || 0,  // SmartGas: actual TRX/ETH funded
             gasUsed: adminTransferResult.blockchainFee || 0,
