@@ -582,6 +582,7 @@ async function handleNewTransaction(
         await callMerchantWebhook(customerData, {
           event: "payment.underpaid", payment_type: "direct_api",
           address, txId: payload.txId,
+          transaction_reference: payload.txId,
           amount_received: totalReceivedAmount, amount_expected: expectedAmount,
           amount_remaining: expectedAmount - totalReceivedAmount,
           currency: items?.currency || payload.asset,
@@ -589,6 +590,7 @@ async function handleNewTransaction(
           status: "underpaid",
           payment_status: "underpaid",
           note: "Direct API: processing with actual received amount",
+          created_at: new Date().toISOString(),
           timestamp: new Date().toISOString(),
         });
       }
