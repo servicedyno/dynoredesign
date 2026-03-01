@@ -9695,6 +9695,59 @@ agent_communication:
       - cd /app/backend && npx jest --forceExit --testPathPatterns="paymentStateMachine|webhookProcessor" 2>&1 | tail -5
 
 
+  - task: "P1/P2 Performance Optimization — Payment creation (~1.9s→~800ms) and webhook receiver (~733ms→~250ms)"
+    implemented: true
+    working: pending_test
+    files:
+      - "/app/backend/webhooks/index.ts" - P2: Parallelized all 3 Redis reads, fire-and-forget dedup SET
+      - "/app/backend/controller/paymentController.ts" - P1 Fix 1: Parallel KYC, P1 Fix 2: Cached wallet validation
+      - "/app/backend/services/merchantPool/merchantPoolReservation.ts" - P1 Fix 3: Pre-reserved warm pool
+      - "/app/backend/services/merchantPoolService.ts" - Export new pool functions
+      - "/app/backend/server.ts" - P1 Fix 3: Pre-warm cron every 2 minutes
+      - "/app/backend/helper/currencyConvert.ts" - P1 Fix 4: 30s request rate cache
+      - "/app/backend/__tests__/webhookHandlers.test.ts" - Updated test for always-send-signature
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    test_instructions: |
+      TEST 1: Backend healthy after all changes
+      - GET http://localhost:8001/health returns 200
+
+      TEST 2: TypeScript compiles clean
+      - cd /app/backend && npx tsc --noEmit --skipLibCheck
+      
+      TEST 3: P2 — Webhook receiver parallelization (webhooks/index.ts tatumCryptoWebHook)
+      - All 3 Redis reads (receiverDedupKey, processedTxKey, outgoingTxKey) in single Promise.all
+      - setRedisItemWithTTL for dedup is fire-and-forget (.catch(() => {})), NOT awaited
+      - No sequential getRedisItem calls before enqueue
+
+      TEST 4: P1 Fix 1 — Parallel KYC (paymentController.ts createCryptoPayment)
+      - kycPromise started immediately after items is retrieved (Promise, not awaited)
+      - kycPromise awaited AFTER expiry/currency/incomplete checks (right before wallet validation)
+
+      TEST 5: P1 Fix 2 — Cached wallet validation (paymentController.ts)
+      - walletCacheKey pattern: `wallet-cache:{userId}:{currency}:{companyId|none}`
+      - getRedisItem(walletCacheKey) checked before DB query
+      - On cache miss: DB query runs, result cached with setRedisItemWithTTL (300s positive, 60s negative)
+      - Cache stores _walletFound boolean flag
+
+      TEST 6: P1 Fix 3 — Pre-reserved warm pool
+      - /app/backend/services/merchantPool/merchantPoolReservation.ts has preWarmAddressPool and replenishPreReservedPool
+      - reserveAddress() has fast path: checks for PRE_RESERVED status first
+      - Uses optimistic lock (WHERE status='PRE_RESERVED' on UPDATE)
+      - On fast path success, triggers replenishPreReservedPool fire-and-forget
+      - Cron in server.ts: */2 schedule calls merchantPoolService.preWarmAddressPool()
+      - PRE_RESERVE_TARGET = 2
+
+      TEST 7: P1 Fix 4 — Rate cache (currencyConvert.ts)
+      - requestRateCache Map with 30s TTL
+      - getCachedRequestRate checked before external API calls in processSingleCurrency
+      - setCachedRequestRate called after rate resolved (also stores inverse rate)
+
+      TEST 8: All tests pass
+      - cd /app/backend && npx jest --forceExit --testPathPatterns="paymentStateMachine|webhookProcessor|webhookHandler" — 207 pass
+
+
   - task: "Fix 6 bugs from Railway deployment log analysis: (1) Auto-disable 404 webhook URLs after 5 consecutive failures using Redis, (2) Always send X-DynoPay-Signature header using system default secret, (3) Fix incomplete payment.pending payload - add transaction_reference, created_at, meta_data, (4) Add created_at to all webhook payloads, (5) BTC UTXO mempool.space fallback when Tatum returns no vout data, (6) stablecoinConversion cron 5-min minimum floor"
     implemented: true
     working: true
