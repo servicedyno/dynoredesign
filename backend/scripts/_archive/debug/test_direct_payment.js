@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://tron-usdt-recovery.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://onboarding-flow-66.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {
