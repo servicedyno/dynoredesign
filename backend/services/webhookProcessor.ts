@@ -825,6 +825,7 @@ async function handleNewTransaction(
           payment_type: failedPaymentType,
           address,
           txId: payload.txId,
+          transaction_reference: payload.txId,
           amount: incomingAmount,
           currency: items?.currency || payload.asset,
           payment_id: items?.payment_id || items?.unique_tx_id,
@@ -835,6 +836,7 @@ async function handleNewTransaction(
           base_currency: failedCustomerData?.base_currency || "USD",
           link_id: failedLinkId,
           fee_payer: failedCustomerData?.fee_payer || items?.fee_payer || "company",
+          created_at: new Date().toISOString(),
           timestamp: new Date().toISOString(),
         });
         webhookLogs.info(`[WebhookProcessor] ✅ payment.failed webhook sent for payment ${paymentId}`);
