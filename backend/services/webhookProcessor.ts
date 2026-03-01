@@ -758,6 +758,7 @@ async function handleNewTransaction(
             payment_type: confirmedPaymentType,
             address,
             txId: payload.txId,
+            transaction_reference: payload.txId,
             amount: finalReceivedAmount,
             currency: items?.currency || payload.asset,
             payment_id: items?.payment_id || items?.unique_tx_id,
@@ -770,6 +771,8 @@ async function handleNewTransaction(
             description: confirmedCustomerData?.description || null,
             link_id: confirmedLinkId,
             fee_payer: confirmedCustomerData?.fee_payer || items?.fee_payer || "company",
+            meta_data: confirmedCustomerData?.meta_data ? (typeof confirmedCustomerData.meta_data === 'string' ? JSON.parse(confirmedCustomerData.meta_data) : confirmedCustomerData.meta_data) : null,
+            created_at: new Date().toISOString(),
             completed_at: new Date().toISOString(),
           });
           webhookLogs.info(`[WebhookProcessor] ✅ payment.confirmed webhook sent for payment ${paymentId}`);
