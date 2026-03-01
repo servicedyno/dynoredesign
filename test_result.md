@@ -9697,7 +9697,7 @@ agent_communication:
 
   - task: "P1/P2 Performance Optimization — Payment creation (~1.9s→~800ms) and webhook receiver (~733ms→~250ms)"
     implemented: true
-    working: pending_test
+    working: true
     files:
       - "/app/backend/webhooks/index.ts" - P2: Parallelized all 3 Redis reads, fire-and-forget dedup SET
       - "/app/backend/controller/paymentController.ts" - P1 Fix 1: Parallel KYC, P1 Fix 2: Cached wallet validation
@@ -9708,7 +9708,7 @@ agent_communication:
       - "/app/backend/__tests__/webhookHandlers.test.ts" - Updated test for always-send-signature
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     test_instructions: |
       TEST 1: Backend healthy after all changes
       - GET http://localhost:8001/health returns 200
