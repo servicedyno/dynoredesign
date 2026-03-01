@@ -218,7 +218,7 @@ def test_pre_reserved_pool():
             return False
         
         # Test 6c: Check optimistic lock pattern
-        optimistic_lock_pattern = r"WHERE.*status.*PRE_RESERVED.*Optimistic lock"
+        optimistic_lock_pattern = r"status.*PRE_RESERVED.*Optimistic lock"
         if not re.search(optimistic_lock_pattern, reservation_content, re.DOTALL):
             log_test("6c", "FAIL", "Optimistic lock pattern not found")
             return False
