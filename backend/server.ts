@@ -618,6 +618,24 @@ cron.schedule("*/15 * * * *", function () {
   merchantPoolService.cleanupStaleAddresses();
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+// PERF FIX 3: Pre-warm address pool every 2 minutes
+// Ensures each active merchant has PRE_RESERVED addresses ready for instant reservation
+// This moves ~400-600ms of lock+transaction+findOne off the payment creation critical path
+// ═══════════════════════════════════════════════════════════════════════
+cron.schedule("*/2 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:preWarmAddressPool", 60, 1, 100, true);
+  if (!lockAcquired) return;
+  try {
+    await merchantPoolService.preWarmAddressPool();
+  } catch (err) {
+    const errMsg = getErrorMessage(err);
+    log(`Cron: preWarmAddressPool failed: ${errMsg}`, "error");
+  } finally {
+    await releaseLock("cron:preWarmAddressPool");
+  }
+});
+
 // Merchant Pool: Subscription health monitor every 2 hours
 // Ensures all pool addresses have valid Tatum webhook subscriptions
 // OPTIMIZED: Reduced from 30 min to 2h — subscriptions rarely break on their own
