@@ -3017,9 +3017,15 @@ const waitForTransactionConfirmation = async (
   currency: string,
   maxWaitMs: number = 60000, // Default 60 seconds
   pollIntervalMs: number = 5000 // Check every 5 seconds
-): Promise<{ confirmed: boolean; blockNumber?: number }> => {
+): Promise<{ confirmed: boolean; blockNumber?: number; contractResult?: string }> => {
   const startTime = Date.now();
   const tatumSdk = await getTatumSDK();
+  
+  // TRON contract result values that indicate execution failure
+  // On TRON, a TX is always included in a block — but the smart contract execution
+  // can fail (OUT_OF_ENERGY, REVERT, etc.) meaning tokens didn't actually move.
+  const TRON_FAILURE_RESULTS = ["OUT_OF_ENERGY", "REVERT", "JVM_STACK_OVER_FLOW", "OUT_OF_TIME", "TRANSFER_FAILED", "UNKNOWN"];
+  const isTronChain = currency === "TRX" || currency === "USDT-TRC20";
   
   while (Date.now() - startTime < maxWaitMs) {
     try {
@@ -3029,7 +3035,7 @@ const waitForTransactionConfirmation = async (
         txData = await tatumSdk.blockchain.eth.ethGetTransaction(txHash);
       } else if (currency === "BSC") {
         txData = await tatumSdk.blockchain.bsc.bscGetTransaction(txHash);
-      } else if (currency === "TRX" || currency === "USDT-TRC20") {
+      } else if (isTronChain) {
         txData = await tatumSdk.blockchain.tron.tronGetTransaction(txHash);
       } else if (currency === "POLYGON" || currency === "USDT-POLYGON") {
         txData = await tatumSdk.blockchain.polygon.polygonGetTransaction(txHash);
@@ -3046,8 +3052,27 @@ const waitForTransactionConfirmation = async (
       }
       
       if (txData && txData.blockNumber) {
-        cronLogger.info(`[waitForTransactionConfirmation] TX ${txHash} confirmed in block ${txData.blockNumber}`);
-        return { confirmed: true, blockNumber: txData.blockNumber as number };
+        // TRON-specific: Check contractResult — TX in a block does NOT mean execution succeeded.
+        // A TRC20 transfer can be included in a block but fail with OUT_OF_ENERGY if the address
+        // didn't have enough TRX to pay for energy. Tokens don't move in this case.
+        if (isTronChain) {
+          const retArray = (txData as any).ret as Array<{ contractRet?: string; fee?: number }> | undefined;
+          const contractResult = retArray?.[0]?.contractRet || "UNKNOWN";
+          
+          if (contractResult === "SUCCESS") {
+            cronLogger.info(`[waitForTransactionConfirmation] TX ${txHash} confirmed in block ${txData.blockNumber} (TRON contractResult: SUCCESS)`);
+            return { confirmed: true, blockNumber: txData.blockNumber as number, contractResult };
+          } else if (TRON_FAILURE_RESULTS.includes(contractResult)) {
+            cronLogger.error(`[waitForTransactionConfirmation] ❌ TX ${txHash} included in block ${txData.blockNumber} but EXECUTION FAILED: contractResult=${contractResult}. Tokens did NOT move.`);
+            return { confirmed: false, blockNumber: txData.blockNumber as number, contractResult };
+          } else {
+            // Unknown contract result — log and treat as pending (might still be processing)
+            cronLogger.warn(`[waitForTransactionConfirmation] TX ${txHash} in block ${txData.blockNumber}, unexpected contractResult: ${contractResult}. Waiting...`);
+          }
+        } else {
+          cronLogger.info(`[waitForTransactionConfirmation] TX ${txHash} confirmed in block ${txData.blockNumber}`);
+          return { confirmed: true, blockNumber: txData.blockNumber as number };
+        }
       }
       
       cronLogger.info(`[waitForTransactionConfirmation] TX ${txHash} still pending, waiting...`);
