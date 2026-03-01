@@ -1,394 +1,374 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Railway Cost Optimization Testing
-Testing all changes from the Railway cost optimization deployment
+Backend testing script for P1/P2 Performance Optimization verification.
+Tests webhook receiver parallelization, KYC optimization, cached wallet validation,
+pre-reserved address pool, and request rate caching.
 """
 
-import requests
 import subprocess
 import sys
-import os
+import requests
+import time
+import json
+import re
 
-# Configuration
-BACKEND_URL = "http://localhost:8001"
+class Colors:
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
 
-def run_test(test_name, test_func):
-    """Run a single test and return success/failure"""
-    print(f"\n{'='*60}")
-    print(f"🧪 RUNNING TEST: {test_name}")
-    print(f"{'='*60}")
+def log_test(test_name, status, details=""):
+    """Log test results with colors."""
+    if status == "PASS":
+        print(f"{Colors.GREEN}✅ TEST {test_name}: PASS{Colors.END}")
+    elif status == "FAIL":
+        print(f"{Colors.RED}❌ TEST {test_name}: FAIL{Colors.END}")
+    else:
+        print(f"{Colors.YELLOW}⚠️ TEST {test_name}: {status}{Colors.END}")
+    
+    if details:
+        print(f"   {details}")
+
+def run_command(cmd, capture_output=True, timeout=60):
+    """Run a shell command and return the result."""
     try:
-        result = test_func()
-        if result:
-            print(f"✅ PASSED: {test_name}")
-            return True
+        if capture_output:
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+            return result.returncode, result.stdout, result.stderr
         else:
-            print(f"❌ FAILED: {test_name}")
-            return False
+            result = subprocess.run(cmd, shell=True, timeout=timeout)
+            return result.returncode, "", ""
+    except subprocess.TimeoutExpired:
+        return -1, "", f"Command timed out after {timeout} seconds"
     except Exception as e:
-        print(f"❌ ERROR in {test_name}: {str(e)}")
-        return False
+        return -1, "", str(e)
 
 def test_backend_health():
-    """TEST 1 - Backend Health: GET /health → 200 with status "healthy" """
-    print(f"Testing GET {BACKEND_URL}/health")
-    
-    response = requests.get(f"{BACKEND_URL}/health", timeout=30)
-    print(f"Response status: {response.status_code}")
-    print(f"Response body: {response.text[:500]}...")
-    
-    if response.status_code == 200:
-        data = response.json()
-        if data.get('status') == 'healthy':
-            print("✓ Backend is healthy and responding correctly")
-            return True
-    
-    print("✗ Backend health check failed")
-    return False
-
-def test_typescript_compilation():
-    """TEST 2 - TypeScript Compilation: npx tsc --noEmit --skipLibCheck → exit code 0"""
-    print("Testing TypeScript compilation in /app/backend")
-    
+    """TEST 1: Backend healthy after all changes"""
     try:
-        # Change to backend directory
-        os.chdir('/app/backend')
-        result = subprocess.run(['npx', 'tsc', '--noEmit', '--skipLibCheck'], 
-                              capture_output=True, text=True, timeout=120)
-        
-        print(f"Exit code: {result.returncode}")
-        if result.stdout:
-            print(f"STDOUT: {result.stdout[:1000]}")
-        if result.stderr:
-            print(f"STDERR: {result.stderr[:1000]}")
-        
-        if result.returncode == 0:
-            print("✓ TypeScript compilation successful")
-            return True
-        else:
-            print("✗ TypeScript compilation failed")
-            return False
-            
-    except subprocess.TimeoutExpired:
-        print("✗ TypeScript compilation timed out")
-        return False
-    except Exception as e:
-        print(f"✗ TypeScript compilation error: {e}")
-        return False
-
-def test_cron_intervals():
-    """TEST 3 - Cron Interval Verification: Check server.ts for correct intervals"""
-    print("Testing cron intervals in server.ts")
-    
-    server_file = '/app/backend/server.ts'
-    
-    with open(server_file, 'r') as f:
-        content = f.read()
-    
-    # Count occurrences of different cron intervals
-    count_15_min = content.count('*/15 * * * *')
-    count_10_min = content.count('*/10 * * * *')  
-    count_30_min = content.count('*/30 * * * *')
-    count_20_min = content.count('*/20 * * * *')
-    count_2_min = content.count('*/2 * * * *')
-    
-    print(f"*/15 * * * * occurrences: {count_15_min} (should be >= 7)")
-    print(f"*/10 * * * * occurrences: {count_10_min} (should be 1)")  
-    print(f"*/30 * * * * occurrences: {count_30_min} (should be 1)")
-    print(f"*/20 * * * * occurrences: {count_20_min} (should be 1)")
-    print(f"*/2 * * * * occurrences: {count_2_min} (should be 0)")
-    
-    success = True
-    
-    if count_15_min < 7:
-        print("✗ Not enough */15 * * * * intervals found")
-        success = False
-    else:
-        print("✓ Correct number of */15 * * * * intervals")
-        
-    if count_10_min != 1:
-        print("✗ Wrong number of */10 * * * * intervals")  
-        success = False
-    else:
-        print("✓ Correct number of */10 * * * * intervals")
-        
-    if count_30_min != 1:
-        print("✗ Wrong number of */30 * * * * intervals")
-        success = False
-    else:
-        print("✓ Correct number of */30 * * * * intervals")
-        
-    if count_20_min != 1:
-        print("✗ Wrong number of */20 * * * * intervals")
-        success = False
-    else:
-        print("✓ Correct number of */20 * * * * intervals")
-        
-    if count_2_min > 0:
-        print("✗ Old */2 * * * * intervals still found (should be removed)")
-        success = False
-    else:
-        print("✓ No old */2 * * * * intervals found")
-    
-    return success
-
-def test_quiet_mode_server():
-    """TEST 4 - Quiet Mode in server.ts: Verify "running" log lines removed"""
-    print("Testing quiet mode in server.ts - checking for removed 'running' logs")
-    
-    server_file = '/app/backend/server.ts'
-    
-    with open(server_file, 'r') as f:
-        content = f.read()
-    
-    # List of "running" log patterns that should be removed
-    running_patterns = [
-        "Cron: processWebhookRetryQueue running",
-        "Cron: performMerchantPoolScheduledSweeps running", 
-        "Cron: releaseMerchantPoolExpiredReservations running",
-        "Cron: processIncompletePayments running",
-        "Cron: checkMissedPayments running",
-        "Cron: sweepNativeAdminFees running",
-        "Cron: checkFeeBalance running",
-        "Cron: cleanupStaleMerchantPoolAddresses running",
-        "Cron: prewarmPoolAddresses running",
-        "Cron: processStablecoinConversions running"
-    ]
-    
-    success = True
-    
-    for pattern in running_patterns:
-        count = content.count(pattern)
-        print(f"'{pattern}': {count} matches (should be 0)")
-        if count > 0:
-            print(f"✗ Found '{pattern}' - should be removed for quiet mode")
-            success = False
-        else:
-            print(f"✓ '{pattern}' correctly removed")
-    
-    if success:
-        print("✓ All 'running' log lines correctly removed from server.ts")
-    else:
-        print("✗ Some 'running' log lines still present in server.ts")
-    
-    return success
-
-def test_quiet_mode_services():
-    """TEST 5 - Quiet Mode in Services: Check specific files for quiet mode changes"""
-    print("Testing quiet mode in service files")
-    
-    files_to_check = {
-        '/app/backend/services/conversionService.ts': ['Starting conversion cycle', 'No incomplete payments found'],
-        '/app/backend/controller/paymentController.ts': [
-            'No incomplete payments found',
-            'Starting native ETH/TRX admin fee sweep'
-        ],
-        '/app/backend/services/volatilityMonitorService.ts': ['insufficient data']
-    }
-    
-    success = True
-    
-    for file_path, patterns in files_to_check.items():
-        print(f"\nChecking {file_path}:")
-        
-        try:
-            with open(file_path, 'r') as f:
-                content = f.read()
-            
-            for pattern in patterns:
-                count = content.count(pattern)
-                print(f"  '{pattern}': {count} matches (should be 0 or wrapped in conditions)")
-                
-                # For some patterns, they might still exist but be wrapped in conditions
-                if pattern == 'insufficient data' and count > 0:
-                    # Check if it's wrapped in wsStatus.connected check
-                    if 'if (wsStatus.connected)' in content:
-                        print(f"  ✓ '{pattern}' is properly wrapped in wsStatus.connected condition")
-                    else:
-                        print(f"  ✗ '{pattern}' not properly wrapped")
-                        success = False
-                elif count > 0:
-                    print(f"  ✗ '{pattern}' still found - should be removed/wrapped")
-                    success = False
-                else:
-                    print(f"  ✓ '{pattern}' correctly removed")
-        
-        except FileNotFoundError:
-            print(f"  ✗ File not found: {file_path}")
-            success = False
-        except Exception as e:
-            print(f"  ✗ Error reading {file_path}: {e}")
-            success = False
-    
-    return success
-
-def test_jest_tests():
-    """TEST 6 - Existing Jest Tests Still Pass"""
-    print("Testing Jest tests for paymentStateMachine and webhookProcessor")
-    
-    try:
-        os.chdir('/app/backend')
-        
-        # Run specific test patterns for critical components
-        result = subprocess.run([
-            'npx', 'jest', 
-            '--config', 'jest.config.ts',
-            '--forceExit',
-            '--testPathPattern=paymentStateMachine|webhookProcessor'
-        ], capture_output=True, text=True, timeout=180)
-        
-        print(f"Jest exit code: {result.returncode}")
-        print(f"STDOUT (last 2000 chars): ...{result.stdout[-2000:]}")
-        if result.stderr:
-            print(f"STDERR (last 1000 chars): ...{result.stderr[-1000:]}")
-        
-        # Check for test results in output
-        output = result.stdout + result.stderr
-        
-        if 'Tests:' in output:
-            print("✓ Jest tests executed")
-            # Look for passing tests
-            if ' passed' in output and 'failed' not in output.lower():
-                print("✓ All tests appear to be passing")
-                return True
-            elif 'failed' in output.lower():
-                print("⚠️ Some tests may have failed - check output")
-                # Don't fail completely for jest issues as they might be pre-existing
+        response = requests.get("http://localhost:8001/health", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy":
+                log_test("1", "PASS", "Backend is healthy and operational")
                 return True
             else:
-                print("⚠️ Cannot determine test results from output")
+                log_test("1", "FAIL", f"Backend status: {data.get('status', 'unknown')}")
+                return False
+        else:
+            log_test("1", "FAIL", f"HTTP {response.status_code}")
+            return False
+    except Exception as e:
+        log_test("1", "FAIL", f"Connection error: {e}")
+        return False
+
+def test_typescript_compilation():
+    """TEST 2: TypeScript compiles clean"""
+    print(f"{Colors.BLUE}Running TypeScript compilation check...{Colors.END}")
+    
+    code, stdout, stderr = run_command("cd /app/backend && npx tsc --noEmit --skipLibCheck")
+    
+    if code == 0:
+        log_test("2", "PASS", "TypeScript compiles cleanly")
+        return True
+    else:
+        log_test("2", "FAIL", f"Compilation errors:\n{stderr}")
+        return False
+
+def test_webhook_parallelization():
+    """TEST 3: P2 — Webhook receiver parallelization"""
+    webhook_file = "/app/backend/webhooks/index.ts"
+    
+    try:
+        with open(webhook_file, 'r') as f:
+            content = f.read()
+        
+        # Test 3a: Check for Promise.all with all 3 Redis reads
+        promise_all_pattern = r"const\s+\[.*alreadyReceived.*alreadyProcessed.*isOutgoingTx.*\]\s*=\s*await\s+Promise\.all"
+        if not re.search(promise_all_pattern, content, re.DOTALL):
+            log_test("3a", "FAIL", "Promise.all not found for 3 Redis reads")
+            return False
+        
+        # Test 3b: Check for fire-and-forget setRedisItemWithTTL with .catch()
+        fire_forget_pattern = r"setRedisItemWithTTL.*receiverDedupKey.*\.catch\("
+        if not re.search(fire_forget_pattern, content, re.DOTALL):
+            log_test("3b", "FAIL", "Fire-and-forget setRedisItemWithTTL with .catch() not found")
+            return False
+        
+        # Test 3c: Check that setRedisItemWithTTL is NOT awaited
+        await_pattern = r"await\s+setRedisItemWithTTL.*receiverDedupKey"
+        if re.search(await_pattern, content):
+            log_test("3c", "FAIL", "setRedisItemWithTTL is being awaited (should be fire-and-forget)")
+            return False
+        
+        log_test("3", "PASS", "Webhook receiver parallelization verified - Promise.all + fire-and-forget dedup")
+        return True
+        
+    except Exception as e:
+        log_test("3", "FAIL", f"Error checking webhook file: {e}")
+        return False
+
+def test_parallel_kyc():
+    """TEST 4: P1 Fix 1 — Parallel KYC"""
+    controller_file = "/app/backend/controller/paymentController.ts"
+    
+    try:
+        with open(controller_file, 'r') as f:
+            content = f.read()
+        
+        # Test 4a: Check KYC promise is started early
+        kyc_promise_pattern = r"const\s+kycPromise\s*=\s*merchantUserId\s*\?\s*checkKycEnforcement"
+        if not re.search(kyc_promise_pattern, content):
+            log_test("4a", "FAIL", "KYC promise not started immediately")
+            return False
+        
+        # Test 4b: Check KYC is awaited later (after validation checks)
+        kyc_await_pattern = r"const\s+kycResult\s*=\s*await\s+kycPromise"
+        if not re.search(kyc_await_pattern, content):
+            log_test("4b", "FAIL", "KYC promise not awaited later")
+            return False
+        
+        # Test 4c: Check timing - await should be after expiry/currency checks
+        # Look for the pattern where kycResult = await kycPromise comes after other validation
+        parts = content.split("const kycResult = await kycPromise")
+        if len(parts) < 2:
+            log_test("4c", "FAIL", "KYC await pattern not found")
+            return False
+        
+        before_await = parts[0]
+        # Check that expiry and currency validation happen before the await
+        if "expires_at" not in before_await or "currencyAliasMap" not in before_await:
+            log_test("4c", "FAIL", "KYC not awaited after validation checks")
+            return False
+        
+        log_test("4", "PASS", "Parallel KYC implementation verified - started early, awaited after validation")
+        return True
+        
+    except Exception as e:
+        log_test("4", "FAIL", f"Error checking controller file: {e}")
+        return False
+
+def test_cached_wallet_validation():
+    """TEST 5: P1 Fix 2 — Cached wallet validation"""
+    controller_file = "/app/backend/controller/paymentController.ts"
+    
+    try:
+        with open(controller_file, 'r') as f:
+            content = f.read()
+        
+        # Test 5a: Check walletCacheKey format
+        cache_key_pattern = r"walletCacheKey\s*=\s*`wallet-cache:\$\{userId\}:\$\{requestedCurrency\}:\$\{.*\}`"
+        if not re.search(cache_key_pattern, content):
+            log_test("5a", "FAIL", "walletCacheKey format not correct")
+            return False
+        
+        # Test 5b: Check Redis cache lookup before DB query
+        cache_lookup_pattern = r"getRedisItem\(walletCacheKey\)"
+        if not re.search(cache_lookup_pattern, content):
+            log_test("5b", "FAIL", "Redis cache lookup not found")
+            return False
+        
+        # Test 5c: Check cache TTLs (300s positive, 60s negative)
+        positive_cache_pattern = r"setRedisItemWithTTL.*300.*\.catch"
+        negative_cache_pattern = r"setRedisItemWithTTL.*60.*\.catch"
+        if not re.search(positive_cache_pattern, content):
+            log_test("5c", "FAIL", "300s positive cache TTL not found")
+            return False
+        if not re.search(negative_cache_pattern, content):
+            log_test("5c", "FAIL", "60s negative cache TTL not found")
+            return False
+        
+        # Test 5d: Check _walletFound flag
+        wallet_found_pattern = r"_walletFound"
+        if not re.search(wallet_found_pattern, content):
+            log_test("5d", "FAIL", "_walletFound flag not found")
+            return False
+        
+        log_test("5", "PASS", "Cached wallet validation verified - proper cache keys, TTLs, and flags")
+        return True
+        
+    except Exception as e:
+        log_test("5", "FAIL", f"Error checking wallet validation: {e}")
+        return False
+
+def test_pre_reserved_pool():
+    """TEST 6: P1 Fix 3 — Pre-reserved warm pool"""
+    reservation_file = "/app/backend/services/merchantPool/merchantPoolReservation.ts"
+    server_file = "/app/backend/server.ts"
+    
+    try:
+        # Test 6a: Check preWarmAddressPool and replenishPreReservedPool exports
+        with open(reservation_file, 'r') as f:
+            reservation_content = f.read()
+        
+        if "export const preWarmAddressPool" not in reservation_content:
+            log_test("6a", "FAIL", "preWarmAddressPool not exported")
+            return False
+        if "export const replenishPreReservedPool" not in reservation_content:
+            log_test("6a", "FAIL", "replenishPreReservedPool not exported") 
+            return False
+        
+        # Test 6b: Check fast path for PRE_RESERVED status
+        pre_reserved_pattern = r'status:\s*"PRE_RESERVED"'
+        if not re.search(pre_reserved_pattern, reservation_content):
+            log_test("6b", "FAIL", "PRE_RESERVED status check not found")
+            return False
+        
+        # Test 6c: Check optimistic lock pattern
+        optimistic_lock_pattern = r"WHERE.*status.*PRE_RESERVED.*Optimistic lock"
+        if not re.search(optimistic_lock_pattern, reservation_content, re.DOTALL):
+            log_test("6c", "FAIL", "Optimistic lock pattern not found")
+            return False
+        
+        # Test 6d: Check fire-and-forget replenishment
+        fire_forget_replenish = r"replenishPreReservedPool.*\.catch"
+        if not re.search(fire_forget_replenish, reservation_content):
+            log_test("6d", "FAIL", "Fire-and-forget replenishment not found")
+            return False
+        
+        # Test 6e: Check cron schedule in server.ts
+        with open(server_file, 'r') as f:
+            server_content = f.read()
+        
+        cron_pattern = r'cron\.schedule\(".*\*/2.*\*.*\*.*\*.*\*".*preWarmAddressPool'
+        if not re.search(cron_pattern, server_content, re.DOTALL):
+            log_test("6e", "FAIL", "*/2 cron schedule for preWarmAddressPool not found")
+            return False
+        
+        # Test 6f: Check PRE_RESERVE_TARGET = 2
+        target_pattern = r"PRE_RESERVE_TARGET\s*=\s*2"
+        if not re.search(target_pattern, reservation_content):
+            log_test("6f", "FAIL", "PRE_RESERVE_TARGET = 2 not found")
+            return False
+        
+        log_test("6", "PASS", "Pre-reserved warm pool verified - exports, fast path, cron, target=2")
+        return True
+        
+    except Exception as e:
+        log_test("6", "FAIL", f"Error checking pre-reserved pool: {e}")
+        return False
+
+def test_rate_cache():
+    """TEST 7: P1 Fix 4 — Rate cache"""
+    currency_file = "/app/backend/helper/currencyConvert.ts"
+    
+    try:
+        with open(currency_file, 'r') as f:
+            content = f.read()
+        
+        # Test 7a: Check requestRateCache Map with 30s TTL
+        cache_map_pattern = r"requestRateCache\s*=\s*new\s+Map"
+        ttl_pattern = r"REQUEST_RATE_CACHE_TTL_MS\s*=\s*30.*1000"
+        if not re.search(cache_map_pattern, content):
+            log_test("7a", "FAIL", "requestRateCache Map not found")
+            return False
+        if not re.search(ttl_pattern, content):
+            log_test("7a", "FAIL", "30s TTL not found")
+            return False
+        
+        # Test 7b: Check getCachedRequestRate called before external APIs
+        get_cached_pattern = r"getCachedRequestRate\(source,\s*currentCurrency\)"
+        if not re.search(get_cached_pattern, content):
+            log_test("7b", "FAIL", "getCachedRequestRate call not found")
+            return False
+        
+        # Test 7c: Check setCachedRequestRate called after rate resolved
+        set_cached_pattern = r"setCachedRequestRate\(source,\s*currentCurrency,\s*rate\)"
+        if not re.search(set_cached_pattern, content):
+            log_test("7c", "FAIL", "setCachedRequestRate call not found")
+            return False
+        
+        # Test 7d: Check that cache is checked before external API calls
+        # Look for the order: getCachedRequestRate -> rate strategies
+        parts = content.split("getCachedRequestRate")
+        if len(parts) < 2:
+            log_test("7d", "FAIL", "Cache check order not found")
+            return False
+        
+        after_cache_check = parts[1]
+        if "getFastForexRate" not in after_cache_check or "getCryptoRateViaTatum" not in after_cache_check:
+            log_test("7d", "FAIL", "External API calls not after cache check")
+            return False
+        
+        log_test("7", "PASS", "Rate cache verified - 30s TTL, get/set functions, proper ordering")
+        return True
+        
+    except Exception as e:
+        log_test("7", "FAIL", f"Error checking rate cache: {e}")
+        return False
+
+def test_jest_tests():
+    """TEST 8: All tests pass"""
+    print(f"{Colors.BLUE}Running Jest tests...{Colors.END}")
+    
+    code, stdout, stderr = run_command(
+        "cd /app/backend && npx jest --forceExit --testPathPatterns=\"paymentStateMachine|webhookProcessor|webhookHandler\"",
+        timeout=120
+    )
+    
+    if code == 0:
+        # Extract test results
+        if "207 passed" in stdout:
+            log_test("8", "PASS", "All 207 tests passed")
+            return True
+        else:
+            # Try to extract actual numbers
+            passed_match = re.search(r"(\d+) passed", stdout)
+            if passed_match:
+                passed_count = passed_match.group(1)
+                log_test("8", "PASS", f"{passed_count} tests passed")
                 return True
-        else:
-            print("✗ Jest tests did not run properly")
-            return False
-            
-    except subprocess.TimeoutExpired:
-        print("⚠️ Jest tests timed out - may be running but taking too long")
-        return True  # Don't fail for timeout
-    except Exception as e:
-        print(f"✗ Jest test error: {e}")
-        return False
-
-def test_conversion_service_quiet_logs():
-    """TEST 7 - Verify quiet conversionService logs when cycle is empty"""
-    print("Testing conversionService quiet logging when cycle is empty")
-    
-    file_path = '/app/backend/services/conversionService.ts'
-    
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-        
-        # Look for the conditional logging pattern
-        if 'if (depositsChecked > 0 || conversions > 0 || withdrawals > 0 || completed > 0)' in content:
-            print("✓ Found conditional 'Cycle complete' logging pattern")
-            return True
-        elif 'depositsChecked > 0' in content and 'Cycle complete' in content:
-            print("✓ Conditional logging logic present for cycle completion")
-            return True
-        else:
-            print("✗ Could not find conditional logging pattern for empty cycles")
-            return False
-    
-    except Exception as e:
-        print(f"✗ Error checking conversionService: {e}")
-        return False
-
-def test_merchant_pool_monitoring_quiet():
-    """TEST 8 - Verify quiet merchantPoolMonitoring when no reserved addresses"""
-    print("Testing merchantPoolMonitoring quiet mode for empty address lists")
-    
-    file_path = '/app/backend/services/merchantPool/merchantPoolMonitoring.ts'
-    
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-        
-        # Look for early return when reservedAddresses.length === 0
-        if 'reservedAddresses.length === 0' in content and 'return' in content:
-            print("✓ Found early return logic when no reserved addresses")
-            return True
-        elif 'length === 0' in content:
-            print("✓ Empty address list handling logic present")
-            return True
-        else:
-            print("⚠️ Could not clearly identify empty address handling - may be implemented differently")
-            return True  # Don't fail as this might be implemented in a different way
-    
-    except Exception as e:
-        print(f"✗ Error checking merchantPoolMonitoring: {e}")
-        return False
-
-def test_prewarm_quiet():
-    """TEST 9 - Verify quiet PreWarm when nothing created"""
-    print("Testing merchantPoolWallet PreWarm quiet mode")
-    
-    file_path = '/app/backend/services/merchantPool/merchantPoolWallet.ts'
-    
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-        
-        # Look for conditional "Complete:" logging
-        if 'if (result.created > 0 || result.errors.length > 0)' in content and 'Complete:' in content:
-            print("✓ Found conditional 'Complete:' logging in PreWarm")
-            return True
-        elif 'result.created > 0' in content:
-            print("✓ Conditional logging logic present for PreWarm completion")
-            return True
-        else:
-            print("⚠️ Could not find conditional PreWarm completion logging")
-            return True  # Don't fail as this might be implemented differently
-    
-    except Exception as e:
-        print(f"✗ Error checking merchantPoolWallet: {e}")
+            else:
+                log_test("8", "PASS", "Tests passed (count not extracted)")
+                return True
+    else:
+        log_test("8", "FAIL", f"Jest tests failed: {stderr}")
         return False
 
 def main():
-    """Main test runner"""
-    print("🚀 STARTING DYNOPAY RAILWAY COST OPTIMIZATION BACKEND TESTS")
-    print(f"Backend URL: {BACKEND_URL}")
+    """Run all performance optimization tests."""
+    print(f"{Colors.BOLD}P1/P2 PERFORMANCE OPTIMIZATION TESTING{Colors.END}")
+    print(f"{Colors.BOLD}Testing DynoPay backend performance improvements{Colors.END}\n")
     
-    # List of all tests to run
+    test_results = []
+    
+    # Run all tests in sequence
     tests = [
-        ("Backend Health Check", test_backend_health),
+        ("Backend Health", test_backend_health),
         ("TypeScript Compilation", test_typescript_compilation), 
-        ("Cron Interval Verification", test_cron_intervals),
-        ("Quiet Mode - Server Running Logs", test_quiet_mode_server),
-        ("Quiet Mode - Service Files", test_quiet_mode_services),
-        ("Jest Tests Pass", test_jest_tests),
-        ("ConversionService Quiet Logs", test_conversion_service_quiet_logs),
-        ("MerchantPoolMonitoring Quiet", test_merchant_pool_monitoring_quiet),
-        ("PreWarm Quiet Mode", test_prewarm_quiet)
+        ("P2 Webhook Parallelization", test_webhook_parallelization),
+        ("P1 Fix 1: Parallel KYC", test_parallel_kyc),
+        ("P1 Fix 2: Cached Wallet Validation", test_cached_wallet_validation),
+        ("P1 Fix 3: Pre-reserved Warm Pool", test_pre_reserved_pool),
+        ("P1 Fix 4: Rate Cache", test_rate_cache),
+        ("Jest Tests", test_jest_tests),
     ]
     
-    # Run all tests
-    results = []
     for test_name, test_func in tests:
-        success = run_test(test_name, test_func)
-        results.append((test_name, success))
+        print(f"\n{Colors.BLUE}Running {test_name}...{Colors.END}")
+        result = test_func()
+        test_results.append(result)
+        time.sleep(0.5)  # Brief pause between tests
     
-    # Print summary
-    print(f"\n{'='*80}")
-    print("📊 RAILWAY COST OPTIMIZATION TEST SUMMARY")
-    print(f"{'='*80}")
+    # Summary
+    print(f"\n{Colors.BOLD}=== TEST SUMMARY ==={Colors.END}")
+    passed = sum(test_results)
+    total = len(test_results)
     
-    passed = sum(1 for _, success in results if success)
-    total = len(results)
-    
-    for test_name, success in results:
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status:10} {test_name}")
-    
-    print(f"\n🏆 OVERALL RESULTS: {passed}/{total} tests passed ({(passed/total)*100:.1f}%)")
+    print(f"Tests passed: {Colors.GREEN}{passed}{Colors.END}/{total}")
+    print(f"Success rate: {Colors.GREEN}{passed/total*100:.1f}%{Colors.END}")
     
     if passed == total:
-        print("🎉 ALL RAILWAY COST OPTIMIZATION TESTS PASSED!")
-        return True
+        print(f"\n{Colors.GREEN}{Colors.BOLD}🎉 ALL P1/P2 PERFORMANCE OPTIMIZATIONS VERIFIED SUCCESSFULLY!{Colors.END}")
+        print(f"{Colors.GREEN}Payment creation and webhook receiver optimizations are operational.{Colors.END}")
     else:
-        print(f"⚠️  {total - passed} tests failed - see details above")
-        return False
+        print(f"\n{Colors.YELLOW}⚠️ Some tests failed. Please review the implementation.{Colors.END}")
+        return 1
+    
+    return 0
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    sys.exit(main())
