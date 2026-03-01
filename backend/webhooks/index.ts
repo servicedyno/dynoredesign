@@ -245,6 +245,16 @@ const callUrlWithPayload = async (
 ): Promise<WebhookResult> => {
   try {
     if (!url) return { success: true };
+
+    // BUG-1 FIX: Check if this URL has been auto-disabled due to consecutive 404s
+    const disabledKey = `webhook-disabled:${url}`;
+    try {
+      const disabledEntry = await getRedisItem(disabledKey);
+      if (disabledEntry && disabledEntry.disabled) {
+        webhookLogs.warn(`[callMerchantWebhook] ⏭️ Skipping ${urlType} to ${url} — auto-disabled after ${disabledEntry.failCount} consecutive 404s (disabled at ${disabledEntry.disabledAt})`);
+        return { success: false, error: `URL auto-disabled after ${disabledEntry.failCount} consecutive 404 failures`, url };
+      }
+    } catch (_e) { /* Redis read failure — proceed to send */ }
     
     // Add metadata to payload
     const timestamp = Math.floor(Date.now() / 1000);
@@ -252,23 +262,24 @@ const callUrlWithPayload = async (
       ...eventData,
       webhook_id: crypto.randomUUID(),
       sent_at: new Date().toISOString(),
+      created_at: eventData.created_at || new Date().toISOString(), // BUG-C FIX: Always include created_at
     };
     
-    // Build headers - signature is optional
+    // BUG-A FIX: Always send signature header.
+    // Use merchant's webhook_secret if configured, otherwise use system default.
+    const signingSecret = webhookSecret || DYNOPAY_DEFAULT_WEBHOOK_SECRET;
+    const signaturePayload = { ...webhookPayload, timestamp };
+    
+    // Build headers — signature is ALWAYS included
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-DynoPay-Event': String(eventData.event || ''),
       'X-DynoPay-Timestamp': timestamp.toString(),
       'X-DynoPay-Webhook-Id': String(webhookPayload.webhook_id),
       'X-DynoPay-Type': urlType, // 'webhook' or 'callback'
+      'X-DynoPay-Signature': generateWebhookSignature(signaturePayload, signingSecret),
       'User-Agent': 'Dynopay-Webhook/1.0',
     };
-    
-    // Only add signature header if secret is configured
-    if (webhookSecret) {
-      const signaturePayload = { ...webhookPayload, timestamp };
-      headers['X-DynoPay-Signature'] = generateWebhookSignature(signaturePayload, webhookSecret);
-    }
     
     webhookLogs.info(`[callMerchantWebhook] Sending ${urlType} ${eventData.event} to ${url}`);
     webhookLogs.info(`[callMerchantWebhook] Signature included: ${!!webhookSecret}`);
