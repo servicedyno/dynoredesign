@@ -10,6 +10,7 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 2. **Retry Logic (paymentController.ts):** Settlement retries on TRON execution errors like `OUT_OF_ENERGY`
 3. **Recovery Endpoint (diagnosticsRouter.ts):** Rewrote `/diagnostics/recover-stuck-payment` to use correct data models (`merchantTempAddressModel` + `merchantPoolTransactionModel` instead of broken `customerTransactionModel` lookup). Supports `payment_id`, `temp_address`, and manual override params.
 4. **Fund Recovery Executed:** Successfully recovered 98.7577 USDT from `TVzJHr4EynTsdtQGXtnppTTfCLSC8LXnY5` → `TTve8v6Y48ChsCTEiCjMRFSbjNtz4mAkxR` (TX: `7995bdcf...`, block 80553581, contractResult: SUCCESS)
+5. **Data Consistency Fix (paymentController.ts):** `recordPoolTransaction` now stores actual post-gas `sendAmount` (what merchant received on-chain) instead of pre-gas `userAmountToSend`. This ensures `pool_tx.merchant_amount` matches the real on-chain transfer.
 
 ## Prioritized Backlog
 
