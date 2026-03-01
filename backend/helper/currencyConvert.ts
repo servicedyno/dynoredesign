@@ -554,6 +554,9 @@ const processSingleCurrency = async (
     throw new Error(`Currency conversion failed for ${source}→${currentCurrency}. Please try again later.`);
   }
 
+  // PERF FIX 4: Cache the resolved rate for 30s (saves API calls for subsequent requests)
+  setCachedRequestRate(source, currentCurrency, rate);
+
   // Calculate converted amount if not already set by FastForex
   if (convertedAmount === null) {
     convertedAmount = amount * rate;
