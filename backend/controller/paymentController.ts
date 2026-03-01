@@ -1382,6 +1382,18 @@ const createCryptoPayment = async (
       }
 
       // Phase 10 Task 10.3: Validate currency is configured using userWalletModel
+      // ========================================
+      // PERF: Await KYC check here (started in parallel above) — saves ~100ms
+      // ========================================
+      const kycResult = await kycPromise;
+      if (kycResult.blocked) {
+        return errorResponseHelper(
+          res,
+          503,
+          "This payment cannot be processed at this time. The merchant's account requires verification. Please contact the merchant for assistance. [MERCHANT_KYC_REQUIRED]"
+        );
+      }
+
       cronLogger.info(`[Phase 10 Validation] Checking wallet for currency: ${requestedCurrency}, user_id: ${items.adm_id}, company_id: ${items.company_id}`);
       
       // Parse user_id safely
