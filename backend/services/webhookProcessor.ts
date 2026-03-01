@@ -396,6 +396,7 @@ async function handleCrashRecovery(
           link_id: linkId,
           fee_payer: customerData?.fee_payer || items?.fee_payer || "company",
           recovered: true,
+          created_at: new Date().toISOString(),
           completed_at: new Date().toISOString(),
         });
       }
