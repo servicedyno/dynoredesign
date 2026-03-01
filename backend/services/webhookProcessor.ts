@@ -616,6 +616,7 @@ async function handleNewTransaction(
         await callMerchantWebhook(customerData, {
           event: "payment.underpaid", payment_type: "payment_link",
           address, txId: payload.txId,
+          transaction_reference: payload.txId,
           amount_received: totalReceivedAmount, amount_expected: expectedAmount,
           amount_remaining: remainingAmount,
           currency: items?.currency || payload.asset,
@@ -623,6 +624,7 @@ async function handleNewTransaction(
           status: "underpaid",
           payment_status: "underpaid",
           grace_period_minutes: merchantGracePeriodMinutes,
+          created_at: new Date().toISOString(),
           timestamp: new Date().toISOString(),
         });
       }
