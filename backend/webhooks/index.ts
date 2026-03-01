@@ -22,9 +22,13 @@ const INTERNAL_WALLETS = new Set(
     .map(addr => addr.toLowerCase())
 );
 
-// FIX BUG-3: Track consecutive webhook delivery failures per URL
-// Resets on successful delivery. Alerts admin after 3+ consecutive failures.
-const webhookFailureTracker = new Map<string, number>();
+// System-level default webhook signing secret (used when merchant hasn't configured their own)
+const DYNOPAY_DEFAULT_WEBHOOK_SECRET = process.env.DYNOPAY_WEBHOOK_SECRET || 'dynopay-webhook-default-v1';
+
+// Maximum consecutive 404 failures before auto-disabling a webhook URL
+const MAX_CONSECUTIVE_404_FAILURES = 5;
+// TTL for the disabled-URL Redis key (24 hours)
+const WEBHOOK_DISABLE_TTL_SECONDS = 86400;
 
 /**
  * Generate HMAC-SHA256 signature for webhook payload
