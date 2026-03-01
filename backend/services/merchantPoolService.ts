@@ -45,6 +45,8 @@ export {
   releaseAddress,
   cleanupStaleAddresses,
   processQueuedPayments,
+  preWarmAddressPool,
+  replenishPreReservedPool,
 } from "./merchantPool/merchantPoolReservation";
 
 // Sweep operations
