@@ -9643,3 +9643,53 @@ agent_communication:
       CONCLUSION: All admin fee sweep deadlock fixes are fully operational and production-ready. The system now properly handles token addresses that accumulate admin fees, preventing the permanent deadlock where releaseAddress() sets tokens to IN_USE but sweep functions couldn't find them. Backend is healthy, compiles cleanly, and all deadlock elimination mechanisms are verified and functional.
       
       NEXT ACTION: Main agent can summarize and finish - admin fee sweep deadlock completely eliminated.
+
+
+  - task: "Fix TRON OUT_OF_ENERGY silent failure bug in waitForTransactionConfirmation + settlement retry + recovery endpoint improvement"
+    implemented: true
+    working: pending_test
+    files:
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/routes/diagnosticsRouter.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    test_instructions: |
+      TEST 1: Backend healthy
+      - GET http://localhost:8001/health returns 200 with status "healthy"
+      
+      TEST 2: TypeScript compiles clean
+      - cd /app/backend && npx tsc --noEmit --skipLibCheck — exit code 0
+      
+      TEST 3: waitForTransactionConfirmation TRON contractResult check
+      - In /app/backend/apis/tatumApi.ts, verify:
+        a. TRON_FAILURE_RESULTS array includes "OUT_OF_ENERGY", "REVERT", "TRANSFER_FAILED"
+        b. For TRON chains (isTronChain), after getting txData with blockNumber:
+           - Checks ret[0].contractRet
+           - If "SUCCESS": returns { confirmed: true, contractResult: "SUCCESS" }
+           - If in TRON_FAILURE_RESULTS: returns { confirmed: false, contractResult: "OUT_OF_ENERGY" }
+        c. Return type includes optional contractResult field
+      
+      TEST 4: Settlement retry on TRON execution failure
+      - In /app/backend/controller/paymentController.ts, after waitForTransactionConfirmation:
+        a. If confirmResult.contractResult is not SUCCESS and confirmed is false:
+           - Logs "TRON TX EXECUTION FAILED"
+           - Re-funds gas via merchantPoolService.fundGasIfNeeded
+           - Retries the transfer via tatumApi.assetToOtherAddress
+           - Marks recovery TX as outgoing in Redis
+           - Verifies recovery TX confirmation
+           - If all retries fail: throws error to prevent false payout_complete
+        b. MAX_RECOVERY_RETRIES = 2
+      
+      TEST 5: Recovery endpoint improved with merchant/admin split
+      - In /app/backend/routes/diagnosticsRouter.ts POST /diagnostics/recover-stuck-payment:
+        a. Calculates merchantSendAmount from DB (merchant_amount or total - fees - gas)
+        b. Only sends merchant portion, NOT full balance
+        c. Marks recovery TX as outgoing in Redis
+        d. Verifies recovery TX for TRON chains
+        e. Updates admin_fee_balance in DB after recovery
+        f. merchantTempAddressModel imported
+      
+      TEST 6: Verify all 511+ existing tests still pass (no regressions)
+      - cd /app/backend && npx jest --forceExit --testPathPatterns="paymentStateMachine|webhookProcessor" 2>&1 | tail -5
