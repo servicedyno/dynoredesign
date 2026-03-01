@@ -33,6 +33,91 @@ export const reserveAddress = async (
 ): Promise<unknown> => {
   const lockKey = `reserve-address:${userId}:${walletType}`;
   
+  // ═══════════════════════════════════════════════════════════════════════
+  // PERF FIX 3: Fast path — check for PRE_RESERVED address first
+  // Pre-warmed addresses skip the full lock+transaction cycle (~400-600ms savings)
+  // If no pre-reserved address, fall back to the standard reservation flow
+  // ═══════════════════════════════════════════════════════════════════════
+  const effectiveCompanyId = companyId && companyId > 0 ? companyId : null;
+  
+  try {
+    const preReserved = await merchantTempAddressModel.findOne({
+      where: {
+        owner_user_id: userId,
+        wallet_type: walletType,
+        status: "PRE_RESERVED",
+      },
+      order: [
+        ["total_transactions", "DESC"],
+        ["admin_fee_balance", "DESC"],
+      ],
+    });
+    
+    if (preReserved) {
+      const reservedUntil = new Date();
+      reservedUntil.setMinutes(reservedUntil.getMinutes() + POOL_CONFIG.RESERVATION_TIMEOUT_MINUTES);
+      
+      const [updatedCount] = await merchantTempAddressModel.update(
+        {
+          status: "RESERVED",
+          current_payment_id: paymentId,
+          current_company_id: effectiveCompanyId,
+          expected_amount: expectedAmount,
+          received_amount: 0,
+          is_partial_payment: false,
+          partial_payment_timestamp: null,
+          reserved_until: reservedUntil,
+          locked_at: new Date(),
+          last_payment_context: null,
+        },
+        {
+          where: {
+            temp_address_id: preReserved.dataValues.temp_address_id,
+            status: "PRE_RESERVED", // Optimistic lock — only succeeds if still PRE_RESERVED
+          },
+        }
+      );
+      
+      if (updatedCount > 0) {
+        cronLogger.info(`[MerchantPool] ⚡ FAST PATH: Used pre-reserved ${walletType} address for payment ${paymentId}`);
+        cronLogger.info(`[MerchantPool]    - Address: ${preReserved.dataValues.wallet_address}`);
+        cronLogger.info(`[MerchantPool]    - Merchant: ${userId}, Company: ${effectiveCompanyId}`);
+        
+        // Async: Update subscription with company info (non-blocking)
+        const addressToSubscribe = preReserved.dataValues.wallet_address;
+        const addressId = preReserved.dataValues.temp_address_id;
+        (async () => {
+          try {
+            const subResult = await tatumApi.createSubscriptionBlockBeeStyle(
+              addressToSubscribe as string,
+              walletType,
+              effectiveCompanyId || 0,
+              userId,
+              addressId as number
+            );
+            if (subResult?.id) {
+              await preReserved.update({ subscription_id: subResult.id });
+            }
+          } catch (subError: unknown) {
+            cronLogger.error(`[MerchantPool] ⚠️ Async subscription update failed:`, (subError as Error).message);
+          }
+        })();
+        
+        // Trigger background replenishment (fire-and-forget)
+        replenishPreReservedPool(userId, walletType).catch(() => {});
+        
+        return preReserved;
+      }
+      // If updatedCount === 0, another concurrent request grabbed it — fall through to standard flow
+      cronLogger.info(`[MerchantPool] Pre-reserved address was grabbed by another request, falling back to standard flow`);
+    }
+  } catch (fastPathErr) {
+    cronLogger.warn(`[MerchantPool] Fast path failed, falling through to standard flow:`, (fastPathErr as Error).message);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // Standard flow: Full lock + DB transaction (original logic preserved)
+  // ═══════════════════════════════════════════════════════════════════════
   const lockResult = await withLock(lockKey, async () => {
     const transaction = await sequelize.transaction();
 
