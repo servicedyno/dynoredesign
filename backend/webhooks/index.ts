@@ -306,11 +306,11 @@ const callUrlWithPayload = async (
         
         webhookLogs.info(`[callMerchantWebhook] ✅ ${urlType} sent successfully, status: ${response.status}`);
         
-        // FIX BUG-3: Reset failure counter on success
-        const successFailKey = `webhook-failures:${url}`;
-        if (webhookFailureTracker.has(successFailKey)) {
-          webhookFailureTracker.delete(successFailKey);
-        }
+        // BUG-1 FIX: Reset consecutive failure counter in Redis on success
+        const failKey = `webhook-404-failures:${url}`;
+        try {
+          await setRedisItemWithTTL(failKey, { count: 0, resetAt: new Date().toISOString() }, 3600);
+        } catch (_e) { /* Non-critical — Redis write failure */ }
         
         // Log successful delivery
         if (companyId) {
