@@ -1401,65 +1401,100 @@ const createCryptoPayment = async (
       if (isNaN(userId)) {
         return errorResponseHelper(res, 400, "Invalid user ID");
       }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // PERF FIX 2: Cached wallet validation (~100ms saved on cache hit)
+      // Merchant wallets rarely change; cache for 5 minutes
+      // ═══════════════════════════════════════════════════════════════════
+      const hasCompanyId = items.company_id && items.company_id !== '' && items.company_id !== 'undefined' && items.company_id !== 'null';
+      const walletCacheKey = `wallet-cache:${userId}:${requestedCurrency}:${hasCompanyId ? items.company_id : 'none'}`;
       
-      const whereClause: Record<string, unknown> = {
-        user_id: userId,
-        wallet_type: requestedCurrency,
-        wallet_address: { [Op.not]: null },
-      };
+      let hasWallet: { dataValues: Record<string, unknown> } | null = null;
+      let walletCacheHit = false;
       
-      // Handle company_id: if provided and valid, add to query
-      // MULTI-TENANT FIX: Require company_id for proper isolation when available
-      let hasWallet;
-      if (items.company_id && items.company_id !== '' && items.company_id !== 'undefined' && items.company_id !== 'null') {
-        const companyId = parseInt(items.company_id);
-        if (!isNaN(companyId)) {
-          whereClause.company_id = companyId;
-        }
-        cronLogger.info('[Phase 10 Validation] Where clause (with company_id):', JSON.stringify(whereClause));
-        hasWallet = await userWalletModel.findOne({ where: whereClause });
-        
-        // MULTI-TENANT FIX: If company_id is set but no wallet found, DO NOT fallback
-        if (!hasWallet) {
-          cronLogger.error(`[Phase 10 Validation] ❌ MULTI-TENANT: No wallet found for company_id ${whereClause.company_id}. NOT falling back.`);
-          return errorResponseHelper(
-            res,
-            400,
-            `No wallet address configured for ${requestedCurrency} in this company. Please add a ${requestedCurrency} wallet for this company first.`
-          );
-        }
-      } else {
-        // If company_id not provided, try to find wallet with null company_id first (legacy support)
-        cronLogger.info('[Phase 10 Validation] No company_id provided, searching with null company_id');
-        
-        // First try with null company_id (legacy wallets)
-        whereClause.company_id = null;
-        cronLogger.info('[Phase 10 Validation] Where clause (null company_id):', JSON.stringify(whereClause));
-        hasWallet = await userWalletModel.findOne({ where: whereClause });
-        
-        // If not found with null, get the FIRST company for this user and use its wallet
-        if (!hasWallet) {
-          cronLogger.info('[Phase 10 Validation] No null company_id wallet, finding user default company');
-          // Parse adm_id to integer for proper SQL comparison
-          const admIdInt = parseInt(String(items.adm_id), 10);
-          if (isNaN(admIdInt)) {
-            return errorResponseHelper(res, 400, "Invalid admin user ID");
+      // Try cache first
+      try {
+        const cachedWallet = await getRedisItem(walletCacheKey);
+        if (cachedWallet && cachedWallet._walletFound !== undefined) {
+          if (cachedWallet._walletFound) {
+            hasWallet = { dataValues: cachedWallet };
+            walletCacheHit = true;
+            // Restore company_id if it was resolved from default company
+            if (cachedWallet._resolvedCompanyId && !hasCompanyId) {
+              items.company_id = cachedWallet._resolvedCompanyId;
+            }
+            cronLogger.info(`[Phase 10 Validation] ⚡ Wallet cache HIT for ${walletCacheKey}`);
+          } else {
+            // Cached as "not found" — skip DB query
+            walletCacheHit = true;
+            hasWallet = null;
+            cronLogger.info(`[Phase 10 Validation] ⚡ Wallet cache HIT (not found) for ${walletCacheKey}`);
           }
-          const userCompany = await companyModel.findOne({
-            where: { user_id: admIdInt },
-            order: [['createdAt', 'ASC']]  // Get the first/oldest company
-          });
+        }
+      } catch (_cacheErr) { /* Cache miss or error — proceed to DB */ }
+      
+      if (!walletCacheHit) {
+        // DB lookup (original logic preserved exactly)
+        const whereClause: Record<string, unknown> = {
+          user_id: userId,
+          wallet_type: requestedCurrency,
+          wallet_address: { [Op.not]: null },
+        };
+      
+        if (hasCompanyId) {
+          const companyId = parseInt(items.company_id);
+          if (!isNaN(companyId)) {
+            whereClause.company_id = companyId;
+          }
+          cronLogger.info('[Phase 10 Validation] Where clause (with company_id):', JSON.stringify(whereClause));
+          hasWallet = await userWalletModel.findOne({ where: whereClause });
+        
+          if (!hasWallet) {
+            cronLogger.error(`[Phase 10 Validation] ❌ MULTI-TENANT: No wallet found for company_id ${whereClause.company_id}. NOT falling back.`);
+            // Cache negative result for 60s (shorter TTL for negative cache)
+            setRedisItemWithTTL(walletCacheKey, { _walletFound: false }, 60).catch(() => {});
+            return errorResponseHelper(
+              res,
+              400,
+              `No wallet address configured for ${requestedCurrency} in this company. Please add a ${requestedCurrency} wallet for this company first.`
+            );
+          }
+        } else {
+          cronLogger.info('[Phase 10 Validation] No company_id provided, searching with null company_id');
+          whereClause.company_id = null;
+          cronLogger.info('[Phase 10 Validation] Where clause (null company_id):', JSON.stringify(whereClause));
+          hasWallet = await userWalletModel.findOne({ where: whereClause });
+        
+          if (!hasWallet) {
+            cronLogger.info('[Phase 10 Validation] No null company_id wallet, finding user default company');
+            const admIdInt = parseInt(String(items.adm_id), 10);
+            if (isNaN(admIdInt)) {
+              return errorResponseHelper(res, 400, "Invalid admin user ID");
+            }
+            const userCompany = await companyModel.findOne({
+              where: { user_id: admIdInt },
+              order: [['createdAt', 'ASC']]
+            });
           
-          if (userCompany) {
-            whereClause.company_id = userCompany.dataValues.company_id;
-            cronLogger.info('[Phase 10 Validation] Using default company_id:', whereClause.company_id);
-            hasWallet = await userWalletModel.findOne({ where: whereClause });
+            if (userCompany) {
+              whereClause.company_id = userCompany.dataValues.company_id;
+              cronLogger.info('[Phase 10 Validation] Using default company_id:', whereClause.company_id);
+              hasWallet = await userWalletModel.findOne({ where: whereClause });
             
-            if (hasWallet) {
-              items.company_id = userCompany.dataValues.company_id;
-              cronLogger.info('[Phase 10 Validation] Found wallet with default company_id:', items.company_id);
+              if (hasWallet) {
+                items.company_id = userCompany.dataValues.company_id;
+                cronLogger.info('[Phase 10 Validation] Found wallet with default company_id:', items.company_id);
+              }
             }
           }
+        }
+        
+        // Cache the result (5 min for positive, 60s for negative)
+        if (hasWallet) {
+          const cacheData = { ...hasWallet.dataValues, _walletFound: true, _resolvedCompanyId: items.company_id || null };
+          setRedisItemWithTTL(walletCacheKey, cacheData, 300).catch(() => {});
+        } else {
+          setRedisItemWithTTL(walletCacheKey, { _walletFound: false }, 60).catch(() => {});
         }
       }
       
