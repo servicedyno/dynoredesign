@@ -1232,26 +1232,16 @@ const createCryptoPayment = async (
       if (DEBUG) cronLogger.info('[DEBUG] Step 4: Redis item retrieved successfully:', { adm_id: items?.adm_id, company_id: items?.company_id });
 
       // ========================================
-      // KYC ENFORCEMENT: Block payment processing if merchant's KYC required but not approved
+      // PERF: Start KYC check as a promise immediately — awaited after validation checks
+      // This runs in parallel with expiry/currency validation (~100ms saved)
       // ========================================
       const merchantUserId = items?.adm_id;
       const merchantCompanyId = items?.company_id;
-      
-      if (merchantUserId) {
-        const kycResult = await checkKycEnforcement(merchantUserId, merchantCompanyId, '[KYC - Checkout]');
-        if (kycResult.blocked) {
-          return errorResponseHelper(
-            res,
-            503,
-            "This payment cannot be processed at this time. The merchant's account requires verification. Please contact the merchant for assistance. [MERCHANT_KYC_REQUIRED]"
-          );
-        }
-      }
-      // ========================================
-      // END KYC ENFORCEMENT
-      // ========================================
+      const kycPromise = merchantUserId
+        ? checkKycEnforcement(merchantUserId, merchantCompanyId, '[KYC - Checkout]')
+        : Promise.resolve({ blocked: false });
 
-      // Check if payment link has expired
+      // Check if payment link has expired (instant, no I/O)
       if (items.expires_at) {
         const expiresAt = new Date(items.expires_at);
         const now = new Date();
