@@ -427,6 +427,41 @@ const getCryptoRateViaCoinGecko = async (from: string, to: string): Promise<numb
   return null;
 };
 
+// ═══════════════════════════════════════════════════════════════════════
+// PERF FIX 4: Short-lived per-request rate cache (30s TTL)
+// Eliminates redundant external API calls when multiple payments for the
+// same currency pair arrive within 30 seconds (~200ms savings per request)
+// ═══════════════════════════════════════════════════════════════════════
+const requestRateCache = new Map<string, { rate: number; timestamp: number }>();
+const REQUEST_RATE_CACHE_TTL_MS = 30 * 1000; // 30 seconds
+
+const getCachedRequestRate = (from: string, to: string): number | null => {
+  const key = `req_rate:${from}:${to}`;
+  const cached = requestRateCache.get(key);
+  if (cached && (Date.now() - cached.timestamp) < REQUEST_RATE_CACHE_TTL_MS) {
+    apiLogger.info(`[currencyConvert] ⚡ Request cache HIT for ${from}→${to}: ${cached.rate} (age: ${Math.floor((Date.now() - cached.timestamp) / 1000)}s)`);
+    return cached.rate;
+  }
+  return null;
+};
+
+const setCachedRequestRate = (from: string, to: string, rate: number): void => {
+  const key = `req_rate:${from}:${to}`;
+  requestRateCache.set(key, { rate, timestamp: Date.now() });
+  // Inverse rate cache too (saves lookup in both directions)
+  if (rate > 0) {
+    const inverseKey = `req_rate:${to}:${from}`;
+    requestRateCache.set(inverseKey, { rate: 1 / rate, timestamp: Date.now() });
+  }
+  // Cleanup old entries periodically (every 100 sets)
+  if (requestRateCache.size > 200) {
+    const now = Date.now();
+    for (const [k, v] of requestRateCache) {
+      if (now - v.timestamp > REQUEST_RATE_CACHE_TTL_MS) requestRateCache.delete(k);
+    }
+  }
+};
+
 /**
  * Normalize currency code (handle variants like USDT-TRC20, USDT-ERC20, etc.)
  */
