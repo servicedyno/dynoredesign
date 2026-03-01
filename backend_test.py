@@ -289,8 +289,10 @@ def test_rate_cache():
             return False
         
         # Verify cache check happens before external API strategies
-        if content.find("getCachedRequestRate(source, currentCurrency)") > content.find("getFastForexRate"):
-            log_test("7d", "FAIL", "Cache check not before external APIs")
+        cache_pos = content.find("const cachedRate = getCachedRequestRate(source, currentCurrency)")
+        fastforex_pos = content.find("getFastForexRate(source, currentCurrency")
+        if cache_pos == -1 or fastforex_pos == -1 or cache_pos > fastforex_pos:
+            log_test("7d", "FAIL", "Cache check not properly ordered before external APIs")
             return False
         
         log_test("7", "PASS", "Rate cache verified - 30s TTL, get/set functions, proper ordering")
