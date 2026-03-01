@@ -3438,18 +3438,100 @@ const settleCryptoTransaction = async ({
 
     // FIX: Verify merchant transaction was actually mined for account-based chains
     // This prevents marking payment complete when TX is stuck due to low gas
+    // CRITICAL FIX: For TRON, also check contractResult — a TX in a block can have
+    // OUT_OF_ENERGY meaning tokens didn't actually move despite "confirmation"
     if (["ETH", "BSC", "TRX", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20", "USDT-TRC20", "SOL", "XRP", "RLUSD", "POLYGON", "USDT-POLYGON"].includes(currency)) {
       const txHash = merchantTransactionDetails?.txId;
       if (txHash) {
         cronLogger.info(`[settleCryptoTransaction] Waiting for TX confirmation: ${txHash}`);
-        const { confirmed, blockNumber } = await tatumApi.waitForTransactionConfirmation(txHash, currency, PAYMENT_TIMING.TRANSACTION_CONFIRMATION_TIMEOUT_MS);
+        const confirmResult = await tatumApi.waitForTransactionConfirmation(txHash, currency, PAYMENT_TIMING.TRANSACTION_CONFIRMATION_TIMEOUT_MS);
         
-        if (!confirmed) {
+        if (confirmResult.confirmed) {
+          cronLogger.info(`[settleCryptoTransaction] TX ${txHash} confirmed in block ${confirmResult.blockNumber}`);
+        } else if (confirmResult.contractResult && confirmResult.contractResult !== "SUCCESS") {
+          // TRON execution failure: TX is in a block but tokens didn't move (e.g., OUT_OF_ENERGY)
+          // This is a critical failure — must retry with gas re-funding
+          const isTRC20Recovery = currency.includes("TRC20") || currency === "TRX";
+          const MAX_RECOVERY_RETRIES = 2;
+          let recovered = false;
+          
+          for (let recoveryAttempt = 1; recoveryAttempt <= MAX_RECOVERY_RETRIES; recoveryAttempt++) {
+            cronLogger.error(`[settleCryptoTransaction] ❌ TRON TX ${txHash} EXECUTION FAILED: contractResult=${confirmResult.contractResult}. Tokens did NOT move! Recovery attempt ${recoveryAttempt}/${MAX_RECOVERY_RETRIES}...`);
+            
+            try {
+              if (isTRC20Recovery) {
+                // Re-fund gas with energy-aware estimation
+                cronLogger.info(`[settleCryptoTransaction] 🔋 Recovery: Re-funding TRX gas for ${fromAddress}...`);
+                const refundResult = await merchantPoolService.fundGasIfNeeded(
+                  { dataValues: { wallet_address: fromAddress }, update: async () => {} },
+                  currency,
+                  merchantSendAmount,
+                  userAddress
+                );
+                
+                if (refundResult.funded) {
+                  cronLogger.info(`[settleCryptoTransaction] ✅ Recovery: Gas re-funded (${refundResult.amount} TRX, TX: ${refundResult.txId}). Waiting for confirmation...`);
+                  // Wait for gas TX to confirm on TRON
+                  await new Promise(resolve => setTimeout(resolve, 8000));
+                } else {
+                  cronLogger.warn(`[settleCryptoTransaction] ⚠️ Recovery: Gas re-funding skipped (${refundResult.reason}). Retrying transfer anyway...`);
+                }
+              }
+              
+              // Retry the merchant transfer
+              const retryResult = await tatumApi.assetToOtherAddress({
+                currency,
+                fromAddress: fromAddress,
+                toAddress: userAddress,
+                privateKey: privateKey,
+                amount: merchantSendAmount,
+                fee: fees,
+                destinationTag: merchantDestinationTag,
+              });
+              
+              if (retryResult?.txId) {
+                cronLogger.info(`[settleCryptoTransaction] 🔄 Recovery: New TX ${retryResult.txId}. Verifying...`);
+                
+                // Mark new TX as outgoing
+                await setRedisItem(`outgoing-tx-${retryResult.txId}`, {
+                  type: "settlement-recovery",
+                  fromAddress: fromAddress,
+                  toAddress: userAddress,
+                  amount: merchantSendAmount,
+                  currency,
+                  originalTxHash: txHash,
+                  recoveryAttempt,
+                  markedAt: new Date().toISOString(),
+                });
+                await setRedisTTL(`outgoing-tx-${retryResult.txId}`, 7200);
+                
+                // Wait and verify the recovery TX
+                const recoveryConfirm = await tatumApi.waitForTransactionConfirmation(retryResult.txId, currency, PAYMENT_TIMING.TRANSACTION_CONFIRMATION_TIMEOUT_MS);
+                
+                if (recoveryConfirm.confirmed) {
+                  cronLogger.info(`[settleCryptoTransaction] ✅ RECOVERY SUCCESSFUL: TX ${retryResult.txId} confirmed in block ${recoveryConfirm.blockNumber}. Merchant transfer completed.`);
+                  merchantTransactionDetails = retryResult; // Update with successful TX
+                  recovered = true;
+                  break;
+                } else if (recoveryConfirm.contractResult && recoveryConfirm.contractResult !== "SUCCESS") {
+                  cronLogger.error(`[settleCryptoTransaction] ❌ Recovery TX also failed: contractResult=${recoveryConfirm.contractResult}`);
+                } else {
+                  cronLogger.warn(`[settleCryptoTransaction] ⚠️ Recovery TX ${retryResult.txId} not confirmed in time`);
+                }
+              }
+            } catch (recoveryError) {
+              cronLogger.error(`[settleCryptoTransaction] ❌ Recovery attempt ${recoveryAttempt} failed: ${getErrorMessage(recoveryError)}`);
+            }
+          }
+          
+          if (!recovered) {
+            // All recovery attempts failed — throw to prevent false payout_complete
+            throw new Error(`TRON merchant transfer EXECUTION FAILED (contractResult=${confirmResult.contractResult}). TX ${txHash} was included in block ${confirmResult.blockNumber} but tokens did NOT move. ${MAX_RECOVERY_RETRIES} recovery attempts failed. Funds are still on temp address ${fromAddress}. Manual recovery required via /diagnostics/recover-stuck-payment.`);
+          }
+        } else if (!confirmResult.confirmed) {
           cronLogger.error(`[settleCryptoTransaction] WARNING: TX ${txHash} not confirmed within timeout!`);
-          // Don't throw - allow flow to continue but log the issue
+          // Don't throw for timeout - allow flow to continue but log the issue
           // The sweep will detect unspent balance and retry later
-        } else {
-          cronLogger.info(`[settleCryptoTransaction] TX ${txHash} confirmed in block ${blockNumber}`);
         }
       }
     }
