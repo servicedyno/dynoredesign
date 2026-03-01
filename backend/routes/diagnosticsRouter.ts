@@ -780,6 +780,8 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
     }});
 
     // Step 5: Attempt recovery transfer
+    // SMART RECOVERY: Only send the merchant's portion, NOT the full balance.
+    // The admin fees should remain on the temp address for the normal sweep process.
     const merchantWallet = paymentData.wallet_address;
     const adminWallet = getAdminWalletAddress(currency);
     
@@ -790,7 +792,44 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
       });
     }
 
+    // Determine the correct merchant amount to send
+    // Look up from DB: merchant_amount field, or calculate from total - fees
+    const dbMerchantAmount = paymentData.merchant_amount ? Number(paymentData.merchant_amount) : null;
+    const dbTotalAmount = paymentData.total_amount ? Number(paymentData.total_amount) : null;
+    const dbFeeAmount = paymentData.admin_fee ? Number(paymentData.admin_fee) : null;
+    const dbGasDeduction = paymentData.gas_deduction ? Number(paymentData.gas_deduction) : null;
+    
+    // Calculate: What we should send to merchant (total received minus fees minus gas)
+    let merchantSendAmount: number;
+    if (dbMerchantAmount && dbMerchantAmount > 0) {
+      merchantSendAmount = dbMerchantAmount;
+    } else if (dbTotalAmount && dbFeeAmount) {
+      merchantSendAmount = dbTotalAmount - dbFeeAmount - (dbGasDeduction || 0);
+    } else {
+      // Fallback: calculate from on-chain balance minus DB admin_fee_balance
+      const tempAddr = await merchantTempAddressModel.findOne({
+        where: { wallet_address: tempAddress },
+      });
+      const dbAdminFee = tempAddr ? Number(tempAddr.dataValues.admin_fee_balance || 0) : 0;
+      merchantSendAmount = tokenBalance - dbAdminFee;
+    }
+    
+    if (merchantSendAmount <= 0 || merchantSendAmount > tokenBalance) {
+      return res.status(400).json({
+        error: `Invalid merchant amount: ${merchantSendAmount} (on-chain balance: ${tokenBalance}). Cannot recover automatically.`,
+        steps,
+        debug: { dbMerchantAmount, dbTotalAmount, dbFeeAmount, dbGasDeduction, tokenBalance },
+      });
+    }
+
     const destination = merchantWallet || adminWallet;
+    
+    steps.push({ step: "calculate_amounts", status: "ok", details: {
+      merchant_send_amount: merchantSendAmount,
+      admin_fee_remaining: tokenBalance - merchantSendAmount,
+      destination,
+      source: dbMerchantAmount ? "db_merchant_amount" : dbTotalAmount ? "calculated" : "balance_minus_admin",
+    }});
     
     // For the recovery, we need the private key from the temp address
     // This should be stored encrypted — check Redis or DB
@@ -804,6 +843,8 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
         payment_id,
         temp_address: tempAddress,
         token_balance: tokenBalance,
+        merchant_amount: merchantSendAmount,
+        admin_fee_remaining: tokenBalance - merchantSendAmount,
         gas_balance: gasBalance,
         destination,
         steps,
@@ -829,23 +870,72 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
         fromAddress: tempAddress,
         toAddress: destination!,
         privateKey,
-        amount: tokenBalance,
+        amount: merchantSendAmount,
         fee: fees,
         _contractAddress: contractAddress,
       });
       
+      const recoveryTxId = transferResult?.txId || transferResult?.id;
+      
+      // Mark recovery TX as outgoing to prevent webhook re-processing
+      if (recoveryTxId) {
+        await setRedisItem(`outgoing-tx-${recoveryTxId}`, {
+          type: "settlement-recovery",
+          fromAddress: tempAddress,
+          toAddress: destination,
+          amount: merchantSendAmount,
+          currency,
+          payment_id,
+          markedAt: new Date().toISOString(),
+        });
+        await setRedisTTL(`outgoing-tx-${recoveryTxId}`, 7200);
+      }
+      
+      // Verify the recovery TX for TRON
+      let txVerified = false;
+      if (isTRC20 && recoveryTxId) {
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for block inclusion
+        const verifyResult = await tatumApi.waitForTransactionConfirmation(recoveryTxId, currency, 60000);
+        txVerified = verifyResult.confirmed;
+        steps.push({ step: "verify_recovery_tx", status: txVerified ? "ok" : "pending", details: {
+          tx_id: recoveryTxId,
+          confirmed: verifyResult.confirmed,
+          contractResult: verifyResult.contractResult || "N/A",
+          block: verifyResult.blockNumber,
+        }});
+      }
+      
+      // Update the temp address admin_fee_balance in DB to reflect the actual remaining balance
+      const adminFeeRemaining = tokenBalance - merchantSendAmount;
+      if (adminFeeRemaining > 0) {
+        try {
+          await merchantTempAddressModel.update(
+            { admin_fee_balance: adminFeeRemaining },
+            { where: { wallet_address: tempAddress } }
+          );
+          steps.push({ step: "update_admin_balance", status: "ok", details: {
+            new_admin_fee_balance: adminFeeRemaining,
+          }});
+        } catch (dbErr) {
+          steps.push({ step: "update_admin_balance", status: "error", details: String(dbErr) });
+        }
+      }
+      
       steps.push({ step: "transfer", status: "ok", details: {
-        tx_id: transferResult?.txId || transferResult?.id || transferResult,
+        tx_id: recoveryTxId,
         from: tempAddress,
         to: destination,
-        amount: tokenBalance,
+        amount: merchantSendAmount,
         currency,
+        admin_fee_remaining: adminFeeRemaining,
+        tx_verified: txVerified,
       }});
 
       return res.status(200).json({
         status: "recovered",
-        message: `Successfully transferred ${tokenBalance} ${currency} from ${tempAddress} to ${destination}`,
+        message: `Successfully transferred ${merchantSendAmount} ${currency} from ${tempAddress} to ${destination}. Admin fee ${adminFeeRemaining} ${currency} remains for sweep.`,
         payment_id,
+        tx_id: recoveryTxId,
         steps,
       });
 
