@@ -540,26 +540,31 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
-    // BUG-10 FIX: Short-lived receiver-level dedup to reject duplicate Tatum webhooks
-    // that arrive within milliseconds of each other (same txId sent twice by Tatum).
-    // This is separate from the processed-tx dedup which checks fully processed TXs.
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERF: Parallelize ALL 3 Redis dedup reads in a single round-trip
+    // Previously: receiver dedup GET (~150ms) → SET (~150ms) → parallel processed+outgoing (~150ms) = ~450ms
+    // Now: single Promise.all for all 3 GETs (~150ms) + fire-and-forget SET = ~150ms total
+    // ═══════════════════════════════════════════════════════════════════════
     const receiverDedupKey = `recv-dedup-${payload.txId}`;
-    const [alreadyReceived] = await Promise.all([getRedisItem(receiverDedupKey)]);
+    const processedTxKey = `processed-tx-${payload.txId}`;
+    const outgoingTxKey = `outgoing-tx-${payload.txId}`;
+
+    const [alreadyReceived, alreadyProcessed, isOutgoingTx] = await Promise.all([
+      getRedisItem(receiverDedupKey),
+      getRedisItem(processedTxKey),
+      getRedisItem(outgoingTxKey),
+    ]);
+
+    // Receiver-level dedup: reject duplicate Tatum webhooks arriving within milliseconds
     if (alreadyReceived && Object.keys(alreadyReceived).length > 0) {
       webhookLogs.info(`[tatumCryptoWebHook] Duplicate webhook at receiver level, skipping: ${payload.txId}`);
       return res.status(200).end();
     }
-    // Mark as received with 30s TTL (covers the duplicate window without blocking legitimate retries)
-    await setRedisItemWithTTL(receiverDedupKey, { received: Date.now() }, 30);
 
-    // PERF: Parallelize the two Redis dedup checks — saves ~100-200ms per webhook
-    // (Railway Redis round-trip is ~100-200ms, running sequentially doubled that)
-    const processedTxKey = `processed-tx-${payload.txId}`;
-    const outgoingTxKey = `outgoing-tx-${payload.txId}`;
-    const [alreadyProcessed, isOutgoingTx] = await Promise.all([
-      getRedisItem(processedTxKey),
-      getRedisItem(outgoingTxKey),
-    ]);
+    // PERF: Fire-and-forget dedup SET — doesn't need to complete before enqueue
+    // The parallel GET already passed, so this is purely for future duplicate protection
+    setRedisItemWithTTL(receiverDedupKey, { received: Date.now() }, 30)
+      .catch(() => { /* non-critical: dedup is best-effort, worker has its own dedup */ });
 
     // Quick duplicate check (fast-path reject, worker also checks)
     if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
@@ -567,9 +572,7 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
-    // BUG-3/4 FIX: Skip webhooks for our own outgoing transactions (settlement/sweep TXs).
-    // When DynoPay sends settlement or sweep TXs, Tatum fires webhooks back to us.
-    // These are false positives — not incoming payments — and should be ignored.
+    // Skip webhooks for our own outgoing transactions (settlement/sweep TXs)
     if (isOutgoingTx && Object.keys(isOutgoingTx).length > 0) {
       webhookLogs.info(`[tatumCryptoWebHook] Outgoing TX detected (${isOutgoingTx.type || 'unknown'}), skipping: ${payload.txId}`);
       return res.status(200).end();
