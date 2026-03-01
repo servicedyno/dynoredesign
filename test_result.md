@@ -9693,3 +9693,65 @@ agent_communication:
       
       TEST 6: Verify all 511+ existing tests still pass (no regressions)
       - cd /app/backend && npx jest --forceExit --testPathPatterns="paymentStateMachine|webhookProcessor" 2>&1 | tail -5
+
+
+  - task: "Fix 6 bugs from Railway deployment log analysis: (1) Auto-disable 404 webhook URLs after 5 consecutive failures using Redis, (2) Always send X-DynoPay-Signature header using system default secret, (3) Fix incomplete payment.pending payload - add transaction_reference, created_at, meta_data, (4) Add created_at to all webhook payloads, (5) BTC UTXO mempool.space fallback when Tatum returns no vout data, (6) stablecoinConversion cron 5-min minimum floor"
+    implemented: true
+    working: pending_test
+    files:
+      - "/app/backend/webhooks/index.ts"
+      - "/app/backend/services/webhookProcessor.ts"
+      - "/app/backend/controller/paymentController.ts"
+      - "/app/backend/apis/tatumApi.ts"
+      - "/app/backend/server.ts"
+      - "/app/backend/services/merchantPool/merchantPoolMonitoring.ts"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    test_instructions: |
+      TEST 1: Backend healthy after all changes
+      - GET http://localhost:8001/health returns 200 with status "healthy"
+      
+      TEST 2: TypeScript compiles clean
+      - cd /app/backend && npx tsc --noEmit --skipLibCheck — exit code 0
+      
+      TEST 3: BUG-1 FIX — Auto-disable 404 webhook URLs (webhooks/index.ts)
+      - Verify in /app/backend/webhooks/index.ts:
+        a. Constants defined: MAX_CONSECUTIVE_404_FAILURES = 5, WEBHOOK_DISABLE_TTL_SECONDS = 86400
+        b. DYNOPAY_DEFAULT_WEBHOOK_SECRET defined from env or default
+        c. In callUrlWithPayload: at the start, checks Redis key `webhook-disabled:{url}` — if disabled=true, returns early with error message and does NOT attempt to send
+        d. On 404 response: increments Redis key `webhook-404-failures:{url}` count, and when count >= MAX_CONSECUTIVE_404_FAILURES, sets `webhook-disabled:{url}` with disabled=true and TTL of 24h
+        e. On successful delivery: resets `webhook-404-failures:{url}` count to 0
+        f. Old in-memory webhookFailureTracker Map is REMOVED
+      
+      TEST 4: BUG-A FIX — Always send signature header (webhooks/index.ts)
+      - Verify in callUrlWithPayload:
+        a. signingSecret = webhookSecret || DYNOPAY_DEFAULT_WEBHOOK_SECRET — always has a value
+        b. X-DynoPay-Signature header is ALWAYS set in the headers object (not conditionally)
+        c. Log line says: "Signature included: true (merchant secret)" or "Signature included: true (system default)"
+      
+      TEST 5: BUG-B FIX — payment.pending payload completeness (webhookProcessor.ts)
+      - Verify in handleNewTransaction payment.pending callMerchantWebhook call:
+        a. Contains: transaction_reference: payload.txId
+        b. Contains: created_at: new Date().toISOString()
+        c. Contains: meta_data field (parsed from customerData.meta_data)
+        d. All callMerchantWebhook calls have transaction_reference and created_at fields
+      
+      TEST 6: BUG-C FIX — created_at in all payloads
+      - In webhooks/index.ts callUrlWithPayload webhookPayload: created_at field is set
+      - In paymentController.ts enhancedWebhookPayload: created_at field present before completed_at
+      - In merchantPoolMonitoring.ts orphan recovery webhook: created_at and completed_at present
+      
+      TEST 7: BUG-2 FIX — BTC UTXO mempool.space fallback (tatumApi.ts)
+      - In findUtxoOutputIndex, when txData has no vout AND currency is BTC:
+        a. Fetches from https://mempool.space/api/tx/{txHash}
+        b. Parses response.vout for scriptpubkey_address matching
+        c. Returns index on match, logs warning on no match
+        d. Catches fetch errors gracefully (non-blocking)
+      
+      TEST 8: BUG-3 FIX — stablecoinConversion cron minimum 5-min floor (server.ts)
+      - convertIntervalMinutes uses Math.max(..., 5) to enforce minimum
+      - Console.warn logged when env var is below 5
+      
+      TEST 9: Verify existing tests still pass (no regressions)
+      - cd /app/backend && npx jest --forceExit --testPathPatterns="paymentStateMachine|webhookProcessor" 2>&1 | tail -5
