@@ -1301,6 +1301,7 @@ export const detectOrphanPayments = async (): Promise<{
                   payment_id: paymentId,
                   transaction_reference: latestTx.txId,
                   status: 'completed',
+                  payment_status: 'confirmed',
                   amount: balance,
                   currency: walletType,
                   recovered: true,
@@ -1308,6 +1309,8 @@ export const detectOrphanPayments = async (): Promise<{
                   original_payment_id: paymentContext?.payment_id || null,
                   customer_name: paymentContext?.customer_name || null,
                   customer_email: paymentContext?.customer_email || null,
+                  created_at: new Date().toISOString(),
+                  completed_at: new Date().toISOString(),
                 });
                 cronLogger.info(`[OrphanDetect] 📤 Recovery webhook sent to merchant`);
               } catch (webhookError) {
