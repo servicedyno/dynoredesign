@@ -483,6 +483,7 @@ async function handleNewTransaction(
         event: "payment.pending",
         payment_type: paymentTypePending,
         address, txId: payload.txId,
+        transaction_reference: payload.txId,
         amount: incomingAmount,
         currency: items?.currency || payload.asset,
         payment_id: items?.payment_id || items?.unique_tx_id,
@@ -495,6 +496,8 @@ async function handleNewTransaction(
         description: customerData?.description || null,
         link_id: linkIdPending,
         fee_payer: customerData?.fee_payer || items?.fee_payer || "company",
+        meta_data: customerData?.meta_data ? (typeof customerData.meta_data === 'string' ? JSON.parse(customerData.meta_data) : customerData.meta_data) : null,
+        created_at: new Date().toISOString(),
         timestamp: new Date().toISOString(),
       });
     } catch (notifError) {
