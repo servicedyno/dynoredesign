@@ -4922,6 +4922,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             
             // Metadata & timestamp
             meta_data: customerData?.meta_data ? JSON.parse(customerData.meta_data) : null,
+            created_at: new Date().toISOString(),
             completed_at: new Date().toISOString(),
           };
           
