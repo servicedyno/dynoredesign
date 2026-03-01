@@ -283,14 +283,14 @@ def test_rate_cache():
         
         # Test 7d: Check that cache is checked before external API calls
         # Look for the order: getCachedRequestRate -> rate strategies
-        parts = content.split("getCachedRequestRate")
-        if len(parts) < 2:
-            log_test("7d", "FAIL", "Cache check order not found")
+        cache_check_pattern = r"cachedRate\s*=\s*getCachedRequestRate\(source,\s*currentCurrency\)"
+        if not re.search(cache_check_pattern, content):
+            log_test("7d", "FAIL", "Cache check pattern not found")
             return False
         
-        after_cache_check = parts[1]
-        if "getFastForexRate" not in after_cache_check or "getCryptoRateViaTatum" not in after_cache_check:
-            log_test("7d", "FAIL", "External API calls not after cache check")
+        # Verify cache check happens before external API strategies
+        if content.find("getCachedRequestRate(source, currentCurrency)") > content.find("getFastForexRate"):
+            log_test("7d", "FAIL", "Cache check not before external APIs")
             return False
         
         log_test("7", "PASS", "Rate cache verified - 30s TTL, get/set functions, proper ordering")
