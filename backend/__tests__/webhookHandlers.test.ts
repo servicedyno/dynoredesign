@@ -463,7 +463,7 @@ describe('callMerchantWebhook', () => {
     expect(headers['X-DynoPay-Timestamp']).toBeDefined();
   });
 
-  it('does NOT include signature header when no secret', async () => {
+  it('ALWAYS includes signature header (uses system default when no merchant secret)', async () => {
     (axios.post as jest.Mock).mockResolvedValueOnce({ status: 200 });
     mockSequelize.query.mockResolvedValue([]);
 
@@ -473,7 +473,10 @@ describe('callMerchantWebhook', () => {
     );
 
     const headers = (axios.post as jest.Mock).mock.calls[0][2].headers;
-    expect(headers['X-DynoPay-Signature']).toBeUndefined();
+    // BUG-A FIX: Signature is now ALWAYS included (system default when no merchant secret)
+    expect(headers['X-DynoPay-Signature']).toBeDefined();
+    expect(typeof headers['X-DynoPay-Signature']).toBe('string');
+    expect(headers['X-DynoPay-Signature'].length).toBeGreaterThan(0);
   });
 
   it('does NOT retry on 4xx client errors', async () => {
