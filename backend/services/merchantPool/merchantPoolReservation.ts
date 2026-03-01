@@ -684,3 +684,102 @@ export const cleanupStaleAddresses = async (
 export const processQueuedPayments = async (tempAddressId: number): Promise<void> => {
   cronLogger.info(`[MerchantPool] Processing queued payments for address ${tempAddressId}`);
 };
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// PERF FIX 3: Pre-reserved Address Pool
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Number of addresses to keep pre-reserved per merchant per currency
+ */
+const PRE_RESERVE_TARGET = 2;
+
+/**
+ * Replenish pre-reserved addresses for a specific merchant+currency.
+ * Called after a pre-reserved address is consumed (fire-and-forget).
+ */
+export const replenishPreReservedPool = async (
+  userId: number,
+  walletType: string,
+): Promise<number> => {
+  const lockKey = `pre-reserve:${userId}:${walletType}`;
+  
+  try {
+    const lockResult = await withLock(lockKey, async () => {
+      // Count current pre-reserved
+      const currentCount = await merchantTempAddressModel.count({
+        where: {
+          owner_user_id: userId,
+          wallet_type: walletType,
+          status: "PRE_RESERVED",
+        },
+      });
+
+      const needed = PRE_RESERVE_TARGET - currentCount;
+      if (needed <= 0) return 0;
+      
+      // Find AVAILABLE addresses to pre-reserve
+      const availableAddresses = await merchantTempAddressModel.findAll({
+        where: {
+          owner_user_id: userId,
+          wallet_type: walletType,
+          status: "AVAILABLE",
+        },
+        order: [
+          ["total_transactions", "DESC"],
+          ["admin_fee_balance", "DESC"],
+        ],
+        limit: needed,
+      });
+      
+      let preReservedCount = 0;
+      for (const addr of availableAddresses) {
+        await addr.update({ status: "PRE_RESERVED" });
+        preReservedCount++;
+      }
+      
+      if (preReservedCount > 0) {
+        cronLogger.info(`[MerchantPool] 🔥 Pre-reserved ${preReservedCount} ${walletType} addresses for merchant ${userId} (target: ${PRE_RESERVE_TARGET})`);
+      }
+      
+      return preReservedCount;
+    }, 30);
+    
+    return lockResult.success ? (lockResult.result as number) : 0;
+  } catch (err) {
+    cronLogger.warn(`[MerchantPool] Pre-reserve replenish failed for ${userId}/${walletType}: ${(err as Error).message}`);
+    return 0;
+  }
+};
+
+/**
+ * Pre-warm the address pool for ALL active merchants.
+ * Called by cron job every 2 minutes. Ensures each merchant with pool addresses
+ * has PRE_RESERVE_TARGET addresses ready for instant reservation.
+ */
+export const preWarmAddressPool = async (): Promise<void> => {
+  try {
+    // Find all distinct merchant+currency combos that have addresses
+    const activePools = await merchantTempAddressModel.findAll({
+      attributes: ['owner_user_id', 'wallet_type'],
+      where: {
+        status: { [Op.in]: ["AVAILABLE", "PRE_RESERVED"] },
+      },
+      group: ['owner_user_id', 'wallet_type'],
+      raw: true,
+    }) as unknown as Array<{ owner_user_id: number; wallet_type: string }>;
+
+    let totalPreReserved = 0;
+    for (const pool of activePools) {
+      const count = await replenishPreReservedPool(pool.owner_user_id, pool.wallet_type);
+      totalPreReserved += count;
+    }
+
+    if (totalPreReserved > 0) {
+      cronLogger.info(`[MerchantPool] 🔥 Pre-warm complete: ${totalPreReserved} addresses pre-reserved across ${activePools.length} pools`);
+    }
+  } catch (err) {
+    cronLogger.error(`[MerchantPool] Pre-warm failed: ${(err as Error).message}`);
+  }
+};
