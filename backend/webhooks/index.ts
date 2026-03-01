@@ -282,7 +282,7 @@ const callUrlWithPayload = async (
     };
     
     webhookLogs.info(`[callMerchantWebhook] Sending ${urlType} ${eventData.event} to ${url}`);
-    webhookLogs.info(`[callMerchantWebhook] Signature included: ${!!webhookSecret}`);
+    webhookLogs.info(`[callMerchantWebhook] Signature included: true (${webhookSecret ? 'merchant secret' : 'system default'})`);
     // Log payload for debugging (truncate large payloads)
     const payloadStr = JSON.stringify(webhookPayload);
     webhookLogs.info(`[callMerchantWebhook] Payload (${payloadStr.length} bytes): ${payloadStr.substring(0, 500)}${payloadStr.length > 500 ? '...' : ''}`);
