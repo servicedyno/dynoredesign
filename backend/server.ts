@@ -724,7 +724,10 @@ setupPaymentLinkReminderCron();
 // Stablecoin Conversion: Process pending conversions via Binance
 // Runs every N minutes (configurable via BINANCE_CONVERT_INTERVAL_MINUTES)
 // Warning: Setting to 1 min may cause Binance API rate limiting / IP bans
-const convertIntervalMinutes = parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "10") || 10;
+const convertIntervalMinutes = Math.max(parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "10") || 10, 5);
+if (parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "10") < 5) {
+  console.warn(`[DynoPay] ⚠️ BINANCE_CONVERT_INTERVAL_MINUTES=${process.env.BINANCE_CONVERT_INTERVAL_MINUTES} is below minimum (5). Using ${convertIntervalMinutes} minutes.`);
+}
 cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
   const lockAcquired = await acquireLock("cron:stablecoinConversion", 240, 1, 100, true);
   if (!lockAcquired) { log("Cron: stablecoinConversion skipped (already running)", "info"); return; }
