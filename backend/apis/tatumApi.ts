@@ -3356,6 +3356,35 @@ const findUtxoOutputIndex = async (
       );
     } else {
       cronLogger.warn(`[findUtxoOutputIndex] No vout data in tx ${txHash} for ${currency}`);
+
+      // BUG-2 FIX: Fallback to public blockchain API when Tatum returns no vout data
+      if (currency === 'BTC') {
+        try {
+          cronLogger.info(`[findUtxoOutputIndex] Attempting mempool.space fallback for BTC tx ${txHash}`);
+          const mempoolResponse = await fetch(`https://mempool.space/api/tx/${txHash}`);
+          if (mempoolResponse.ok) {
+            const mempoolTx = await mempoolResponse.json() as {
+              vout?: Array<{ value?: number; scriptpubkey_address?: string; n?: number }>;
+            };
+            if (mempoolTx?.vout) {
+              const addressLower = address.toLowerCase();
+              for (let i = 0; i < mempoolTx.vout.length; i++) {
+                const output = mempoolTx.vout[i];
+                if (output.scriptpubkey_address && output.scriptpubkey_address.toLowerCase() === addressLower) {
+                  cronLogger.info(`[findUtxoOutputIndex] ✅ mempool.space fallback: Found output index ${i} for ${address} in tx ${txHash}`);
+                  return i;
+                }
+              }
+              cronLogger.warn(`[findUtxoOutputIndex] mempool.space: Address ${address} not found in ${mempoolTx.vout.length} outputs of tx ${txHash}`);
+            }
+          } else {
+            cronLogger.warn(`[findUtxoOutputIndex] mempool.space returned ${mempoolResponse.status} for tx ${txHash}`);
+          }
+        } catch (fallbackErr: unknown) {
+          const fbErr = fallbackErr as { message?: string };
+          cronLogger.warn(`[findUtxoOutputIndex] mempool.space fallback failed: ${fbErr.message}`);
+        }
+      }
     }
 
     // FIX BUG-9: Return -1 instead of 0 so callers can detect "not found" vs "index 0"
