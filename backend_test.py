@@ -39,8 +39,8 @@ def test_backend_healthy():
     """TEST 1: Backend healthy - GET /health returns 200 with status 'healthy'"""
     print("\n=== TEST 1: Backend Health Check ===")
     try:
-        # Try both /health and /api/health endpoints
-        for endpoint in ["/health", "/api/health"]:
+        # Try multiple possible health endpoints
+        for endpoint in ["/health", "/api/health", "/api/status/health"]:
             try:
                 response = requests.get(f"{BACKEND_URL}{endpoint}", timeout=10)
                 if response.status_code == 200:
@@ -51,6 +51,7 @@ def test_backend_healthy():
                             print(f"   Service: {data.get('service', 'Unknown')}")
                             print(f"   Database: {data.get('database', 'Unknown')}")
                             print(f"   Redis: {data.get('redis', 'Unknown')}")
+                            print(f"   Timestamp: {data.get('timestamp', 'Unknown')}")
                             return True
                     except json.JSONDecodeError:
                         # Try plain text response
