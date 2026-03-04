@@ -15,6 +15,32 @@ import sequelize from "../utils/dbInstance";
 import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 import { getCurrencySymbol, getCurrencyInfo, formatAmountForDisplay, COMPANY_CURRENCY_QUERY, convertToFiat, getCompanyBaseCurrency } from "../utils/currencyUtils";
 
+/**
+ * Convert per-currency volume rows to a single target fiat amount.
+ * Each row must have { base_currency: string, volume: string|number }.
+ * Returns the sum in targetCurrency.
+ */
+async function convertVolumesToFiat(
+  rows: Array<Record<string, unknown>>,
+  volumeField: string,
+  targetCurrency: string,
+): Promise<number> {
+  let total = 0;
+  for (const row of rows) {
+    const currency = String(row.base_currency || "USD");
+    const rawVolume = parseFloat(String(row[volumeField] || "0"));
+    if (rawVolume === 0) continue;
+    try {
+      const { amount } = await convertToFiat(currency, targetCurrency, rawVolume);
+      total += amount;
+    } catch {
+      // If conversion fails for a currency, skip it (e.g. delisted coins)
+      apiLogger.warn(`[Dashboard] convertToFiat failed for ${currency} -> ${targetCurrency}, skipping ${rawVolume}`);
+    }
+  }
+  return Math.round(total * 100) / 100;
+}
+
 // Cache TTL for dashboard data (30 seconds)
 const DASHBOARD_CACHE_TTL = 30;
 
@@ -107,32 +133,53 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    // OPTIMIZED: Single combined query for all transaction stats
+    // ── 1. Transaction COUNTS (no status filter — matches getUserAnalytics) ──
     const companyJoin = company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : '';
     const companyFilter = company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : '';
     
-    const combinedQuery = `
+    const countQuery = `
       SELECT 
-        -- Current month stats
-        COUNT(*) FILTER (WHERE ut.status IN ('successful', 'completed') AND ut."createdAt" >= :startOfMonth) as current_month_count,
-        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status IN ('successful', 'completed') AND ut."createdAt" >= :startOfMonth), 0) as current_month_volume,
-        -- Last month stats
-        COUNT(*) FILTER (WHERE ut.status IN ('successful', 'completed') AND ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth) as last_month_count,
-        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status IN ('successful', 'completed') AND ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_volume,
-        -- All-time stats
-        COUNT(*) FILTER (WHERE ut.status IN ('successful', 'completed')) as total_count,
-        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status IN ('successful', 'completed')), 0) as total_volume,
-        -- Pending count
+        COUNT(*) as total_count,
+        COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfMonth) as current_month_count,
+        COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth) as last_month_count,
         COUNT(*) FILTER (WHERE ut.status = 'pending') as pending_count
       FROM tbl_user_transaction ut
       ${companyJoin}
       WHERE ut.user_id = :userId ${companyFilter}
     `;
 
-    // Run both queries in parallel
-    const [transactionStats, activeWallets] = await Promise.all([
-      sequelize.query(combinedQuery, {
+    // ── 2. Volume PER CURRENCY (so we can convert each to fiat correctly) ──
+    const volumeQuery = `
+      SELECT 
+        ut.base_currency,
+        COALESCE(SUM(ut.base_amount), 0) as total_vol,
+        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut."createdAt" >= :startOfMonth), 0) as current_month_vol,
+        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_vol
+      FROM tbl_user_transaction ut
+      ${companyJoin}
+      WHERE ut.user_id = :userId ${companyFilter}
+      GROUP BY ut.base_currency
+    `;
+
+    // ── 3. Self-transactions count ──
+    const selfCountQuery = `
+      SELECT COUNT(*) as self_count
+      FROM tbl_user_self_transaction st
+      WHERE st.user_id = :userId
+    `;
+
+    // Run all queries + active wallets in parallel
+    const [countResult, volumeRows, selfCountResult, activeWallets] = await Promise.all([
+      sequelize.query(countQuery, {
         replacements: { userId, startOfMonth, startOfLastMonth, endOfLastMonth, companyId: company_id },
+        type: QueryTypes.SELECT,
+      }),
+      sequelize.query(volumeQuery, {
+        replacements: { userId, startOfMonth, startOfLastMonth, endOfLastMonth, companyId: company_id },
+        type: QueryTypes.SELECT,
+      }),
+      sequelize.query(selfCountQuery, {
+        replacements: { userId },
         type: QueryTypes.SELECT,
       }),
       sequelize.query(
@@ -147,42 +194,34 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
           type: QueryTypes.SELECT,
         }
       )
-    ]) as [Array<Record<string, unknown>>, Array<Record<string, unknown>>];
+    ]) as [Array<Record<string, unknown>>, Array<Record<string, unknown>>, Array<Record<string, unknown>>, Array<Record<string, unknown>>];
 
-    // Parse results from combined query
-    const stats = transactionStats[0] || {} as Record<string, string>;
+    // ── Parse counts ──
+    const stats = countResult[0] || {} as Record<string, string>;
+    const incomingTotal = parseInt(String(stats.total_count || '0'));
     const currentCount = parseInt(String(stats.current_month_count || '0'));
-    let currentVolume = parseFloat(String(stats.current_month_volume || '0'));
     const lastCount = parseInt(String(stats.last_month_count || '0'));
-    let lastVolume = parseFloat(String(stats.last_month_volume || '0'));
-    const totalCount = parseInt(String(stats.total_count || '0'));
-    let totalVolume = parseFloat(String(stats.total_volume || '0'));
     const pendingCount = parseInt(String(stats.pending_count || '0'));
-    
-    // Store USD values for fee tier calculation
-    const currentMonthVolumeUSD = parseFloat(String(stats.current_month_volume || '0'));
+    const selfCount = parseInt(String((selfCountResult[0] as Record<string, unknown>)?.self_count || '0'));
+    const totalCount = incomingTotal + selfCount;
 
-    // Convert volumes to preferred currency if not USD
-    let conversionRate = 1;
-    if (preferredCurrency !== 'USD' && (totalVolume > 0 || currentVolume > 0)) {
-      try {
-        const result = await convertToFiat('USD', preferredCurrency, 1);
-        
-        if (result.amount) {
-          conversionRate = result.amount;
-          totalVolume = totalVolume * conversionRate;
-          currentVolume = currentVolume * conversionRate;
-          lastVolume = lastVolume * conversionRate;
-          apiLogger.info(`[Dashboard] Converted volumes to ${preferredCurrency} (rate: ${conversionRate})`);
-        }
-      } catch (convErr) {
-        apiLogger.warn(`[Dashboard] Currency conversion failed, showing USD:`, convErr);
-        preferredCurrency = 'USD'; // Fallback to USD
-        conversionRate = 1;
-      }
+    // ── Convert per-currency volumes to preferred currency ──
+    const [totalVolume, currentVolume, lastVolume] = await Promise.all([
+      convertVolumesToFiat(volumeRows, 'total_vol', preferredCurrency),
+      convertVolumesToFiat(volumeRows, 'current_month_vol', preferredCurrency),
+      convertVolumesToFiat(volumeRows, 'last_month_vol', preferredCurrency),
+    ]);
+
+    // Fee tier needs USD volume — convert if preferred is not USD
+    let currentMonthVolumeUSD = currentVolume;
+    if (preferredCurrency !== 'USD') {
+      currentMonthVolumeUSD = await convertVolumesToFiat(volumeRows, 'current_month_vol', 'USD');
     }
 
     // Calculate fee tier (based on USD, but display in preferred currency)
+    const conversionRate = preferredCurrency !== 'USD' && currentMonthVolumeUSD > 0
+      ? currentVolume / currentMonthVolumeUSD
+      : 1;
     const feeTier = getFeeTier(currentMonthVolumeUSD, preferredCurrency, conversionRate);
 
     // Build response
@@ -194,10 +233,10 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
         comparison_period: "last_month",
       },
       total_volume: {
-        amount: Math.round(totalVolume * 100) / 100,
-        amount_formatted: formatAmountForDisplay(Math.round(totalVolume * 100) / 100, preferredCurrency).display_value,
-        current_month: Math.round(currentVolume * 100) / 100,
-        current_month_formatted: formatAmountForDisplay(Math.round(currentVolume * 100) / 100, preferredCurrency).display_value,
+        amount: totalVolume,
+        amount_formatted: formatAmountForDisplay(totalVolume, preferredCurrency).display_value,
+        current_month: currentVolume,
+        current_month_formatted: formatAmountForDisplay(currentVolume, preferredCurrency).display_value,
         currency: preferredCurrency,
         currency_info: getCurrencyInfo(preferredCurrency),
         change_percent: calculateChange(currentVolume, lastVolume),
@@ -238,8 +277,14 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     const { period = '30d', company_id } = req.query;
     const userId = userData.user_id;
 
+    // Get company preferred currency
+    let preferredCurrency = "USD";
+    if (company_id) {
+      preferredCurrency = await getCompanyBaseCurrency(company_id as string);
+    }
+
     // Check cache first (60 second TTL for chart data)
-    const cacheKey = `chart:${userId}:${company_id || 'all'}:${period}`;
+    const cacheKey = `chart:${userId}:${company_id || 'all'}:${period}:${preferredCurrency}`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
       apiLogger.info(`[Chart] Cache hit for user ${userId}`);
@@ -275,119 +320,137 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    // Get aggregated data based on groupBy
-    let chartQuery = '';
-    
-    if (groupBy === 'day') {
-      chartQuery = `
-        SELECT 
-          DATE(ut."createdAt") as date,
-          COUNT(*) as transaction_count,
-          COALESCE(SUM(ut.base_amount), 0) as volume
-        FROM tbl_user_transaction ut
-        ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
-        WHERE ut.user_id = :userId 
-        AND ut.status IN ('successful', 'completed')
-        AND ut."createdAt" >= :startDate
-        ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
-        GROUP BY DATE(ut."createdAt")
-        ORDER BY date ASC
-      `;
-    } else if (groupBy === 'week') {
-      chartQuery = `
-        SELECT 
-          DATE_TRUNC('week', ut."createdAt") as date,
-          COUNT(*) as transaction_count,
-          COALESCE(SUM(ut.base_amount), 0) as volume
-        FROM tbl_user_transaction ut
-        ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
-        WHERE ut.user_id = :userId 
-        AND ut.status IN ('successful', 'completed')
-        AND ut."createdAt" >= :startDate
-        ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
-        GROUP BY DATE_TRUNC('week', ut."createdAt")
-        ORDER BY date ASC
-      `;
-    } else {
-      chartQuery = `
-        SELECT 
-          DATE_TRUNC('month', ut."createdAt") as date,
-          COUNT(*) as transaction_count,
-          COALESCE(SUM(ut.base_amount), 0) as volume
-        FROM tbl_user_transaction ut
-        ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
-        WHERE ut.user_id = :userId 
-        AND ut.status IN ('successful', 'completed')
-        AND ut."createdAt" >= :startDate
-        ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
-        GROUP BY DATE_TRUNC('month', ut."createdAt")
-        ORDER BY date ASC
-      `;
-    }
+    const companyJoinChart = company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : '';
+    const companyFilterChart = company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : '';
 
-    const chartData = await sequelize.query(chartQuery, {
-      replacements: { userId, startDate, companyId: company_id },
-      type: QueryTypes.SELECT,
-    }) as Array<Record<string, unknown>>;
+    // ── 1. Chart data grouped by date AND currency (so we can convert volumes) ──
+    let dateTrunc: string;
+    if (groupBy === 'day') dateTrunc = `DATE(ut."createdAt")`;
+    else if (groupBy === 'week') dateTrunc = `DATE_TRUNC('week', ut."createdAt")`;
+    else dateTrunc = `DATE_TRUNC('month', ut."createdAt")`;
 
-    // Get transaction breakdown by currency
-    const currencyBreakdown = await sequelize.query(
-      `SELECT 
+    const chartQuery = `
+      SELECT 
+        ${dateTrunc} as date,
+        ut.base_currency,
+        COUNT(*) as transaction_count,
+        COALESCE(SUM(ut.base_amount), 0) as volume
+      FROM tbl_user_transaction ut
+      ${companyJoinChart}
+      WHERE ut.user_id = :userId 
+      AND ut."createdAt" >= :startDate
+      ${companyFilterChart}
+      GROUP BY ${dateTrunc}, ut.base_currency
+      ORDER BY date ASC
+    `;
+
+    // ── 2. Currency breakdown (no status filter) ──
+    const currencyBreakdownQuery = `
+      SELECT 
         ut.base_currency,
         COUNT(*) as count,
         COALESCE(SUM(ut.base_amount), 0) as volume
        FROM tbl_user_transaction ut
-       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       ${companyJoinChart}
        WHERE ut.user_id = :userId 
-       AND ut.status IN ('successful', 'completed')
        AND ut."createdAt" >= :startDate
-       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
+       ${companyFilterChart}
        GROUP BY ut.base_currency
-       ORDER BY volume DESC`,
-      {
-        replacements: { userId, startDate, companyId: company_id },
-        type: QueryTypes.SELECT,
-      }
-    ) as Array<Record<string, unknown>>;
+       ORDER BY volume DESC`;
 
-    // Get transaction breakdown by status
-    const statusBreakdown = await sequelize.query(
-      `SELECT 
+    // ── 3. Status breakdown ──
+    const statusBreakdownQuery = `
+      SELECT 
         ut.status,
         COUNT(*) as count
        FROM tbl_user_transaction ut
-       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       ${companyJoinChart}
        WHERE ut.user_id = :userId 
        AND ut."createdAt" >= :startDate
-       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
-       GROUP BY ut.status`,
-      {
+       ${companyFilterChart}
+       GROUP BY ut.status`;
+
+    const [rawChartData, currencyBreakdownRaw, statusBreakdown] = await Promise.all([
+      sequelize.query(chartQuery, {
         replacements: { userId, startDate, companyId: company_id },
         type: QueryTypes.SELECT,
-      }
-    ) as Array<Record<string, unknown>>;
+      }),
+      sequelize.query(currencyBreakdownQuery, {
+        replacements: { userId, startDate, companyId: company_id },
+        type: QueryTypes.SELECT,
+      }),
+      sequelize.query(statusBreakdownQuery, {
+        replacements: { userId, startDate, companyId: company_id },
+        type: QueryTypes.SELECT,
+      }),
+    ]) as [Array<Record<string, unknown>>, Array<Record<string, unknown>>, Array<Record<string, unknown>>];
 
-    // Format chart data
-    const formattedChartData = chartData.map((item: Record<string, unknown>) => ({
-      date: item.date,
-      volume: Math.round(parseFloat(String(item.volume || '0')) * 100) / 100,
-      transaction_count: parseInt(String(item.transaction_count || '0')),
-    }));
+    // ── Build conversion-rate cache (one API call per unique currency) ──
+    const uniqueCurrencies = [...new Set(rawChartData.map(r => String(r.base_currency || 'USD')))];
+    const rateMap: Record<string, number> = {};
+    await Promise.all(
+      uniqueCurrencies.map(async (cur) => {
+        if (cur === preferredCurrency) { rateMap[cur] = 1; return; }
+        try {
+          const { rate } = await convertToFiat(cur, preferredCurrency, 1);
+          rateMap[cur] = rate || 0;
+        } catch {
+          rateMap[cur] = 0;
+          apiLogger.warn(`[Chart] convertToFiat failed for ${cur}, using 0`);
+        }
+      })
+    );
+
+    // ── Aggregate chart rows: convert each currency row to fiat, then sum per date ──
+    const dateAgg: Record<string, { volume: number; transaction_count: number }> = {};
+    for (const row of rawChartData) {
+      const dateKey = new Date(String(row.date)).toISOString().split('T')[0];
+      const cur = String(row.base_currency || 'USD');
+      const rawVol = parseFloat(String(row.volume || '0'));
+      const count = parseInt(String(row.transaction_count || '0'));
+      const convertedVol = rawVol * (rateMap[cur] || 0);
+      if (!dateAgg[dateKey]) dateAgg[dateKey] = { volume: 0, transaction_count: 0 };
+      dateAgg[dateKey].volume += convertedVol;
+      dateAgg[dateKey].transaction_count += count;
+    }
+
+    const formattedChartData = Object.entries(dateAgg).map(([date, d]) => ({
+      date,
+      volume: Math.round(d.volume * 100) / 100,
+      transaction_count: d.transaction_count,
+    })).sort((a, b) => a.date.localeCompare(b.date));
 
     // Fill in missing dates with zero values
     const filledChartData = fillMissingDates(formattedChartData, startDate, new Date(), groupBy);
+
+    // ── Convert currency breakdown volumes to fiat ──
+    const currencyBreakdown = await Promise.all(
+      (currencyBreakdownRaw as Array<Record<string, unknown>>).map(async (c) => {
+        const cur = String(c.base_currency || 'USD');
+        const rawVol = parseFloat(String(c.volume || '0'));
+        let convertedVol = rawVol;
+        if (cur !== preferredCurrency && rawVol > 0) {
+          try {
+            const { amount } = await convertToFiat(cur, preferredCurrency, rawVol);
+            convertedVol = amount;
+          } catch { /* keep raw */ }
+        }
+        return {
+          currency: cur,
+          count: parseInt(String(c.count || '0')),
+          volume: Math.round(convertedVol * 100) / 100,
+        };
+      })
+    );
 
     const responseData = {
       period,
       group_by: groupBy,
       start_date: startDate.toISOString().split('T')[0],
       end_date: new Date().toISOString().split('T')[0],
+      currency: preferredCurrency,
       chart_data: filledChartData,
-      currency_breakdown: currencyBreakdown.map((c: Record<string, unknown>) => ({
-        currency: c.base_currency,
-        count: parseInt(String(c.count || '0')),
-        volume: Math.round(parseFloat(String(c.volume || '0')) * 100) / 100,
-      })),
+      currency_breakdown: currencyBreakdown.sort((a, b) => b.volume - a.volume),
       status_breakdown: statusBreakdown.map((s: Record<string, unknown>) => ({
         status: s.status,
         count: parseInt(String(s.count || '0')),
@@ -470,21 +533,24 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const monthlyVolumeResult = await sequelize.query(
-      `SELECT COALESCE(SUM(ut.base_amount), 0) as volume
+    const companyJoinFee = company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : '';
+    const companyFilterFee = company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : '';
+
+    const monthlyVolPerCurrency = await sequelize.query(
+      `SELECT ut.base_currency, COALESCE(SUM(ut.base_amount), 0) as volume
        FROM tbl_user_transaction ut
-       ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
+       ${companyJoinFee}
        WHERE ut.user_id = :userId 
-       AND ut.status IN ('successful', 'completed')
        AND ut."createdAt" >= :startOfMonth
-       ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
+       ${companyFilterFee}
+       GROUP BY ut.base_currency`,
       {
         replacements: { userId, startOfMonth, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as Array<Record<string, unknown>>;
 
-    const monthlyVolumeUSD = parseFloat(String(monthlyVolumeResult[0]?.volume || 0));
+    const monthlyVolumeUSD = await convertVolumesToFiat(monthlyVolPerCurrency, 'volume', 'USD');
     
     // Get conversion rate if not USD
     if (preferredCurrency !== 'USD') {

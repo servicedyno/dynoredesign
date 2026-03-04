@@ -9880,12 +9880,24 @@ agent_communication:
       TEST 2: TypeScript compiles clean
       - cd /app/backend && npx tsc --noEmit --skipLibCheck — exit code 0
 
-      TEST 3: Dashboard query no longer uses status='done'
-      - grep -c "status = 'done'" /app/backend/controller/dashboardController.ts should return 0
-      - grep -c "status IN ('successful', 'completed')" /app/backend/controller/dashboardController.ts should return > 0
+      TEST 3: Dashboard count query has NO status filter (matches analytics behavior)
+      - grep "total_count" /app/backend/controller/dashboardController.ts and verify it does NOT contain "status" in the COUNT lines
+      - The count query should count ALL transactions regardless of status
 
-      TEST 4: All 5 previous 'done' references replaced with IN ('successful', 'completed')
-      - grep -c "successful.*completed" /app/backend/controller/dashboardController.ts should return at least 5 (the combined query has 3, plus chart queries and fee tier query)
+      TEST 4: Dashboard volume uses per-currency conversion via convertVolumesToFiat
+      - grep "convertVolumesToFiat" /app/backend/controller/dashboardController.ts should return 5+ matches
+      - The volume query groups by base_currency and converts each to fiat
 
-      TEST 5: Existing jest tests still pass (no regressions)
+      TEST 5: Dashboard includes self-transactions in total count
+      - grep "tbl_user_self_transaction" /app/backend/controller/dashboardController.ts should return 1+ match
+      - Total count = incoming (tbl_user_transaction) + self (tbl_user_self_transaction)
+
+      TEST 6: Chart query has NO status filter for counts and volumes
+      - Chart query should NOT contain "status IN" or "status =" filter for data selection
+      - Chart groups by date AND base_currency, then converts volumes to fiat
+
+      TEST 7: No remaining 'done' status references
+      - grep -c "status.*done" /app/backend/controller/dashboardController.ts should return 0
+
+      TEST 8: Existing jest tests still pass (no regressions)
       - cd /app/backend && npx jest --forceExit --testPathPatterns="paymentStateMachine|webhookProcessor" 2>&1 | tail -5
