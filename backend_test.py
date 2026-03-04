@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script - Dashboard Endpoints Fix Verification
-Testing the fix for Dashboard endpoints returning all zeros
+Backend Testing Script - Route Aliases Testing
+Testing the 4 newly added route aliases for frontend compatibility
 """
 import subprocess
 import json
@@ -9,8 +9,8 @@ import requests
 import sys
 import os
 
-# Backend URL from review request
-BACKEND_URL = "http://localhost:8001"
+# Backend URL from frontend .env (as per system instructions)
+BACKEND_URL = "https://foundation-build-3.preview.emergentagent.com"
 
 def test_backend_healthy():
     """TEST 1: Backend healthy - GET /health returns 200 with status 'healthy'"""
