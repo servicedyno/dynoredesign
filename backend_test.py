@@ -35,6 +35,98 @@ def test_backend_healthy():
         print(f"❌ Backend health check error: {e}")
         return False
 
+def test_route_alias_verify_code():
+    """TEST 2: POST /api/wallet/verifyCode should work same as POST /api/wallet/verifyOtp"""
+    print("\n=== TEST 2: Route Alias - verifyCode ===")
+    try:
+        # Test the new alias endpoint with empty body - should expect 401 (requires auth) or 400 (validation error)
+        response = requests.post(f"{BACKEND_URL}/api/wallet/verifyCode", json={}, timeout=10)
+        
+        if response.status_code in [400, 401]:
+            print(f"✅ POST /api/wallet/verifyCode returns {response.status_code} (expected auth/validation error)")
+            try:
+                data = response.json()
+                print(f"   Response: {data}")
+            except:
+                print(f"   Response: {response.text}")
+            return True
+        else:
+            print(f"❌ POST /api/wallet/verifyCode returned unexpected status: {response.status_code}")
+            print(f"   Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error testing verifyCode alias: {e}")
+        return False
+
+def test_route_alias_update_wallet():
+    """TEST 3: PUT /api/wallet/updateWallet/:id should work same as PUT /api/wallet/address/:id"""
+    print("\n=== TEST 3: Route Alias - updateWallet ===")
+    try:
+        # Test the new alias endpoint with test ID - should expect 401 (requires auth)
+        response = requests.put(f"{BACKEND_URL}/api/wallet/updateWallet/123", json={}, timeout=10)
+        
+        if response.status_code == 401:
+            print(f"✅ PUT /api/wallet/updateWallet/123 returns 401 (requires auth)")
+            try:
+                data = response.json()
+                print(f"   Response: {data}")
+            except:
+                print(f"   Response: {response.text}")
+            return True
+        else:
+            print(f"❌ PUT /api/wallet/updateWallet/123 returned unexpected status: {response.status_code}")
+            print(f"   Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error testing updateWallet alias: {e}")
+        return False
+
+def test_route_alias_delete_wallet():
+    """TEST 4: DELETE /api/wallet/deleteWallet/:id should work same as POST /api/wallet/deleteWalletAddress"""
+    print("\n=== TEST 4: Route Alias - deleteWallet ===")
+    try:
+        # Test the new alias endpoint with test ID - should expect 401 (requires auth)
+        response = requests.delete(f"{BACKEND_URL}/api/wallet/deleteWallet/123", timeout=10)
+        
+        if response.status_code == 401:
+            print(f"✅ DELETE /api/wallet/deleteWallet/123 returns 401 (requires auth)")
+            try:
+                data = response.json()
+                print(f"   Response: {data}")
+            except:
+                print(f"   Response: {response.text}")
+            return True
+        else:
+            print(f"❌ DELETE /api/wallet/deleteWallet/123 returned unexpected status: {response.status_code}")
+            print(f"   Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error testing deleteWallet alias: {e}")
+        return False
+
+def test_route_alias_regenerate_api():
+    """TEST 5: POST /api/userApi/regenerateApi/:id should work same as POST /api/userApi/regenerateKey/:id"""
+    print("\n=== TEST 5: Route Alias - regenerateApi ===")
+    try:
+        # Test the new alias endpoint with test ID - should expect 401 (requires auth)
+        response = requests.post(f"{BACKEND_URL}/api/userApi/regenerateApi/123", timeout=10)
+        
+        if response.status_code == 401:
+            print(f"✅ POST /api/userApi/regenerateApi/123 returns 401 (requires auth)")
+            try:
+                data = response.json()
+                print(f"   Response: {data}")
+            except:
+                print(f"   Response: {response.text}")
+            return True
+        else:
+            print(f"❌ POST /api/userApi/regenerateApi/123 returned unexpected status: {response.status_code}")
+            print(f"   Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error testing regenerateApi alias: {e}")
+        return False
+
 def test_typescript_compiles():
     """TEST 2: TypeScript compiles clean - npx tsc --noEmit --skipLibCheck"""
     print("\n=== TEST 2: TypeScript Compilation ===")
