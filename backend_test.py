@@ -414,23 +414,21 @@ def test_existing_jest_tests():
         return False
 
 def main():
-    """Run all dashboard endpoint tests"""
-    print("=== DASHBOARD ENDPOINTS FIX VERIFICATION ===")
-    print("Testing 3 root cause fixes in /app/backend/controller/dashboardController.ts:")
-    print("1. Status filter removal from main count queries")
-    print("2. Per-currency volume conversion with convertVolumesToFiat helper")  
-    print("3. Self-transactions included in total count")
+    """Run all route alias tests"""
+    print("=== ROUTE ALIASES TESTING ===")
+    print("Testing 4 newly added route aliases for frontend compatibility:")
+    print("1. POST /api/wallet/verifyCode → POST /api/wallet/verifyOtp")
+    print("2. PUT /api/wallet/updateWallet/:id → PUT /api/wallet/address/:id")  
+    print("3. DELETE /api/wallet/deleteWallet/:id → POST /api/wallet/deleteWalletAddress")
+    print("4. POST /api/userApi/regenerateApi/:id → POST /api/userApi/regenerateKey/:id")
     print(f"Backend URL: {BACKEND_URL}")
     
     tests = [
         ("Backend Health", test_backend_healthy),
-        ("TypeScript Compilation", test_typescript_compiles), 
-        ("Dashboard Count Query", test_dashboard_count_query),
-        ("Dashboard Volume Conversion", test_dashboard_volume_conversion),
-        ("Self-Transactions Included", test_self_transactions_included),
-        ("Chart Endpoint No Status Filter", test_chart_endpoint_no_status_filter),
-        ("No 'done' Status References", test_no_done_status_references),
-        ("Jest Tests (No Regressions)", test_existing_jest_tests),
+        ("Route Alias - verifyCode", test_route_alias_verify_code),
+        ("Route Alias - updateWallet", test_route_alias_update_wallet),
+        ("Route Alias - deleteWallet", test_route_alias_delete_wallet),
+        ("Route Alias - regenerateApi", test_route_alias_regenerate_api),
     ]
     
     results = []
@@ -445,7 +443,7 @@ def main():
     
     # Summary
     print("\n" + "="*60)
-    print("DASHBOARD ENDPOINTS FIX TEST SUMMARY")
+    print("ROUTE ALIASES TEST SUMMARY")
     print("="*60)
     
     passed = sum(1 for _, result in results if result)
@@ -458,13 +456,12 @@ def main():
     print(f"\nOverall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
     
     if passed == total:
-        print("\n🎉 ALL DASHBOARD ENDPOINT FIXES VERIFIED SUCCESSFULLY!")
-        print("✅ Root Cause 1: Status filters removed from main count queries")
-        print("✅ Root Cause 2: Per-currency volume conversion implemented") 
-        print("✅ Root Cause 3: Self-transactions included in total count")
+        print("\n🎉 ALL ROUTE ALIASES VERIFIED SUCCESSFULLY!")
+        print("✅ All 4 route aliases are working correctly")
+        print("✅ Backend health check passes")
         return True
     else:
-        print(f"\n❌ {total - passed} test(s) failed - dashboard fixes need attention")
+        print(f"\n❌ {total - passed} test(s) failed - route aliases need attention")
         return False
 
 if __name__ == "__main__":
