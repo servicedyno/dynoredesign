@@ -9864,3 +9864,28 @@ agent_communication:
       - Backend service remains stable and healthy
       
       ✅ RECOMMENDATION: All P1/P2 performance optimizations are production-ready and successfully verified.
+
+  - task: "Fix Dashboard 'Compared to Last Month' showing 0% for both transactions and volume"
+    implemented: true
+    working: pending_testing
+    files:
+      - "/app/backend/controller/dashboardController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    test_instructions: |
+      TEST 1: Backend healthy
+      - GET http://localhost:8001/health returns 200 with status "healthy"
+
+      TEST 2: TypeScript compiles clean
+      - cd /app/backend && npx tsc --noEmit --skipLibCheck — exit code 0
+
+      TEST 3: Dashboard query no longer uses status='done'
+      - grep -c "status = 'done'" /app/backend/controller/dashboardController.ts should return 0
+      - grep -c "status IN ('successful', 'completed')" /app/backend/controller/dashboardController.ts should return > 0
+
+      TEST 4: All 5 previous 'done' references replaced with IN ('successful', 'completed')
+      - grep -c "successful.*completed" /app/backend/controller/dashboardController.ts should return at least 5 (the combined query has 3, plus chart queries and fee tier query)
+
+      TEST 5: Existing jest tests still pass (no regressions)
+      - cd /app/backend && npx jest --forceExit --testPathPatterns="paymentStateMachine|webhookProcessor" 2>&1 | tail -5

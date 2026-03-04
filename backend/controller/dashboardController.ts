@@ -114,14 +114,14 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const combinedQuery = `
       SELECT 
         -- Current month stats
-        COUNT(*) FILTER (WHERE ut.status = 'done' AND ut."createdAt" >= :startOfMonth) as current_month_count,
-        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status = 'done' AND ut."createdAt" >= :startOfMonth), 0) as current_month_volume,
+        COUNT(*) FILTER (WHERE ut.status IN ('successful', 'completed') AND ut."createdAt" >= :startOfMonth) as current_month_count,
+        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status IN ('successful', 'completed') AND ut."createdAt" >= :startOfMonth), 0) as current_month_volume,
         -- Last month stats
-        COUNT(*) FILTER (WHERE ut.status = 'done' AND ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth) as last_month_count,
-        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status = 'done' AND ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_volume,
+        COUNT(*) FILTER (WHERE ut.status IN ('successful', 'completed') AND ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth) as last_month_count,
+        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status IN ('successful', 'completed') AND ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_volume,
         -- All-time stats
-        COUNT(*) FILTER (WHERE ut.status = 'done') as total_count,
-        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status = 'done'), 0) as total_volume,
+        COUNT(*) FILTER (WHERE ut.status IN ('successful', 'completed')) as total_count,
+        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut.status IN ('successful', 'completed')), 0) as total_volume,
         -- Pending count
         COUNT(*) FILTER (WHERE ut.status = 'pending') as pending_count
       FROM tbl_user_transaction ut
@@ -287,7 +287,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
         FROM tbl_user_transaction ut
         ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
         WHERE ut.user_id = :userId 
-        AND ut.status = 'done'
+        AND ut.status IN ('successful', 'completed')
         AND ut."createdAt" >= :startDate
         ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
         GROUP BY DATE(ut."createdAt")
@@ -302,7 +302,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
         FROM tbl_user_transaction ut
         ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
         WHERE ut.user_id = :userId 
-        AND ut.status = 'done'
+        AND ut.status IN ('successful', 'completed')
         AND ut."createdAt" >= :startDate
         ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
         GROUP BY DATE_TRUNC('week', ut."createdAt")
@@ -317,7 +317,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
         FROM tbl_user_transaction ut
         ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
         WHERE ut.user_id = :userId 
-        AND ut.status = 'done'
+        AND ut.status IN ('successful', 'completed')
         AND ut."createdAt" >= :startDate
         ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
         GROUP BY DATE_TRUNC('month', ut."createdAt")
@@ -339,7 +339,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
        FROM tbl_user_transaction ut
        ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
        WHERE ut.user_id = :userId 
-       AND ut.status = 'done'
+       AND ut.status IN ('successful', 'completed')
        AND ut."createdAt" >= :startDate
        ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}
        GROUP BY ut.base_currency
@@ -475,7 +475,7 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
        FROM tbl_user_transaction ut
        ${company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : ''}
        WHERE ut.user_id = :userId 
-       AND ut.status = 'done'
+       AND ut.status IN ('successful', 'completed')
        AND ut."createdAt" >= :startOfMonth
        ${company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : ''}`,
       {
