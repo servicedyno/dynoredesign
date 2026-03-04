@@ -10,6 +10,8 @@ apiRouter.get("/getApi", authMiddleware, apiController.getApi);
 apiRouter.get("/getApi/:id", authMiddleware, apiController.getApiById);
 apiRouter.put("/updateApi/:id", authMiddleware, apiController.updateApi);
 apiRouter.post("/regenerateKey/:id", authMiddleware, apiController.regenerateApiKey);
+// ALIAS: Frontend compatibility - POST /userApi/regenerateApi/:id -> POST /userApi/regenerateKey/:id
+apiRouter.post("/regenerateApi/:id", authMiddleware, apiController.regenerateApiKey);
 apiRouter.put("/toggleStatus/:id", authMiddleware, apiController.toggleApiStatus);
 apiRouter.post("/revoke/:id", authMiddleware, apiController.revokeApi);
 apiRouter.delete("/deleteApi/:id", authMiddleware, apiController.deleteApi);

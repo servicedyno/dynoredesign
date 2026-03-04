@@ -17,6 +17,8 @@ walletRouter.get("/getWalletAddresses", walletController.getWalletAddresses);
 walletRouter.post("/validateWalletAddress", walletController.validateWallet);
 // Step 2: Verify OTP and complete creation
 walletRouter.post("/verifyOtp", walletController.verifyOtp);
+// ALIAS: Frontend compatibility - /wallet/verifyCode -> /wallet/verifyOtp
+walletRouter.post("/verifyCode", walletController.verifyOtp);
 // Alternative: Direct add (for merchants, no OTP)
 walletRouter.post("/addWalletAddress", walletController.addWalletAddress);
 
@@ -25,12 +27,16 @@ walletRouter.post("/addWalletAddress", walletController.addWalletAddress);
 walletRouter.post("/address/send-otp", walletController.sendEditWalletOTP);
 // Step 2: Verify OTP and update
 walletRouter.put("/address/:id", walletController.editWalletAddress);
+// ALIAS: Frontend compatibility - PUT /wallet/updateWallet/:id -> PUT /wallet/address/:id
+walletRouter.put("/updateWallet/:id", walletController.editWalletAddress);
 
 // DELETE - Delete wallet address (2-step OTP flow)
 // Step 1: Send OTP for deletion
 walletRouter.post("/address/delete/send-otp", walletController.sendDeleteWalletOTP);
 // Step 2: Verify OTP and delete
 walletRouter.post("/deleteWalletAddress", walletController.deleteWalletAddressWithOTP);
+// ALIAS: Frontend compatibility - DELETE /wallet/deleteWallet/:id -> POST /wallet/deleteWalletAddress
+walletRouter.delete("/deleteWallet/:id", walletController.deleteWalletAddressWithOTP);
 
 // UPDATE - Update wallet in main payment system (2-step OTP flow)
 walletRouter.post("/wallet/update/send-otp", walletController.sendUpdateWalletOTP);
