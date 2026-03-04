@@ -5,6 +5,14 @@ export const dashboardPaths = {
       summary: 'Get dashboard statistics',
       description: `Retrieve comprehensive dashboard statistics including transaction counts, volume, active wallets, and fee tier information.
 
+**Counting behaviour:** Transaction counts include ALL records (incoming payments + self-transfers) with **no status filter**, consistent with the \`/wallet/getUserAnalytics\` historicalTrends data.
+
+**Volume conversion:** Volumes are aggregated per crypto currency and individually converted to the company's preferred fiat currency using live exchange rates, then summed. This avoids the incorrect practice of mixing raw crypto amounts across currencies.
+
+**Month-over-month %:** \`change_percent\` = ((current_month − last_month) / last_month) × 100. Returns 100 when last month was 0 but current is positive; returns 0 when both are 0.
+
+**Caching:** Responses are cached in Redis for 30 seconds.
+
 **Authentication:** Requires JWT token (Bearer Auth).`,
       security: [{ BearerAuth: [] }],
       parameters: [
@@ -12,7 +20,7 @@ export const dashboardPaths = {
           in: 'query',
           name: 'company_id',
           schema: { type: 'integer' },
-          description: 'Filter stats by company ID (optional, defaults to user\'s primary company)',
+          description: 'Filter stats by company ID (optional, defaults to all companies owned by the user)',
           example: 38
         }
       ],
@@ -35,6 +43,14 @@ export const dashboardPaths = {
       tags: ['Dashboard'],
       summary: 'Get volume chart data',
       description: `Retrieve transaction volume chart data for visualization. Returns time-series data grouped by the specified period.
+
+**Counting behaviour:** All transactions are included regardless of status (consistent with the main dashboard endpoint).
+
+**Volume conversion:** Each data point is aggregated per crypto currency, converted to the company's preferred fiat currency using live rates, then summed per date bucket. This means chart volumes represent actual fiat value, not raw crypto amounts.
+
+**Grouping:** 7d/30d → daily, 90d → weekly, 1y → monthly.
+
+**Caching:** Responses are cached in Redis for 60 seconds.
 
 **Authentication:** Requires JWT token (Bearer Auth).`,
       security: [{ BearerAuth: [] }],
@@ -63,14 +79,48 @@ export const dashboardPaths = {
                 type: 'object',
                 properties: {
                   success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Chart data retrieved successfully' },
                   data: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        date: { type: 'string', format: 'date', example: '2026-02-01' },
-                        volume: { type: 'number', example: 1250.50 },
-                        count: { type: 'integer', example: 15 }
+                    type: 'object',
+                    properties: {
+                      period: { type: 'string', example: '30d' },
+                      group_by: { type: 'string', enum: ['day', 'week', 'month'], example: 'day' },
+                      start_date: { type: 'string', format: 'date', example: '2026-02-02' },
+                      end_date: { type: 'string', format: 'date', example: '2026-03-04' },
+                      currency: { type: 'string', description: 'Fiat currency used for all volume values', example: 'USD' },
+                      chart_data: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            date: { type: 'string', format: 'date', example: '2026-02-15' },
+                            volume: { type: 'number', description: 'Total volume for this date bucket, converted to fiat', example: 1250.50 },
+                            transaction_count: { type: 'integer', description: 'Number of transactions in this date bucket', example: 15 }
+                          }
+                        }
+                      },
+                      currency_breakdown: {
+                        type: 'array',
+                        description: 'Volume breakdown by crypto currency (volumes converted to fiat)',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            currency: { type: 'string', example: 'BTC' },
+                            count: { type: 'integer', example: 8 },
+                            volume: { type: 'number', description: 'Sum in preferred fiat currency', example: 850.25 }
+                          }
+                        }
+                      },
+                      status_breakdown: {
+                        type: 'array',
+                        description: 'Transaction count by status within the selected period',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            status: { type: 'string', example: 'successful' },
+                            count: { type: 'integer', example: 120 }
+                          }
+                        }
                       }
                     }
                   }

@@ -707,37 +707,61 @@ function verifyWebhookSignature(payload, signature, secret) {
         // Dashboard Schemas
         DashboardStats: {
           type: "object",
+          description: "Comprehensive dashboard statistics. Counts include ALL transactions (incoming + self-transfers) regardless of status. Volumes are converted from each crypto currency to the company's preferred fiat currency using live exchange rates.",
           properties: {
             total_transactions: {
               type: "object",
+              description: "Transaction counts (incoming from tbl_user_transaction + self-transfers). No status filter — matches analytics historicalTrends behavior.",
               properties: {
-                count: { type: "integer" },
-                current_month: { type: "integer" },
-                change_percent: { type: "number" },
+                count: { type: "integer", description: "All-time total (incoming + self-transactions)", example: 640 },
+                current_month: { type: "integer", description: "Transactions created in the current calendar month", example: 9 },
+                change_percent: { type: "number", description: "Month-over-month % change: ((current - last) / last) * 100", example: -95.1 },
+                comparison_period: { type: "string", enum: ["last_month"], example: "last_month" },
               },
             },
             total_volume: {
               type: "object",
+              description: "Volume amounts converted to the company's preferred fiat currency. Each crypto currency is converted individually using live rates before summing.",
               properties: {
-                amount: { type: "number" },
-                currency: { type: "string" },
-                change_percent: { type: "number" },
+                amount: { type: "number", description: "All-time total volume in preferred currency", example: 14804.37 },
+                amount_formatted: { type: "string", description: "Formatted display string with currency symbol", example: "$14,804.37 USD" },
+                current_month: { type: "number", description: "Current month volume in preferred currency", example: 350.20 },
+                current_month_formatted: { type: "string", example: "$350.20 USD" },
+                currency: { type: "string", description: "The fiat currency used for display (from company settings)", example: "USD" },
+                currency_info: { type: "object", description: "Currency metadata (symbol, name, decimals)" },
+                change_percent: { type: "number", description: "Month-over-month volume % change in fiat terms", example: -42.5 },
+                comparison_period: { type: "string", enum: ["last_month"], example: "last_month" },
+              },
+            },
+            pending_transactions: {
+              type: "object",
+              properties: {
+                count: { type: "integer", description: "Transactions currently in 'pending' status", example: 3 },
               },
             },
             active_wallets: {
               type: "object",
               properties: {
-                count: { type: "integer" },
-                wallets: { type: "array", items: { type: "string" } },
+                count: { type: "integer", example: 5 },
+                wallets: { type: "array", items: { type: "string" }, example: ["BTC", "ETH", "USDT-ERC20"] },
+                details: { type: "array", items: { type: "object" }, description: "Full wallet records with wallet_type, wallet_name, company_id" },
               },
             },
             fee_tier: {
               type: "object",
+              description: "Fee tier based on current month USD volume, with thresholds displayed in preferred currency.",
               properties: {
-                current_tier: { type: "string" },
-                monthly_volume: { type: "number" },
-                tier_threshold: { type: "number" },
-                percent_complete: { type: "number" },
+                current_tier: { type: "string", example: "Starter" },
+                tier_description: { type: "string", example: "For new users testing the platform" },
+                monthly_volume: { type: "number", description: "Current month volume in preferred currency", example: 350.20 },
+                monthly_volume_usd: { type: "number", description: "Current month volume in USD (reference)", example: 350.20 },
+                tier_threshold: { type: "number", nullable: true, description: "Upper threshold of current tier in preferred currency (null for Enterprise)", example: 10000 },
+                tier_threshold_formatted: { type: "string", example: "$10,000 USD" },
+                percent_complete: { type: "number", description: "Percentage progress toward next tier", example: 3.5 },
+                amount_to_next_tier: { type: "number", example: 9649.80 },
+                amount_to_next_tier_formatted: { type: "string", nullable: true, example: "$9,649.80 USD" },
+                next_tier: { type: "string", nullable: true, example: "Standard" },
+                currency: { type: "string", example: "USD" },
               },
             },
           },

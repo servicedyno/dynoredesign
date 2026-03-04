@@ -111,6 +111,7 @@
  *   get:
  *     tags: [Dashboard]
  *     summary: Get dashboard statistics
+ *     description: Counts include all transactions (incoming + self) with no status filter. Volumes are per-currency converted to preferred fiat.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -132,6 +133,7 @@
  *   get:
  *     tags: [Dashboard]
  *     summary: Get volume chart data
+ *     description: All transactions included (no status filter). Volumes converted per-currency to preferred fiat. Response includes currency, chart_data, currency_breakdown, status_breakdown.
  *     security:
  *       - BearerAuth: []
  *     parameters:
