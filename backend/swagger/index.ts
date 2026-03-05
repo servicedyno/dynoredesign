@@ -615,6 +615,7 @@ function verifyWebhookSignature(payload, signature, secret) {
             photo: { type: "string" },
             login_type: { type: "string", enum: ["EMAIL", "GOOGLE", "TELEGRAM"] },
             status: { type: "string" },
+            email_verified: { type: "boolean", description: "Whether the user has verified their email via OTP. Unverified users cannot access company, wallet, or dashboard features.", example: false },
           },
         },
         LoginRequest: {
@@ -1163,12 +1164,12 @@ function verifyWebhookSignature(payload, signature, secret) {
     paths: allPaths,
     tags: [
       // === AUTHENTICATION & USER ===
-      { name: "Authentication", description: "User login, registration, and password management" },
+      { name: "Authentication", description: "User login, registration, email verification, and password management. Email verification (POST /api/user/verify-email) is required before accessing company, wallet, and dashboard features." },
       { name: "User Management", description: "User profile, settings, and account management" },
       
       // === MERCHANT SETUP ===
-      { name: "Company", description: "Company profile and business configuration" },
-      { name: "Wallet Address Management", description: "Crypto wallet configuration (requires OTP for changes)" },
+      { name: "Company", description: "Company profile and business configuration. ⚠️ Requires verified email." },
+      { name: "Wallet Address Management", description: "Crypto wallet configuration (requires OTP for changes). ⚠️ Requires verified email." },
       { name: "API Keys", description: "API key management for server-to-server integration" },
       { name: "KYC Verification", description: "Identity verification with Veriff" },
       
@@ -1183,7 +1184,7 @@ function verifyWebhookSignature(payload, signature, secret) {
       
       // === TRANSACTIONS & REPORTS ===
       { name: "Transactions", description: "Transaction history and export" },
-      { name: "Dashboard", description: "Analytics and statistics" },
+      { name: "Dashboard", description: "Analytics and statistics. ⚠️ Requires verified email." },
       { name: "Invoices", description: "Transaction invoices and PDF generation" },
       { name: "Subscriptions", description: "Recurring payment management" },
       { name: "Auto-Stablecoin Conversion", description: `Automatic conversion of volatile crypto (BTC, ETH, SOL, etc.) to stablecoins (USDT/USDC) via Binance.
