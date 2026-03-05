@@ -10,7 +10,7 @@ import sys
 import os
 
 # Backend URL from frontend .env (as per system instructions)
-BACKEND_URL = "https://initial-setup-15.preview.emergentagent.com"
+BACKEND_URL = "https://initial-config-15.preview.emergentagent.com"
 
 def test_backend_healthy():
     """TEST 1: Backend healthy - GET /health returns 200 with status 'healthy'"""
