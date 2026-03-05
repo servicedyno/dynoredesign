@@ -133,10 +133,7 @@ const registerUser = async (req: express.Request, res: express.Response) => {
         }
       }
 
-      // Send welcome email (non-blocking)
-      emailService.sendWelcomeEmail(email.toLowerCase(), name).catch(err => {
-        userLogger.error("Failed to send welcome email:", err);
-      });
+      // Welcome email is deferred until after OTP verification (see verifyEmail)
 
       // Generate email verification OTP and send it
       const verifyOtp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -2268,6 +2265,13 @@ const verifyEmail = async (req: express.Request, res: express.Response) => {
     await deleteRedisItem(`profile:${userId}`);
 
     userLogger.info(`[VerifyEmail] Email verified for user ${userId}`);
+
+    // Send welcome email now that OTP is verified (non-blocking)
+    const email = user.dataValues.email;
+    const name = user.dataValues.name || "User";
+    emailService.sendWelcomeEmail(email.toLowerCase(), name).catch(err => {
+      userLogger.error("[VerifyEmail] Failed to send welcome email:", err);
+    });
 
     return successResponseHelper(res, 200, "Email verified successfully!", { email_verified: true });
   } catch (e) {
