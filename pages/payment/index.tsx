@@ -98,7 +98,7 @@ const Payment = () => {
       currency: walletState.currency,
       amount: walletState.amount,
     };
-    const res = createEncryption(JSON.stringify(finalPayload));
+    const res = await createEncryption(JSON.stringify(finalPayload));
 
     const {
       data: { data },

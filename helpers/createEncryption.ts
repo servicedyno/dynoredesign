@@ -1,11 +1,22 @@
-import CryptoJs from "crypto-js";
+import axiosBaseApi from "@/axiosConfig";
 
-const createEncryption = (content: any) => {
-  const secretKey = process.env.NEXT_PUBLIC_CYPHER_KEY ?? "mysecretkey";
-  console.log(content, secretKey);
-  const cipherText = CryptoJs.AES.encrypt(content, secretKey).toString();
-
-  return cipherText;
+/**
+ * Server-side encryption — sends payload to backend for encryption.
+ * Replaces the previous client-side AES encryption that used an exposed
+ * NEXT_PUBLIC_ key (which was visible in the browser bundle).
+ */
+const createEncryption = async (content: string): Promise<string> => {
+  try {
+    const {
+      data: { data },
+    } = await axiosBaseApi.post("/wallet/encrypt-payload", {
+      payload: content,
+    });
+    return data.data;
+  } catch (error) {
+    console.error("Server-side encryption failed:", error);
+    throw new Error("Failed to encrypt payment data");
+  }
 };
 
 export default createEncryption;

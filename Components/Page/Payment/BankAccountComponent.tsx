@@ -26,58 +26,41 @@ import {
 import { paymentTypes } from "@/utils/enums";
 import FormManager from "../Common/FormManager";
 import Dropdown from "@/Components/UI/Dropdown";
+import { usePaymentRates } from "@/hooks/usePaymentRates";
 
 const timer = (ms: any) => new Promise((res) => setTimeout(res, ms));
 
-const currencyList = ["EUR", "GBP", "NGN"];
+const currencyListItems = ["EUR", "GBP", "NGN"];
 
 const BankAccountComponent = () => {
   const theme = useTheme();
   const dispatch = useDispatch();
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
-  const [loading, setLoading] = useState(true);
   const [checkVerify, setCheckVerify] = useState(false);
   const [accountDetails, setAccountDetails] = useState<CommonDetails>();
-  const [currencyRates, setCurrencyRates] = useState<currencyData[]>();
   const [selectedCurrency, setSelectedCurrency] = useState<currencyData>();
   const [loading2, setLoading2] = useState(false);
   const [collapse, setCollapse] = useState(false);
+
+  // Use shared hook for currency rates
+  const { rates: currencyRates, loading } = usePaymentRates({
+    source: walletState.currency,
+    amount: walletState.amount,
+    currencyList: currencyListItems,
+    enabled: !!(walletState.amount && walletState.currency),
+  });
+
+  useEffect(() => {
+    if (currencyRates && currencyRates.length > 0 && !selectedCurrency) {
+      setSelectedCurrency(currencyRates[0] as any);
+    }
+  }, [currencyRates]);
 
   useEffect(() => {
     if (accountDetails) {
       setLoading2(false);
     }
   }, [accountDetails]);
-
-  useEffect(() => {
-    if (walletState.amount && walletState.currency) {
-      getCurrencyRate();
-    }
-  }, [walletState.amount]);
-
-  const getCurrencyRate = async () => {
-    try {
-      const {
-        data: { data },
-      } = await axiosBaseApi.post("/wallet/getCurrencyRates", {
-        source: walletState.currency,
-        amount: walletState.amount,
-        currencyList,
-      });
-      setCurrencyRates(data);
-      setSelectedCurrency(data[0]);
-      setLoading(false);
-    } catch (e: any) {
-      const message = e.response.data.message ?? e.message;
-      dispatch({
-        type: TOAST_SHOW,
-        payload: {
-          message: message,
-          severity: "error",
-        },
-      });
-    }
-  };
 
   const handleSubmit = async () => {
     window.open(accountDetails?.redirect);
@@ -97,7 +80,7 @@ const BankAccountComponent = () => {
       amount: selectedCurrency?.amount,
     };
     console.log(finalPayload);
-    const res = createEncryption(JSON.stringify(finalPayload));
+    const res = await createEncryption(JSON.stringify(finalPayload));
     setLoading2(true);
     setCollapse(true);
     const {
@@ -271,7 +254,7 @@ const BankAccountComponent = () => {
               >
                 <>
                   <Dropdown
-                    menuItems={currencyList.map((x) => {
+                    menuItems={currencyListItems.map((x) => {
                       return { label: x, value: x };
                     })}
                     fullWidth

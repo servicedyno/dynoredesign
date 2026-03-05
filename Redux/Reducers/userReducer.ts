@@ -39,6 +39,9 @@ const userReducer = (state = userInitialState, action: ReducerAction) => {
 
     case USER_LOGIN:
       localStorage.setItem("token", payload.accessToken);
+      if (payload.refreshToken) {
+        localStorage.setItem("refreshToken", payload.refreshToken);
+      }
       return {
         ...state,
         email: payload.email,
@@ -48,6 +51,9 @@ const userReducer = (state = userInitialState, action: ReducerAction) => {
       };
     case USER_REGISTER:
       localStorage.setItem("token", payload.accessToken);
+      if (payload.refreshToken) {
+        localStorage.setItem("refreshToken", payload.refreshToken);
+      }
       return {
         ...state,
         email: payload.email,
@@ -57,6 +63,9 @@ const userReducer = (state = userInitialState, action: ReducerAction) => {
       };
     case USER_UPDATE:
       localStorage.setItem("token", payload.accessToken);
+      if (payload.refreshToken) {
+        localStorage.setItem("refreshToken", payload.refreshToken);
+      }
       return { ...state };
 
     case USER_PROFILE_FETCH:

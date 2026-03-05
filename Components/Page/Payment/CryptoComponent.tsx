@@ -34,6 +34,7 @@ import TextBox from "@/Components/UI/TextBox";
 import Dropdown from "@/Components/UI/Dropdown";
 import { paymentTypes } from "@/utils/enums";
 import { CopyAllRounded, NorthEastRounded } from "@mui/icons-material";
+import { usePaymentRates } from "@/hooks/usePaymentRates";
 
 const currencyList2 = [
   "BTC",
@@ -67,9 +68,7 @@ const CyrptoComponent = () => {
   const theme = useTheme();
   const dispatch = useDispatch();
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
-  const [loading, setLoading] = useState(true);
 
-  const [currencyRates, setCurrencyRates] = useState<currencyData[]>();
   const [selectedCurrency, setSelectedCurrency] = useState<currencyData>();
   const [checkVerify, setCheckVerify] = useState(false);
   const [cryptoDetails, setCryptoDetails] = useState<CryptoDetails>({
@@ -79,36 +78,20 @@ const CyrptoComponent = () => {
   });
   const [loading2, setLoading2] = useState(false);
 
-  useEffect(() => {
-    if (walletState.amount && walletState.currency) {
-      getCurrencyRate();
-    }
-  }, [walletState.amount]);
+  // Use shared hook for currency rates (prevents redundant API calls)
+  const { rates: currencyRates, loading } = usePaymentRates({
+    source: walletState.currency,
+    amount: walletState.amount,
+    currencyList: currencyList.map((x) => x.currency),
+    fixedDecimal: false,
+    enabled: !!(walletState.amount && walletState.currency),
+  });
 
-  const getCurrencyRate = async () => {
-    try {
-      const {
-        data: { data },
-      } = await axiosBaseApi.post("/wallet/getCurrencyRates", {
-        source: walletState.currency,
-        amount: walletState.amount,
-        currencyList: currencyList.map((x) => x.currency),
-        fixedDecimal: false,
-      });
-      setCurrencyRates(data);
-      setSelectedCurrency(data[0]);
-      setLoading(false);
-    } catch (e: any) {
-      const message = e.response.data.message ?? e.message;
-      dispatch({
-        type: TOAST_SHOW,
-        payload: {
-          message: message,
-          severity: "error",
-        },
-      });
+  useEffect(() => {
+    if (currencyRates && currencyRates.length > 0 && !selectedCurrency) {
+      setSelectedCurrency(currencyRates[0] as any);
     }
-  };
+  }, [currencyRates]);
 
   const handleSubmit = async (values: any) => {
     try {
@@ -123,7 +106,7 @@ const CyrptoComponent = () => {
         amount: selectedCurrency?.amount,
         paymentType: paymentTypes.CRYPTO,
       };
-      const res = createEncryption(JSON.stringify(finalPayload));
+      const res = await createEncryption(JSON.stringify(finalPayload));
       setCheckVerify(true);
       setLoading2(true);
       const {

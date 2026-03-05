@@ -20,6 +20,7 @@ import {
 } from "@/utils/types/paymentTypes";
 import { NorthEastRounded } from "@mui/icons-material";
 import { paymentTypes } from "@/utils/enums";
+import { usePaymentRates } from "@/hooks/usePaymentRates";
 
 const QRCodeComponent = () => {
   const theme = useTheme();
@@ -28,6 +29,15 @@ const QRCodeComponent = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCurrency, setSelectedCurrency] = useState<currencyData>();
   const [accountDetails, setAccountDetails] = useState<CommonDetails>();
+
+  // Use shared hook for currency rates
+  const isNGN = walletState.currency === "NGN";
+  const { rates: currencyRates } = usePaymentRates({
+    source: walletState.currency,
+    amount: walletState.amount,
+    currencyList: ["NGN"],
+    enabled: !!(walletState.amount && walletState.currency && !isNGN),
+  });
 
   useEffect(() => {
     if (accountDetails) {
@@ -38,9 +48,7 @@ const QRCodeComponent = () => {
 
   useEffect(() => {
     if (walletState.amount && walletState.currency) {
-      if (walletState.currency !== "NGN") {
-        getCurrencyRate();
-      } else {
+      if (isNGN) {
         setSelectedCurrency({
           currency: "NGN",
           amount: walletState.amount.toString(),
@@ -50,34 +58,12 @@ const QRCodeComponent = () => {
     }
   }, [walletState.amount]);
 
+  // When rates arrive from hook, set selected currency
   useEffect(() => {
-    if (selectedCurrency?.currency) {
-      initiateQRCodeTransfer();
+    if (currencyRates && currencyRates.length > 0 && !isNGN) {
+      setSelectedCurrency(currencyRates[0] as any);
     }
-  }, [selectedCurrency]);
-
-  const getCurrencyRate = async () => {
-    try {
-      const {
-        data: { data },
-      } = await axiosBaseApi.post("/wallet/getCurrencyRates", {
-        source: walletState.currency,
-        amount: walletState.amount,
-        currencyList: ["NGN"],
-      });
-
-      setSelectedCurrency(data[0]);
-    } catch (e: any) {
-      const message = e.response.data.message ?? e.message;
-      dispatch({
-        type: TOAST_SHOW,
-        payload: {
-          message: message,
-          severity: "error",
-        },
-      });
-    }
-  };
+  }, [currencyRates]);
 
   const handleSubmit = async () => {
     try {
@@ -106,7 +92,7 @@ const QRCodeComponent = () => {
       currency: selectedCurrency?.currency,
       amount: selectedCurrency?.amount,
     };
-    const res = createEncryption(JSON.stringify(finalPayload));
+    const res = await createEncryption(JSON.stringify(finalPayload));
 
     const {
       data: { data },

@@ -26,10 +26,12 @@ import {
   Typography,
 } from "@mui/material";
 import React, { useEffect, useRef, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import * as yup from "yup";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import { WalletAction, WALLET_FETCH } from "@/Redux/Actions/WalletAction";
+import { rootReducer } from "@/utils/types";
 
 
 const OTPInitial = {
@@ -40,6 +42,7 @@ const minimumDollar = 10;
 
 const Withdraw = ({ setPageName }: pageProps) => {
   const dispatch = useDispatch();
+  const walletState = useSelector((state: rootReducer) => state.walletReducer);
   const [cryptoData, setCryptoData] = useState<IWallet[]>([]);
   const [walletInitial, setWalletInitial] = useState({
     currency: "ETH",
@@ -83,9 +86,17 @@ const Withdraw = ({ setPageName }: pageProps) => {
   const [loading2, setLoading2] = useState(false);
   useEffect(() => {
     setPageName("Withdraw");
-    getWallets();
+    // Dispatch Redux action to fetch wallets (avoids duplicate direct API call)
+    dispatch(WalletAction(WALLET_FETCH));
     getWalletAddresses();
   }, []);
+
+  // Process wallet data from Redux store when it updates
+  useEffect(() => {
+    if (walletState.walletList && walletState.walletList.length > 0) {
+      processWalletData(walletState.walletList);
+    }
+  }, [walletState.walletList]);
 
   const schema = yup.object().shape({
     amount: yup
@@ -250,15 +261,10 @@ const Withdraw = ({ setPageName }: pageProps) => {
     }
   }, [countdown]);
 
-  const getWallets = async () => {
+  const processWalletData = (data: any[]) => {
     try {
-      const {
-        data: { data },
-      } = await axiosBaseApi.get("/wallet/getWallet");
-
       const tempWallets = data.filter((x: any) => x.currency_type === "CRYPTO");
       const tempWalletData: menuItem[] = [];
-      const allCurrency = [];
       for (let i = 0; i < data.length; i++) {
         const x = data[i];
         if (x.currency_type === "CRYPTO") {
@@ -266,26 +272,27 @@ const Withdraw = ({ setPageName }: pageProps) => {
             label: x.wallet_type,
             value: x.wallet_type,
           });
-          allCurrency.push(x.wallet_type);
         }
       }
       const ETHIndex = tempWalletData.findIndex((x) => x.value === "ETH");
+      const safeIndex = ETHIndex >= 0 ? ETHIndex : 0;
 
-      setCurrentIndex(ETHIndex);
+      setCurrentIndex(safeIndex);
       setWallets(tempWalletData);
       setCryptoData(tempWallets);
 
-      const tempAmount = Number(
-        Number(tempWallets[ETHIndex].amount_in_usd) - minimumDollar
-      );
-      setMaxAmount(Number(tempAmount.toFixed(2)));
+      if (tempWallets[safeIndex]) {
+        const tempAmount = Number(
+          Number(tempWallets[safeIndex].amount_in_usd) - minimumDollar
+        );
+        setMaxAmount(Number(tempAmount.toFixed(2)));
+      }
       setLoading(false);
     } catch (e: any) {
-      const message = e?.response?.data?.message ?? e.message;
       dispatch({
         type: TOAST_SHOW,
         payload: {
-          message: message,
+          message: "Failed to process wallet data",
           severity: "error",
         },
       });

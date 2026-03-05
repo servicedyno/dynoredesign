@@ -10,6 +10,7 @@ import sequelize from "../utils/dbInstance";
 import { Op, QueryTypes } from "sequelize";
 import {
   decrypt,
+  encrypt,
   errorResponseHelper,
   getErrorMessage,
   sendEmail,
@@ -4341,6 +4342,25 @@ const getCryptoPrice = async (symbol: string): Promise<number> => {
   }
 };
 
+/**
+ * POST /api/wallet/encrypt-payload
+ * Server-side encryption endpoint — replaces client-side encryption
+ * that was using an exposed NEXT_PUBLIC_ key.
+ */
+const encryptPayload = async (req: express.Request, res: express.Response) => {
+  try {
+    const { payload } = req.body;
+    if (!payload) {
+      return errorResponseHelper(res, 400, "payload is required");
+    }
+    const payloadStr = typeof payload === "string" ? payload : JSON.stringify(payload);
+    const encrypted = encrypt(payloadStr);
+    return successResponseHelper(res, 200, "Payload encrypted", { data: encrypted });
+  } catch (e) {
+    handleControllerError(res, e, walletLogger);
+  }
+};
+
 export default {
   getWallet,
   addFunds,
@@ -4378,4 +4398,5 @@ export default {
   // New: DELETE with OTP (for main table) - using unique names
   sendDeletePaymentWalletOTP,
   deletePaymentWalletWithOTP,
+  encryptPayload,
 };

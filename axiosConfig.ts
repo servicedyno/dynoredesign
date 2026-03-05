@@ -16,6 +16,24 @@ const AUTH_ENDPOINTS = ["user/login", "user/register", "user/checkEmail", "user/
 
 const isAuthEndpoint = (url: string) => AUTH_ENDPOINTS.some((ep) => url.includes(ep));
 
+// --- Token Refresh State ---
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+  failedQueue = [];
+};
+
 // Request interceptor: attach token (skip for auth endpoints)
 axiosBaseApi.interceptors.request.use(
   (config: any) => {
@@ -40,23 +58,78 @@ axiosBaseApi.interceptors.request.use(
   },
 );
 
-// Response interceptor: handle errors like 500 and 403
+// Response interceptor: handle 401 with token refresh
 axiosBaseApi.interceptors.response.use(
   (response) => response, // success responses
-  (error) => {
-    console.error("API Response error:", error.response ?? error.message);
+  async (error) => {
+    const originalRequest = error.config;
 
-    if (error.response?.status === 401) {
-      const requestUrl = error.config?.url || "";
-      if (!isAuthEndpoint(requestUrl)) {
-        // Remove token from browser storage
+    if (error.response?.status === 401 && !isAuthEndpoint(originalRequest?.url || "")) {
+      // Don't retry if this was already a retry or a refresh-token call
+      if (originalRequest._retry || (originalRequest.url || "").includes("user/refresh-token")) {
         localStorage.removeItem("token");
-
-        // Remove axios default header
+        localStorage.removeItem("refreshToken");
         delete axiosBaseApi.defaults.headers.common.Authorization;
-
-        // Redirect to login
         window.location.href = "/auth/login";
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        // Queue this request while refresh is in progress
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return axiosBaseApi(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        isRefreshing = false;
+        localStorage.removeItem("token");
+        delete axiosBaseApi.defaults.headers.common.Authorization;
+        window.location.href = "/auth/login";
+        return Promise.reject(error);
+      }
+
+      try {
+        const { data: refreshResponse } = await axios.post(
+          `${apiBaseUrl}api/user/refresh-token`,
+          { refresh_token: refreshToken },
+          { headers: { "Content-Type": "application/json" } }
+        );
+
+        const newAccessToken = refreshResponse?.data?.accessToken;
+        const newRefreshToken = refreshResponse?.data?.refreshToken;
+
+        if (newAccessToken) {
+          localStorage.setItem("token", newAccessToken);
+          if (newRefreshToken) {
+            localStorage.setItem("refreshToken", newRefreshToken);
+          }
+          axiosBaseApi.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
+          processQueue(null, newAccessToken);
+
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return axiosBaseApi(originalRequest);
+        } else {
+          throw new Error("No access token in refresh response");
+        }
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        delete axiosBaseApi.defaults.headers.common.Authorization;
+        window.location.href = "/auth/login";
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
@@ -66,7 +139,6 @@ axiosBaseApi.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Optional: you can return a standard format to always handle errors consistently
     return Promise.reject(error);
   },
 );

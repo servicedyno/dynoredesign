@@ -55,6 +55,7 @@ walletRouter.get("/transaction/:id", walletController.getTransactionDetails);
 walletRouter.post("/transactions/export", walletController.exportTransactions);
 
 walletRouter.post("/addFunds", walletController.addFunds);
+walletRouter.post("/encrypt-payload", walletController.encryptPayload);
 walletRouter.post("/authStep", walletController.authStep);
 walletRouter.post("/verifyPayment", walletController.verifyPayment);
 walletRouter.post("/confirmPayment", walletController.confirmPayment);

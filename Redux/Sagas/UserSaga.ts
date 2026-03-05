@@ -101,7 +101,7 @@ export function* userLogin(payload: any): unknown {
     });
     yield put({
       type: USER_LOGIN,
-      payload: { ...data.userData, accessToken: data.accessToken },
+      payload: { ...data.userData, accessToken: data.accessToken, refreshToken: data.refreshToken },
     });
   } catch (e: any) {
     const message = e.response?.data?.message ?? e.message ?? "Login failed";
@@ -157,7 +157,7 @@ export function* registerUser(payload: any): unknown {
     });
     yield put({
       type: USER_REGISTER,
-      payload: { ...data.userData, accessToken: data.accessToken },
+      payload: { ...data.userData, accessToken: data.accessToken, refreshToken: data.refreshToken },
     });
   } catch (e: any) {
     const message =

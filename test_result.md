@@ -5,23 +5,39 @@ DynoPay is a full-stack crypto payment gateway.
 - **Frontend**: Next.js (port 3000) with MUI components
 - **Backend**: Node.js/Express/TypeScript (port 3300 internally, proxied via Python/uvicorn on port 8001)
 - **Database**: PostgreSQL (Railway), Redis (Railway), MongoDB (local)
-- **Integrations**: Tatum API, Binance, Flutterwave, Google Cloud KMS, TRON
 
 ## Current Setup Status
 - ✅ Frontend: Running (Next.js on port 3000)
 - ✅ Backend: Running (Node.js on port 3300, Python proxy on port 8001)
 - ✅ MongoDB: Running
-- ⚠️ Binance WebSocket: Geo-blocked (expected in this environment)
 
-## Previous Session Completed Work
-1. Fixed TRON `OUT_OF_ENERGY` transaction confirmation bug in `tatumApi.ts`
-2. Added settlement retry logic in `paymentController.ts`
-3. Improved recovery endpoint in `diagnosticsRouter.ts`
-4. Successfully recovered 98.7577 USDT stuck funds
+## Changes Made This Session
 
-## Known Outstanding Issues
-- **P1**: TRX hot wallet depletion monitoring
-- **P1**: Merchant webhook 404 error at `lockbaypaymentfixing-production.up.railway.app/webhook/dynopay`
+### Fix 1: 🟠 Token Refresh (was kicking users out on 401)
+- **File**: `axiosConfig.ts`
+- Added refresh token logic with request queueing in the 401 interceptor
+- On 401: tries `POST /api/user/refresh-token`, retries original request on success
+- Falls back to login redirect only when refresh fails
+- **Files**: `Redux/Reducers/userReducer.ts`, `Redux/Sagas/UserSaga.ts`  
+- Now stores `refreshToken` in localStorage alongside `accessToken`
+
+### Fix 2: 🟠 Server-Side Encryption (was exposing key in browser)
+- **Backend**: Added `POST /api/wallet/encrypt-payload` endpoint in `walletRouter.ts` + `walletController.ts`
+- **Frontend**: `helpers/createEncryption.ts` now calls backend instead of using exposed `NEXT_PUBLIC_CYPHER_KEY`
+- Updated 8 payment components to `await` the now-async function:
+  - CardComponent, CryptoComponent, MobileMoneyComponent, BankTransferComponent
+  - BankAccountComponent, QRCodeComponent, USSDComponent, pages/payment/index.tsx
+
+### Fix 3: 🟡 Duplicate API Calls in withdraw.tsx
+- **File**: `pages/withdraw.tsx`
+- Replaced direct `getWallet` API call with Redux store data (`walletReducer.walletList`)
+- Uses `WalletAction(WALLET_FETCH)` dispatch instead of duplicate direct call
+
+### Fix 4: 🟡 Redundant Payment API Calls
+- **New file**: `hooks/usePaymentRates.ts` — shared hook with module-level cache (30s TTL)
+- Replaced inline `getCurrencyRate` functions in 5 payment components:
+  - CryptoComponent, MobileMoneyComponent, BankAccountComponent
+  - USSDComponent, BankTransferComponent
 
 ---
 
@@ -31,6 +47,7 @@ DynoPay is a full-stack crypto payment gateway.
 - Use `deep_testing_backend_v2` for backend testing
 - Backend base URL: `http://localhost:8001`
 - All API routes prefixed with `/api`
+- The encrypt endpoint requires authentication (CSRF token)
 
 ### Frontend Testing  
 - Only test frontend with explicit user permission

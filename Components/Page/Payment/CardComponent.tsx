@@ -131,7 +131,7 @@ const CardComponent = () => {
       currency: walletState.currency,
       amount: walletState.amount,
     };
-    const res = createEncryption(JSON.stringify(finalPayload));
+    const res = await createEncryption(JSON.stringify(finalPayload));
 
     const {
       data: { data },
@@ -155,7 +155,7 @@ const CardComponent = () => {
       paymentType: paymentTypes.CARD,
       mode: authType,
     };
-    const res = createEncryption(JSON.stringify(finalPayload));
+    const res = await createEncryption(JSON.stringify(finalPayload));
 
     const {
       data: { data },

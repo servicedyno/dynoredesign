@@ -23,6 +23,7 @@ import FormManager from "../Common/FormManager";
 import * as yup from "yup";
 import Dropdown from "@/Components/UI/Dropdown";
 import { paymentTypes } from "@/utils/enums";
+import { usePaymentRates } from "@/hooks/usePaymentRates";
 
 const BankList = [
   { label: "Select Bank", value: "0" },
@@ -55,7 +56,6 @@ const USSDComponent = () => {
     hash: "",
   });
   const [currentBank, setCurrentBank] = useState("");
-  const [loading, setLoading] = useState(true);
   const [selectedCurrency, setSelectedCurrency] = useState<currencyData>();
   const [transferDetails, setTransferDetails] = useState<transferDetails>();
 
@@ -71,43 +71,30 @@ const USSDComponent = () => {
       }),
   });
 
+  // Use shared hook for currency rates
+  const isNGN = walletState.currency === "NGN";
+  const { rates: currencyRates, loading } = usePaymentRates({
+    source: walletState.currency,
+    amount: walletState.amount,
+    currencyList: ["NGN"],
+    enabled: !!(walletState.amount && walletState.currency && !isNGN),
+  });
+
   useEffect(() => {
-    if (walletState.amount && walletState.currency) {
-      if (walletState.currency !== "NGN") {
-        getCurrencyRate();
-      } else {
-        setSelectedCurrency({
-          currency: "NGN",
-          amount: walletState.amount.toString(),
-          transferRate: "1",
-        });
-      }
+    if (walletState.amount && walletState.currency && isNGN) {
+      setSelectedCurrency({
+        currency: "NGN",
+        amount: walletState.amount.toString(),
+        transferRate: "1",
+      });
     }
   }, [walletState.amount]);
 
-  const getCurrencyRate = async () => {
-    try {
-      const {
-        data: { data },
-      } = await axiosBaseApi.post("/wallet/getCurrencyRates", {
-        source: walletState.currency,
-        amount: walletState.amount,
-        currencyList: ["NGN"],
-      });
-
-      setSelectedCurrency(data[0]);
-      setLoading(false);
-    } catch (e: any) {
-      const message = e.response.data.message ?? e.message;
-      dispatch({
-        type: TOAST_SHOW,
-        payload: {
-          message: message,
-          severity: "error",
-        },
-      });
+  useEffect(() => {
+    if (currencyRates && currencyRates.length > 0 && !isNGN) {
+      setSelectedCurrency(currencyRates[0] as any);
     }
-  };
+  }, [currencyRates]);
 
   const handleSubmit = async () => {
     try {
@@ -139,7 +126,7 @@ const USSDComponent = () => {
       currency: selectedCurrency?.currency,
       amount: selectedCurrency?.amount,
     };
-    const res = createEncryption(JSON.stringify(finalPayload));
+    const res = await createEncryption(JSON.stringify(finalPayload));
 
     const {
       data: { data },
