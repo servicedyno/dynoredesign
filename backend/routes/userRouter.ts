@@ -68,6 +68,10 @@ userRouter.delete("/account", authMiddleware, userController.deleteAccount);
 // Onboarding status (requires auth) - check wallet, KYC, API key, company setup status
 userRouter.get("/onboarding-status", authMiddleware, userController.getOnboardingStatus);
 
+// Email verification endpoints (requires auth)
+userRouter.post("/verify-email", authMiddleware, userController.verifyEmail);
+userRouter.post("/resend-verification", authMiddleware, otpRateLimiter, userController.resendVerification);
+
 // Referee code unsubscribe (no auth required - uses token)
 userRouter.post("/unsubscribe-reminders", userController.unsubscribeFromReminders);
 userRouter.get("/unsubscribe-reminders/:token", userController.unsubscribeFromReminders);

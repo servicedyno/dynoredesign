@@ -21,6 +21,7 @@ import {
   authMiddleware,
   walletMiddleware,
 } from "../middleware";
+import emailVerifiedMiddleware from "../middleware/emailVerifiedMiddleware";
 // ITatumWebHook, IWebHook imports removed - not used
 import { strictRateLimiter } from "../middleware/rateLimitMiddleware";
 import apiRouter from "./apiRouter";
@@ -157,12 +158,12 @@ router.use("/user", userRouter);
 // Merchant API routes (unified) — supports both OLD and NEW auth flows
 router.use("/user", merchantApiRouter);
 router.use("/admin", adminRouter);
-router.use("/company", companyRouter);
+router.use("/company", authMiddleware, emailVerifiedMiddleware, companyRouter);
 router.use("/userApi", apiRouter);
-router.use("/wallet", authMiddleware, walletMiddleware, walletRouter);
+router.use("/wallet", authMiddleware, walletMiddleware, emailVerifiedMiddleware, walletRouter);
 router.use("/pay", paymentRouter);
 router.use("/tax", taxRouter);
-router.use("/dashboard", dashboardRouter);
+router.use("/dashboard", authMiddleware, emailVerifiedMiddleware, dashboardRouter);
 router.use("/notifications", notificationRouter);
 router.use("/kyc", kycRouter);
 router.use("/status", statusRouter); // Public status page endpoints

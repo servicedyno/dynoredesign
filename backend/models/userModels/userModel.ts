@@ -121,6 +121,13 @@ const userModel = sequelize.define(
       allowNull: true,
       comment: "referee_code, user_referral_referee, user_referral_referrer, referrer_reward, promo",
     },
+    // Email verification
+    email_verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: "Whether the user has verified their email address via OTP",
+    },
     // Security tracking
     last_login_ip: {
       type: DataTypes.STRING(50),

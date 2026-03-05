@@ -133,24 +133,25 @@ const registerUser = async (req: express.Request, res: express.Response) => {
         }
       }
 
-      // Send welcome email
-      try {
-        await emailService.sendWelcomeEmail(email.toLowerCase(), name);
-      } catch (emailError) {
-        // Log error but don't fail registration
-        userLogger.error("Error sending welcome email:", emailError);
-      }
-
-      const resData = await getAccessToken(createdUser.dataValues.user_id);
-
       // Send welcome email (non-blocking)
       emailService.sendWelcomeEmail(email.toLowerCase(), name).catch(err => {
         userLogger.error("Failed to send welcome email:", err);
-        // Don't fail registration if email fails
       });
 
-      successResponseHelper(res, 200, "Registered Successful!", {
+      // Generate email verification OTP and send it
+      const verifyOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const verifyKey = `email-verify:${createdUser.dataValues.user_id}`;
+      await setRedisItem(verifyKey, { otp: verifyOtp, createdAt: new Date().toISOString() });
+      await setRedisTTL(verifyKey, 600); // 10 minutes
+      emailService.sendEmailVerificationOTPEmail(email.toLowerCase(), name, verifyOtp).catch(err => {
+        userLogger.error("Failed to send email verification OTP:", err);
+      });
+
+      const resData = await getAccessToken(createdUser.dataValues.user_id);
+
+      successResponseHelper(res, 200, "Registered Successful! Please verify your email.", {
         ...resData,
+        email_verified: false,
         referral_code: userReferralCode,
         referred_by: referral_code || null,
       });
@@ -2140,6 +2141,14 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     // 6. Determine next steps
     const nextSteps: string[] = [];
     
+    // Check email verification status
+    const userRecord = await userModel.findOne({ where: { user_id: userId }, attributes: ['email_verified'] });
+    const isEmailVerified = userRecord?.dataValues?.email_verified === true;
+    
+    if (!isEmailVerified) {
+      nextSteps.push("Verify your email address to unlock all features");
+    }
+    
     if (!hasCompany) {
       nextSteps.push("Create a company to start accepting payments");
     }
@@ -2159,11 +2168,15 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
       nextSteps.push("Create a production API key for live payments");
     }
     
-    // 7. Determine if onboarding is complete
-    const onboardingComplete = hasCompany && hasWalletAddress && (!requiresKyc || kycApproved);
+    // 7. Determine if onboarding is complete (email must be verified)
+    const onboardingComplete = isEmailVerified && hasCompany && hasWalletAddress && (!requiresKyc || kycApproved);
     
     // Build response
     const onboardingStatus = {
+      email_verification: {
+        is_verified: isEmailVerified,
+        required_action: !isEmailVerified ? "Verify your email address" : null,
+      },
       wallet_setup: {
         has_wallet: hasCryptoWallet,  // Has at least one CRYPTO wallet type
         has_wallet_address: hasWalletAddress,  // Has at least one address to receive payments
@@ -2211,6 +2224,109 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
   }
 };
 
+/**
+ * POST /api/user/verify-email
+ * Verify email address using OTP sent during registration.
+ * Requires authentication.
+ */
+const verifyEmail = async (req: express.Request, res: express.Response) => {
+  try {
+    const userData = jwt.decode(res.locals.token) as IUserType;
+    const userId = userData.user_id;
+    const { otp } = req.body;
+
+    if (!otp) {
+      return errorResponseHelper(res, 400, "OTP is required");
+    }
+
+    // Check if already verified
+    const user = await userModel.findOne({ where: { user_id: userId } });
+    if (!user) {
+      return errorResponseHelper(res, 404, "User not found");
+    }
+    if (user.dataValues.email_verified) {
+      return successResponseHelper(res, 200, "Email is already verified", { email_verified: true });
+    }
+
+    // Check OTP from Redis
+    const verifyKey = `email-verify:${userId}`;
+    const storedData = await getRedisItem(verifyKey);
+    if (!storedData || typeof storedData !== 'object' || !('otp' in (storedData as Record<string, unknown>))) {
+      return errorResponseHelper(res, 400, "Verification code has expired. Please request a new one.");
+    }
+
+    const storedOtp = (storedData as Record<string, unknown>).otp;
+    if (String(storedOtp) !== String(otp)) {
+      return errorResponseHelper(res, 400, "Invalid verification code. Please try again.");
+    }
+
+    // OTP matches — mark email as verified
+    await userModel.update({ email_verified: true }, { where: { user_id: userId } });
+    await deleteRedisItem(verifyKey);
+
+    // Invalidate profile cache so subsequent calls reflect the change
+    await deleteRedisItem(`profile:${userId}`);
+
+    userLogger.info(`[VerifyEmail] Email verified for user ${userId}`);
+
+    return successResponseHelper(res, 200, "Email verified successfully!", { email_verified: true });
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
+/**
+ * POST /api/user/resend-verification
+ * Resend email verification OTP. Requires authentication.
+ * Rate limited: 1 request per 60 seconds.
+ */
+const resendVerification = async (req: express.Request, res: express.Response) => {
+  try {
+    const userData = jwt.decode(res.locals.token) as IUserType;
+    const userId = userData.user_id;
+
+    const user = await userModel.findOne({ where: { user_id: userId } });
+    if (!user) {
+      return errorResponseHelper(res, 404, "User not found");
+    }
+    if (user.dataValues.email_verified) {
+      return successResponseHelper(res, 200, "Email is already verified", { email_verified: true });
+    }
+
+    // Cooldown check — 60 seconds between resend requests
+    const cooldownKey = `email-verify-cooldown:${userId}`;
+    const cooldown = await getRedisItem(cooldownKey);
+    if (cooldown && Object.keys(cooldown).length > 0) {
+      return errorResponseHelper(res, 429, "Please wait 60 seconds before requesting a new code.");
+    }
+
+    // Generate new OTP
+    const email = user.dataValues.email;
+    const name = user.dataValues.name || "User";
+    const verifyOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store OTP with 10 min TTL
+    const verifyKey = `email-verify:${userId}`;
+    await setRedisItem(verifyKey, { otp: verifyOtp, createdAt: new Date().toISOString() });
+    await setRedisTTL(verifyKey, 600);
+
+    // Set 60s cooldown
+    await setRedisItem(cooldownKey, { sent: true });
+    await setRedisTTL(cooldownKey, 60);
+
+    // Send email (non-blocking)
+    emailService.sendEmailVerificationOTPEmail(email, name, verifyOtp).catch(err => {
+      userLogger.error("[ResendVerification] Failed to send verification email:", err);
+    });
+
+    userLogger.info(`[ResendVerification] Verification OTP resent for user ${userId}`);
+
+    return successResponseHelper(res, 200, "Verification code sent to your email.");
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
 export default {
   registerUser,
   registerPhoneStep1,
@@ -2236,4 +2352,6 @@ export default {
   unsubscribeFromReminders,
   unsubscribeFromPaymentReminders,
   getOnboardingStatus,
+  verifyEmail,
+  resendVerification,
 };
