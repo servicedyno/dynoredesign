@@ -104,14 +104,15 @@ const Register = () => {
     }
   }, [userState.error, pendingVerification, showOtpDialog]);
 
-  // When registration succeeds, show OTP dialog and send verification code
+  // When registration succeeds, show OTP dialog
+  // NOTE: Backend registerUser already sends the verification OTP email,
+  // so we only open the dialog — no need to call resend-verification here
   useEffect(() => {
     if (userState.name && pendingVerification && !showOtpDialog) {
       setShowOtpDialog(true);
-      dispatch(UserAction(USER_RESEND_VERIFICATION, { email }));
       setOtpCountdown(30);
     }
-  }, [userState.name, pendingVerification, showOtpDialog, email, dispatch]);
+  }, [userState.name, pendingVerification, showOtpDialog]);
 
   // Detect OTP verification result (loading transitions from true → false after submit)
   useEffect(() => {
