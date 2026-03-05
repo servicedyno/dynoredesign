@@ -10,6 +10,9 @@ import {
   USER_SEND_OTP,
   USER_SEND_RESET_LINK,
   USER_UPDATE,
+  USER_EMAIL_VERIFIED,
+  USER_VERIFY_EMAIL,
+  USER_RESEND_VERIFICATION,
 } from "../Actions/UserAction";
 
 const userInitialState = {
@@ -20,6 +23,7 @@ const userInitialState = {
   error: null as { message: string; actionType: string } | null,
   profile: null as any,
   profileLoading: false,
+  email_verified: false,
 };
 
 const userReducer = (state = userInitialState, action: ReducerAction) => {
@@ -60,6 +64,16 @@ const userReducer = (state = userInitialState, action: ReducerAction) => {
         ...state,
         profileLoading: false,
         profile: payload,
+        email_verified: payload?.email_verified ?? state.email_verified,
+      };
+
+    case USER_EMAIL_VERIFIED:
+      return {
+        ...state,
+        email_verified: true,
+        loading: false,
+        error: null,
+        profile: state.profile ? { ...state.profile, email_verified: true } : state.profile,
       };
 
     case USER_EMAIL_CHECK:

@@ -4,6 +4,7 @@ import NewSidebar from "@/Components/Layout/NewSidebar";
 import withAuth from "@/Components/Page/Common/HOC/withAuth";
 import { CompanyDialogProvider } from "@/Components/UI/CompanyDialog/context";
 import { CompanySettingsDialogProvider } from "@/Components/UI/CompanySettingsDialog/context";
+import EmailVerificationBanner from "@/Components/UI/EmailVerificationBanner";
 import Toast from "@/Components/UI/Toast";
 import useIsMobile from "@/hooks/useIsMobile";
 import { LayoutProps, rootReducer } from "@/utils/types";
@@ -76,6 +77,9 @@ const ClientLayout = ({
               </Box>
             </Box>
           </Box>
+
+          {/* ================= EMAIL VERIFICATION BANNER ================= */}
+          <EmailVerificationBanner />
 
           {/* ================= BODY ================= */}
           <Box

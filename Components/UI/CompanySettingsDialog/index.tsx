@@ -87,11 +87,26 @@ export default function CompanySettingsDialog({
   const [mediaFile, setMediaFile] = useState<File | undefined>();
   const [expanded, setExpanded] = useState<string | false>("company");
   const [openToast, setOpenToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastSeverity, setToastSeverity] = useState<"success" | "error">("success");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [autoConvertData, setAutoConvertData] = useState<{
     auto_convert_volatile_crypto: string;
     convert_to_stablecoin: string;
   } | null>(null);
+  const [webhookData, setWebhookData] = useState<{
+    webhook_url: string;
+    webhook_secret: string;
+  } | null>(null);
+
+  const showToast = (message: string, severity: "success" | "error" = "success") => {
+    setOpenToast(false);
+    setToastMessage(message);
+    setToastSeverity(severity);
+    setTimeout(() => setOpenToast(true), 0);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setOpenToast(false), 3000);
+  };
 
   const handleAccordionChange =
     (panel: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
@@ -198,6 +213,22 @@ export default function CompanySettingsDialog({
         .catch(() => {
           // Fallback to company data
         });
+
+      // Fetch webhook settings from dedicated endpoint
+      axiosBaseApi
+        .get(`/company/webhook-settings/${company.company_id}`)
+        .then((res) => {
+          const data = res?.data?.data;
+          if (data) {
+            setWebhookData({
+              webhook_url: data.webhook_url ?? "",
+              webhook_secret: data.webhook_secret ?? "",
+            });
+          }
+        })
+        .catch(() => {
+          // Fallback to company data
+        });
     }
   }, [open, company?.company_id]);
 
@@ -249,6 +280,18 @@ export default function CompanySettingsDialog({
       .catch(() => {
         // Silently fail — company update is the primary action
       });
+
+    // Save webhook settings via dedicated endpoint
+    const webhookUrl = values.webhook_notification_url || webhookData?.webhook_url;
+    if (webhookUrl) {
+      axiosBaseApi
+        .put(`/company/webhook-settings/${company.company_id}`, {
+          webhook_url: webhookUrl,
+        })
+        .catch(() => {
+          // Silently fail — company update is the primary action
+        });
+    }
 
     handleClose();
   };
@@ -330,37 +373,53 @@ export default function CompanySettingsDialog({
 
                   <WebhookNotificationsSection
                     notificationUrl={
+                      webhookData?.webhook_url ??
                       values.webhook_notification_url ??
                       initialFormValues.webhook_notification_url
                     }
                     secretKey={
+                      webhookData?.webhook_secret ??
                       values.webhook_secret_key ??
                       initialFormValues.webhook_secret_key
                     }
-                    onNotificationUrlChange={(value) =>
-                      handleFieldsChange({ webhook_notification_url: value })
-                    }
-                    onSecretKeyChange={(value) =>
-                      handleFieldsChange({ webhook_secret_key: value })
-                    }
-                    onRegenerateSecret={() => {
-                      // TODO: call API to regenerate webhook secret
+                    onNotificationUrlChange={(value) => {
+                      handleFieldsChange({ webhook_notification_url: value });
+                      setWebhookData((prev) => prev ? { ...prev, webhook_url: value } : { webhook_url: value, webhook_secret: "" });
                     }}
-                    onSendTest={() => {
-                      setOpenToast(false);
-
-                      setTimeout(() => {
-                        setOpenToast(true);
-                      }, 0);
-
-                      if (toastTimer.current) {
-                        clearTimeout(toastTimer.current);
+                    onSecretKeyChange={(value) => {
+                      handleFieldsChange({ webhook_secret_key: value });
+                      setWebhookData((prev) => prev ? { ...prev, webhook_secret: value } : { webhook_url: "", webhook_secret: value });
+                    }}
+                    onRegenerateSecret={async () => {
+                      if (!company?.company_id) return;
+                      try {
+                        const res = await axiosBaseApi.put(
+                          `/company/webhook-settings/${company.company_id}`,
+                          { webhook_secret: "generate" }
+                        );
+                        const data = res?.data?.data;
+                        if (data?.webhook_secret) {
+                          setWebhookData((prev) => prev
+                            ? { ...prev, webhook_secret: data.webhook_secret }
+                            : { webhook_url: "", webhook_secret: data.webhook_secret }
+                          );
+                          handleFieldsChange({ webhook_secret_key: data.webhook_secret });
+                          showToast("Webhook secret regenerated successfully!");
+                        }
+                      } catch {
+                        showToast("Failed to regenerate webhook secret", "error");
                       }
-
-                      toastTimer.current = setTimeout(() => {
-                        setOpenToast(false);
-                      }, 2000);
-                      // TODO: call API to send test webhook
+                    }}
+                    onSendTest={async () => {
+                      if (!company?.company_id) return;
+                      try {
+                        await axiosBaseApi.post(
+                          `/company/webhook-test/${company.company_id}`
+                        );
+                        showToast("Test webhook sent successfully!");
+                      } catch {
+                        showToast("Failed to send test webhook", "error");
+                      }
                     }}
                     isMobile={isMobile}
                     expanded={expanded === "webhook"}
@@ -432,8 +491,8 @@ export default function CompanySettingsDialog({
 
       <Toast
         open={openToast}
-        message={"Test notification sent successfully!"}
-        severity="success"
+        message={toastMessage}
+        severity={toastSeverity}
       />
     </>
   );

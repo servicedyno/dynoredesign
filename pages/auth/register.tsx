@@ -10,9 +10,9 @@ import { AuthContainer, CardWrapper } from "@/Containers/Login/styled";
 import useIsMobile from "@/hooks/useIsMobile";
 import {
   USER_API_ERROR,
-  USER_CONFIRM_CODE,
+  USER_VERIFY_EMAIL,
   USER_REGISTER,
-  USER_SEND_OTP,
+  USER_RESEND_VERIFICATION,
   UserAction,
 } from "@/Redux/Actions/UserAction";
 import { theme } from "@/styles/theme";
@@ -108,7 +108,7 @@ const Register = () => {
   useEffect(() => {
     if (userState.name && pendingVerification && !showOtpDialog) {
       setShowOtpDialog(true);
-      dispatch(UserAction(USER_SEND_OTP, { email }));
+      dispatch(UserAction(USER_RESEND_VERIFICATION, { email }));
       setOtpCountdown(30);
     }
   }, [userState.name, pendingVerification, showOtpDialog, email, dispatch]);
@@ -116,18 +116,22 @@ const Register = () => {
   // Detect OTP verification result (loading transitions from true → false after submit)
   useEffect(() => {
     if (prevLoading.current && !userState.loading && otpSubmitted) {
-      if (!userState.error) {
-        // OTP verified — allow redirect
-        setShowOtpDialog(false);
-        setPendingVerification(false);
-        setOtpSubmitted(false);
-      } else {
+      if (!userState.error || (userState.error && userState.error.actionType !== USER_VERIFY_EMAIL)) {
+        // Check if email_verified was set
+        if (userState.email_verified) {
+          // OTP verified — allow redirect
+          setShowOtpDialog(false);
+          setPendingVerification(false);
+          setOtpSubmitted(false);
+        }
+      }
+      if (userState.error && userState.error.actionType === USER_VERIFY_EMAIL) {
         setOtpError(userState.error.message || t("enterOTPError"));
         setOtpSubmitted(false);
       }
     }
     prevLoading.current = userState.loading;
-  }, [userState.loading, userState.error, otpSubmitted, t]);
+  }, [userState.loading, userState.error, userState.email_verified, otpSubmitted, t]);
 
   // OTP countdown timer
   useEffect(() => {
@@ -142,14 +146,14 @@ const Register = () => {
     (otp: string) => {
       setOtpError("");
       setOtpSubmitted(true);
-      dispatch(UserAction(USER_CONFIRM_CODE, { email, otp: otp.trim() }));
+      dispatch(UserAction(USER_VERIFY_EMAIL, { otp: otp.trim() }));
     },
-    [dispatch, email],
+    [dispatch],
   );
 
   const handleResendOtp = useCallback(() => {
     setOtpError("");
-    dispatch(UserAction(USER_SEND_OTP, { email }));
+    dispatch(UserAction(USER_RESEND_VERIFICATION, { email }));
     setOtpCountdown(30);
   }, [dispatch, email]);
 

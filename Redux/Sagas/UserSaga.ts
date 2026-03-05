@@ -12,6 +12,9 @@ import {
   USER_SEND_RESET_LINK,
   USER_UPDATE,
   USER_UPDATE_PASSWORD,
+  USER_VERIFY_EMAIL,
+  USER_RESEND_VERIFICATION,
+  USER_EMAIL_VERIFIED,
 } from "../Actions/UserAction";
 import axios from "@/axiosConfig";
 import { TOAST_SHOW } from "../Actions/ToastAction";
@@ -50,6 +53,12 @@ export function* UserSaga(action: IUserAction): unknown {
       break;
     case USER_PROFILE_FETCH:
       yield fetchProfile();
+      break;
+    case USER_VERIFY_EMAIL:
+      yield verifyEmail(action.payload);
+      break;
+    case USER_RESEND_VERIFICATION:
+      yield resendVerification(action.payload);
       break;
     default:
       yield put({ type: USER_API_ERROR });
@@ -480,6 +489,77 @@ function* fetchProfile(): unknown {
         message: message,
         actionType: USER_PROFILE_FETCH,
       },
+    });
+  }
+}
+
+
+function* verifyEmail(payload: any): unknown {
+  try {
+    const response = yield call(axios.post, "user/verify-email", { otp: payload.otp });
+    const responseData = response?.data;
+
+    if (!responseData) {
+      throw new Error("Invalid response from server");
+    }
+
+    if (responseData.success === false) {
+      const errorMessage = responseData.message || "Email verification failed";
+      throw new Error(errorMessage);
+    }
+
+    const { message } = responseData;
+
+    yield put({
+      type: TOAST_SHOW,
+      payload: { message: message || "Email verified successfully!" },
+    });
+    yield put({
+      type: USER_EMAIL_VERIFIED,
+      payload: { email_verified: true },
+    });
+  } catch (e: any) {
+    const message = e.response?.data?.message ?? e.message ?? "Email verification failed";
+    yield put({
+      type: TOAST_SHOW,
+      payload: { message, severity: "error" },
+    });
+    yield put({
+      type: USER_API_ERROR,
+      payload: { message, actionType: USER_VERIFY_EMAIL },
+    });
+  }
+}
+
+function* resendVerification(_payload: any): unknown {
+  try {
+    const response = yield call(axios.post, "user/resend-verification");
+    const responseData = response?.data;
+
+    if (!responseData) {
+      throw new Error("Invalid response from server");
+    }
+
+    if (responseData.success === false) {
+      const errorMessage = responseData.message || "Failed to resend verification";
+      throw new Error(errorMessage);
+    }
+
+    const { message } = responseData;
+
+    yield put({
+      type: TOAST_SHOW,
+      payload: { message: message || "Verification code sent!" },
+    });
+  } catch (e: any) {
+    const message = e.response?.data?.message ?? e.message ?? "Failed to resend verification";
+    yield put({
+      type: TOAST_SHOW,
+      payload: { message, severity: "error" },
+    });
+    yield put({
+      type: USER_API_ERROR,
+      payload: { message, actionType: USER_RESEND_VERIFICATION },
     });
   }
 }

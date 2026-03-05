@@ -635,10 +635,51 @@ export default function Login() {
   };
 
   // Handle Google social login
-  const handleGoogleLogin = () => {
-    signIn("google", {
-      callbackUrl: "/auth/validateSocialLogin",
-    });
+  // Uses client-side Google Sign-In to avoid NextAuth /api/auth/* route conflicts
+  // with K8s ingress. Falls back to NextAuth if client-side fails.
+  const handleGoogleLogin = async () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      // Fallback to NextAuth
+      signIn("google", { callbackUrl: "/auth/validateSocialLogin" });
+      return;
+    }
+
+    try {
+      // Try loading Google Identity Services
+      if (typeof window !== "undefined" && (window as any).google?.accounts?.oauth2) {
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: "openid email profile",
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse?.access_token) {
+              try {
+                const res = await axiosBaseApi.post("user/google-signin", {
+                  accessToken: tokenResponse.access_token,
+                });
+                const { data, message } = res?.data || {};
+                if (data?.userData && data?.accessToken) {
+                  dispatch({ type: TOAST_SHOW, payload: { message: message || "Login successful" } });
+                  dispatch({ type: USER_LOGIN, payload: { ...data.userData, accessToken: data.accessToken } });
+                } else {
+                  throw new Error("Invalid response");
+                }
+              } catch (e: any) {
+                const msg = e.response?.data?.message ?? e.message ?? "Google login failed";
+                dispatch({ type: TOAST_SHOW, payload: { message: msg, severity: "error" } });
+              }
+            }
+          },
+        });
+        tokenClient.requestAccessToken();
+      } else {
+        // Google Identity Services not loaded, fallback to NextAuth
+        signIn("google", { callbackUrl: "/auth/validateSocialLogin" });
+      }
+    } catch {
+      // Fallback to NextAuth
+      signIn("google", { callbackUrl: "/auth/validateSocialLogin" });
+    }
   };
 
   // Forgot password countdown timer

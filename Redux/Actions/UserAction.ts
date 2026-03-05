@@ -10,6 +10,9 @@ export const USER_UPDATE = "USER_UPDATE";
 export const USER_UPDATE_PASSWORD = "USER_UPDATE_PASSWORD";
 export const USER_RESET_PASSWORD = "USER_RESET_PASSWORD";
 export const USER_PROFILE_FETCH = "USER_PROFILE_FETCH";
+export const USER_VERIFY_EMAIL = "USER_VERIFY_EMAIL";
+export const USER_RESEND_VERIFICATION = "USER_RESEND_VERIFICATION";
+export const USER_EMAIL_VERIFIED = "USER_EMAIL_VERIFIED";
 
 export const UserAction = (type?: string, data?: any) => {
   return { type: USER_INIT, payload: data, crudType: type };

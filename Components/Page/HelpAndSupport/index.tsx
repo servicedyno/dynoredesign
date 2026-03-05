@@ -1,5 +1,5 @@
 import useIsMobile from "@/hooks/useIsMobile";
-import { Box, Button } from "@mui/material";
+import { Box, Button, CircularProgress } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import CallIcon from "@/assets/Icons/CallIcon.svg";
 import MessageIcon from "@/assets/Icons/MessageIcon.svg";
@@ -13,29 +13,129 @@ import {
 import ArrowOutwardIcon from "@mui/icons-material/ArrowOutward";
 import { theme } from "@/styles/theme";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import HelpAndSupportData from "@/hooks/useHelpAndSupportData";
 import SearchIcon from "@/assets/Icons/search-icon.svg";
+import axiosBaseApi from "@/axiosConfig";
+
+interface KBArticle {
+    article_id: number;
+    title: string;
+    slug: string;
+    excerpt?: string;
+    description?: string;
+    category_name?: string;
+    reading_time_minutes?: number;
+}
 
 const HelpAndSupport = () => {
     const isMobile = useIsMobile("md");
     const { t } = useTranslation("helpAndSupport");
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState("");
-    const [filteredData, setFilteredData] = useState(HelpAndSupportData);
+    const [articles, setArticles] = useState<KBArticle[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searching, setSearching] = useState(false);
 
-    const handleSearch = () => {
+    // Fetch articles from KB API, fallback to hardcoded data
+    useEffect(() => {
+        const fetchArticles = async () => {
+            try {
+                setLoading(true);
+                const res = await axiosBaseApi.get("/kb/articles?limit=20");
+                const data = res?.data?.data;
+                if (data?.articles && data.articles.length > 0) {
+                    setArticles(data.articles.map((a: any) => ({
+                        article_id: a.article_id,
+                        title: a.title,
+                        slug: a.slug,
+                        excerpt: a.excerpt || a.description || "",
+                        description: a.excerpt || a.description || "",
+                        category_name: a.category_name || "",
+                        reading_time_minutes: a.reading_time_minutes || 0,
+                    })));
+                } else {
+                    // Fallback to hardcoded data
+                    setArticles(HelpAndSupportData.map((item, i) => ({
+                        article_id: i,
+                        title: item.title,
+                        slug: item.slug,
+                        description: item.description,
+                        excerpt: item.description,
+                    })));
+                }
+            } catch {
+                // Fallback to hardcoded data on error
+                setArticles(HelpAndSupportData.map((item, i) => ({
+                    article_id: i,
+                    title: item.title,
+                    slug: item.slug,
+                    description: item.description,
+                    excerpt: item.description,
+                })));
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchArticles();
+    }, []);
+
+    const handleSearch = useCallback(async () => {
         if (!searchTerm.trim()) {
-            setFilteredData(HelpAndSupportData);
+            // Reset to all articles
+            try {
+                const res = await axiosBaseApi.get("/kb/articles?limit=20");
+                const data = res?.data?.data;
+                if (data?.articles) {
+                    setArticles(data.articles.map((a: any) => ({
+                        article_id: a.article_id,
+                        title: a.title,
+                        slug: a.slug,
+                        excerpt: a.excerpt || a.description || "",
+                        description: a.excerpt || a.description || "",
+                    })));
+                }
+            } catch {
+                setArticles(HelpAndSupportData.map((item, i) => ({
+                    article_id: i,
+                    title: item.title,
+                    slug: item.slug,
+                    description: item.description,
+                    excerpt: item.description,
+                })));
+            }
             return;
         }
 
-        const filtered = HelpAndSupportData.filter(item =>
-            item.title.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-        setFilteredData(filtered);
-    };
+        try {
+            setSearching(true);
+            const res = await axiosBaseApi.get(`/kb/search?q=${encodeURIComponent(searchTerm)}&limit=20`);
+            const data = res?.data?.data;
+            if (data?.articles) {
+                setArticles(data.articles.map((a: any) => ({
+                    article_id: a.article_id,
+                    title: a.title,
+                    slug: a.slug,
+                    excerpt: a.excerpt || a.description || "",
+                    description: a.excerpt || a.description || "",
+                })));
+            }
+        } catch {
+            // Fallback to client-side filter
+            const filtered = HelpAndSupportData.filter(item =>
+                item.title.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            setArticles(filtered.map((item, i) => ({
+                article_id: i,
+                title: item.title,
+                slug: item.slug,
+                description: item.description,
+                excerpt: item.description,
+            })));
+        } finally {
+            setSearching(false);
+        }
+    }, [searchTerm]);
 
     const footerData = [
         {
@@ -43,7 +143,7 @@ const HelpAndSupport = () => {
             contectDetail: "+1 892 8444-531",
             buttonContent: "",
             icon: CallIcon,
-            responseTime: "Mon–Fri, 9 AM – 6 PM (ET)",
+            responseTime: "Mon-Fri, 9 AM - 6 PM (ET)",
         },
         {
             contectType: t("emailUs"),
@@ -62,18 +162,20 @@ const HelpAndSupport = () => {
     ];
 
     useEffect(() => {
-        document.addEventListener("keydown", (e) => {
+        const handler = (e: KeyboardEvent) => {
             if (e.key === "Enter") {
                 handleSearch();
             }
-        });
+        };
+        document.addEventListener("keydown", handler);
+        return () => document.removeEventListener("keydown", handler);
     }, [handleSearch]);
 
     useEffect(() => {
         if (searchTerm === "") {
-            setFilteredData(HelpAndSupportData);
+            handleSearch();
         }
-    }, [searchTerm])
+    }, [searchTerm]);
 
     return (
         <Box
@@ -121,51 +223,72 @@ const HelpAndSupport = () => {
             </Box>
 
             <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: "20px", }}>
-                <Box
-                    sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        width: "100%",
-                        gap: "24px",
-                        justifyContent: "flex-start",
-                    }}
-                >
-                    {filteredData.map((item, index) => (
-                        <Box
-                            key={index}
-                            sx={{
-                                width: isMobile ? "330px" : "355px",
-                                height: isMobile ? "160px" : "202px",
-                                backgroundColor: "#FFFFFF",
-                                border: "1px solid #E9ECF2",
-                                borderRadius: "14px",
-                                display: "flex",
-                                flexDirection: "column",
-                                justifyContent: "space-between",
-                                padding: "20px",
-                            }}
-                        >
-                            <TextDecoration style={{ fontSize: isMobile ? "15px" : "20px", color: "#242428" }}>
-                                {item.title}
+                {loading || searching ? (
+                    <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                        <CircularProgress size={32} />
+                    </Box>
+                ) : (
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            width: "100%",
+                            gap: "24px",
+                            justifyContent: "flex-start",
+                        }}
+                    >
+                        {articles.length === 0 ? (
+                            <TextDecoration style={{ fontSize: "15px", color: "#676768" }}>
+                                {t("noResults") || "No articles found. Try a different search term."}
                             </TextDecoration>
-                            <TextDecoration style={{ fontSize: isMobile ? "13px" : "15px", color: "#676768" }}>
-                                {item.description}
-                            </TextDecoration>
+                        ) : (
+                            articles.map((item, index) => (
+                                <Box
+                                    key={item.article_id || index}
+                                    sx={{
+                                        width: isMobile ? "330px" : "355px",
+                                        height: isMobile ? "160px" : "202px",
+                                        backgroundColor: "#FFFFFF",
+                                        border: "1px solid #E9ECF2",
+                                        borderRadius: "14px",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        justifyContent: "space-between",
+                                        padding: "20px",
+                                        cursor: "pointer",
+                                        transition: "box-shadow 0.2s",
+                                        "&:hover": {
+                                            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                                        },
+                                    }}
+                                    onClick={() => router.push(`/help-support/${item.slug}`)}
+                                >
+                                    <TextDecoration style={{ fontSize: isMobile ? "15px" : "20px", color: "#242428" }}>
+                                        {item.title}
+                                    </TextDecoration>
+                                    <TextDecoration style={{ fontSize: isMobile ? "13px" : "15px", color: "#676768" }}>
+                                        {item.excerpt || item.description}
+                                    </TextDecoration>
 
-                            <SearchIconButton
-                                style={{
-                                    marginLeft: "auto",
-                                    borderColor: theme.palette.text.secondary,
-                                }}
-                                onClick={() => router.push(`/help-support/${item.slug}`)}
-                            >
-                                <ArrowOutwardIcon
-                                    sx={{ color: theme.palette.text.secondary, fontSize: 18.5 }}
-                                />
-                            </SearchIconButton>
-                        </Box>
-                    ))}
-                </Box>
+                                    <SearchIconButton
+                                        style={{
+                                            marginLeft: "auto",
+                                            borderColor: theme.palette.text.secondary,
+                                        }}
+                                        onClick={(e: React.MouseEvent) => {
+                                            e.stopPropagation();
+                                            router.push(`/help-support/${item.slug}`);
+                                        }}
+                                    >
+                                        <ArrowOutwardIcon
+                                            sx={{ color: theme.palette.text.secondary, fontSize: 18.5 }}
+                                        />
+                                    </SearchIconButton>
+                                </Box>
+                            ))
+                        )}
+                    </Box>
+                )}
 
                 <TextDecoration sx={{ fontSize: "24px" }}>{t("needHelp")}</TextDecoration>
 
