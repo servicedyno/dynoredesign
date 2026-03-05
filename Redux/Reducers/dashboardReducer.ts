@@ -1,0 +1,100 @@
+import { ReducerAction } from "@/utils/types";
+import {
+  DASHBOARD_FETCH,
+  DASHBOARD_CHART_FETCH,
+  DASHBOARD_FEE_TIERS_FETCH,
+  DASHBOARD_RECENT_TX_FETCH,
+  DASHBOARD_ERROR,
+  DASHBOARD_INIT,
+} from "../Actions/DashboardAction";
+
+export interface DashboardState {
+  stats: {
+    totalTransactions: number;
+    totalVolume: number;
+    activeWallets: number;
+    transactionChange: number;
+    volumeChange: number;
+  };
+  chartData: Array<{ date: string; value: number }>;
+  feeTiers: {
+    monthlyLimit: number;
+    usedAmount: number;
+    currentTier: string;
+  };
+  recentTransactions: any[];
+  loading: boolean;
+  chartLoading: boolean;
+}
+
+const dashboardInitialState: DashboardState = {
+  stats: {
+    totalTransactions: 0,
+    totalVolume: 0,
+    activeWallets: 0,
+    transactionChange: 0,
+    volumeChange: 0,
+  },
+  chartData: [],
+  feeTiers: {
+    monthlyLimit: 50000,
+    usedAmount: 0,
+    currentTier: "Standard",
+  },
+  recentTransactions: [],
+  loading: false,
+  chartLoading: false,
+};
+
+const dashboardReducer = (
+  state = dashboardInitialState,
+  action: ReducerAction
+) => {
+  const { payload } = action;
+
+  switch (action.type) {
+    case DASHBOARD_INIT:
+      return {
+        ...state,
+        loading: true,
+      };
+
+    case DASHBOARD_FETCH:
+      return {
+        ...state,
+        loading: false,
+        stats: payload.stats || state.stats,
+      };
+
+    case DASHBOARD_CHART_FETCH:
+      return {
+        ...state,
+        chartLoading: false,
+        chartData: payload.chartData || state.chartData,
+      };
+
+    case DASHBOARD_FEE_TIERS_FETCH:
+      return {
+        ...state,
+        feeTiers: payload.feeTiers || state.feeTiers,
+      };
+
+    case DASHBOARD_RECENT_TX_FETCH:
+      return {
+        ...state,
+        recentTransactions: payload.recentTransactions || state.recentTransactions,
+      };
+
+    case DASHBOARD_ERROR:
+      return {
+        ...state,
+        loading: false,
+        chartLoading: false,
+      };
+
+    default:
+      return state;
+  }
+};
+
+export default dashboardReducer;

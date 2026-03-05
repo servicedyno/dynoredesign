@@ -1,0 +1,23 @@
+{
+  "language": "Langue",
+  "english": "Anglais",
+  "spanish": "Espagnol",
+  "homePageName": "Accueil",
+  "homeHeading": "Bonjour !",
+  "homeTagline": "Gérez votre argent en toute sécurité avec BozzWallet.",
+  "copiedToClipboard": "Copié dans le presse-papiers",
+  "yourReferralCode": "Votre code de parrainage",
+  "helpSupport": "Aide et Support",
+  "transactionsNotAvailable": "Transactions Non Disponibles",
+  "EmptyTransactionTitle": "Il n'y a pas de transactions",
+  "EmptyTransactionDescription": "Commencez à accepter des paiements pour voir les transactions",
+  "createPaymentLink": "Créer un Lien de Paiement",
+  "EmptyWalletTitle": "Il n'y a pas de portefeuilles",
+  "EmptyWalletDescription": "Ajoutons le premier",
+  "addWallet": "Ajouter un portefeuille",
+  "EmptyApiKeyTitle": "Il n'y a pas de clés API",
+  "EmptyApiKeyDescription": "Créons la première",
+  "createNewKey": "Créer une Nouvelle Clé",
+  "EmptyPaymentLinkTitle": "Il n'y a pas de liens de paiement",
+  "EmptyPaymentLinkDescription": "Créons le premier"
+}

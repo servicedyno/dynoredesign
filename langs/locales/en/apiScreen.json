@@ -1,0 +1,75 @@
+{
+  "apiKeysTitle": "API Keys",
+  "apiKeysDescription": "Manage API keys for integrating DynoPay into your applications",
+  "createNewKey": "Create New Key",
+  "createKeyMobile": "Create",
+  "documentation": {
+    "title": "API Documentation",
+    "description": "Learn how to integrate DynoPay into your application with our complete API documentation",
+    "viewDocumentation": "View Documentation",
+    "infoIconAlt": "information"
+  },
+    "icons": {
+    "copyAlt": "copy",
+    "eyeAlt": "view",
+    "trashAlt": "delete"
+  },
+  "status": {
+    "active": "Active"
+  },
+  "createdOn": "Created on {{date}} at {{time}}",
+  "validation": {
+    "selectCompany": "Please select a company"
+  },
+  "company": {
+    "selectCompany": "Select Company",
+    "label": "Company Name"
+  },
+  "currency": {
+    "baseCurrency": "Base Currency"
+  },
+  "toast": {
+    "copied": "Copied!"
+  },
+  "delete": {
+    "title": "Delete API key",
+    "confirmMessage": "Are you sure you want to delete this API key? Applications using this key will no longer be able to access the API. This action cannot be undone.",
+    "confirmButton": "Delete"
+  },
+  "security": {
+    "title": "Security Best Practices:",
+    "description": "Keep your API keys secure and never share them publicly. If you suspect a key has been compromised, delete it immediately and create a new one."
+  },
+  "generate": {
+    "modalTitle": "Create New API Key",
+    "modalSubtitle": "Generate a new API key to integrate DynoPay into your app",
+    "submit": "Generate",
+    "keyName": "Key Name",
+    "keyNamePlaceholder": "e.g.: App Production",
+    "baseCurrency": "Base Currency",
+    "baseCurrencyPlaceholder": "Enter base currency",
+    "keyNameDescription": "Key Permissions",
+    "keyNameDescription1": "Create and manage payment requests",
+    "keyNameDescription2": "View transaction history",
+    "keyNameDescription3": "Receive webhook notifications",
+    "keyNameDescription4": "Access wallet information",
+    "successTitle": "API Key Generated",
+    "successSubtitle": "Save this key now - you won't be able to see it again",
+    "yourKey": "API",
+    "adminToken": "Admin Token",
+    "securityTitle": "Important Security Notice",
+    "securityMessage": "Make sure to copy your API key now. For security reasons, we won't show it again. Store it securely and never share it publicly."
+  },
+  "withdrawalWhitelist": {
+    "title": "Withdrawal Whitelist",
+    "description": "Once enabled, your account will only be able to withdraw to addresses on your whitelist.",
+    "addressManagement": "Address Management",
+    "off": "OFF",
+    "enable": "Enable"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "generate": "Generate Key",
+    "done": "Done"
+  }
+}

@@ -1,0 +1,212 @@
+import MobileNavigationBar from "@/Components/Layout/MobileNavigationBar";
+import NewHeader from "@/Components/Layout/NewHeader";
+import NewSidebar from "@/Components/Layout/NewSidebar";
+import withAuth from "@/Components/Page/Common/HOC/withAuth";
+import { CompanyDialogProvider } from "@/Components/UI/CompanyDialog/context";
+import { CompanySettingsDialogProvider } from "@/Components/UI/CompanySettingsDialog/context";
+import Toast from "@/Components/UI/Toast";
+import useIsMobile from "@/hooks/useIsMobile";
+import { LayoutProps, rootReducer } from "@/utils/types";
+import { Box, SxProps, Theme, useTheme } from "@mui/material";
+import { useRouter } from "next/router";
+import { useSelector } from "react-redux";
+import {
+  MainPageHeader,
+  PageHeader,
+  PageHeaderDescription,
+  PageHeaderTitle,
+} from "./styled";
+
+const ClientLayout = ({
+  children,
+  pageName,
+  pageDescription,
+  pageWarning,
+  pageAction,
+  pageHeaderSx,
+}: LayoutProps) => {
+  const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useIsMobile("md");
+  const ToastState = useSelector((state: rootReducer) => state.toastReducer);
+  const isDashboard =
+    router.pathname === "/dashboard" ||
+    router.pathname === "/pay-links" ||
+    router.pathname === "/transactions";
+  return (
+    <>
+    <CompanyDialogProvider>
+      <CompanySettingsDialogProvider>
+        <Box
+          sx={{
+            height: "100dvh",
+            width: "100%",
+            p: {
+              xs: isDashboard ? "0px" : "8px 16px 0px 16px",
+              md: "16px 23px 16px 23px",
+              lg: "16px 23px 16px 23px",
+              xl: "16px 40px 16px 40px",
+            },
+            display: "flex",
+            overflow: "hidden",
+            flexDirection: "column",
+            backgroundColor: theme.palette.secondary.main,
+            gap: isMobile ? "20px" : "24px",
+          }}
+        >
+          {/* ================= HEADER ================= */}
+          <Box
+            sx={{
+              p: {
+                xs: isDashboard ? "8px 16px 0px 16px" : "0px",
+                md: "0px",
+              },
+            }}
+          >
+            <Box
+              sx={{
+                height: isMobile ? "40px" : "56px",
+                width: "100%",
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <Box sx={{ width: "100%", maxWidth: "1840px" }}>
+                <NewHeader />
+              </Box>
+            </Box>
+          </Box>
+
+          {/* ================= BODY ================= */}
+          <Box
+            sx={{
+              flex: 1,
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              overflow: "hidden",
+            }}
+          >
+            <Box
+              sx={{
+                width: "100%",
+                maxWidth: "1840px",
+                display: "flex",
+                gap: "24px",
+                overflow: "hidden",
+              }}
+            >
+              {/* ================= SIDEBAR ================= */}
+              <Box
+                sx={{
+                  width: "clamp(265px, 18vw, 324px)",
+                  height: "100%",
+                  overflow: "hidden",
+                  display: { xs: "none", lg: "block" },
+                }}
+              >
+                <NewSidebar />
+              </Box>
+
+              {/* ================= MAIN CONTENT ================= */}
+              <Box
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: "100%",
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                  pb: { xs: 10, lg: 0 },
+                }}
+              >
+                {(pageName || pageDescription) && (
+                  <MainPageHeader
+                    sx={{
+                      p: {
+                        xs: isDashboard ? "0px 16px 0px 16px" : "0px",
+                        md: "0px",
+                      },
+                    }}
+                  >
+                    <PageHeader
+                      sx={
+                        pageHeaderSx
+                          ? ([
+                              { pt: 0, pb: { lg: 2.5, md: 1.5, xs: 2 }, mb: 0 },
+                              pageHeaderSx,
+                            ] as SxProps<Theme>)
+                          : { pt: 0, pb: { lg: 2.5, md: 1.5, xs: 2 }, mb: 0 }
+                      }
+                    >
+                      <Box
+                        sx={{
+                          flex: 1,
+                          minWidth: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: isMobile ? "6px" : "8px",
+                        }}
+                      >
+                        {pageName && (
+                          <PageHeaderTitle variant="h1">
+                            {pageName}
+                          </PageHeaderTitle>
+                        )}
+                        {pageDescription && (
+                          <PageHeaderDescription variant="body1">
+                            {pageDescription}
+                          </PageHeaderDescription>
+                        )}
+                      </Box>
+
+                      {pageAction && (
+                        <Box
+                          sx={{
+                            flexShrink: 0,
+                            pt: { xs: 1, md: 0 },
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: { xs: 1, md: 2 },
+                          }}
+                          className="pageAction"
+                        >
+                          {pageAction}
+                        </Box>
+                      )}
+                    </PageHeader>
+
+                    {pageWarning && (
+                      <Box
+                        sx={{ mb: { xs: 1, md: 2.5 }, mt: { xs: 0, md: 0 } }}
+                      >
+                        {pageWarning}
+                      </Box>
+                    )}
+                  </MainPageHeader>
+                )}
+
+                {children}
+              </Box>
+            </Box>
+          </Box>
+
+          {/* ================= MOBILE NAV ================= */}
+          <Box sx={{ display: { xs: "block", lg: "none" } }}>
+            <MobileNavigationBar />
+          </Box>
+        </Box>
+      </CompanySettingsDialogProvider>
+    </CompanyDialogProvider>
+    <Toast
+      open={ToastState.open}
+      message={ToastState.message}
+      severity={ToastState.severity || "success"}
+      loading={ToastState.loading}
+    />
+    </>
+  );
+};
+
+export default withAuth(ClientLayout);

@@ -1,0 +1,657 @@
+import {
+  Box,
+  Typography,
+  useTheme,
+  Chip,
+  Skeleton,
+  LinearProgress,
+  linearProgressClasses,
+} from "@mui/material";
+import {
+  PeopleAltRounded,
+  EmojiEventsRounded,
+  MonetizationOnRounded,
+  DiscountRounded,
+  ContentCopyRounded,
+  ShareRounded,
+  PersonAddRounded,
+} from "@mui/icons-material";
+import Head from "next/head";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import useIsMobile from "@/hooks/useIsMobile";
+import axiosBaseApi from "@/axiosConfig";
+import PanelCard from "@/Components/UI/PanelCard";
+import Toast from "@/Components/UI/Toast";
+import { pageProps } from "@/utils/types";
+
+type ReferralStats = {
+  referral_code: string;
+  referral_link: string;
+  stats: {
+    total_referrals: number;
+    pending_referrals: number;
+    active_referrals: number;
+    rewarded_referrals: number;
+    total_earnings: string;
+  };
+};
+
+type Referral = {
+  id: number;
+  referred_email: string;
+  referred_name: string;
+  status: string;
+  created_at: string;
+};
+
+type Earnings = {
+  summary: {
+    total_earnings: number;
+    pending_earnings: number;
+    credited_earnings: number;
+    withdrawn_earnings: number;
+  };
+  rewards: Array<{
+    id: number;
+    amount: number;
+    status: string;
+    created_at: string;
+    description: string;
+  }>;
+};
+
+type DiscountStatus = {
+  has_discount: boolean | null;
+  discount_percent: number;
+  expires_at: string | null;
+  reason: string | null;
+  days_remaining: number;
+};
+
+type LeaderboardEntry = {
+  rank: number;
+  name: string;
+  referral_count: number;
+  is_current_user: boolean;
+};
+
+const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
+  const theme = useTheme();
+  const isMobile = useIsMobile("md");
+  const { t } = useTranslation("common");
+
+  const [loading, setLoading] = useState(true);
+  const [codeData, setCodeData] = useState<ReferralStats | null>(null);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [earnings, setEarnings] = useState<Earnings | null>(null);
+  const [discount, setDiscount] = useState<DiscountStatus | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [toast, setToast] = useState({ open: false, message: "", severity: "success" as "success" | "error" });
+
+  useEffect(() => {
+    if (setPageName && setPageDescription) {
+      setPageName("Referrals");
+      setPageDescription("Earn rewards by inviting others to DynoPay");
+    }
+  }, [setPageName, setPageDescription]);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      setLoading(true);
+      try {
+        const [codeRes, listRes, earningsRes, discountRes, leaderboardRes] =
+          await Promise.allSettled([
+            axiosBaseApi.get("/referral/my-code"),
+            axiosBaseApi.get("/referral/list"),
+            axiosBaseApi.get("/referral/earnings"),
+            axiosBaseApi.get("/referral/discount-status"),
+            axiosBaseApi.get("/referral/leaderboard"),
+          ]);
+
+        if (codeRes.status === "fulfilled") setCodeData(codeRes.value.data.data);
+        if (listRes.status === "fulfilled") setReferrals(listRes.value.data.data.referrals || []);
+        if (earningsRes.status === "fulfilled") setEarnings(earningsRes.value.data.data);
+        if (discountRes.status === "fulfilled") setDiscount(discountRes.value.data.data);
+        if (leaderboardRes.status === "fulfilled") setLeaderboard(leaderboardRes.value.data.data.leaderboard || []);
+      } catch {
+        // Individual errors handled by allSettled
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
+  }, []);
+
+  const handleCopy = useCallback((text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setToast({ open: true, message: `${label} copied!`, severity: "success" });
+    setTimeout(() => setToast((p) => ({ ...p, open: false })), 2000);
+  }, []);
+
+  const stats = codeData?.stats;
+
+  const statCards = [
+    { label: "Total Referrals", value: stats?.total_referrals ?? 0, icon: PeopleAltRounded, color: theme.palette.primary.main },
+    { label: "Active", value: stats?.active_referrals ?? 0, icon: PersonAddRounded, color: theme.palette.border.success },
+    { label: "Pending", value: stats?.pending_referrals ?? 0, icon: PeopleAltRounded, color: "#F59E0B" },
+    { label: "Total Earnings", value: `$${stats?.total_earnings ?? "0.00"}`, icon: MonetizationOnRounded, color: theme.palette.primary.main },
+  ];
+
+  return (
+    <>
+      <Head>
+        <title>DynoPay - Referrals</title>
+        <meta name="description" content="Referral program" />
+      </Head>
+      <Box sx={{ px: isMobile ? "16px" : 0 }}>
+        {/* Referral Code Card */}
+        <Box
+          data-testid="referral-code-card"
+          sx={{
+            mb: 2.5,
+            p: isMobile ? 2.5 : 3,
+            borderRadius: "14px",
+            border: `1px solid ${theme.palette.border.main}`,
+            bgcolor: "#fff",
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            gap: 2,
+            alignItems: isMobile ? "stretch" : "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Box>
+            <Typography
+              sx={{
+                fontSize: isMobile ? "16px" : "18px",
+                fontFamily: "UrbanistSemibold",
+                fontWeight: 600,
+                color: theme.palette.text.primary,
+                mb: 0.5,
+              }}
+            >
+              Your Referral Code
+            </Typography>
+            {loading ? (
+              <Skeleton width={200} height={32} />
+            ) : (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Typography
+                  data-testid="referral-code-value"
+                  sx={{
+                    fontSize: isMobile ? "18px" : "22px",
+                    fontFamily: "UrbanistSemibold",
+                    fontWeight: 700,
+                    color: theme.palette.primary.main,
+                    letterSpacing: "1px",
+                  }}
+                >
+                  {codeData?.referral_code || "—"}
+                </Typography>
+                <Box
+                  data-testid="copy-referral-code-btn"
+                  onClick={() => handleCopy(codeData?.referral_code || "", "Referral code")}
+                  sx={{
+                    cursor: "pointer",
+                    p: 0.75,
+                    borderRadius: "8px",
+                    display: "flex",
+                    "&:hover": { bgcolor: theme.palette.secondary.main },
+                  }}
+                >
+                  <ContentCopyRounded sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                </Box>
+              </Box>
+            )}
+          </Box>
+          {!loading && codeData?.referral_link && (
+            <Box
+              data-testid="share-referral-btn"
+              onClick={() => handleCopy(codeData.referral_link, "Referral link")}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 2.5,
+                py: 1.25,
+                borderRadius: "10px",
+                bgcolor: theme.palette.primary.main,
+                color: "#fff",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                alignSelf: isMobile ? "flex-start" : "center",
+                "&:hover": { opacity: 0.9 },
+              }}
+            >
+              <ShareRounded sx={{ fontSize: 18 }} />
+              <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistSemibold", fontWeight: 600 }}>
+                Copy Invite Link
+              </Typography>
+            </Box>
+          )}
+        </Box>
+
+        {/* Stats Grid */}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
+            gap: isMobile ? 1.5 : 2,
+            mb: 2.5,
+          }}
+        >
+          {statCards.map((card) => (
+            <Box
+              key={card.label}
+              data-testid={`referral-stat-${card.label.toLowerCase().replace(/\s+/g, "-")}`}
+              sx={{
+                p: isMobile ? 2 : 2.5,
+                borderRadius: "12px",
+                border: `1px solid ${theme.palette.border.main}`,
+                bgcolor: "#fff",
+              }}
+            >
+              <Box
+                sx={{
+                  width: isMobile ? 32 : 38,
+                  height: isMobile ? 32 : 38,
+                  borderRadius: "10px",
+                  bgcolor: `${card.color}14`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  mb: 1.5,
+                }}
+              >
+                <card.icon sx={{ fontSize: isMobile ? 16 : 20, color: card.color }} />
+              </Box>
+              {loading ? (
+                <Skeleton width={60} height={28} />
+              ) : (
+                <Typography
+                  sx={{
+                    fontSize: isMobile ? "20px" : "24px",
+                    fontFamily: "UrbanistSemibold",
+                    fontWeight: 700,
+                    color: theme.palette.text.primary,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {card.value}
+                </Typography>
+              )}
+              <Typography
+                sx={{
+                  fontSize: isMobile ? "11px" : "13px",
+                  fontFamily: "UrbanistMedium",
+                  fontWeight: 500,
+                  color: theme.palette.text.secondary,
+                  mt: 0.5,
+                }}
+              >
+                {card.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        {/* Two-column layout */}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gap: isMobile ? 2 : 2.5,
+          }}
+        >
+          {/* Discount Status */}
+          <Box
+            data-testid="referral-discount-card"
+            sx={{
+              p: isMobile ? 2 : 2.5,
+              borderRadius: "12px",
+              border: `1px solid ${theme.palette.border.main}`,
+              bgcolor: "#fff",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <DiscountRounded sx={{ fontSize: 20, color: theme.palette.primary.main }} />
+              <Typography
+                sx={{
+                  fontSize: isMobile ? "14px" : "16px",
+                  fontFamily: "UrbanistSemibold",
+                  fontWeight: 600,
+                  color: theme.palette.text.primary,
+                }}
+              >
+                Fee Discount
+              </Typography>
+            </Box>
+            {loading ? (
+              <Skeleton width="100%" height={60} />
+            ) : discount?.has_discount ? (
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: isMobile ? "28px" : "34px",
+                    fontFamily: "UrbanistSemibold",
+                    fontWeight: 700,
+                    color: theme.palette.border.success,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {discount.discount_percent}% OFF
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: "13px",
+                    fontFamily: "UrbanistMedium",
+                    fontWeight: 500,
+                    color: theme.palette.text.secondary,
+                    mt: 0.5,
+                  }}
+                >
+                  {discount.days_remaining > 0
+                    ? `${discount.days_remaining} days remaining`
+                    : "Active"}
+                  {discount.reason && ` — ${discount.reason}`}
+                </Typography>
+              </Box>
+            ) : (
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: "14px",
+                    fontFamily: "UrbanistMedium",
+                    fontWeight: 500,
+                    color: theme.palette.text.secondary,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  No active fee discount. Refer friends to earn discounts on transaction fees!
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Earnings Breakdown */}
+          <Box
+            data-testid="referral-earnings-card"
+            sx={{
+              p: isMobile ? 2 : 2.5,
+              borderRadius: "12px",
+              border: `1px solid ${theme.palette.border.main}`,
+              bgcolor: "#fff",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <MonetizationOnRounded sx={{ fontSize: 20, color: theme.palette.primary.main }} />
+              <Typography
+                sx={{
+                  fontSize: isMobile ? "14px" : "16px",
+                  fontFamily: "UrbanistSemibold",
+                  fontWeight: 600,
+                  color: theme.palette.text.primary,
+                }}
+              >
+                Earnings Breakdown
+              </Typography>
+            </Box>
+            {loading ? (
+              <Skeleton width="100%" height={60} />
+            ) : (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {[
+                  { label: "Credited", value: earnings?.summary.credited_earnings ?? 0 },
+                  { label: "Pending", value: earnings?.summary.pending_earnings ?? 0 },
+                  { label: "Withdrawn", value: earnings?.summary.withdrawn_earnings ?? 0 },
+                ].map((row) => (
+                  <Box
+                    key={row.label}
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: "13px",
+                        fontFamily: "UrbanistMedium",
+                        fontWeight: 500,
+                        color: theme.palette.text.secondary,
+                      }}
+                    >
+                      {row.label}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: "14px",
+                        fontFamily: "UrbanistSemibold",
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
+                      ${typeof row.value === "number" ? row.value.toFixed(2) : row.value}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>
+        </Box>
+
+        {/* Referral List */}
+        <Box
+          data-testid="referral-list"
+          sx={{
+            mt: 2.5,
+            p: isMobile ? 2 : 2.5,
+            borderRadius: "12px",
+            border: `1px solid ${theme.palette.border.main}`,
+            bgcolor: "#fff",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+            <PeopleAltRounded sx={{ fontSize: 20, color: theme.palette.primary.main }} />
+            <Typography
+              sx={{
+                fontSize: isMobile ? "14px" : "16px",
+                fontFamily: "UrbanistSemibold",
+                fontWeight: 600,
+                color: theme.palette.text.primary,
+              }}
+            >
+              My Referrals
+            </Typography>
+          </Box>
+          {loading ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Skeleton width="100%" height={40} />
+              <Skeleton width="100%" height={40} />
+            </Box>
+          ) : referrals.length === 0 ? (
+            <Typography
+              sx={{
+                fontSize: "14px",
+                fontFamily: "UrbanistMedium",
+                fontWeight: 500,
+                color: theme.palette.text.secondary,
+                py: 3,
+                textAlign: "center",
+              }}
+            >
+              No referrals yet. Share your code to start earning!
+            </Typography>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {referrals.map((r, i) => (
+                <Box
+                  key={r.id || i}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    p: isMobile ? "10px 12px" : "12px 16px",
+                    borderRadius: "10px",
+                    bgcolor: theme.palette.secondary.main,
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      sx={{
+                        fontSize: "14px",
+                        fontFamily: "UrbanistSemibold",
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
+                      {r.referred_name || r.referred_email}
+                    </Typography>
+                    {r.referred_name && (
+                      <Typography
+                        sx={{
+                          fontSize: "12px",
+                          fontFamily: "UrbanistMedium",
+                          color: theme.palette.text.secondary,
+                        }}
+                      >
+                        {r.referred_email}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Chip
+                    label={r.status}
+                    size="small"
+                    sx={{
+                      fontFamily: "UrbanistSemibold",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      bgcolor:
+                        r.status === "active"
+                          ? theme.palette.success.main
+                          : r.status === "pending"
+                            ? "#FEF3CD"
+                            : theme.palette.secondary.main,
+                      color:
+                        r.status === "active"
+                          ? theme.palette.border.success
+                          : r.status === "pending"
+                            ? "#856404"
+                            : theme.palette.text.secondary,
+                    }}
+                  />
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
+
+        {/* Leaderboard */}
+        <Box
+          data-testid="referral-leaderboard"
+          sx={{
+            mt: 2.5,
+            mb: 4,
+            p: isMobile ? 2 : 2.5,
+            borderRadius: "12px",
+            border: `1px solid ${theme.palette.border.main}`,
+            bgcolor: "#fff",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+            <EmojiEventsRounded sx={{ fontSize: 20, color: "#F59E0B" }} />
+            <Typography
+              sx={{
+                fontSize: isMobile ? "14px" : "16px",
+                fontFamily: "UrbanistSemibold",
+                fontWeight: 600,
+                color: theme.palette.text.primary,
+              }}
+            >
+              Leaderboard
+            </Typography>
+          </Box>
+          {loading ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Skeleton width="100%" height={40} />
+              <Skeleton width="100%" height={40} />
+            </Box>
+          ) : leaderboard.length === 0 ? (
+            <Typography
+              sx={{
+                fontSize: "14px",
+                fontFamily: "UrbanistMedium",
+                fontWeight: 500,
+                color: theme.palette.text.secondary,
+                py: 3,
+                textAlign: "center",
+              }}
+            >
+              Leaderboard is empty. Be the first to refer and lead!
+            </Typography>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {leaderboard.map((entry, i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    p: isMobile ? "10px 12px" : "12px 16px",
+                    borderRadius: "10px",
+                    bgcolor: entry.is_current_user
+                      ? theme.palette.primary.light
+                      : theme.palette.secondary.main,
+                    border: entry.is_current_user
+                      ? `1px solid ${theme.palette.primary.main}`
+                      : "none",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: "15px",
+                      fontFamily: "UrbanistSemibold",
+                      fontWeight: 700,
+                      color: entry.rank <= 3 ? "#F59E0B" : theme.palette.text.secondary,
+                      minWidth: 24,
+                    }}
+                  >
+                    #{entry.rank}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      flex: 1,
+                      fontSize: "14px",
+                      fontFamily: "UrbanistSemibold",
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
+                    }}
+                  >
+                    {entry.name}
+                    {entry.is_current_user && " (You)"}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: "14px",
+                      fontFamily: "UrbanistSemibold",
+                      fontWeight: 600,
+                      color: theme.palette.primary.main,
+                    }}
+                  >
+                    {entry.referral_count} referrals
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Box>
+
+      <Toast open={toast.open} message={toast.message} severity={toast.severity} />
+    </>
+  );
+};
+
+export default Referrals;

@@ -1,0 +1,53 @@
+{
+  "title": "Configuración de la Empresa",
+  "subtitle": "Aquí puedes verificar o cambiar la información de tu empresa.",
+  "profileImage": "Imagen de perfil",
+  "fields": {
+    "profileName": "Nombre del perfil*"
+  },
+  "webhookNotifications": "Notificaciones Webhook",
+  "webhookSubtitle": "Recibe notificaciones automáticas cuando se realizan pagos.",
+  "webhookNotificationUrl": "URL de Notificación",
+  "webhookNotificationUrlHelper": "¿Dónde debemos enviar las notificaciones de pago?",
+  "webhookSecretKey": "Clave Secreta",
+  "webhookSecretKeyHelper": "Úsala para verificar que las notificaciones realmente provienen de DynoPay.",
+  "webhookCopy": "Copiar",
+  "webhookReveal": "Revelar clave secreta",
+  "webhookHide": "Ocultar clave secreta",
+  "webhookRegenerate": "Regenerar clave secreta",
+  "webhookRegenerateConfirmTitle": "¿Generar Nueva Clave Secreta?",
+  "webhookRegenerateConfirmMessage": "Tu clave secreta actual dejará de funcionar inmediatamente. Asegúrate de actualizar tu integración antes de generar una nueva.",
+  "webhookRegenerateConfirmButton": "Generar Nueva",
+  "webhookSendTest": "Enviar Prueba",
+  "paymentTolerance": "Tolerancia de pago",
+  "paymentToleranceSubtitle": "Controla cuánta variación aceptar en los pagos.",
+  "paymentToleranceFields": {
+    "acceptUnderpaymentsUpTo": "Aceptar Pagos Insuficientes Hasta",
+    "acceptUnderpaymentsHelper": "Si un pago de $100 llega como $99, aún se marcará como completado.",
+    "flagOverpaymentsAbove": "Señalar Sobrepagos Por Encima de",
+    "flagOverpaymentsHelper": "Recibirás una notificación cuando alguien pague más de esta cantidad por encima del total.",
+    "timeForPartialPayments": "Tiempo para Pagos Parciales",
+    "timeForPartialPaymentsHelper": "Cuánto tiempo esperar para que un cliente complete un pago parcial",
+    "minutes": "minutos"
+  },
+  "cryptoConversion": "Conversión Crypto",
+  "cryptoConversionSubtitle": "Los BTC, ETH, LTC entrantes serán convertidos automáticamente a una stablecoin.",
+  "cryptoConversionAlert": "Por favor, configura primero tu billetera USDT/USDC.",
+  "cryptoConversionAutoConvert": "Conversión automática de crypto volátil",
+  "cryptoConversionYes": "Sí",
+  "cryptoConversionNo": "No",
+  "cryptoConversionFee": "Comisión de conversión: 0%",
+  "cryptoConversionConvertTo": "Convertir a:",
+  "cryptoConversionUsdtTrc20": "USDT (TRC20)",
+  "cryptoConversionUsdtErc20": "USDT (ERC20)",
+  "cryptoConversionUsdcErc20": "USDC (ERC20)",
+  "actions": {
+    "cancel": "Cancelar",
+    "saveChanges": "Guardar cambios"
+  },
+  "placeholders": {
+    "webhook": "Configurar notificaciones webhook (contenido por completar).",
+    "paymentTolerance": "Establecer tolerancia de pago (contenido por completar).",
+    "cryptoConversion": "Configurar conversión crypto (contenido por completar)."
+  }
+}

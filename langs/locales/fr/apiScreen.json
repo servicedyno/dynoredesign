@@ -1,0 +1,75 @@
+{
+  "apiKeysTitle": "Clés API",
+  "apiKeysDescription": "Gérez les clés API pour intégrer DynoPay dans vos applications",
+  "createNewKey": "Créer une Nouvelle Clé",
+  "createKeyMobile": "Créer",
+  "documentation": {
+    "title": "Documentation API",
+    "description": "Apprenez à intégrer DynoPay dans votre application grâce à notre documentation API complète",
+    "viewDocumentation": "Voir la Documentation",
+    "infoIconAlt": "information"
+  },
+  "icons": {
+    "copyAlt": "copier",
+    "eyeAlt": "voir",
+    "trashAlt": "supprimer"
+  },
+  "status": {
+    "active": "Actif"
+  },
+  "createdOn": "Créé le {{date}} à {{time}}",
+  "validation": {
+    "selectCompany": "Veuillez sélectionner une entreprise"
+  },
+  "company": {
+    "selectCompany": "Sélectionner une Entreprise",
+    "label": "Nom de l'Entreprise"
+  },
+  "currency": {
+    "baseCurrency": "Devise de Base"
+  },
+  "toast": {
+    "copied": "Copié !"
+  },
+  "delete": {
+    "title": "Supprimer la clé API",
+    "confirmMessage": "Êtes-vous sûr de vouloir supprimer cette clé API ? Les applications utilisant cette clé ne pourront plus accéder à l'API. Cette action est irréversible.",
+    "confirmButton": "Supprimer"
+  },
+  "security": {
+    "title": "Bonnes Pratiques de Sécurité :",
+    "description": "Gardez vos clés API en sécurité et ne les partagez jamais publiquement. Si vous suspectez qu'une clé a été compromise, supprimez-la immédiatement et créez-en une nouvelle."
+  },
+  "generate": {
+    "modalTitle": "Créer une Nouvelle Clé API",
+    "modalSubtitle": "Générez une nouvelle clé API pour intégrer DynoPay dans votre application",
+    "submit": "Générer",
+    "keyName": "Nom de la Clé",
+    "keyNamePlaceholder": "ex. : App Production",
+    "baseCurrency": "Devise de Base",
+    "baseCurrencyPlaceholder": "Entrez la devise de base",
+    "keyNameDescription": "Permissions de la Clé",
+    "keyNameDescription1": "Créer et gérer les demandes de paiement",
+    "keyNameDescription2": "Voir l'historique des transactions",
+    "keyNameDescription3": "Recevoir les notifications webhook",
+    "keyNameDescription4": "Accéder aux informations du portefeuille",
+    "successTitle": "Clé API Générée",
+    "successSubtitle": "Enregistrez cette clé maintenant - vous ne pourrez plus la voir",
+    "yourKey": "API",
+    "adminToken": "Jeton Admin",
+    "securityTitle": "Avis de Sécurité Important",
+    "securityMessage": "Assurez-vous de copier votre clé API maintenant. Pour des raisons de sécurité, nous ne l'afficherons plus. Stockez-la en sécurité et ne la partagez jamais publiquement."
+  },
+  "withdrawalWhitelist": {
+    "title": "Liste Blanche de Retrait",
+    "description": "Une fois activé, votre compte ne pourra retirer que vers les adresses de votre liste blanche.",
+    "addressManagement": "Gestion des Adresses",
+    "off": "DÉSACTIVÉ",
+    "enable": "Activer"
+  },
+  "actions": {
+    "cancel": "Annuler",
+    "generate": "Générer la Clé",
+    "done": "Terminé"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "apiKeysTitle": "Chaves de API",
+  "apiKeysDescription": "Gerencie as chaves de API para integrar o DynoPay aos seus aplicativos.",
+  "createNewKey": "Criar nova chave",
+  "createKeyMobile": "Criar",
+  "documentation": {
+    "title": "Documentação da API",
+    "description": "Aprenda como integrar o DynoPay em sua aplicação com nossa documentação completa da API.",
+    "viewDocumentation": "Ver documentação",
+    "infoIconAlt": "informação"
+  },
+  "icons": {
+    "copyAlt": "copiar",
+    "eyeAlt": "visualizar",
+    "trashAlt": "excluir"
+  },
+  "status": {
+    "active": "Ativo"
+  },
+  "createdOn": "Criado em {{date}} às {{time}}",
+  "validation": {
+    "selectCompany": "Selecione uma empresa"
+  },
+  "company": {
+    "selectCompany": "Selecionar empresa",
+    "label": "Nome da empresa"
+  },
+  "currency": {
+    "baseCurrency": "Moeda base"
+  },
+  "toast": {
+    "copied": "Copiado!"
+  },
+  "delete": {
+    "title": "Excluir chave de API",
+    "confirmMessage": "Tem certeza de que deseja excluir esta chave de API? Os aplicativos que usam esta chave não poderão mais acessar a API. Esta ação não pode ser desfeita.",
+    "confirmButton": "Excluir"
+  },
+  "security": {
+    "title": "Melhores práticas de segurança:",
+    "description": "Mantenha suas chaves de API em segurança e nunca as compartilhe publicamente. Se suspeitar que uma chave foi comprometida, exclua-a imediatamente e crie uma nova."
+  },
+  "generate": {
+    "modalTitle": "Criar nova chave de API",
+    "modalSubtitle": "Gere uma nova chave de API para integrar o DynoPay ao seu aplicativo.",
+    "submit": "Gerar",
+    "keyName": "Nome da chave",
+    "baseCurrency": "Moeda base",
+    "baseCurrencyPlaceholder": "Digite a moeda base",
+    "keyNamePlaceholder": "Exemplo: Produção de Aplicativos",
+    "keyNameDescription": "Permissões da chave",
+    "keyNameDescription1": "Criar e gerenciar solicitações de pagamento",
+    "keyNameDescription2": "Visualizar histórico de transações",
+    "keyNameDescription3": "Receber notificações de webhook",
+    "keyNameDescription4": "Acessar informações da carteira",
+    "successTitle": "Chave de API Gerada",
+    "successSubtitle": "Salve esta chave agora - você não poderá vê-la novamente",
+    "yourKey": "Chave de API",
+    "adminToken": "Token de administração",
+    "securityTitle": "Aviso de Segurança Importante",
+    "securityMessage": "Certifique-se de copiar sua chave de API agora. Por motivos de segurança, não a mostraremos novamente. Armazene-a com segurança e nunca a compartilhe publicamente."
+  },
+  "withdrawalWhitelist": {
+    "title": "Lista de permissões de saque",
+    "description": "Quando ativado, sua conta só poderá sacar para endereços na sua lista de permissões.",
+    "addressManagement": "Gerenciar endereços",
+    "off": "DESLIGADO",
+    "enable": "Ativar"
+    },
+  "actions": {
+    "cancel": "Cancelar",
+    "generate": "Gerar chave",
+    "done": "Feito"
+  }
+}

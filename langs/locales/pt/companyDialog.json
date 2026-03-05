@@ -1,0 +1,83 @@
+{
+  "mode": {
+    "add": {
+      "title": "Adicionar nova empresa",
+      "subtitle": "Crie um novo perfil empresarial para gerenciar pagamentos em criptomoedas",
+      "primaryButton": "Criar empresa"
+    },
+    "edit": {
+      "title": "Editar empresa",
+      "subtitle": "Atualize as informações do perfil da empresa",
+      "primaryButton": "Atualizar"
+    }
+  },
+  "fields": {
+    "companyName": {
+      "label": "Nome da empresa*",
+      "placeholder": "Insira o nome da empresa"
+    },
+    "website": {
+      "label": "Website (opcional)",
+      "placeholder": "https://example.com"
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "contact@example.com"
+    },
+    "mobile": {
+      "label": "Celular",
+      "placeholder": "Digite seu número de telefone"
+    },
+    "brandLogo": {
+      "label": "Logotipo da marca",
+      "uploadCta": "Clique para enviar ou arraste e solte",
+      "uploadHint": "SVG, PNG, JPG (máx. 2MB)"
+    },
+    "country": {
+      "label": "País*",
+      "placeholder": "Selecione o país"
+    },
+    "state": {
+      "label": "Estado*",
+      "placeholder": "Selecione o estado"
+    },
+    "city": {
+      "label": "Cidade*",
+      "placeholder": "Selecione a cidade"
+    },
+    "addressLine1": {
+      "label": "Endereço, Linha 1*",
+      "placeholder": "Insira o endereço, linha 1"
+    },
+    "addressLine2": {
+      "label": "Endereço, Linha 2 (opcional)",
+      "placeholder": "Insira o endereço, linha 2"
+    },
+    "zipCode": {
+      "label": "Código postal*",
+      "placeholder": "Insira o código postal"
+    },
+    "vatNumber": {
+      "label": "Número de VAT (opcional)",
+      "placeholder": "Insira o número de VAT"
+    }
+  },
+  "actions": {
+    "cancel": "Cancelar"
+  },
+  "validation": {
+    "companyNameRequired": "O nome da empresa é obrigatório",
+    "emailInvalid": "Por favor, insira um e-mail válido",
+    "emailRequired": "O e-mail é obrigatório",
+    "mobileRequired": "O número de celular é obrigatório",
+    "mobileMin": "São necessários no mínimo 10 dígitos",
+    "mobileMax": "No máximo 14 dígitos são permitidos",
+    "countryRequired": "O país é obrigatório",
+    "stateRequired": "O estado é obrigatório",
+    "cityRequired": "A cidade é obrigatória",
+    "addressLine1Required": "A linha do endereço 1 é obrigatória",
+    "zipCodeRequired": "O código postal é obrigatório"
+  },
+  "vatNumber": "Número de IVA (opcional)",
+  "vatVerify": "Número de IVA verificado"
+}
