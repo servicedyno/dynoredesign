@@ -39,6 +39,7 @@ interface HeaderItem {
   translationKey: TranslationKey;
   path: string;
   sectionId?: SectionId;
+  external?: boolean;
 }
 
 /* ================= CONSTANTS ================= */
@@ -50,7 +51,7 @@ const HEADER_ITEMS: readonly HeaderItem[] = [
   { translationKey: "howItWorks", sectionId: "how-it-works", path: "/" },
   { translationKey: "features", sectionId: "features", path: "/" },
   { translationKey: "useCases", sectionId: "use-cases", path: "/" },
-  { translationKey: "documentation", path: "/" },
+  { translationKey: "documentation", path: "/api/docs", external: true },
 ] as const;
 
 /* ================= COMPONENT ================= */
@@ -85,6 +86,12 @@ const HomeHeader = memo(function HomeHeader() {
 
   const handleNav = useCallback(
     (item: HeaderItem) => {
+      if (item.external) {
+        window.open(item.path, "_blank", "noopener,noreferrer");
+        setMobileMenuOpen(false);
+        return;
+      }
+
       if (item.sectionId) {
         if (router.pathname !== "/") {
           void router.push("/").then(() => {

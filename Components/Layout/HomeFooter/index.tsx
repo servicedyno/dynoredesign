@@ -33,6 +33,7 @@ interface SocialItemType {
 interface RouteItemType {
   readonly labelKey: string;
   readonly link: string;
+  readonly external?: boolean;
 }
 
 const SOCIALS: readonly SocialItemType[] = [
@@ -43,7 +44,7 @@ const SOCIALS: readonly SocialItemType[] = [
 ] as const;
 
 const ROUTES: readonly RouteItemType[] = [
-  { labelKey: "documentation", link: "#" },
+  { labelKey: "documentation", link: "/api/docs", external: true },
   { labelKey: "footerSandbox", link: "#" },
   { labelKey: "footerTerms", link: "/terms-conditions" },
   { labelKey: "footerPrivacy", link: "/privacy-policy" },
@@ -58,11 +59,23 @@ const HomeFooter: FC = () => {
 
   const routeItems = useMemo(
     () =>
-      ROUTES.map((item) => (
-        <Link key={item.labelKey} href={item.link}>
-          <Navigation>{t(item.labelKey)}</Navigation>
-        </Link>
-      )),
+      ROUTES.map((item) =>
+        item.external ? (
+          <a
+            key={item.labelKey}
+            href={item.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: "none" }}
+          >
+            <Navigation>{t(item.labelKey)}</Navigation>
+          </a>
+        ) : (
+          <Link key={item.labelKey} href={item.link}>
+            <Navigation>{t(item.labelKey)}</Navigation>
+          </Link>
+        ),
+      ),
     [t],
   );
 
