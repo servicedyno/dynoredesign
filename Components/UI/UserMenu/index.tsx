@@ -9,6 +9,7 @@ import useTokenData from "@/hooks/useTokenData";
 import useWindow from "@/hooks/useWindow";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 import Image from "next/image";
 import { useRouter } from "next/router";
@@ -231,6 +232,30 @@ export default function UserMenu() {
           {/* Content */}
           <Box sx={{ mt: "7px" }}>
             <MenuItemRow
+              data-testid="user-menu-profile"
+              onClick={() => {
+                router.push("/profile");
+                setAnchorEl(null);
+              }}
+              sx={{
+                gap: "8px",
+                justifyContent: "center",
+                "&:hover": { background: "transparent" },
+              }}
+            >
+              <PersonIcon sx={{ fontSize: "16px" }} />
+              <Typography
+                sx={{
+                  fontFamily: "UrbanistMedium",
+                  fontSize: isMobile ? "13px" : "15px",
+                }}
+              >
+                {t("profile") || "Profile"}
+              </Typography>
+            </MenuItemRow>
+
+            <MenuItemRow
+              data-testid="user-menu-settings"
               onClick={() => {
                 router.push("/profile");
                 setAnchorEl(null);

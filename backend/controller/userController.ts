@@ -1433,21 +1433,30 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
   try {
     const { name, mobile, username } = req.body;
     
+    // Fetch current DB data for accurate comparison (JWT may be stale)
+    const currentUser = await userModel.findOne({
+      where: { user_id: userData.user_id },
+      attributes: ['name', 'mobile', 'username']
+    });
+    const currentName = currentUser?.dataValues?.name || userData.name;
+    const currentMobile = currentUser?.dataValues?.mobile || userData.mobile;
+    const currentUsername = currentUser?.dataValues?.username || userData.username;
+    
     // Build update object with only provided fields
     const updateData: Record<string, unknown> = {};
     const updatedFields: string[] = [];
     
-    if (name !== undefined && name !== userData.name) {
+    if (name !== undefined && name !== currentName) {
       updateData.name = name;
-      updatedFields.push(`Name: ${userData.name} → ${name}`);
+      updatedFields.push(`Name: ${currentName} → ${name}`);
     }
-    if (mobile !== undefined && mobile !== userData.mobile) {
+    if (mobile !== undefined && mobile !== currentMobile) {
       updateData.mobile = mobile;
-      updatedFields.push(`Mobile: ${userData.mobile || 'Not set'} → ${mobile}`);
+      updatedFields.push(`Mobile: ${currentMobile || 'Not set'} → ${mobile}`);
     }
-    if (username !== undefined && username !== userData.username) {
+    if (username !== undefined && username !== currentUsername) {
       updateData.username = username;
-      updatedFields.push(`Username: ${userData.username} → ${username}`);
+      updatedFields.push(`Username: ${currentUsername} → ${username}`);
     }
     
     // Check if there's anything to update
@@ -1464,6 +1473,9 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
       where: { user_id: userData.user_id },
       attributes: { exclude: ['password', 'reset_token', 'reset_token_expiry'] }
     });
+    
+    // Invalidate profile cache
+    await deleteRedisItem(`profile:${userData.user_id}`);
     
     // Send profile update notification email
     if (updatedFields.length > 0) {

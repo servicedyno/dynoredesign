@@ -8,5 +8,6 @@
   "emaiResponseTime": "Nous répondons généralement dans les 24 heures.",
   "chatUs": "Discutez avec nous",
   "openChat": "Ouvrir le Chat",
-  "chatResponseTime": "Temps de réponse typique : moins de 3 minutes"
+  "chatResponseTime": "Temps de réponse typique : moins de 3 minutes",
+  "noResults": "Aucun article trouvé. Essayez un autre terme de recherche."
 }

@@ -86,13 +86,22 @@ const HelpAndSupport = () => {
             try {
                 const res = await axiosBaseApi.get("/kb/articles?limit=20");
                 const data = res?.data?.data;
-                if (data?.articles) {
+                if (data?.articles && data.articles.length > 0) {
                     setArticles(data.articles.map((a: any) => ({
                         article_id: a.article_id,
                         title: a.title,
                         slug: a.slug,
                         excerpt: a.excerpt || a.description || "",
                         description: a.excerpt || a.description || "",
+                    })));
+                } else {
+                    // Fallback to hardcoded data when API returns empty
+                    setArticles(HelpAndSupportData.map((item, i) => ({
+                        article_id: i,
+                        title: item.title,
+                        slug: item.slug,
+                        description: item.description,
+                        excerpt: item.description,
                     })));
                 }
             } catch {
@@ -111,13 +120,26 @@ const HelpAndSupport = () => {
             setSearching(true);
             const res = await axiosBaseApi.get(`/kb/search?q=${encodeURIComponent(searchTerm)}&limit=20`);
             const data = res?.data?.data;
-            if (data?.articles) {
+            if (data?.articles && data.articles.length > 0) {
                 setArticles(data.articles.map((a: any) => ({
                     article_id: a.article_id,
                     title: a.title,
                     slug: a.slug,
                     excerpt: a.excerpt || a.description || "",
                     description: a.excerpt || a.description || "",
+                })));
+            } else {
+                // Fallback to client-side filter when search API returns empty
+                const filtered = HelpAndSupportData.filter(item =>
+                    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    item.description.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                setArticles(filtered.map((item, i) => ({
+                    article_id: i,
+                    title: item.title,
+                    slug: item.slug,
+                    description: item.description,
+                    excerpt: item.description,
                 })));
             }
         } catch {
