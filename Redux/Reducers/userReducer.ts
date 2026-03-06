@@ -48,6 +48,7 @@ const userReducer = (state = userInitialState, action: ReducerAction) => {
         name: payload.name,
         loading: false,
         error: null,
+        email_verified: payload?.email_verified ?? state.email_verified,
       };
     case USER_REGISTER:
       localStorage.setItem("token", payload.accessToken);
@@ -60,6 +61,7 @@ const userReducer = (state = userInitialState, action: ReducerAction) => {
         name: payload.name,
         loading: false,
         error: null,
+        email_verified: payload?.email_verified ?? state.email_verified,
       };
     case USER_UPDATE:
       localStorage.setItem("token", payload.accessToken);
