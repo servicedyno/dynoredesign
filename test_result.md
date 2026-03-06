@@ -41,6 +41,23 @@ DynoPay is a full-stack crypto payment gateway.
 
 ---
 
+## UI Automation Testing - Onboarding Flow
+
+### Test Plan
+1. **Registration**: Fill form with test data, submit, check for OTP dialog
+2. **Login**: Login with registered credentials  
+3. **Company Creation**: Create a company profile
+4. **Add Wallet**: Add BTC wallet with address `1JH5TnZzjYTf1yYwBDLjWoHgkAcCHc1Do7`
+5. **Page-by-page navigation**: Test each dashboard page
+
+### Test Credentials
+- First Name: Test
+- Last Name: User  
+- Email: testuser_dynopay@test.com
+- Password: TestPass@123
+
+---
+
 ## Testing Protocol
 
 ### Backend Testing
