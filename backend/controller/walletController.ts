@@ -561,7 +561,7 @@ const getAllTransactions = async (
       { type: QueryTypes.SELECT, replacements }
     );
 
-    const customer_data = tempData.map((x: Record<string, unknown>) => {
+    const customer_data = await Promise.all(tempData.map(async (x: Record<string, unknown>) => {
       const {
         wallet_id,
         auto_convert_id,
@@ -576,13 +576,29 @@ const getAllTransactions = async (
         auto_convert_completed_at,
         ...rest
       } = x;
+
+      // Calculate USD value: use base_amount for USD/stablecoins, convert for crypto
+      let usd_value: number | null = null;
+      const baseCurrency = (x.base_currency as string || '').toUpperCase();
+      const baseAmount = Number(x.base_amount) || 0;
+      const stablecoins = ['USD', 'USDT', 'USDC', 'USDT-ERC20', 'USDT-TRC20', 'USDC-ERC20', 'BUSD', 'DAI'];
+      if (stablecoins.some(s => baseCurrency.includes(s) || baseCurrency === s)) {
+        usd_value = baseAmount;
+      } else if (baseAmount > 0) {
+        try {
+          usd_value = await convertToUSD(baseCurrency, baseAmount);
+        } catch {
+          usd_value = null;
+        }
+      }
+
       return {
         ...rest,
         // Format for UI
         transaction_id_display: x.id || `TX${x.transaction_id}`,
         crypto: x.crypto_currency || x.base_currency,
         amount: x.base_amount,
-        usd_value: x.base_currency === 'USD' ? x.base_amount : null,
+        usd_value: usd_value,
         date_time: x.createdAt,
         status: x.status,
         // Auto-stablecoin conversion indicator
@@ -602,7 +618,7 @@ const getAllTransactions = async (
             }
           : null,
       };
-    });
+    }));
 
     // Get self transactions with same filters
     let selfWhereClause: Record<string, unknown> = {

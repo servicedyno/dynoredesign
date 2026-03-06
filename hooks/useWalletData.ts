@@ -176,8 +176,9 @@ export const useWalletData = () => {
       setWalletWarning(false);
       return;
     }
-    setWalletWarning(cryptocurrencies.length > 0);
-  }, [walletLoading, cryptocurrencies]);
+    // Only show warning if user has NO wallet addresses configured at all
+    setWalletWarning(walletData.length === 0);
+  }, [walletLoading, walletData]);
 
   const activeWalletsData = useMemo(() => {
     return ALLCRYPTOCURRENCIES.filter((crypto) => {

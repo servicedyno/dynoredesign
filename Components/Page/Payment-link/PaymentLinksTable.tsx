@@ -173,11 +173,24 @@ const PaymentLinksTable = ({
     }, 2000);
   };
 
+  // Parse DD/MM/YYYY HH:MM:SS format from API
+  function parseDateSafe(dateString: string): Date {
+    if (!dateString) return new Date(NaN);
+    const ddmmyyyy = dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
+    if (ddmmyyyy) {
+      const [, day, month, year, hours, minutes, seconds] = ddmmyyyy;
+      return new Date(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`);
+    }
+    return new Date(dateString);
+  }
+
   function getDateDiffShort(from: string, to: string): string {
     if (!from || !to) return "";
 
-    const start = new Date(from).getTime();
-    const end = new Date(to).getTime();
+    const start = parseDateSafe(from).getTime();
+    const end = parseDateSafe(to).getTime();
+
+    if (isNaN(start) || isNaN(end)) return "";
 
     let diff = Math.abs(end - start);
 
@@ -217,7 +230,8 @@ const PaymentLinksTable = ({
   function formatUtcToDisplay(dateString: string): string {
     if (!dateString) return "";
 
-    const date = new Date(dateString);
+    const date = parseDateSafe(dateString);
+    if (isNaN(date.getTime())) return dateString || "";
 
     const pad = (n: number) => n.toString().padStart(2, "0");
 
@@ -304,7 +318,7 @@ const PaymentLinksTable = ({
                   >
                     <TableBodyCell sx={{ pl: "15px" }}>{row.id}</TableBodyCell>
                     <TableBodyCell>{row.description}</TableBodyCell>
-                    <TableBodyCell>${row.usdValue}</TableBodyCell>
+                    <TableBodyCell>{row.usdValue}</TableBodyCell>
                     <TableBodyCell>{row.cryptoValue}</TableBodyCell>
                     <TableBodyCell>
                       {formatUtcToDisplay(row.createdAt)}

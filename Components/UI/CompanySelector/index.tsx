@@ -199,6 +199,8 @@ export default function CompanySelector() {
               display: "flex",
               flexDirection: "column",
               gap: isMobile ? "0px" : "6px",
+              maxHeight: "50vh",
+              overflowY: "auto",
             }}
           >
             <Typography

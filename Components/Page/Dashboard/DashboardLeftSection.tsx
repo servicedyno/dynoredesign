@@ -121,7 +121,10 @@ const processTransactionData = (
   const dateMap = new Map<string, number>();
 
   rawData.forEach((item) => {
-    dateMap.set(item.date, item.value);
+    // API returns dates like "2026-02-27", convert to "Feb 27" format to match
+    const parsed = new Date(item.date + "T00:00:00");
+    const key = !isNaN(parsed.getTime()) ? formatDate(parsed) : item.date;
+    dateMap.set(key, (dateMap.get(key) ?? 0) + item.value);
   });
 
   const result = safeDateRange.map((date) => {

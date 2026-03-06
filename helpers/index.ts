@@ -119,9 +119,7 @@ const formatNumberWithComma = (number: number): string => {
     .toLocaleString("en-US", {
       minimumFractionDigits: decimalPlaces,
       maximumFractionDigits: 2,
-    })
-    .replace(/,/g, " ")
-    .replace(/\./g, ",");
+    });
 };
 
 export {

@@ -39,12 +39,18 @@ const PaymentLinksPage = ({
     return paymentLinkState.paymentLinks.map((link: any) => ({
       id: link._id || link.link_id || link.id,
       description: link.description || "",
-      usdValue: link.amount ? link.amount.toLocaleString() : "0",
-      cryptoValue: link.crypto_amount
-        ? `${link.crypto_amount} ${link.crypto_currency || ""}`
-        : undefined,
-      createdAt: link.created_at || link.createdAt || "",
-      expiresAt: link.expires_at || link.expiresAt || "",
+      usdValue: link.display_value
+        ? String(link.display_value)
+        : link.base_amount
+          ? `${Number(link.base_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${link.base_currency || ""}`
+          : "0",
+      cryptoValue: link.crypto_currencies
+        ? String(link.crypto_currencies)
+        : link.base_amount && link.base_currency
+          ? `${link.base_amount} ${link.base_currency}`
+          : undefined,
+      createdAt: link.created || link.created_at || link.createdAt || "",
+      expiresAt: link.expires || link.expires_at || link.expiresAt || "",
       status: link.status || "pending",
       timesUsed: link.times_used || link.timesUsed || 0,
     }));
@@ -91,7 +97,7 @@ const PaymentLinksPage = ({
     >
       <PaymentLinksTopBar onSearch={handleSearch} />
 
-      <PaymentLinksTable paymentLinks={filteredLinks} rowsPerPage={5} />
+      <PaymentLinksTable paymentLinks={filteredLinks} rowsPerPage={10} />
     </Box>
   );
 };

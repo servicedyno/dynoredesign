@@ -27,7 +27,36 @@ DynoPay is a full-stack crypto payment gateway.
   - ✅ Test 3: User with company + wallet → Dashboard (verified via console logs: phase="done")
   - Test 2 (new user, no company/wallet → Company modal): Verified via code logic
 
-## Changes Made This Session
+## UI Fixes Applied (All Verified ✅)
+
+### Fix 1: Wallet Warning Banner (`hooks/useWalletData.ts`)
+- Only shows when user has ZERO configured wallet addresses (not when some types are missing)
+
+### Fix 2: Transaction Volume Chart (`Components/Page/Dashboard/DashboardLeftSection.tsx`)
+- Fixed date format mismatch: API returns "YYYY-MM-DD", chart expected "Feb 27" format
+- Now converts API dates to match `formatDate` output before lookup
+
+### Fix 3: Number Formatting (`helpers/index.ts`)
+- Removed European format conversion (`.replace(/,/g, " ").replace(/\./g, ",")`)
+- Now displays US format: `$14,958.46` instead of `$14 958,46`
+
+### Fix 4: Crypto/USD Value Accuracy (`backend/controller/walletController.ts`, `Components/Page/Transactions/index.tsx`)
+- Backend now calculates USD values using `convertToUSD` with cached exchange rates
+- Stablecoins (USDT, USDC, etc.) → 1:1 to USD
+- Crypto (BTC, ETH, etc.) → converted using live rates
+- Frontend uses `usd_value` from API response
+
+### Fix 5: Default Rows Per Page
+- `Components/Page/Transactions/index.tsx`: Changed from 5 to 10
+- `Components/Page/Payment-link/index.tsx`: Changed from 5 to 10
+
+### Fix 6: Payment Links Table (`Components/Page/Payment-link/`)
+- Fixed field mapping: `link.created`/`link.expires`/`link.display_value` (was looking for wrong field names)
+- Fixed DD/MM/YYYY date parsing (API uses European date format)
+- Fixed double currency symbol (`$€25.00` → `€25.00 EUR`)
+
+### Fix 7: Company Dropdown (`Components/UI/CompanySelector/index.tsx`)
+- Added `maxHeight: '50vh'` and `overflowY: 'auto'` to prevent overflow below viewport
 
 ### Fix 1: 🟠 Token Refresh (was kicking users out on 401)
 - **File**: `axiosConfig.ts`

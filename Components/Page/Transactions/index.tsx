@@ -103,7 +103,9 @@ const TransactionPage = () => {
         id: item.id || `TX-${Math.random().toString(36).substr(2, 9)}`,
         crypto: item.base_currency,
         amount: `${item.base_amount} ${item.base_currency}`,
-        usdValue: `$${item.base_amount}`,
+        usdValue: (item as any).usd_value != null
+          ? `$${Number((item as any).usd_value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : `$${Number(item.base_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         dateTime: formatDateTime(item.createdAt),
         status:
           item.status === "success" || item.status === "successful"
@@ -187,7 +189,7 @@ const TransactionPage = () => {
         onWalletChange={handleWalletChange}
         onExport={handleExport}
       />
-      <TransactionsTable transactions={processedTransactions} rowsPerPage={5} />
+      <TransactionsTable transactions={processedTransactions} rowsPerPage={10} />
     </Box>
   );
 };
