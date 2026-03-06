@@ -12,12 +12,13 @@ DynoPay is a full-stack crypto payment gateway.
 - ✅ MongoDB: Running
 
 ## Pod URL Setup
-- **Pod URL**: `https://0c4cc5ce-4759-433e-af7f-d167d324de2b.preview.emergentagent.com`
-- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL` set to pod URL (used by axiosConfig.ts for API calls)
+- **Pod URL**: `https://ab57d69c-7a8f-4590-82d0-de32056c6b79.preview.emergentagent.com`
+- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL` set to pod URL with trailing slash (used by axiosConfig.ts for API calls)
 - **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL` set to pod URL
 - **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to pod URL
 - **Frontend start**: Changed to `next dev` mode (turbo removed to prevent memory issues)
 - **Cleanup**: Removed unused CRA template files from `/app/frontend/src/` (only bridge `package.json` remains)
+- **Dependencies**: Both `/app` (Next.js frontend) and `/app/backend` (Node.js) have `node_modules` installed via yarn
 
 ## Checkout Page Integration (from CheckoutDyno repo)
 - **Pages added**: `/pay`, `/pay/demo`, `/pay/aml-policy`, `/pay/terms-of-service`, `/pay/success-demo`, `/pay/payment-states-demo`
