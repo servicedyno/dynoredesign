@@ -17,6 +17,7 @@ import TransactionDashboardImage_svg from "@/assets/Images/home/transaction-dash
 import WalletSelectorImage_svg from "@/assets/Images/home/wallet-selector.svg";
 import APIKeyImage_svg from "@/assets/Images/home/api-key.svg";
 import ProgressCounterImage_svg from "@/assets/Images/home/progress-counter.svg";
+import ShieldIcon from "@/assets/Icons/home/shield-icon.svg";
 import WebhookInfoImage_svg from "@/assets/Images/home/webhook-info.svg";
 
 import PaymentLinkSuccessImage_png from "@/assets/Images/home/payment-link-success.png";
@@ -79,7 +80,7 @@ const FeaturesSection = () => {
       titleKey: "feature6Title",
       descriptionKey: "feature6Description",
       image: os === "ios" || browser === "safari" ? WebhookInfoImage_png : WebhookInfoImage_svg,
-      icon: WebhookIcon,
+      icon: ShieldIcon,
       order: { xs: 4, md: 6 },
     },
   ];

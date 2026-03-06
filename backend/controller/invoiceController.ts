@@ -1,6 +1,6 @@
 import express from "express";
 import jwt from "jsonwebtoken";
-import { Op } from "sequelize";
+import { Op, fn, col, literal } from "sequelize";
 import {
   errorResponseHelper,
   getErrorMessage,
@@ -524,10 +524,301 @@ const downloadInvoicePDF = async (
   }
 };
 
+/**
+ * Get aggregated tax report
+ * GET /api/invoices/tax-report
+ * Query: start_date, end_date, company_id, group_by (month|quarter|year)
+ */
+const getTaxReport = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  const {
+    start_date,
+    end_date,
+    company_id,
+    group_by = "month",
+  } = req.query;
+
+  try {
+    // Get user's companies
+    const companies = await companyModel.findAll({
+      where: { user_id: userData.user_id },
+      attributes: ["company_id", "company_name", "country"],
+    });
+
+    const companyIds = companies.map(
+      (c: { dataValues: { company_id: number } }) =>
+        (c as unknown as { dataValues: { company_id: number } }).dataValues
+          .company_id
+    );
+
+    if (companyIds.length === 0) {
+      return successResponseHelper(res, 200, "Tax report generated", {
+        summary: { total_revenue: 0, total_tax: 0, total_invoices: 0 },
+        by_period: [],
+        by_jurisdiction: [],
+      });
+    }
+
+    // Build where clause
+    const whereClause: Record<string, unknown> = {};
+    if (company_id) {
+      if (!companyIds.includes(parseInt(company_id as string))) {
+        return errorResponseHelper(res, 403, "Access denied to this company");
+      }
+      whereClause.company_id = parseInt(company_id as string);
+    } else {
+      whereClause.company_id = { [Op.in]: companyIds };
+    }
+
+    if (start_date || end_date) {
+      const dateFilter: Record<string, unknown> = {};
+      if (start_date) dateFilter[Op.gte as unknown as string] = new Date(start_date as string);
+      if (end_date) dateFilter[Op.lte as unknown as string] = new Date(end_date as string);
+      whereClause.invoice_date = dateFilter;
+    }
+
+    // Fetch all matching invoices
+    const invoices = await invoiceModel.findAll({
+      where: whereClause,
+      order: [["invoice_date", "DESC"]],
+    });
+
+    const invoiceData = invoices.map(
+      (inv: { dataValues: Record<string, unknown> }) =>
+        (inv as unknown as { dataValues: Record<string, unknown> }).dataValues
+    );
+
+    // Calculate summary
+    let totalRevenue = 0;
+    let totalTax = 0;
+    const periodMap = new Map<
+      string,
+      { revenue: number; tax: number; count: number; period_label: string }
+    >();
+    const jurisdictionMap = new Map<
+      string,
+      { revenue: number; tax: number; count: number; rate: number }
+    >();
+
+    // Build company lookup
+    const companyLookup = new Map<number, { name: string; country: string }>();
+    companies.forEach((c: any) => {
+      const cd = c.dataValues;
+      companyLookup.set(cd.company_id, {
+        name: cd.company_name,
+        country: cd.country || "Unknown",
+      });
+    });
+
+    for (const inv of invoiceData) {
+      const revenue = parseFloat((inv.total_usd as string) || "0");
+      const tax = parseFloat((inv.vat_amount as string) || "0");
+      const vatRate = parseFloat((inv.vat_rate as string) || "0");
+      totalRevenue += revenue;
+      totalTax += tax;
+
+      // Group by period
+      const invDate = new Date(inv.invoice_date as string);
+      let periodKey = "";
+      let periodLabel = "";
+
+      if (group_by === "year") {
+        periodKey = `${invDate.getFullYear()}`;
+        periodLabel = periodKey;
+      } else if (group_by === "quarter") {
+        const q = Math.ceil((invDate.getMonth() + 1) / 3);
+        periodKey = `${invDate.getFullYear()}-Q${q}`;
+        periodLabel = `Q${q} ${invDate.getFullYear()}`;
+      } else {
+        // month
+        const m = String(invDate.getMonth() + 1).padStart(2, "0");
+        periodKey = `${invDate.getFullYear()}-${m}`;
+        const monthNames = [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
+        periodLabel = `${monthNames[invDate.getMonth()]} ${invDate.getFullYear()}`;
+      }
+
+      const existing = periodMap.get(periodKey) || {
+        revenue: 0,
+        tax: 0,
+        count: 0,
+        period_label: periodLabel,
+      };
+      existing.revenue += revenue;
+      existing.tax += tax;
+      existing.count += 1;
+      periodMap.set(periodKey, existing);
+
+      // Group by jurisdiction (country from company)
+      const companyInfo = companyLookup.get(inv.company_id as number);
+      const jurisdiction = companyInfo?.country || "Unknown";
+      const jExisting = jurisdictionMap.get(jurisdiction) || {
+        revenue: 0,
+        tax: 0,
+        count: 0,
+        rate: vatRate,
+      };
+      jExisting.revenue += revenue;
+      jExisting.tax += tax;
+      jExisting.count += 1;
+      if (vatRate > 0) jExisting.rate = vatRate;
+      jurisdictionMap.set(jurisdiction, jExisting);
+    }
+
+    // Convert maps to sorted arrays
+    const byPeriod = Array.from(periodMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, val]) => ({
+        period: key,
+        period_label: val.period_label,
+        revenue: parseFloat(val.revenue.toFixed(2)),
+        tax_collected: parseFloat(val.tax.toFixed(2)),
+        invoice_count: val.count,
+      }));
+
+    const byJurisdiction = Array.from(jurisdictionMap.entries())
+      .sort(([, a], [, b]) => b.tax - a.tax)
+      .map(([country, val]) => ({
+        country,
+        tax_rate: val.rate,
+        revenue: parseFloat(val.revenue.toFixed(2)),
+        tax_collected: parseFloat(val.tax.toFixed(2)),
+        invoice_count: val.count,
+      }));
+
+    successResponseHelper(res, 200, "Tax report generated", {
+      summary: {
+        total_revenue: parseFloat(totalRevenue.toFixed(2)),
+        total_tax: parseFloat(totalTax.toFixed(2)),
+        total_invoices: invoiceData.length,
+        period: {
+          start: start_date || "all time",
+          end: end_date || "present",
+        },
+        group_by,
+      },
+      by_period: byPeriod,
+      by_jurisdiction: byJurisdiction,
+    });
+  } catch (e) {
+    handleControllerError(res, e, apiLogger);
+  }
+};
+
+/**
+ * Export tax report as CSV
+ * GET /api/invoices/tax-report/csv
+ */
+const exportTaxReportCSV = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  const { start_date, end_date, company_id } = req.query;
+
+  try {
+    // Get user's companies
+    const companies = await companyModel.findAll({
+      where: { user_id: userData.user_id },
+      attributes: ["company_id", "company_name", "country"],
+    });
+
+    const companyIds = companies.map(
+      (c: any) => c.dataValues.company_id
+    );
+
+    if (companyIds.length === 0) {
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="tax-report.csv"'
+      );
+      return res.send("No data available");
+    }
+
+    // Build where clause
+    const whereClause: Record<string, unknown> = {};
+    if (company_id) {
+      if (!companyIds.includes(parseInt(company_id as string))) {
+        return errorResponseHelper(res, 403, "Access denied");
+      }
+      whereClause.company_id = parseInt(company_id as string);
+    } else {
+      whereClause.company_id = { [Op.in]: companyIds };
+    }
+
+    if (start_date || end_date) {
+      const dateFilter: Record<string, unknown> = {};
+      if (start_date)
+        dateFilter[Op.gte as unknown as string] = new Date(start_date as string);
+      if (end_date)
+        dateFilter[Op.lte as unknown as string] = new Date(end_date as string);
+      whereClause.invoice_date = dateFilter;
+    }
+
+    const invoices = await invoiceModel.findAll({
+      where: whereClause,
+      order: [["invoice_date", "DESC"]],
+    });
+
+    // Build company lookup
+    const companyLookup = new Map<number, string>();
+    companies.forEach((c: any) => {
+      companyLookup.set(c.dataValues.company_id, c.dataValues.company_name);
+    });
+
+    // Generate CSV
+    const header =
+      "Invoice Number,Date,Company,Customer,Description,Subtotal,VAT Rate (%),VAT Amount,Processing Fee,Total,Currency\n";
+
+    const rows = invoices
+      .map((inv: any) => {
+        const d = inv.dataValues;
+        const date = new Date(d.invoice_date).toISOString().split("T")[0];
+        const companyName = companyLookup.get(d.company_id) || "";
+        const subtotal = (
+          parseFloat(d.total_usd || 0) - parseFloat(d.vat_amount || 0)
+        ).toFixed(2);
+
+        return [
+          d.invoice_number,
+          date,
+          `"${companyName}"`,
+          `"${d.customer_name || ""}"`,
+          `"${(d.description || "").replace(/"/g, '""')}"`,
+          subtotal,
+          parseFloat(d.vat_rate || 0).toFixed(2),
+          parseFloat(d.vat_amount || 0).toFixed(2),
+          parseFloat(d.fixed_fee || 0).toFixed(2),
+          parseFloat(d.total_usd || 0).toFixed(2),
+          d.crypto_currency || "USD",
+        ].join(",");
+      })
+      .join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="tax-report-${new Date().toISOString().split("T")[0]}.csv"`
+    );
+
+    return res.send(header + rows);
+  } catch (e) {
+    handleControllerError(res, e, apiLogger);
+  }
+};
+
 export default {
   getTransactionInvoice,
   getAllInvoices,
   getInvoiceById,
   autoGenerateInvoice,
   downloadInvoicePDF,
+  getTaxReport,
+  exportTaxReportCSV,
 };

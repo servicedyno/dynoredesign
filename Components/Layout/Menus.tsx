@@ -5,6 +5,7 @@ import {
   ApiRounded,
   AssignmentRounded,
   BusinessRounded,
+  DescriptionRounded,
   DraftsRounded,
   GroupsRounded,
   HomeRounded,
@@ -61,6 +62,11 @@ const navItems = [
     icon: <ReceiptLongRounded color="inherit" />,
     name: "Transactions",
     link: "/transactions",
+  },
+  {
+    icon: <DescriptionRounded color="inherit" />,
+    name: "Invoices & Tax",
+    link: "/invoices",
   },
   {
     icon: <AccountBalanceWallet color="inherit" />,

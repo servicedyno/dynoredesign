@@ -2,6 +2,7 @@ import CustomButton from "@/Components/UI/Buttons";
 import PopupModal from "@/Components/UI/PopupModal";
 import CopyIcon from "@/assets/Icons/copy-icon.svg";
 import { Box, Typography, useTheme } from "@mui/material";
+import { DownloadRounded } from "@mui/icons-material";
 import Image from "next/image";
 import React, { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,6 +27,7 @@ import InputField from "@/Components/UI/AuthLayout/InputFields";
 import PanelCard from "@/Components/UI/PanelCard";
 import Toast from "@/Components/UI/Toast";
 import useIsMobile from "@/hooks/useIsMobile";
+import axiosBaseApi from "@/axiosConfig";
 import { HourGlassIcon } from "@/utils/customIcons";
 import { TransactionDetailsModalProps } from "@/utils/types/transaction";
 import {
@@ -125,6 +127,48 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
     //   transaction.incomingTransactionId || transaction.id
     // }`;
     // window.open(explorerUrl, "_blank");
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!transaction) return;
+    try {
+      const res = await axiosBaseApi.get(
+        `/transactions/${transaction.id}/invoice`,
+        { responseType: "blob" }
+      );
+      // If we get a blob (PDF), download it
+      if (res.data instanceof Blob && res.data.size > 0) {
+        const url = window.URL.createObjectURL(res.data);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `invoice-${transaction.id}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        // Fallback: try JSON response for the invoice data
+        const jsonRes = await axiosBaseApi.get(
+          `/transactions/${transaction.id}/invoice`
+        );
+        if (jsonRes?.data?.data?.invoice_id) {
+          const invId = jsonRes.data.data.invoice_id;
+          const pdfRes = await axiosBaseApi.get(`/invoices/${invId}/pdf`, {
+            responseType: "blob",
+          });
+          const url = window.URL.createObjectURL(new Blob([pdfRes.data]));
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", `invoice-${invId}.pdf`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+        }
+      }
+    } catch (err) {
+      console.error("Invoice not available for this transaction");
+    }
   };
 
   return (
@@ -490,6 +534,23 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
                 },
               }}
             />
+            {transaction?.status === "done" && (
+              <CustomButton
+                label="Invoice"
+                startIcon={<DownloadRounded sx={{ fontSize: 16 }} />}
+                variant="outlined"
+                size="medium"
+                onClick={handleDownloadInvoice}
+                fullWidth
+                sx={{
+                  [theme.breakpoints.down("md")]: {
+                    width: "fit-content",
+                    flex: 1,
+                    height: "32px",
+                  },
+                }}
+              />
+            )}
             <CustomButton
               label={tTransactions("viewOnExplorer")}
               variant="primary"

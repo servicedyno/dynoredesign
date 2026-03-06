@@ -13,7 +13,7 @@ import {
 import HomeSectionTitle from "@/Components/UI/SectionTitle";
 import LowerFeesIcon from "@/assets/Icons/home/lower-arrow-icon.svg";
 import FullControlOfFundsIcon from "@/assets/Icons/home/shield-icon.svg";
-import FastIntegrationIcon from "@/assets/Icons/home/light-bolt-icon.svg";
+import TaxComplianceIcon from "@/assets/Icons/Check-icon.svg";
 import GlobalReachIcon from "@/assets/Icons/home/global-icon.svg";
 
 const WhyChooseDynopaySection = () => {
@@ -32,7 +32,7 @@ const WhyChooseDynopaySection = () => {
       descriptionKey: "whyChoose2Description",
     },
     {
-      icon: FastIntegrationIcon,
+      icon: TaxComplianceIcon,
       titleKey: "whyChoose3Title",
       descriptionKey: "whyChoose3Description",
     },

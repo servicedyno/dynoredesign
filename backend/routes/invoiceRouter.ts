@@ -18,6 +18,20 @@ invoiceRouter.get(
   invoiceController.getAllInvoices
 );
 
+// Get tax report (aggregated)
+invoiceRouter.get(
+  "/invoices/tax-report",
+  authMiddleware,
+  invoiceController.getTaxReport
+);
+
+// Export tax report as CSV
+invoiceRouter.get(
+  "/invoices/tax-report/csv",
+  authMiddleware,
+  invoiceController.exportTaxReportCSV
+);
+
 // Get specific invoice by invoice ID
 invoiceRouter.get(
   "/invoices/:id",
