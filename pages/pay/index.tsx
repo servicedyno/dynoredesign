@@ -675,19 +675,28 @@ const Payment = () => {
                 elevation={0}
                 data-testid="checkout-card"
                 sx={{
-                  borderRadius: 3,
-                  p: { xs: 2, sm: 2.5 },
+                  borderRadius: '16px',
+                  overflow: 'hidden',
                   width: '100%',
                   maxWidth: 440,
                   textAlign: 'center',
                   border: `1px solid ${isDark ? theme.palette.surface.border : '#E9ECF2'}`,
                   boxShadow: isDark 
-                    ? '0 8px 32px rgba(0,0,0,0.3)' 
-                    : '0 4px 24px rgba(0,0,0,0.06)',
+                    ? '0 12px 40px rgba(0,0,0,0.35)' 
+                    : '0 8px 32px rgba(0,4,255,0.06), 0 2px 8px rgba(0,0,0,0.04)',
                   backgroundColor: theme.palette.background.paper,
-                  transition: 'all 0.3s ease',
+                  transition: 'box-shadow 0.3s ease, transform 0.3s ease',
+                  '&:hover': {
+                    boxShadow: isDark
+                      ? '0 16px 48px rgba(0,0,0,0.4)'
+                      : '0 12px 40px rgba(0,4,255,0.08), 0 4px 12px rgba(0,0,0,0.06)',
+                    transform: 'translateY(-1px)',
+                  },
                 }}
               >
+                {/* Gradient accent bar */}
+                <Box sx={{ height: '3px', background: 'linear-gradient(90deg, #0004FF 0%, #3D40FF 40%, #6C6FFF 100%)' }} />
+                <Box px={{ xs: 2, sm: 2.5 }} py={{ xs: 2, sm: 2.5 }}>
                 {/* Logo Section - Merchant logo or DynoPay */}
                 <Box display='flex' justifyContent='center' mb={1}>
                   {merchantInfo?.company_logo ? (
@@ -761,8 +770,9 @@ const Payment = () => {
                 {/* Context-Aware Title */}
                 <Typography
                   fontWeight={700}
-                  fontSize={{ xs: 18, sm: 20 }}
+                  fontSize={{ xs: 17, sm: 19 }}
                   lineHeight={1.2}
+                  letterSpacing='-0.3px'
                   
                   color={theme.palette.text.primary}
                   data-testid="checkout-title"
@@ -774,8 +784,8 @@ const Payment = () => {
                 <Typography
                   color={theme.palette.text.secondary}
                   fontWeight={400}
-                  fontSize={13}
-                  lineHeight={1.4}
+                  fontSize={12.5}
+                  lineHeight={1.5}
                   mb={2}
                   mt={0.5}
                   
@@ -788,12 +798,13 @@ const Payment = () => {
                 {(description || orderReference || customerName) && (
                   <Box
                     sx={{
-                      border: `1px solid ${isDark ? theme.palette.surface.border : '#E9ECF2'}`,
-                      borderRadius: '10px',
+                      border: `1px solid ${isDark ? theme.palette.surface.border : '#EEF0F6'}`,
+                      borderRadius: '12px',
                       p: 1.5,
                       mb: 1.5,
                       textAlign: 'left',
-                      backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : '#FAFBFF'
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : '#F8F9FC',
+                      transition: 'background-color 0.3s ease',
                     }}
                     data-testid="order-details-section"
                   >
@@ -895,8 +906,8 @@ const Payment = () => {
                 {/* Fee Breakdown Section */}
                 <Box
                   alignItems='center'
-                  border={`1px solid ${isDark ? theme.palette.surface.border : '#E9ECF2'}`}
-                  borderRadius='10px'
+                  border={`1px solid ${isDark ? theme.palette.surface.border : '#EEF0F6'}`}
+                  borderRadius='12px'
                   px={1.5}
                   py={1.5}
                   sx={{ transition: 'border-color 0.3s ease' }}
@@ -1005,13 +1016,22 @@ const Payment = () => {
                     justifyContent='space-between'
                     alignItems='center'
                     mb={1.5}
+                    sx={{
+                      backgroundColor: isDark ? 'rgba(0,4,255,0.06)' : 'rgba(0,4,255,0.03)',
+                      borderRadius: '8px',
+                      mx: -0.75,
+                      px: 0.75,
+                      py: 0.75,
+                      transition: 'background-color 0.3s ease',
+                    }}
                   >
                     <Typography
                       variant='subtitle2'
                       
                       fontWeight={700}
-                      fontSize={{ xs: 14, sm: 15 }}
+                      fontSize={{ xs: 13, sm: 14 }}
                       color={theme.palette.text.primary}
+                      letterSpacing='-0.2px'
                     >
                       {t('checkout.total')}
                     </Typography>
@@ -1046,10 +1066,11 @@ const Payment = () => {
                             )?.icon}
 
                           <Typography
-                            fontWeight={700}
+                            fontWeight={800}
                             
                             fontSize={{ xs: 14, sm: 16 }}
                             color={theme.palette.text.primary}
+                            letterSpacing='-0.3px'
                             data-testid="total-amount"
                           >
                             {(() => {
@@ -1185,7 +1206,7 @@ const Payment = () => {
                   <Box display='flex' gap={2}>
                     <Button
                       fullWidth
-                      variant='outlined'
+                      variant='contained'
                       startIcon={<BitCoinGreenIcon width={7} />}
                       onClick={() => {
                         setActiveStep(1)
@@ -1193,18 +1214,26 @@ const Payment = () => {
                       }}
                       data-testid="crypto-payment-btn"
                       sx={{
-                        borderColor: '#12B76A',
-                        color: '#12B76A',
+                        background: 'linear-gradient(135deg, #12B76A 0%, #0E9F5C 100%)',
+                        color: '#fff',
                         textTransform: 'none',
-                        borderRadius: 30,
-                        fontWeight: 600,
+                        borderRadius: '12px',
+                        fontWeight: 700,
                         py: 1.25,
                         fontSize: '14px',
-                        minHeight: 44,
+                        minHeight: 46,
+                        letterSpacing: '0.2px',
+                        boxShadow: '0 4px 14px rgba(18, 183, 106, 0.3)',
+                        transition: 'all 0.3s ease',
                         '&:hover': {
-                          backgroundColor: isDark ? 'rgba(18, 183, 106, 0.1)' : '#ECFDF5',
-                          borderColor: '#12B76A'
-                        }
+                          background: 'linear-gradient(135deg, #0E9F5C 0%, #0C8A50 100%)',
+                          boxShadow: '0 6px 20px rgba(18, 183, 106, 0.4)',
+                          transform: 'translateY(-1px)',
+                        },
+                        '&:active': {
+                          transform: 'translateY(0)',
+                          boxShadow: '0 2px 8px rgba(18, 183, 106, 0.3)',
+                        },
                       }}
                     >
                       {t('checkout.cryptocurrency')}
@@ -1229,11 +1258,12 @@ const Payment = () => {
                     </Box>
                   )}
                   <Box display='flex' alignItems='center' gap={0.5} data-testid="security-badge">
-                    <Icon icon="mdi:lock" width={12} color={isDark ? '#6C7BFF' : '#0004FF'} />
-                    <Typography fontSize={11} color={isDark ? '#6C7BFF' : '#0004FF'} fontWeight={600}>
+                    <Icon icon="mdi:shield-check" width={13} color={isDark ? '#6C7BFF' : '#0004FF'} />
+                    <Typography fontSize={10.5} color={isDark ? '#6C7BFF' : '#0004FF'} fontWeight={700} letterSpacing='0.2px'>
                       {t('checkout.securePayment')}
                     </Typography>
                   </Box>
+                </Box>
                 </Box>
               </Paper>
             </Box>

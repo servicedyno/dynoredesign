@@ -20,8 +20,44 @@ export default function Pay3Layout({
                 flexDirection: 'column',
                 background: theme.palette.background.default,
                 transition: 'background 0.3s ease',
+                position: 'relative',
+                overflow: 'hidden',
             }}
         >
+            {/* Subtle radial glow behind card */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: '30%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '600px',
+                    height: '600px',
+                    borderRadius: '50%',
+                    background: isDark
+                        ? 'radial-gradient(circle, rgba(0,4,255,0.06) 0%, transparent 70%)'
+                        : 'radial-gradient(circle, rgba(0,4,255,0.05) 0%, transparent 70%)',
+                    pointerEvents: 'none',
+                    zIndex: 0,
+                }}
+            />
+            {/* Secondary glow accent */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: '60%',
+                    left: '30%',
+                    width: '400px',
+                    height: '400px',
+                    borderRadius: '50%',
+                    background: isDark
+                        ? 'radial-gradient(circle, rgba(108,123,255,0.04) 0%, transparent 70%)'
+                        : 'radial-gradient(circle, rgba(0,4,255,0.03) 0%, transparent 70%)',
+                    pointerEvents: 'none',
+                    zIndex: 0,
+                }}
+            />
+
             <Header darkMode={isDark} toggleDarkMode={toggleTheme} />
             <Box
                 component="main"
@@ -31,6 +67,8 @@ export default function Pay3Layout({
                     flexDirection: 'column',
                     justifyContent: 'center',
                     py: { xs: 2, sm: 3 },
+                    position: 'relative',
+                    zIndex: 1,
                 }}
             >
                 {children}
