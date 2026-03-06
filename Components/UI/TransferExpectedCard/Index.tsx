@@ -157,7 +157,7 @@ export default function TransferExpectedCard({
               fontWeight={600}
               color={theme.palette.text.primary}
               mb={1}
-              fontFamily='Space Grotesk'
+              
             >
               {customerName ? t('success.thankYouName', { name: customerName, defaultValue: `Thank you, ${customerName}!` }) : t('success.thankYou')}
             </Typography>
@@ -168,11 +168,11 @@ export default function TransferExpectedCard({
               gap={0.5}
               mt={2}
             >
-              <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#444CE7'} />
+              <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#0004FF'} />
               <Typography
                 fontSize={12}
-                fontFamily='Space Grotesk'
-                color={isDark ? '#6C7BFF' : '#444CE7'}
+                
+                color={isDark ? '#6C7BFF' : '#0004FF'}
                 fontWeight={500}
               >
                 {t('checkout.securePayment')}
@@ -241,7 +241,7 @@ export default function TransferExpectedCard({
               fontWeight={600}
               color={theme.palette.text.primary}
               mb={1}
-              fontFamily='Space Grotesk'
+              
               data-testid="success-title"
             >
               {customerName 
@@ -255,7 +255,7 @@ export default function TransferExpectedCard({
               variant='body1'
               color={isDark ? theme.palette.text.secondary : '#515151'}
               mb={3}
-              fontFamily='Space Grotesk'
+              
             >
               {merchantName && amount
                 ? t('success.paidTo', { amount, merchant: merchantName })
@@ -269,7 +269,7 @@ export default function TransferExpectedCard({
             {transactionId && (
               <Box
                 sx={{
-                  border: `1px solid ${isDark ? theme.palette.divider : '#E7EAFD'}`,
+                  border: `1px solid ${isDark ? theme.palette.divider : '#E9ECF2'}`,
                   borderRadius: '10px',
                   p: 2,
                   mb: 2,
@@ -281,7 +281,7 @@ export default function TransferExpectedCard({
                   fontSize={11}
                   fontWeight={600}
                   color={isDark ? theme.palette.text.secondary : '#666'}
-                  fontFamily='Space Grotesk'
+                  
                   letterSpacing={0.5}
                   mb={0.5}
                 >
@@ -292,7 +292,7 @@ export default function TransferExpectedCard({
                     fontWeight={600}
                     fontSize={15}
                     color={theme.palette.text.primary}
-                    fontFamily='Space Grotesk'
+                    
                     data-testid="transaction-id"
                   >
                     #{transactionId}
@@ -303,7 +303,7 @@ export default function TransferExpectedCard({
                       onClick={handleCopyTransactionId}
                       data-testid="copy-transaction-btn"
                       sx={{
-                        bgcolor: isDark ? '#2a2a4a' : '#E7EAFD',
+                        bgcolor: isDark ? '#2a2a4a' : '#E9ECF2',
                         p: 0.75,
                         borderRadius: '6px',
                         '&:hover': { bgcolor: isDark ? '#3a3a5a' : '#E0E7FF' }
@@ -317,7 +317,7 @@ export default function TransferExpectedCard({
                   <Typography
                     fontSize={11}
                     color={isDark ? theme.palette.text.secondary : '#888'}
-                    fontFamily='Space Grotesk'
+                    
                     mt={1}
                   >
                     {t('success.saveForRecords')}
@@ -338,7 +338,7 @@ export default function TransferExpectedCard({
                 <Icon icon="mdi:email-check" width={16} color="#12B76A" />
                 <Typography
                   fontSize={13}
-                  fontFamily='Space Grotesk'
+                  
                   color={isDark ? theme.palette.text.secondary : '#666'}
                 >
                   {t('success.confirmationSent', { email })}
@@ -356,10 +356,10 @@ export default function TransferExpectedCard({
                 mb={2}
                 data-testid="redirect-countdown"
               >
-                <CircularProgress size={16} sx={{ color: '#444CE7' }} />
+                <CircularProgress size={16} sx={{ color: '#0004FF' }} />
                 <Typography
                   fontSize={13}
-                  fontFamily='Space Grotesk'
+                  
                   color={isDark ? theme.palette.text.secondary : '#515151'}
                 >
                   {merchantName 
@@ -380,14 +380,14 @@ export default function TransferExpectedCard({
                   onClick={handleRedirect}
                   data-testid="return-btn"
                   sx={{
-                    backgroundColor: '#4F46E5',
+                    backgroundColor: '#0004FF',
                     color: '#fff',
                     textTransform: 'none',
                     borderRadius: 30,
                     py: 1.75,
                     fontSize: '15px',
                     fontWeight: 600,
-                    fontFamily: 'Space Grotesk',
+                    ,
                     '&:hover': {
                       backgroundColor: '#4338CA'
                     }
@@ -402,7 +402,7 @@ export default function TransferExpectedCard({
                 <Typography
                   fontSize={12}
                   color={isDark ? theme.palette.text.secondary : '#888'}
-                  fontFamily='Space Grotesk'
+                  
                   mt={1.5}
                   sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                   onClick={handleRedirect}
@@ -418,14 +418,14 @@ export default function TransferExpectedCard({
                 onClick={handleDone}
                 data-testid="done-btn"
                 sx={{
-                  backgroundColor: '#4F46E5',
+                  backgroundColor: '#0004FF',
                   color: '#fff',
                   textTransform: 'none',
                   borderRadius: 30,
                   py: 1.75,
                   fontSize: '15px',
                   fontWeight: 600,
-                  fontFamily: 'Space Grotesk',
+                  ,
                   '&:hover': {
                     backgroundColor: '#4338CA'
                   }
@@ -443,11 +443,11 @@ export default function TransferExpectedCard({
               gap={0.5}
               mt={2}
             >
-              <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#444CE7'} />
+              <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#0004FF'} />
               <Typography
                 fontSize={12}
-                fontFamily='Space Grotesk'
-                color={isDark ? '#6C7BFF' : '#444CE7'}
+                
+                color={isDark ? '#6C7BFF' : '#0004FF'}
                 fontWeight={500}
               >
                 {t('checkout.securePayment')}
@@ -535,7 +535,7 @@ export default function TransferExpectedCard({
             fontWeight={600}
             color={theme.palette.text.primary}
             mb={1}
-            fontFamily='Space Grotesk'
+            
           >
             {t('success.transferExpected')}
           </Typography>
@@ -544,7 +544,7 @@ export default function TransferExpectedCard({
             variant='body2'
             color={isDark ? theme.palette.text.secondary : '#515151'}
             mb={3}
-            fontFamily='Space Grotesk'
+            
           >
             {t('success.transferPending')}
           </Typography>
@@ -553,7 +553,7 @@ export default function TransferExpectedCard({
           {transactionId && (
             <Box
               sx={{
-                border: `1px solid ${isDark ? theme.palette.divider : '#E7EAFD'}`,
+                border: `1px solid ${isDark ? theme.palette.divider : '#E9ECF2'}`,
                 borderRadius: '10px',
                 p: 2,
                 mb: 3,
@@ -566,7 +566,7 @@ export default function TransferExpectedCard({
                     fontSize={10}
                     fontWeight={600}
                     color={isDark ? theme.palette.text.secondary : '#666'}
-                    fontFamily='Space Grotesk'
+                    
                     letterSpacing={0.5}
                   >
                     {t('success.transactionId')}
@@ -575,7 +575,7 @@ export default function TransferExpectedCard({
                     fontWeight={500}
                     fontSize={13}
                     color={theme.palette.text.primary}
-                    fontFamily='Space Grotesk'
+                    
                   >
                     #{transactionId}
                   </Typography>
@@ -585,7 +585,7 @@ export default function TransferExpectedCard({
                     size='small'
                     onClick={handleCopyTransactionId}
                     sx={{
-                      bgcolor: isDark ? '#2a2a4a' : '#E7EAFD',
+                      bgcolor: isDark ? '#2a2a4a' : '#E9ECF2',
                       p: 0.75,
                       borderRadius: '6px',
                       '&:hover': { bgcolor: isDark ? '#3a3a5a' : '#E0E7FF' }
@@ -604,16 +604,16 @@ export default function TransferExpectedCard({
             variant='outlined'
             onClick={handleDone}
             sx={{
-              borderColor: '#4F46E5',
-              color: '#4F46E5',
+              borderColor: '#0004FF',
+              color: '#0004FF',
               textTransform: 'none',
               borderRadius: 30,
               py: 1.5,
-              fontFamily: 'Space Grotesk',
+              ,
               fontWeight: 500,
               '&:hover': {
                 backgroundColor: isDark ? 'rgba(79, 70, 229, 0.1)' : '#EEF2FF',
-                borderColor: '#4F46E5'
+                borderColor: '#0004FF'
               }
             }}
           >

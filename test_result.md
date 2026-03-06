@@ -31,6 +31,17 @@ DynoPay is a full-stack crypto payment gateway.
 - **Dependency**: `@iconify/react` installed
 - **Test Results**: ✅ `/pay` returns 200, ✅ `/pay/demo` renders checkout UI correctly, ✅ Homepage still works
 
+## Checkout UI Redesign — Compact & Branded
+- **Font**: Switched from Space Grotesk/Poppins → **Urbanist** (matches main app)
+- **Colors**: Updated #1034A6/#444CE7 → **#0004FF** (matches main app primary blue)
+- **Header**: Slimmed from 92px → 60px, removed notification bell & avatar, glassmorphism wallet button
+- **Footer**: Removed social icons, minimal bar with Terms/AML/Powered by DynoPay
+- **Card**: Compact padding (32px→20px), maxWidth 500→440, removed minHeight constraint, flat elevation
+- **Progress Bar**: Smaller step icons (28→22px), #0004FF accent, centered max-width 480px
+- **Expiry + Security**: Moved to single row below card
+- **Responsive**: ✅ Desktop (1920px), ✅ Tablet (768px), ✅ Mobile (390px) — all fit without scrolling
+- **Theme**: lightTheme/darkTheme updated with Urbanist font + new palette
+
 ## Onboarding Fix: hasWallet check + race condition fix
 - **Files**: `Components/UI/OnboardingFlow/index.tsx`, `pages/dashboard.tsx`
 - Fixed `hasWallet` check: now verifies `wallet_address` is actually configured (not just that wallet entries exist)

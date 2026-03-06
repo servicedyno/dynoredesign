@@ -13,17 +13,28 @@ export default function Pay3Layout({
     const theme = useTheme();
 
     return (
-        <Box 
-            sx={{ 
-                minHeight: '100vh', 
+        <Box
+            sx={{
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
                 background: theme.palette.background.default,
                 transition: 'background 0.3s ease',
             }}
         >
             <Header darkMode={isDark} toggleDarkMode={toggleTheme} />
-            <main style={{ minHeight: 'calc(100vh - 210px)' }}>
+            <Box
+                component="main"
+                sx={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    py: { xs: 2, sm: 3 },
+                }}
+            >
                 {children}
-            </main>
+            </Box>
             <Footer />
         </Box>
     );

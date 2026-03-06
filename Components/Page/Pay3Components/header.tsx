@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import {
   AppBar,
   Toolbar,
@@ -12,8 +11,6 @@ import {
   Select,
   MenuItem,
   FormControl,
-  Avatar,
-  Badge,
   Button,
   useMediaQuery,
   useTheme
@@ -21,9 +18,6 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import BedtimeIcon from '@mui/icons-material/Bedtime';
-import Notification from "@/assets/Icons/Nitification";
-import User from '@/assets/Images/user.png';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useTranslation } from 'react-i18next';
@@ -42,20 +36,14 @@ const Header = ({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { t } = useTranslation('common');
   const router = useRouter();
-
-  const toggleDrawer = () => {
-    setDrawerOpen(!drawerOpen);
-  };
-
   const [open, setOpen] = useState(false);
+
+  const toggleDrawer = () => setDrawerOpen(!drawerOpen);
 
   const handleLanguageChange = (event: any) => {
     const newLocale = event.target.value as string;
-    // Set cookie to remember user's language preference
     document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
     const { pathname, asPath, query } = router;
-    // Use replace instead of push to avoid adding to history stack
-    // State is preserved via sessionStorage (handled in payment components)
     router.replace({ pathname, query }, asPath, { locale: newLocale });
   };
 
@@ -63,56 +51,63 @@ const Header = ({
     <>
       <AppBar
         position='static'
+        elevation={0}
         sx={{
-          backgroundImage: `url('/wave.png'), linear-gradient(90deg, #101EF7 0%, #4B50E6 50%, #7C5CF0 100%)`,
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'top right',
-          backgroundSize: 'auto',
-          padding: '0.5rem 1rem',
-          boxShadow: 'none',
-          height: '92px'
+          background: darkMode
+            ? 'linear-gradient(90deg, #0d0d1a 0%, #1a1a2e 100%)'
+            : 'linear-gradient(90deg, #0004FF 0%, #3D40FF 50%, #6C6FFF 100%)',
+          height: '60px',
+          justifyContent: 'center',
         }}
       >
-        <Toolbar sx={{ justifyContent: 'space-between', height: '100%' }}>
+        <Toolbar
+          sx={{
+            justifyContent: 'space-between',
+            minHeight: '60px !important',
+            px: { xs: 2, md: 4 },
+          }}
+        >
           {/* Left: Logo */}
-          <Box display='flex' alignItems='center' gap={1}>
-            <Logo width={50} height={60} />
+          <Box display='flex' alignItems='center'>
+            <Logo width={36} height={42} />
           </Box>
 
-          {/* Right: Menu or Full Actions */}
+          {/* Right */}
           {isMobile ? (
-            <IconButton data-testid="mobile-menu-button" onClick={toggleDrawer} sx={{ color: 'white' }}>
+            <IconButton onClick={toggleDrawer} sx={{ color: 'white' }}>
               <MenuIcon />
             </IconButton>
           ) : (
-            <Stack direction='row' spacing={3} alignItems='center'>
+            <Stack direction='row' spacing={2} alignItems='center'>
+              {/* Wallet */}
               <Button
-                startIcon={<Icon icon="solar:wallet-linear" width="24" height="24" />}
+                startIcon={<Icon icon="solar:wallet-linear" width="18" height="18" />}
                 variant='contained'
+                size='small'
                 sx={{
-                  backgroundColor: '#FFF',
-                  color: '#444CE7',
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  color: '#fff',
                   borderRadius: 20,
                   px: 2,
-                  py: 2,
-                  right: { md: "30%", lg: "60%", xl: "100%" },
+                  py: 0.75,
                   textTransform: 'none',
-                  fontSize: '14px',
-                  fontFamily: "Space Grotesk",
-                  fontWeight: '500',
+                  fontSize: '13px',
+                  fontWeight: 600,
                   boxShadow: 'none',
+                  backdropFilter: 'blur(8px)',
                   '&:hover': {
-                    backgroundColor: '#f5f5f5'
+                    backgroundColor: 'rgba(255,255,255,0.25)',
+                    boxShadow: 'none',
                   },
-                  height: '44px'
+                  height: '36px',
                 }}
               >
                 {t('header.wallet')}
               </Button>
 
-              <FormControl variant="standard">
+              {/* Language */}
+              <FormControl variant="standard" size="small">
                 <Select
-                  data-testid="language-selector"
                   value={router.locale || 'en'}
                   onChange={handleLanguageChange}
                   onOpen={() => setOpen(true)}
@@ -122,6 +117,7 @@ const Header = ({
                     <KeyboardArrowDownIcon
                       sx={{
                         color: 'white',
+                        fontSize: 18,
                         transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
                         transition: 'transform 0.3s ease',
                       }}
@@ -129,127 +125,69 @@ const Header = ({
                   )}
                   sx={{
                     color: 'white',
-                    fontFamily: 'Space Grotesk',
                     fontWeight: 600,
-                    '& .MuiSelect-icon': {
-                      right: 8,
-                    },
+                    fontSize: '13px',
+                    '& .MuiSelect-select': { py: 0.5 },
                   }}
                   MenuProps={{
                     PaperProps: {
-                      'data-testid': 'language-menu',
-                      sx: {
-                        mt: 1,
-                        borderRadius: 2,
-                      }
-                    }
+                      sx: { mt: 1, borderRadius: 2 },
+                    },
                   }}
                 >
-                  <MenuItem data-testid="lang-en" value="en">EN</MenuItem>
-                  <MenuItem data-testid="lang-fr" value="fr">FR</MenuItem>
-                  <MenuItem data-testid="lang-es" value="es">ES</MenuItem>
-                  <MenuItem data-testid="lang-pt" value="pt">PT</MenuItem>
-                  <MenuItem data-testid="lang-de" value="de">DE</MenuItem>
-                  <MenuItem data-testid="lang-nl" value="nl">NL</MenuItem>
+                  <MenuItem value="en">EN</MenuItem>
+                  <MenuItem value="fr">FR</MenuItem>
+                  <MenuItem value="es">ES</MenuItem>
+                  <MenuItem value="pt">PT</MenuItem>
+                  <MenuItem value="de">DE</MenuItem>
+                  <MenuItem value="nl">NL</MenuItem>
                 </Select>
               </FormControl>
 
-              {/* Theme Toggle */}
+              {/* Theme Toggle — compact */}
               <Box
-                data-testid="theme-toggle"
                 onClick={toggleDarkMode}
                 sx={{
-                  width: 80,
-                  height: 40,
-                  backgroundColor: 'white',
+                  width: 60,
+                  height: 30,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
                   borderRadius: 999,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  px: 0.5,
+                  px: '3px',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
                 }}
               >
                 <Box
                   sx={{
-                    width: 32,
-                    height: 32,
-                    backgroundColor: !darkMode ? '#444CE7' : '#fff',
+                    width: 24,
+                    height: 24,
+                    backgroundColor: !darkMode ? '#fff' : 'transparent',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
-                    color: 'white',
+                    justifyContent: 'center',
                     transition: 'all 0.3s ease',
-                    padding: '4px'
-
                   }}
                 >
-                  <WbSunnyIcon fontSize='small' sx={{
-                    color: darkMode ? '#444CE7' : '#fff',
-                    width: '100%'
-                  }} />
+                  <WbSunnyIcon sx={{ fontSize: 14, color: !darkMode ? '#0004FF' : 'rgba(255,255,255,0.5)' }} />
                 </Box>
                 <Box
                   sx={{
-                    width: 32,
-                    height: 32,
-                    backgroundColor: darkMode ? '#444CE7' : '#fff',
+                    width: 24,
+                    height: 24,
+                    backgroundColor: darkMode ? '#fff' : 'transparent',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
-                    color: 'white',
+                    justifyContent: 'center',
                     transition: 'all 0.3s ease',
-                    padding: '4px'
                   }}
                 >
-                  <BedtimeIcon sx={{
-                    color: darkMode ? '#fff' : '#444CE7',
-                    width: '100%'
-                  }} fontSize='small' />
+                  <BedtimeIcon sx={{ fontSize: 14, color: darkMode ? '#0004FF' : 'rgba(255,255,255,0.5)' }} />
                 </Box>
-              </Box>
-
-              {/* Notifications */}
-              <IconButton sx={{ color: 'white', position: 'relative', }}>
-                <Badge
-                  variant="dot"
-                  sx={{
-                    position: 'absolute',
-                    top: 18,
-                    right: 18,
-                    '& .MuiBadge-dot': {
-                      height: 11,
-                      width: 11,
-                      backgroundColor: '#444CE7',
-                    },
-                  }}
-                >
-                </Badge>
-                <Notification />
-
-              </IconButton>
-
-              {/* Avatar */}
-              <Box position='relative'>
-                <Avatar
-                  sx={{ bgcolor: 'white', color: '#2b3bcf', width: 48, height: 48 }}
-                >
-                  <Image src={User.src} alt='User' width={28} height={28} />
-                </Avatar>
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: 4,
-                    right: 2,
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    backgroundColor: '#12B76A',
-                    border: '2px solid white'
-                  }}
-                />
               </Box>
             </Stack>
           )}
@@ -257,83 +195,84 @@ const Header = ({
       </AppBar>
 
       {/* Mobile Drawer */}
-      <Drawer 
-        anchor='right' 
-        open={drawerOpen} 
+      <Drawer
+        anchor='right'
+        open={drawerOpen}
         onClose={toggleDrawer}
-        ModalProps={{
-          keepMounted: true, // Better mobile performance
-        }}
         sx={{
           '& .MuiDrawer-paper': {
-            zIndex: 1200,
-          }
+            width: 240,
+            p: 2,
+            backgroundColor: darkMode ? '#1a1a2e' : '#fff',
+          },
         }}
       >
-        <Box sx={{ width: 250, p: 2 }}>
-          <Stack spacing={2}>
-            <Button startIcon={<AccountBalanceWalletIcon />}>{t('header.wallet')}</Button>
-            <FormControl variant='standard' sx={{ minWidth: 120 }}>
-              <Select 
-                data-testid="language-selector-mobile"
-                value={router.locale || 'en'}
-                onChange={(e) => {
-                  handleLanguageChange(e);
-                  toggleDrawer(); // Close drawer after selection
-                }}
-                MenuProps={{
-                  disablePortal: false,
-                  sx: { 
-                    zIndex: 1500, // Higher than drawer (1200)
-                    '& .MuiPaper-root': {
-                      zIndex: 1500,
-                    }
-                  }
-                }}
-              >
-                <MenuItem data-testid="lang-mobile-en" value='en'>EN</MenuItem>
-                <MenuItem data-testid="lang-mobile-fr" value='fr'>FR</MenuItem>
-                <MenuItem data-testid="lang-mobile-es" value='es'>ES</MenuItem>
-                <MenuItem data-testid="lang-mobile-pt" value='pt'>PT</MenuItem>
-                <MenuItem data-testid="lang-mobile-de" value='de'>DE</MenuItem>
-                <MenuItem data-testid="lang-mobile-nl" value='nl'>NL</MenuItem>
-              </Select>
-            </FormControl>
-            <Box
-              data-testid="theme-toggle-mobile"
-              onClick={toggleDarkMode}
-              sx={{
-                width: 60,
-                height: 30,
-                backgroundColor: 'white',
-                borderRadius: 999,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: darkMode ? 'flex-end' : 'flex-start',
-                px: 0.5,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                transition: 'all 0.3s ease'
+        <Stack spacing={2} mt={1}>
+          <Button
+            startIcon={<Icon icon="solar:wallet-linear" width="18" height="18" />}
+            variant='outlined'
+            size='small'
+            sx={{
+              borderColor: '#0004FF',
+              color: '#0004FF',
+              borderRadius: 20,
+              textTransform: 'none',
+              fontSize: '13px',
+              fontWeight: 600,
+            }}
+          >
+            {t('header.wallet')}
+          </Button>
+
+          <FormControl variant='standard' size='small' sx={{ minWidth: 100 }}>
+            <Select
+              value={router.locale || 'en'}
+              onChange={(e) => {
+                handleLanguageChange(e);
+                toggleDrawer();
               }}
             >
-              <Box
-                sx={{
-                  width: 24,
-                  height: 24,
-                  backgroundColor: '#444CE7',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                {darkMode ? <WbSunnyIcon fontSize='small' /> : <BedtimeIcon fontSize='small' />}
-              </Box>
+              <MenuItem value='en'>EN</MenuItem>
+              <MenuItem value='fr'>FR</MenuItem>
+              <MenuItem value='es'>ES</MenuItem>
+              <MenuItem value='pt'>PT</MenuItem>
+              <MenuItem value='de'>DE</MenuItem>
+              <MenuItem value='nl'>NL</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Box
+            onClick={() => { toggleDarkMode(); toggleDrawer(); }}
+            sx={{
+              width: 52,
+              height: 28,
+              backgroundColor: darkMode ? '#2a2a4a' : '#E9ECF2',
+              borderRadius: 999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: darkMode ? 'flex-end' : 'flex-start',
+              px: '3px',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+            }}
+          >
+            <Box
+              sx={{
+                width: 22,
+                height: 22,
+                backgroundColor: '#0004FF',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              {darkMode ? <BedtimeIcon sx={{ fontSize: 13 }} /> : <WbSunnyIcon sx={{ fontSize: 13 }} />}
             </Box>
-          </Stack>
-        </Box>
+          </Box>
+        </Stack>
       </Drawer>
     </>
   );

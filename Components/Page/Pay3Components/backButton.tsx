@@ -28,7 +28,7 @@ export default function BackButton({
         '&:hover': {
           backgroundColor: '#F9FAFB',
         },
-        fontFamily: 'Space Grotesk'
+        
       }}
     >
       {label}

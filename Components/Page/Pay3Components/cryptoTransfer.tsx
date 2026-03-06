@@ -1388,11 +1388,11 @@ const CryptoTransfer = ({
               setIsStart(false);
             }}
             sx={{
-              backgroundColor: isDark ? '#6C7BFF' : "#444CE7",
+              backgroundColor: isDark ? '#6C7BFF' : "#0004FF",
               color: "#FFFFFF",
               borderRadius: "30px",
               py: 1.5,
-              fontFamily: "Space Grotesk",
+              ,
               fontWeight: 500,
               textTransform: "none",
               mb: 2,
@@ -1413,7 +1413,7 @@ const CryptoTransfer = ({
               color: theme.palette.text.primary,
               borderRadius: "30px",
               py: 1.5,
-              fontFamily: "Space Grotesk",
+              ,
               fontWeight: 500,
               textTransform: "none",
               "&:hover": {
@@ -1522,7 +1522,7 @@ const CryptoTransfer = ({
               color: "#344054",
               borderRadius: "30px",
               py: 1.5,
-              fontFamily: "Space Grotesk",
+              ,
               fontWeight: 500,
               textTransform: "none",
               "&:hover": {
@@ -1554,7 +1554,7 @@ const CryptoTransfer = ({
           width: "100%",
           maxWidth: 450,
           marginTop: 0,
-          border: `1px solid ${isDark ? theme.palette.divider : '#E7EAFD'}`,
+          border: `1px solid ${isDark ? theme.palette.divider : '#E9ECF2'}`,
           boxShadow: isDark ? "0px 45px 64px 0px rgba(0,0,0,0.3)" : "0px 45px 64px 0px #0D03230F",
           bgcolor: theme.palette.background.paper,
         }}
@@ -1563,13 +1563,13 @@ const CryptoTransfer = ({
           onClick={() => setActiveStep(activeStep - 1)}
           sx={{
             backgroundColor: isDark ? 'rgba(108, 123, 255, 0.15)' : "#F5F8FF",
-            color: isDark ? '#6C7BFF' : "#444CE7",
+            color: isDark ? '#6C7BFF' : "#0004FF",
             borderRadius: "50%",
             padding: "10px",
             "&:hover": { backgroundColor: isDark ? 'rgba(108, 123, 255, 0.25)' : "#ebefff" },
           }}
         >
-          <ArrowBack sx={{ color: isDark ? '#6C7BFF' : "#444CE7" }} />
+          <ArrowBack sx={{ color: isDark ? '#6C7BFF' : "#0004FF" }} />
         </IconButton>
 
         <Typography
@@ -1608,7 +1608,7 @@ const CryptoTransfer = ({
               border={`1px solid ${isDark ? theme.palette.divider : '#737373'}`}
               borderRadius="10px"
             >
-              <CircularProgress size={24} sx={{ color: isDark ? '#6C7BFF' : "#444CE7" }} />
+              <CircularProgress size={24} sx={{ color: isDark ? '#6C7BFF' : "#0004FF" }} />
               <Typography ml={2} fontFamily="Space Grotesk" color={theme.palette.text.secondary}>
                 {t('crypto.loadingCurrencies')}
               </Typography>
@@ -1707,7 +1707,7 @@ const CryptoTransfer = ({
                     style={{
                       color: theme.palette.text.primary,
                       fontWeight: 500,
-                      fontFamily: "Space Grotesk",
+                      ,
                     }}
                   >
                     {t('crypto.selectCryptoType')}
@@ -1783,12 +1783,12 @@ const CryptoTransfer = ({
                   border={`1px solid ${
                     selectedNetwork === net 
                       ? (isDark ? '#6C7BFF' : "#86A4F9") 
-                      : (isDark ? theme.palette.divider : "#E7EAFD")
+                      : (isDark ? theme.palette.divider : "#E9ECF2")
                   }`}
                   padding="5px 10px"
                   fontSize="small"
                   bgcolor={selectedNetwork === net 
-                    ? (isDark ? 'rgba(108, 123, 255, 0.2)' : "#E7EAFD") 
+                    ? (isDark ? 'rgba(108, 123, 255, 0.2)' : "#E9ECF2") 
                     : (isDark ? 'rgba(255, 255, 255, 0.05)' : "#F5F8FF")}
                   color={theme.palette.text.primary}
                   borderRadius="5px"
@@ -1841,12 +1841,12 @@ const CryptoTransfer = ({
                   border={`1px solid ${
                     selectedNetwork === net 
                       ? (isDark ? '#6C7BFF' : "#86A4F9") 
-                      : (isDark ? theme.palette.divider : "#E7EAFD")
+                      : (isDark ? theme.palette.divider : "#E9ECF2")
                   }`}
                   padding="5px 10px"
                   fontSize="small"
                   bgcolor={selectedNetwork === net 
-                    ? (isDark ? 'rgba(108, 123, 255, 0.2)' : "#E7EAFD") 
+                    ? (isDark ? 'rgba(108, 123, 255, 0.2)' : "#E9ECF2") 
                     : (isDark ? 'rgba(255, 255, 255, 0.05)' : "#F5F8FF")}
                   color={theme.palette.text.primary}
                   borderRadius="5px"
@@ -1908,7 +1908,7 @@ const CryptoTransfer = ({
                   sx={{
                     bgcolor: theme.palette.background.paper,
                     borderRadius: "10px",
-                    border: `1px solid ${isDark ? theme.palette.divider : '#E7EAFD'}`,
+                    border: `1px solid ${isDark ? theme.palette.divider : '#E9ECF2'}`,
                     mb: 2,
                   }}
                 >
@@ -1941,14 +1941,14 @@ const CryptoTransfer = ({
                   display="flex"
                   alignItems="center"
                   justifyContent="space-between"
-                  border={`1px solid ${isDark ? theme.palette.divider : '#E7EAFD'}`}
+                  border={`1px solid ${isDark ? theme.palette.divider : '#E9ECF2'}`}
                   padding="10px"
                   borderRadius="8px"
                   bgcolor={theme.palette.background.paper}
                 >
                   <Typography
                     variant="body2"
-                    sx={{ color: isDark ? '#6C7BFF' : "#444CE7" }}
+                    sx={{ color: isDark ? '#6C7BFF' : "#0004FF" }}
                     fontWeight="400"
                     fontSize="11px"
                     maxWidth="88%"
@@ -1962,7 +1962,7 @@ const CryptoTransfer = ({
                     <IconButton
                       size="small"
                       sx={{
-                        bgcolor: isDark ? 'rgba(108, 123, 255, 0.2)' : "#E7EAFD",
+                        bgcolor: isDark ? 'rgba(108, 123, 255, 0.2)' : "#E9ECF2",
                         p: 0.5,
                         height: "24px",
                         width: "24px",
@@ -2255,7 +2255,7 @@ const CryptoTransfer = ({
                         <IconButton
                           size="small"
                           sx={{
-                            bgcolor: isDark ? 'rgba(108, 123, 255, 0.2)' : "#E7EAFD",
+                            bgcolor: isDark ? 'rgba(108, 123, 255, 0.2)' : "#E9ECF2",
                             p: 0.5,
                             height: "24px",
                             width: "24px",

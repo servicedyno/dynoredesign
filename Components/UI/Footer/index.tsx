@@ -1,55 +1,61 @@
 'use client'
 
-import { Box, IconButton, useTheme } from '@mui/material'
-import XIcon from '@mui/icons-material/X'
+import { Box, Typography, useTheme } from '@mui/material'
 import Link from 'next/link'
-import InstagramIcon from '@mui/icons-material/Instagram'
 import { useTranslation } from 'react-i18next'
 
-export default function Footer () {
+export default function Footer() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { t } = useTranslation('common');
-  
-  return (
-    <Box component='footer' width='100%' >
-      {/* Icon Row */}
-      <Box display='flex' justifyContent='center' py={2}>
-        <IconButton>
-          <InstagramIcon sx={{ color: isDark ? '#6C7BFF' : '#2D3282' }} />
-        </IconButton>
-        <IconButton>
-          <XIcon sx={{ color: isDark ? '#6C7BFF' : '#2D3282' }} />
-        </IconButton>
-      </Box>
 
-      {/* Footer Bar */}
-      <Box
-        bgcolor={isDark ? '#1a1a2e' : '#2D3282'}
-        py={1}
-        textAlign='center'
-        sx={{ 
-          width: '100%', 
-          color: '#fff', 
-          height: '46px',
-          transition: 'background-color 0.3s ease',
-        }}
-      >
+  return (
+    <Box
+      component='footer'
+      sx={{
+        width: '100%',
+        py: 1.5,
+        textAlign: 'center',
+        backgroundColor: isDark ? '#1a1a2e' : '#242428',
+        transition: 'background-color 0.3s ease',
+      }}
+    >
+      <Box display='flex' alignItems='center' justifyContent='center' gap={1.5}>
         <Link
-          href={'/pay/terms-of-service'}
+          href='/pay/terms-of-service'
           style={{
-            color: '#fff',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '400'
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: '12px',
+            fontWeight: 500,
+            textDecoration: 'none',
+            fontFamily: "'Urbanist', sans-serif",
           }}
         >
           {t('footer.termsOfService')}
         </Link>
-        <span> | </span>
-        <Link href={'/pay/aml-policy'} style={{ color: '#fff', cursor: 'pointer', fontSize:'14px', fontWeight:"400" }}>
+        <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>|</Typography>
+        <Link
+          href='/pay/aml-policy'
+          style={{
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: '12px',
+            fontWeight: 500,
+            textDecoration: 'none',
+            fontFamily: "'Urbanist', sans-serif",
+          }}
+        >
           {t('footer.amlPolicy')}
         </Link>
+        <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>|</Typography>
+        <Typography
+          sx={{
+            color: 'rgba(255,255,255,0.4)',
+            fontSize: '11px',
+            fontFamily: "'Urbanist', sans-serif",
+          }}
+        >
+          Powered by DynoPay
+        </Typography>
       </Box>
     </Box>
   )

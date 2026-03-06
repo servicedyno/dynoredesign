@@ -163,7 +163,7 @@ const OverPayment = ({
             maxWidth: 500,
             textAlign: "center",
             margin: 0,
-            border: `1px solid ${isDark ? theme.palette.divider : '#E7EAFD'}`,
+            border: `1px solid ${isDark ? theme.palette.divider : '#E9ECF2'}`,
             boxShadow: isDark 
               ? "0px 45px 64px 0px rgba(0,0,0,0.3)" 
               : "0px 45px 64px 0px #0D03230F",
@@ -198,7 +198,7 @@ const OverPayment = ({
           {transactionId && (
             <Box
               sx={{
-                border: `1px solid ${isDark ? theme.palette.divider : '#E7EAFD'}`,
+                border: `1px solid ${isDark ? theme.palette.divider : '#E9ECF2'}`,
                 borderRadius: '10px',
                 p: 2,
                 mb: 2,
@@ -211,7 +211,7 @@ const OverPayment = ({
                     fontSize={10}
                     fontWeight={600}
                     color={isDark ? theme.palette.text.secondary : '#666'}
-                    fontFamily='Space Grotesk'
+                    
                     letterSpacing={0.5}
                   >
                     {t('success.transactionId')}
@@ -220,7 +220,7 @@ const OverPayment = ({
                     fontWeight={500}
                     fontSize={13}
                     color={theme.palette.text.primary}
-                    fontFamily='Space Grotesk'
+                    
                   >
                     #{transactionId}
                   </Typography>
@@ -231,7 +231,7 @@ const OverPayment = ({
                     onClick={handleCopyTransactionId}
                     data-testid="copy-transaction-btn"
                     sx={{
-                      bgcolor: isDark ? '#2a2a4a' : '#E7EAFD',
+                      bgcolor: isDark ? '#2a2a4a' : '#E9ECF2',
                       p: 0.75,
                       borderRadius: '6px',
                       '&:hover': { bgcolor: isDark ? '#3a3a5a' : '#E0E7FF' }
@@ -411,7 +411,7 @@ const OverPayment = ({
                 <Icon icon="mdi:email-check" width={16} color="#12B76A" />
                 <Typography
                   fontSize={13}
-                  fontFamily='Space Grotesk'
+                  
                   color={isDark ? theme.palette.text.secondary : '#666'}
                 >
                   {t('success.confirmationSent', { email })}
@@ -428,10 +428,10 @@ const OverPayment = ({
                 gap={1} 
                 mb={2}
               >
-                <CircularProgress size={16} sx={{ color: '#444CE7' }} />
+                <CircularProgress size={16} sx={{ color: '#0004FF' }} />
                 <Typography
                   fontSize={13}
-                  fontFamily='Space Grotesk'
+                  
                   color={isDark ? theme.palette.text.secondary : '#515151'}
                 >
                   {merchantName 
@@ -450,14 +450,14 @@ const OverPayment = ({
                 onClick={handleRedirect}
                 data-testid="return-btn"
                 sx={{
-                  backgroundColor: '#4F46E5',
+                  backgroundColor: '#0004FF',
                   color: '#fff',
                   textTransform: "none",
                   borderRadius: 30,
                   py: 1.75,
                   fontSize: '15px',
                   fontWeight: 600,
-                  fontFamily: 'Space Grotesk',
+                  ,
                   "&:hover": {
                     backgroundColor: '#4338CA',
                   },
@@ -477,7 +477,7 @@ const OverPayment = ({
               <Typography
                 fontSize={12}
                 color={isDark ? theme.palette.text.secondary : '#888'}
-                fontFamily='Space Grotesk'
+                
                 sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                 onClick={handleRedirect}
               >
@@ -494,11 +494,11 @@ const OverPayment = ({
             gap={0.5}
             mt={2}
           >
-            <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#444CE7'} />
+            <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#0004FF'} />
             <Typography
               fontSize={12}
-              fontFamily='Space Grotesk'
-              color={isDark ? '#6C7BFF' : '#444CE7'}
+              
+              color={isDark ? '#6C7BFF' : '#0004FF'}
               fontWeight={500}
             >
               {t('checkout.securePayment')}

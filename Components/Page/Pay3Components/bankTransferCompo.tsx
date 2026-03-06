@@ -251,7 +251,7 @@ const BankTransferCompo = ({
               maxWidth: 450,
               marginTop: 10,
               margin: 0,
-              border: "1px solid #E7EAFD",
+              border: "1px solid #E9ECF2",
               boxShadow: "0px 45px 64px 0px #0D03230F",
             }}
           >
@@ -260,7 +260,7 @@ const BankTransferCompo = ({
               onClick={() => setActiveStep(activeStep - 1)}
               sx={{
                 backgroundColor: "#F5F8FF",
-                color: "#444CE7",
+                color: "#0004FF",
                 borderRadius: "50%",
                 padding: "10px",
                 "&:hover": {
@@ -268,7 +268,7 @@ const BankTransferCompo = ({
                 },
               }}
             >
-              <ArrowBack sx={{ color: "#444CE7" }} />
+              <ArrowBack sx={{ color: "#0004FF" }} />
             </IconButton>
 
             {/* Title */}
@@ -286,7 +286,7 @@ const BankTransferCompo = ({
                 icon="mingcute:bank-line"
                 width="26"
                 height="29"
-                style={{ color: "#444CE7" }}
+                style={{ color: "#0004FF" }}
               />
               NGN Bank Transfer
             </Typography>
@@ -359,10 +359,10 @@ const BankTransferCompo = ({
                     size="small"
                     sx={{
                       fontSize: "12px",
-                      color: isDark ? '#6C7BFF' : "#444CE7",
-                      bgcolor: isDark ? 'rgba(108, 123, 255, 0.2)' : "#E7EAFD",
+                      color: isDark ? '#6C7BFF' : "#0004FF",
+                      bgcolor: isDark ? 'rgba(108, 123, 255, 0.2)' : "#E9ECF2",
                       borderRadius: "6px",
-                      fontFamily: "Space Grotesk",
+                      ,
                       gap: "4px",
                     }}
                   >
@@ -524,14 +524,14 @@ const BankTransferCompo = ({
                   sx={{
                     mt: 1,
                     borderRadius: "99999px",
-                    bgcolor: "#444CE7",
-                    fontFamily: "Space Grotesk",
+                    bgcolor: "#0004FF",
+                    ,
                     fontWeight: 500,
                     py: "17px",
                     textTransform: "none",
                     boxShadow: "none",
                     "&:hover": {
-                      bgcolor: "#444CE7",
+                      bgcolor: "#0004FF",
                       boxShadow: "none",
                     },
                   }}

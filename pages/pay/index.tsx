@@ -666,40 +666,38 @@ const Payment = () => {
           {activeStep === 0 ? (
             <Box
               display='flex'
-              alignItems='center'
+              alignItems='flex-start'
               justifyContent='center'
-              px={2}
-              minHeight={'calc(100vh - 340px)'}
+              px={{ xs: 1.5, sm: 2 }}
+              py={{ xs: 1, sm: 2 }}
             >
               <Paper
-                elevation={3}
+                elevation={0}
                 data-testid="checkout-card"
                 sx={{
-                  borderRadius: 4,
-                  p: { xs: 2.5, sm: 4 },
+                  borderRadius: 3,
+                  p: { xs: 2, sm: 2.5 },
                   width: '100%',
-                  maxWidth: 500,
-                  marginTop: 10,
+                  maxWidth: 440,
                   textAlign: 'center',
-                  margin: 0,
-                  border: `1px solid ${isDark ? theme.palette.surface.border : '#E7EAFD'}`,
+                  border: `1px solid ${isDark ? theme.palette.surface.border : '#E9ECF2'}`,
                   boxShadow: isDark 
-                    ? '0px 45px 64px 0px rgba(0,0,0,0.3)' 
-                    : '0px 45px 64px 0px #0D03230F',
+                    ? '0 8px 32px rgba(0,0,0,0.3)' 
+                    : '0 4px 24px rgba(0,0,0,0.06)',
                   backgroundColor: theme.palette.background.paper,
                   transition: 'all 0.3s ease',
                 }}
               >
                 {/* Logo Section - Merchant logo or DynoPay */}
-                <Box display='flex' justifyContent='center' mb={2}>
+                <Box display='flex' justifyContent='center' mb={1}>
                   {merchantInfo?.company_logo ? (
                     <Box
                       component="img"
                       src={merchantInfo.company_logo}
                       alt={merchantInfo.name || 'Merchant'}
                       sx={{
-                        maxHeight: 50,
-                        maxWidth: 150,
+                        maxHeight: 36,
+                        maxWidth: 120,
                         objectFit: 'contain'
                       }}
                       onError={(e: any) => {
@@ -707,7 +705,7 @@ const Payment = () => {
                       }}
                     />
                   ) : (
-                    <Logo />
+                    <Logo width={36} height={42} />
                   )}
                 </Box>
 
@@ -722,10 +720,10 @@ const Payment = () => {
                     }}
                     data-testid="incomplete-payment-alert"
                   >
-                    <AlertTitle sx={{ fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+                    <AlertTitle sx={{ , fontWeight: 600 }}>
                       {t('checkout.incompletePayment', { defaultValue: 'Incomplete Payment' })}
                     </AlertTitle>
-                    <Typography variant="body2" fontFamily='Space Grotesk'>
+                    <Typography variant="body2" >
                       {t('checkout.incompletePaymentDesc', { 
                         defaultValue: `You have a pending payment of ${incompletePayment.pending_amount} ${incompletePayment.currency}. Please complete it within ${incompletePayment.remaining_minutes} minutes or wait for it to expire.`,
                         amount: incompletePayment.pending_amount,
@@ -737,7 +735,7 @@ const Payment = () => {
                       variant="caption" 
                       color="text.secondary" 
                       sx={{ mt: 1, display: 'block', wordBreak: 'break-all' }}
-                      fontFamily='Space Grotesk'
+                      
                     >
                       {t('checkout.address', { defaultValue: 'Address' })}: {incompletePayment.address}
                     </Typography>
@@ -751,7 +749,7 @@ const Payment = () => {
                           color: '#E67E22',
                           fontWeight: 600,
                         }}
-                        fontFamily='Space Grotesk'
+                        
                         data-testid="incomplete-payment-memo"
                       >
                         {t('checkout.memoTag', { defaultValue: 'Memo / Tag' })}: {incompletePayment.memo || incompletePayment.destination_tag}
@@ -762,11 +760,10 @@ const Payment = () => {
 
                 {/* Context-Aware Title */}
                 <Typography
-                  fontWeight={500}
-                  fontSize={{ xs: 20, sm: 25 }}
-                  lineHeight='98%'
-                  gutterBottom
-                  fontFamily='Space Grotesk'
+                  fontWeight={700}
+                  fontSize={{ xs: 18, sm: 20 }}
+                  lineHeight={1.2}
+                  
                   color={theme.palette.text.primary}
                   data-testid="checkout-title"
                 >
@@ -775,12 +772,13 @@ const Payment = () => {
 
                 {/* Dynamic Subtitle with Merchant Name */}
                 <Typography
-                  color={isDark ? theme.palette.text.secondary : '#000'}
+                  color={theme.palette.text.secondary}
                   fontWeight={400}
-                  fontSize={14}
-                  lineHeight='18px'
-                  mb={3}
-                  fontFamily='Space Grotesk'
+                  fontSize={13}
+                  lineHeight={1.4}
+                  mb={2}
+                  mt={0.5}
+                  
                   data-testid="checkout-subtitle"
                 >
                   {getSubtitle()}
@@ -790,10 +788,10 @@ const Payment = () => {
                 {(description || orderReference || customerName) && (
                   <Box
                     sx={{
-                      border: `1px solid ${isDark ? theme.palette.surface.border : '#E7EAFD'}`,
+                      border: `1px solid ${isDark ? theme.palette.surface.border : '#E9ECF2'}`,
                       borderRadius: '10px',
-                      p: 2,
-                      mb: 2,
+                      p: 1.5,
+                      mb: 1.5,
                       textAlign: 'left',
                       backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : '#FAFBFF'
                     }}
@@ -803,7 +801,7 @@ const Payment = () => {
                       fontWeight={600}
                       fontSize={11}
                       color={isDark ? theme.palette.text.secondary : '#666'}
-                      fontFamily='Space Grotesk'
+                      
                       letterSpacing={0.5}
                       mb={1}
                     >
@@ -813,9 +811,9 @@ const Payment = () => {
                     {description && (
                       <Typography
                         fontWeight={500}
-                        fontSize={14}
+                        fontSize={13}
                         color={theme.palette.text.primary}
-                        fontFamily='Space Grotesk'
+                        
                         mb={(orderReference || tokenData?.email || customerName) ? 1.5 : 0}
                       >
                         {description}
@@ -829,7 +827,7 @@ const Payment = () => {
                           fontWeight={500}
                           fontSize={13}
                           color={theme.palette.text.primary}
-                          fontFamily='Space Grotesk'
+                          
                           data-testid="customer-name"
                         >
                           {customerName}
@@ -844,7 +842,7 @@ const Payment = () => {
                           fontWeight={500}
                           fontSize={13}
                           color={theme.palette.text.primary}
-                          fontFamily='Space Grotesk'
+                          
                           data-testid="customer-email"
                         >
                           {tokenData.email}
@@ -859,7 +857,7 @@ const Payment = () => {
                             fontWeight={600}
                             fontSize={10}
                             color={isDark ? theme.palette.text.secondary : '#888'}
-                            fontFamily='Space Grotesk'
+                            
                             letterSpacing={0.5}
                           >
                             {t('checkout.invoice')}
@@ -868,7 +866,7 @@ const Payment = () => {
                             fontWeight={500}
                             fontSize={13}
                             color={theme.palette.text.primary}
-                            fontFamily='Space Grotesk'
+                            
                             data-testid="invoice-number"
                           >
                             {orderReference}
@@ -880,7 +878,7 @@ const Payment = () => {
                             onClick={handleCopyInvoice}
                             data-testid="copy-invoice-btn"
                             sx={{
-                              bgcolor: isDark ? '#2a2a4a' : '#E7EAFD',
+                              bgcolor: isDark ? '#2a2a4a' : '#E9ECF2',
                               p: 0.75,
                               borderRadius: '6px',
                               '&:hover': { bgcolor: isDark ? '#3a3a5a' : '#E0E7FF' }
@@ -897,10 +895,10 @@ const Payment = () => {
                 {/* Fee Breakdown Section */}
                 <Box
                   alignItems='center'
-                  border={`1px solid ${isDark ? theme.palette.surface.border : '#DFDFDF'}`}
-                  borderRadius={'10px'}
-                  px='21px'
-                  py='18px'
+                  border={`1px solid ${isDark ? theme.palette.surface.border : '#E9ECF2'}`}
+                  borderRadius='10px'
+                  px={1.5}
+                  py={1.5}
                   sx={{ transition: 'border-color 0.3s ease' }}
                   data-testid="fee-breakdown-section"
                 >
@@ -909,15 +907,15 @@ const Payment = () => {
                     <>
                       <Box display='flex' justifyContent='space-between' alignItems='center' mb={1}>
                         <Typography
-                          fontSize={14}
-                          fontFamily='Space Grotesk'
+                          fontSize={13}
+                          
                           color={isDark ? theme.palette.text.secondary : '#666'}
                         >
                           {t('checkout.subtotal')}
                         </Typography>
                         <Typography
-                          fontSize={14}
-                          fontFamily='Space Grotesk'
+                          fontSize={13}
+                          
                           fontWeight={500}
                           color={theme.palette.text.primary}
                         >
@@ -934,8 +932,8 @@ const Payment = () => {
                         <Box display='flex' justifyContent='space-between' alignItems='center' mb={1}>
                           <Box display='flex' alignItems='center' gap={0.5}>
                             <Typography
-                              fontSize={14}
-                              fontFamily='Space Grotesk'
+                              fontSize={13}
+                              
                               color={isDark ? theme.palette.text.secondary : '#666'}
                             >
                               {t('checkout.processingFee')}
@@ -946,8 +944,8 @@ const Payment = () => {
                           </Box>
                           <Box display='flex' alignItems='center' gap={0.5}>
                             <Typography
-                              fontSize={14}
-                              fontFamily='Space Grotesk'
+                              fontSize={13}
+                              
                               fontWeight={500}
                               color={theme.palette.text.primary}
                             >
@@ -962,7 +960,7 @@ const Payment = () => {
                         <Box display='flex' alignItems='center' mb={1} gap={0.5}>
                           <Typography
                             fontSize={12}
-                            fontFamily='Space Grotesk'
+                            
                             color={feeInfo.fee_payer === 'merchant' ? '#12B76A' : (isDark ? theme.palette.text.secondary : '#666')}
                           >
                             {feeInfo.fee_payer === 'merchant' 
@@ -977,8 +975,8 @@ const Payment = () => {
                       {taxInfo && taxInfo.amount > 0 && (
                         <Box display='flex' justifyContent='space-between' alignItems='center' mb={1}>
                           <Typography
-                            fontSize={14}
-                            fontFamily='Space Grotesk'
+                            fontSize={13}
+                            
                             color={isDark ? theme.palette.text.secondary : '#666'}
                           >
                             {taxInfo.country 
@@ -987,8 +985,8 @@ const Payment = () => {
                             }
                           </Typography>
                           <Typography
-                            fontSize={14}
-                            fontFamily='Space Grotesk'
+                            fontSize={13}
+                            
                             fontWeight={500}
                             color={theme.palette.text.primary}
                           >
@@ -1006,13 +1004,13 @@ const Payment = () => {
                     display='flex'
                     justifyContent='space-between'
                     alignItems='center'
-                    mb={2}
+                    mb={1.5}
                   >
                     <Typography
                       variant='subtitle2'
-                      fontFamily='Space Grotesk'
-                      fontWeight={600}
-                      fontSize={{ xs: 14, sm: 18 }}
+                      
+                      fontWeight={700}
+                      fontSize={{ xs: 14, sm: 15 }}
                       color={theme.palette.text.primary}
                     >
                       {t('checkout.total')}
@@ -1048,9 +1046,9 @@ const Payment = () => {
                             )?.icon}
 
                           <Typography
-                            fontWeight={600}
-                            fontFamily='Space Grotesk'
-                            fontSize={{ xs: 14, sm: 20 }}
+                            fontWeight={700}
+                            
+                            fontSize={{ xs: 14, sm: 16 }}
                             color={theme.palette.text.primary}
                             data-testid="total-amount"
                           >
@@ -1069,7 +1067,7 @@ const Payment = () => {
                             <Typography
                               variant="caption"
                               color={isDark ? theme.palette.text.secondary : '#666'}
-                              fontFamily='Space Grotesk'
+                              
                               fontSize={11}
                               sx={{ 
                                 display: 'block',
@@ -1180,7 +1178,7 @@ const Payment = () => {
                   </Box>
 
                   <Divider sx={{ 
-                    mb: 2, 
+                    mb: 1.5, 
                     borderColor: isDark ? theme.palette.surface.border : undefined 
                   }} />
 
@@ -1188,7 +1186,7 @@ const Payment = () => {
                     <Button
                       fullWidth
                       variant='outlined'
-                      startIcon={<BitCoinGreenIcon width={8.25} />}
+                      startIcon={<BitCoinGreenIcon width={7} />}
                       onClick={() => {
                         setActiveStep(1)
                         setTransferMethod('crypto')
@@ -1199,14 +1197,10 @@ const Payment = () => {
                         color: '#12B76A',
                         textTransform: 'none',
                         borderRadius: 30,
-                        fontFamily: 'Space Grotesk',
-                        fontWeight: '500',
-                        py: {
-                          xs: 1.5,
-                          sm: 2
-                        },
-                        fontSize: '16px',
-                        minHeight: 56,
+                        fontWeight: 600,
+                        py: 1.25,
+                        fontSize: '14px',
+                        minHeight: 44,
                         '&:hover': {
                           backgroundColor: isDark ? 'rgba(18, 183, 106, 0.1)' : '#ECFDF5',
                           borderColor: '#12B76A'
@@ -1218,44 +1212,25 @@ const Payment = () => {
                   </Box>
                 </Box>
 
-                {/* Expiry Countdown */}
-                {countdown && countdown !== 'Expired' && (
-                  <Box 
-                    display='flex' 
-                    alignItems='center' 
-                    justifyContent='center' 
-                    gap={1} 
-                    mt={2}
-                    data-testid="expiry-countdown"
-                  >
-                    <Icon icon="mdi:clock-outline" width={16} color={isDark ? theme.palette.text.secondary : '#666'} />
-                    <Typography
-                      fontSize={13}
-                      fontFamily='Space Grotesk'
-                      color={isDark ? theme.palette.text.secondary : '#666'}
-                    >
-                      {t('checkout.expiresIn')} <strong>{countdown}</strong>
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Transaction ID & Security Badge */}
-                <Box mt={2}>
-                  {/* Security Badge */}
-                  <Box 
-                    display='flex' 
-                    alignItems='center' 
-                    justifyContent='center' 
-                    gap={0.5} 
-                    data-testid="security-badge"
-                  >
-                    <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#444CE7'} />
-                    <Typography
-                      fontSize={12}
-                      fontFamily='Space Grotesk'
-                      color={isDark ? '#6C7BFF' : '#444CE7'}
-                      fontWeight={500}
-                    >
+                {/* Expiry + Security row */}
+                <Box
+                  display='flex'
+                  alignItems='center'
+                  justifyContent='space-between'
+                  mt={1.5}
+                  px={0.5}
+                >
+                  {countdown && countdown !== 'Expired' && (
+                    <Box display='flex' alignItems='center' gap={0.5} data-testid="expiry-countdown">
+                      <Icon icon="mdi:clock-outline" width={13} color={theme.palette.text.secondary} />
+                      <Typography fontSize={11} color={theme.palette.text.secondary}>
+                        {t('checkout.expiresIn')} <strong>{countdown}</strong>
+                      </Typography>
+                    </Box>
+                  )}
+                  <Box display='flex' alignItems='center' gap={0.5} data-testid="security-badge">
+                    <Icon icon="mdi:lock" width={12} color={isDark ? '#6C7BFF' : '#0004FF'} />
+                    <Typography fontSize={11} color={isDark ? '#6C7BFF' : '#0004FF'} fontWeight={600}>
                       {t('checkout.securePayment')}
                     </Typography>
                   </Box>

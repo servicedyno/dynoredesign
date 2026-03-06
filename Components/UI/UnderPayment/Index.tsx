@@ -132,7 +132,7 @@ const UnderPayment = ({
             maxWidth: 500,
             textAlign: "center",
             margin: 0,
-            border: `1px solid ${isDark ? theme.palette.divider : '#E7EAFD'}`,
+            border: `1px solid ${isDark ? theme.palette.divider : '#E9ECF2'}`,
             boxShadow: isDark 
               ? "0px 45px 64px 0px rgba(0,0,0,0.3)" 
               : "0px 45px 64px 0px #0D03230F",
@@ -230,7 +230,7 @@ const UnderPayment = ({
           {transactionId && (
             <Box
               sx={{
-                border: `1px solid ${isDark ? theme.palette.divider : '#E7EAFD'}`,
+                border: `1px solid ${isDark ? theme.palette.divider : '#E9ECF2'}`,
                 borderRadius: '10px',
                 p: 2,
                 mb: 2,
@@ -243,7 +243,7 @@ const UnderPayment = ({
                     fontSize={10}
                     fontWeight={600}
                     color={isDark ? theme.palette.text.secondary : '#666'}
-                    fontFamily='Space Grotesk'
+                    
                     letterSpacing={0.5}
                   >
                     {t('success.transactionId')}
@@ -252,7 +252,7 @@ const UnderPayment = ({
                     fontWeight={500}
                     fontSize={13}
                     color={theme.palette.text.primary}
-                    fontFamily='Space Grotesk'
+                    
                   >
                     #{transactionId}
                   </Typography>
@@ -263,7 +263,7 @@ const UnderPayment = ({
                     onClick={handleCopyTransactionId}
                     data-testid="copy-transaction-btn"
                     sx={{
-                      bgcolor: isDark ? '#2a2a4a' : '#E7EAFD',
+                      bgcolor: isDark ? '#2a2a4a' : '#E9ECF2',
                       p: 0.75,
                       borderRadius: '6px',
                       '&:hover': { bgcolor: isDark ? '#3a3a5a' : '#E0E7FF' }
@@ -379,7 +379,7 @@ const UnderPayment = ({
                   color: "#10B981",
                   textTransform: "none",
                   borderRadius: 30,
-                  fontFamily: "Space Grotesk",
+                  ,
                   fontWeight: 500,
                   py: { xs: 1.5, sm: 2 },
                   fontSize: { xs: "14px", sm: "16px" },
@@ -403,11 +403,11 @@ const UnderPayment = ({
             gap={0.5}
             mt={2}
           >
-            <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#444CE7'} />
+            <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#0004FF'} />
             <Typography
               fontSize={12}
-              fontFamily='Space Grotesk'
-              color={isDark ? '#6C7BFF' : '#444CE7'}
+              
+              color={isDark ? '#6C7BFF' : '#0004FF'}
               fontWeight={500}
             >
               {t('checkout.securePayment')}

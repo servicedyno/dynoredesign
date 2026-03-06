@@ -6,61 +6,58 @@ import {
   StepLabel,
   StepConnector,
   stepConnectorClasses,
-  Typography,
-  IconButton,
   Box
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import CheckIcon from '@mui/icons-material/Check'
-import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew'
 
-const CustomConnector = styled(StepConnector)(({ theme }) => ({
+const CustomConnector = styled(StepConnector)(() => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
-    top: 14
+    top: 10,
   },
   [`& .${stepConnectorClasses.line}`]: {
     height: 2,
     border: 0,
-    backgroundColor: '#CBD5E1', // gray line
-    borderRadius: 1
+    backgroundColor: '#E9ECF2',
+    borderRadius: 1,
   },
   [`&.${stepConnectorClasses.active} .${stepConnectorClasses.line}`]: {
-    backgroundColor: '#4F46E5' // active step line
+    backgroundColor: '#0004FF',
   },
   [`&.${stepConnectorClasses.completed} .${stepConnectorClasses.line}`]: {
-    backgroundColor: '#4F46E5' // completed line
-  }
+    backgroundColor: '#0004FF',
+  },
 }))
 
 const StepIconRoot = styled('div')<{
   ownerState: { completed: boolean; active: boolean }
 }>(({ ownerState }) => ({
-  backgroundColor: ownerState.completed ? '#4F46E5' : '#fff',
+  backgroundColor: ownerState.completed ? '#0004FF' : '#fff',
   zIndex: 1,
-  color: ownerState.completed ? '#fff' : '#4F46E5',
-  width: 28,
-  height: 28,
+  color: ownerState.completed ? '#fff' : '#0004FF',
+  width: 22,
+  height: 22,
   display: 'flex',
-  border: '2px solid #4F46E5',
+  border: `2px solid ${ownerState.active || ownerState.completed ? '#0004FF' : '#CBD5E1'}`,
   borderRadius: '50%',
   justifyContent: 'center',
-  alignItems: 'center'
+  alignItems: 'center',
 }))
 
-function StepIconComponent (props: any) {
+function StepIconComponent(props: any) {
   const { active, completed } = props
 
   return (
     <StepIconRoot ownerState={{ completed, active }}>
       {completed ? (
-        <CheckIcon style={{ fontSize: 16, color: '#fff' }} />
+        <CheckIcon style={{ fontSize: 13, color: '#fff' }} />
       ) : (
         <div
           style={{
-            width: 8,
-            height: 8,
+            width: 6,
+            height: 6,
             borderRadius: '50%',
-            background: active ? '#4F46E5' : '#CBD5E1'
+            background: active ? '#0004FF' : '#CBD5E1',
           }}
         />
       )}
@@ -68,28 +65,11 @@ function StepIconComponent (props: any) {
   )
 }
 
-const steps = ['Order Info', 'Payment', 'Confirmation']
+const steps = ['Order', 'Payment', 'Done']
 
 export default function ProgressBar({ activeStep }: { activeStep: number }) {
   return (
-    <Box
-      sx={{ width: '100%', px: 4, py: 3, }}
-    >
-      {/* {activeStep === 2 ? (
-        <Box display='flex' alignItems='center' mb={2} height={35}>
-      
-        </Box>
-      ) : (
-        // <Box display='flex' alignItems='center' mb={2}>
-        //   <IconButton>
-        //     <ArrowBackIosNewIcon fontSize='small' />
-        //   </IconButton>
-
-        //   <Typography variant='body2' sx={{ fontFamily: "Space Grotesk", fontWeight: '500', fontSize: '14px' }}>
-        //     Back
-        //   </Typography>
-        // </Box>
-      )} */}
+    <Box sx={{ width: '100%', maxWidth: 480, mx: 'auto', px: 2, pt: 1.5, pb: 1 }}>
       <Stepper
         alternativeLabel
         activeStep={activeStep}
@@ -97,15 +77,7 @@ export default function ProgressBar({ activeStep }: { activeStep: number }) {
       >
         {steps.map(label => (
           <Step key={label}>
-            <StepLabel StepIconComponent={StepIconComponent}>
-              <Typography
-                variant='caption'
-                fontWeight={500}
-                color='text.secondary'
-              >
-                {/* {label} */}
-              </Typography>
-            </StepLabel>
+            <StepLabel StepIconComponent={StepIconComponent} />
           </Step>
         ))}
       </Stepper>
