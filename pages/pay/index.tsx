@@ -1,0 +1,1321 @@
+import axiosBaseApi from '@/axiosConfig'
+
+import paymentAuth from '@/Components/Page/Common/HOC/paymentAuth'
+import { createEncryption } from '@/helpers'
+import { paymentTypes } from '@/utils/enums'
+import {
+  CommonApiRes,
+  CommonDetails,
+  currencyData
+} from '@/utils/types/paymentTypes'
+import {
+  Box,
+  Button,
+  Divider,
+  IconButton,
+  Menu,
+  MenuItem,
+  Paper,
+  Skeleton,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+  useTheme,
+  Snackbar,
+  Alert,
+  AlertTitle
+} from '@mui/material'
+import React, { useEffect, useState, useCallback } from 'react'
+import 'react-credit-cards-2/dist/es/styles-compiled.css'
+import { useDispatch } from 'react-redux'
+import { walletState } from '../../utils/types/paymentTypes'
+
+import { useRouter } from 'next/router'
+import { TOAST_SHOW } from '@/Redux/Actions/ToastAction'
+import jwt from 'jsonwebtoken'
+import ProgressBar from '@/Components/UI/ProgressBar'
+
+import FloatingChatButton from '@/Components/UI/ChatButton'
+
+import TransferExpectedCard from '@/Components/UI/TransferExpectedCard/Index'
+import CopyIcon from '@/assets/Icons/CopyIcon'
+import { Icon } from '@iconify/react'
+import BitCoinGreenIcon from '@/assets/Icons/BitCoinGreenIcon'
+import Logo from '@/assets/Icons/Logo'
+import CryptoTransfer from '@/Components/Page/Pay3Components/cryptoTransfer'
+import BankTransferCompo from '@/Components/Page/Pay3Components/bankTransferCompo'
+import Pay3Layout from '@/Components/Layout/Pay3Layout'
+import Image from 'next/image'
+// Flag icon imports - International
+import USDIcon from '../../assets/Icons/flag/USD.png'
+import EURIcon from '../../assets/Icons/flag/EUR.png'
+import GBPIcon from '../../assets/Icons/flag/GBP.png'
+import AUDIcon from '../../assets/Icons/flag/AUD.png'
+import CADIcon from '../../assets/Icons/flag/CAD.png'
+import CHFIcon from '../../assets/Icons/flag/CHF.png'
+import CNYIcon from '../../assets/Icons/flag/CNY.png'
+import JPYIcon from '../../assets/Icons/flag/JPY.png'
+import HKDIcon from '../../assets/Icons/flag/HKD.png'
+import NZDIcon from '../../assets/Icons/flag/NZD.png'
+import SGDIcon from '../../assets/Icons/flag/SGD.png'
+// Flag icon imports - Latin America
+import BRLIcon from '../../assets/Icons/flag/BRL.png'
+import ARSIcon from '../../assets/Icons/flag/ARS.png'
+import COPIcon from '../../assets/Icons/flag/COP.png'
+import CLPIcon from '../../assets/Icons/flag/CLP.png'
+import PENIcon from '../../assets/Icons/flag/PEN.png'
+import MXNIcon from '../../assets/Icons/flag/MXN.png'
+import VESIcon from '../../assets/Icons/flag/VES.png'
+import UYUIcon from '../../assets/Icons/flag/UYU.png'
+// Flag icon imports - Africa
+import NGNIcon from '../../assets/Icons/flag/NGN.png'
+import ZARIcon from '../../assets/Icons/flag/ZAR.png'
+import KESIcon from '../../assets/Icons/flag/KES.png'
+import GHSIcon from '../../assets/Icons/flag/GHS.png'
+import TZSIcon from '../../assets/Icons/flag/TZS.png'
+import XAFIcon from '../../assets/Icons/flag/XAF.png'
+import XOFIcon from '../../assets/Icons/flag/XOF.png'
+import EGPIcon from '../../assets/Icons/flag/EGP.png'
+import MADIcon from '../../assets/Icons/flag/MAD.png'
+import UGXIcon from '../../assets/Icons/flag/UGX.png'
+import RWFIcon from '../../assets/Icons/flag/RWF.png'
+import ETBIcon from '../../assets/Icons/flag/ETB.png'
+import ZMWIcon from '../../assets/Icons/flag/ZMW.png'
+import BWPIcon from '../../assets/Icons/flag/BWP.png'
+import MURIcon from '../../assets/Icons/flag/MUR.png'
+import AOAIcon from '../../assets/Icons/flag/AOA.png'
+import MZNIcon from '../../assets/Icons/flag/MZN.png'
+import CDFIcon from '../../assets/Icons/flag/CDF.png'
+import { useTranslation } from 'react-i18next'
+import { formatWithSeparators } from '@/utils/currencyFormat'
+
+// Types for enhanced checkout data
+interface FeeInfo {
+  processing_fee: number
+  fee_payer: 'customer' | 'merchant'
+  estimated_processing_fee?: number
+  fees_pending_crypto_selection?: boolean
+  subtotal?: number
+  tax_amount?: number
+  total_amount?: number
+}
+
+interface TaxInfo {
+  rate: number
+  amount: number
+  country: string
+  type: string
+}
+
+interface ExpiryInfo {
+  countdown: string
+  expires_at: string
+}
+
+interface MerchantInfo {
+  name: string
+  company_logo: string | null
+}
+
+export const currencyOptions = [
+  // International
+  { code: 'USD', labelKey: 'currency.USD', icon: <Image src={USDIcon} alt='USD' width={20} height={20} />, currency: 'USD', symbol: '$', decimals: 2 },
+  { code: 'EUR', labelKey: 'currency.EUR', icon: <Image src={EURIcon} alt='EUR' width={20} height={20} />, currency: 'EUR', symbol: '€', decimals: 2 },
+  { code: 'GBP', labelKey: 'currency.GBP', icon: <Image src={GBPIcon} alt='GBP' width={20} height={20} />, currency: 'GBP', symbol: '£', decimals: 2 },
+  { code: 'AUD', labelKey: 'currency.AUD', icon: <Image src={AUDIcon} alt='AUD' width={20} height={20} />, currency: 'AUD', symbol: 'A$', decimals: 2 },
+  { code: 'CAD', labelKey: 'currency.CAD', icon: <Image src={CADIcon} alt='CAD' width={20} height={20} />, currency: 'CAD', symbol: 'C$', decimals: 2 },
+  { code: 'CHF', labelKey: 'currency.CHF', icon: <Image src={CHFIcon} alt='CHF' width={20} height={20} />, currency: 'CHF', symbol: 'Fr', decimals: 2 },
+  { code: 'CNY', labelKey: 'currency.CNY', icon: <Image src={CNYIcon} alt='CNY' width={20} height={20} />, currency: 'CNY', symbol: '¥', decimals: 2 },
+  { code: 'JPY', labelKey: 'currency.JPY', icon: <Image src={JPYIcon} alt='JPY' width={20} height={20} />, currency: 'JPY', symbol: '¥', decimals: 0 },
+  { code: 'HKD', labelKey: 'currency.HKD', icon: <Image src={HKDIcon} alt='HKD' width={20} height={20} />, currency: 'HKD', symbol: 'HK$', decimals: 2 },
+  { code: 'NZD', labelKey: 'currency.NZD', icon: <Image src={NZDIcon} alt='NZD' width={20} height={20} />, currency: 'NZD', symbol: 'NZ$', decimals: 2 },
+  { code: 'SGD', labelKey: 'currency.SGD', icon: <Image src={SGDIcon} alt='SGD' width={20} height={20} />, currency: 'SGD', symbol: 'S$', decimals: 2 },
+  // Latin America
+  { code: 'BRL', labelKey: 'currency.BRL', icon: <Image src={BRLIcon} alt='BRL' width={20} height={20} />, currency: 'BRL', symbol: 'R$', decimals: 2 },
+  { code: 'ARS', labelKey: 'currency.ARS', icon: <Image src={ARSIcon} alt='ARS' width={20} height={20} />, currency: 'ARS', symbol: '$', decimals: 2 },
+  { code: 'COP', labelKey: 'currency.COP', icon: <Image src={COPIcon} alt='COP' width={20} height={20} />, currency: 'COP', symbol: '$', decimals: 0 },
+  { code: 'CLP', labelKey: 'currency.CLP', icon: <Image src={CLPIcon} alt='CLP' width={20} height={20} />, currency: 'CLP', symbol: '$', decimals: 0 },
+  { code: 'PEN', labelKey: 'currency.PEN', icon: <Image src={PENIcon} alt='PEN' width={20} height={20} />, currency: 'PEN', symbol: 'S/', decimals: 2 },
+  { code: 'MXN', labelKey: 'currency.MXN', icon: <Image src={MXNIcon} alt='MXN' width={20} height={20} />, currency: 'MXN', symbol: '$', decimals: 2 },
+  { code: 'VES', labelKey: 'currency.VES', icon: <Image src={VESIcon} alt='VES' width={20} height={20} />, currency: 'VES', symbol: 'Bs', decimals: 2 },
+  { code: 'UYU', labelKey: 'currency.UYU', icon: <Image src={UYUIcon} alt='UYU' width={20} height={20} />, currency: 'UYU', symbol: '$U', decimals: 2 },
+  // Africa
+  { code: 'NGN', labelKey: 'currency.NGN', icon: <Image src={NGNIcon} alt='NGN' width={20} height={20} />, currency: 'NGN', symbol: '₦', decimals: 2 },
+  { code: 'ZAR', labelKey: 'currency.ZAR', icon: <Image src={ZARIcon} alt='ZAR' width={20} height={20} />, currency: 'ZAR', symbol: 'R', decimals: 2 },
+  { code: 'KES', labelKey: 'currency.KES', icon: <Image src={KESIcon} alt='KES' width={20} height={20} />, currency: 'KES', symbol: 'KSh', decimals: 2 },
+  { code: 'GHS', labelKey: 'currency.GHS', icon: <Image src={GHSIcon} alt='GHS' width={20} height={20} />, currency: 'GHS', symbol: '₵', decimals: 2 },
+  { code: 'TZS', labelKey: 'currency.TZS', icon: <Image src={TZSIcon} alt='TZS' width={20} height={20} />, currency: 'TZS', symbol: 'TSh', decimals: 0 },
+  { code: 'XAF', labelKey: 'currency.XAF', icon: <Image src={XAFIcon} alt='XAF' width={20} height={20} />, currency: 'XAF', symbol: 'FCFA', decimals: 0 },
+  { code: 'XOF', labelKey: 'currency.XOF', icon: <Image src={XOFIcon} alt='XOF' width={20} height={20} />, currency: 'XOF', symbol: 'CFA', decimals: 0 },
+  { code: 'EGP', labelKey: 'currency.EGP', icon: <Image src={EGPIcon} alt='EGP' width={20} height={20} />, currency: 'EGP', symbol: 'E£', decimals: 2 },
+  { code: 'MAD', labelKey: 'currency.MAD', icon: <Image src={MADIcon} alt='MAD' width={20} height={20} />, currency: 'MAD', symbol: 'DH', decimals: 2 },
+  { code: 'UGX', labelKey: 'currency.UGX', icon: <Image src={UGXIcon} alt='UGX' width={20} height={20} />, currency: 'UGX', symbol: 'USh', decimals: 0 },
+  { code: 'RWF', labelKey: 'currency.RWF', icon: <Image src={RWFIcon} alt='RWF' width={20} height={20} />, currency: 'RWF', symbol: 'FRw', decimals: 0 },
+  { code: 'ETB', labelKey: 'currency.ETB', icon: <Image src={ETBIcon} alt='ETB' width={20} height={20} />, currency: 'ETB', symbol: 'Br', decimals: 2 },
+  { code: 'ZMW', labelKey: 'currency.ZMW', icon: <Image src={ZMWIcon} alt='ZMW' width={20} height={20} />, currency: 'ZMW', symbol: 'ZK', decimals: 2 },
+  { code: 'BWP', labelKey: 'currency.BWP', icon: <Image src={BWPIcon} alt='BWP' width={20} height={20} />, currency: 'BWP', symbol: 'P', decimals: 2 },
+  { code: 'MUR', labelKey: 'currency.MUR', icon: <Image src={MURIcon} alt='MUR' width={20} height={20} />, currency: 'MUR', symbol: '₨', decimals: 2 },
+  { code: 'AOA', labelKey: 'currency.AOA', icon: <Image src={AOAIcon} alt='AOA' width={20} height={20} />, currency: 'AOA', symbol: 'Kz', decimals: 2 },
+  { code: 'MZN', labelKey: 'currency.MZN', icon: <Image src={MZNIcon} alt='MZN' width={20} height={20} />, currency: 'MZN', symbol: 'MT', decimals: 2 },
+  { code: 'CDF', labelKey: 'currency.CDF', icon: <Image src={CDFIcon} alt='CDF' width={20} height={20} />, currency: 'CDF', symbol: 'FC', decimals: 2 },
+]
+
+const Payment = () => {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'))
+  const router = useRouter()
+  const dispatch = useDispatch()
+  const { t } = useTranslation('common')
+  
+  const [paymentType, setPaymentType] = useState(paymentTypes.CARD)
+  const [payLoading, setPayloading] = useState(false)
+  const [paymentMode, setPaymentMode] = useState('payment')
+  const [allowedModes, setAllowedModes] = useState<any[]>([])
+  const [accountDetails, setAccountDetails] = useState<CommonDetails>()
+  const [selectedCurrency, setSelectedCurrency] = useState('USD')
+  const [currencyRates, setCurrencyRates] = useState<currencyData>()
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [activeStep, setActiveStep] = useState<number>(() => {
+    // Restore activeStep from sessionStorage on mount (for language change persistence)
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('payment_active_step');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Only restore if saved within the last 30 minutes
+        if (parsed.timestamp && Date.now() - parsed.timestamp < 30 * 60 * 1000) {
+          return parsed.step || 0;
+        }
+      }
+    }
+    return 0;
+  })
+  const [tokenData, setTokenData] = useState({ email: '' })
+  const [walletState, setWalletState] = useState<walletState>({
+    amount: 0,
+    currency: 'USD'
+  })
+  const [transferMethod, setTransferMethod] = useState(() => {
+    // Restore transferMethod from sessionStorage on mount
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('payment_transfer_method');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.timestamp && Date.now() - parsed.timestamp < 30 * 60 * 1000) {
+          return parsed.method || '';
+        }
+      }
+    }
+    return '';
+  })
+  const [loading, setLoading] = useState(true)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [isBank, setIsBank] = useState()
+  const [feePayer, setFeePayer] = useState<string>('')
+  const [linkId, setLinkId] = useState<string>('')
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
+
+  // Save activeStep to sessionStorage when it changes (for language change persistence)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && activeStep > 0) {
+      sessionStorage.setItem('payment_active_step', JSON.stringify({
+        step: activeStep,
+        timestamp: Date.now()
+      }));
+    }
+  }, [activeStep]);
+
+  // Save transferMethod to sessionStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && transferMethod) {
+      sessionStorage.setItem('payment_transfer_method', JSON.stringify({
+        method: transferMethod,
+        timestamp: Date.now()
+      }));
+    }
+  }, [transferMethod]);
+
+  // Enhanced checkout state variables
+  const [description, setDescription] = useState<string>('')
+  const [orderReference, setOrderReference] = useState<string>('')
+  const [customerName, setCustomerName] = useState<string>('')
+  const [feeInfo, setFeeInfo] = useState<FeeInfo | null>(null)
+  const [taxInfo, setTaxInfo] = useState<TaxInfo | null>(null)
+  const [expiryInfo, setExpiryInfo] = useState<ExpiryInfo | null>(null)
+  const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null)
+  const [countdown, setCountdown] = useState<string>('')
+  const [copySnackbar, setCopySnackbar] = useState(false)
+
+  // Incomplete payment state
+  const [incompletePayment, setIncompletePayment] = useState<{
+    exists: boolean;
+    currency: string;
+    address: string;
+    pending_amount: string;
+    remaining_minutes: number;
+    qr_code?: string;
+    memo?: string;
+    destination_tag?: string;
+  } | null>(null)
+  const [availableCurrencies, setAvailableCurrencies] = useState<string[]>([
+    'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'HKD', 'NZD', 'SGD',
+    'BRL', 'ARS', 'COP', 'CLP', 'PEN', 'MXN', 'VES', 'UYU',
+    'NGN', 'ZAR', 'KES', 'GHS', 'TZS', 'XAF', 'XOF', 'EGP', 'MAD', 'UGX', 'RWF', 'ETB', 'ZMW', 'BWP', 'MUR', 'AOA', 'MZN', 'CDF'
+  ])
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!expiryInfo?.expires_at) return
+
+    const updateCountdown = () => {
+      const now = new Date().getTime()
+      const expiry = new Date(expiryInfo.expires_at).getTime()
+      const diff = expiry - now
+
+      if (diff <= 0) {
+        setCountdown('Expired')
+        // Dispatch a toast to notify user
+        dispatch({
+          type: TOAST_SHOW,
+          payload: {
+            message: t('checkout.paymentLinkExpired', { defaultValue: 'This payment link has expired. Please contact the merchant for a new link.' }),
+            severity: 'warning'
+          }
+        })
+        return
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+      const parts = []
+      if (days > 0) parts.push(`${days}${t('checkout.days')}`)
+      if (hours > 0 || days > 0) parts.push(`${hours}${t('checkout.hours')}`)
+      if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}${t('checkout.minutes')}`)
+      parts.push(`${seconds}${t('checkout.seconds')}`)
+
+      setCountdown(parts.join(':'))
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+    return () => clearInterval(interval)
+  }, [expiryInfo, t])
+
+  // Auto-refresh remaining time countdown for incomplete payment
+  useEffect(() => {
+    if (!incompletePayment) return
+    
+    const interval = setInterval(() => {
+      setIncompletePayment(prev => {
+        if (!prev) return null
+        const newRemaining = prev.remaining_minutes - 1
+        
+        if (newRemaining <= 0) {
+          // Grace period expired - refresh to unlock currencies
+          window.location.reload()
+          return null
+        }
+        
+        return { ...prev, remaining_minutes: newRemaining }
+      })
+    }, 60000) // Update every minute
+    
+    return () => clearInterval(interval)
+  }, [incompletePayment])
+
+  useEffect(() => {
+    if (
+      paymentType === paymentTypes.GOOGLE_PAY ||
+      paymentType === paymentTypes.APPLE_PAY
+    ) {
+      initiateGoogleApplyPayTransfer()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentType])
+
+  useEffect(() => {
+    if (router.query && router.query?.d) {
+      getQueryData()
+    } else {
+      setLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query])
+
+  const getQueryData = async () => {
+    try {
+      const query_data = router.query.d
+      
+      // Get customer's timezone for tax calculation
+      const customerTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      
+      const {
+        data: { data }
+      }: { data: any } = await axiosBaseApi.post('pay/getData', {
+        data: query_data,
+        timezone: customerTimezone
+      })
+      setWalletState({
+        amount: Number(data.amount),
+        currency: data.base_currency
+      })
+      setPaymentMode(data.payment_mode)
+      if (data?.payment_mode === 'createLink') {
+        setAllowedModes(data?.allowedModes?.split(','))
+      }
+
+      localStorage.setItem('token', data.token)
+      const tempToken: any = jwt.decode(data.token)
+      setTokenData(tempToken)
+      setFeePayer(data.fee_payer || '')
+      setLinkId(tempToken?.transaction_id || '')
+      setRedirectUrl(data.redirect_url || null)
+
+      // Check for incomplete payment
+      if (data.incomplete_payment?.exists) {
+        const ip = data.incomplete_payment
+        setIncompletePayment({
+          exists: ip.exists,
+          currency: ip.currency,
+          address: ip.address,
+          pending_amount: ip.pending_amount,
+          remaining_minutes: ip.remaining_minutes,
+          qr_code: ip.qr_code,
+          memo: ip.memo || ip.tag || ip.destination_tag || ip.dt || '',
+          destination_tag: ip.destination_tag || ip.tag || ip.memo || ip.dt || '',
+        })
+        // Lock currency selector to only show the incomplete payment currency
+        setAvailableCurrencies([ip.currency])
+        console.log(`[Incomplete Payment] Locked to ${ip.currency}, ${ip.remaining_minutes} mins remaining${ip.memo || ip.destination_tag || ip.tag ? `, memo/tag: ${ip.memo || ip.destination_tag || ip.tag}` : ''}`)
+      }
+
+      // Capture enhanced checkout fields from backend
+      setDescription(data.description || '')
+      setOrderReference(data.order_reference || '')
+      setCustomerName(data.customer_name || '')
+      
+      if (data.fee_info) {
+        setFeeInfo({
+          processing_fee: data.fee_info.processing_fee || 0,
+          fee_payer: data.fee_info.fee_payer || data.fee_payer || 'merchant',
+          estimated_processing_fee: data.fee_info.estimated_processing_fee,
+          fees_pending_crypto_selection: data.fee_info.fees_pending_crypto_selection,
+          subtotal: data.fee_info.subtotal,
+          tax_amount: data.fee_info.tax_amount,
+          total_amount: data.fee_info.total_amount
+        })
+      } else if (data.fee_payer) {
+        setFeeInfo({
+          processing_fee: 0,
+          fee_payer: data.fee_payer
+        })
+      }
+      
+      if (data.tax_info) {
+        setTaxInfo({
+          rate: data.tax_info.tax_rate || data.tax_info.rate || 0,
+          amount: data.tax_info.tax_amount || data.tax_info.amount || 0,
+          country: data.tax_info.country_name || data.tax_info.country || '',
+          type: data.tax_info.tax_acronym || data.tax_info.type || 'VAT'
+        })
+      }
+      
+      if (data.expiry) {
+        setExpiryInfo({
+          countdown: data.expiry.countdown || '',
+          expires_at: data.expiry.expires_at || ''
+        })
+      }
+      
+      if (data.merchant) {
+        setMerchantInfo({
+          name: data.merchant.name || data.merchant.company_name || '',
+          company_logo: data.merchant.company_logo || null
+        })
+      }
+      
+      const amount = Number(data.amount)
+      if (amount && data.base_currency) {
+        try {
+          // For initial display, get base rates without fee calculation
+          // Fees will be calculated accurately when user selects crypto type
+          const ratesResponse = await axiosBaseApi.post('/pay/getCurrencyRates', {
+            source: data.base_currency,
+            amount: amount,
+            currencyList: [data.base_currency],
+            fixedDecimal: false,
+            // Don't pass fee_payer here - let CryptoTransfer handle accurate fee calculation
+            tax_amount: data.tax_info?.tax_amount || 0
+          });
+          console.log('Rates response:', ratesResponse?.data);
+          if (ratesResponse?.data?.data && ratesResponse.data.data[0]) {
+            setCurrencyRates(ratesResponse.data.data[0]);
+            console.log('Set currencyRates to:', ratesResponse.data.data[0]);
+          }
+        } catch (rateError: any) {
+          console.log('Failed to fetch initial rates:', rateError?.message);
+        }
+      }
+      
+      setLoading(false)
+    } catch (e: any) {
+      setLoading(false)
+      const message = e?.response?.data?.message ?? e.message
+      dispatch({
+        type: TOAST_SHOW,
+        payload: {
+          message: message,
+          severity: 'error'
+        }
+      })
+    }
+  }
+
+  const getCurrencyRate = async (selectedCurrency: string) => {
+    try {
+      setLoading(true)
+      console.log('Fetching rate for currency:', selectedCurrency, 'from source:', walletState?.currency)
+      
+      const {
+        data: { data }
+      } = await axiosBaseApi.post('/pay/getCurrencyRates', {
+        source: walletState?.currency,
+        amount: walletState?.amount,
+        currencyList: [selectedCurrency],
+        fixedDecimal: false,
+        fee_payer: feePayer,
+        tax_amount: taxInfo?.amount || 0
+      })
+      
+      console.log('Rate response:', data)
+      
+      if (data && data[0]) {
+        setCurrencyRates(data[0])
+        setSelectedCurrency(selectedCurrency)
+      } else {
+        console.error('No rate data returned for', selectedCurrency)
+        dispatch({
+          type: TOAST_SHOW,
+          payload: {
+            message: `Unable to get rate for ${selectedCurrency}`,
+            severity: 'warning'
+          }
+        })
+      }
+      setLoading(false)
+    } catch (e: any) {
+      setLoading(false)
+      console.error('Rate fetch error:', e)
+      const message = e?.response?.data?.message ?? e?.message ?? 'Failed to fetch currency rate'
+      dispatch({
+        type: TOAST_SHOW,
+        payload: {
+          message: message,
+          severity: 'error'
+        }
+      })
+    }
+  }
+
+  const initiateGoogleApplyPayTransfer = async () => {
+    const finalPayload = {
+      paymentType,
+      currency: walletState.currency,
+      amount: walletState.amount
+    }
+    setPayloading(true)
+    const res = createEncryption(JSON.stringify(finalPayload))
+
+    const {
+      data: { data }
+    }: { data: CommonApiRes } = await axiosBaseApi.post('pay/addPayment', {
+      data: res
+    })
+    setPayloading(false)
+    setAccountDetails(data)
+  }
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    // Don't allow opening currency selector when incomplete payment exists
+    if (incompletePayment) return
+    
+    if (anchorEl) {
+      setAnchorEl(null)
+    } else {
+      setAnchorEl(event.currentTarget)
+    }
+  }
+
+  const handleClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleSelect = (event: React.MouseEvent, code: string) => {
+    getCurrencyRate(code)
+    handleClose()
+  }
+
+  const handleCopyInvoice = useCallback(async () => {
+    if (orderReference) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(orderReference)
+        } else {
+          const textArea = document.createElement('textarea')
+          textArea.value = orderReference
+          textArea.style.position = 'fixed'
+          textArea.style.left = '-999999px'
+          document.body.appendChild(textArea)
+          textArea.focus()
+          textArea.select()
+          document.execCommand('copy')
+          document.body.removeChild(textArea)
+        }
+        setCopySnackbar(true)
+      } catch {
+        const textArea = document.createElement('textarea')
+        textArea.value = orderReference
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        setCopySnackbar(true)
+      }
+    }
+  }, [orderReference])
+
+  const handleCopyTransactionId = useCallback(async () => {
+    if (linkId) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(linkId)
+        } else {
+          const textArea = document.createElement('textarea')
+          textArea.value = linkId
+          textArea.style.position = 'fixed'
+          textArea.style.left = '-999999px'
+          document.body.appendChild(textArea)
+          textArea.focus()
+          textArea.select()
+          document.execCommand('copy')
+          document.body.removeChild(textArea)
+        }
+        setCopySnackbar(true)
+      } catch {
+        const textArea = document.createElement('textarea')
+        textArea.value = linkId
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        setCopySnackbar(true)
+      }
+    }
+  }, [linkId])
+
+  // Calculate display values - convert all values using transfer rate when currency changed
+  const transferRate = Number(currencyRates?.transferRate ?? 1)
+  const displayCurrency = currencyRates?.currency ?? walletState?.currency
+  
+  // Convert fee breakdown values using transfer rate when a different currency is selected
+  const baseSubtotal = Number(feeInfo?.subtotal ?? walletState?.amount ?? 0)
+  const baseProcessingFee = Number(feeInfo?.processing_fee ?? 0)
+  const baseTaxAmount = Number(taxInfo?.amount ?? 0)
+  
+  // Apply transfer rate to convert values to selected currency
+  const subtotalAmount = baseSubtotal * transferRate
+  const processingFee = baseProcessingFee * transferRate
+  const taxAmount = baseTaxAmount * transferRate
+  
+  // Total amount should be the sum of converted values (subtotal + tax + fee if customer pays)
+  const totalAmount = subtotalAmount + taxAmount + (feeInfo?.fee_payer === 'customer' ? processingFee : 0)
+
+  // Get context-aware title
+  const getTitle = () => {
+    if (description) return t('checkout.title')
+    if (merchantInfo?.name) return t('checkout.titleComplete')
+    return t('checkout.titleCheckout')
+  }
+
+  // Get subtitle with merchant name and customer personalization
+  const getSubtitle = () => {
+    const greeting = customerName ? `Hi ${customerName}, ` : ''
+    if (merchantInfo?.name) {
+      return greeting + t('checkout.subtitle', { merchant: merchantInfo.name }).replace(/^Complete/, 'complete')
+    }
+    return greeting + (customerName ? t('checkout.subtitleDefault').replace(/^Complete/, 'complete') : t('checkout.subtitleDefault'))
+  }
+
+  const isOpen = Boolean(anchorEl)
+
+  return (
+    <Pay3Layout>
+      <Box>
+        <Box>
+          <ProgressBar activeStep={activeStep} />
+
+          {activeStep === 0 ? (
+            <Box
+              display='flex'
+              alignItems='center'
+              justifyContent='center'
+              px={2}
+              minHeight={'calc(100vh - 340px)'}
+            >
+              <Paper
+                elevation={3}
+                data-testid="checkout-card"
+                sx={{
+                  borderRadius: 4,
+                  p: { xs: 2.5, sm: 4 },
+                  width: '100%',
+                  maxWidth: 500,
+                  marginTop: 10,
+                  textAlign: 'center',
+                  margin: 0,
+                  border: `1px solid ${isDark ? theme.palette.surface.border : '#E7EAFD'}`,
+                  boxShadow: isDark 
+                    ? '0px 45px 64px 0px rgba(0,0,0,0.3)' 
+                    : '0px 45px 64px 0px #0D03230F',
+                  backgroundColor: theme.palette.background.paper,
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                {/* Logo Section - Merchant logo or DynoPay */}
+                <Box display='flex' justifyContent='center' mb={2}>
+                  {merchantInfo?.company_logo ? (
+                    <Box
+                      component="img"
+                      src={merchantInfo.company_logo}
+                      alt={merchantInfo.name || 'Merchant'}
+                      sx={{
+                        maxHeight: 50,
+                        maxWidth: 150,
+                        objectFit: 'contain'
+                      }}
+                      onError={(e: any) => {
+                        e.target.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <Logo />
+                  )}
+                </Box>
+
+                {/* Incomplete Payment Warning Banner */}
+                {incompletePayment && (
+                  <Alert 
+                    severity="warning" 
+                    sx={{ 
+                      mb: 2, 
+                      textAlign: 'left',
+                      '& .MuiAlert-message': { width: '100%' }
+                    }}
+                    data-testid="incomplete-payment-alert"
+                  >
+                    <AlertTitle sx={{ fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+                      {t('checkout.incompletePayment', { defaultValue: 'Incomplete Payment' })}
+                    </AlertTitle>
+                    <Typography variant="body2" fontFamily='Space Grotesk'>
+                      {t('checkout.incompletePaymentDesc', { 
+                        defaultValue: `You have a pending payment of ${incompletePayment.pending_amount} ${incompletePayment.currency}. Please complete it within ${incompletePayment.remaining_minutes} minutes or wait for it to expire.`,
+                        amount: incompletePayment.pending_amount,
+                        currency: incompletePayment.currency,
+                        minutes: incompletePayment.remaining_minutes
+                      })}
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary" 
+                      sx={{ mt: 1, display: 'block', wordBreak: 'break-all' }}
+                      fontFamily='Space Grotesk'
+                    >
+                      {t('checkout.address', { defaultValue: 'Address' })}: {incompletePayment.address}
+                    </Typography>
+                    {(incompletePayment.memo || incompletePayment.destination_tag) && (
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          mt: 0.5, 
+                          display: 'block', 
+                          wordBreak: 'break-all',
+                          color: '#E67E22',
+                          fontWeight: 600,
+                        }}
+                        fontFamily='Space Grotesk'
+                        data-testid="incomplete-payment-memo"
+                      >
+                        {t('checkout.memoTag', { defaultValue: 'Memo / Tag' })}: {incompletePayment.memo || incompletePayment.destination_tag}
+                      </Typography>
+                    )}
+                  </Alert>
+                )}
+
+                {/* Context-Aware Title */}
+                <Typography
+                  fontWeight={500}
+                  fontSize={{ xs: 20, sm: 25 }}
+                  lineHeight='98%'
+                  gutterBottom
+                  fontFamily='Space Grotesk'
+                  color={theme.palette.text.primary}
+                  data-testid="checkout-title"
+                >
+                  {getTitle()}
+                </Typography>
+
+                {/* Dynamic Subtitle with Merchant Name */}
+                <Typography
+                  color={isDark ? theme.palette.text.secondary : '#000'}
+                  fontWeight={400}
+                  fontSize={14}
+                  lineHeight='18px'
+                  mb={3}
+                  fontFamily='Space Grotesk'
+                  data-testid="checkout-subtitle"
+                >
+                  {getSubtitle()}
+                </Typography>
+
+                {/* Order Details Section */}
+                {(description || orderReference || customerName) && (
+                  <Box
+                    sx={{
+                      border: `1px solid ${isDark ? theme.palette.surface.border : '#E7EAFD'}`,
+                      borderRadius: '10px',
+                      p: 2,
+                      mb: 2,
+                      textAlign: 'left',
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : '#FAFBFF'
+                    }}
+                    data-testid="order-details-section"
+                  >
+                    <Typography
+                      fontWeight={600}
+                      fontSize={11}
+                      color={isDark ? theme.palette.text.secondary : '#666'}
+                      fontFamily='Space Grotesk'
+                      letterSpacing={0.5}
+                      mb={1}
+                    >
+                      {t('checkout.orderDetails')}
+                    </Typography>
+                    
+                    {description && (
+                      <Typography
+                        fontWeight={500}
+                        fontSize={14}
+                        color={theme.palette.text.primary}
+                        fontFamily='Space Grotesk'
+                        mb={(orderReference || tokenData?.email || customerName) ? 1.5 : 0}
+                      >
+                        {description}
+                      </Typography>
+                    )}
+                    
+                    {customerName && (
+                      <Box display='flex' alignItems='center' gap={1} mb={(orderReference || tokenData?.email) ? 1.5 : 0}>
+                        <Icon icon="mdi:account-outline" width={16} color={isDark ? theme.palette.text.secondary : '#666'} />
+                        <Typography
+                          fontWeight={500}
+                          fontSize={13}
+                          color={theme.palette.text.primary}
+                          fontFamily='Space Grotesk'
+                          data-testid="customer-name"
+                        >
+                          {customerName}
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    {tokenData?.email && (
+                      <Box display='flex' alignItems='center' gap={1} mb={orderReference ? 1.5 : 0}>
+                        <Icon icon="mdi:email-outline" width={16} color={isDark ? theme.palette.text.secondary : '#666'} />
+                        <Typography
+                          fontWeight={500}
+                          fontSize={13}
+                          color={theme.palette.text.primary}
+                          fontFamily='Space Grotesk'
+                          data-testid="customer-email"
+                        >
+                          {tokenData.email}
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    {orderReference && (
+                      <Box display='flex' alignItems='center' justifyContent='space-between'>
+                        <Box>
+                          <Typography
+                            fontWeight={600}
+                            fontSize={10}
+                            color={isDark ? theme.palette.text.secondary : '#888'}
+                            fontFamily='Space Grotesk'
+                            letterSpacing={0.5}
+                          >
+                            {t('checkout.invoice')}
+                          </Typography>
+                          <Typography
+                            fontWeight={500}
+                            fontSize={13}
+                            color={theme.palette.text.primary}
+                            fontFamily='Space Grotesk'
+                            data-testid="invoice-number"
+                          >
+                            {orderReference}
+                          </Typography>
+                        </Box>
+                        <Tooltip title={t('checkout.copyInvoice')}>
+                          <IconButton
+                            size='small'
+                            onClick={handleCopyInvoice}
+                            data-testid="copy-invoice-btn"
+                            sx={{
+                              bgcolor: isDark ? '#2a2a4a' : '#E7EAFD',
+                              p: 0.75,
+                              borderRadius: '6px',
+                              '&:hover': { bgcolor: isDark ? '#3a3a5a' : '#E0E7FF' }
+                            }}
+                          >
+                            <CopyIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+
+                {/* Fee Breakdown Section */}
+                <Box
+                  alignItems='center'
+                  border={`1px solid ${isDark ? theme.palette.surface.border : '#DFDFDF'}`}
+                  borderRadius={'10px'}
+                  px='21px'
+                  py='18px'
+                  sx={{ transition: 'border-color 0.3s ease' }}
+                  data-testid="fee-breakdown-section"
+                >
+                  {/* Subtotal Row */}
+                  {(feeInfo || taxInfo) && (
+                    <>
+                      <Box display='flex' justifyContent='space-between' alignItems='center' mb={1}>
+                        <Typography
+                          fontSize={14}
+                          fontFamily='Space Grotesk'
+                          color={isDark ? theme.palette.text.secondary : '#666'}
+                        >
+                          {t('checkout.subtotal')}
+                        </Typography>
+                        <Typography
+                          fontSize={14}
+                          fontFamily='Space Grotesk'
+                          fontWeight={500}
+                          color={theme.palette.text.primary}
+                        >
+                          {loading ? (
+                            <Skeleton width={60} height={20} />
+                          ) : (
+                            `${formatWithSeparators(subtotalAmount, displayCurrency)} ${displayCurrency}`
+                          )}
+                        </Typography>
+                      </Box>
+
+                      {/* Processing Fee Row - Always show if fee exists */}
+                      {feeInfo && feeInfo.processing_fee > 0 && (
+                        <Box display='flex' justifyContent='space-between' alignItems='center' mb={1}>
+                          <Box display='flex' alignItems='center' gap={0.5}>
+                            <Typography
+                              fontSize={14}
+                              fontFamily='Space Grotesk'
+                              color={isDark ? theme.palette.text.secondary : '#666'}
+                            >
+                              {t('checkout.processingFee')}
+                            </Typography>
+                            {feeInfo.fee_payer === 'merchant' && (
+                              <Icon icon="mdi:check-circle" color="#12B76A" width={14} />
+                            )}
+                          </Box>
+                          <Box display='flex' alignItems='center' gap={0.5}>
+                            <Typography
+                              fontSize={14}
+                              fontFamily='Space Grotesk'
+                              fontWeight={500}
+                              color={theme.palette.text.primary}
+                            >
+                              {formatWithSeparators(processingFee, displayCurrency)} {displayCurrency}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      )}
+
+                      {/* Fee Payer Indicator */}
+                      {feeInfo && feeInfo.processing_fee > 0 && (
+                        <Box display='flex' alignItems='center' mb={1} gap={0.5}>
+                          <Typography
+                            fontSize={12}
+                            fontFamily='Space Grotesk'
+                            color={feeInfo.fee_payer === 'merchant' ? '#12B76A' : (isDark ? theme.palette.text.secondary : '#666')}
+                          >
+                            {feeInfo.fee_payer === 'merchant' 
+                              ? t('checkout.processingFeesIncluded')
+                              : t('checkout.customerPaysFee', { defaultValue: 'Customer pays processing fee' })
+                            }
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* Tax Row */}
+                      {taxInfo && taxInfo.amount > 0 && (
+                        <Box display='flex' justifyContent='space-between' alignItems='center' mb={1}>
+                          <Typography
+                            fontSize={14}
+                            fontFamily='Space Grotesk'
+                            color={isDark ? theme.palette.text.secondary : '#666'}
+                          >
+                            {taxInfo.country 
+                              ? t('checkout.vatRate', { rate: taxInfo.rate, country: taxInfo.country })
+                              : t('checkout.tax')
+                            }
+                          </Typography>
+                          <Typography
+                            fontSize={14}
+                            fontFamily='Space Grotesk'
+                            fontWeight={500}
+                            color={theme.palette.text.primary}
+                          >
+                            {formatWithSeparators(taxAmount, displayCurrency)} {displayCurrency}
+                          </Typography>
+                        </Box>
+                      )}
+
+                      <Divider sx={{ my: 1.5, borderColor: isDark ? theme.palette.surface.border : undefined }} />
+                    </>
+                  )}
+
+                  {/* Total Row */}
+                  <Box
+                    display='flex'
+                    justifyContent='space-between'
+                    alignItems='center'
+                    mb={2}
+                  >
+                    <Typography
+                      variant='subtitle2'
+                      fontFamily='Space Grotesk'
+                      fontWeight={600}
+                      fontSize={{ xs: 14, sm: 18 }}
+                      color={theme.palette.text.primary}
+                    >
+                      {t('checkout.total')}
+                    </Typography>
+
+                    <Box
+                      display='flex'
+                      alignItems='center'
+                      border={1}
+                      borderRadius='6px'
+                      padding={1}
+                      gap={1}
+                      sx={{
+                        cursor: 'pointer',
+                        borderColor: isOpen ? (isDark ? '#6C7BFF' : '#737373') : 'transparent',
+                        '&:hover': {
+                          border: `1px solid ${isDark ? '#4a4a6a' : '#D9D9D9'}`
+                        },
+                        '&:active': {
+                          border: `1px solid ${isDark ? '#6C7BFF' : '#737373'}`
+                        }
+                      }}
+                      onClick={handleClick}
+                      data-testid="currency-selector"
+                    >
+                      {!loading ? (
+                        <>
+                          {currencyOptions?.find(
+                            c => c.code === currencyRates?.currency
+                          )?.icon ||
+                            currencyOptions.find(
+                              c => c.code === walletState?.currency
+                            )?.icon}
+
+                          <Typography
+                            fontWeight={600}
+                            fontFamily='Space Grotesk'
+                            fontSize={{ xs: 14, sm: 20 }}
+                            color={theme.palette.text.primary}
+                            data-testid="total-amount"
+                          >
+                            {(() => {
+                              // If customer pays fees and crypto not selected yet, show subtotal + tax only (converted)
+                              if (feePayer === 'customer' && feeInfo?.fees_pending_crypto_selection) {
+                                return formatWithSeparators(subtotalAmount + taxAmount, displayCurrency)
+                              }
+                              // Otherwise show the full calculated total amount
+                              return formatWithSeparators(Number(totalAmount), displayCurrency)
+                            })()}{' '}
+                            {displayCurrency}
+                          </Typography>
+                          {/* Processing fee hint when customer pays fees but crypto not selected */}
+                          {feePayer === 'customer' && feeInfo?.fees_pending_crypto_selection && feeInfo?.estimated_processing_fee && (
+                            <Typography
+                              variant="caption"
+                              color={isDark ? theme.palette.text.secondary : '#666'}
+                              fontFamily='Space Grotesk'
+                              fontSize={11}
+                              sx={{ 
+                                display: 'block',
+                                mt: 0.5,
+                                opacity: 0.8
+                              }}
+                            >
+                              + ~{Math.ceil(feeInfo.estimated_processing_fee * transferRate)} {displayCurrency} fee
+                            </Typography>
+                          )}
+                          <Icon
+                            icon={
+                              isOpen
+                                ? 'solar:alt-arrow-up-linear'
+                                : 'solar:alt-arrow-down-linear'
+                            }
+                            width='17'
+                            height='17'
+                            color={theme.palette.text.primary}
+                          />
+                        </>
+                      ) : (
+                        <Skeleton
+                          variant='rectangular'
+                          width={154}
+                          height={24}
+                          animation='wave'
+                          sx={{ 
+                            borderRadius: '6px', 
+                            background: isDark ? '#2a2a4a' : '#F5F8FF' 
+                          }}
+                        />
+                      )}
+
+                      <Menu
+                        anchorEl={anchorEl}
+                        open={isOpen}
+                        onClose={handleClose}
+                        PaperProps={{
+                          sx: {
+                            border: `1px solid ${isDark ? '#4a4a6a' : '#737373'}`,
+                            borderRadius: '10px',
+                            marginTop: '10px',
+                            py: '4px',
+                            px: '10px',
+                            backgroundColor: theme.palette.background.paper,
+                            maxHeight: '400px',
+                            overflowY: 'auto',
+                          }
+                        }}
+                      >
+                        {incompletePayment ? (
+                          // When incomplete payment exists, show only the locked currency
+                          <MenuItem
+                            key={incompletePayment.currency}
+                            disabled
+                            sx={{
+                              px: { xs: 1.5, sm: 2, md: 2.5 },
+                              py: { xs: 1, sm: 1.2, md: 1.5 },
+                              borderRadius: '6px',
+                              opacity: 0.8
+                            }}
+                          >
+                            <Box display='flex' alignItems='center' gap={1}>
+                              {currencyOptions.find(c => c.code === incompletePayment.currency)?.icon}
+                              <Typography
+                                color={theme.palette.text.primary}
+                                sx={{ fontSize: { xs: '14px', sm: '18px', md: '14px' }, fontWeight: '500' }}
+                              >
+                                {incompletePayment.currency} ({t('checkout.pendingPayment', { defaultValue: 'Pending payment' })})
+                              </Typography>
+                            </Box>
+                          </MenuItem>
+                        ) : (
+                          // Normal currency options
+                          currencyOptions
+                            .filter(currency => availableCurrencies.includes(currency.code))
+                            .map(currency => (
+                              <MenuItem
+                                key={currency.code}
+                                onClick={e => handleSelect(e, currency.code)}
+                                sx={{
+                                  px: { xs: 1.5, sm: 2, md: 2.5 },
+                                  py: { xs: 1, sm: 1.2, md: 1.5 },
+                                  borderRadius: '6px',
+                                  '&:hover': {
+                                    backgroundColor: isDark ? '#2a2a4a' : '#F5F8FF'
+                                  }
+                                }}
+                              >
+                                <Box display='flex' alignItems='center' gap={1}>
+                                  {currency.icon}
+                                  <Typography
+                                    color={theme.palette.text.primary}
+                                    sx={{
+                                      fontSize: { xs: '14px', sm: '18px', md: '14px' },
+                                      fontWeight: '500'
+                                    }}
+                                  >
+                                    {t(currency.labelKey)}
+                                  </Typography>
+                                </Box>
+                              </MenuItem>
+                            ))
+                        )}
+                      </Menu>
+                    </Box>
+                  </Box>
+
+                  <Divider sx={{ 
+                    mb: 2, 
+                    borderColor: isDark ? theme.palette.surface.border : undefined 
+                  }} />
+
+                  <Box display='flex' gap={2}>
+                    <Button
+                      fullWidth
+                      variant='outlined'
+                      startIcon={<BitCoinGreenIcon width={8.25} />}
+                      onClick={() => {
+                        setActiveStep(1)
+                        setTransferMethod('crypto')
+                      }}
+                      data-testid="crypto-payment-btn"
+                      sx={{
+                        borderColor: '#12B76A',
+                        color: '#12B76A',
+                        textTransform: 'none',
+                        borderRadius: 30,
+                        fontFamily: 'Space Grotesk',
+                        fontWeight: '500',
+                        py: {
+                          xs: 1.5,
+                          sm: 2
+                        },
+                        fontSize: '16px',
+                        minHeight: 56,
+                        '&:hover': {
+                          backgroundColor: isDark ? 'rgba(18, 183, 106, 0.1)' : '#ECFDF5',
+                          borderColor: '#12B76A'
+                        }
+                      }}
+                    >
+                      {t('checkout.cryptocurrency')}
+                    </Button>
+                  </Box>
+                </Box>
+
+                {/* Expiry Countdown */}
+                {countdown && countdown !== 'Expired' && (
+                  <Box 
+                    display='flex' 
+                    alignItems='center' 
+                    justifyContent='center' 
+                    gap={1} 
+                    mt={2}
+                    data-testid="expiry-countdown"
+                  >
+                    <Icon icon="mdi:clock-outline" width={16} color={isDark ? theme.palette.text.secondary : '#666'} />
+                    <Typography
+                      fontSize={13}
+                      fontFamily='Space Grotesk'
+                      color={isDark ? theme.palette.text.secondary : '#666'}
+                    >
+                      {t('checkout.expiresIn')} <strong>{countdown}</strong>
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Transaction ID & Security Badge */}
+                <Box mt={2}>
+                  {/* Security Badge */}
+                  <Box 
+                    display='flex' 
+                    alignItems='center' 
+                    justifyContent='center' 
+                    gap={0.5} 
+                    data-testid="security-badge"
+                  >
+                    <Icon icon="mdi:lock" width={14} color={isDark ? '#6C7BFF' : '#444CE7'} />
+                    <Typography
+                      fontSize={12}
+                      fontFamily='Space Grotesk'
+                      color={isDark ? '#6C7BFF' : '#444CE7'}
+                      fontWeight={500}
+                    >
+                      {t('checkout.securePayment')}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            </Box>
+          ) : activeStep === 1 ? (
+            transferMethod === 'bank' ? (
+              <BankTransferCompo
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                walletState={walletState}
+                setIsSuccess={setIsSuccess}
+                setIsBank={setIsBank}
+                redirectUrl={redirectUrl}
+              />
+            ) : (
+              <CryptoTransfer
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                walletState={walletState}
+                feePayer={feePayer}
+                redirectUrl={redirectUrl}
+                taxInfo={taxInfo}
+                feeInfo={feeInfo}
+                merchantInfo={merchantInfo}
+                displayCurrency={displayCurrency}
+                transferRate={transferRate}
+                email={tokenData?.email}
+                transactionId={linkId}
+                customerName={customerName}
+              />
+            )
+          ) : activeStep === 2 ? (
+            <TransferExpectedCard
+              isTrue={isSuccess}
+              dataUrl={isBank || ''}
+              type={'bank'}
+              redirectUrl={redirectUrl}
+              transactionId={linkId}
+              merchantName={merchantInfo?.name}
+              amount={`${formatWithSeparators(Number(totalAmount), displayCurrency)} ${displayCurrency}`}
+              email={tokenData?.email}
+              customerName={customerName}
+            />
+          ) : null}
+        </Box>
+        <FloatingChatButton />
+
+        {/* Copy Success Snackbar */}
+        <Snackbar
+          open={copySnackbar}
+          autoHideDuration={2000}
+          onClose={() => setCopySnackbar(false)}
+          message={t('checkout.copied')}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        />
+      </Box>
+    </Pay3Layout>
+  )
+}
+
+export default paymentAuth(Payment)

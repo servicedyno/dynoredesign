@@ -3,7 +3,7 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
 const isServer = typeof window === "undefined";
-const SUPPORTED_LANGUAGES = ["en", "pt", "fr", "es"];
+const SUPPORTED_LANGUAGES = ["en", "pt", "fr", "es", "de", "nl"];
 const DEFAULT_LANGUAGE = "en";
 
 // Resolve initial language: saved preference > browser locale > default
@@ -104,6 +104,12 @@ instance.init({
       termsConditions: require("./langs/locales/es/termsConditions.json"),
       privacyPolicy: require("./langs/locales/es/privacyPolicy.json"),
       amlPolicy: require("./langs/locales/es/amlPolicy.json"),
+    },
+    de: {
+      common: require("./langs/locales/de/common.json"),
+    },
+    nl: {
+      common: require("./langs/locales/nl/common.json"),
     },
   },
 

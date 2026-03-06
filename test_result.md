@@ -19,6 +19,18 @@ DynoPay is a full-stack crypto payment gateway.
 - **Frontend start**: Changed to `next dev` mode (turbo removed to prevent memory issues)
 - **Cleanup**: Removed unused CRA template files from `/app/frontend/src/` (only bridge `package.json` remains)
 
+## Checkout Page Integration (from CheckoutDyno repo)
+- **Pages added**: `/pay`, `/pay/demo`, `/pay/aml-policy`, `/pay/terms-of-service`, `/pay/success-demo`, `/pay/payment-states-demo`
+- **Components added**: Pay3Components, Pay3Layout, BrandLogo, ChatButton, Footer, ProgressBar, TransferExpectedCard, UnderPayment, OverPayment, Loading
+- **Assets added**: Flag icons (30+ countries), Coin SVG icons (9 cryptos), various UI icons
+- **Context added**: ThemeContext (dark/light mode toggle for checkout pages)
+- **Theme updated**: Added `lightTheme` and `darkTheme` exports with surface palette for checkout
+- **i18n updated**: Added checkout translations (header, checkout, crypto, etc.) + de/nl languages
+- **_app.tsx updated**: `/pay` routes wrapped with CheckoutThemeProvider + PaymentLayout
+- **Imports fixed**: `next-i18next` → `react-i18next`, removed `getServerSideProps` with `serverSideTranslations`
+- **Dependency**: `@iconify/react` installed
+- **Test Results**: ✅ `/pay` returns 200, ✅ `/pay/demo` renders checkout UI correctly, ✅ Homepage still works
+
 ## Onboarding Fix: hasWallet check + race condition fix
 - **Files**: `Components/UI/OnboardingFlow/index.tsx`, `pages/dashboard.tsx`
 - Fixed `hasWallet` check: now verifies `wallet_address` is actually configured (not just that wallet entries exist)

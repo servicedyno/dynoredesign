@@ -13,6 +13,7 @@ import { Provider } from "react-redux";
 
 import LanguageBootstrap from "@/helpers/LanguageBootstrap";
 import store from "@/store";
+import { ThemeProvider as CheckoutThemeProvider } from "@/contexts/ThemeContext";
 
 import {
   AdminLayout,
@@ -38,7 +39,7 @@ export type LayoutSetterProps = {
 };
 
 export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
-  layout?: "home" | "client" | "login" | "payment" | "admin" | "none";
+  layout?: "home" | "client" | "login" | "payment" | "pay" | "admin" | "none";
 };
 
 type AppPropsWithLayout = AppProps & {
@@ -88,6 +89,10 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
       return "payment";
     }
 
+    if (pathname.startsWith("/pay")) {
+      return "pay";
+    }
+
     if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
       return "admin";
     }
@@ -126,6 +131,15 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
           <PaymentLayout pageName={pageName} pageDescription={pageDescription}>
             <Component {...pageProps} {...pageSetterProps} />
           </PaymentLayout>
+        );
+
+      case "pay":
+        return (
+          <CheckoutThemeProvider>
+            <PaymentLayout pageName={pageName} pageDescription={pageDescription}>
+              <Component {...pageProps} {...pageSetterProps} />
+            </PaymentLayout>
+          </CheckoutThemeProvider>
         );
 
       case "admin":
