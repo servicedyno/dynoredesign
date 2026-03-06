@@ -85,7 +85,7 @@ export function* getApi(): unknown {
 
     yield put({
       type: API_FETCH,
-      payload: data,
+      payload: data?.all || data || [],
     });
   } catch (e: any) {
     const message = e?.response?.data?.message ?? e?.message ?? "Failed to fetch API keys";

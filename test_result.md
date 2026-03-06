@@ -42,6 +42,11 @@ DynoPay is a full-stack crypto payment gateway.
 - **Responsive**: ✅ Desktop (1920px), ✅ Tablet (768px), ✅ Mobile (390px) — all fit without scrolling
 - **Theme**: lightTheme/darkTheme updated with Urbanist font + new palette
 
+## Bug Fix: API Credentials Not Showing in UI
+- **Root cause**: Backend `getApi` returns `{ all: [...array...], grouped: {...}, total, ... }` (nested object), but Redux saga was setting the entire object as `apiList`. Component checks `Array.isArray(apiList)` → `false` → keys never rendered.
+- **Fix**: In `/app/Redux/Sagas/ApiSaga.ts` → `getApi()` function, changed `payload: data` to `payload: data?.all || data || []` to extract the actual array of API keys.
+- **File changed**: `/app/Redux/Sagas/ApiSaga.ts` (line 88)
+
 ## Onboarding Fix: hasWallet check + race condition fix
 - **Files**: `Components/UI/OnboardingFlow/index.tsx`, `pages/dashboard.tsx`
 - Fixed `hasWallet` check: now verifies `wallet_address` is actually configured (not just that wallet entries exist)
