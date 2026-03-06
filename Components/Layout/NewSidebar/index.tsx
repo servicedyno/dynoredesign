@@ -28,6 +28,11 @@ const NewSidebar = () => {
       path: "/transactions",
     },
     {
+      label: t("invoicesTax"),
+      icon: "invoices",
+      path: "/invoices",
+    },
+    {
       label: t("payLinks"),
       icon: "payment-links",
       path: "/pay-links",

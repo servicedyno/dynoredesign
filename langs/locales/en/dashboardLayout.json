@@ -44,5 +44,6 @@
   "customPeriod": "Custom Period",
   "pay-links": "Payment Links",
   "walletWarnnigTitle": "wallet setup",
-  "walletSetUpWarnnigTitle": "Complete wallet setup"
+  "walletSetUpWarnnigTitle": "Complete wallet setup",
+  "invoicesTax": "Invoices & Tax"
 }

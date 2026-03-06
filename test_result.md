@@ -21,6 +21,15 @@ DynoPay is a full-stack crypto payment gateway.
 - **Dependencies**: Both `/app` (Next.js frontend) and `/app/backend` (Node.js) have `node_modules` installed via yarn
 
 ## Checkout Page Integration (from CheckoutDyno repo)
+
+### Fix: Invoices & Tax Sidebar Navigation (March 6, 2026)
+- **Issue**: "Invoices & Tax" was added to old `Menus.tsx` but app uses `NewSidebar/index.tsx`
+- **Fix**: Added `invoicesTax` menu item to `NewSidebar` between Transactions and Payment Links
+- **Added**: Custom "invoices" icon SVG in `sidebar-icons.tsx`
+- **Added**: `invoicesTax` translation key to all 4 language files (EN/ES/FR/PT)
+- **Files changed**: `Components/Layout/NewSidebar/index.tsx`, `utils/customIcons/sidebar-icons.tsx`, `langs/locales/*/dashboardLayout.json`
+
+## Checkout Page Integration (from CheckoutDyno repo)
 - **Pages added**: `/pay`, `/pay/demo`, `/pay/aml-policy`, `/pay/terms-of-service`, `/pay/success-demo`, `/pay/payment-states-demo`
 - **Components added**: Pay3Components, Pay3Layout, BrandLogo, ChatButton, Footer, ProgressBar, TransferExpectedCard, UnderPayment, OverPayment, Loading
 - **Assets added**: Flag icons (30+ countries), Coin SVG icons (9 cryptos), various UI icons

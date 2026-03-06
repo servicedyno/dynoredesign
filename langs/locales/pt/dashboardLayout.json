@@ -42,5 +42,6 @@
   "last90Days": "Últimos 90 dias",
   "customPeriod": "Período personalizado",
   "walletWarnnigTitle": "configuração da carteira",
-  "walletSetUpWarnnigTitle": "Configuração completa da carteira"
+  "walletSetUpWarnnigTitle": "Configuração completa da carteira",
+  "invoicesTax": "Faturas & Impostos"
 }

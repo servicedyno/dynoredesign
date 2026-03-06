@@ -43,5 +43,6 @@
   "customPeriod": "Período Personalizado",
   "pay-links": "Enlaces de Pago",
   "walletWarnnigTitle": "configuración de billetera",
-  "walletSetUpWarnnigTitle": "Completar configuración de billetera"
+  "walletSetUpWarnnigTitle": "Completar configuración de billetera",
+  "invoicesTax": "Facturas & Impuestos"
 }

@@ -43,5 +43,6 @@
   "customPeriod": "Période Personnalisée",
   "pay-links": "Liens de Paiement",
   "walletWarnnigTitle": "configuration du portefeuille",
-  "walletSetUpWarnnigTitle": "Compléter la configuration du portefeuille"
+  "walletSetUpWarnnigTitle": "Compléter la configuration du portefeuille",
+  "invoicesTax": "Factures & Taxes"
 }
