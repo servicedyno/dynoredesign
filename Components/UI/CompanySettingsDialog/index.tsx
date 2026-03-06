@@ -10,11 +10,12 @@ import CustomButton from "@/Components/UI/Buttons";
 import PopupModal from "@/Components/UI/PopupModal";
 import useIsMobile from "@/hooks/useIsMobile";
 import { CompanyAction } from "@/Redux/Actions";
-import { COMPANY_UPDATE } from "@/Redux/Actions/CompanyAction";
+import { COMPANY_DELETE, COMPANY_UPDATE } from "@/Redux/Actions/CompanyAction";
 import { ICompany, rootReducer } from "@/utils/types";
 import axiosBaseApi from "@/axiosConfig";
 
 import Toast from "../Toast";
+import CustomAlert from "../CustomAlert";
 import CompanyDetailsSection from "./CompanyDetailsSection";
 import CryptoConversionSection from "./CryptoConversionSection";
 import PaymentToleranceSection from "./PaymentToleranceSection";
@@ -98,6 +99,18 @@ export default function CompanySettingsDialog({
     webhook_url: string;
     webhook_secret: string;
   } | null>(null);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+
+  const handleDeleteCompany = () => {
+    if (company?.company_id) {
+      dispatch({
+        type: COMPANY_DELETE,
+        payload: company.company_id,
+      });
+      setDeleteAlertOpen(false);
+      onClose();
+    }
+  };
 
   const showToast = (message: string, severity: "success" | "error" = "success") => {
     setOpenToast(false);
@@ -453,34 +466,51 @@ export default function CompanySettingsDialog({
                   <Box
                     sx={{
                       display: "flex",
-                      justifyContent: "flex-end",
+                      justifyContent: "space-between",
+                      alignItems: "center",
                       gap: 1.5,
+                      mt: 1,
                     }}
                   >
                     <CustomButton
-                      label={tSettings("actions.cancel")}
+                      label="Delete Company"
                       variant="outlined"
                       size={isMobile ? "small" : "medium"}
-                      onClick={handleClose}
-                      disabled={companyState.loading}
+                      onClick={() => setDeleteAlertOpen(true)}
                       sx={{
-                        flex: 1,
-                        fontSize: "15px",
-                        [theme.breakpoints.down("md")]: { fontSize: "13px" },
+                        fontSize: "13px",
+                        color: theme.palette.error.main,
+                        borderColor: theme.palette.error.main,
+                        "&:hover": {
+                          borderColor: theme.palette.error.dark,
+                          backgroundColor: `${theme.palette.error.main}10`,
+                        },
                       }}
                     />
-                    <CustomButton
-                      label={tSettings("actions.saveChanges")}
-                      variant="primary"
-                      size={isMobile ? "small" : "medium"}
-                      onClick={() => handleSubmit(values)}
-                      disabled={submitDisable || companyState.loading}
-                      sx={{
-                        flex: 1,
-                        fontSize: "15px",
-                        [theme.breakpoints.down("md")]: { fontSize: "13px" },
-                      }}
-                    />
+                    <Box sx={{ display: "flex", gap: 1.5 }}>
+                      <CustomButton
+                        label={tSettings("actions.cancel")}
+                        variant="outlined"
+                        size={isMobile ? "small" : "medium"}
+                        onClick={handleClose}
+                        disabled={companyState.loading}
+                        sx={{
+                          fontSize: "15px",
+                          [theme.breakpoints.down("md")]: { fontSize: "13px" },
+                        }}
+                      />
+                      <CustomButton
+                        label={tSettings("actions.saveChanges")}
+                        variant="primary"
+                        size={isMobile ? "small" : "medium"}
+                        onClick={() => handleSubmit(values)}
+                        disabled={submitDisable || companyState.loading}
+                        sx={{
+                          fontSize: "15px",
+                          [theme.breakpoints.down("md")]: { fontSize: "13px" },
+                        }}
+                      />
+                    </Box>
                   </Box>
                 </>
               );
@@ -493,6 +523,14 @@ export default function CompanySettingsDialog({
         open={openToast}
         message={toastMessage}
         severity={toastSeverity}
+      />
+
+      <CustomAlert
+        open={deleteAlertOpen}
+        handleClose={() => setDeleteAlertOpen(false)}
+        message="Are you sure you want to remove this company? This will remove all associated users, transactions, and API keys."
+        confirmText="Delete"
+        onConfirm={handleDeleteCompany}
       />
     </>
   );
