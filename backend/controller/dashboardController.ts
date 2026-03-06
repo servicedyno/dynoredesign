@@ -212,17 +212,18 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       convertVolumesToFiat(volumeRows, 'last_month_vol', preferredCurrency),
     ]);
 
-    // Fee tier needs USD volume — convert if preferred is not USD
-    let currentMonthVolumeUSD = currentVolume;
+    // Fee tier needs USD volume — use ALL-TIME cumulative volume for tier progression
+    // Users should not lose their tier when a new month starts
+    let allTimeVolumeUSD = totalVolume;
     if (preferredCurrency !== 'USD') {
-      currentMonthVolumeUSD = await convertVolumesToFiat(volumeRows, 'current_month_vol', 'USD');
+      allTimeVolumeUSD = await convertVolumesToFiat(volumeRows, 'total_vol', 'USD');
     }
 
-    // Calculate fee tier (based on USD, but display in preferred currency)
-    const conversionRate = preferredCurrency !== 'USD' && currentMonthVolumeUSD > 0
-      ? currentVolume / currentMonthVolumeUSD
+    // Calculate fee tier (based on cumulative USD volume, display in preferred currency)
+    const conversionRate = preferredCurrency !== 'USD' && allTimeVolumeUSD > 0
+      ? totalVolume / allTimeVolumeUSD
       : 1;
-    const feeTier = getFeeTier(currentMonthVolumeUSD, preferredCurrency, conversionRate);
+    const feeTier = getFeeTier(allTimeVolumeUSD, preferredCurrency, conversionRate);
 
     // Build response
     const dashboardData = {
@@ -529,28 +530,25 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
       preferredCurrency = await getCompanyBaseCurrency(company_id as string);
     }
 
-    // Calculate user's monthly transaction volume (in USD)
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
+    // Calculate user's ALL-TIME cumulative transaction volume (in USD)
+    // Tier progression is based on total volume, not just current month
     const companyJoinFee = company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : '';
     const companyFilterFee = company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : '';
 
-    const monthlyVolPerCurrency = await sequelize.query(
+    const totalVolPerCurrency = await sequelize.query(
       `SELECT ut.base_currency, COALESCE(SUM(ut.base_amount), 0) as volume
        FROM tbl_user_transaction ut
        ${companyJoinFee}
        WHERE ut.user_id = :userId 
-       AND ut."createdAt" >= :startOfMonth
        ${companyFilterFee}
        GROUP BY ut.base_currency`,
       {
-        replacements: { userId, startOfMonth, companyId: company_id },
+        replacements: { userId, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as Array<Record<string, unknown>>;
 
-    const monthlyVolumeUSD = await convertVolumesToFiat(monthlyVolPerCurrency, 'volume', 'USD');
+    const allTimeVolumeUSD = await convertVolumesToFiat(totalVolPerCurrency, 'volume', 'USD');
     
     // Get conversion rate if not USD
     if (preferredCurrency !== 'USD') {
@@ -565,7 +563,7 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
       }
     }
     
-    const userTierInfo = getFeeTier(monthlyVolumeUSD, preferredCurrency, conversionRate);
+    const userTierInfo = getFeeTier(allTimeVolumeUSD, preferredCurrency, conversionRate);
     const currencySymbol = getCurrencySymbol(preferredCurrency);
 
     // Build tiers with indicator for current tier (show thresholds in preferred currency)
@@ -585,8 +583,8 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
       user_tier: {
         current_tier: userTierInfo.current_tier,
         tier_description: userTierInfo.tier_description,
-        monthly_volume: userTierInfo.monthly_volume,
-        monthly_volume_formatted: `${currencySymbol}${userTierInfo.monthly_volume.toLocaleString()} ${preferredCurrency}`,
+        total_volume: userTierInfo.monthly_volume,
+        total_volume_formatted: `${currencySymbol}${userTierInfo.monthly_volume.toLocaleString()} ${preferredCurrency}`,
         percent_to_next_tier: userTierInfo.percent_complete,
         amount_to_next_tier: userTierInfo.amount_to_next_tier,
         amount_to_next_tier_formatted: userTierInfo.amount_to_next_tier_formatted,

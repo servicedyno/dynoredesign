@@ -113,9 +113,9 @@ export function* DashboardSaga(action: DashboardSagaAction): Generator<any, void
             payload: {
               feeTiers: {
                 monthlyLimit: userTier.amount_to_next_tier
-                  ? userTier.monthly_volume + userTier.amount_to_next_tier
+                  ? userTier.total_volume + userTier.amount_to_next_tier
                   : 50000,
-                usedAmount: userTier.monthly_volume ?? 0,
+                usedAmount: userTier.total_volume ?? 0,
                 currentTier: userTier.current_tier ?? "Standard",
                 tiers: apiData.tiers || [],
                 percentToNextTier: userTier.percent_to_next_tier ?? 0,
