@@ -56,6 +56,24 @@ DynoPay is a full-stack crypto payment gateway.
 - Email: testuser_dynopay@test.com
 - Password: TestPass@123
 
+### Test Results - Onboarding Flow
+1. ✅ Registration - Working (NEXT_PUBLIC_BASE_URL fix applied)
+2. ✅ OTP Verification - Working (verified via API + Redis OTP retrieval)
+3. ✅ Login - Working (use keyboard.type() for password field, not fill())
+4. ✅ Company Creation Modal - Shows on dashboard for new users (Step 1/2)
+5. ✅ Wallet Addition Modal - Shows after company creation (Step 2/2)  
+6. ✅ Step Indicator - Correctly shows "1 Company ── 2 Wallet" progress
+7. ✅ Validation - Working correctly on both forms
+8. ⚠️ CelebrationOverlay - Not yet verified (requires completing wallet OTP)
+
+### Changes Made
+- Fixed NEXT_PUBLIC_BASE_URL missing (created /app/.env.local)
+- Fixed NEXTAUTH_SECRET missing
+- Removed old CompanyDialog folder (/app/Components/UI/CompanyDialog/)
+- Removed old OnboardingChecklist folder (/app/Components/UI/OnboardingChecklist/)
+- Updated CompanySelector to use router.push('/company') instead of old openAddCompany()
+- Removed CompanyDialogProvider wrapper from Containers/Client/index.tsx
+
 ---
 
 ## Testing Protocol
