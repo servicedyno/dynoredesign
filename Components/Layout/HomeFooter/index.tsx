@@ -47,7 +47,7 @@ const ROUTES: readonly RouteItemType[] = [
   { labelKey: "footerSandbox", link: "#" },
   { labelKey: "footerTerms", link: "/terms-conditions" },
   { labelKey: "footerPrivacy", link: "/privacy-policy" },
-  { labelKey: "footerApiStatus", link: "/api-status" },
+  { labelKey: "footerApiStatus", link: "/system-status" },
   { labelKey: "footerSupport", link: "#" },
 ] as const;
 
