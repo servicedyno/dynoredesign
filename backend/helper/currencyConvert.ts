@@ -209,7 +209,7 @@ const TATUM_RATE_IDS: Record<string, string> = {
 // Negative cache for Tatum rate API failures — avoid hammering failing pairs
 // Key: "tatum_fail:{crypto}:{fiat}", Value: timestamp of last failure
 const tatumFailureCache = new Map<string, number>();
-const TATUM_FAILURE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const TATUM_FAILURE_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes (reduced from 10 to recover faster)
 
 /**
  * Get crypto rate from Tatum in any fiat (already paid for, reliable, no extra cost)

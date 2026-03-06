@@ -698,15 +698,6 @@ cron.schedule("*/15 * * * *", function () {
   });
 });
 
-// Background rate cache: Refresh crypto rates every 15 minutes via Tatum
-// PERF: Increased from 5min to 15min — saves ~7,200 Tatum API calls/day
-// Rates are used for display purposes and payment creation caches its own rate
-cron.schedule("*/15 * * * *", function () {
-  refreshBackgroundRateCache().catch(err => {
-    log(`Cron: Background rate cache refresh failed: ${err.message}`, "error");
-  });
-});
-
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
 setupWeeklySummaryCron();
 
@@ -777,6 +768,16 @@ cron.schedule("*/10 * * * *", async function () {
 });
 
 } // end if (enableBackgroundJobs) — cron jobs block
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ALWAYS-ON: Background rate cache refresh (not destructive, needed for conversions)
+// Runs regardless of ENABLE_BACKGROUND_JOBS to prevent currency conversion failures
+// ═══════════════════════════════════════════════════════════════════════════
+cron.schedule("*/10 * * * *", function () {
+  refreshBackgroundRateCache().catch(err => {
+    log(`Cron: Background rate cache refresh failed: ${err.message}`, "error");
+  });
+});
 
 const startServer = async () => {
   log('Connecting to Redis...', 'info');
