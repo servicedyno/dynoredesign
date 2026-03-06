@@ -51,7 +51,7 @@ const HEADER_ITEMS: readonly HeaderItem[] = [
   { translationKey: "howItWorks", sectionId: "how-it-works", path: "/" },
   { translationKey: "features", sectionId: "features", path: "/" },
   { translationKey: "useCases", sectionId: "use-cases", path: "/" },
-  { translationKey: "documentation", path: "/api/docs", external: true },
+  { translationKey: "documentation", path: "/documentation", external: false },
 ] as const;
 
 /* ================= COMPONENT ================= */

@@ -401,7 +401,7 @@ const ApiKeysPage = ({
 
   const docsUrl =
     (process.env.NEXT_PUBLIC_API_DOCS_URL as string) ||
-    "https://docs.dynopay.com";
+    "/documentation";
 
   const itemAnimation = {
     "@keyframes fadeSlideIn": {
@@ -439,6 +439,27 @@ const ApiKeysPage = ({
     return (
       <>
         <EmptyDataModel pageName="apiKey" />
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            mt: 2,
+          }}
+        >
+          <CustomButton
+            label={t("documentation.viewDocumentation")}
+            endIcon={<ArrowOutwardIcon sx={{ fontSize: 16 }} />}
+            variant="outlined"
+            sx={{
+              borderColor: "#0004FF",
+              color: "#0004FF",
+              "&:hover": { background: "#f0f5ff", borderColor: "#0004FF" },
+            }}
+            onClick={() => {
+              window.open(docsUrl, "_blank", "noopener,noreferrer");
+            }}
+          />
+        </Box>
         <CreateApiModel open={openCreate} onClose={handleCreateClose} />
       </>
     );

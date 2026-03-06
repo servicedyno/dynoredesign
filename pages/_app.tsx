@@ -73,6 +73,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
       "/privacy-policy",
       "/aml-policy",
       "/system-status",
+      "/documentation",
     ]);
 
     if (homePaths.has(pathname)) return "home";

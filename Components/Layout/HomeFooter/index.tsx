@@ -44,7 +44,7 @@ const SOCIALS: readonly SocialItemType[] = [
 ] as const;
 
 const ROUTES: readonly RouteItemType[] = [
-  { labelKey: "documentation", link: "/api/docs", external: true },
+  { labelKey: "documentation", link: "/documentation" },
   { labelKey: "footerSandbox", link: "#" },
   { labelKey: "footerTerms", link: "/terms-conditions" },
   { labelKey: "footerPrivacy", link: "/privacy-policy" },
