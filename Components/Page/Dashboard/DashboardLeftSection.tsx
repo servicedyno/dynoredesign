@@ -33,6 +33,7 @@ import { useRouter } from "next/router";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PercentageChip } from "./styled";
+import ConversionBanner from "./ConversionBanner";
 
 const formatDate = (date: Date): string => {
   const months = [
@@ -830,6 +831,9 @@ const DashboardLeftSection = () => {
           </Box>
         </PanelCard>
       </Box>
+
+      {/* Auto-Convert to Stablecoins Banner */}
+      <ConversionBanner />
 
       {/* Transaction Volume Graph */}
       <Box sx={{ px: { xs: "16px", md: "0px" } }}>

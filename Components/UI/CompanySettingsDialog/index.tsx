@@ -384,6 +384,15 @@ export default function CompanySettingsDialog({
                     onAccordionChange={handleAccordionChange("company")}
                   />
 
+                  <CryptoConversionSection
+                    value={values.auto_convert_volatile_crypto ?? "no"}
+                    convertTo={values.convert_to_stablecoin ?? "usdt_trc20"}
+                    onFieldsChange={handleFieldsChange}
+                    isMobile={isMobile}
+                    expanded={expanded === "crypto"}
+                    onAccordionChange={handleAccordionChange("crypto")}
+                  />
+
                   <WebhookNotificationsSection
                     notificationUrl={
                       webhookData?.webhook_url ??
@@ -452,15 +461,6 @@ export default function CompanySettingsDialog({
                     isMobile={isMobile}
                     expanded={expanded === "payment"}
                     onAccordionChange={handleAccordionChange("payment")}
-                  />
-
-                  <CryptoConversionSection
-                    value={values.auto_convert_volatile_crypto ?? "no"}
-                    convertTo={values.convert_to_stablecoin ?? "usdt_trc20"}
-                    onFieldsChange={handleFieldsChange}
-                    isMobile={isMobile}
-                    expanded={expanded === "crypto"}
-                    onAccordionChange={handleAccordionChange("crypto")}
                   />
 
                   <Box
