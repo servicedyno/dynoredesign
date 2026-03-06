@@ -15,6 +15,7 @@ const OnboardingFlow: React.FC = () => {
   const dispatch = useDispatch();
   const [phase, setPhase] = useState<OnboardingPhase>("loading");
   const initialCheckDone = useRef(false);
+  const [fetchStarted, setFetchStarted] = useState(false);
 
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer,
@@ -22,19 +23,26 @@ const OnboardingFlow: React.FC = () => {
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
 
   const hasCompany = companyState.companyList?.length > 0;
-  const hasWallet = walletState.walletList?.length > 0;
+  // A wallet is "set up" only if it has an actual address configured
+  const hasWallet = walletState.walletList?.some(
+    (w: any) => w.wallet_address != null && w.wallet_address !== ''
+  ) || false;
   const isLoading = companyState.loading || walletState.loading;
 
-  // Fetch data on mount
+  // Fetch data on mount and mark fetch as started
   useEffect(() => {
     dispatch(CompanyAction(COMPANY_FETCH));
     dispatch(WalletAction(WALLET_FETCH));
+    // Use setState (not ref) to trigger a re-render after dispatch
+    // This ensures the phase-check effect runs AFTER loading state updates
+    setFetchStarted(true);
   }, [dispatch]);
 
   // Determine initial phase once data loads
   useEffect(() => {
     if (initialCheckDone.current) return;
-    if (isLoading) return;
+    if (!fetchStarted) return; // Wait until we've dispatched fetches
+    if (isLoading) return; // Wait for loading to finish
 
     // Data has loaded at least once
     initialCheckDone.current = true;
@@ -47,7 +55,7 @@ const OnboardingFlow: React.FC = () => {
       // Returning user — everything set up, skip onboarding
       setPhase("done");
     }
-  }, [isLoading, hasCompany, hasWallet]);
+  }, [isLoading, hasCompany, hasWallet, fetchStarted]);
 
   // Called when company creation succeeds
   const handleCompanyCreated = useCallback(() => {

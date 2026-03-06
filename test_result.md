@@ -18,6 +18,15 @@ DynoPay is a full-stack crypto payment gateway.
 - **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to pod URL
 - **Frontend start**: Changed to `next dev --turbo` mode (no build required)
 
+## Onboarding Fix: hasWallet check + race condition fix
+- **Files**: `Components/UI/OnboardingFlow/index.tsx`, `pages/dashboard.tsx`
+- Fixed `hasWallet` check: now verifies `wallet_address` is actually configured (not just that wallet entries exist)
+- Fixed race condition: added `fetchStarted` state to prevent phase determination before API data loads
+- **Test Results**:
+  - ✅ Test 1: User with company + no wallet → Wallet modal shown correctly
+  - ✅ Test 3: User with company + wallet → Dashboard (verified via console logs: phase="done")
+  - Test 2 (new user, no company/wallet → Company modal): Verified via code logic
+
 ## Changes Made This Session
 
 ### Fix 1: 🟠 Token Refresh (was kicking users out on 401)

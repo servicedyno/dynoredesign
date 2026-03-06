@@ -16,7 +16,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "config-center-6.preview.emergentagent.com",
+        hostname: "**.preview.emergentagent.com",
       },
     ],
   },

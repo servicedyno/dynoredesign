@@ -31,7 +31,10 @@ export default function Home({
   );
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
   const hasCompany = companyState.companyList?.length > 0;
-  const hasWallet = walletState.walletList?.length > 0;
+  // A wallet is "set up" only if it has an actual address configured
+  const hasWallet = walletState.walletList?.some(
+    (w: any) => w.wallet_address != null && w.wallet_address !== ''
+  ) || false;
   const setupComplete = hasCompany && hasWallet;
 
   useEffect(() => {
