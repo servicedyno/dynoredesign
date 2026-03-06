@@ -11,6 +11,13 @@ DynoPay is a full-stack crypto payment gateway.
 - ✅ Backend: Running (Node.js on port 3300, Python proxy on port 8001)
 - ✅ MongoDB: Running
 
+## Pod URL Setup
+- **Pod URL**: `https://eba08ed1-b50d-443c-b8b4-c81b8c38cd82.preview.emergentagent.com`
+- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL` set to pod URL (used by axiosConfig.ts for API calls)
+- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL` set to pod URL
+- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to pod URL
+- **Frontend start**: Changed to `next dev --turbo` mode (no build required)
+
 ## Changes Made This Session
 
 ### Fix 1: 🟠 Token Refresh (was kicking users out on 401)
@@ -97,3 +104,43 @@ DynoPay is a full-stack crypto payment gateway.
 ### Incorporate User Feedback
 - Always ask user before making changes based on test results
 - Do not fix minor issues without user approval
+
+---
+
+## Latest Testing Session (March 6, 2026)
+
+### Backend API Validation - COMPLETED ✅
+
+**Testing Agent**: backend_testing_agent  
+**Test Date**: 2026-03-06 12:20 UTC  
+**Test File**: `/app/backend_test.py`
+
+#### Test Results Summary
+✅ **Backend Health Check**: Backend healthy - Dynopay API status: operational  
+✅ **CSRF Token Endpoint**: GET /api/csrf-token working - token length: 64  
+✅ **Backend Root Endpoint**: Backend API accessible - Dynopay API v1.0.0 status: operational  
+✅ **Backend Connectivity**: Connected to Dynopay API v1.0.0
+
+**Success Rate**: 100% (4/4 tests passed)
+
+#### Key Findings
+1. **Health Endpoint**: `/health` works internally but not externally routed (expected K8s behavior)
+2. **CSRF Protection**: Fully functional via `/api/csrf-token` endpoint
+3. **Database Connections**: PostgreSQL (Railway) ✅ connected, Redis (Railway) ✅ connected
+4. **External Integrations**: Tatum API ✅ operational
+5. **Backend Architecture**: Node.js/Express on port 3300, proxied via Python/uvicorn on port 8001
+
+#### Tested Endpoints
+- ✅ `GET /api` - Backend info and status
+- ✅ `GET /api/csrf-token` - CSRF token generation  
+- ✅ `GET /health` (internal) - Health status with DB/Redis checks
+- ✅ `GET /api/status` - Service status endpoint
+
+#### Infrastructure Status
+- **Backend Service**: Running and operational
+- **Database**: PostgreSQL connected via Railway
+- **Cache**: Redis connected via Railway  
+- **API Gateway**: Python proxy functioning correctly
+- **External Routing**: Pod URL routing working for `/api/*` endpoints
+
+**Conclusion**: DynoPay backend API is fully accessible and responding correctly. All core endpoints operational.
