@@ -10,7 +10,6 @@ import {
   TriggerText,
 } from "./styled";
 
-import { useCompanyDialog } from "@/Components/UI/CompanyDialog/context";
 import { useCompanySettingsDialog } from "@/Components/UI/CompanySettingsDialog/context";
 import useIsMobile from "@/hooks/useIsMobile";
 import { rootReducer } from "@/utils/types";
@@ -18,6 +17,7 @@ import { Add } from "@mui/icons-material";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import CustomButton from "../Buttons";
@@ -27,8 +27,8 @@ export default function CompanySelector() {
   const { t } = useTranslation("dashboardLayout");
   const theme = useTheme();
   const isMobile = useIsMobile("md");
+  const router = useRouter();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const { openAddCompany } = useCompanyDialog();
   const { openCompanySettings } = useCompanySettingsDialog();
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer,
@@ -277,7 +277,7 @@ export default function CompanySelector() {
               sx={{ mt: 1, py: "8px !important" }}
               onClick={() => {
                 handleClose();
-                openAddCompany();
+                router.push('/company');
               }}
             />
           </Box>

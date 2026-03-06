@@ -2,7 +2,6 @@ import MobileNavigationBar from "@/Components/Layout/MobileNavigationBar";
 import NewHeader from "@/Components/Layout/NewHeader";
 import NewSidebar from "@/Components/Layout/NewSidebar";
 import withAuth from "@/Components/Page/Common/HOC/withAuth";
-import { CompanyDialogProvider } from "@/Components/UI/CompanyDialog/context";
 import { CompanySettingsDialogProvider } from "@/Components/UI/CompanySettingsDialog/context";
 import EmailVerificationBanner from "@/Components/UI/EmailVerificationBanner";
 import Toast from "@/Components/UI/Toast";
@@ -36,7 +35,6 @@ const ClientLayout = ({
     router.pathname === "/transactions";
   return (
     <>
-    <CompanyDialogProvider>
       <CompanySettingsDialogProvider>
         <Box
           sx={{
@@ -202,7 +200,6 @@ const ClientLayout = ({
           </Box>
         </Box>
       </CompanySettingsDialogProvider>
-    </CompanyDialogProvider>
     <Toast
       open={ToastState.open}
       message={ToastState.message}
