@@ -7,7 +7,7 @@ Testing specific endpoints mentioned in review request:
 3. Root endpoint: GET {backend_url}/ - should return 200
 
 The backend uses PostgreSQL (Railway) and Redis (Railway) for database connections.
-Pod URL: https://crypto-payment-debug-1.preview.emergentagent.com
+Pod URL: https://pod-backend-frontend.preview.emergentagent.com
 """
 
 import requests
@@ -17,7 +17,7 @@ import os
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://crypto-payment-debug-1.preview.emergentagent.com"
+BACKEND_URL = "https://pod-backend-frontend.preview.emergentagent.com"
 
 class DynoPayBackendTester:
     def __init__(self):
