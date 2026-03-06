@@ -14,11 +14,14 @@ export interface AddWalletModalProps {
   cryptoData?: any[];
   onWalletAdded?: () => void;
   headerExtra?: React.ReactNode;
+  companyId?: number | string;
 }
 
 export type Address = {
   wallet_address: string;
   currency: string;
+  wallet_name?: string;
+  company_id?: number | string;
 };
 
 export interface WalletError {

@@ -64,7 +64,7 @@ DynoPay is a full-stack crypto payment gateway.
 5. ✅ Wallet Addition Modal - Shows after company creation (Step 2/2)  
 6. ✅ Step Indicator - Correctly shows "1 Company ── 2 Wallet" progress
 7. ✅ Validation - Working correctly on both forms
-8. ⚠️ CelebrationOverlay - Not yet verified (requires completing wallet OTP)
+8. ✅ CelebrationOverlay - VERIFIED! Shows confetti + "You're all set!" + "Go to Dashboard"
 
 ### Changes Made
 - Fixed NEXT_PUBLIC_BASE_URL missing (created /app/.env.local)
@@ -73,6 +73,11 @@ DynoPay is a full-stack crypto payment gateway.
 - Removed old OnboardingChecklist folder (/app/Components/UI/OnboardingChecklist/)
 - Updated CompanySelector to use router.push('/company') instead of old openAddCompany()
 - Removed CompanyDialogProvider wrapper from Containers/Client/index.tsx
+- Fixed AddWalletModal: moved OtpDialog outside PopupModal to fix z-index stacking
+- Fixed AddWalletModal: don't call onClose() in handleSubmit (prevented phase="done" premature)
+- Fixed AddWalletModal: added company_id to validateWalletAddress and verifyOtp API calls
+- Fixed AddWalletModal: hide PopupModal when OTP dialog is showing (open={open && !otpModalOpen})
+- Fixed OTP verification success handler to properly reset form without calling onClose()
 
 ---
 

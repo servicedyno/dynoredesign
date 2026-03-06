@@ -32,9 +32,12 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
   cryptoData = [],
   onWalletAdded,
   headerExtra,
+  companyId: propCompanyId,
 }) => {
   const dispatch = useDispatch();
   const userState = useSelector((state: rootReducer) => state.userReducer);
+  const companyState = useSelector((state: rootReducer) => state.companyReducer);
+  const companyId = propCompanyId || companyState.companyList?.[0]?.company_id;
   const isMobile = useIsMobile("sm");
   const { t } = useTranslation("walletScreen");
   const tWallet = useCallback(
@@ -108,6 +111,8 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
       const values: any = {
         wallet_address: walletAddress.trim(),
         currency: cryptocurrency,
+        company_id: companyId,
+        wallet_name: walletName.trim(),
       };
 
       if (TAG_BASED_CHAINS.includes(cryptocurrency) && xrpTag.trim()) {
@@ -132,15 +137,13 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
         return;
       }
 
-      setAddress(values);
+      setAddress({ ...values, wallet_name: walletName.trim() });
       setPopupLoading(false);
       setIsSubmitting(false);
 
-      setWalletName("");
-      setCryptocurrency("BTC");
-      setWalletAddress("");
-      setErrors({});
-      onClose();
+      // Don't call onClose() here — it would unmount the component
+      // (OnboardingFlow sets phase="done" on close, removing the OTP dialog).
+      // Instead, just open the OTP dialog on top of the wallet modal.
       setOtpModalOpen(true);
     } catch (error: any) {
       console.error("Error adding wallet address:", error);
@@ -179,12 +182,22 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
         wallet_address: address?.wallet_address,
         currency: address?.currency,
         currency_type: currencyType,
+        company_id: companyId,
+        wallet_name: walletName || address?.wallet_name,
       });
 
       if (response.status) {
         setOtpModalOpen(false);
         setAddress(null);
-        handleClose();
+        // Reset form state without calling onClose() (which unmounts the component in OnboardingFlow)
+        setWalletName("");
+        setCryptocurrency("");
+        setWalletAddress("");
+        setXrpTag("");
+        setErrors({});
+        setPopupLoading(false);
+        setIsSubmitting(false);
+        // Notify parent that wallet was added — OnboardingFlow transitions to celebration
         onWalletAdded?.();
         dispatch({
           type: TOAST_SHOW,
@@ -275,8 +288,9 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
   };
 
   return (
+    <>
     <PopupModal
-      open={open}
+      open={open && !otpModalOpen}
       handleClose={handleClose}
       showHeader={false}
       hasFooter={false}
@@ -467,26 +481,27 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
           />
         </Box>
       </PanelCard>
-
-      <OtpDialog
-        open={otpModalOpen}
-        onClose={() => {
-          setOtpModalOpen(false);
-          setOtpError("");
-        }}
-        title={tWallet("emailVerification")}
-        subtitle={tWallet("emailVerificationSubtitle")}
-        contactInfo={userState.email}
-        contactType="email"
-        otpLength={6}
-        onVerify={handleOtpVerify}
-        onResendCode={handleResendCode}
-        loading={otpLoading}
-        error={otpError}
-        onClearError={() => setOtpError("")}
-        countdown={0}
-      />
     </PopupModal>
+
+    <OtpDialog
+      open={otpModalOpen}
+      onClose={() => {
+        setOtpModalOpen(false);
+        setOtpError("");
+      }}
+      title={tWallet("emailVerification")}
+      subtitle={tWallet("emailVerificationSubtitle")}
+      contactInfo={userState.email}
+      contactType="email"
+      otpLength={6}
+      onVerify={handleOtpVerify}
+      onResendCode={handleResendCode}
+      loading={otpLoading}
+      error={otpError}
+      onClearError={() => setOtpError("")}
+      countdown={0}
+    />
+    </>
   );
 };
 
