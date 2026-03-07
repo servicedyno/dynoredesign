@@ -2593,9 +2593,15 @@ const getUserAnalytics = async (
     // Get company's preferred currency for analytics display
     const preferredCurrency = await getCompanyBaseCurrency(company_id);
 
+    // Build company filter for SQL queries (both tbl_user_transaction and tbl_user_temp_address have company_id)
+    const companyFilterSQL = company_id ? ` and ut.company_id='${company_id}'` : '';
+
+    const txWhere: any = { user_id: userData.user_id };
+    if (company_id) txWhere.company_id = company_id;
+
     const totalTransactionsIncoming = (
       await userTransactionModel.findAndCountAll({
-        where: { user_id: userData.user_id },
+        where: txWhere,
       })
     ).count;
 
@@ -2610,11 +2616,11 @@ const getUserAnalytics = async (
 
     let where = "";
     if (periodType === "YEAR") {
-      where = `where extract(year from ut."createdAt")=${year} and ut.user_id=${userData.user_id}`;
+      where = `where extract(year from ut."createdAt")=${year} and ut.user_id=${userData.user_id}${companyFilterSQL}`;
     } else if (periodType === "MONTH") {
-      where = `where extract(year from ut."createdAt")=${year} and extract(month from ut."createdAt")=${month} and ut.user_id=${userData.user_id}`;
+      where = `where extract(year from ut."createdAt")=${year} and extract(month from ut."createdAt")=${month} and ut.user_id=${userData.user_id}${companyFilterSQL}`;
     } else {
-      where = `where ut.user_id=${userData.user_id}`;
+      where = `where ut.user_id=${userData.user_id}${companyFilterSQL}`;
     }
 
     const popularCurrency = await sequelize.query(
@@ -2645,7 +2651,7 @@ const getUserAnalytics = async (
 		base_currency
       from tbl_user_transaction ut
       where ${where && `extract(year from ut."createdAt")=${year} and`
-      } ut.user_id=${userData.user_id}
+      } ut.user_id=${userData.user_id}${companyFilterSQL}
       group by month,month_name,base_currency 
       order by month`,
       {
