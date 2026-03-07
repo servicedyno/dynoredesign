@@ -4438,6 +4438,30 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         `);
 
         // ============================================
+        // Store incoming & outgoing TX hashes on user transaction
+        // ============================================
+        const txRecordIdForHashes = tempData.user_tx_id || tempData.unique_tx_id || tempData.payment_id;
+        const outgoingMerchantTxHash = adminTransferResult.transactionDetails?.txId || null;
+        if (txRecordIdForHashes) {
+          try {
+            const hashUpdate: Record<string, string | null> = {};
+            // Incoming = the blockchain TX where customer sent payment
+            if (allTxIds) hashUpdate.incoming_tx_hash = allTxIds;
+            // Outgoing = the blockchain TX where we forwarded to merchant wallet
+            if (outgoingMerchantTxHash) hashUpdate.outgoing_tx_hash = outgoingMerchantTxHash;
+            if (Object.keys(hashUpdate).length > 0) {
+              await userTransactionModel.update(hashUpdate, {
+                where: { id: txRecordIdForHashes },
+                transaction,
+              });
+              cronLogger.info(`[cryptoVerification] Updated TX hashes for ${txRecordIdForHashes}: incoming=${allTxIds || 'N/A'}, outgoing=${outgoingMerchantTxHash || 'N/A'}`);
+            }
+          } catch (hashErr: unknown) {
+            cronLogger.warn(`[cryptoVerification] Failed to update TX hashes: ${hashErr instanceof Error ? hashErr.message : String(hashErr)}`);
+          }
+        }
+
+        // ============================================
         // AUTO-CONVERT: Create conversion record for Binance processing
         // ============================================
         if (autoConvertEnabled && originalUserAmount > 0) {

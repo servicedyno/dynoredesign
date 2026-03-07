@@ -122,11 +122,40 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
     }, 2000);
   };
 
-  const handleViewOnExplorer = () => {
-    // const explorerUrl = `https://blockchain.info/tx/${
-    //   transaction.incomingTransactionId || transaction.id
-    // }`;
-    // window.open(explorerUrl, "_blank");
+  const getBlockchairUrl = (crypto: string, txHash: string): string => {
+    const chainMap: Record<string, string> = {
+      BTC: "bitcoin",
+      ETH: "ethereum",
+      LTC: "litecoin",
+      DOGE: "dogecoin",
+      BCH: "bitcoin-cash",
+      SOL: "solana",
+      XRP: "ripple",
+      POLYGON: "polygon",
+      BNB: "bnb",
+    };
+    // TRC20 tokens use Tronscan (better support than Blockchair for TRON)
+    const upperCrypto = crypto.toUpperCase();
+    if (upperCrypto.includes("TRC20") || upperCrypto === "TRX") {
+      return `https://tronscan.org/#/transaction/${txHash}`;
+    }
+    // ERC20 tokens use Ethereum explorer
+    if (upperCrypto.includes("ERC20") || upperCrypto.includes("RLUSD-ERC20")) {
+      return `https://blockchair.com/ethereum/transaction/${txHash}`;
+    }
+    // USDT-POLYGON uses Polygon explorer
+    if (upperCrypto.includes("POLYGON")) {
+      return `https://blockchair.com/polygon/transaction/${txHash}`;
+    }
+    const chain = chainMap[upperCrypto] || "bitcoin";
+    return `https://blockchair.com/${chain}/transaction/${txHash}`;
+  };
+
+  const handleViewOnExplorer = (txHash?: string) => {
+    const hash = txHash || transaction.incomingTransactionId || transaction.id;
+    if (!hash) return;
+    const url = getBlockchairUrl(transaction.crypto, hash);
+    window.open(url, "_blank");
   };
 
   const handleDownloadInvoice = async () => {
@@ -365,6 +394,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
                             />
                           </CopyButton>
                           <ExplorerButton
+                            onClick={() => handleViewOnExplorer(transaction.incomingTransactionId!)}
                             title={tTransactions("viewOnExplorer")}
                           >
                             <Image
@@ -412,6 +442,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
                             />
                           </CopyButton>
                           <ExplorerButton
+                            onClick={() => handleViewOnExplorer(transaction.outgoingTransactionId!)}
                             title={tTransactions("viewOnExplorer")}
                           >
                             <Image
@@ -555,7 +586,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
               label={tTransactions("viewOnExplorer")}
               variant="primary"
               size="medium"
-              onClick={handleViewOnExplorer}
+              onClick={() => handleViewOnExplorer()}
               fullWidth
               sx={{
                 [theme.breakpoints.down("md")]: {
