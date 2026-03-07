@@ -120,8 +120,8 @@ const TransactionPage = () => {
               : "pending",
         fees: (item as any).fees || (item as any).fee || "0",
         confirmations: (item as any).confirmations || "0/0",
-        incomingTransactionId: (item as any).incoming_txid || (item as any).incomingTransactionId || "",
-        outgoingTransactionId: (item as any).outgoing_txid || (item as any).outgoingTransactionId || "",
+        incomingTransactionId: (item as any).incoming_tx_hash || (item as any).incoming_txid || (item as any).incomingTransactionId || (item as any).transaction_reference || "",
+        outgoingTransactionId: (item as any).outgoing_tx_hash || (item as any).outgoing_txid || (item as any).outgoingTransactionId || "",
         callbackUrl: (item as any).callback_url || (item as any).callbackUrl || "",
         webhookResponse: (item as any).webhook_response || (item as any).webhookResponse || null,
       }));
