@@ -63,7 +63,7 @@ const Wallet = () => {
     setOpenEditModal(true);
   };
 
-  if (walletLoading) {
+  if (walletLoading && walletData.length === 0) {
     return (
       <Box
         sx={{

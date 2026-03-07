@@ -1,7 +1,7 @@
 import { WalletAction } from "@/Redux/Actions";
 import { WALLET_FETCH } from "@/Redux/Actions/WalletAction";
 import { rootReducer } from "@/utils/types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import BitcoinIcon from "@/assets/cryptocurrency/Bitcoin-icon.svg";
@@ -116,13 +116,28 @@ export const useWalletData = () => {
     : 0;
   const [walletWarning, setWalletWarning] = useState(false);
 
+  // Track last fetched company to prevent infinite re-fetching
+  const lastFetchedCompanyRef = useRef<string | null | undefined>(undefined);
+  const isFetchingRef = useRef(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("token");
     if (!token) return;
 
+    // Skip if already fetching or if we just fetched for this company
+    if (isFetchingRef.current) return;
+    if (lastFetchedCompanyRef.current === (selectedCompanyId ?? null)) return;
+
+    lastFetchedCompanyRef.current = selectedCompanyId ?? null;
+    isFetchingRef.current = true;
+
     const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
     dispatch(WalletAction(WALLET_FETCH, payload));
+
+    // Reset fetching flag after a brief delay to allow the saga to complete
+    const timer = setTimeout(() => { isFetchingRef.current = false; }, 2000);
+    return () => clearTimeout(timer);
   }, [dispatch, selectedCompanyId]);
 
   /* ---------------------------- Wallet Data ---------------------------- */

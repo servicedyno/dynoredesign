@@ -61,6 +61,7 @@ export function* getWallet(payload?: any): unknown {
       payload: flatWallets,
     });
   } catch (e: any) {
+    console.error("[WalletSaga] Error:", e?.message || e);
     const message = e?.response?.data?.message ?? e?.message ?? "Failed to fetch wallets";
     yield put({
       type: TOAST_SHOW,
