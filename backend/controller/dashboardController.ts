@@ -148,13 +148,18 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       WHERE ut.user_id = :userId ${companyFilter}
     `;
 
-    // ── 2. Volume PER CURRENCY (so we can convert each to fiat correctly) ──
+    // ── 2. Volume: Use stored usd_value for historical accuracy, fallback to base_amount for legacy ──
+    // For transactions WITH usd_value stored, sum that directly (already in USD at time of receipt)
+    // For transactions WITHOUT usd_value, fall back to per-currency conversion (legacy behavior)
     const volumeQuery = `
       SELECT 
         ut.base_currency,
         COALESCE(SUM(ut.base_amount), 0) as total_vol,
         COALESCE(SUM(ut.base_amount) FILTER (WHERE ut."createdAt" >= :startOfMonth), 0) as current_month_vol,
-        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_vol
+        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_vol,
+        COALESCE(SUM(ut.usd_value), 0) as total_usd_value,
+        COALESCE(SUM(ut.usd_value) FILTER (WHERE ut."createdAt" >= :startOfMonth), 0) as current_month_usd_value,
+        COALESCE(SUM(ut.usd_value) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_usd_value
       FROM tbl_user_transaction ut
       ${companyJoin}
       WHERE ut.user_id = :userId ${companyFilter}

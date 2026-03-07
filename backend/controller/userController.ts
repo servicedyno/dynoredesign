@@ -702,11 +702,13 @@ const confirmOTP = async (req: express.Request, res: express.Response) => {
           }
         );
         if (data.response_code === "accepted") {
+          // Look up user by mobile when using phone OTP, fallback to email
           const userData = await userModel.findOne({
-            where: {
-              email,
-            },
+            where: mobile ? { mobile } : { email },
           });
+          if (!userData) {
+            return errorResponseHelper(res, 404, "User not found for this phone number");
+          }
           const resData = await getAccessToken(userData.dataValues.user_id);
           successResponseHelper(res, 200, "Login Successful!", resData);
         } else {

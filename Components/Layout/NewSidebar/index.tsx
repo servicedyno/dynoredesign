@@ -39,6 +39,7 @@ const NewSidebar = () => {
       plus: true,
     },
     { label: t("wallets"), icon: "wallets", path: "/wallet" },
+    { label: "Customers", icon: "customers", path: "/customers" },
     { label: t("api"), icon: "api", path: "/developer-keys" },
     { label: "Referrals", icon: "referrals", path: "/referrals" },
     {
@@ -79,7 +80,7 @@ const NewSidebar = () => {
                 ) : (
                   <SidebarIcon
                     name={item.icon}
-                    size={20}
+                    size={item.icon === "customers" ? 24 : 20}
                     color={
                       isActive
                         ? theme.palette.primary.main

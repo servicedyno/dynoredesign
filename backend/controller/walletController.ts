@@ -577,18 +577,26 @@ const getAllTransactions = async (
         ...rest
       } = x;
 
-      // Calculate USD value: use base_amount for USD/stablecoins, convert for crypto
+      // Use stored usd_value from transaction time (historical value, not current conversion)
+      // This preserves the value at the time of receipt
       let usd_value: number | null = null;
-      const baseCurrency = (x.base_currency as string || '').toUpperCase();
-      const baseAmount = Number(x.base_amount) || 0;
-      const stablecoins = ['USD', 'USDT', 'USDC', 'USDT-ERC20', 'USDT-TRC20', 'USDC-ERC20', 'BUSD', 'DAI'];
-      if (stablecoins.some(s => baseCurrency.includes(s) || baseCurrency === s)) {
-        usd_value = baseAmount;
-      } else if (baseAmount > 0) {
-        try {
-          usd_value = await convertToUSD(baseCurrency, baseAmount);
-        } catch {
-          usd_value = null;
+      const storedUsdValue = Number(x.usd_value);
+      if (storedUsdValue && storedUsdValue > 0) {
+        // Use the value stored at transaction creation time
+        usd_value = storedUsdValue;
+      } else {
+        // Fallback for legacy transactions without stored usd_value
+        const baseCurrency = (x.base_currency as string || '').toUpperCase();
+        const baseAmount = Number(x.base_amount) || 0;
+        const stablecoins = ['USD', 'USDT', 'USDC', 'USDT-ERC20', 'USDT-TRC20', 'USDC-ERC20', 'BUSD', 'DAI'];
+        if (stablecoins.some(s => baseCurrency.includes(s) || baseCurrency === s)) {
+          usd_value = baseAmount;
+        } else if (baseAmount > 0) {
+          try {
+            usd_value = await convertToUSD(baseCurrency, baseAmount);
+          } catch {
+            usd_value = null;
+          }
         }
       }
 

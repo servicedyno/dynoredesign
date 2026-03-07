@@ -144,21 +144,20 @@ const addApi = async (req: express.Request, res: express.Response) => {
 
     const apiKey = encrypt(keyString, process.env.API_SECRET);
 
-    // Check if API key already exists for this company + environment (only 1 API key per environment allowed)
+    // Enforce: Only 1 API key per company (regardless of environment)
+    // A company cannot have more than 1 active key due to the currency system
     const existingApiKey = await apiModel.findOne({
       where: {
         company_id,
-        environment,
         status: 'active',
       },
     });
 
     if (existingApiKey) {
-      const envLabel = environment === 'production' ? 'Production' : 'Development';
       return errorResponseHelper(
         res,
         400,
-        `This company already has an active ${envLabel} API key. Delete the existing key first to create a new one with different settings.`
+        `This company already has an active API key (${existingApiKey.dataValues.base_currency} ${existingApiKey.dataValues.environment}). Use "Regenerate" to get a new key, or disable the existing one first.`
       );
     }
     
@@ -960,6 +959,165 @@ const deleteCustomer = async (req: express.Request, res: express.Response) => {
 };
 
 /**
+ * Get customers with wallet balances for dashboard
+ * GET /api/userApi/customers
+ * Returns customers with their wallet balances for the current company
+ */
+const getCustomersWithBalances = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { company_id, search, page = 1, limit = 20 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    // Get user's companies
+    const userCompanies = await companyModel.findAll({
+      attributes: ["company_id"],
+      where: { user_id: userData.user_id },
+    });
+    const companyIds = company_id 
+      ? [company_id] 
+      : userCompanies.map((c) => c.dataValues.company_id);
+
+    if (companyIds.length === 0) {
+      return successResponseHelper(res, 200, "No companies found", { customers: [], total: 0, aggregates: { total_customers: 0, total_balance: 0 } });
+    }
+
+    // Build search filter
+    let searchFilter = '';
+    const replacements: Record<string, unknown> = { companyIds, limit: Number(limit), offset };
+    if (search) {
+      searchFilter = `AND (c.customer_name ILIKE :search OR c.email ILIKE :search)`;
+      replacements.search = `%${search}%`;
+    }
+
+    // Get customers with their wallet balances
+    const customers = await sequelize.query(
+      `SELECT 
+        c.customer_id, c.id, c.customer_name, c.email, c.mobile, c.company_id, c."createdAt",
+        cm.company_name,
+        COALESCE(cw.amount, 0) as wallet_balance,
+        COALESCE(cw.wallet_type, 'USD') as wallet_currency,
+        (SELECT COUNT(*) FROM tbl_customer_transaction ct WHERE ct.customer_id = c.customer_id) as transaction_count
+      FROM tbl_customer c
+      LEFT JOIN tbl_customer_wallet cw ON cw.customer_id = c.customer_id
+      LEFT JOIN tbl_company cm ON cm.company_id = c.company_id
+      WHERE c.company_id IN (:companyIds) ${searchFilter}
+      ORDER BY c."createdAt" DESC
+      LIMIT :limit OFFSET :offset`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    // Get total count
+    const countResult = await sequelize.query(
+      `SELECT COUNT(DISTINCT c.customer_id) as total 
+       FROM tbl_customer c
+       WHERE c.company_id IN (:companyIds) ${searchFilter}`,
+      { replacements, type: QueryTypes.SELECT }
+    ) as Array<{ total: string }>;
+
+    // Get aggregate stats
+    const aggregates = await sequelize.query(
+      `SELECT 
+        COUNT(DISTINCT c.customer_id) as total_customers,
+        COALESCE(SUM(cw.amount), 0) as total_balance,
+        COALESCE(MAX(cw.wallet_type), 'USD') as currency
+      FROM tbl_customer c
+      LEFT JOIN tbl_customer_wallet cw ON cw.customer_id = c.customer_id
+      WHERE c.company_id IN (:companyIds)`,
+      { replacements: { companyIds }, type: QueryTypes.SELECT }
+    ) as Array<Record<string, unknown>>;
+
+    const total = parseInt(String(countResult[0]?.total || '0'));
+    const agg = aggregates[0] || {};
+
+    successResponseHelper(res, 200, `Retrieved ${customers.length} customers`, {
+      customers,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      pages: Math.ceil(total / Number(limit)),
+      aggregates: {
+        total_customers: parseInt(String(agg.total_customers || '0')),
+        total_balance: parseFloat(String(agg.total_balance || '0')),
+        currency: agg.currency || 'USD',
+      },
+    });
+  } catch (e) {
+    handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
+  }
+};
+
+/**
+ * Get customer detail with wallet balance and transaction history
+ * GET /api/userApi/customer/:id
+ */
+const getCustomerDetail = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const customer_id = req.params.id;
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    // Get user's companies
+    const userCompanies = await companyModel.findAll({
+      attributes: ["company_id"],
+      where: { user_id: userData.user_id },
+    });
+    const companyIds = userCompanies.map((c) => c.dataValues.company_id);
+
+    // Get customer data
+    const customerData = await sequelize.query(
+      `SELECT c.*, cm.company_name
+       FROM tbl_customer c
+       LEFT JOIN tbl_company cm ON cm.company_id = c.company_id
+       WHERE c.customer_id = :customer_id AND c.company_id IN (:companyIds)`,
+      { replacements: { customer_id, companyIds }, type: QueryTypes.SELECT }
+    ) as Array<Record<string, unknown>>;
+
+    if (customerData.length === 0) {
+      return errorResponseHelper(res, 404, "Customer not found");
+    }
+
+    // Get wallet balance
+    const walletData = await sequelize.query(
+      `SELECT * FROM tbl_customer_wallet WHERE customer_id = :customer_id`,
+      { replacements: { customer_id }, type: QueryTypes.SELECT }
+    );
+
+    // Get transaction history
+    const transactions = await sequelize.query(
+      `SELECT * FROM tbl_customer_transaction 
+       WHERE customer_id = :customer_id 
+       ORDER BY "createdAt" DESC 
+       LIMIT :limit OFFSET :offset`,
+      { replacements: { customer_id, limit: Number(limit), offset }, type: QueryTypes.SELECT }
+    );
+
+    const txCountResult = await sequelize.query(
+      `SELECT COUNT(*) as total FROM tbl_customer_transaction WHERE customer_id = :customer_id`,
+      { replacements: { customer_id }, type: QueryTypes.SELECT }
+    ) as Array<{ total: string }>;
+
+    const txTotal = parseInt(String(txCountResult[0]?.total || '0'));
+
+    successResponseHelper(res, 200, "Customer detail retrieved", {
+      customer: customerData[0],
+      wallet: walletData[0] || null,
+      transactions: {
+        data: transactions,
+        total: txTotal,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(txTotal / Number(limit)),
+      },
+    });
+  } catch (e) {
+    handleControllerError(res, e, apiLogger, { user_id: userData.user_id, email: userData.email });
+  }
+};
+
+
+/**
  * Get API Usage Statistics
  * GET /api/userApi/usage/:id
  */
@@ -1287,6 +1445,8 @@ export default {
   revokeApi,
   deleteApi,
   getApiCustomers,
+  getCustomersWithBalances,
+  getCustomerDetail,
   updateCustomer,
   deleteCustomer,
   createPlan,

@@ -10,7 +10,7 @@ import {
 } from "@/Components/UI/CryptocurrencySelector/styled";
 import PanelCard from "@/Components/UI/PanelCard";
 import TimePeriodSelector from "@/Components/UI/TimePeriodSelector";
-import { formatNumberWithComma, getCurrencySymbol } from "@/helpers";
+import { formatNumberWithComma } from "@/helpers";
 import useIsMobile from "@/hooks/useIsMobile";
 import { useWalletData } from "@/hooks/useWalletData";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -288,6 +288,7 @@ const DashboardLeftSection = () => {
 
   const totalTransactions = stats.totalTransactions || 0;
   const totalVolume = stats.totalVolume || 0;
+  const totalVolumeFormatted = stats.totalVolumeFormatted || "$0.00 USD";
   const transactionChange = stats.transactionChange || 0;
   const volumeChange = stats.volumeChange || 0;
 
@@ -606,7 +607,7 @@ const DashboardLeftSection = () => {
               letterSpacing: 0,
             }}
           >
-            {loading ? <Skeleton width={120} /> : getCurrencySymbol("USD", formatNumberWithComma(totalVolume))}
+            {loading ? <Skeleton width={120} /> : totalVolumeFormatted}
           </Typography>
 
           <Box

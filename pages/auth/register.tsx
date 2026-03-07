@@ -19,13 +19,16 @@ import { theme } from "@/styles/theme";
 import { rootReducer } from "@/utils/types";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import EmailIcon from "@mui/icons-material/Email";
+import PhoneIcon from "@mui/icons-material/Phone";
 import Image from "next/image";
 import router from "next/router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import * as yup from "yup";
+import axiosBaseApi from "@/axiosConfig";
 
 type RegisterErrorKey =
   | ""
@@ -73,6 +76,97 @@ const Register = () => {
 
   const passwordRegex =
     /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-=__+{}\[\]:;<>,.?/~]).{8,20}$/;
+
+  // Registration method toggle
+  const [registerMethod, setRegisterMethod] = useState<"email" | "phone">("email");
+
+  // Phone registration state
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [phoneName, setPhoneName] = useState("");
+  const [phoneNameError, setPhoneNameError] = useState("");
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [phoneOtpDialog, setPhoneOtpDialog] = useState(false);
+  const [phoneOtpCountdown, setPhoneOtpCountdown] = useState(0);
+  const [phoneOtpError, setPhoneOtpError] = useState("");
+  const [phonePassword, setPhonePassword] = useState("");
+  const [phonePasswordError, setPhonePasswordError] = useState("");
+  const [showPhonePassword, setShowPhonePassword] = useState(false);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+
+  // Phone OTP countdown timer
+  useEffect(() => {
+    if (phoneOtpCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setPhoneOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [phoneOtpCountdown]);
+
+  const handlePhoneRegisterStep1 = async () => {
+    if (!phoneName.trim()) { setPhoneNameError("Name is required"); return; }
+    if (!phone.trim() || phone.length < 8) { setPhoneError("Valid phone number is required (include country code, e.g. +1...)"); return; }
+    if (!phonePassword || !passwordRegex.test(phonePassword)) { setPhonePasswordError("Password must be 8-20 chars with uppercase, lowercase, number, special char"); return; }
+    setPhoneNameError("");
+    setPhoneError("");
+    setPhonePasswordError("");
+    setPhoneLoading(true);
+    try {
+      await axiosBaseApi.post("/user/registerPhone", {
+        name: phoneName.trim(),
+        mobile: phone.trim(),
+        password: phonePassword,
+      });
+      setPhoneOtpSent(true);
+      setPhoneOtpDialog(true);
+      setPhoneOtpCountdown(60);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to send OTP. Please check your phone number.";
+      setPhoneError(msg);
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handlePhoneOtpVerify = async (otp: string) => {
+    setPhoneOtpError("");
+    setPhoneLoading(true);
+    try {
+      const res = await axiosBaseApi.post("/user/registerPhone/verify", {
+        mobile: phone.trim(),
+        otp: otp.trim(),
+      });
+      // If successful, user is created — redirect to login
+      if (res.data?.data?.token) {
+        // Auto-login
+        localStorage.setItem("token", res.data.data.token);
+        if (res.data.data.refreshToken) {
+          localStorage.setItem("refreshToken", res.data.data.refreshToken);
+        }
+        router.push("/dashboard");
+      } else {
+        router.push("/auth/login");
+      }
+    } catch (err: any) {
+      setPhoneOtpError(err?.response?.data?.message || "Invalid OTP. Please try again.");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handlePhoneResend = async () => {
+    setPhoneOtpError("");
+    try {
+      await axiosBaseApi.post("/user/registerPhone", {
+        name: phoneName.trim(),
+        mobile: phone.trim(),
+        password: phonePassword,
+      });
+      setPhoneOtpCountdown(60);
+    } catch (err: any) {
+      setPhoneOtpError("Failed to resend OTP");
+    }
+  };
 
   const registerSchema = yup.object().shape({
     firstName: yup.string().required("firstNameRequired"),
@@ -332,6 +426,120 @@ const Register = () => {
           descriptionVariant="p"
         />
 
+        {/* Registration Method Toggle */}
+        <Box sx={{ mt: 2, mb: 1, display: "flex", justifyContent: "center" }}>
+          <ToggleButtonGroup
+            value={registerMethod}
+            exclusive
+            onChange={(_, val) => { if (val) setRegisterMethod(val); }}
+            size="small"
+            sx={{
+              "& .MuiToggleButton-root": {
+                textTransform: "none",
+                fontFamily: "UrbanistMedium",
+                fontSize: "13px",
+                px: 3,
+                py: 0.8,
+                borderColor: theme.palette.divider,
+                "&.Mui-selected": {
+                  bgcolor: theme.palette.primary.main,
+                  color: "#fff",
+                  "&:hover": { bgcolor: theme.palette.primary.dark },
+                },
+              },
+            }}
+          >
+            <ToggleButton value="email">
+              <EmailIcon sx={{ fontSize: 16, mr: 0.5 }} /> Email
+            </ToggleButton>
+            <ToggleButton value="phone">
+              <PhoneIcon sx={{ fontSize: 16, mr: 0.5 }} /> Phone
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        {registerMethod === "phone" ? (
+          /* Phone Registration Form */
+          <Box
+            sx={{
+              marginTop: isMobile ? "12px" : "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+            }}
+          >
+            <InputField
+              label="Full Name"
+              type="text"
+              placeholder="Enter your full name"
+              value={phoneName}
+              onChange={(e) => { setPhoneName(e.target.value); setPhoneNameError(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
+              error={!!phoneNameError}
+              helperText={phoneNameError}
+            />
+            <InputField
+              label="Phone Number"
+              type="tel"
+              placeholder="+1 234 567 8900"
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
+              error={!!phoneError}
+              helperText={phoneError}
+            />
+            <InputField
+              type={showPhonePassword ? "text" : "password"}
+              value={phonePassword}
+              autoComplete="off"
+              label="Password"
+              onChange={(e) => { setPhonePassword(e.target.value.replace(/\s/g, "")); setPhonePasswordError(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
+              placeholder="Create a password"
+              error={!!phonePasswordError}
+              helperText={phonePasswordError}
+              sideButton={true}
+              sideButtonType="primary"
+              sideButtonIcon={showPhonePassword ? <VisibilityOffIcon sx={{ color: "#676768", height: "18px", width: "16px" }} /> : <VisibilityIcon sx={{ color: "#676768", height: "18px", width: "16px" }} />}
+              sideButtonIconWidth={isMobile ? "14px" : "18px"}
+              sideButtonIconHeight={isMobile ? "14px" : "18px"}
+              onSideButtonClick={() => setShowPhonePassword(!showPhonePassword)}
+              showPasswordToggle={true}
+            />
+
+            <Box sx={{ mt: 1 }}>
+              <CustomButton
+                label="Send Verification Code"
+                variant="primary"
+                size={isMobile ? "small" : "medium"}
+                fullWidth
+                disabled={phoneLoading}
+                onClick={handlePhoneRegisterStep1}
+                hideLabelWhenLoading={true}
+                endIcon={phoneLoading ? <LoadingIcon size={20} /> : undefined}
+              />
+            </Box>
+
+            {/* Phone OTP Dialog */}
+            <OtpDialog
+              open={phoneOtpDialog}
+              onClose={() => setPhoneOtpDialog(false)}
+              preventClose={false}
+              title="Phone Verification"
+              subtitle="Enter the verification code sent to your phone"
+              contactInfo={phone}
+              contactType="phone"
+              otpLength={6}
+              onVerify={handlePhoneOtpVerify}
+              onResendCode={handlePhoneResend}
+              onClearError={() => setPhoneOtpError("")}
+              countdown={phoneOtpCountdown}
+              loading={phoneLoading}
+              error={phoneOtpError}
+            />
+          </Box>
+        ) : (
+        /* Email Registration Form (existing) */
         <Box
           sx={{
             marginTop: isMobile ? "16px" : "24px",
@@ -575,21 +783,22 @@ const Register = () => {
             }}
             showPasswordToggle={true}
           />
-        </Box>
 
-        {/* Sign Up Button */}
-        <Box sx={{ marginTop: isMobile ? "16px" : "24px" }}>
-          <CustomButton
-            label={t("signUpButton")}
-            variant="primary"
-            size={isMobile ? "small" : "medium"}
-            fullWidth
-            disabled={userState.loading}
-            onClick={handleSignUp}
-            hideLabelWhenLoading={true}
-            endIcon={userState.loading ? <LoadingIcon size={20} /> : undefined}
-          />
+          {/* Sign Up Button */}
+          <Box sx={{ marginTop: isMobile ? "16px" : "24px" }}>
+            <CustomButton
+              label={t("signUpButton")}
+              variant="primary"
+              size={isMobile ? "small" : "medium"}
+              fullWidth
+              disabled={userState.loading}
+              onClick={handleSignUp}
+              hideLabelWhenLoading={true}
+              endIcon={userState.loading ? <LoadingIcon size={20} /> : undefined}
+            />
+          </Box>
         </Box>
+        )}
 
         {/* Don't have acc */}
         <Box

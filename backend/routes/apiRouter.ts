@@ -32,6 +32,8 @@ apiRouter.delete("/deletePlan/:id", authMiddleware, apiController.deletePlan);
 
 // Customer Management
 apiRouter.post("/getApiCustomers", authMiddleware, apiController.getApiCustomers);
+apiRouter.get("/customers", authMiddleware, apiController.getCustomersWithBalances);
+apiRouter.get("/customer/:id", authMiddleware, apiController.getCustomerDetail);
 apiRouter.put("/updateCustomer/:id", authMiddleware, apiController.updateCustomer);
 apiRouter.delete("/deleteCustomer/:id", authMiddleware, apiController.deleteCustomer);
 

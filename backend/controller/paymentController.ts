@@ -4715,6 +4715,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             transaction_type: "CREDIT",
             status: "successful",
             customer_id: customerData.customer_id ? Number(customerData.customer_id) : null,
+            // Store USD value at time of receipt (historical value)
+            usd_value: await convertToUSD(Number(userAmountToSend), tempCurrency),
           };
 
           // FIX: Use user_tx_id for user transaction updates (separate from payment_id which is for payment link)

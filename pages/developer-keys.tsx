@@ -5,6 +5,7 @@ import { pageProps } from "@/utils/types";
 import { AddRounded } from "@mui/icons-material";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
 
 const APIs = ({
   setPageName,
@@ -21,6 +22,8 @@ const APIs = ({
   );
 
   const [openCreate, setOpenCreate] = useState(false);
+  const apiState = useSelector((state: any) => state?.api);
+  const hasExistingKey = Array.isArray(apiState?.apiList) && apiState.apiList.length > 0;
 
   useEffect(() => {
     if (setPageName && setPageDescription) {
@@ -36,22 +39,27 @@ const APIs = ({
 
   useEffect(() => {
     if (!setPageAction) return;
-    setPageAction(
-      <CustomButton
-        label={isMobile ? tApi("createKeyMobile") : tApi("createNewKey")}
-        variant="primary"
-        size="medium"
-        endIcon={<AddRounded sx={{ fontSize: isMobile ? 18 : 20 }} />}
-        onClick={() => setOpenCreate(true)}
-        sx={{
-          height: isMobile ? 34 : 40,
-          px: isMobile ? 1.5 : 2.5,
-          fontSize: isMobile ? 13 : 15,
-        }}
-      />,
-    );
+    // Only show "Create" button if no API key exists (max 1 key per company)
+    if (hasExistingKey) {
+      setPageAction(null);
+    } else {
+      setPageAction(
+        <CustomButton
+          label={isMobile ? tApi("createKeyMobile") : tApi("createNewKey")}
+          variant="primary"
+          size="medium"
+          endIcon={<AddRounded sx={{ fontSize: isMobile ? 18 : 20 }} />}
+          onClick={() => setOpenCreate(true)}
+          sx={{
+            height: isMobile ? 34 : 40,
+            px: isMobile ? 1.5 : 2.5,
+            fontSize: isMobile ? 13 : 15,
+          }}
+        />,
+      );
+    }
     return () => setPageAction(null);
-  }, [setPageAction, tApi, isMobile]);
+  }, [setPageAction, tApi, isMobile, hasExistingKey]);
 
   return (
     <>

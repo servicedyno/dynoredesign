@@ -7,7 +7,9 @@ type IconName =
   | "api"
   | "notifications"
   | "payment-links"
-  | "invoices";
+  | "invoices"
+  | "customers"
+  | "referrals";
 
 interface SidebarIconProps {
   name: string;
@@ -74,6 +76,28 @@ const icons: Record<IconName, React.FC<{ color: string }>> = {
         fill={color}
         fillRule="evenodd"
         clipRule="evenodd"
+      />
+    </>
+  ),
+
+  customers: ({ color }) => (
+    <>
+      <path
+        d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 6C13.1 6 14 6.9 14 8C14 9.1 13.1 10 12 10C10.9 10 10 9.1 10 8C10 6.9 10.9 6 12 6Z"
+        fill={color}
+      />
+      <path
+        d="M4 18C4 14.69 7.58 12 12 12C16.42 12 20 14.69 20 18V20H4V18ZM6 18C6 15.79 8.69 14 12 14C15.31 14 18 15.79 18 18H6Z"
+        fill={color}
+      />
+    </>
+  ),
+
+  referrals: ({ color }) => (
+    <>
+      <path
+        d="M15 12C16.93 12 18.5 10.43 18.5 8.5C18.5 6.57 16.93 5 15 5C13.07 5 11.5 6.57 11.5 8.5C11.5 10.43 13.07 12 15 12ZM6 10V7H4V10H1V12H4V15H6V12H9V10H6ZM15 14C12.33 14 7 15.34 7 18V20H23V18C23 15.34 17.67 14 15 14Z"
+        fill={color}
       />
     </>
   ),

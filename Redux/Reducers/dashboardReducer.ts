@@ -12,6 +12,9 @@ export interface DashboardState {
   stats: {
     totalTransactions: number;
     totalVolume: number;
+    totalVolumeFormatted: string;
+    currency: string;
+    currencySymbol: string;
     activeWallets: number;
     transactionChange: number;
     volumeChange: number;
@@ -31,6 +34,9 @@ const dashboardInitialState: DashboardState = {
   stats: {
     totalTransactions: 0,
     totalVolume: 0,
+    totalVolumeFormatted: "$0.00 USD",
+    currency: "USD",
+    currencySymbol: "$",
     activeWallets: 0,
     transactionChange: 0,
     volumeChange: 0,
