@@ -120,7 +120,7 @@ const CryptoItemCard: React.FC<CryptoItemCardProps> = React.memo(
 
             <Text
               sx={{
-                width: item.name === "POLYGON USDT" ? "67px" : "auto",
+                width: item.name === "POLYGON USDT" ? "80px" : "auto",
                 whiteSpace: "wrap",
                 fontSize: "15px",
                 color: theme.palette.text.primary,

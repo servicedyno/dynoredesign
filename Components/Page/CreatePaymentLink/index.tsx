@@ -321,18 +321,19 @@ const CreatePaymentLinkPage = ({
         return;
       }
 
-      // Build API payload
+      // Build API payload with backend-compatible field names
       const apiPayload = {
         amount: parseFloat(paymentSettings.value),
         currency: paymentSettings.currency,
         description: paymentSettings.description,
-        clientName: paymentSettings.clientName,
-        expire: paymentSettings.expire,
-        blockchainFees: paymentSettings.blockchainFees,
-        acceptedCryptoCurrency: paymentSettings.acceptedCryptoCurrency,
+        name: paymentSettings.clientName,
+        expire: paymentSettings.expire === "no" ? "No" : paymentSettings.expire,
+        fee_payer: paymentSettings.blockchainFees,
+        accepted_currencies: paymentSettings.acceptedCryptoCurrency,
         redirect_url: postPaymentSettings.redirectUrl,
         webhook_url: postPaymentSettings.webhookUrl,
-        payment_url: postPaymentSettings.callbackUrl,
+        callback_url: postPaymentSettings.callbackUrl,
+        apply_tax: includeTax,
         company_id: selectedCompanyId,
       };
 
@@ -357,7 +358,8 @@ const CreatePaymentLinkPage = ({
         description: paymentSettings.description,
         redirect_url: postPaymentSettings.redirectUrl,
         webhook_url: postPaymentSettings.webhookUrl,
-        payment_url: postPaymentSettings.callbackUrl,
+        callback_url: postPaymentSettings.callbackUrl,
+        apply_tax: includeTax,
         company_id: selectedCompanyId,
       };
 
@@ -464,21 +466,21 @@ const CreatePaymentLinkPage = ({
       },
       {
         name: "USDT",
-        label: "TRC-20",
+        label: "USDT-TRC20",
         icon: USDTIcon,
         fullOrder: 2,
         shortOrder: 7,
       },
       {
         name: "USDT",
-        label: "ERC-20",
+        label: "USDT-ERC20",
         icon: USDTIcon,
         fullOrder: 6,
         shortOrder: 8,
       },
       {
-        name: "USDT",
-        label: "FRC-20",
+        name: "USDC",
+        label: "USDC-ERC20",
         icon: USDT2Icon,
         fullOrder: 7,
         shortOrder: 9,
@@ -506,21 +508,21 @@ const CreatePaymentLinkPage = ({
       },
       {
         name: "POLYGON USDT",
-        label: "ERC-20",
+        label: "USDT-POLYGON",
         icon: PolygonIcon,
         fullOrder: 12,
         shortOrder: 13,
       },
       {
         name: "RLUSD",
-        label: "XRP",
+        label: "RLUSD",
         icon: RLUSDIcon,
         fullOrder: 13,
         shortOrder: 14,
       },
       {
         name: "RLUSD",
-        label: "ERC-20",
+        label: "RLUSD-ERC20",
         icon: RLUSDIcon,
         fullOrder: 14,
         shortOrder: 15,
