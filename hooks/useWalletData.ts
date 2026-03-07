@@ -107,6 +107,9 @@ const requestedWalletFetchByToken = new Set<string>();
 export const useWalletData = () => {
   const dispatch = useDispatch();
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
+  const selectedCompanyId = useSelector(
+    (state: rootReducer) => (state as any).companyReducer?.selectedCompanyId
+  );
   const walletLoading = Boolean(walletState?.loading);
   const walletListLength = Array.isArray(walletState?.walletList)
     ? walletState.walletList.length
@@ -117,16 +120,10 @@ export const useWalletData = () => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("token");
     if (!token) return;
-    if (walletListLength > 0) {
-      requestedWalletFetchByToken.add(token);
-      return;
-    }
-    if (walletLoading) return;
-    if (requestedWalletFetchByToken.has(token)) return;
 
-    requestedWalletFetchByToken.add(token);
-    dispatch(WalletAction(WALLET_FETCH));
-  }, [dispatch, walletLoading, walletListLength]);
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(WalletAction(WALLET_FETCH, payload));
+  }, [dispatch, selectedCompanyId]);
 
   /* ---------------------------- Wallet Data ---------------------------- */
 

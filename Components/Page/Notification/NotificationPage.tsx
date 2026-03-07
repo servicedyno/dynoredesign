@@ -19,6 +19,7 @@ import CircleIcon from "@mui/icons-material/Circle";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import axiosBaseApi from "@/axiosConfig";
+import { useSelector } from "react-redux";
 
 const NotificationItem: React.FC<NotificationItemProps> = ({
   title,
@@ -93,6 +94,10 @@ const NotificationPage = () => {
   );
   const isMobile = useIsMobile("md");
 
+  const selectedCompanyId = useSelector(
+    (state: any) => state?.companyReducer?.selectedCompanyId
+  );
+
   const {
     preferences,
     loading,
@@ -114,14 +119,16 @@ const NotificationPage = () => {
   const [markingAllRead, setMarkingAllRead] = useState(false);
 
   useEffect(() => {
-    axiosBaseApi.get("/notifications")
+    const params: Record<string, any> = {};
+    if (selectedCompanyId) params.company_id = selectedCompanyId;
+    axiosBaseApi.get("/notifications", { params })
       .then((res) => setNotifications(res?.data?.data?.notifications || []))
       .catch(() => {})
       .finally(() => setNotifLoading(false));
-    axiosBaseApi.get("/notifications/unread-count")
+    axiosBaseApi.get("/notifications/unread-count", { params })
       .then((res) => setUnreadCount(res?.data?.data?.unread_count || 0))
       .catch(() => {});
-  }, []);
+  }, [selectedCompanyId]);
 
   const markAllAsRead = async () => {
     setMarkingAllRead(true);

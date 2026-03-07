@@ -17,7 +17,7 @@ interface ITransactionAction {
 export function* TransactionSaga(action: ITransactionAction): unknown {
   switch (action.crudType) {
     case TRANSACTION_FETCH:
-      yield getAllTransactions();
+      yield getAllTransactions(action.payload);
       break;
 
     case TRANSACTION_DETAIL_FETCH:
@@ -34,9 +34,11 @@ export function* TransactionSaga(action: ITransactionAction): unknown {
   }
 }
 
-export function* getAllTransactions(): unknown {
+export function* getAllTransactions(payload?: any): unknown {
   try {
-    const response = yield call(axios.post, "wallet/getAllTransactions");
+    const body: Record<string, unknown> = {};
+    if (payload?.company_id) body.company_id = payload.company_id;
+    const response = yield call(axios.post, "wallet/getAllTransactions", body);
     const apiData = response?.data?.data;
 
     if (apiData) {

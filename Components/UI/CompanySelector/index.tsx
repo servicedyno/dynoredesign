@@ -23,13 +23,17 @@ import { useSelector, useDispatch } from "react-redux";
 import CustomButton from "../Buttons";
 import { HeaderDivider } from "../LanguageSwitcher/styled";
 import { selectCompany } from "@/Redux/Actions/CompanyAction";
-import { DashboardAction } from "@/Redux/Actions";
+import { DashboardAction, TransactionAction, WalletAction, PaymentLinkAction, ApiAction } from "@/Redux/Actions";
 import {
   DASHBOARD_FETCH,
   DASHBOARD_CHART_FETCH,
   DASHBOARD_FEE_TIERS_FETCH,
   DASHBOARD_RECENT_TX_FETCH,
 } from "@/Redux/Actions/DashboardAction";
+import { TRANSACTION_FETCH } from "@/Redux/Actions/TransactionAction";
+import { WALLET_FETCH } from "@/Redux/Actions/WalletAction";
+import { PAYLINK_FETCH } from "@/Redux/Actions/PaymentLinkAction";
+import { API_FETCH } from "@/Redux/Actions/ApiAction";
 
 export default function CompanySelector() {
   const { t } = useTranslation("dashboardLayout");
@@ -91,11 +95,16 @@ export default function CompanySelector() {
   const handleCompanySwitch = (companyId: number) => {
     dispatch(selectCompany(companyId));
     handleClose();
-    // Re-fetch all data for the new company
-    dispatch(DashboardAction(DASHBOARD_FETCH, { company_id: companyId }));
-    dispatch(DashboardAction(DASHBOARD_CHART_FETCH, { company_id: companyId, period: "7d" }));
-    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, { company_id: companyId }));
-    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, { company_id: companyId }));
+    // Re-fetch all company-scoped data for the new company
+    const companyPayload = { company_id: companyId };
+    dispatch(DashboardAction(DASHBOARD_FETCH, companyPayload));
+    dispatch(DashboardAction(DASHBOARD_CHART_FETCH, { ...companyPayload, period: "7d" }));
+    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, companyPayload));
+    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, companyPayload));
+    dispatch(TransactionAction(TRANSACTION_FETCH, companyPayload));
+    dispatch(WalletAction(WALLET_FETCH, companyPayload));
+    dispatch(PaymentLinkAction(PAYLINK_FETCH, companyPayload));
+    dispatch(ApiAction(API_FETCH, companyPayload));
   };
 
   useEffect(() => {

@@ -344,6 +344,10 @@ const ApiKeysPage = ({
   const isMobile = useIsMobile("md");
   const apiState = useSelector((state: rootReducer) => state.apiReducer);
 
+  const selectedCompanyId = useSelector(
+    (state: rootReducer) => (state as any).companyReducer?.selectedCompanyId
+  );
+
   const [openCreateLocal, setOpenCreateLocal] = useState(false);
   const openCreate = openCreateProp ?? openCreateLocal;
   const setOpenCreate = setOpenCreateProp ?? setOpenCreateLocal;
@@ -362,8 +366,9 @@ const ApiKeysPage = ({
 
   useEffect(() => {
     dispatch(CompanyAction(COMPANY_FETCH));
-    dispatch(ApiAction(API_FETCH));
-  }, []);
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(ApiAction(API_FETCH, payload));
+  }, [selectedCompanyId]);
 
   const handleCopy = (value: string) => {
     if (!value) return;

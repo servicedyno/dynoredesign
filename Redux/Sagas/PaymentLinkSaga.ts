@@ -22,7 +22,9 @@ export function* PaymentLinkSaga(action: PaymentLinkSagaAction): Generator<any, 
   try {
     switch (crudType) {
       case PAYLINK_FETCH: {
-        const response = yield call(axiosBaseApi.get, "/pay/getPaymentLinks");
+        const fetchParams: Record<string, unknown> = {};
+        if (payload?.company_id) fetchParams.company_id = payload.company_id;
+        const response = yield call(axiosBaseApi.get, "/pay/getPaymentLinks", { params: fetchParams });
         const apiData = response?.data?.data;
         if (apiData !== undefined) {
           yield put({

@@ -97,6 +97,10 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
   const apiState = useSelector((state: any) => state?.api);
   const baseCurrency = apiState?.apiData?.[0]?.base_currency || "USD";
 
+  const selectedCompanyId = useSelector(
+    (state: any) => state?.companyReducer?.selectedCompanyId
+  );
+
   useEffect(() => {
     if (setPageName && setPageDescription) {
       setPageName("Invoices & Tax");
@@ -108,8 +112,10 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
   const fetchInvoices = useCallback(async () => {
     setInvoiceLoading(true);
     try {
+      const params: Record<string, any> = { page, limit: 20 };
+      if (selectedCompanyId) params.company_id = selectedCompanyId;
       const res = await axiosBaseApi.get("/invoices", {
-        params: { page, limit: 20 },
+        params,
       });
       const data = res?.data?.data;
       if (data) {
@@ -121,13 +127,14 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
     } finally {
       setInvoiceLoading(false);
     }
-  }, [page]);
+  }, [page, selectedCompanyId]);
 
   // Fetch tax report
   const fetchTaxReport = useCallback(async () => {
     setTaxLoading(true);
     try {
       const params: Record<string, string> = { group_by: groupBy };
+      if (selectedCompanyId) params.company_id = String(selectedCompanyId);
 
       if (taxPeriod !== "all") {
         const now = new Date();
@@ -211,6 +218,7 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
   const handleExportCSV = async () => {
     try {
       const params: Record<string, string> = {};
+      if (selectedCompanyId) params.company_id = String(selectedCompanyId);
       if (taxPeriod !== "all") {
         const now = new Date();
         let startDate: Date;

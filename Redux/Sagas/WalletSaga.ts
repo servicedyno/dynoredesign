@@ -11,7 +11,7 @@ interface IWalletAction {
 export function* WalletSaga(action: IWalletAction): unknown {
   switch (action.crudType) {
     case WALLET_FETCH:
-      yield getWallet();
+      yield getWallet(action.payload);
       break;
 
     case WALLET_ADD_ADDRESS:
@@ -32,9 +32,11 @@ export function* WalletSaga(action: IWalletAction): unknown {
   }
 }
 
-export function* getWallet(): unknown {
+export function* getWallet(payload?: any): unknown {
   try {
-    const response = yield call(axios.get, "wallet/getWallet");
+    const params: Record<string, unknown> = {};
+    if (payload?.company_id) params.company_id = payload.company_id;
+    const response = yield call(axios.get, "wallet/getWallet", { params });
     const apiData = response?.data?.data;
 
     // API returns company-grouped data: [{company_id, wallets: [...]}]

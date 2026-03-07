@@ -88,11 +88,16 @@ const CustomersPage: React.FC = () => {
   const apiState = useSelector((state: any) => state?.api);
   const baseCurrency = apiState?.apiData?.[0]?.base_currency || aggregates.currency || "USD";
 
+  const selectedCompanyId = useSelector(
+    (state: any) => state?.companyReducer?.selectedCompanyId
+  );
+
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
       const params: any = { page, limit: 20 };
       if (search) params.search = search;
+      if (selectedCompanyId) params.company_id = selectedCompanyId;
       const res = await axiosBaseApi.get("/userApi/customers", { params });
       const data = res.data?.data;
       setCustomers(data?.customers || []);
@@ -104,7 +109,7 @@ const CustomersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, selectedCompanyId]);
 
   useEffect(() => {
     fetchCustomers();

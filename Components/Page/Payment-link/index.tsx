@@ -18,6 +18,10 @@ const PaymentLinksPage = ({
   const dispatch = useDispatch();
   const [searchQuery, setSearchQuery] = useState("");
 
+  const selectedCompanyId = useSelector(
+    (state: rootReducer) => (state as any).companyReducer?.selectedCompanyId
+  );
+
   useEffect(() => {
     setPageName?.("");
     setPageDescription?.("");
@@ -25,8 +29,9 @@ const PaymentLinksPage = ({
   }, []);
 
   useEffect(() => {
-    dispatch(PaymentLinkAction(PAYLINK_FETCH));
-  }, [dispatch]);
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(PaymentLinkAction(PAYLINK_FETCH, payload));
+  }, [dispatch, selectedCompanyId]);
 
   const isMobile = useIsMobile("md");
 

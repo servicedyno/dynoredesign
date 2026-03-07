@@ -24,7 +24,7 @@ export function* ApiSaga(action: IApiAction): unknown {
       break;
 
     case API_FETCH:
-      yield getApi();
+      yield getApi(action.payload);
       break;
 
     case API_DELETE:
@@ -77,11 +77,13 @@ export function* addApi(payload: any): unknown {
   }
 }
 
-export function* getApi(): unknown {
+export function* getApi(payload?: any): unknown {
   try {
+    const params: Record<string, string> = {};
+    if (payload?.company_id) params.company_id = String(payload.company_id);
     const {
       data: { data, message },
-    } = yield call(axios.get, "userApi/getApi");
+    } = yield call(axios.get, "userApi/getApi", { params });
 
     yield put({
       type: API_FETCH,

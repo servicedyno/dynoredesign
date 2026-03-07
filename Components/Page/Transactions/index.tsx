@@ -37,9 +37,14 @@ const TransactionPage = () => {
     (state: rootReducer) => state.transactionReducer,
   );
 
+  const selectedCompanyId = useSelector(
+    (state: rootReducer) => (state as any).companyReducer?.selectedCompanyId
+  );
+
   useEffect(() => {
-    dispatch(TransactionAction(TRANSACTION_FETCH));
-  }, [dispatch]);
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(TransactionAction(TRANSACTION_FETCH, payload));
+  }, [dispatch, selectedCompanyId]);
 
   const formatDateTime = (isoString: string) => {
     const date = new Date(isoString);
