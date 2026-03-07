@@ -12,7 +12,7 @@ DynoPay is a full-stack crypto payment gateway.
 - ✅ MongoDB: Running
 
 ## Pod URL Setup
-- **Pod URL**: `https://fd03d9a9-6250-47b6-a2ae-41d22d6cf9ac.preview.emergentagent.com`
+- **Pod URL**: `https://4fc90ae1-c5ae-4f15-9df8-c6ae4b9c589b.preview.emergentagent.com`
 - **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL` set to pod URL with trailing slash (used by axiosConfig.ts for API calls)
 - **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL` set to pod URL
 - **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to pod URL
