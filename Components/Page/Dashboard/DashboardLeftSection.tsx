@@ -469,7 +469,7 @@ const DashboardLeftSection = () => {
           }
           sx={{
             width: { xs: "200px", sm: "240px", md: "289px", xl: "315px" },
-            height: { xs: "128px", sm: "140px", md: "176px" },
+            minHeight: { xs: "128px", sm: "140px", md: "176px" },
             flexShrink: 0,
           }}
           headerAction={
@@ -517,7 +517,7 @@ const DashboardLeftSection = () => {
             }}
           >
             <PercentageChip
-              sx={{ padding: isMobile ? "7px 3px" : "5px 7px", lineHeight: 0 }}
+              sx={{ padding: isMobile ? "4px 6px" : "4px 8px", lineHeight: 1 }}
             >
               <Image
                 src={ArrowUpSuccessIcon}
@@ -533,15 +533,15 @@ const DashboardLeftSection = () => {
                 component="span"
                 sx={{
                   fontSize: isMobile ? "10px" : "13px",
-                  color: theme.palette.border.success,
+                  color: transactionChange >= 0 ? theme.palette.border.success : theme.palette.error.main,
                   fontFamily: "UrbanistMedium",
-                  lineHeight: 0,
-                  padding: isMobile ? "0px 2px" : "8px 0px",
+                  lineHeight: 1.2,
+                  padding: isMobile ? "0px 2px" : "4px 0px",
                   fontWeight: 500,
                   letterSpacing: 0,
                 }}
               >
-                {transactionChange}%
+                {Math.abs(transactionChange).toFixed(1)}%
               </Typography>
             </PercentageChip>
             <Typography
@@ -573,7 +573,7 @@ const DashboardLeftSection = () => {
           }
           sx={{
             width: { xs: "200px", sm: "240px", md: "289px", xl: "315px" },
-            height: { xs: "128px", sm: "140px", md: "176px" },
+            minHeight: { xs: "128px", sm: "140px", md: "176px" },
             flexShrink: 0,
           }}
           headerAction={
@@ -620,7 +620,7 @@ const DashboardLeftSection = () => {
             }}
           >
             <PercentageChip
-              sx={{ padding: isMobile ? "7px 3px" : "5px 7px", lineHeight: 0 }}
+              sx={{ padding: isMobile ? "4px 6px" : "4px 8px", lineHeight: 1 }}
             >
               <Image
                 src={ArrowUpSuccessIcon}
@@ -636,26 +636,25 @@ const DashboardLeftSection = () => {
                 component="span"
                 sx={{
                   fontSize: isMobile ? "10px" : "13px",
-                  color: theme.palette.border.success,
+                  color: volumeChange >= 0 ? theme.palette.border.success : theme.palette.error.main,
                   fontFamily: "UrbanistMedium",
-                  lineHeight: 0,
-                  padding: isMobile ? "0px 2px" : "8px 0px",
+                  lineHeight: 1.2,
+                  padding: isMobile ? "0px 2px" : "4px 0px",
                   fontWeight: 500,
                   letterSpacing: 0,
                 }}
               >
-                {volumeChange}%
+                {Math.abs(volumeChange).toFixed(1)}%
               </Typography>
             </PercentageChip>
             <Typography
               sx={{
-                fontSize: isMobile ? "10px" : "13px",
+                fontSize: isMobile ? "10px" : "12px",
                 color: theme.palette.text.secondary,
                 fontFamily: "UrbanistMedium",
-                lineHeight: "100%",
+                lineHeight: 1.2,
                 fontWeight: 500,
                 letterSpacing: 0,
-                paddingRight: "0px !important",
               }}
             >
               {t("comparedToLastMonth")}
@@ -679,7 +678,7 @@ const DashboardLeftSection = () => {
           }
           sx={{
             width: { xs: "200px", sm: "240px", md: "289px", xl: "315px" },
-            height: { xs: "128px", sm: "140px", md: "176px" },
+            minHeight: { xs: "128px", sm: "140px", md: "176px" },
             flexShrink: 0,
           }}
           headerAction={

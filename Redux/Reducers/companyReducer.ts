@@ -8,12 +8,14 @@ import {
   COMPANY_INSERT,
   COMPANY_UPDATE,
   COMPANY_VALIDATE_TAX,
+  COMPANY_SELECT,
 } from "../Actions/CompanyAction";
 
 const companyInitialState: ICompanyReducer = {
   companyList: [],
   loading: false,
   taxValidation: null,
+  selectedCompanyId: null,
 };
 
 const companyReducer = (state = companyInitialState, action: ReducerAction) => {
@@ -33,8 +35,6 @@ const companyReducer = (state = companyInitialState, action: ReducerAction) => {
       };
 
     case COMPANY_UPDATE:
-      // Defensive: avoid crashes if list contains undefined entries
-      // or if API returns an unexpected payload.
       if (!payload?.id || !payload?.data) {
         return {
           ...state,
@@ -47,7 +47,6 @@ const companyReducer = (state = companyInitialState, action: ReducerAction) => {
       );
 
       if (index < 0) {
-        // If we can't find the company, keep the list unchanged.
         return {
           ...state,
           loading: false,
@@ -68,6 +67,8 @@ const companyReducer = (state = companyInitialState, action: ReducerAction) => {
         ...state,
         loading: false,
         companyList: payload,
+        // Auto-select first company if none selected
+        selectedCompanyId: state.selectedCompanyId || (payload.length > 0 ? payload[0].company_id : null),
       };
 
     case COMPANY_DELETE:
@@ -78,6 +79,14 @@ const companyReducer = (state = companyInitialState, action: ReducerAction) => {
         ...state,
         loading: false,
         companyList: [...tempList],
+        // Clear selection if deleted company was selected
+        selectedCompanyId: state.selectedCompanyId === payload ? (tempList.length > 0 ? tempList[0].company_id : null) : state.selectedCompanyId,
+      };
+
+    case COMPANY_SELECT:
+      return {
+        ...state,
+        selectedCompanyId: payload,
       };
 
     case COMPANY_API_ERROR:

@@ -35,6 +35,7 @@ export interface companyReducer {
   companyList: ICompany[];
   loading: boolean;
   taxValidation?: any;
+  selectedCompanyId: number | null;
 }
 
 export interface apiReducer {

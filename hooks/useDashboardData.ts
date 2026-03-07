@@ -16,26 +16,32 @@ export const useDashboardData = () => {
     (state: rootReducer) => state.dashboardReducer
   );
 
+  const selectedCompanyId = useSelector(
+    (state: any) => state.companyReducer?.selectedCompanyId
+  );
+
   useEffect(() => {
-    dispatch(DashboardAction(DASHBOARD_FETCH));
-    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH));
-    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH));
-  }, [dispatch]);
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(DashboardAction(DASHBOARD_FETCH, payload));
+    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, payload));
+    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, payload));
+  }, [dispatch, selectedCompanyId]);
 
   const fetchChartData = useCallback(
     (period: string, startDate?: string, endDate?: string) => {
       dispatch(
-        DashboardAction(DASHBOARD_CHART_FETCH, { period, startDate, endDate })
+        DashboardAction(DASHBOARD_CHART_FETCH, { period, startDate, endDate, company_id: selectedCompanyId })
       );
     },
-    [dispatch]
+    [dispatch, selectedCompanyId]
   );
 
   const refreshDashboard = useCallback(() => {
-    dispatch(DashboardAction(DASHBOARD_FETCH));
-    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH));
-    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH));
-  }, [dispatch]);
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(DashboardAction(DASHBOARD_FETCH, payload));
+    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, payload));
+    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, payload));
+  }, [dispatch, selectedCompanyId]);
 
   return {
     stats: dashboardState.stats,

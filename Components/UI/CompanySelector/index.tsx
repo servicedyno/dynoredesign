@@ -19,15 +19,24 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import CustomButton from "../Buttons";
 import { HeaderDivider } from "../LanguageSwitcher/styled";
+import { selectCompany } from "@/Redux/Actions/CompanyAction";
+import { DashboardAction } from "@/Redux/Actions";
+import {
+  DASHBOARD_FETCH,
+  DASHBOARD_CHART_FETCH,
+  DASHBOARD_FEE_TIERS_FETCH,
+  DASHBOARD_RECENT_TX_FETCH,
+} from "@/Redux/Actions/DashboardAction";
 
 export default function CompanySelector() {
   const { t } = useTranslation("dashboardLayout");
   const theme = useTheme();
   const isMobile = useIsMobile("md");
   const router = useRouter();
+  const dispatch = useDispatch();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const { openCompanySettings } = useCompanySettingsDialog();
   const companyState = useSelector(
@@ -63,17 +72,31 @@ export default function CompanySelector() {
     () => companyState.companyList ?? [],
     [companyState.companyList],
   );
-  const [active, setActive] = useState<number | null>(null);
-
+  
+  // Use Redux selectedCompanyId
+  const active = companyState.selectedCompanyId;
+  
+  // Auto-select first company if none selected
   useEffect(() => {
-    if (active == null && companies.length > 0)
-      setActive(companies[0].company_id);
-  }, [active, companies]);
+    if (active == null && companies.length > 0) {
+      dispatch(selectCompany(companies[0].company_id));
+    }
+  }, [active, companies, dispatch]);
 
   const selected = companies.find((c) => c.company_id === active);
 
   const handleOpen = (e: any) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
+
+  const handleCompanySwitch = (companyId: number) => {
+    dispatch(selectCompany(companyId));
+    handleClose();
+    // Re-fetch all data for the new company
+    dispatch(DashboardAction(DASHBOARD_FETCH, { company_id: companyId }));
+    dispatch(DashboardAction(DASHBOARD_CHART_FETCH, { company_id: companyId, period: "7d" }));
+    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, { company_id: companyId }));
+    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, { company_id: companyId }));
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -221,8 +244,7 @@ export default function CompanySelector() {
                 key={c.company_id}
                 active={active === c.company_id}
                 onClick={() => {
-                  setActive(c.company_id);
-                  handleClose();
+                  handleCompanySwitch(c.company_id);
                 }}
               >
                 <ItemLeft>

@@ -20,12 +20,16 @@ export function* DashboardSaga(action: DashboardSagaAction): Generator<any, void
   try {
     switch (crudType) {
       case DASHBOARD_FETCH: {
+        // Build params with company_id if available
+        const params: any = {};
+        if (payload?.company_id) params.company_id = payload.company_id;
+
         // Fetch both dashboard summary and analytics in parallel
         const [response, analyticsResponse] = yield call(function* () {
-          const r1: any = yield call(axiosBaseApi.get, "/dashboard");
+          const r1: any = yield call(axiosBaseApi.get, "/dashboard", { params });
           let r2: any = null;
           try {
-            r2 = yield call(axiosBaseApi.post, "/wallet/getUserAnalytics");
+            r2 = yield call(axiosBaseApi.post, "/wallet/getUserAnalytics", { company_id: payload?.company_id });
           } catch (e) {
             // Analytics is supplementary - don't fail if it errors
           }
@@ -83,6 +87,7 @@ export function* DashboardSaga(action: DashboardSagaAction): Generator<any, void
       case DASHBOARD_CHART_FETCH: {
         const period = payload?.period || "7d";
         const params: any = { period };
+        if (payload?.company_id) params.company_id = payload.company_id;
         if (payload?.startDate) params.startDate = payload.startDate;
         if (payload?.endDate) params.endDate = payload.endDate;
 
@@ -106,7 +111,9 @@ export function* DashboardSaga(action: DashboardSagaAction): Generator<any, void
       }
 
       case DASHBOARD_FEE_TIERS_FETCH: {
-        const response = yield call(axiosBaseApi.get, "/dashboard/fee-tiers");
+        const feeTierParams: any = {};
+        if (payload?.company_id) feeTierParams.company_id = payload.company_id;
+        const response = yield call(axiosBaseApi.get, "/dashboard/fee-tiers", { params: feeTierParams });
         const apiData = response?.data?.data;
         if (apiData) {
           const userTier = apiData.user_tier || {};
@@ -133,7 +140,9 @@ export function* DashboardSaga(action: DashboardSagaAction): Generator<any, void
       }
 
       case DASHBOARD_RECENT_TX_FETCH: {
-        const response = yield call(axiosBaseApi.get, "/dashboard/recent-transactions");
+        const recentTxParams: any = {};
+        if (payload?.company_id) recentTxParams.company_id = payload.company_id;
+        const response = yield call(axiosBaseApi.get, "/dashboard/recent-transactions", { params: recentTxParams });
         const apiData = response?.data?.data;
         if (apiData) {
           yield put({

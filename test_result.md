@@ -252,6 +252,17 @@ DynoPay is a full-stack crypto payment gateway.
 5. **CSV export date filters** — Added missing "lastMonth", "thisQuarter", "lastYear" cases to `handleExportCSV`.
 6. **`total_usd` documentation** — Added comments clarifying this field stores value in company's preferred currency (not necessarily USD).
 
+## Dashboard & Company Switching Fixes (March 7, 2026)
+
+### Fixes Applied:
+1. **Company Switching** — `CompanySelector` now dispatches Redux `COMPANY_SELECT` action and triggers full dashboard data re-fetch with `company_id` parameter. Each company's data is now isolated.
+2. **Redux selectedCompanyId** — Added `selectedCompanyId` to company reducer state. Persists across page navigations.
+3. **Dashboard data re-fetch** — `useDashboardData` hook now passes `selectedCompanyId` to all API calls (dashboard, chart, fee tiers, recent transactions).
+4. **Dashboard API calls** — `DashboardSaga` now passes `company_id` to all backend endpoints (GET /dashboard, /dashboard/chart, /dashboard/fee-tiers, /dashboard/recent-transactions).
+5. **Percentage display UI** — Fixed clipping by changing card `height` to `minHeight`, fixing `lineHeight: 0` → `lineHeight: 1.2`, and adding `flexWrap: "wrap"` to percentage row.
+6. **Percentage values** — Now shows `Math.abs(change).toFixed(1)%` (always positive with correct decimal). Arrow rotates 180° for negative changes. Color turns red for negative changes.
+7. **"Compared to last month" text** — Proper line height and font sizing for all breakpoints.
+
 ---
 
 ## Phase 2 Backend API Testing - COMPLETED ✅ (March 7, 2026)
