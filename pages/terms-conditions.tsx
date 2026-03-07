@@ -26,7 +26,7 @@ const TermsConditions = () => {
         component="h1"
         sx={{
           fontSize: isMobile ? "45px" : "60px",
-          color: "#131520",
+          color: "text.primary",
           fontWeight: isMobile ? 600 : 500,
           textAlign: "center",
           fontFamily: "OutfitMedium",
@@ -59,7 +59,7 @@ const TermsConditions = () => {
               <Typography
                 sx={{
                   fontSize: "18px",
-                  color: "#676B7E",
+                  color: "text.secondary",
                   fontWeight: 600,
                   fontFamily: "OutfitBold",
                   lineHeight: "28px",
@@ -74,7 +74,7 @@ const TermsConditions = () => {
                 <Typography
                   sx={{
                     fontSize: "18px",
-                    color: "#676B7E",
+                    color: "text.secondary",
                     fontFamily: "OutfitRegular",
                     lineHeight: "28px",
                     letterSpacing: 0,
@@ -89,7 +89,7 @@ const TermsConditions = () => {
                 <Typography
                   sx={{
                     fontSize: "18px",
-                    color: "#676B7E",
+                    color: "text.secondary",
                     fontFamily: "OutfitRegular",
                     lineHeight: "28px",
                     letterSpacing: 0,
@@ -109,7 +109,7 @@ const TermsConditions = () => {
                       sx={{
                         listStyle: "disc",
                         fontSize: "18px",
-                        color: "#676B7E",
+                        color: "text.secondary",
                         fontWeight: 400,
                         fontFamily: "OutfitRegular",
                         lineHeight: "28px",
@@ -127,7 +127,7 @@ const TermsConditions = () => {
                 <Typography
                   sx={{
                     fontSize: "18px",
-                    color: "#676B7E",
+                    color: "text.secondary",
                     fontWeight: 400,
                     fontFamily: "OutfitRegular",
                     lineHeight: "28px",

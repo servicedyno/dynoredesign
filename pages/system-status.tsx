@@ -1,8 +1,7 @@
 import useIsMobile from "@/hooks/useIsMobile";
-import { Box, Typography, CircularProgress, Skeleton } from "@mui/material";
+import { Box, Typography, CircularProgress, Skeleton, useTheme } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { homeTheme } from "@/styles/homeTheme";
 import {
   SuccessChip,
   TypographyDescription,
@@ -249,7 +248,7 @@ const StatusPage = () => {
             fontSize: "30px",
             lineHeight: "36px",
             fontFamily: "OutfitBold",
-            color: "#131520",
+            color: "text.primary",
             letterSpacing: 0,
           }}
         >
@@ -263,7 +262,7 @@ const StatusPage = () => {
             lineHeight: "24px",
             letterSpacing: 0,
             fontFamily: "OutfitRegular",
-            color: "#676B7E",
+            color: "text.secondary",
           }}
         >
           {t("statusSubtitle")}
@@ -274,7 +273,8 @@ const StatusPage = () => {
       <Box
         width="100%"
         sx={{
-          border: "1px solid #E7E8EF",
+          border: "1px solid",
+          borderColor: "border.main",
           borderRadius: "16px",
           overflow: "hidden",
         }}
@@ -303,7 +303,8 @@ const StatusPage = () => {
                     alignItems: "center",
                     justifyContent: "space-between",
                     px: "24px",
-                    borderTop: "1px solid #E7E8EF",
+                    borderTop: "1px solid",
+                    borderColor: "border.main",
                   }}
                 >
                   <Skeleton variant="text" width={150} height={24} />
@@ -322,7 +323,8 @@ const StatusPage = () => {
                     alignItems: "center",
                     justifyContent: "space-between",
                     px: "24px",
-                    borderTop: "1px solid #E7E8EF",
+                    borderTop: "1px solid",
+                    borderColor: "border.main",
                   }}
                 >
                   <Box
@@ -348,7 +350,7 @@ const StatusPage = () => {
                         fontFamily: "OutfitRegular",
                         lineHeight: "24px",
                         letterSpacing: 0,
-                        color: "#131520",
+                        color: "text.primary",
                       }}
                     >
                       {service.name}
@@ -397,7 +399,8 @@ const StatusPage = () => {
       <Box
         width="100%"
         sx={{
-          border: "1px solid #E7E8EF",
+          border: "1px solid",
+          borderColor: "border.main",
           borderRadius: "16px",
           p: isMobile ? "25px" : "24px",
         }}
@@ -497,7 +500,8 @@ const StatusPage = () => {
         ) : incidents.length === 0 ? (
           <Box
             sx={{
-              border: "1px solid #E7E8EF",
+              border: "1px solid",
+          borderColor: "border.main",
               borderRadius: "16px",
               p: "24px",
               textAlign: "center",
@@ -512,7 +516,8 @@ const StatusPage = () => {
             <Box
               key={incident.id || index}
               sx={{
-                border: "1px solid #E7E8EF",
+                border: "1px solid",
+          borderColor: "border.main",
                 borderRadius: "16px",
                 p: "24px",
                 display: "flex",
@@ -527,7 +532,7 @@ const StatusPage = () => {
                     fontWeight: 500,
                     lineHeight: "24px",
                     letterSpacing: 0,
-                    color: "#131520",
+                    color: "text.primary",
                   }}
                 >
                   {incident.title}
@@ -546,7 +551,7 @@ const StatusPage = () => {
                         sx={{
                           px: "8px",
                           py: "2px",
-                          backgroundColor: "#F3F4F6",
+                          backgroundColor: "action.hover",
                           borderRadius: "4px",
                         }}
                       >
@@ -554,7 +559,7 @@ const StatusPage = () => {
                           sx={{
                             fontSize: "11px",
                             fontFamily: "OutfitRegular",
-                            color: "#676B7E",
+                            color: "text.secondary",
                             textTransform: "capitalize",
                           }}
                         >

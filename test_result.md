@@ -48,6 +48,22 @@ DynoPay is a full-stack crypto payment gateway.
 - Fixed NewHeader to use `useMuiTheme()` instead of imported static theme (proper reactivity)
 - Fixed Home container styled components to use theme from provider instead of static import
 
+### 6. Dark Mode Text Visibility Fix (Complete)
+**Root cause**: Styled components across the landing page imported `homeTheme` (light theme) directly and used its palette values instead of the dynamic `theme` callback parameter from MUI's `styled()`. This caused all colors to remain hardcoded to light-mode values even when dark mode was active.
+
+**Files Fixed**:
+- `/app/Components/UI/SectionTitle/styled.tsx` - Badge, Heading, SubText now use `({ theme })` callback
+- `/app/Components/UI/HomeCard/styled.tsx` - StyledCard gradients, WhyChooseUsCard borders/bg, all text colors now theme-aware
+- `/app/Components/Layout/HomeHeader/styled.tsx` - FixedHeader bg, nav link colors, Sign In, mobile drawer all dark-mode aware
+- `/app/Components/Layout/HomeFooter/styled.tsx` - Footer bg uses conditional dark color
+- `/app/Components/Layout/HomeButton/styled.tsx` - Primary and outlined button variants use dark-mode aware colors
+- `/app/Components/Page/Home/styled.tsx` - All section backgrounds and glow effects use `theme.palette`
+- `/app/Components/Page/Home/UseCase.tsx` - UseCase cards, tags, borders all theme-aware
+- `/app/Components/UI/UseCaseBanner/index.tsx` - Banner gradient and border now dark-mode aware
+- `/app/Components/UI/LanguageSwitcher/styled.tsx` - Dropdown, trigger, borders, hover states all theme-aware
+- `/app/pages/privacy-policy.tsx`, `terms-conditions.tsx`, `aml-policy.tsx` - Replaced hardcoded `#131520`, `#676B7E` with `text.primary`, `text.secondary`
+- `/app/pages/system-status.tsx` - Replaced hardcoded colors with theme tokens
+
 ## Testing Protocol
 
 ### Backend Testing

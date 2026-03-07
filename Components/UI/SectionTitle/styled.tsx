@@ -1,4 +1,3 @@
-import { homeTheme } from "@/styles/homeTheme";
 import { Box, Typography, styled } from "@mui/material";
 
 export const Wrapper = styled(Box)(() => ({
@@ -14,7 +13,7 @@ export const Wrapper = styled(Box)(() => ({
   },
 }));
 
-export const Badge = styled(Box)(() => ({
+export const Badge = styled(Box)(({ theme }) => ({
   textAlign: "center",
   width: "fit-content",
   fontSize: 14,
@@ -22,8 +21,8 @@ export const Badge = styled(Box)(() => ({
   letterSpacing: "0px !important",
   fontWeight: 500,
   fontFamily: "OutfitMedium",
-  color: homeTheme.palette.primary.main,
-  backgroundColor: homeTheme.palette.background.default,
+  color: theme.palette.primary.main,
+  backgroundColor: theme.palette.background.default,
   padding: "6px 16px",
   borderRadius: "9999px",
   alignSelf: "center",
@@ -36,7 +35,7 @@ export const Badge = styled(Box)(() => ({
 export const Heading = styled(Typography)(({ theme }) => ({
   fontWeight: 500,
   fontFamily: "OutfitMedium",
-  color: homeTheme.palette.text.primary,
+  color: theme.palette.text.primary,
   padding: "0 15px",
   textAlign: "center",
   "&[data-align='start']": {
@@ -76,7 +75,7 @@ export const SubText = styled(Typography)(({ theme }) => ({
   fontWeight: 400,
   letterSpacing: "0px !important",
   fontFamily: "OutfitRegular",
-  color: homeTheme.palette.text.secondary,
+  color: theme.palette.text.secondary,
   textAlign: "center",
   "&[data-align='start']": {
     textAlign: "left",

@@ -1,25 +1,24 @@
-import { Box, styled, Typography } from "@mui/material";
+import { Box, styled, Typography, useTheme } from "@mui/material";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { homeTheme } from "@/styles/homeTheme";
 import Dashboard_png from "@/assets/Images/home/Dashboard.png";
 import Dashboard_svg from "@/assets/Images/home/Dashboard.svg";
 import Image from "next/image";
 import BitcoinBg from "@/assets/Images/home/Bitcoin-bg.png";
 import EthereumBg from "@/assets/Images/home/Ethereum-bg.png";
 import LitecoinBg from "@/assets/Images/home/Litecoin-bg.png";
-import { theme } from "@/styles/theme";
 import HomeButton from "@/Components/Layout/HomeButton";
 import { useDevice } from "@/hooks/useDevice";
 
-const UseCaseBannerWrapper = styled(Box)(() => ({
+const UseCaseBannerWrapper = styled(Box)(({ theme }) => ({
   width: "100%",
   height: "100%",
   padding: "35px 0 23px 64px",
-  background:
-    "linear-gradient(135deg, rgba(0, 4, 255, 0.05) 0%, rgba(0, 4, 255, 0) 50%, rgba(0, 4, 255, 0.1) 100%)",
+  background: theme.palette.mode === "dark"
+    ? "linear-gradient(135deg, rgba(106,123,255,0.08) 0%, rgba(106,123,255,0) 50%, rgba(106,123,255,0.12) 100%)"
+    : "linear-gradient(135deg, rgba(0, 4, 255, 0.05) 0%, rgba(0, 4, 255, 0) 50%, rgba(0, 4, 255, 0.1) 100%)",
   borderRadius: "24px",
-  border: `1px solid ${homeTheme.palette.border.main}`,
+  border: `1px solid ${theme.palette.border?.main || (theme.palette.mode === "dark" ? "#2A2D42" : "#E7E8EF")}`,
   overflow: "hidden",
   display: "flex",
   alignItems: "center",
@@ -32,19 +31,19 @@ const UseCaseBannerWrapper = styled(Box)(() => ({
   },
 }));
 
-const TitleText = styled(Typography)(() => ({
+const TitleText = styled(Typography)(({ theme }) => ({
   fontSize: "36px",
   lineHeight: "40px",
   fontWeight: 500,
   fontFamily: "OutfitMedium",
-  color: homeTheme.palette.text.primary,
+  color: theme.palette.text.primary,
 }));
 
-const SubText = styled(Typography)(() => ({
+const SubText = styled(Typography)(({ theme }) => ({
   fontSize: "18px",
   fontWeight: 400,
   fontFamily: "OutfitRegular",
-  color: homeTheme.palette.text.secondary,
+  color: theme.palette.text.secondary,
   lineHeight: "28px",
   letterSpacing: "0",
 }));
@@ -58,7 +57,7 @@ const HighlightText = styled("span")(() => ({
   fontWeight: 500,
 }));
 
-const DashboardImageWrapper = styled(Box)(() => ({
+const DashboardImageWrapper = styled(Box)(({ theme }) => ({
   position: "relative",
   width: "100%",
   height: "100%",
@@ -92,6 +91,7 @@ const DecorativeImage = styled(Box)(() => ({
 const UseCaseBanner = () => {
   const { os } = useDevice();
   const { t } = useTranslation("landing");
+  const theme = useTheme();
 
   return (
     <UseCaseBannerWrapper>

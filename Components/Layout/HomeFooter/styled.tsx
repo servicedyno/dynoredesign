@@ -1,8 +1,7 @@
-import { homeTheme } from "@/styles/homeTheme";
 import { Box, Typography, styled } from "@mui/material";
 
 export const FooterWrapper = styled(Box)(({ theme }) => ({
-  backgroundColor: homeTheme.palette.text.primary,
+  backgroundColor: theme.palette.mode === "dark" ? "#0B0D17" : "#131520",
   marginTop: "auto",
   paddingTop: 64,
   paddingBottom: 64,

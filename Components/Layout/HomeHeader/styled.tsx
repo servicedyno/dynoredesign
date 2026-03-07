@@ -1,5 +1,3 @@
-import { homeTheme } from "@/styles/homeTheme";
-import { theme } from "@/styles/theme";
 import { MenuRounded } from "@mui/icons-material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import {
@@ -12,14 +10,14 @@ import {
   Typography,
 } from "@mui/material";
 
-export const FixedHeader = styled(Box)(() => ({
+export const FixedHeader = styled(Box)(({ theme }) => ({
   position: "fixed",
   top: 0,
   left: 0,
   right: 0,
   zIndex: 1400,
-  backgroundColor: theme.palette.common.white,
-  transition: "transform 0.3s ease-in-out",
+  backgroundColor: theme.palette.background.paper,
+  transition: "transform 0.3s ease-in-out, background-color 0.3s ease",
   width: "100%",
 }));
 
@@ -29,7 +27,7 @@ export const HeaderContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   maxWidth: 1280,
   margin: "0 auto",
 
@@ -47,9 +45,9 @@ export const HeaderContainer = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const HeaderDivider = styled(Divider)({
-  borderColor: homeTheme.palette.border.main,
-});
+export const HeaderDivider = styled(Divider)(({ theme }) => ({
+  borderColor: theme.palette.border?.main || (theme.palette.mode === "dark" ? "#2A2D42" : "#E7E8EF"),
+}));
 
 export const ClickableLogo = styled(Button)({
   display: "inline-flex",
@@ -74,7 +72,7 @@ export const RightGroup = styled(Box)({
   gap: "12px",
 });
 
-export const NavLinks = styled(Box)(() => ({
+export const NavLinks = styled(Box)(({ theme }) => ({
   display: "flex",
   gap: 30,
   letterSpacing: "0px",
@@ -93,17 +91,17 @@ export const NavLinks = styled(Box)(() => ({
     lineHeight: "20px",
     letterSpacing: "0px",
     fontFamily: "OutfitRegular",
-    color: homeTheme.palette.text.secondary,
+    color: theme.palette.text.secondary,
     padding: 0,
 
     "&:hover": {
       background: "transparent",
-      color: homeTheme.palette.primary.main,
+      color: theme.palette.primary.main,
     },
   },
 }));
 
-export const Actions = styled(Box)({
+export const Actions = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "12px",
@@ -112,17 +110,17 @@ export const Actions = styled(Box)({
     textTransform: "none",
     fontSize: "14px",
     fontWeight: 500,
-    color: homeTheme.palette.text.primary,
+    color: theme.palette.text.primary,
     lineHeight: "20px",
     fontFamily: "OutfitMedium",
     whiteSpace: "nowrap",
 
     "&:hover": {
       background: "transparent",
-      color: homeTheme.palette.primary.main,
+      color: theme.palette.primary.main,
     },
   },
-});
+}));
 
 export const DesktopLanguageWrapper = styled(Box)({
   marginRight: "8px",
@@ -149,17 +147,17 @@ export const MobileMenuButton = styled(IconButton)(() => ({
   },
 }));
 
-export const MenuOpenIcon = styled(MenuRounded)({
+export const MenuOpenIcon = styled(MenuRounded)(({ theme }) => ({
   color: theme.palette.text.primary,
   fontSize: 24,
-});
+}));
 
-export const MenuCloseIcon = styled(CloseRoundedIcon)({
+export const MenuCloseIcon = styled(CloseRoundedIcon)(({ theme }) => ({
   color: theme.palette.text.primary,
   fontSize: 24,
-});
+}));
 
-export const MobileMenuDrawer = styled(Drawer)({
+export const MobileMenuDrawer = styled(Drawer)(({ theme }) => ({
   display: "none",
   zIndex: 1200,
 
@@ -174,7 +172,7 @@ export const MobileMenuDrawer = styled(Drawer)({
   },
 
   "& .MuiBackdrop-root": {
-    backgroundColor: "#FFFFFFCC",
+    backgroundColor: theme.palette.mode === "dark" ? "#0B0D17CC" : "#FFFFFFCC",
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
   },
@@ -182,15 +180,15 @@ export const MobileMenuDrawer = styled(Drawer)({
   "@media (max-width: 1025px)": {
     display: "block",
   },
-});
+}));
 
-export const MobileDrawer = styled(Box)({
+export const MobileDrawer = styled(Box)(({ theme }) => ({
   height: "100%",
-  backgroundColor: "transparent",
+  backgroundColor: theme.palette.mode === "dark" ? "#0B0D17" : "transparent",
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-});
+}));
 
 export const MobileNavContent = styled(Box)({
   marginTop: "51px",
@@ -203,12 +201,12 @@ export const MobileNavContent = styled(Box)({
   alignItems: "flex-end",
 });
 
-export const MobileNavItem = styled(Typography)({
+export const MobileNavItem = styled(Typography)(({ theme }) => ({
   fontSize: "15.88px",
   fontWeight: 400,
   lineHeight: "22.68px",
   fontFamily: "OutfitRegular",
-  color: homeTheme.palette.text.secondary,
+  color: theme.palette.text.secondary,
   cursor: "pointer",
   transition: "color 0.2s ease",
   textAlign: "right",
@@ -220,21 +218,21 @@ export const MobileNavItem = styled(Typography)({
   border: "none",
   background: "transparent",
   padding: 0,
-});
+}));
 
-export const StyledSignInButton = styled(Button)(() => ({
+export const StyledSignInButton = styled(Button)(({ theme }) => ({
   textTransform: "none",
   fontSize: "14px",
   fontWeight: 500,
   lineHeight: "20px",
   fontFamily: "OutfitMedium",
-  color: homeTheme.palette.text.primary,
+  color: theme.palette.text.primary,
   whiteSpace: "nowrap",
   padding: 0,
 
   "&:hover": {
     background: "transparent",
-    color: homeTheme.palette.primary.main,
+    color: theme.palette.primary.main,
   },
 }));
 

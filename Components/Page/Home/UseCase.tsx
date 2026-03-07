@@ -1,33 +1,31 @@
 import HomeSectionTitle from "@/Components/UI/SectionTitle";
-import { Box, Grid, Typography } from "@mui/material";
+import { Box, Grid, Typography, useTheme } from "@mui/material";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import Image from "next/image";
-import { homeTheme } from "@/styles/homeTheme";
 import useCase1 from "@/assets/Images/UseCase/use-case-1.svg";
 import useCase2 from "@/assets/Images/UseCase/use-case-2.svg";
 import useCase3 from "@/assets/Images/UseCase/use-case-3.svg";
 import { styled } from "@mui/material/styles";
 import useCase4 from "@/assets/Images/UseCase/use-case-4.svg";
-import { theme } from "@/styles/theme";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import UseCaseBanner from "@/Components/UI/UseCaseBanner";
 import useIsMobile from "@/hooks/useIsMobile";
 
-const UseCaseCard = styled(Box)(() => ({
-  backgroundColor: "#FFFFFF",
+const UseCaseCard = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
   borderRadius: "20px",
   padding: "26px",
   height: "100%",
   display: "flex",
   alignItems: "start",
   gap: "20px",
-  border: `1px solid ${homeTheme.palette.border.main}`,
+  border: `1px solid ${theme.palette.border?.main || (theme.palette.mode === "dark" ? "#2A2D42" : "#E7E8EF")}`,
   position: "relative",
   overflow: "hidden",
 }));
 
-const UseCaseImage = styled(Box)(() => ({
+const UseCaseImage = styled(Box)(({ theme }) => ({
   width: "163px",
   height: "133px",
   borderRadius: "10px",
@@ -46,45 +44,49 @@ const UseCaseTitleWrapper = styled(Box)(() => ({
   flex: 1,
 }));
 
-const UseCaseTitle = styled(Typography)(() => ({
+const UseCaseTitle = styled(Typography)(({ theme }) => ({
   fontSize: "18px",
   fontWeight: 500,
   fontFamily: "OutfitSemiBold",
-  color: homeTheme.palette.text.primary,
+  color: theme.palette.text.primary,
   lineHeight: "28px",
   letterSpacing: 0,
 }));
 
-const UseCaseDescription = styled(Typography)(() => ({
+const UseCaseDescription = styled(Typography)(({ theme }) => ({
   fontSize: "14px",
   lineHeight: "20px",
   fontWeight: 400,
   maxWidth: "244px",
   fontFamily: "OutfitRegular",
   letterSpacing: 0,
-  color: homeTheme.palette.text.secondary,
+  color: theme.palette.text.secondary,
 }));
 
-const UseCaseTag = styled(Typography)(() => ({
-  padding: "6px 9px",
-  borderRadius: "100px",
-  width: "fit-content",
-  backgroundColor: theme.palette.success.main,
-  fontSize: "13px",
-  lineHeight: "18px",
-  fontWeight: 500,
-  fontFamily: "OutfitMedium",
-  color: theme.palette.success.dark,
-  border: `1px solid ${theme.palette.success.light}`,
-  display: "flex",
-  justifyContent: "start",
-  gap: "5px",
-  alignItems: "center",
-}));
+const UseCaseTag = styled(Typography)(({ theme }) => {
+  const isDark = theme.palette.mode === "dark";
+  return {
+    padding: "6px 9px",
+    borderRadius: "100px",
+    width: "fit-content",
+    backgroundColor: isDark ? "#1B3A26" : "#EAFFF0",
+    fontSize: "13px",
+    lineHeight: "18px",
+    fontWeight: 500,
+    fontFamily: "OutfitMedium",
+    color: "#47B464",
+    border: `1px solid ${isDark ? "#1B3A26" : "#DCF6E4"}`,
+    display: "flex",
+    justifyContent: "start",
+    gap: "5px",
+    alignItems: "center",
+  };
+});
 
 const UseCaseSection = () => {
   const isMobile = useIsMobile("md");
   const { t } = useTranslation("landing");
+  const theme = useTheme();
 
   const useCases = [
     {
@@ -146,7 +148,7 @@ const UseCaseSection = () => {
                     sx={{
                       width: "203px",
                       height: "203px",
-                      bgcolor: `${homeTheme.palette.primary.main}0D`,
+                      bgcolor: `${theme.palette.primary.main}0D`,
                       borderRadius: "100%",
                       filter: "blur(25px)",
                       position: "absolute",

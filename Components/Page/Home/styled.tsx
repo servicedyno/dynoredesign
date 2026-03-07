@@ -1,4 +1,3 @@
-import { homeTheme } from "@/styles/homeTheme";
 import { Box, Grid, Typography } from "@mui/material";
 import { alpha, styled } from "@mui/material/styles";
 
@@ -26,7 +25,7 @@ export const HomeFullWidthContainer = styled(Box)(({ theme }) => ({
   margin: "0 auto",
   paddingLeft: theme.spacing(2),
   paddingRight: theme.spacing(2),
-  backgroundColor: alpha(homeTheme.palette.background.default, 0.3),
+  backgroundColor: alpha(theme.palette.background.default, 0.3),
 }));
 
 // HeroSection
@@ -157,7 +156,7 @@ export const DesktopShowcase = styled(Box)(({ theme }) => ({
     left: 0,
     width: "100%",
     height: "110%",
-    backgroundColor: alpha(homeTheme.palette.primary.main, 0.05),
+    backgroundColor: alpha(theme.palette.primary.main, 0.05),
     filter: "blur(100px)",
     borderRadius: "1000px",
     zIndex: 0,
@@ -288,7 +287,7 @@ export const MobileSection = styled(Box)(({ theme }) => ({
     left: 0,
     width: "100%",
     height: "100%",
-    backgroundColor: alpha(homeTheme.palette.primary.main, 0.05),
+    backgroundColor: alpha(theme.palette.primary.main, 0.05),
     filter: "blur(100px)",
     borderRadius: "1000px",
     zIndex: 0,

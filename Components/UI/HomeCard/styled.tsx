@@ -1,6 +1,4 @@
 import { getBrowser } from "@/hooks/useDevice";
-import { homeTheme } from "@/styles/homeTheme";
-import { theme } from "@/styles/theme";
 import { Box, Card, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
@@ -13,10 +11,17 @@ interface StyledCardProps {
 export const StyledCard = styled(Card)(({ theme }) => {
   const { isDesktopSafari } =
     typeof window !== "undefined" ? getBrowser() : { isDesktopSafari: false };
+  const isDark = theme.palette.mode === "dark";
+
+  const bgColor = isDark ? "#141625" : "#FFFFFF";
+  const glowColor = isDark
+    ? "rgba(106,123,255,0.25)"
+    : "rgba(0,4,255,0.3)";
+  const fadeTo = isDark ? "#141625" : "#FFFFFF";
 
   return {
-    backgroundColor: theme.palette.common.white,
-    border: `1px solid ${homeTheme.palette.border.main}`,
+    backgroundColor: bgColor,
+    border: `1px solid ${theme.palette.border?.main || (isDark ? "#2A2D42" : "#E7E8EF")}`,
     boxShadow: "none !important",
     borderRadius: "20px",
     display: "flex",
@@ -32,8 +37,8 @@ export const StyledCard = styled(Card)(({ theme }) => {
       width: "100%",
       height: "120%",
       background: isDesktopSafari
-        ? "radial-gradient(ellipse at bottom, rgba(0,4,255,0.45) 0%, #FFFFFF 70%)"
-        : "radial-gradient(at center bottom, #0004FF4D, #FFFFFF)",
+        ? `radial-gradient(ellipse at bottom, ${glowColor} 0%, ${fadeTo} 70%)`
+        : `radial-gradient(at center bottom, ${isDark ? "#6A7BFF3D" : "#0004FF4D"}, ${fadeTo})`,
       filter: isDesktopSafari ? "blur(140px)" : "blur(100px)",
       opacity: isDesktopSafari ? 0.7 : 0.5,
       zIndex: 0,
@@ -83,7 +88,7 @@ export const GoLiveDescription = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-export const FeatureIcon = styled(Box)(() => ({
+export const FeatureIcon = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -92,10 +97,10 @@ export const FeatureIcon = styled(Box)(() => ({
   minHeight: "48px",
   minWidth: "48px",
   borderRadius: "16px",
-  background: homeTheme.palette.background.default,
+  background: theme.palette.background.default,
 }));
 
-export const WhyChooseUsCard = styled(Box)(() => ({
+export const WhyChooseUsCard = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "flex-start",
@@ -106,8 +111,8 @@ export const WhyChooseUsCard = styled(Box)(() => ({
   minWidth: "328px",
   minHeight: "218px",
   padding: "25px",
-  background: theme.palette.primary.contrastText,
-  border: `1px solid #E7E8EF`,
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.border?.main || (theme.palette.mode === "dark" ? "#2A2D42" : "#E7E8EF")}`,
   boxShadow: "none !important",
   borderRadius: "20px",
   margin: "0 auto",
@@ -119,7 +124,7 @@ export const WhyChooseUsCard = styled(Box)(() => ({
   },
 }));
 
-export const WhyChooseDynoPayTitle = styled(Typography)(() => ({
+export const WhyChooseDynoPayTitle = styled(Typography)(({ theme }) => ({
   fontSize: "18px",
   fontWeight: 500,
   lineHeight: "28px",
@@ -127,20 +132,20 @@ export const WhyChooseDynoPayTitle = styled(Typography)(() => ({
   letterSpacing: 0,
   textAlign: "center",
   fontFamily: "OutfitMedium",
-  color: homeTheme.palette.text.primary,
+  color: theme.palette.text.primary,
 }));
 
-export const WhyChooseDynoPayDescription = styled(Typography)(() => ({
+export const WhyChooseDynoPayDescription = styled(Typography)(({ theme }) => ({
   fontSize: "14px",
   fontWeight: 400,
   lineHeight: "20px",
   letterSpacing: 0,
   textAlign: "center",
   fontFamily: "OutfitRegular",
-  color: homeTheme.palette.text.secondary,
+  color: theme.palette.text.secondary,
 }));
 
-export const WhyChooseDynoPayIcon = styled(Box)(() => ({
+export const WhyChooseDynoPayIcon = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -149,7 +154,7 @@ export const WhyChooseDynoPayIcon = styled(Box)(() => ({
   minHeight: "56px",
   minWidth: "56px",
   borderRadius: "20px",
-  background: "#0004FF1A",
+  background: theme.palette.mode === "dark" ? "rgba(106,123,255,0.1)" : "#0004FF1A",
 }));
 
 export const CardHeader = styled(Box)(({ theme }) => ({
@@ -171,17 +176,17 @@ export const HeaderContent = styled(Box)({
   flex: 1,
 });
 
-export const HeaderTitle = styled(Typography)({
+export const HeaderTitle = styled(Typography)(({ theme }) => ({
   fontSize: "20px",
   fontWeight: 500,
   lineHeight: 1.2,
   letterSpacing: "-0.02em",
   fontFamily: "OutfitMedium",
-  color: "#242428",
+  color: theme.palette.text.primary,
   [theme.breakpoints.down("md")]: {
     fontSize: "15px",
   },
-});
+}));
 
 export const HeaderIcon = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -202,7 +207,7 @@ export const CardFooter = styled(Box)(({ theme }) => ({
   justifyContent: "flex-end",
   alignItems: "center",
   padding: theme.spacing(2, 3),
-  borderTop: `1px solid ${theme.palette.border.main}`,
+  borderTop: `1px solid ${theme.palette.border?.main || (theme.palette.mode === "dark" ? "#2A2D42" : "#E9ECF2")}`,
   gap: theme.spacing(1.5),
 }));
 
@@ -233,7 +238,7 @@ export const TypographyTitle = styled(Typography)(({ theme }) => ({
   fontFamily: "OutfitSemiBold",
   lineHeight: "24px",
   letterSpacing: 0,
-  color: "#131520",
+  color: theme.palette.text.primary,
 }));
 
 export const TypographyDescription = styled(Typography)(({ theme }) => ({
@@ -242,7 +247,7 @@ export const TypographyDescription = styled(Typography)(({ theme }) => ({
   fontWeight: 400,
   lineHeight: "20px",
   letterSpacing: 0,
-  color: "#676B7E",
+  color: theme.palette.text.secondary,
 }));
 
 export const TypographyTime = styled(Typography)(({ theme }) => ({
@@ -251,5 +256,5 @@ export const TypographyTime = styled(Typography)(({ theme }) => ({
   fontWeight: 400,
   lineHeight: "16px",
   letterSpacing: 0,
-  color: "#676B7E",
+  color: theme.palette.text.secondary,
 }));
