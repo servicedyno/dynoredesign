@@ -3,6 +3,7 @@ import EditIcon from "@/assets/Icons/edit-icon.svg";
 import LinkIcon from "@/assets/Icons/link-icon.svg";
 import RoundedStackIcon from "@/assets/Icons/roundedStck-icon.svg";
 import AddWalletModal from "@/Components/UI/AddWalletModal";
+import DeleteWalletModal from "@/Components/UI/DeleteWalletModal";
 import InputField from "@/Components/UI/AuthLayout/InputFields";
 import CustomButton from "@/Components/UI/Buttons";
 import EmptyDataModel from "@/Components/UI/EmptyDataModel";
@@ -11,15 +12,17 @@ import { formatNumberWithComma, getCurrencySymbol } from "@/helpers";
 import useIsMobile from "@/hooks/useIsMobile";
 import { useWalletData } from "@/hooks/useWalletData";
 import { TOAST_SHOW } from "@/Redux/Actions/ToastAction";
+import { WalletAction } from "@/Redux/Actions";
+import { WALLET_FETCH } from "@/Redux/Actions/WalletAction";
 import { theme } from "@/styles/theme";
-import { WalletData } from "@/utils/types/wallet";
-import { ArrowOutward } from "@mui/icons-material";
+import { WalletDataType } from "@/utils/types/wallet";
+import { ArrowOutward, DeleteOutlineRounded } from "@mui/icons-material";
 import { Box, CircularProgress, Grid, Typography } from "@mui/material";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { CopyButton } from "../Transactions/TransactionDetailsModal.styled";
 import {
   HeaderIcon,
@@ -44,6 +47,13 @@ const Wallet = () => {
 
   const router = useRouter();
   const [openEditModal, setOpenEditModal] = useState(false);
+  const [editWalletCrypto, setEditWalletCrypto] = useState("");
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; type: string; address: string } | null>(null);
+
+  const selectedCompanyId = useSelector(
+    (state: any) => state.companyReducer?.selectedCompanyId
+  );
 
   const { walletLoading, walletData } = useWalletData();
 
@@ -58,9 +68,24 @@ const Wallet = () => {
     });
   };
 
-  const handleEdit = (wallet: WalletData) => {
-    console.log("Edit wallet:", wallet.walletTitle);
+  const handleEdit = (wallet: WalletDataType) => {
+    setEditWalletCrypto(wallet.walletTitle);
     setOpenEditModal(true);
+  };
+
+  const handleDelete = (wallet: WalletDataType) => {
+    setDeleteTarget({ id: wallet.id, type: wallet.walletTitle, address: wallet.walletAddress });
+    setOpenDeleteModal(true);
+  };
+
+  const handleWalletDeleted = () => {
+    dispatch({
+      type: TOAST_SHOW,
+      payload: { message: "Wallet deleted successfully", severity: "success" },
+    });
+    // Re-fetch wallets
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(WalletAction(WALLET_FETCH, payload));
   };
 
   if (walletLoading && walletData.length === 0) {
@@ -255,12 +280,29 @@ const Wallet = () => {
                     <WalletEditButton onClick={() => handleEdit(wallet)}>
                       <Image
                         src={EditIcon.src}
-                        alt="View Transactions"
+                        alt="Edit Wallet"
                         width={isMobile ? 13 : 16}
                         height={isMobile ? 14 : 16}
                         draggable={false}
                         style={{
                           filter: "brightness(0) saturate(100%) invert(0%)",
+                        }}
+                      />
+                    </WalletEditButton>
+
+                    <WalletEditButton
+                      onClick={() => handleDelete(wallet)}
+                      sx={{
+                        "&:hover": {
+                          backgroundColor: "#FEE2E2",
+                          borderColor: "#FECACA",
+                        },
+                      }}
+                    >
+                      <DeleteOutlineRounded
+                        sx={{
+                          fontSize: isMobile ? 15 : 18,
+                          color: "#DC2626",
                         }}
                       />
                     </WalletEditButton>
@@ -354,7 +396,24 @@ const Wallet = () => {
 
       <AddWalletModal
         open={openEditModal}
-        onClose={() => setOpenEditModal(false)}
+        currentCryptocurrency={editWalletCrypto}
+        onClose={() => {
+          setOpenEditModal(false);
+          setEditWalletCrypto("");
+        }}
+      />
+
+      <DeleteWalletModal
+        open={openDeleteModal}
+        onClose={() => {
+          setOpenDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        walletId={deleteTarget?.id ?? null}
+        walletType={deleteTarget?.type ?? ""}
+        walletAddress={deleteTarget?.address ?? ""}
+        companyId={selectedCompanyId}
+        onDeleted={handleWalletDeleted}
       />
     </Box>
   );

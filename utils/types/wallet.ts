@@ -1,4 +1,5 @@
 export interface WalletData {
+  id: number;
   icon: any;
   walletTitle: string;
   walletAddress: string;
@@ -81,6 +82,7 @@ export type CryptoCode =
   | "RLUSD-ERC20";
 
 export interface WalletDataType {
+  id: number;
   icon: any;
   walletTitle: WalletType;
   walletAddress: string;

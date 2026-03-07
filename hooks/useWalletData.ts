@@ -163,6 +163,7 @@ export const useWalletData = () => {
         const type = wallet.wallet_type as WalletType;
 
         return {
+          id: wallet.id || wallet.wallet_id,
           icon: WALLET_ICONS[type],
           walletTitle: type,
           walletAddress: wallet.wallet_address,
