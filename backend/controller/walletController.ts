@@ -205,7 +205,14 @@ const getWallet = async (req: express.Request, res: express.Response) => {
       currencyList.push(walletData[i].dataValues.wallet_type);
     }
 
-    const currencyData = await convertToMultiple("USD", currencyList, 1, false);
+    let currencyData: Array<{ currency: string; amount: number; transferRate: number }> = [];
+    try {
+      currencyData = await convertToMultiple("USD", currencyList, 1, false);
+    } catch (e) {
+      walletLogger.warn(`[getWallet] Currency conversion failed for some currencies, using fallback rates`);
+      // Fallback: return empty rates - wallet will still load with 0 USD values
+      currencyData = currencyList.map((c: string) => ({ currency: c, amount: 0, transferRate: 0 }));
+    }
     
     // Get USD to preferred currency conversion rate
     if (preferredCurrency !== 'USD') {

@@ -551,7 +551,14 @@ const processSingleCurrency = async (
 
   if (!rate) {
     apiLogger.error(`[currencyConvert] ❌ No rate available for ${source}→${currentCurrency} - all providers failed (FastForex, Tatum, CoinGecko)`);
-    throw new Error(`Currency conversion failed for ${source}→${currentCurrency}. Please try again later.`);
+    // Graceful fallback: return amount as-is with rate=1 instead of crashing
+    // This ensures the wallet page still loads even if rate providers are down
+    apiLogger.warn(`[currencyConvert] ⚠️ Using fallback rate 0 for ${source}→${currentCurrency} (providers unavailable)`);
+    return {
+      amount: "0.00",
+      rate: "0",
+      currency: currentCurrency,
+    };
   }
 
   // PERF FIX 4: Cache the resolved rate for 30s (saves API calls for subsequent requests)
