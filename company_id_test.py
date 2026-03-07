@@ -16,7 +16,7 @@ import os
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://current-pod-config.preview.emergentagent.com"
+BACKEND_URL = "https://unified-pod-deploy.preview.emergentagent.com"
 
 class CompanyIdTester:
     def __init__(self):

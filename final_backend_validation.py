@@ -8,7 +8,7 @@ import requests
 import json
 import sys
 
-BACKEND_URL = "https://current-pod-config.preview.emergentagent.com"
+BACKEND_URL = "https://unified-pod-deploy.preview.emergentagent.com"
 
 def final_validation_tests():
     """Final validation of all review request requirements"""

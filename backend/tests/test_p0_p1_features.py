@@ -24,7 +24,7 @@ import uuid
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 # Fallback to internal URL if env not set
 if not BASE_URL:
-    BASE_URL = "https://current-pod-config.preview.emergentagent.com"
+    BASE_URL = "https://unified-pod-deploy.preview.emergentagent.com"
 
 # Test credentials
 TEST_EMAIL = "richard@dyno.pt"
