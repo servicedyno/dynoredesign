@@ -2259,15 +2259,26 @@ const verifyEmail = async (req: express.Request, res: express.Response) => {
       return successResponseHelper(res, 200, "Email is already verified", { email_verified: true });
     }
 
+    // Acquire a lock to prevent duplicate verification (race condition guard)
+    const verifyLockKey = `email-verify-lock:${userId}`;
+    const existingLock = await getRedisItem(verifyLockKey);
+    if (existingLock && Object.keys(existingLock).length > 0) {
+      return successResponseHelper(res, 200, "Email verification is being processed", { email_verified: true });
+    }
+    await setRedisItem(verifyLockKey, { processing: true });
+    await setRedisTTL(verifyLockKey, 30); // 30 second lock
+
     // Check OTP from Redis
     const verifyKey = `email-verify:${userId}`;
     const storedData = await getRedisItem(verifyKey);
     if (!storedData || typeof storedData !== 'object' || !('otp' in (storedData as Record<string, unknown>))) {
+      await deleteRedisItem(verifyLockKey);
       return errorResponseHelper(res, 400, "Verification code has expired. Please request a new one.");
     }
 
     const storedOtp = (storedData as Record<string, unknown>).otp;
     if (String(storedOtp) !== String(otp)) {
+      await deleteRedisItem(verifyLockKey);
       return errorResponseHelper(res, 400, "Invalid verification code. Please try again.");
     }
 
@@ -2280,12 +2291,21 @@ const verifyEmail = async (req: express.Request, res: express.Response) => {
 
     userLogger.info(`[VerifyEmail] Email verified for user ${userId}`);
 
-    // Send welcome email now that OTP is verified (non-blocking)
-    const email = user.dataValues.email;
-    const name = user.dataValues.name || "User";
-    emailService.sendWelcomeEmail(email.toLowerCase(), name).catch(err => {
-      userLogger.error("[VerifyEmail] Failed to send welcome email:", err);
-    });
+    // Send welcome email now that OTP is verified (non-blocking, with dedup guard)
+    const welcomeSentKey = `welcome-email-sent:${userId}`;
+    const alreadySent = await getRedisItem(welcomeSentKey);
+    if (!alreadySent || Object.keys(alreadySent).length === 0) {
+      await setRedisItem(welcomeSentKey, { sent: true });
+      await setRedisTTL(welcomeSentKey, 3600); // 1 hour dedup window
+      const email = user.dataValues.email;
+      const name = user.dataValues.name || "User";
+      emailService.sendWelcomeEmail(email.toLowerCase(), name).catch(err => {
+        userLogger.error("[VerifyEmail] Failed to send welcome email:", err);
+      });
+    }
+
+    // Release lock
+    await deleteRedisItem(verifyLockKey);
 
     return successResponseHelper(res, 200, "Email verified successfully!", { email_verified: true });
   } catch (e) {

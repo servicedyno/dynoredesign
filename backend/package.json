@@ -52,6 +52,7 @@
     "tronweb": "^6.0.0",
     "ts-node": "^10.9.1",
     "wallet-address-validator": "^0.2.4",
+    "web-push": "^3.6.7",
     "winston": "^3.14.2",
     "ws": "^8.19.0",
     "xrpl": "^4.5.0",

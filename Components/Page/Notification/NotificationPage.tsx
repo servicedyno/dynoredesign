@@ -20,6 +20,9 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import axiosBaseApi from "@/axiosConfig";
 import { useSelector } from "react-redux";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
+import NotificationsOffIcon from "@mui/icons-material/NotificationsOff";
 
 const NotificationItem: React.FC<NotificationItemProps> = ({
   title,
@@ -105,6 +108,37 @@ const NotificationPage = () => {
     updatePreference,
     savePreferences,
   } = useNotificationPreferences();
+
+  const {
+    permission: pushPermission,
+    isSubscribed: pushSubscribed,
+    loading: pushLoading,
+    supported: pushSupported,
+    subscribe: pushSubscribe,
+    unsubscribe: pushUnsubscribe,
+  } = usePushNotifications();
+
+  const handlePushToggle = useCallback(async () => {
+    if (pushSubscribed) {
+      const ok = await pushUnsubscribe();
+      if (ok) {
+        setToastMessage("Browser push notifications disabled");
+        setToastSeverity("success");
+        setOpenToast(true);
+      }
+    } else {
+      const ok = await pushSubscribe();
+      if (ok) {
+        setToastMessage("Browser push notifications enabled!");
+        setToastSeverity("success");
+        setOpenToast(true);
+      } else if (pushPermission === "denied") {
+        setToastMessage("Notifications blocked. Please enable in browser settings.");
+        setToastSeverity("error");
+        setOpenToast(true);
+      }
+    }
+  }, [pushSubscribed, pushSubscribe, pushUnsubscribe, pushPermission]);
 
   const [openToast, setOpenToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("Settings updated successfully!");
@@ -536,7 +570,7 @@ const NotificationPage = () => {
                   checked={preferences.smsNotifications}
                   onChange={(val) => updatePreference("smsNotifications", val)}
                 />
-                {/* Browser Notifications - Special Button */}
+                {/* Browser Push Notifications - Web Push API */}
                 <Box
                   sx={{
                     display: "flex",
@@ -545,19 +579,45 @@ const NotificationPage = () => {
                   }}
                 >
                   <Box sx={{ flex: 1, pr: 2 }}>
-                    <Typography
-                      sx={{
-                        fontSize: { xs: "13px", md: "15px" },
-                        fontWeight: 700,
-                        fontFamily: "UrbanistMedium",
-                        color: theme.palette.text.primary,
-                        mb: 1,
-                        lineHeight: 1.2,
-                        letterSpacing: 0,
-                      }}
-                    >
-                      {tNotifications("browserNotificationsTitle")}
-                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                      {pushSubscribed ? (
+                        <NotificationsActiveIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
+                      ) : (
+                        <NotificationsOffIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                      )}
+                      <Typography
+                        sx={{
+                          fontSize: { xs: "13px", md: "15px" },
+                          fontWeight: 700,
+                          fontFamily: "UrbanistMedium",
+                          color: theme.palette.text.primary,
+                          lineHeight: 1.2,
+                          letterSpacing: 0,
+                        }}
+                      >
+                        {tNotifications("browserNotificationsTitle")}
+                      </Typography>
+                      {pushSubscribed && (
+                        <Chip
+                          label="Active"
+                          size="small"
+                          sx={{
+                            bgcolor: theme.palette.primary.main,
+                            color: "#fff",
+                            fontSize: "11px",
+                            height: 20,
+                          }}
+                        />
+                      )}
+                      {pushPermission === "denied" && (
+                        <Chip
+                          label="Blocked"
+                          size="small"
+                          color="error"
+                          sx={{ fontSize: "11px", height: 20 }}
+                        />
+                      )}
+                    </Box>
                     <Typography
                       sx={{
                         fontSize: { xs: "13px", md: "15px" },
@@ -566,29 +626,55 @@ const NotificationPage = () => {
                         lineHeight: 1.2,
                       }}
                     >
-                      {tNotifications("browserNotificationsDescription")}
+                      {pushSubscribed
+                        ? "You'll receive instant push notifications even when this tab is in the background."
+                        : pushPermission === "denied"
+                        ? "Push notifications are blocked. Please enable them in your browser settings."
+                        : tNotifications("browserNotificationsDescription")}
                     </Typography>
                   </Box>
-                  <CustomButton
-                    label={tNotifications("activate")}
-                    variant="secondary"
-                    size={isMobile ? "small" : "medium"}
-                    sx={{ padding: isMobile ? "8px 10px" : "15px 24px" }}
-                    endIcon={
-                      <Box>
-                        <ArrowOutwardIcon
-                          style={{
-                            height: "16px",
-                            width: "16px",
-                            marginTop: "2px",
-                          }}
-                        />
-                      </Box>
-                    }
-                    onClick={() => {
-                      console.log("Activating browser notifications...");
-                    }}
-                  />
+                  {pushSupported && (
+                    <CustomButton
+                      label={
+                        pushLoading
+                          ? "..."
+                          : pushSubscribed
+                          ? "Disable"
+                          : pushPermission === "denied"
+                          ? "Blocked"
+                          : tNotifications("activate")
+                      }
+                      variant={pushSubscribed ? "outlined" : "secondary"}
+                      size={isMobile ? "small" : "medium"}
+                      sx={{ padding: isMobile ? "8px 10px" : "15px 24px" }}
+                      disabled={pushLoading || pushPermission === "denied"}
+                      endIcon={
+                        !pushSubscribed && pushPermission !== "denied" ? (
+                          <Box>
+                            <ArrowOutwardIcon
+                              style={{
+                                height: "16px",
+                                width: "16px",
+                                marginTop: "2px",
+                              }}
+                            />
+                          </Box>
+                        ) : undefined
+                      }
+                      onClick={handlePushToggle}
+                    />
+                  )}
+                  {!pushSupported && (
+                    <Typography
+                      sx={{
+                        fontSize: "13px",
+                        color: theme.palette.text.secondary,
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Not supported in this browser
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             </PanelCard>

@@ -3,11 +3,63 @@ import notificationController from "../controller/notificationController";
 import { authMiddleware } from "../middleware";
 import { triggerWeeklySummary, triggerWalletReminder } from "../utils/cronJobs";
 import { successResponseHelper, errorResponseHelper, getErrorMessage } from "../helper";
+import { saveSubscription, removeSubscription, getVapidPublicKey } from "../services/webPushService";
+import jwt from "jsonwebtoken";
 
 const notificationRouter = express.Router();
 
-// All notification routes require authentication
+// Public endpoint - no auth needed for VAPID public key
+notificationRouter.get("/push/vapid-key", (_req, res) => {
+  const key = getVapidPublicKey();
+  if (!key) {
+    return errorResponseHelper(res, 503, "Web Push not configured");
+  }
+  return successResponseHelper(res, 200, "VAPID public key", { vapid_public_key: key });
+});
+
+// All other notification routes require authentication
 notificationRouter.use(authMiddleware);
+
+// Push subscription endpoints
+notificationRouter.post("/push/subscribe", async (req, res) => {
+  try {
+    const userData = jwt.decode(res.locals.token) as any;
+    const { subscription } = req.body;
+
+    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+      return errorResponseHelper(res, 400, "Invalid push subscription data");
+    }
+
+    const saved = await saveSubscription(
+      userData.user_id,
+      subscription,
+      req.headers["user-agent"]
+    );
+
+    if (saved) {
+      return successResponseHelper(res, 200, "Push subscription saved", { subscribed: true });
+    } else {
+      return errorResponseHelper(res, 500, "Failed to save push subscription");
+    }
+  } catch (e) {
+    return errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
+
+notificationRouter.post("/push/unsubscribe", async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+
+    if (!endpoint) {
+      return errorResponseHelper(res, 400, "Endpoint is required");
+    }
+
+    const removed = await removeSubscription(endpoint);
+    return successResponseHelper(res, 200, "Push subscription removed", { removed });
+  } catch (e) {
+    return errorResponseHelper(res, 500, getErrorMessage(e));
+  }
+});
 
 // Preferences endpoints
 // GET /api/notifications/preferences - Get user's notification settings

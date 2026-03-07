@@ -11,6 +11,7 @@
  */
 import { emitNotification, emitPaymentUpdate, broadcast, sendToChannel, getSSEStats } from "./sseService";
 import { createNotification, NOTIFICATION_TYPES } from "../controller/notificationController";
+import { sendWebPush } from "./webPushService";
 import { apiLogger } from "../utils/loggers";
 
 interface PushPayload {
@@ -47,6 +48,7 @@ interface BroadcastPayload {
 export const pushNotification = async (payload: PushPayload): Promise<{
   persisted: boolean;
   sse_delivered: boolean;
+  web_push_sent: number;
   notification_id?: number;
 }> => {
   let persisted = false;
@@ -84,7 +86,26 @@ export const pushNotification = async (payload: PushPayload): Promise<{
     apiLogger.error(`[PushNotification] SSE delivery failed for user ${payload.userId}:`, (err as Error).message);
   }
 
-  return { persisted, sse_delivered: sseDelivered, notification_id: notificationId };
+  // 3. Send Web Push notification (works even when tab is closed/background)
+  let webPushSent = 0;
+  try {
+    const result = await sendWebPush(payload.userId, {
+      title: payload.title,
+      body: payload.message,
+      data: {
+        ...payload.data,
+        notification_id: notificationId,
+        type: payload.type,
+        url: "/notifications",
+      },
+      tag: `dynopay-${payload.type}-${notificationId || Date.now()}`,
+    });
+    webPushSent = result.sent;
+  } catch (err) {
+    apiLogger.error(`[PushNotification] Web Push failed for user ${payload.userId}:`, (err as Error).message);
+  }
+
+  return { persisted, sse_delivered: sseDelivered, web_push_sent: webPushSent, notification_id: notificationId };
 };
 
 /**

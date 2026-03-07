@@ -41,6 +41,9 @@ import kbArticleModel from "./knowledgeBaseModels/kbArticleModel";
 // Stablecoin Conversion
 import stablecoinConversionModel from "./stablecoinConversionModel";
 
+// Push Subscriptions
+import pushSubscriptionModel from "./pushSubscriptionModel";
+
 // USDT Pool System models (legacy - to be deprecated)
 import {
   usdtPoolAddressModel,
@@ -115,4 +118,6 @@ export {
   NON_HD_CHAINS,
   // Stablecoin Conversion
   stablecoinConversionModel,
+  // Push Subscriptions
+  pushSubscriptionModel,
 };

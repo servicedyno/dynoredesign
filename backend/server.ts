@@ -838,6 +838,11 @@ const startServer = async () => {
     await stablecoinConversionModel.sync(syncOptions);
     log('Stablecoin conversion table synced.', 'info');
     
+    // Sync push subscription model (Web Push)
+    const { default: pushSubscriptionModel } = await import("./models/pushSubscriptionModel");
+    await pushSubscriptionModel.sync(syncOptions);
+    log('Push subscription table synced.', 'info');
+    
     // Sync company model (for auto-convert fields)
     await companyModel.sync(syncOptions);
     log('Company model synced with auto-convert fields.', 'info');

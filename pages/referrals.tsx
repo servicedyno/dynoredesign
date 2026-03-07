@@ -129,6 +129,35 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
     setTimeout(() => setToast((p) => ({ ...p, open: false })), 2000);
   }, []);
 
+  const handleShare = useCallback(async () => {
+    const referralLink = codeData?.referral_link;
+    if (!referralLink) return;
+
+    const shareData = {
+      title: "Join DynoPay",
+      text: `Hey! Use my referral link to sign up for DynoPay and we both earn rewards: `,
+      url: referralLink,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(referralLink);
+        setToast({ open: true, message: "Referral link copied to clipboard!", severity: "success" });
+        setTimeout(() => setToast((p) => ({ ...p, open: false })), 2000);
+      }
+    } catch (err: any) {
+      // User cancelled share or error — ignore AbortError
+      if (err?.name !== "AbortError") {
+        await navigator.clipboard.writeText(referralLink);
+        setToast({ open: true, message: "Referral link copied!", severity: "success" });
+        setTimeout(() => setToast((p) => ({ ...p, open: false })), 2000);
+      }
+    }
+  }, [codeData?.referral_link]);
+
   const stats = codeData?.stats;
 
   const statCards = [
@@ -206,28 +235,52 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
             )}
           </Box>
           {!loading && codeData?.referral_link && (
-            <Box
-              data-testid="share-referral-btn"
-              onClick={() => handleCopy(codeData.referral_link, "Referral link")}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                px: 2.5,
-                py: 1.25,
-                borderRadius: "10px",
-                bgcolor: theme.palette.primary.main,
-                color: "#fff",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                alignSelf: isMobile ? "flex-start" : "center",
-                "&:hover": { opacity: 0.9 },
-              }}
-            >
-              <ShareRounded sx={{ fontSize: 18 }} />
-              <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistSemibold", fontWeight: 600 }}>
-                Copy Invite Link
-              </Typography>
+            <Box sx={{ display: "flex", gap: 1.5, alignSelf: isMobile ? "flex-start" : "center", flexWrap: "wrap" }}>
+              <Box
+                data-testid="copy-referral-link-btn"
+                onClick={() => handleCopy(codeData.referral_link, "Referral link")}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 2.5,
+                  py: 1.25,
+                  borderRadius: "10px",
+                  border: `1px solid ${theme.palette.border.main}`,
+                  bgcolor: "#fff",
+                  color: theme.palette.text.primary,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  "&:hover": { bgcolor: theme.palette.secondary.main },
+                }}
+              >
+                <ContentCopyRounded sx={{ fontSize: 18 }} />
+                <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistSemibold", fontWeight: 600 }}>
+                  Copy Link
+                </Typography>
+              </Box>
+              <Box
+                data-testid="share-referral-btn"
+                onClick={handleShare}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 2.5,
+                  py: 1.25,
+                  borderRadius: "10px",
+                  bgcolor: theme.palette.primary.main,
+                  color: "#fff",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  "&:hover": { opacity: 0.9 },
+                }}
+              >
+                <ShareRounded sx={{ fontSize: 18 }} />
+                <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistSemibold", fontWeight: 600 }}>
+                  Share Referral Link
+                </Typography>
+              </Box>
             </Box>
           )}
         </Box>

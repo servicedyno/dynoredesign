@@ -13,7 +13,7 @@ import { companyLogger } from "../utils/loggers";
 import sequelize from "../utils/dbInstance";
 import { QueryTypes, Op } from "sequelize";
 import { sendCompanyProfileCreatedEmail, sendCompanyContactWelcomeEmail, sendCompanyProfileUpdatedEmail } from "../services/emailService";
-import { deleteRedisItem } from "../utils/redisInstance";
+import { deleteRedisItem, getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 
 import axios from "axios";
 
@@ -248,42 +248,54 @@ const addCompany = async (req: express.Request, res: express.Response) => {
       photo,
     });
 
-    // Send email notifications
+    // Send email notifications (with deduplication guard)
     try {
-      // Fetch user details for email
-      const user = await userModel.findOne({
-        where: { user_id: userData.user_id },
-        attributes: ['name', 'email'],
-      });
+      const emailDedupKey = `company-email-sent:${userData.user_id}:${resData.dataValues.company_id}`;
+      const alreadySent = await getRedisItem(emailDedupKey);
+      if (!alreadySent || Object.keys(alreadySent).length === 0) {
+        await setRedisItem(emailDedupKey, { sent: true });
+        await setRedisTTL(emailDedupKey, 3600); // 1 hour dedup window
 
-      if (user) {
-        const userDetails = user.dataValues as { name: string; email: string };
-        const companyName = data.company_name || 'Your Company';
-        const companyContactEmail = data.email; // Company contact email from form
+        // Fetch user details for email
+        const user = await userModel.findOne({
+          where: { user_id: userData.user_id },
+          attributes: ['name', 'email'],
+        });
 
-        // Email 1: Send to account holder (operational confirmation)
-        await sendCompanyProfileCreatedEmail(
-          userDetails.email,
-          userDetails.name || 'User',
-          companyName
-        );
-        companyLogger.info(
-          `Company profile created email sent to account: ${userDetails.email}`,
-          { user_id: userData.user_id, company_name: companyName }
-        );
+        if (user) {
+          const userDetails = user.dataValues as { name: string; email: string };
+          const companyName = data.company_name || 'Your Company';
+          const companyContactEmail = data.email; // Company contact email from form
 
-        // Email 2: Send to company contact (if provided and different from account email)
-        if (companyContactEmail && companyContactEmail.toLowerCase() !== userDetails.email.toLowerCase()) {
-          await sendCompanyContactWelcomeEmail(
-            companyContactEmail,
-            companyName,
-            userDetails.name || 'the account holder'
+          // Email 1: Send to account holder (operational confirmation)
+          await sendCompanyProfileCreatedEmail(
+            userDetails.email,
+            userDetails.name || 'User',
+            companyName
           );
           companyLogger.info(
-            `Company contact welcome email sent to: ${companyContactEmail}`,
+            `Company profile created email sent to account: ${userDetails.email}`,
             { user_id: userData.user_id, company_name: companyName }
           );
+
+          // Email 2: Send to company contact (if provided and different from account email)
+          if (companyContactEmail && companyContactEmail.toLowerCase() !== userDetails.email.toLowerCase()) {
+            await sendCompanyContactWelcomeEmail(
+              companyContactEmail,
+              companyName,
+              userDetails.name || 'the account holder'
+            );
+            companyLogger.info(
+              `Company contact welcome email sent to: ${companyContactEmail}`,
+              { user_id: userData.user_id, company_name: companyName }
+            );
+          }
         }
+      } else {
+        companyLogger.info(
+          `Company creation emails already sent (dedup), skipping`,
+          { user_id: userData.user_id }
+        );
       }
     } catch (emailError) {
       // Log email error but don't fail the company creation
