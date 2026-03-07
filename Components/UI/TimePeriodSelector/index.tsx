@@ -423,9 +423,9 @@ export default function TimePeriodSelector({
               : value === "custom"
                 ? "260px"
                 : "175px",
-            border: "1px solid rgba(233,236,242,1)",
+            border: `1px solid ${theme.palette.border?.main || "rgba(233,236,242,1)"}`,
             borderRadius: "6px",
-            backgroundColor: "#fff",
+            backgroundColor: theme.palette.background.paper,
             padding: "7px 8px",
             zIndex: 100,
             boxShadow: "0px 8px 24px rgba(0,0,0,0.08)",

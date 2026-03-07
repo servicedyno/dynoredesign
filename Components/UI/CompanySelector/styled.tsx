@@ -11,7 +11,7 @@ export const SelectorTrigger = styled("div")(({ theme }) => ({
   border: "1px solid ",
   borderColor: theme?.palette?.border?.main,
   cursor: "pointer",
-  background: "white",
+  background: theme.palette.background.paper,
   zIndex: 2,
   position: "relative",
   color: theme?.palette?.text?.primary,

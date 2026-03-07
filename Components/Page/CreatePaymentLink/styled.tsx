@@ -144,7 +144,7 @@ export const ExpireTrigger = styled(Box, {
     transform: "translateY(-50%)",
     width: "1px",
     height: isMobile ? "16px" : "20px",
-    backgroundColor: "#E9ECF2",
+    backgroundColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "#E9ECF2",
     zIndex: 1,
     pointerEvents: "none",
   },

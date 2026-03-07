@@ -172,6 +172,9 @@ const CreatePaymentLinkPage = ({
     description: "",
   });
 
+  // Optional customer email for referral code delivery
+  const [customerEmail, setCustomerEmail] = useState("");
+
   // Touched fields for Payment Settings tab
   const [paymentSettingsTouched, setPaymentSettingsTouched] = useState({
     value: false,
@@ -327,7 +330,7 @@ const CreatePaymentLinkPage = ({
       }
 
       // Build API payload with backend-compatible field names
-      const apiPayload = {
+      const apiPayload: any = {
         amount: parseFloat(paymentSettings.value),
         currency: paymentSettings.currency,
         description: paymentSettings.description,
@@ -341,6 +344,10 @@ const CreatePaymentLinkPage = ({
         apply_tax: includeTax,
         company_id: selectedCompanyId,
       };
+
+      if (customerEmail.trim()) {
+        apiPayload.customer_email = customerEmail.trim();
+      }
 
       // Dispatch to Redux saga which calls the API
       if (hasPaymentLinkData) {
@@ -721,6 +728,65 @@ const CreatePaymentLinkPage = ({
                 paymentSettings={paymentSettings}
                 setPaymentSettings={setPaymentSettings}
               />
+
+              <Box
+                sx={{
+                  height: "1px",
+                  backgroundColor: theme.palette.border.main,
+                }}
+              />
+
+              {/* Optional Customer Email for referral code delivery */}
+              <Box sx={{ py: 2 }}>
+                <Typography
+                  sx={{
+                    fontSize: "14px",
+                    fontFamily: "UrbanistSemiBold",
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    mb: 1,
+                  }}
+                >
+                  {tPaymentLink("customerEmail") || "Customer Email"}{" "}
+                  <Typography component="span" sx={{ fontSize: "13px", color: theme.palette.text.secondary, fontFamily: "UrbanistRegular" }}>
+                    ({tPaymentLink("optional") || "Optional"})
+                  </Typography>
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: "12px",
+                    fontFamily: "UrbanistRegular",
+                    color: theme.palette.text.secondary,
+                    mb: 1.5,
+                  }}
+                >
+                  {tPaymentLink("customerEmailDescription") || "Send payment link and referral code to this email"}
+                </Typography>
+                <Box
+                  component="input"
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerEmail(e.target.value)}
+                  placeholder={tPaymentLink("customerEmailPlaceholder") || "customer@example.com"}
+                  sx={{
+                    width: "100%",
+                    p: "10px 14px",
+                    borderRadius: "10px",
+                    border: `1px solid ${theme.palette.border.main}`,
+                    bgcolor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                    fontFamily: "UrbanistRegular",
+                    fontSize: "14px",
+                    outline: "none",
+                    "&:focus": {
+                      borderColor: theme.palette.primary.main,
+                    },
+                    "&::placeholder": {
+                      color: theme.palette.text.disabled,
+                    },
+                  }}
+                />
+              </Box>
 
               <Box
                 sx={{

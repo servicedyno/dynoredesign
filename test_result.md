@@ -17,7 +17,32 @@ DynoPay is a full-stack crypto payment gateway.
 - **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL` set to pod URL
 - **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to pod URL
 
-## Changes Made in This Session
+## Changes Made in Current Session (Phase: Referral, Dark Mode, Translations)
+
+### Dark Mode Fixes
+- Fixed 11 SVG icons in `/assets/Icons/home/` - changed hardcoded `stroke="#0004FF"` to `currentColor`
+- Fixed `FeatureIcon` and `WhyChooseDynoPayIcon` styled components with proper dark mode color
+- Fixed App Header (`Components/Layout/Header`) - dark mode background, borders, hovers
+- Fixed 15+ components with hardcoded `#fff` backgrounds → `theme.palette.background.paper`
+  - PanelCard, NewHeader, UserMenu, CompanySelector, TimePeriodSelector, FullHeightModal, AreaChart, DashboardRightSection, API styled, AuthLayout/PasswordValidation, CryptocurrencySelector, OnboardingFlow, ApiKeysModel
+- Fixed DynoPay logo in NewHeader to swap between dark/white variants based on theme
+- Fixed hardcoded `#E9ECF2` borders in DashboardRightSection and CreatePaymentLink
+
+### Translation Fixes
+- Phone tab of register page: All strings now use `t()` (Full Name, Phone Number, Password, Send Verification Code, Phone Verification subtitle, password error)
+- Email/Phone toggle buttons now translated
+- App Header: "My Profile", "Logout", "Hello" now use `t()` from common namespace
+- Added missing keys to all 6 locales (en, de, es, fr, nl, pt) in `auth.json` and `common.json`
+- Created `referrals.json` for all 6 locales with 35+ keys
+- Registered referrals namespace in i18n.js
+
+### Referral System UI
+- Added optional "Referral Code" input field to email registration (with collapsible "Have a referral code?" link)
+- Added same referral code field to phone registration tab
+- Auto-populates referral code from URL query param (`?ref=CODE`)
+- Referral code is sent in register payload to backend
+- Added optional "Customer Email" field to Create Payment Link form (for sending referral/referee codes)
+- Referral page strings now use translations
 
 ### 1. Dark/Light Mode Toggle (Landing + In-App)
 - Extended existing `ThemeContext` to work globally (was only for checkout pages)

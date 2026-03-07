@@ -10,7 +10,7 @@ export const ModalContainer = styled(Dialog)(({ theme }) => ({
     borderRadius: "30px",
     margin: 0,
     maxWidth: "100vw",
-    background: "#fff",
+    background: theme.palette.background.paper,
     top: "50%",
     transform: "translateY(-50%)",
     maxHeight: "100%",

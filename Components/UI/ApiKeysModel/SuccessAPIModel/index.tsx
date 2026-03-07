@@ -165,7 +165,7 @@ const SuccessAPIModel: React.FC<SuccessAPIModelProps> = ({
                     height: 26,
                     borderRadius: "4px",
                     border: `1px solid ${theme.palette.primary.main}`,
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.palette.background.paper,
                   }}
                   onClick={() => handleCopy("dpk_live_x04exyjb946e9lwclqhqvqzrgu3k0v24")}
                 >
@@ -225,7 +225,7 @@ const SuccessAPIModel: React.FC<SuccessAPIModelProps> = ({
                     height: 26,
                     borderRadius: "4px",
                     border: `1px solid ${theme.palette.primary.main}`,
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.palette.background.paper,
                   }}
                   onClick={() => handleCopy("dpk_live_x04exyjb946e9lwclqhqvqzrgu3k0v24")}
                 >

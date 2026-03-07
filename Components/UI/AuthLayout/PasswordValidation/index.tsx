@@ -108,7 +108,7 @@ const PasswordValidation: React.FC<PasswordValidationProps> = ({
       sx={{
         p: isMobile ? "12px" : "18px",
         position: "relative",
-        background: "#fff",
+        background: theme.palette.background.paper,
         border: `1px solid ${theme.palette.border.main}`,
         borderRadius: "16px",
         boxShadow: "rgba(52, 93, 157, 0.09) 0px 4px 6.3px",
@@ -143,7 +143,7 @@ const PasswordValidation: React.FC<PasswordValidationProps> = ({
             height: 0,
             borderTop: "9px solid transparent",
             borderBottom: "9px solid transparent",
-            borderLeft: "9px solid #fff",
+            borderLeft: `9px solid ${theme.palette.background.paper}`,
           },
         }),
 
@@ -173,7 +173,7 @@ const PasswordValidation: React.FC<PasswordValidationProps> = ({
             height: 0,
             borderLeft: "9px solid transparent",
             borderRight: "9px solid transparent",
-            borderBottom: "9px solid #fff",
+            borderBottom: `9px solid ${theme.palette.background.paper}`,
           },
         }),
       }}

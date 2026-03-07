@@ -33,7 +33,7 @@ export const UserName = styled("span")(({ theme }) => ({
 
 export const PopWrapper = styled("div")(() => ({
   padding: "16px 18px",
-  background: "#fff",
+  background: theme.palette.background.paper,
 }));
 
 export const UserRow = styled("div")(() => ({

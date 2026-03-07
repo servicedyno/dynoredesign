@@ -110,7 +110,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
         position: "fixed",
         left: position.left,
         top: position.top,
-        background: "#fff",
+        background: theme.palette.background.paper,
         padding: "10px 14px",
         borderRadius: "12px",
         boxShadow: "0 10px 25px rgba(0,0,0,0.12)",

@@ -79,7 +79,8 @@ type LeaderboardEntry = {
 const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
   const theme = useTheme();
   const isMobile = useIsMobile("md");
-  const { t } = useTranslation("common");
+  const { t } = useTranslation("referrals");
+  const { t: tCommon } = useTranslation("common");
 
   const [loading, setLoading] = useState(true);
   const [codeData, setCodeData] = useState<ReferralStats | null>(null);
@@ -91,10 +92,10 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
 
   useEffect(() => {
     if (setPageName && setPageDescription) {
-      setPageName("Referrals");
-      setPageDescription("Earn rewards by inviting others to DynoPay");
+      setPageName(t("pageTitle"));
+      setPageDescription(t("pageDescription"));
     }
-  }, [setPageName, setPageDescription]);
+  }, [setPageName, setPageDescription, t]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -125,17 +126,17 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
 
   const handleCopy = useCallback((text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    setToast({ open: true, message: `${label} copied!`, severity: "success" });
+    setToast({ open: true, message: label === "Referral code" ? t("referralCodeCopied") : t("referralLinkCopied"), severity: "success" });
     setTimeout(() => setToast((p) => ({ ...p, open: false })), 2000);
-  }, []);
+  }, [t]);
 
   const handleShare = useCallback(async () => {
     const referralLink = codeData?.referral_link;
     if (!referralLink) return;
 
     const shareData = {
-      title: "Join DynoPay",
-      text: `Hey! Use my referral link to sign up for DynoPay and we both earn rewards: `,
+      title: t("joinDynoPay"),
+      text: t("shareMessage"),
       url: referralLink,
     };
 
@@ -143,28 +144,26 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
       if (navigator.share && navigator.canShare?.(shareData)) {
         await navigator.share(shareData);
       } else {
-        // Fallback: copy to clipboard
         await navigator.clipboard.writeText(referralLink);
-        setToast({ open: true, message: "Referral link copied to clipboard!", severity: "success" });
+        setToast({ open: true, message: t("referralLinkCopied"), severity: "success" });
         setTimeout(() => setToast((p) => ({ ...p, open: false })), 2000);
       }
     } catch (err: any) {
-      // User cancelled share or error — ignore AbortError
       if (err?.name !== "AbortError") {
         await navigator.clipboard.writeText(referralLink);
-        setToast({ open: true, message: "Referral link copied!", severity: "success" });
+        setToast({ open: true, message: t("referralLinkCopied"), severity: "success" });
         setTimeout(() => setToast((p) => ({ ...p, open: false })), 2000);
       }
     }
-  }, [codeData?.referral_link]);
+  }, [codeData?.referral_link, t]);
 
   const stats = codeData?.stats;
 
   const statCards = [
-    { label: "Total Referrals", value: stats?.total_referrals ?? 0, icon: PeopleAltRounded, color: theme.palette.primary.main },
-    { label: "Active", value: stats?.active_referrals ?? 0, icon: PersonAddRounded, color: theme.palette.border.success },
-    { label: "Pending", value: stats?.pending_referrals ?? 0, icon: PeopleAltRounded, color: "#F59E0B" },
-    { label: "Total Earnings", value: `$${stats?.total_earnings ?? "0.00"}`, icon: MonetizationOnRounded, color: theme.palette.primary.main },
+    { label: t("totalReferrals"), value: stats?.total_referrals ?? 0, icon: PeopleAltRounded, color: theme.palette.primary.main },
+    { label: t("active"), value: stats?.active_referrals ?? 0, icon: PersonAddRounded, color: theme.palette.border.success },
+    { label: t("pending"), value: stats?.pending_referrals ?? 0, icon: PeopleAltRounded, color: "#F59E0B" },
+    { label: t("totalEarnings"), value: `$${stats?.total_earnings ?? "0.00"}`, icon: MonetizationOnRounded, color: theme.palette.primary.main },
   ];
 
   return (
@@ -182,7 +181,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
             p: isMobile ? 2.5 : 3,
             borderRadius: "14px",
             border: `1px solid ${theme.palette.border.main}`,
-            bgcolor: "#fff",
+            bgcolor: theme.palette.background.paper,
             display: "flex",
             flexDirection: isMobile ? "column" : "row",
             gap: 2,
@@ -200,7 +199,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
                 mb: 0.5,
               }}
             >
-              Your Referral Code
+              {t("yourReferralCode")}
             </Typography>
             {loading ? (
               <Skeleton width={200} height={32} />
@@ -247,7 +246,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
                   py: 1.25,
                   borderRadius: "10px",
                   border: `1px solid ${theme.palette.border.main}`,
-                  bgcolor: "#fff",
+                  bgcolor: theme.palette.background.paper,
                   color: theme.palette.text.primary,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
@@ -256,7 +255,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
               >
                 <ContentCopyRounded sx={{ fontSize: 18 }} />
                 <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistSemibold", fontWeight: 600 }}>
-                  Copy Link
+                  {t("copyLink")}
                 </Typography>
               </Box>
               <Box
@@ -278,7 +277,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
               >
                 <ShareRounded sx={{ fontSize: 18 }} />
                 <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistSemibold", fontWeight: 600 }}>
-                  Share Referral Link
+                  {t("shareLink")}
                 </Typography>
               </Box>
             </Box>
@@ -302,7 +301,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
                 p: isMobile ? 2 : 2.5,
                 borderRadius: "12px",
                 border: `1px solid ${theme.palette.border.main}`,
-                bgcolor: "#fff",
+                bgcolor: theme.palette.background.paper,
               }}
             >
               <Box
@@ -364,7 +363,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
               p: isMobile ? 2 : 2.5,
               borderRadius: "12px",
               border: `1px solid ${theme.palette.border.main}`,
-              bgcolor: "#fff",
+              bgcolor: theme.palette.background.paper,
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
@@ -434,7 +433,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
               p: isMobile ? 2 : 2.5,
               borderRadius: "12px",
               border: `1px solid ${theme.palette.border.main}`,
-              bgcolor: "#fff",
+              bgcolor: theme.palette.background.paper,
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
@@ -455,9 +454,9 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
             ) : (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {[
-                  { label: "Credited", value: earnings?.summary.credited_earnings ?? 0 },
-                  { label: "Pending", value: earnings?.summary.pending_earnings ?? 0 },
-                  { label: "Withdrawn", value: earnings?.summary.withdrawn_earnings ?? 0 },
+                  { label: t("credited"), value: earnings?.summary.credited_earnings ?? 0 },
+                  { label: t("pending"), value: earnings?.summary.pending_earnings ?? 0 },
+                  { label: t("withdrawn"), value: earnings?.summary.withdrawn_earnings ?? 0 },
                 ].map((row) => (
                   <Box
                     key={row.label}
@@ -502,7 +501,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
             p: isMobile ? 2 : 2.5,
             borderRadius: "12px",
             border: `1px solid ${theme.palette.border.main}`,
-            bgcolor: "#fff",
+            bgcolor: theme.palette.background.paper,
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
@@ -609,7 +608,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
             p: isMobile ? 2 : 2.5,
             borderRadius: "12px",
             border: `1px solid ${theme.palette.border.main}`,
-            bgcolor: "#fff",
+            bgcolor: theme.palette.background.paper,
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>

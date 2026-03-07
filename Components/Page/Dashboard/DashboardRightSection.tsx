@@ -78,7 +78,7 @@ const DashboardRightSection = () => {
               p: "8px",
               width: isMobile ? 32 : 40,
               height: isMobile ? 32 : 40,
-              "&:hover": { backgroundColor: "#E9ECF2" },
+              "&:hover": { backgroundColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.12)" : "#E9ECF2" },
             }}
           >
             <Image
@@ -270,7 +270,7 @@ const DashboardRightSection = () => {
                   height: isMobile ? 32 : 49,
                   border: `1px solid ${theme.palette.border.main}`,
                   borderRadius: "50%",
-                  background: "#fff",
+                  background: theme.palette.background.paper,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

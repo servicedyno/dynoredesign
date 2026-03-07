@@ -310,5 +310,8 @@
         "content": "En utilisant DynoPay, les utilisateurs acceptent de se conformer à cette Politique AML et de coopérer à toutes les demandes liées à la conformité. Le non-respect peut entraîner la suspension du compte, le signalement aux autorités ou la résiliation permanente."
       }
     }
-  }
+  },
+  "myProfile": "Mon Profil",
+  "logout": "Déconnexion",
+  "hello": "Bonjour"
 }

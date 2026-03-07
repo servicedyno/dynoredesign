@@ -289,5 +289,8 @@
         "content": "Door DynoPay te gebruiken, stemmen gebruikers ermee in dit AML-beleid na te leven en mee te werken aan alle compliance-gerelateerde verzoeken. Niet-naleving kan resulteren in accountopschorting, melding aan autoriteiten of permanente beëindiging."
       }
     }
-  }
+  },
+  "myProfile": "Mijn Profiel",
+  "logout": "Uitloggen",
+  "hello": "Hallo"
 }

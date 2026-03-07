@@ -48,7 +48,7 @@ export const ApiKeyViewButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 6,
   width: 40,
   height: 40,
-  backgroundColor: "#fff",
+  backgroundColor: theme.palette.background.paper,
   [theme.breakpoints.down("md")]: {
     width: 32,
     height: 32,
@@ -94,7 +94,7 @@ export const ApiKeyDeleteButton = styled(IconButton)(({ theme }) => ({
   borderRadius: 6,
   width: 40,
   height: 40,
-  backgroundColor: "#fff",
+  backgroundColor: theme.palette.background.paper,
   [theme.breakpoints.down("md")]: {
     width: 32,
     height: 32,

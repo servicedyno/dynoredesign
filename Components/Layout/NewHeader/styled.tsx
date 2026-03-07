@@ -66,7 +66,7 @@ export const RequiredKYC = styled("div")(({ theme }) => ({
   borderRadius: "6px",
   border: "1px solid",
   cursor: "pointer",
-  background: "white",
+  background: theme.palette.background.paper,
   color: theme?.palette?.border?.main,
 }));
 

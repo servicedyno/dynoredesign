@@ -22,6 +22,7 @@ import { useSelector, useDispatch } from "react-redux";
 import useWindow from "@/hooks/useWindow";
 import useTokenData from "@/hooks/useTokenData";
 import { useRouter } from "next/router";
+import { useTranslation } from "react-i18next";
 
 import SideBar from "@/Components/Layout/Sidebar";
 import { drawerWidth } from "@/styles/theme";
@@ -46,6 +47,7 @@ const Header = ({ pageName, component }: HeaderProps) => {
   const menuRef = useRef<HTMLElement | null>(null);
   const menuRef2 = useRef<HTMLElement | null>(null);
   const tokenData = useTokenData();
+  const { t } = useTranslation("common");
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -91,9 +93,9 @@ const Header = ({ pageName, component }: HeaderProps) => {
           zIndex: 999,
           width: { lg: `calc(100vw - ${drawerWidth}px)`, xs: "100vw" },
           boxShadow: "none",
-          background: theme.palette.common.white,
-          color: theme.palette.primary.main,
-          borderBottom: "1px solid #EAEAEA",
+          background: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          borderBottom: `1px solid ${theme.palette.border?.main || (theme.palette.mode === "dark" ? "#2A2D42" : "#EAEAEA")}`,
         }}
       >
         <Toolbar sx={{ display: { sm: "flex", xs: "none" } }}>
@@ -139,7 +141,7 @@ const Header = ({ pageName, component }: HeaderProps) => {
                     objectFit: "cover",
                   },
                   "&:hover": {
-                    background: "#f8f8f8",
+                    background: theme.palette.action?.hover || (theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "#f8f8f8"),
                   },
                 }}
                 onClick={handlePopupMenu}
@@ -200,7 +202,7 @@ const Header = ({ pageName, component }: HeaderProps) => {
                     objectFit: "cover",
                   },
                   "&:hover": {
-                    background: "#f8f8f8",
+                    background: theme.palette.action?.hover || (theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "#f8f8f8"),
                   },
                 }}
                 onClick={handlePopupMenu2}
@@ -231,7 +233,7 @@ const Header = ({ pageName, component }: HeaderProps) => {
             >
               {pageName ?? ""}
             </Typography>
-            <Box>Hello</Box>
+            <Box>{t("hello")}</Box>
           </Box>
         </Box>
       </AppBar>
@@ -309,7 +311,7 @@ const Header = ({ pageName, component }: HeaderProps) => {
                 router.push("/profile");
               }}
             >
-              My Profile
+              {t("myProfile")}
             </ListItemButton>
           </ListItem>
           <ListItem sx={{ p: 0 }}>
@@ -317,7 +319,7 @@ const Header = ({ pageName, component }: HeaderProps) => {
               sx={{ color: (theme) => theme.palette.error.main }}
               onClick={handleLogout}
             >
-              Logout
+              {t("logout")}
             </ListItemButton>
           </ListItem>
         </List>

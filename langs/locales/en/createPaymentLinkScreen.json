@@ -81,5 +81,9 @@
   "editPaymentLink": "Edit Payment Link",
   "paymentLinkDetail": "Payment Link Details",
   "expiteDate": "Expiration date",
-  "expiteTime": "Expiration time"
+  "expiteTime": "Expiration time",
+  "customerEmail": "Customer Email",
+  "optional": "Optional",
+  "customerEmailDescription": "Send payment link and referral code to this email",
+  "customerEmailPlaceholder": "customer@example.com"
 }

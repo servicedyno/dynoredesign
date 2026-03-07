@@ -289,5 +289,8 @@
         "content": "Durch die Nutzung von DynoPay erklären sich die Benutzer damit einverstanden, diese AML-Richtlinie einzuhalten und bei allen compliance-bezogenen Anfragen zu kooperieren. Nichteinhaltung kann zur Kontosperrung, Meldung an Behörden oder dauerhafter Kündigung führen."
       }
     }
-  }
+  },
+  "myProfile": "Mein Profil",
+  "logout": "Abmelden",
+  "hello": "Hallo"
 }

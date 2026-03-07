@@ -88,7 +88,7 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
           mx: "auto",
           textAlign: "center",
           p: isMobile ? 3 : 4,
-          backgroundColor: "#fff",
+          backgroundColor: theme.palette.background.paper,
         },
       }}
       data-testid="onboarding-celebration-modal"

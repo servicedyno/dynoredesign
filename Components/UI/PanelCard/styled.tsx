@@ -4,7 +4,7 @@ import { styled } from "@mui/material/styles";
 
 export const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: "10px",
-  background: "#fff",
+  background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.border.main}`,
   boxShadow: "none !important",
   display: "flex",

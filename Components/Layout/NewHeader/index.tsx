@@ -1,4 +1,5 @@
 import Logo from "@/assets/Images/auth/dynopay-logo.png";
+import LogoDark from "@/assets/Images/auth/dynopay-white-logo.png";
 import MobileLogo from "@/assets/Images/auth/dynopay-mobile-logo.png";
 import CompanySelector from "@/Components/UI/CompanySelector";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
@@ -77,7 +78,7 @@ const NewHeader = () => {
         <LogoContainer>
           <Image
             onClick={() => router.push("/dashboard")}
-            src={Logo}
+            src={muiTheme.palette.mode === "dark" ? LogoDark : Logo}
             alt="logo"
             width={114}
             height={39}

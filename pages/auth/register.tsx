@@ -24,7 +24,7 @@ import { Box, Typography, ToggleButton, ToggleButtonGroup, useTheme } from "@mui
 import EmailIcon from "@mui/icons-material/Email";
 import PhoneIcon from "@mui/icons-material/Phone";
 import Image from "next/image";
-import router from "next/router";
+import router, { useRouter } from "next/router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -46,6 +46,7 @@ const Register = () => {
   const { t } = useTranslation("auth");
   const dispatch = useDispatch();
   const muiTheme = useTheme();
+  const nextRouter = useRouter();
   const userState = useSelector((state: rootReducer) => state.userReducer);
 
   const [firstName, setFirstName] = useState("");
@@ -96,6 +97,19 @@ const Register = () => {
   const [showPhonePassword, setShowPhonePassword] = useState(false);
   const [phoneLoading, setPhoneLoading] = useState(false);
 
+  // Referral code state
+  const [referralCode, setReferralCode] = useState("");
+  const [showReferralField, setShowReferralField] = useState(false);
+
+  // Auto-populate referral code from URL query param
+  useEffect(() => {
+    const ref = nextRouter.query.ref as string;
+    if (ref) {
+      setReferralCode(ref);
+      setShowReferralField(true);
+    }
+  }, [nextRouter.query.ref]);
+
   // Phone OTP countdown timer
   useEffect(() => {
     if (phoneOtpCountdown <= 0) return;
@@ -108,17 +122,21 @@ const Register = () => {
   const handlePhoneRegisterStep1 = async () => {
     if (!phoneName.trim()) { setPhoneNameError("Name is required"); return; }
     if (!phone.trim() || phone.length < 8) { setPhoneError("Valid phone number is required (include country code, e.g. +1...)"); return; }
-    if (!phonePassword || !passwordRegex.test(phonePassword)) { setPhonePasswordError("Password must be 8-20 chars with uppercase, lowercase, number, special char"); return; }
+    if (!phonePassword || !passwordRegex.test(phonePassword)) { setPhonePasswordError(t("passwordValidationError")); return; }
     setPhoneNameError("");
     setPhoneError("");
     setPhonePasswordError("");
     setPhoneLoading(true);
     try {
-      await axiosBaseApi.post("/user/registerPhone", {
+      const phonePayload: any = {
         name: phoneName.trim(),
         mobile: phone.trim(),
         password: phonePassword,
-      });
+      };
+      if (referralCode.trim()) {
+        phonePayload.referral_code = referralCode.trim();
+      }
+      await axiosBaseApi.post("/user/registerPhone", phonePayload);
       setPhoneOtpSent(true);
       setPhoneOtpDialog(true);
       setPhoneOtpCountdown(60);
@@ -352,11 +370,15 @@ const Register = () => {
       setPasswordError("");
       setConfirmPasswordError("");
 
-      const payload = {
+      const payload: any = {
         name: `${firstName} ${lastName}`.trim(),
         email,
         password,
       };
+
+      if (referralCode.trim()) {
+        payload.referral_code = referralCode.trim();
+      }
 
       setPendingVerification(true);
       dispatch(UserAction(USER_REGISTER, payload));
@@ -452,10 +474,10 @@ const Register = () => {
             }}
           >
             <ToggleButton value="email">
-              <EmailIcon sx={{ fontSize: 16, mr: 0.5 }} /> Email
+              <EmailIcon sx={{ fontSize: 16, mr: 0.5 }} /> {t("email")}
             </ToggleButton>
             <ToggleButton value="phone">
-              <PhoneIcon sx={{ fontSize: 16, mr: 0.5 }} /> Phone
+              <PhoneIcon sx={{ fontSize: 16, mr: 0.5 }} /> {t("phone")}
             </ToggleButton>
           </ToggleButtonGroup>
         </Box>
@@ -471,9 +493,9 @@ const Register = () => {
             }}
           >
             <InputField
-              label="Full Name"
+              label={t("fullName")}
               type="text"
-              placeholder="Enter your full name"
+              placeholder={t("fullNamePlaceholder")}
               value={phoneName}
               onChange={(e) => { setPhoneName(e.target.value); setPhoneNameError(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
@@ -481,9 +503,9 @@ const Register = () => {
               helperText={phoneNameError}
             />
             <InputField
-              label="Phone Number"
+              label={t("phoneNumber")}
               type="tel"
-              placeholder="+1 234 567 8900"
+              placeholder={t("phoneNumberPlaceholder")}
               value={phone}
               onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
@@ -494,10 +516,10 @@ const Register = () => {
               type={showPhonePassword ? "text" : "password"}
               value={phonePassword}
               autoComplete="off"
-              label="Password"
+              label={t("password")}
               onChange={(e) => { setPhonePassword(e.target.value.replace(/\s/g, "")); setPhonePasswordError(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
-              placeholder="Create a password"
+              placeholder={t("createPassword")}
               error={!!phonePasswordError}
               helperText={phonePasswordError}
               sideButton={true}
@@ -509,9 +531,35 @@ const Register = () => {
               showPasswordToggle={true}
             />
 
+            {/* Referral Code for Phone Tab */}
+            <Box>
+              {!showReferralField ? (
+                <Typography
+                  onClick={() => setShowReferralField(true)}
+                  sx={{
+                    fontSize: "13px",
+                    fontFamily: "UrbanistMedium",
+                    color: muiTheme.palette.primary.main,
+                    cursor: "pointer",
+                    "&:hover": { textDecoration: "underline" },
+                  }}
+                >
+                  {t("haveReferralCode")}
+                </Typography>
+              ) : (
+                <InputField
+                  label={t("referralCode")}
+                  type="text"
+                  placeholder={t("referralCodePlaceholder")}
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value)}
+                />
+              )}
+            </Box>
+
             <Box sx={{ mt: 1 }}>
               <CustomButton
-                label="Send Verification Code"
+                label={t("sendVerificationCode")}
                 variant="primary"
                 size={isMobile ? "small" : "medium"}
                 fullWidth
@@ -527,8 +575,8 @@ const Register = () => {
               open={phoneOtpDialog}
               onClose={() => setPhoneOtpDialog(false)}
               preventClose={false}
-              title="Phone Verification"
-              subtitle="Enter the verification code sent to your phone"
+              title={t("phoneVerification")}
+              subtitle={t("phoneVerificationSubtitle")}
               contactInfo={phone}
               contactType="phone"
               otpLength={6}
@@ -785,6 +833,32 @@ const Register = () => {
             }}
             showPasswordToggle={true}
           />
+
+          {/* Referral Code */}
+          <Box sx={{ mt: 1 }}>
+            {!showReferralField ? (
+              <Typography
+                onClick={() => setShowReferralField(true)}
+                sx={{
+                  fontSize: "13px",
+                  fontFamily: "UrbanistMedium",
+                  color: muiTheme.palette.primary.main,
+                  cursor: "pointer",
+                  "&:hover": { textDecoration: "underline" },
+                }}
+              >
+                {t("haveReferralCode")}
+              </Typography>
+            ) : (
+              <InputField
+                label={t("referralCode")}
+                type="text"
+                placeholder={t("referralCodePlaceholder")}
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value)}
+              />
+            )}
+          </Box>
 
           {/* Sign Up Button */}
           <Box sx={{ marginTop: isMobile ? "16px" : "24px" }}>

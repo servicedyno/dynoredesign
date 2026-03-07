@@ -81,5 +81,9 @@
   "editPaymentLink": "Modifier le Lien de Paiement",
   "paymentLinkDetail": "Détails du Lien de Paiement",
   "expiteDate": "Date d'expiration",
-  "expiteTime": "Heure d'expiration"
+  "expiteTime": "Heure d'expiration",
+  "customerEmail": "Email du Client",
+  "optional": "Facultatif",
+  "customerEmailDescription": "Envoyer le lien de paiement et le code de parrainage à cet email",
+  "customerEmailPlaceholder": "client@exemple.fr"
 }

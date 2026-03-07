@@ -81,5 +81,9 @@
   "editPaymentLink": "Editar Enlace de Pago",
   "paymentLinkDetail": "Detalles del Enlace de Pago",
   "expiteDate": "Fecha de expiración",
-  "expiteTime": "Hora de expiración"
+  "expiteTime": "Hora de expiración",
+  "customerEmail": "Email del Cliente",
+  "optional": "Opcional",
+  "customerEmailDescription": "Enviar enlace de pago y código de referido a este email",
+  "customerEmailPlaceholder": "cliente@ejemplo.com"
 }

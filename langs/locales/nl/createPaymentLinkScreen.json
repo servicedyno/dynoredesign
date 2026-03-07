@@ -81,5 +81,9 @@
   "editPaymentLink": "Betaallink bewerken",
   "paymentLinkDetail": "Betaallinkdetails",
   "expiteDate": "Vervaldatum",
-  "expiteTime": "Vervaltijd"
+  "expiteTime": "Vervaltijd",
+  "customerEmail": "Klant E-mail",
+  "optional": "Optioneel",
+  "customerEmailDescription": "Betaallink en verwijzingscode naar dit e-mailadres sturen",
+  "customerEmailPlaceholder": "klant@voorbeeld.nl"
 }

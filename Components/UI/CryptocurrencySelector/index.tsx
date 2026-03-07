@@ -194,7 +194,7 @@ const CryptocurrencySelector: React.FC<CryptocurrencySelectorProps> = ({
               width: "100%",
               border: `1px solid ${borderColor}`,
               borderRadius: "6px",
-              backgroundColor: "#fff",
+              backgroundColor: theme.palette.background.paper,
               padding: "10px 14px",
               zIndex: 100,
               boxShadow: "0px 8px 24px rgba(0,0,0,0.08)",

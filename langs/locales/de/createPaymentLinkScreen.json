@@ -81,5 +81,9 @@
   "editPaymentLink": "Zahlungslink bearbeiten",
   "paymentLinkDetail": "Zahlungslink-Details",
   "expiteDate": "Ablaufdatum",
-  "expiteTime": "Ablaufzeit"
+  "expiteTime": "Ablaufzeit",
+  "customerEmail": "Kunden-E-Mail",
+  "optional": "Optional",
+  "customerEmailDescription": "Zahlungslink und Empfehlungscode an diese E-Mail senden",
+  "customerEmailPlaceholder": "kunde@beispiel.de"
 }

@@ -80,5 +80,9 @@
   "editPaymentLink": "Editar Link de Pagamento",
   "paymentLinkDetail": "Detalhes do link de pagamento",
   "expiteDate": "Data de validade",
-  "expiteTime": "Prazo de validade"
+  "expiteTime": "Prazo de validade",
+  "customerEmail": "Email do Cliente",
+  "optional": "Opcional",
+  "customerEmailDescription": "Enviar link de pagamento e código de indicação para este email",
+  "customerEmailPlaceholder": "cliente@exemplo.com"
 }

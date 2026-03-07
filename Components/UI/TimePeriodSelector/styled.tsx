@@ -13,7 +13,7 @@ export const PeriodTrigger = muiStyled(Box)(({ theme }: any) => ({
   border: "1px solid",
   borderColor: theme?.palette?.border?.main,
   cursor: "pointer",
-  background: "white",
+  background: theme.palette.background.paper,
   color: theme?.palette?.text?.primary ?? "#000",
   minWidth: "fit-content",
   transition: "all 0.2s ease",

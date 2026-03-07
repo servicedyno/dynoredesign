@@ -44,6 +44,7 @@ instance.init({
       termsConditions: require("./langs/locales/en/termsConditions.json"),
       privacyPolicy: require("./langs/locales/en/privacyPolicy.json"),
       amlPolicy: require("./langs/locales/en/amlPolicy.json"),
+      referrals: require("./langs/locales/en/referrals.json"),
     },
     pt: {
       common: require("./langs/locales/pt/common.json"),
@@ -64,6 +65,7 @@ instance.init({
       termsConditions: require("./langs/locales/pt/termsConditions.json"),
       privacyPolicy: require("./langs/locales/pt/privacyPolicy.json"),
       amlPolicy: require("./langs/locales/pt/amlPolicy.json"),
+      referrals: require("./langs/locales/pt/referrals.json"),
     },
     fr: {
       common: require("./langs/locales/fr/common.json"),
@@ -84,6 +86,7 @@ instance.init({
       termsConditions: require("./langs/locales/fr/termsConditions.json"),
       privacyPolicy: require("./langs/locales/fr/privacyPolicy.json"),
       amlPolicy: require("./langs/locales/fr/amlPolicy.json"),
+      referrals: require("./langs/locales/fr/referrals.json"),
     },
     es: {
       common: require("./langs/locales/es/common.json"),
@@ -104,6 +107,7 @@ instance.init({
       termsConditions: require("./langs/locales/es/termsConditions.json"),
       privacyPolicy: require("./langs/locales/es/privacyPolicy.json"),
       amlPolicy: require("./langs/locales/es/amlPolicy.json"),
+      referrals: require("./langs/locales/es/referrals.json"),
     },
     de: {
       common: require("./langs/locales/de/common.json"),
@@ -124,6 +128,7 @@ instance.init({
       termsConditions: require("./langs/locales/de/termsConditions.json"),
       amlPolicy: require("./langs/locales/de/amlPolicy.json"),
       privacyPolicy: require("./langs/locales/de/privacyPolicy.json"),
+      referrals: require("./langs/locales/de/referrals.json"),
     },
     nl: {
       common: require("./langs/locales/nl/common.json"),
@@ -144,6 +149,7 @@ instance.init({
       termsConditions: require("./langs/locales/nl/termsConditions.json"),
       amlPolicy: require("./langs/locales/nl/amlPolicy.json"),
       privacyPolicy: require("./langs/locales/nl/privacyPolicy.json"),
+      referrals: require("./langs/locales/nl/referrals.json"),
     },
   },
 
