@@ -98,6 +98,11 @@ const CreatePaymentLinkPage = ({
       if (newestLink?.payment_link) {
         setPaymentLink(newestLink.payment_link);
       }
+      // Update linkId in paymentSettings so the success modal shows it
+      const newLinkId = newestLink?.link_id || newestLink?.linkId || newestLink?._id || "";
+      if (newLinkId) {
+        setPaymentSettings((prev) => ({ ...prev, linkId: newLinkId }));
+      }
     }
     prevPaymentLinksLengthRef.current = currentLength;
   }, [paymentLinkState?.paymentLinks, successModalOpen]);
