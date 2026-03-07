@@ -518,7 +518,7 @@ const PaymentLinksTable = ({
                   "&:disabled": {
                     backgroundColor: theme.palette.common.white,
                     color: theme.palette.text.primary,
-                    border: `1px solid ${theme.palette.border.main}`,
+                    border: `1px solid ${(theme.palette as any).border?.main ?? "#E9ECF2"}`,
                     cursor: "not-allowed",
                     opacity: 0.5,
                   },
@@ -551,7 +551,7 @@ const PaymentLinksTable = ({
                   "&:disabled": {
                     backgroundColor: theme.palette.common.white,
                     color: theme.palette.text.primary,
-                    border: `1px solid ${theme.palette.border.main}`,
+                    border: `1px solid ${(theme.palette as any).border?.main ?? "#E9ECF2"}`,
                     cursor: "not-allowed",
                     opacity: 0.5,
                   },

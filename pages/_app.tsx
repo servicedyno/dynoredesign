@@ -90,7 +90,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
       return "payment";
     }
 
-    if (pathname.startsWith("/pay")) {
+    if (pathname.startsWith("/pay/") || pathname === "/pay") {
       return "pay";
     }
 
