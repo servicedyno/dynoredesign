@@ -75,6 +75,8 @@ const invoiceModel = sequelize.define(
       type: DataTypes.DECIMAL(5, 2),
     },
     // Totals
+    // Note: total_usd stores the total in the company's preferred currency (not necessarily USD)
+    // The actual currency is indicated by crypto_currency field
     total_usd: {
       type: DataTypes.DECIMAL(18, 2),
     },
@@ -83,6 +85,10 @@ const invoiceModel = sequelize.define(
     },
     crypto_currency: {
       type: DataTypes.STRING(20),
+    },
+    status: {
+      type: DataTypes.STRING(20),
+      defaultValue: "generated",
     },
     // Terms
     payment_terms: {

@@ -233,36 +233,12 @@ const withRetry = async <T>(
 const TAX_DATA_API_URL = process.env.TAX_DATA_API_URL || "https://api.apilayer.com/tax_data";
 const TAX_DATA_API_KEY = process.env.TAX_DATA_API_KEY;
 
-// Fallback VAT rates for major countries
-const FALLBACK_TAX_RATES: Record<string, number> = {
-  AT: 20, BE: 21, BG: 20, CY: 19, CZ: 21, DE: 19, DK: 25, EE: 22, ES: 21,
-  FI: 24, FR: 20, GR: 24, HR: 25, HU: 27, IE: 23, IT: 22, LT: 21, LU: 17,
-  LV: 21, MT: 18, NL: 21, PL: 23, PT: 23, RO: 19, SE: 25, SI: 22, SK: 20,
-  GB: 20, CH: 8.1, NO: 25, IS: 24, LI: 8.1,
-  US: 0, CA: 5, AU: 10, NZ: 15, JP: 10, SG: 9, IN: 18,
-};
-
-// Tax acronyms by country
-const TAX_ACRONYMS: Record<string, string> = {
-  AT: "VAT", BE: "VAT", BG: "VAT", CY: "VAT", CZ: "VAT", DE: "VAT", DK: "VAT",
-  EE: "VAT", ES: "IVA", FI: "VAT", FR: "TVA", GR: "VAT", HR: "VAT", HU: "VAT",
-  IE: "VAT", IT: "IVA", LT: "VAT", LU: "VAT", LV: "VAT", MT: "VAT", NL: "VAT",
-  PL: "VAT", PT: "IVA", RO: "VAT", SE: "VAT", SI: "VAT", SK: "VAT",
-  GB: "VAT", CH: "VAT", NO: "VAT", IS: "VAT", LI: "VAT",
-  US: "Tax", CA: "GST", AU: "GST", NZ: "GST", JP: "Tax", SG: "GST", IN: "GST",
-};
-
-// Country names
-const COUNTRY_NAMES: Record<string, string> = {
-  AT: "Austria", BE: "Belgium", BG: "Bulgaria", CY: "Cyprus", CZ: "Czech Republic",
-  DE: "Germany", DK: "Denmark", EE: "Estonia", ES: "Spain", FI: "Finland",
-  FR: "France", GR: "Greece", HR: "Croatia", HU: "Hungary", IE: "Ireland",
-  IT: "Italy", LT: "Lithuania", LU: "Luxembourg", LV: "Latvia", MT: "Malta",
-  NL: "Netherlands", PL: "Poland", PT: "Portugal", RO: "Romania", SE: "Sweden",
-  SI: "Slovenia", SK: "Slovakia", GB: "United Kingdom", US: "United States",
-  CA: "Canada", AU: "Australia", NZ: "New Zealand", IN: "India", JP: "Japan",
-  CH: "Switzerland", NO: "Norway", SG: "Singapore",
-};
+import {
+  FALLBACK_TAX_RATES,
+  TAX_TYPE_ACRONYMS as TAX_ACRONYMS,
+  COUNTRY_NAMES,
+  EU_COUNTRIES,
+} from "../utils/taxData";
 
 /**
  * Calculate tax for checkout based on customer location

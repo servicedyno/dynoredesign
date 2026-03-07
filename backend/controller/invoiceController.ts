@@ -16,6 +16,7 @@ import { generateInvoicePDF } from "../services/pdfService";
 import { sendInvoiceGeneratedEmail } from "../services/emailService";
 import { getFeeTiers, getTransactionFeePercent } from "../utils/feeConfigUtils";
 import { getCompanyBaseCurrency, getCurrencySymbol, convertToFiat } from "../utils/currencyUtils";
+import { EU_COUNTRIES } from "../utils/taxData";
 
 /**
  * Generate invoice number
@@ -28,15 +29,15 @@ const generateInvoiceNumber = async (): Promise<string> => {
   const day = String(date.getDate()).padStart(2, "0");
   const datePrefix = `INV-${year}${month}${day}`;
 
-  // Get count of invoices created today
+  // Get count of invoices created today (using correct Sequelize Op syntax)
   const todayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const todayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 
   const count = await invoiceModel.count({
     where: {
       invoice_date: {
-        $gte: todayStart,
-        $lt: todayEnd,
+        [Op.gte]: todayStart,
+        [Op.lt]: todayEnd,
       },
     },
   });
@@ -132,13 +133,7 @@ export const autoGenerateInvoice = async (
 
     if (companyData.vat_verified && companyData.country) {
       // VAT applies to EU countries
-      const euCountries = [
-        "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR",
-        "GR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL",
-        "PT", "RO", "SE", "SI", "SK",
-      ];
-
-      if (euCountries.includes(companyData.country)) {
+      if (EU_COUNTRIES.includes(companyData.country)) {
         // Get VAT rate from tbl_tax_rate dynamically
         try {
           const taxRate = await taxRateModel.findOne({

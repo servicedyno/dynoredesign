@@ -8,57 +8,22 @@ import {
 import { handleControllerErrorReturn } from "../helper/controllerErrorHandler";
 import { taxRateModel } from "../models";
 import { taxLogger } from "../utils/loggers";
+import {
+  FALLBACK_TAX_RATES,
+  TAX_ID_ACRONYMS,
+  TAX_TYPE_ACRONYMS,
+  COUNTRY_NAMES,
+  EU_COUNTRIES,
+} from "../utils/taxData";
 
-// Tax acronyms by country (from implementation tasks)
-const TAX_ACRONYMS: Record<string, string> = {
-  // European Union (All use VAT)
-  AT: "VAT", BE: "VAT", BG: "VAT", CY: "VAT", CZ: "VAT", DE: "VAT", DK: "VAT",
-  EE: "VAT", ES: "VAT", FI: "VAT", FR: "VAT", GR: "VAT", HR: "VAT", HU: "VAT",
-  IE: "VAT", IT: "VAT", LT: "VAT", LU: "VAT", LV: "VAT", MT: "VAT", NL: "VAT",
-  PL: "VAT", PT: "VAT", RO: "VAT", SE: "VAT", SI: "VAT", SK: "VAT",
-  // Rest of World
-  AD: "NRT", AE: "TRN", AF: "TIN", AG: "TIN", AL: "TIN", AM: "TIN", AO: "TIN",
-  AR: "CUIT", AU: "ABN", AW: "TIN", AZ: "TIN", BA: "TIN", BB: "TIN", BD: "BIN",
-  BF: "IFU", BH: "VAT", BJ: "IFU", BO: "TIN", BR: "CNPJ/CPF", BS: "TIN",
-  BY: "TIN", CA: "BN", CH: "VAT", CL: "RUT", CN: "TIN", CO: "NIT", CR: "TIN",
-  DO: "RCN", DZ: "TIN", EC: "RUC", EG: "TIN", GB: "VAT", GE: "VAT", GH: "TIN",
-  GT: "VAT", HK: "BR", ID: "NPWP", IL: "VAT", IN: "GST", IS: "VAT", JP: "CN",
-  KE: "PIN", KR: "BRN", KZ: "BIN", LI: "VAT", MA: "TIN", MC: "NIF", MD: "VAT",
-  ME: "TIN", MK: "TIN", MU: "VAT", MX: "RFC", MY: "TIN", NG: "TIN", NO: "VAT",
-  NZ: "GST", OM: "VAT", PA: "RUC", PE: "RUC", PH: "TIN", PK: "STRN", PY: "TIN",
-  RS: "TIN", RU: "INN", SA: "VAT", SG: "UEN", TH: "VAT", TR: "TIN", TW: "VAT",
-  UA: "VAT", US: "EIN", UY: "RUT", VE: "RIF", VN: "TIN", ZA: "VAT",
-};
-
-// Country names mapping
-const COUNTRY_NAMES: Record<string, string> = {
-  AT: "Austria", BE: "Belgium", BG: "Bulgaria", CY: "Cyprus", CZ: "Czech Republic",
-  DE: "Germany", DK: "Denmark", EE: "Estonia", ES: "Spain", FI: "Finland",
-  FR: "France", GR: "Greece", HR: "Croatia", HU: "Hungary", IE: "Ireland",
-  IT: "Italy", LT: "Lithuania", LU: "Luxembourg", LV: "Latvia", MT: "Malta",
-  NL: "Netherlands", PL: "Poland", PT: "Portugal", RO: "Romania", SE: "Sweden",
-  SI: "Slovenia", SK: "Slovakia", GB: "United Kingdom", US: "United States",
-  CA: "Canada", AU: "Australia", NZ: "New Zealand", IN: "India", JP: "Japan",
-  CN: "China", BR: "Brazil", MX: "Mexico", AR: "Argentina", CH: "Switzerland",
-  NO: "Norway", SG: "Singapore", HK: "Hong Kong", KR: "South Korea", ZA: "South Africa",
-  AE: "United Arab Emirates", SA: "Saudi Arabia", IL: "Israel", TR: "Turkey",
-  RU: "Russia", UA: "Ukraine", TH: "Thailand", MY: "Malaysia", ID: "Indonesia",
-  PH: "Philippines", VN: "Vietnam", NG: "Nigeria", EG: "Egypt", KE: "Kenya",
-  GH: "Ghana", MA: "Morocco", PK: "Pakistan", BD: "Bangladesh", CL: "Chile",
-  CO: "Colombia", PE: "Peru", VE: "Venezuela", EC: "Ecuador",
-};
+// Use TAX_ID_ACRONYMS for tax ID validation, TAX_TYPE_ACRONYMS for rate display
+const TAX_ACRONYMS = TAX_ID_ACRONYMS;
 
 const TAX_DATA_API_URL = process.env.TAX_DATA_API_URL || "https://api.apilayer.com/tax_data";
 const TAX_DATA_API_KEY = process.env.TAX_DATA_API_KEY;
 
-// Fallback VAT rates for EU countries (standard rates as of 2024)
-const FALLBACK_VAT_RATES: Record<string, number> = {
-  AT: 20, BE: 21, BG: 20, CY: 19, CZ: 21, DE: 19, DK: 25, EE: 22, ES: 21,
-  FI: 24, FR: 20, GR: 24, HR: 25, HU: 27, IE: 23, IT: 22, LT: 21, LU: 17,
-  LV: 21, MT: 18, NL: 21, PL: 23, PT: 23, RO: 19, SE: 25, SI: 22, SK: 20,
-  GB: 20, CH: 8.1, NO: 25, IS: 24, LI: 8.1, // Non-EU European
-  US: 0, CA: 5, AU: 10, NZ: 15, JP: 10, SG: 9, IN: 18, // Other major countries
-};
+// Use centralized FALLBACK_TAX_RATES as FALLBACK_VAT_RATES
+const FALLBACK_VAT_RATES = FALLBACK_TAX_RATES;
 
 /**
  * Get VAT/Tax rate for a country (cache-first logic)
@@ -255,14 +220,9 @@ const getTaxAcronyms = async (_req: express.Request, res: express.Response) => {
       tax_acronym: acronym,
     }));
 
-    // Group by region
-    const euCountries = ["AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", 
-                        "FR", "GR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT", 
-                        "NL", "PL", "PT", "RO", "SE", "SI", "SK"];
-    
     const grouped = {
-      european_union: acronymsWithNames.filter(a => euCountries.includes(a.country_code)),
-      rest_of_world: acronymsWithNames.filter(a => !euCountries.includes(a.country_code)),
+      european_union: acronymsWithNames.filter(a => EU_COUNTRIES.includes(a.country_code)),
+      rest_of_world: acronymsWithNames.filter(a => !EU_COUNTRIES.includes(a.country_code)),
     };
 
     return successResponseHelper(res, 200, "Tax acronyms retrieved", {

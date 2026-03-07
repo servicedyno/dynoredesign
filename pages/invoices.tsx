@@ -35,6 +35,8 @@ import axiosBaseApi from "@/axiosConfig";
 import CustomButton from "@/Components/UI/Buttons";
 import PanelCard from "@/Components/UI/PanelCard";
 import { theme as appTheme } from "@/styles/theme";
+import { getCurrencySymbol } from "@/helpers";
+import { useSelector } from "react-redux";
 
 interface Invoice {
   invoice_id: number;
@@ -90,6 +92,10 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
   const [taxLoading, setTaxLoading] = useState(false);
   const [groupBy, setGroupBy] = useState<string>("month");
   const [taxPeriod, setTaxPeriod] = useState<string>("all");
+
+  // Get company's base currency from API state
+  const apiState = useSelector((state: any) => state?.api);
+  const baseCurrency = apiState?.apiData?.[0]?.base_currency || "USD";
 
   useEffect(() => {
     if (setPageName && setPageDescription) {
@@ -208,18 +214,32 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
       if (taxPeriod !== "all") {
         const now = new Date();
         let startDate: Date;
+        let endDate: Date = now;
         switch (taxPeriod) {
           case "thisMonth":
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             break;
+          case "lastMonth":
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+            break;
+          case "thisQuarter": {
+            const quarter = Math.floor(now.getMonth() / 3);
+            startDate = new Date(now.getFullYear(), quarter * 3, 1);
+            break;
+          }
           case "thisYear":
             startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+          case "lastYear":
+            startDate = new Date(now.getFullYear() - 1, 0, 1);
+            endDate = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
             break;
           default:
             startDate = new Date(2020, 0, 1);
         }
         params.start_date = startDate.toISOString();
-        params.end_date = now.toISOString();
+        params.end_date = endDate.toISOString();
       }
 
       const res = await axiosBaseApi.get("/invoices/tax-report/csv", {
@@ -246,8 +266,9 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
     window.print();
   };
 
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2)}`;
+  const formatCurrency = (amount: number, currency?: string) => {
+    const curr = currency || baseCurrency;
+    return getCurrencySymbol(curr, amount.toFixed(2));
   };
 
   const formatDate = (dateStr: string) => {
@@ -467,7 +488,7 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
                             <TableCell align="right">
                               {parseFloat(String(inv.vat_amount)) > 0 ? (
                                 <Chip
-                                  label={`${formatCurrency(parseFloat(String(inv.vat_amount)))} (${inv.vat_rate}%)`}
+                                  label={`${formatCurrency(parseFloat(String(inv.vat_amount)), inv.crypto_currency)} (${inv.vat_rate}%)`}
                                   size="small"
                                   sx={{
                                     fontFamily: "UrbanistMedium",
@@ -499,7 +520,8 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
                                 }}
                               >
                                 {formatCurrency(
-                                  parseFloat(String(inv.total_usd))
+                                  parseFloat(String(inv.total_usd)),
+                                  inv.crypto_currency
                                 )}
                               </Typography>
                             </TableCell>
