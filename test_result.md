@@ -12,7 +12,7 @@ DynoPay is a full-stack crypto payment gateway.
 - ✅ MongoDB: Running
 
 ## Pod URL Setup
-- **Pod URL**: `https://e8e955c6-8e61-4dfe-94ca-15f3ba9be27b.preview.emergentagent.com`
+- **Pod URL**: `https://pod-endpoint-update.preview.emergentagent.com`
 - **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL` set to pod URL with trailing slash (used by axiosConfig.ts for API calls)
 - **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL` set to pod URL
 - **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to pod URL
@@ -989,7 +989,7 @@ Testing the DynoPay backend running on http://localhost:8001 (proxied to Node.js
 
 **Key Requirements Tested**:
 1. **Backend proxy is working**: Test that http://localhost:8001/api/ returns a response (confirms Python proxy → Node.js is working)
-2. **Email service FRONTEND_BASE_URL**: The emailService.ts now uses `process.env.FRONTEND_URL` instead of hardcoded `https://dynopay.com`. Since FRONTEND_URL is set to `https://e8e955c6-8e61-4dfe-94ca-15f3ba9be27b.preview.emergentagent.com` in `/app/backend/.env`, verify the backend loaded this value by checking backend logs.
+2. **Email service FRONTEND_BASE_URL**: The emailService.ts now uses `process.env.FRONTEND_URL` instead of hardcoded `https://dynopay.com`. Since FRONTEND_URL is set to `https://pod-endpoint-update.preview.emergentagent.com` in `/app/backend/.env`, verify the backend loaded this value by checking backend logs.
 3. **Payment link creation endpoint**: Test POST /api/pay/createPaymentLink returns a `payment_link` field in the response that uses the CHECKOUT_URL from env (should contain the pod URL, not dynopay.com).
 
 #### Test Results Summary
@@ -1003,7 +1003,7 @@ Testing the DynoPay backend running on http://localhost:8001 (proxied to Node.js
 
 #### Key Findings - All Requirements Met ✅
 1. **Python Proxy → Node.js Working**: ✅ The Python proxy at port 8001 successfully forwards requests to the Node.js backend on port 3300. The API responds with proper Dynopay service information.
-2. **FRONTEND_URL Configuration**: ✅ The backend `.env` file correctly has `FRONTEND_URL=https://e8e955c6-8e61-4dfe-94ca-15f3ba9be27b.preview.emergentagent.com` set to the pod URL instead of hardcoded dynopay.com.
+2. **FRONTEND_URL Configuration**: ✅ The backend `.env` file correctly has `FRONTEND_URL=https://pod-endpoint-update.preview.emergentagent.com` set to the pod URL instead of hardcoded dynopay.com.
 3. **Payment Link Endpoint Routing**: ✅ The `/api/pay/createPaymentLink` endpoint is properly registered and responds with CSRF protection (403), indicating the route exists and is functional.
 4. **API Documentation Available**: The API returns comprehensive endpoint documentation at `/api` showing all available routes including payments (`/api/pay`).
 5. **CSRF Protection Active**: Both the `/api/csrf-token` endpoint and payment creation endpoint properly implement CSRF protection as expected.
