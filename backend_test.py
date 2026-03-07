@@ -29,7 +29,7 @@ import os
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://a58067a0-d517-4c25-8124-372f0d4f6f5c.preview.emergentagent.com"
+BACKEND_URL = "https://pod-integration-demo.preview.emergentagent.com"
 
 class DynoPayBackendTester:
     def __init__(self):
