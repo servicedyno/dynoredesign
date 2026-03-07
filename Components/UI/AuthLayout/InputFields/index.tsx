@@ -429,12 +429,12 @@ const InputField: React.FC<InputFieldProps> = ({
                 backgroundColor:
                   inputBgColor ??
                   (disabled
-                    ? "#F5F5F5"
+                    ? theme.palette.action.disabledBackground
                     : success
-                      ? "#E5EDFF"
+                      ? (theme.palette.mode === "dark" ? "rgba(59,130,246,0.1)" : "#E5EDFF")
                       : error
-                        ? "#FFFBFB"
-                        : "#FFFFFF"),
+                        ? (theme.palette.mode === "dark" ? "rgba(239,68,68,0.05)" : "#FFFBFB")
+                        : theme.palette.background.paper),
                 transition: "all 0.3s ease",
                 boxShadow: "rgba(16, 24, 40, 0.05) 0px 1px 2px 0px",
                 "& fieldset": {
@@ -449,18 +449,18 @@ const InputField: React.FC<InputFieldProps> = ({
                   borderWidth: "1px",
                 },
                 "&.Mui-disabled": {
-                  backgroundColor: "#F5F5F5",
+                  backgroundColor: theme.palette.action.disabledBackground,
                   opacity: 1,
                 },
                 "& input": {
                   "&:-webkit-autofill": {
-                    WebkitBoxShadow: "0 0 0 1000px white inset",
-                    WebkitTextFillColor: "#333",
+                    WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset`,
+                    WebkitTextFillColor: theme.palette.text.primary,
                   },
                 },
               },
               "& .MuiOutlinedInput-input.Mui-disabled": {
-                WebkitTextFillColor: "#6b728080",
+                WebkitTextFillColor: theme.palette.text.disabled,
               },
             }}
           />

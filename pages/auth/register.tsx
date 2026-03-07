@@ -1,5 +1,6 @@
 import LoadingIcon from "@/assets/Icons/LoadingIcon";
 import Logo from "@/assets/Images/auth/dynopay-logo.png";
+import WhiteLogo from "@/assets/Images/auth/dynopay-white-logo.png";
 import InputField from "@/Components/UI/AuthLayout/InputFields";
 import PasswordValidation from "@/Components/UI/AuthLayout/PasswordValidation";
 import TitleDescription from "@/Components/UI/AuthLayout/TitleDescription";
@@ -19,7 +20,7 @@ import { theme } from "@/styles/theme";
 import { rootReducer } from "@/utils/types";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import { Box, Typography, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { Box, Typography, ToggleButton, ToggleButtonGroup, useTheme } from "@mui/material";
 import EmailIcon from "@mui/icons-material/Email";
 import PhoneIcon from "@mui/icons-material/Phone";
 import Image from "next/image";
@@ -44,6 +45,7 @@ const Register = () => {
   const isMobile = useIsMobile();
   const { t } = useTranslation("auth");
   const dispatch = useDispatch();
+  const muiTheme = useTheme();
   const userState = useSelector((state: rootReducer) => state.userReducer);
 
   const [firstName, setFirstName] = useState("");
@@ -400,7 +402,7 @@ const Register = () => {
       >
         {/* Logo */}
         <Image
-          src={Logo}
+          src={muiTheme.palette.mode === "dark" ? WhiteLogo : Logo}
           alt="logo"
           width={isMobile ? 86 : 114}
           height={isMobile ? 29 : 39}
@@ -500,7 +502,7 @@ const Register = () => {
               helperText={phonePasswordError}
               sideButton={true}
               sideButtonType="primary"
-              sideButtonIcon={showPhonePassword ? <VisibilityOffIcon sx={{ color: "#676768", height: "18px", width: "16px" }} /> : <VisibilityIcon sx={{ color: "#676768", height: "18px", width: "16px" }} />}
+              sideButtonIcon={showPhonePassword ? <VisibilityOffIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} /> : <VisibilityIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} />}
               sideButtonIconWidth={isMobile ? "14px" : "18px"}
               sideButtonIconHeight={isMobile ? "14px" : "18px"}
               onSideButtonClick={() => setShowPhonePassword(!showPhonePassword)}
@@ -672,7 +674,7 @@ const Register = () => {
                     tabIndex={-1}
                     aria-hidden={true}
                     sx={{
-                      color: "#676768",
+                      color: "text.secondary",
                       height: "18px",
                       width: "16px",
                     }}
@@ -682,7 +684,7 @@ const Register = () => {
                     tabIndex={-1}
                     aria-hidden={true}
                     sx={{
-                      color: "#676768",
+                      color: "text.secondary",
                       height: "18px",
                       width: "16px",
                     }}

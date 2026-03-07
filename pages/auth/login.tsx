@@ -2,6 +2,7 @@ import EditIcon from "@/assets/Icons/editicon.png";
 import LoadingIcon from "@/assets/Icons/LoadingIcon";
 import ArrowUpwardIcon from "@/assets/Icons/up-arrow-icon.png";
 import Logo from "@/assets/Images/auth/dynopay-logo.png";
+import WhiteLogo from "@/assets/Images/auth/dynopay-white-logo.png";
 import GoogleIcon from "@/assets/Images/googleIcon.svg";
 import axiosBaseApi from "@/axiosConfig";
 import InputField from "@/Components/UI/AuthLayout/InputFields";
@@ -741,7 +742,7 @@ export default function Login() {
       >
         {/* Logo */}
         <Image
-          src={Logo}
+          src={theme.palette.mode === "dark" ? WhiteLogo : Logo}
           alt="logo"
           width={isMobile ? 86 : 114}
           height={isMobile ? 29 : 39}
@@ -883,7 +884,7 @@ export default function Login() {
                   fontFamily: "UrbanistMedium",
                   lineHeight: "1.2",
                   letterSpacing: 0,
-                  color: "#676768",
+                  color: "text.secondary",
                 }}
               >
                 {t("chooseLoginMethod")}
@@ -898,7 +899,7 @@ export default function Login() {
                     "& .MuiFormControlLabel-label": {
                       fontSize: isMobile ? "13px" : "15px",
                       fontFamily: "UrbanistMedium",
-                      color: "#242428",
+                      color: "text.primary",
                       paddingLeft: "8px",
                     },
                   }}
@@ -967,7 +968,7 @@ export default function Login() {
                         sx={{
                           textAlign: "start",
                           fontSize: "12px",
-                          color: "#676768",
+                          color: "text.secondary",
                           fontFamily: "UrbanistMedium",
                         }}
                       >
@@ -1134,7 +1135,7 @@ export default function Login() {
                       label={t("sendVerificationCodeViaEmail")}
                       sx={{
                         margin: "0px",
-                        color: "#242428",
+                        color: "text.primary",
                         textAlign: "start",
                         flex: 1,
                       }}
@@ -1240,7 +1241,7 @@ export default function Login() {
                       value="password"
                       control={<CustomRadio />}
                       label={t("password")}
-                      sx={{ margin: "0px", color: "#242428" }}
+                      sx={{ margin: "0px", color: "text.primary" }}
                       onClick={() => {
                         setLoginMethod("password");
                         setTimeout(() => {
@@ -1311,7 +1312,7 @@ export default function Login() {
                           showPassword ? (
                             <VisibilityOffIcon
                               sx={{
-                                color: "#676768",
+                                color: "text.secondary",
                                 height: "18px",
                                 width: "16px",
                               }}
@@ -1319,7 +1320,7 @@ export default function Login() {
                           ) : (
                             <VisibilityIcon
                               sx={{
-                                color: "#676768",
+                                color: "text.secondary",
                                 height: "18px",
                                 width: "16px",
                               }}
@@ -1395,7 +1396,7 @@ export default function Login() {
             sx={{
               borderColor: "red",
               "&::before, &::after": {
-                borderColor: "#E9ECF2",
+                borderColor: "divider",
               },
             }}
           >
@@ -1445,15 +1446,16 @@ export default function Login() {
               height: isMobile ? "32px" : "40px",
               width: isMobile ? "32px" : "40px",
               borderRadius: "100%",
-              border: "1px solid #E9ECF2",
-              backgroundColor: "#F4F6FA",
+              border: "1px solid",
+              borderColor: "divider",
+              backgroundColor: "action.hover",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               transition: "all 0.2s ease",
               "&:hover": {
-                backgroundColor: "#E9ECF2",
+                backgroundColor: "action.selected",
                 borderColor: "#D0D5DD",
               },
             }}

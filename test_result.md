@@ -48,21 +48,43 @@ DynoPay is a full-stack crypto payment gateway.
 - Fixed NewHeader to use `useMuiTheme()` instead of imported static theme (proper reactivity)
 - Fixed Home container styled components to use theme from provider instead of static import
 
-### 6. Dark Mode Text Visibility Fix (Complete)
-**Root cause**: Styled components across the landing page imported `homeTheme` (light theme) directly and used its palette values instead of the dynamic `theme` callback parameter from MUI's `styled()`. This caused all colors to remain hardcoded to light-mode values even when dark mode was active.
+### 6. Dark Mode Comprehensive Fix (Complete)
+**Root cause**: Styled components across the app imported `homeTheme`/`theme` (light-only static) directly and used hardcoded color literals instead of the dynamic `theme` callback parameter from MUI's `styled()`.
 
-**Files Fixed**:
-- `/app/Components/UI/SectionTitle/styled.tsx` - Badge, Heading, SubText now use `({ theme })` callback
-- `/app/Components/UI/HomeCard/styled.tsx` - StyledCard gradients, WhyChooseUsCard borders/bg, all text colors now theme-aware
-- `/app/Components/Layout/HomeHeader/styled.tsx` - FixedHeader bg, nav link colors, Sign In, mobile drawer all dark-mode aware
-- `/app/Components/Layout/HomeFooter/styled.tsx` - Footer bg uses conditional dark color
-- `/app/Components/Layout/HomeButton/styled.tsx` - Primary and outlined button variants use dark-mode aware colors
-- `/app/Components/Page/Home/styled.tsx` - All section backgrounds and glow effects use `theme.palette`
-- `/app/Components/Page/Home/UseCase.tsx` - UseCase cards, tags, borders all theme-aware
-- `/app/Components/UI/UseCaseBanner/index.tsx` - Banner gradient and border now dark-mode aware
-- `/app/Components/UI/LanguageSwitcher/styled.tsx` - Dropdown, trigger, borders, hover states all theme-aware
-- `/app/pages/privacy-policy.tsx`, `terms-conditions.tsx`, `aml-policy.tsx` - Replaced hardcoded `#131520`, `#676B7E` with `text.primary`, `text.secondary`
-- `/app/pages/system-status.tsx` - Replaced hardcoded colors with theme tokens
+**Phase 1 - Landing Page (styled components)**:
+- `SectionTitle/styled.tsx` - Badge, Heading, SubText
+- `HomeCard/styled.tsx` - StyledCard gradients, WhyChooseUsCard, + icon brightness filter for dark mode
+- `HomeHeader/styled.tsx` - FixedHeader bg, nav links, Sign In, mobile drawer
+- `HomeFooter/styled.tsx` - Footer bg conditional dark color
+- `HomeButton/styled.tsx` - Primary and outlined buttons
+- `Home/styled.tsx` - Section backgrounds and glow effects
+- `Home/UseCase.tsx` - Cards, tags, borders
+- `UseCaseBanner/index.tsx` - Banner gradient and border
+- `LanguageSwitcher/styled.tsx` - Dropdown, trigger, borders, hover states
+- `MobileLanguageSwitcher/styled.tsx` - Modal bg, close button
+- Static pages: `privacy-policy`, `terms-conditions`, `aml-policy`, `system-status`
+
+**Phase 2 - Logo Visibility**:
+- `HomeHeader/index.tsx` - Switches to white logo (`dynopay-whiteLogo.svg`) in dark mode
+- `auth/login.tsx` - Switches to white PNG logo in dark mode
+- `auth/register.tsx` - Switches to white PNG logo in dark mode
+
+**Phase 3 - Documentation Page**:
+- All helper components (ParamTable, EndpointCard) now use `useTheme()` with dark-aware colors
+- Section headings, body text, code inline tags, sidebar nav, auth cards, error table, support box
+
+**Phase 4 - Auth Pages & Shared Components**:
+- `Login/styled.tsx` - Dark wrapper bg, dark card bg, dark border
+- `auth/login.tsx` - Text colors, border colors, backgrounds
+- `auth/register.tsx` - Text colors, icon colors
+- `AuthLayout/TitleDescription` - Title and description colors
+- `AuthLayout/InputFields` - Input bg, disabled state, autofill colors
+- `UI/Buttons/index.tsx` - Hover, disabled, animation state colors (converted from static theme import to `useTheme()`)
+- `UI/OtpDialog/index.tsx` - Background and text colors
+- `_error.tsx` - Button colors for dark mode
+
+**Phase 5 - Icon Brightness**:
+- `FeatureIcon` and `WhyChooseDynoPayIcon` apply `brightness(2.5)` CSS filter in dark mode for `#0004FF` stroke icons
 
 ## Testing Protocol
 

@@ -50,9 +50,11 @@ const Error = ({ statusCode, setPageName }: any) => {
         <Button
           variant="rounded"
           sx={{
-            background: "#12131C",
+            background: (theme) => theme.palette.mode === "dark" ? "#6A7BFF" : "#12131C",
+            color: "#fff",
             "&:hover": {
-              color: "#12131C",
+              color: (theme) => theme.palette.mode === "dark" ? "#fff" : "#12131C",
+              background: (theme) => theme.palette.mode === "dark" ? "#5A6BEF" : "transparent",
             },
             fontFamily: "UrbanistBold",
             fontSize: "16px",

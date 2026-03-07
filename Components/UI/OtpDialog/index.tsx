@@ -617,7 +617,7 @@ const OtpDialog: React.FC<OtpDialogProps> = ({
         bodyPadding="0"
         headerPadding="0 !important"
         sx={{
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "background.paper",
           borderRadius: "14px",
           padding: "30px",
           boxShadow: "none",
@@ -832,7 +832,7 @@ const OtpDialog: React.FC<OtpDialogProps> = ({
                                 fontFamily: "UrbanistBold",
                                 padding: "0 !important",
                                 letterSpacing: "0.5px",
-                                color: "#242428",
+                                color: "text.primary",
                                 height: "100%",
                                 lineHeight: inputSize,
                               },

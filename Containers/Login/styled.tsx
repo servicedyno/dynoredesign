@@ -1,7 +1,7 @@
 import { Box, Card, styled } from "@mui/material";
 
-export const LoginWrapper = styled(Box)(() => ({
-  background: "#f4f6fa",
+export const LoginWrapper = styled(Box)(({ theme }) => ({
+  background: theme.palette.mode === "dark" ? "#0B0D17" : "#f4f6fa",
   width: "100%",
   height: "100dvh",
   minHeight: "100dvh",
@@ -51,10 +51,12 @@ export const CardWrapper = styled(Card)(({ theme }) => ({
   height: "fit-content",
   borderRadius: "14px",
   padding: "8px",
-  background: "#fff",
+  background: theme.palette.background.paper,
   textAlign: "center",
-  border: "1px solid #E9ECF2",
-  boxShadow: "rgba(47, 47, 101, 0.15) 0 4px 16px 0",
+  border: `1px solid ${theme.palette.mode === "dark" ? "#2A2D42" : "#E9ECF2"}`,
+  boxShadow: theme.palette.mode === "dark"
+    ? "rgba(0, 0, 0, 0.4) 0 4px 16px 0"
+    : "rgba(47, 47, 101, 0.15) 0 4px 16px 0",
 
   [theme.breakpoints.down("sm")]: {
     padding: "16px",

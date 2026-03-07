@@ -1,6 +1,5 @@
 import useIsMobile from "@/hooks/useIsMobile";
-import { theme } from "@/styles/theme";
-import { Box, Button as MuiButton, Typography } from "@mui/material";
+import { Box, Button as MuiButton, Typography, useTheme } from "@mui/material";
 import { SxProps, Theme } from "@mui/system";
 import Image, { StaticImageData } from "next/image";
 import React from "react";
@@ -43,6 +42,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   hideLabel = false,
 }) => {
   const isMobile = useIsMobile("sm");
+  const theme = useTheme();
   const sizeConfig = {
     small: {
       padding: "8px 16px",
@@ -169,14 +169,14 @@ const CustomButton: React.FC<CustomButtonProps> = ({
           !disabled && {
             "&:hover": {
               backgroundColor: "#0004FF99",
-              color: "#FFFFFF",
+              color: theme.palette.common.white,
             },
           }),
         ...(disabled && {
-          backgroundColor: variant === "primary" ? "#B0BEC5" : "#FFFFFF",
+          backgroundColor: variant === "primary" ? "#B0BEC5" : theme.palette.background.paper,
           color:
-            variant === "primary" ? "#FFFFFF !important" : "#676768 !important",
-          border: `1px solid ${variant === "primary" ? "#B0BEC5" : "#676768"}`,
+            variant === "primary" ? `${theme.palette.common.white} !important` : `${theme.palette.text.secondary} !important`,
+          border: `1px solid ${variant === "primary" ? "#B0BEC5" : theme.palette.text.secondary}`,
           cursor: "not-allowed",
           lineHeight: "1",
         }),
@@ -184,7 +184,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
           animation: "successPulse 0.6s ease-in-out",
           "@keyframes successPulse": {
             "0%, 100%": {
-              backgroundColor: variant === "primary" ? "#0004FF" : "#FFFFFF",
+              backgroundColor: variant === "primary" ? "#0004FF" : theme.palette.background.paper,
             },
             "50%": {
               transform: "scale(0.98)",

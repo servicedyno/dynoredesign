@@ -456,64 +456,65 @@ const ParamTable = ({
 }: {
   title: string;
   params: { name: string; type: string; required?: boolean; description: string }[];
-}) => (
-  <Box sx={{ mb: 2.5 }}>
-    <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1e1e2e", mb: 1 }}>{title}</Typography>
-    <Box
-      sx={{
-        border: "1px solid #e5e7eb",
-        borderRadius: "10px",
-        overflow: "hidden",
-      }}
-    >
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-        <thead>
-          <tr style={{ background: "#f9fafb" }}>
-            <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #e5e7eb" }}>
-              Parameter
-            </th>
-            <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #e5e7eb" }}>
-              Type
-            </th>
-            <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #e5e7eb" }}>
-              Description
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {params.map((p, i) => (
-            <tr key={p.name} style={{ borderBottom: i < params.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-              <td style={{ padding: "10px 14px" }}>
-                <code style={{ color: "#0004FF", fontWeight: 600, fontSize: 13 }}>{p.name}</code>
-                {"required" in p && p.required && (
-                  <span style={{ color: "#ef4444", fontSize: 11, marginLeft: 6 }}>required</span>
-                )}
-              </td>
-              <td style={{ padding: "10px 14px", color: "#6b7280" }}>
-                <code style={{ fontSize: 12 }}>{p.type}</code>
-              </td>
-              <td style={{ padding: "10px 14px", color: "#374151" }}>{p.description}</td>
+}) => {
+  const t = useTheme();
+  const dk = t.palette.mode === "dark";
+  const borderClr = dk ? "#2A2D42" : "#e5e7eb";
+  const headBg = dk ? "#141625" : "#f9fafb";
+  const headClr = dk ? "#C8CAD5" : "#374151";
+  const rowBorder = dk ? "#1E2030" : "#f3f4f6";
+  const descClr = dk ? "#A0A3B1" : "#374151";
+  const typeClr = dk ? "#8B8FA0" : "#6b7280";
+  return (
+    <Box sx={{ mb: 2.5 }}>
+      <Typography sx={{ fontSize: 14, fontWeight: 600, color: "text.primary", mb: 1 }}>{title}</Typography>
+      <Box sx={{ border: `1px solid ${borderClr}`, borderRadius: "10px", overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: headBg }}>
+              <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, color: headClr, borderBottom: `1px solid ${borderClr}` }}>Parameter</th>
+              <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, color: headClr, borderBottom: `1px solid ${borderClr}` }}>Type</th>
+              <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, color: headClr, borderBottom: `1px solid ${borderClr}` }}>Description</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {params.map((p, i) => (
+              <tr key={p.name} style={{ borderBottom: i < params.length - 1 ? `1px solid ${rowBorder}` : "none" }}>
+                <td style={{ padding: "10px 14px" }}>
+                  <code style={{ color: dk ? "#8B9AFF" : "#0004FF", fontWeight: 600, fontSize: 13 }}>{p.name}</code>
+                  {"required" in p && p.required && (
+                    <span style={{ color: "#ef4444", fontSize: 11, marginLeft: 6 }}>required</span>
+                  )}
+                </td>
+                <td style={{ padding: "10px 14px", color: typeClr }}>
+                  <code style={{ fontSize: 12 }}>{p.type}</code>
+                </td>
+                <td style={{ padding: "10px 14px", color: descClr }}>{p.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Box>
     </Box>
-  </Box>
-);
+  );
+};
 
 // ─── Endpoint Card ────────────────────────────────────────────
 const EndpointCard = ({ ep }: { ep: Endpoint }) => {
   const [expanded, setExpanded] = useState(false);
+  const t = useTheme();
+  const dk = t.palette.mode === "dark";
+  const borderClr = dk ? "#2A2D42" : "#e5e7eb";
   return (
     <Box
       id={ep.id}
       sx={{
         mb: 4,
-        border: "1px solid #e5e7eb",
+        border: `1px solid ${borderClr}`,
         borderRadius: "14px",
         overflow: "hidden",
         transition: "box-shadow 0.2s",
-        "&:hover": { boxShadow: "0 2px 16px rgba(0,4,255,0.06)" },
+        "&:hover": { boxShadow: dk ? "0 2px 16px rgba(106,123,255,0.1)" : "0 2px 16px rgba(0,4,255,0.06)" },
         scrollMarginTop: "100px",
       }}
     >
@@ -527,9 +528,11 @@ const EndpointCard = ({ ep }: { ep: Endpoint }) => {
           px: 2.5,
           py: 2,
           cursor: "pointer",
-          background: expanded ? "#fafbff" : "#fff",
+          background: expanded
+            ? (dk ? "rgba(106,123,255,0.05)" : "#fafbff")
+            : (dk ? t.palette.background.paper : "#fff"),
           transition: "background 0.15s",
-          "&:hover": { background: "#f5f7ff" },
+          "&:hover": { background: dk ? "rgba(106,123,255,0.08)" : "#f5f7ff" },
         }}
       >
         <MethodBadge method={ep.method} />
@@ -538,14 +541,14 @@ const EndpointCard = ({ ep }: { ep: Endpoint }) => {
             fontFamily: "monospace",
             fontSize: 14,
             fontWeight: 500,
-            color: "#374151",
+            color: "text.secondary",
             flex: 1,
           }}
         >
           {BASE_URL}
           {ep.path}
         </Typography>
-        <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1e1e2e", mr: 1, display: { xs: "none", md: "block" } }}>
+        <Typography sx={{ fontSize: 14, fontWeight: 600, color: "text.primary", mr: 1, display: { xs: "none", md: "block" } }}>
           {ep.title}
         </Typography>
         <span
@@ -553,8 +556,10 @@ const EndpointCard = ({ ep }: { ep: Endpoint }) => {
             fontSize: 11,
             padding: "2px 8px",
             borderRadius: 4,
-            background: ep.auth === "api-key" ? "#dbeafe" : "#ede9fe",
-            color: ep.auth === "api-key" ? "#1d4ed8" : "#6d28d9",
+            background: ep.auth === "api-key"
+              ? (dk ? "rgba(29,78,216,0.15)" : "#dbeafe")
+              : (dk ? "rgba(109,40,217,0.15)" : "#ede9fe"),
+            color: ep.auth === "api-key" ? "#60a5fa" : "#a78bfa",
             fontWeight: 600,
             whiteSpace: "nowrap",
           }}
@@ -572,14 +577,14 @@ const EndpointCard = ({ ep }: { ep: Endpoint }) => {
             flexShrink: 0,
           }}
         >
-          <path d="M5 7.5L10 12.5L15 7.5" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 7.5L10 12.5L15 7.5" stroke={dk ? "#6B7280" : "#9ca3af"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </Box>
 
       {/* Card Body */}
       {expanded && (
-        <Box sx={{ px: 2.5, py: 2.5, borderTop: "1px solid #e5e7eb" }}>
-          <Typography sx={{ fontSize: 14, color: "#4b5563", mb: 2.5, lineHeight: 1.7 }}>{ep.description}</Typography>
+        <Box sx={{ px: 2.5, py: 2.5, borderTop: `1px solid ${borderClr}` }}>
+          <Typography sx={{ fontSize: 14, color: "text.secondary", mb: 2.5, lineHeight: 1.7 }}>{ep.description}</Typography>
 
           {/* Headers */}
           <ParamTable
@@ -607,7 +612,7 @@ const EndpointCard = ({ ep }: { ep: Endpoint }) => {
           {/* Request Example */}
           {ep.requestExample && (
             <Box sx={{ mb: 2 }}>
-              <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1e1e2e", mb: 1 }}>
+              <Typography sx={{ fontSize: 14, fontWeight: 600, color: "text.primary", mb: 1 }}>
                 Request Example
               </Typography>
               <CodeBlock code={ep.requestExample} lang="json" />
@@ -616,7 +621,7 @@ const EndpointCard = ({ ep }: { ep: Endpoint }) => {
 
           {/* Response */}
           <Box>
-            <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1e1e2e", mb: 1 }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 600, color: "text.primary", mb: 1 }}>
               Response Example
             </Typography>
             <CodeBlock code={ep.responseExample} lang="json" />
@@ -647,6 +652,10 @@ const DocumentationPage = () => {
     return map;
   }, []);
 
+  const dk = theme.palette.mode === "dark";
+  const borderClr = dk ? "#2A2D42" : "#e5e7eb";
+  const headBg = dk ? "#141625" : "#f9fafb";
+
   return (
     <>
       <Head>
@@ -660,7 +669,7 @@ const DocumentationPage = () => {
       <Box
         sx={{
           minHeight: "100vh",
-          background: "#fff",
+          background: dk ? theme.palette.background.default : "#fff",
         }}
       >
         {/* Hero */}
@@ -751,7 +760,7 @@ const DocumentationPage = () => {
                 overflowY: "auto",
               }}
             >
-              <Typography sx={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#9ca3af", textTransform: "uppercase", mb: 1.5 }}>
+              <Typography sx={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "text.secondary", textTransform: "uppercase", mb: 1.5 }}>
                 Navigation
               </Typography>
               {SECTIONS.map((sec) => (
@@ -765,10 +774,10 @@ const DocumentationPage = () => {
                       cursor: "pointer",
                       fontSize: 14,
                       fontWeight: activeSection === sec.id ? 600 : 400,
-                      color: activeSection === sec.id ? "#0004FF" : "#4b5563",
-                      background: activeSection === sec.id ? "#eff2ff" : "transparent",
+                      color: activeSection === sec.id ? "primary.main" : "text.secondary",
+                      background: activeSection === sec.id ? (dk ? "rgba(106,123,255,0.1)" : "#eff2ff") : "transparent",
                       transition: "all 0.15s",
-                      "&:hover": { background: "#f3f4f6" },
+                      "&:hover": { background: dk ? "rgba(106,123,255,0.06)" : "#f3f4f6" },
                     }}
                   >
                     {sec.title}
@@ -782,10 +791,10 @@ const DocumentationPage = () => {
                         pr: 1.5,
                         py: 0.5,
                         fontSize: 13,
-                        color: "#6b7280",
+                        color: "text.secondary",
                         cursor: "pointer",
                         borderRadius: "6px",
-                        "&:hover": { color: "#0004FF", background: "#f9fafb" },
+                        "&:hover": { color: "primary.main", background: dk ? "rgba(106,123,255,0.06)" : "#f9fafb" },
                       }}
                     >
                       {endpointMap[epId]?.title}
@@ -800,10 +809,10 @@ const DocumentationPage = () => {
           <Box sx={{ flex: 1, minWidth: 0 }}>
             {/* Getting Started */}
             <Box id="getting-started" sx={{ mb: 6, scrollMarginTop: "100px" }}>
-              <Typography sx={{ fontSize: { xs: 24, md: 30 }, fontWeight: 800, color: "#1e1e2e", mb: 1.5 }}>
+              <Typography sx={{ fontSize: { xs: 24, md: 30 }, fontWeight: 800, color: "text.primary", mb: 1.5 }}>
                 Getting Started
               </Typography>
-              <Typography sx={{ fontSize: 15, color: "#4b5563", lineHeight: 1.8, mb: 3 }}>
+              <Typography sx={{ fontSize: 15, color: "text.secondary", lineHeight: 1.8, mb: 3 }}>
                 Integrate DynoPay in three simple steps:
               </Typography>
 
@@ -833,8 +842,9 @@ const DocumentationPage = () => {
                       alignItems: "flex-start",
                       p: 2.5,
                       borderRadius: "12px",
-                      border: "1px solid #e5e7eb",
-                      background: "#fafbff",
+                      border: `1px solid`,
+                      borderColor: "divider",
+                      background: dk ? "rgba(106,123,255,0.04)" : "#fafbff",
                     }}
                   >
                     <Box
@@ -855,16 +865,16 @@ const DocumentationPage = () => {
                       {s.step}
                     </Box>
                     <Box>
-                      <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#1e1e2e", mb: 0.3 }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: 15, color: "text.primary", mb: 0.3 }}>
                         {s.title}
                       </Typography>
-                      <Typography sx={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>{s.desc}</Typography>
+                      <Typography sx={{ fontSize: 14, color: "text.secondary", lineHeight: 1.6 }}>{s.desc}</Typography>
                     </Box>
                   </Box>
                 ))}
               </Box>
 
-              <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1e1e2e", mb: 1 }}>Quick Example — Create a customer and payment</Typography>
+              <Typography sx={{ fontSize: 14, fontWeight: 600, color: "text.primary", mb: 1 }}>Quick Example — Create a customer and payment</Typography>
               <CodeBlock
                 lang="bash"
                 code={`# Step 1: Create a customer
@@ -884,10 +894,10 @@ curl -X POST https://your-domain.com/api/user/createPayment \\
 
             {/* Authentication */}
             <Box id="authentication" sx={{ mb: 6, scrollMarginTop: "100px" }}>
-              <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, color: "#1e1e2e", mb: 1.5 }}>
+              <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, color: "text.primary", mb: 1.5 }}>
                 Authentication
               </Typography>
-              <Typography sx={{ fontSize: 15, color: "#4b5563", lineHeight: 1.8, mb: 3 }}>
+              <Typography sx={{ fontSize: 15, color: "text.secondary", lineHeight: 1.8, mb: 3 }}>
                 DynoPay uses two levels of authentication depending on the endpoint:
               </Typography>
 
@@ -896,15 +906,15 @@ curl -X POST https://your-domain.com/api/user/createPayment \\
                   sx={{
                     p: 2.5,
                     borderRadius: "12px",
-                    border: "2px solid #dbeafe",
-                    background: "#f0f5ff",
+                    border: dk ? "2px solid rgba(29,78,216,0.3)" : "2px solid #dbeafe",
+                    background: dk ? "rgba(29,78,216,0.08)" : "#f0f5ff",
                   }}
                 >
-                  <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#1d4ed8", mb: 1 }}>
+                  <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#60a5fa", mb: 1 }}>
                     API Key Only
                   </Typography>
-                  <Typography sx={{ fontSize: 13, color: "#4b5563", lineHeight: 1.7, mb: 1.5 }}>
-                    Used for creating customers and listing supported currencies. Only requires the <code style={{ background: "#e5e7eb", padding: "1px 5px", borderRadius: 4, fontSize: 12 }}>x-api-key</code> header.
+                  <Typography sx={{ fontSize: 13, color: "text.secondary", lineHeight: 1.7, mb: 1.5 }}>
+                    Used for creating customers and listing supported currencies. Only requires the <code style={{ background: dk ? "#1E2030" : "#e5e7eb", padding: "1px 5px", borderRadius: 4, fontSize: 12 }}>x-api-key</code> header.
                   </Typography>
                   <CodeBlock code={`x-api-key: your_api_key`} />
                 </Box>
@@ -912,14 +922,14 @@ curl -X POST https://your-domain.com/api/user/createPayment \\
                   sx={{
                     p: 2.5,
                     borderRadius: "12px",
-                    border: "2px solid #ede9fe",
-                    background: "#f5f3ff",
+                    border: dk ? "2px solid rgba(109,40,217,0.3)" : "2px solid #ede9fe",
+                    background: dk ? "rgba(109,40,217,0.08)" : "#f5f3ff",
                   }}
                 >
-                  <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#6d28d9", mb: 1 }}>
+                  <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#a78bfa", mb: 1 }}>
                     API Key + Bearer Token
                   </Typography>
-                  <Typography sx={{ fontSize: 13, color: "#4b5563", lineHeight: 1.7, mb: 1.5 }}>
+                  <Typography sx={{ fontSize: 13, color: "text.secondary", lineHeight: 1.7, mb: 1.5 }}>
                     Required for all payment and wallet operations. Include both the API key and a customer bearer token from the Create Customer response.
                   </Typography>
                   <CodeBlock
@@ -933,7 +943,7 @@ Authorization: Bearer eyJhbGciOi...`}
             {/* Endpoint Sections */}
             {SECTIONS.filter((s) => s.endpoints).map((section) => (
               <Box key={section.id} id={section.id} sx={{ mb: 6, scrollMarginTop: "100px" }}>
-                <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, color: "#1e1e2e", mb: 2.5 }}>
+                <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, color: "text.primary", mb: 2.5 }}>
                   {section.title}
                 </Typography>
                 {section.endpoints!.map((epId) => {
@@ -945,11 +955,11 @@ Authorization: Bearer eyJhbGciOi...`}
 
             {/* Error Responses */}
             <Box id="errors" sx={{ mb: 6, scrollMarginTop: "100px" }}>
-              <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, color: "#1e1e2e", mb: 1.5 }}>
+              <Typography sx={{ fontSize: { xs: 22, md: 26 }, fontWeight: 800, color: "text.primary", mb: 1.5 }}>
                 Error Handling
               </Typography>
-              <Typography sx={{ fontSize: 15, color: "#4b5563", lineHeight: 1.8, mb: 2.5 }}>
-                All errors follow a consistent format. Check the <code style={{ background: "#f3f4f6", padding: "1px 5px", borderRadius: 4, fontSize: 13 }}>success</code> field and the HTTP status code.
+              <Typography sx={{ fontSize: 15, color: "text.secondary", lineHeight: 1.8, mb: 2.5 }}>
+                All errors follow a consistent format. Check the <code style={{ background: dk ? "#1E2030" : "#f3f4f6", padding: "1px 5px", borderRadius: 4, fontSize: 13 }}>success</code> field and the HTTP status code.
               </Typography>
               <CodeBlock
                 lang="json"
@@ -961,14 +971,14 @@ Authorization: Bearer eyJhbGciOi...`}
   ]
 }`}
               />
-              <Box sx={{ border: "1px solid #e5e7eb", borderRadius: "10px", overflow: "hidden", mt: 2 }}>
+              <Box sx={{ border: `1px solid ${borderClr}`, borderRadius: "10px", overflow: "hidden", mt: 2 }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: "#f9fafb" }}>
-                      <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>
+                    <tr style={{ background: headBg }}>
+                      <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, color: dk ? "#C8CAD5" : undefined, borderBottom: `1px solid ${borderClr}` }}>
                         Status
                       </th>
-                      <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>
+                      <th style={{ textAlign: "left", padding: "10px 14px", fontWeight: 600, color: dk ? "#C8CAD5" : undefined, borderBottom: `1px solid ${borderClr}` }}>
                         Meaning
                       </th>
                     </tr>
@@ -981,11 +991,11 @@ Authorization: Bearer eyJhbGciOi...`}
                       ["404", "Not Found — resource does not exist"],
                       ["500", "Server Error — something went wrong on our side"],
                     ].map(([code, desc], i) => (
-                      <tr key={code} style={{ borderBottom: i < 4 ? "1px solid #f3f4f6" : "none" }}>
+                      <tr key={code} style={{ borderBottom: i < 4 ? `1px solid ${dk ? "#1E2030" : "#f3f4f6"}` : "none" }}>
                         <td style={{ padding: "10px 14px" }}>
                           <code style={{ fontWeight: 700, color: Number(code) >= 500 ? "#ef4444" : "#f59e0b" }}>{code}</code>
                         </td>
-                        <td style={{ padding: "10px 14px", color: "#374151" }}>{desc}</td>
+                        <td style={{ padding: "10px 14px", color: dk ? "#A0A3B1" : "#374151" }}>{desc}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -998,13 +1008,15 @@ Authorization: Bearer eyJhbGciOi...`}
               sx={{
                 p: 3,
                 borderRadius: "14px",
-                background: "linear-gradient(135deg, #f0f5ff 0%, #f5f3ff 100%)",
-                border: "1px solid #dbeafe",
+                background: dk
+                  ? "linear-gradient(135deg, rgba(106,123,255,0.08) 0%, rgba(109,40,217,0.08) 100%)"
+                  : "linear-gradient(135deg, #f0f5ff 0%, #f5f3ff 100%)",
+                border: `1px solid ${dk ? "rgba(106,123,255,0.2)" : "#dbeafe"}`,
                 mb: 6,
               }}
             >
-              <Typography sx={{ fontWeight: 700, fontSize: 16, color: "#1e1e2e", mb: 1 }}>Need Help?</Typography>
-              <Typography sx={{ fontSize: 14, color: "#4b5563", lineHeight: 1.7 }}>
+              <Typography sx={{ fontWeight: 700, fontSize: 16, color: "text.primary", mb: 1 }}>Need Help?</Typography>
+              <Typography sx={{ fontSize: 14, color: "text.secondary", lineHeight: 1.7 }}>
                 If you run into any issues integrating DynoPay, reach out to our support team through the dashboard&apos;s Help & Support section.
                 We&apos;re here to help you get set up quickly.
               </Typography>

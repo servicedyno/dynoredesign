@@ -98,6 +98,9 @@ export const FeatureIcon = styled(Box)(({ theme }) => ({
   minWidth: "48px",
   borderRadius: "16px",
   background: theme.palette.background.default,
+  "& img, & svg": {
+    filter: theme.palette.mode === "dark" ? "brightness(2.5)" : "none",
+  },
 }));
 
 export const WhyChooseUsCard = styled(Box)(({ theme }) => ({
@@ -155,6 +158,9 @@ export const WhyChooseDynoPayIcon = styled(Box)(({ theme }) => ({
   minWidth: "56px",
   borderRadius: "20px",
   background: theme.palette.mode === "dark" ? "rgba(106,123,255,0.1)" : "#0004FF1A",
+  "& img, & svg": {
+    filter: theme.palette.mode === "dark" ? "brightness(2.5)" : "none",
+  },
 }));
 
 export const CardHeader = styled(Box)(({ theme }) => ({

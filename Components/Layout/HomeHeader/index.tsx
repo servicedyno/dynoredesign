@@ -1,8 +1,9 @@
 import DynopayLogo from "@/assets/Images/auth/dynopay-logo.svg";
+import DynopayWhiteLogo from "@/assets/Icons/home/dynopay-whiteLogo.svg";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 import ThemeToggle from "@/Components/UI/ThemeToggle";
 import useIsMobile from "@/hooks/useIsMobile";
-import { Button } from "@mui/material";
+import { Button, useTheme } from "@mui/material";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
@@ -61,6 +62,8 @@ const HomeHeader = memo(function HomeHeader() {
   const router = useRouter();
   const { t } = useTranslation("landing");
   const isMobile = useIsMobile("md");
+  const muiTheme = useTheme();
+  const isDark = muiTheme.palette.mode === "dark";
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState<boolean>(true);
@@ -180,7 +183,7 @@ const HomeHeader = memo(function HomeHeader() {
             onClick={navigateHome}
           >
             <Image
-              src={DynopayLogo}
+              src={isDark ? DynopayWhiteLogo : DynopayLogo}
               alt="Dynopay"
               width={134}
               height={45}

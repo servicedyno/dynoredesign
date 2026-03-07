@@ -32,9 +32,9 @@ export const ModalBackdrop = styled(Box)<{ open: boolean }>(({ open }) => ({
     position: "relative",
     width: "fit-content",
     minWidth: "fit-content",
-    background: theme.palette.common.white,
+    background: theme.palette.background.paper,
     borderRadius: "12px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+    boxShadow: theme.palette.mode === "dark" ? "0 4px 20px rgba(0,0,0,0.4)" : "0 4px 20px rgba(0,0,0,0.1)",
     overflow: "hidden",
     padding: "6px",
     opacity: open ? 1 : 0,
@@ -49,11 +49,11 @@ export const ModalBackdrop = styled(Box)<{ open: boolean }>(({ open }) => ({
     right: "8px",
     width: "32px",
     height: "32px",
-    backgroundColor: "#F5F5F5",
-    color: "#666",
+    backgroundColor: theme.palette.action.hover,
+    color: theme.palette.text.secondary,
     zIndex: 1,
     "&:hover": {
-      backgroundColor: "#E0E0E0",
+      backgroundColor: theme.palette.action.selected,
     },
   }));
   export const CustomLangFlag = styled("img")({
