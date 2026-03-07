@@ -151,6 +151,7 @@ const TransactionPage = () => {
       startDate: dateRange.startDate?.toISOString(),
       endDate: dateRange.endDate?.toISOString(),
       search: searchTerm || undefined,
+      company_id: selectedCompanyId || undefined,
     }));
   };
 

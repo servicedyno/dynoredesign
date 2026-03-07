@@ -43,6 +43,9 @@ const minimumDollar = 10;
 const Withdraw = ({ setPageName }: pageProps) => {
   const dispatch = useDispatch();
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
+  const selectedCompanyId = useSelector(
+    (state: rootReducer) => (state as any).companyReducer?.selectedCompanyId
+  );
   const [cryptoData, setCryptoData] = useState<IWallet[]>([]);
   const [walletInitial, setWalletInitial] = useState({
     currency: "ETH",
@@ -86,10 +89,10 @@ const Withdraw = ({ setPageName }: pageProps) => {
   const [loading2, setLoading2] = useState(false);
   useEffect(() => {
     setPageName("Withdraw");
-    // Dispatch Redux action to fetch wallets (avoids duplicate direct API call)
-    dispatch(WalletAction(WALLET_FETCH));
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(WalletAction(WALLET_FETCH, payload));
     getWalletAddresses();
-  }, []);
+  }, [selectedCompanyId]);
 
   // Process wallet data from Redux store when it updates
   useEffect(() => {
@@ -301,9 +304,11 @@ const Withdraw = ({ setPageName }: pageProps) => {
 
   const getWalletAddresses = async () => {
     try {
+      const params: Record<string, any> = {};
+      if (selectedCompanyId) params.company_id = selectedCompanyId;
       const {
         data: { data },
-      } = await axiosBaseApi.get("/wallet/getWalletAddresses");
+      } = await axiosBaseApi.get("/wallet/getWalletAddresses", { params });
       updateNewList(data, "ETH");
       setSavedAddresses(data);
     } catch (e: any) {

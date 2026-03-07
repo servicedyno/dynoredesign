@@ -62,6 +62,9 @@ const WalletAddress = ({ setPageName }: pageProps) => {
   const dispatch = useDispatch();
   const router = useRouter();
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
+  const selectedCompanyId = useSelector(
+    (state: rootReducer) => (state as any).companyReducer?.selectedCompanyId
+  );
   const [fiatData, setFiatData] = useState<IWallet[]>([]);
   const [cryptoData, setCryptoData] = useState<IWallet[]>([]);
   const [searchValue, setSearchValue] = useState("");
@@ -95,8 +98,9 @@ const WalletAddress = ({ setPageName }: pageProps) => {
 
   useEffect(() => {
     setPageName("Wallet Address");
-    dispatch(WalletAction(WALLET_FETCH));
-  }, []);
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(WalletAction(WALLET_FETCH, payload));
+  }, [selectedCompanyId]);
 
   useEffect(() => {
     let total = 0;
@@ -249,7 +253,8 @@ const WalletAddress = ({ setPageName }: pageProps) => {
       if(response.status){
         setOtpModalOpen(false);
         setWalletData(null);
-        dispatch(WalletAction(WALLET_FETCH));
+        const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+        dispatch(WalletAction(WALLET_FETCH, payload));
       }
       dispatch({
         type: TOAST_SHOW,
@@ -296,7 +301,8 @@ const WalletAddress = ({ setPageName }: pageProps) => {
       });
       setDeleteModalOpen(false);
       setDeleteTarget(null);
-      dispatch(WalletAction(WALLET_FETCH));
+      const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+      dispatch(WalletAction(WALLET_FETCH, payload));
     } catch (error: any) {
       dispatch({
         type: TOAST_SHOW,

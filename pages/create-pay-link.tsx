@@ -29,14 +29,16 @@ const CreatePaymentLink = ({ setPageName, setPageDescription }: pageProps) => {
     (state: rootReducer) => state.companyReducer,
   );
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
+  const selectedCompanyId = companyState.selectedCompanyId;
   const hasCompany = companyState.companyList?.length > 0;
   const hasWallet = walletState.walletList?.length > 0;
   const setupComplete = hasCompany && hasWallet;
 
   useEffect(() => {
     dispatch(CompanyAction(COMPANY_FETCH));
-    dispatch(WalletAction(WALLET_FETCH));
-  }, [dispatch]);
+    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    dispatch(WalletAction(WALLET_FETCH, payload));
+  }, [dispatch, selectedCompanyId]);
 
   const tCreatePaymentLink = useCallback(
     (key: string, defaultValue?: string) =>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
 import axiosBaseApi from "@/axiosConfig";
 
 interface NotificationPreferences {
@@ -26,10 +27,16 @@ export const useNotificationPreferences = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedCompanyId = useSelector(
+    (state: any) => state?.companyReducer?.selectedCompanyId
+  );
+
   const fetchPreferences = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axiosBaseApi.get("/notifications/preferences");
+      const params: Record<string, any> = {};
+      if (selectedCompanyId) params.company_id = selectedCompanyId;
+      const response = await axiosBaseApi.get("/notifications/preferences", { params });
       if (response?.data?.status && response.data.data) {
         setPreferences({
           transactionUpdates:
@@ -55,13 +62,15 @@ export const useNotificationPreferences = () => {
 
   useEffect(() => {
     fetchPreferences();
-  }, [fetchPreferences]);
+  }, [fetchPreferences, selectedCompanyId]);
 
   const savePreferences = useCallback(async (prefs: NotificationPreferences) => {
     setSaving(true);
     setError(null);
     try {
-      const response = await axiosBaseApi.put("/notifications/preferences", prefs);
+      const body: Record<string, any> = { ...prefs };
+      if (selectedCompanyId) body.company_id = selectedCompanyId;
+      const response = await axiosBaseApi.put("/notifications/preferences", body);
       if (response?.data?.status) {
         setPreferences(prefs);
         return true;

@@ -24,7 +24,10 @@ const ConversionBanner = () => {
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer
   );
-  const company: ICompany | null = companyState.companyList?.[0] ?? null;
+  const selectedCompanyId = companyState.selectedCompanyId;
+  const company: ICompany | null = companyState.companyList?.find(
+    (c: ICompany) => c.company_id === selectedCompanyId
+  ) ?? companyState.companyList?.[0] ?? null;
 
   const [enabled, setEnabled] = useState(false);
   const [stablecoin, setStablecoin] = useState("usdt_trc20");

@@ -133,7 +133,9 @@ const NotificationPage = () => {
   const markAllAsRead = async () => {
     setMarkingAllRead(true);
     try {
-      await axiosBaseApi.put("/notifications/read-all");
+      const body: Record<string, any> = {};
+      if (selectedCompanyId) body.company_id = selectedCompanyId;
+      await axiosBaseApi.put("/notifications/read-all", body);
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch {}

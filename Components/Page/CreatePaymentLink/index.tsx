@@ -59,6 +59,9 @@ const CreatePaymentLinkPage = ({
   const { t } = useTranslation("createPaymentLinkScreen");
   const paymentLinkState = useSelector((state: any) => state.paymentLinkReducer);
   const feePreview = paymentLinkState?.feePreview;
+  const selectedCompanyId = useSelector(
+    (state: any) => state?.companyReducer?.selectedCompanyId
+  );
   const tPaymentLink = useCallback(
     (key: string): string => {
       const result = t(key, { ns: "createPaymentLinkScreen" });
@@ -316,6 +319,7 @@ const CreatePaymentLinkPage = ({
         redirect_url: postPaymentSettings.redirectUrl,
         webhook_url: postPaymentSettings.webhookUrl,
         payment_url: postPaymentSettings.callbackUrl,
+        company_id: selectedCompanyId,
       };
 
       // Dispatch to Redux saga which calls the API
@@ -343,6 +347,7 @@ const CreatePaymentLinkPage = ({
         redirect_url: postPaymentSettings.redirectUrl,
         webhook_url: postPaymentSettings.webhookUrl,
         payment_url: postPaymentSettings.callbackUrl,
+        company_id: selectedCompanyId,
       };
 
       dispatch(PaymentLinkAction(PAYLINK_CREATE, apiPayload));
