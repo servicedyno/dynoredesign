@@ -71,7 +71,7 @@ const navItems = [
   {
     icon: <AccountBalanceWallet color="inherit" />,
     name: "Wallet Address",
-    link: "/walletAddress",
+    link: "/wallet",
   },
 ];
 
