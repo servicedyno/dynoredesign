@@ -1,7 +1,7 @@
 import EditIcon from "@/assets/Icons/edit-icon.svg";
 import BusinessCenterIcon from "@mui/icons-material/BusinessCenter";
 import { Box, Divider, Typography, useTheme } from "@mui/material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CompanyItem,
   ItemLeft,
@@ -23,7 +23,8 @@ import { useSelector, useDispatch } from "react-redux";
 import CustomButton from "../Buttons";
 import { HeaderDivider } from "../LanguageSwitcher/styled";
 import { selectCompany } from "@/Redux/Actions/CompanyAction";
-import { DashboardAction, TransactionAction, WalletAction, PaymentLinkAction, ApiAction } from "@/Redux/Actions";
+import { CompanyAction, DashboardAction, TransactionAction, WalletAction, PaymentLinkAction, ApiAction } from "@/Redux/Actions";
+import { COMPANY_FETCH } from "@/Redux/Actions/CompanyAction";
 import {
   DASHBOARD_FETCH,
   DASHBOARD_CHART_FETCH,
@@ -34,6 +35,10 @@ import { TRANSACTION_FETCH } from "@/Redux/Actions/TransactionAction";
 import { WALLET_FETCH } from "@/Redux/Actions/WalletAction";
 import { PAYLINK_FETCH } from "@/Redux/Actions/PaymentLinkAction";
 import { API_FETCH } from "@/Redux/Actions/ApiAction";
+import CreateCompanyModal from "@/Components/UI/OnboardingFlow/CreateCompanyModal";
+import AddWalletModal from "@/Components/UI/AddWalletModal";
+import StepIndicator from "@/Components/UI/OnboardingFlow/StepIndicator";
+import CelebrationOverlay from "@/Components/UI/OnboardingFlow/CelebrationOverlay";
 
 export default function CompanySelector() {
   const { t } = useTranslation("dashboardLayout");
@@ -46,6 +51,31 @@ export default function CompanySelector() {
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer,
   );
+
+  // Add Company Flow states
+  const [addCompanyPhase, setAddCompanyPhase] = useState<"idle" | "company" | "wallet" | "celebration">("idle");
+
+  const handleAddCompanyClick = useCallback(() => {
+    setAddCompanyPhase("company");
+  }, []);
+
+  const handleCompanyCreated = useCallback(() => {
+    dispatch(CompanyAction(COMPANY_FETCH));
+    dispatch(WalletAction(WALLET_FETCH));
+    setAddCompanyPhase("wallet");
+  }, [dispatch]);
+
+  const handleWalletAdded = useCallback(() => {
+    dispatch(WalletAction(WALLET_FETCH));
+    setAddCompanyPhase("celebration");
+  }, [dispatch]);
+
+  const handleCelebrationDismiss = useCallback(() => {
+    setAddCompanyPhase("idle");
+    // Refresh all data
+    dispatch(CompanyAction(COMPANY_FETCH));
+    dispatch(WalletAction(WALLET_FETCH));
+  }, [dispatch]);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const MIN_WIDTH = 390;
@@ -186,7 +216,7 @@ export default function CompanySelector() {
             width: isMobile ? "224px" : "300px",
             border: "1px solid rgba(233, 236, 242, 1)",
             borderRadius: "6px",
-            backgroundColor: "#fff",
+            backgroundColor: theme.palette.background.paper,
             padding: anchorEl ? "9px 8px" : "11px 8px",
             zIndex: 100,
             boxShadow: "0px 8px 24px rgba(0,0,0,0.08)",
@@ -310,12 +340,31 @@ export default function CompanySelector() {
               sx={{ mt: 1, py: "8px !important" }}
               onClick={() => {
                 handleClose();
-                router.push('/company');
+                handleAddCompanyClick();
               }}
             />
           </Box>
         </Box>
       )}
+
+      {/* Add Company Onboarding Flow */}
+      <CreateCompanyModal
+        open={addCompanyPhase === "company"}
+        onSuccess={handleCompanyCreated}
+      />
+      <AddWalletModal
+        open={addCompanyPhase === "wallet"}
+        onClose={() => {
+          setAddCompanyPhase("idle");
+          dispatch(CompanyAction(COMPANY_FETCH));
+        }}
+        onWalletAdded={handleWalletAdded}
+        headerExtra={<StepIndicator currentStep={2} totalSteps={2} />}
+      />
+      <CelebrationOverlay
+        open={addCompanyPhase === "celebration"}
+        onDismiss={handleCelebrationDismiss}
+      />
     </Box>
   );
 }

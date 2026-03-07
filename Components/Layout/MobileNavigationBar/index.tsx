@@ -13,6 +13,10 @@ import i18n from "i18next";
 
 import portugalFlag from "@/assets/Images/Icons/flags/portugal-flag.png";
 import unitedStatesFlag from "@/assets/Images/Icons/flags/united-states-flag.png";
+import franceFlag from "@/assets/Images/Icons/flags/france-flag.png";
+import spainFlag from "@/assets/Images/Icons/flags/spain-flag.png";
+import germanyFlag from "@/assets/Images/Icons/flags/germany-flag.png";
+import netherlandsFlag from "@/assets/Images/Icons/flags/netherlands-flag.png";
 import Link from "next/link";
 
 import LanguageSwitcherModal from "@/Components/UI/MobileLanguageSwitcher";
@@ -75,10 +79,12 @@ const MobileNavigationBar = () => {
   };
 
   const languages = [
-    { code: "pt", label: "Português", flag: portugalFlag },
     { code: "en", label: "English", flag: unitedStatesFlag },
-    // { code: "fr", label: "Français", flag: franceFlag },
-    // { code: "es", label: "Español", flag: spainFlag },
+    { code: "pt", label: "Português", flag: portugalFlag },
+    { code: "fr", label: "Français", flag: franceFlag },
+    { code: "es", label: "Español", flag: spainFlag },
+    { code: "de", label: "Deutsch", flag: germanyFlag },
+    { code: "nl", label: "Nederlands", flag: netherlandsFlag },
   ];
 
   // First row items (5 items)

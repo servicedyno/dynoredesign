@@ -2,9 +2,10 @@ import Logo from "@/assets/Images/auth/dynopay-logo.png";
 import MobileLogo from "@/assets/Images/auth/dynopay-mobile-logo.png";
 import CompanySelector from "@/Components/UI/CompanySelector";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
+import ThemeToggle from "@/Components/UI/ThemeToggle";
 import UserMenu from "@/Components/UI/UserMenu";
 import { useWalletData } from "@/hooks/useWalletData";
-import { theme } from "@/styles/theme";
+import { useTheme as useMuiTheme } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import ArrowOutwardIcon from "@mui/icons-material/ArrowOutward";
 import { Box } from "@mui/material";
@@ -26,6 +27,7 @@ import { HeaderDivider } from "@/Components/UI/LanguageSwitcher/styled";
 
 const NewHeader = () => {
   const router = useRouter();
+  const muiTheme = useMuiTheme();
   const namespaces = ["dashboardLayout", "walletScreen"];
   const { t } = useTranslation(namespaces);
   const tDashboard = useCallback(
@@ -110,6 +112,8 @@ const NewHeader = () => {
               <LanguageSwitcher />
             </Box>
 
+            <ThemeToggle size="small" />
+
             {kycRequired && (
               <Box sx={{ order: { lg: 1, xl: 2 } }}>
                 <RequiredKYC
@@ -118,13 +122,13 @@ const NewHeader = () => {
                   data-testid="kyc-required-banner"
                 >
                   <InfoIcon
-                    sx={{ fontSize: 20, color: theme.palette.error.main }}
+                    sx={{ fontSize: 20, color: muiTheme.palette.error.main }}
                   />
                   <RequiredKYCText sx={{ display: { lg: "none", xl: "block" } }}>{tDashboard("requiredKYC2")}</RequiredKYCText>
                   <RequiredKYCText sx={{ display: { lg: "block", xl: "none" } }}>{tDashboard("requiredKYC1")}</RequiredKYCText>
                   <HeaderDivider style={{ margin: "0 14px" }} />
                   <ArrowOutwardIcon
-                    sx={{ color: theme.palette.text.secondary, fontSize: 16 }}
+                    sx={{ color: muiTheme.palette.text.secondary, fontSize: 16 }}
                   />
                 </RequiredKYC>
               </Box>
@@ -135,7 +139,7 @@ const NewHeader = () => {
                 <Link href="/wallet">
                   <RequiredKYC>
                     <InfoIcon
-                      sx={{ fontSize: 20, color: theme.palette.error.main }}
+                      sx={{ fontSize: 20, color: muiTheme.palette.error.main }}
                     />
                     <RequiredKYCText
                       sx={{ display: { lg: "none", xl: "block" } }}

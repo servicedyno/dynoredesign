@@ -195,10 +195,11 @@ async def ensure_services_started():
         # Start monitoring thread
         threading.Thread(target=monitor_services, daemon=True).start()
         
-        # Create HTTP client for proxying
+        # Create HTTP client for proxying with optimized connection pooling
         HTTP_CLIENT = httpx.AsyncClient(
             base_url=f"http://127.0.0.1:{NODE_PORT}",
-            timeout=httpx.Timeout(60.0, connect=10.0)
+            timeout=httpx.Timeout(60.0, connect=10.0),
+            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20, keepalive_expiry=30),
         )
         
         print("Proxy ready on port 8001 -> Node.js on port 3300", flush=True)

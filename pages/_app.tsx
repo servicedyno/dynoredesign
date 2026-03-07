@@ -4,16 +4,16 @@ import "../i18n";
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
-import { ReactNode, useMemo, useState } from "react";
+import React, { ReactNode, useMemo, useState } from "react";
 
 import type { SxProps, Theme } from "@mui/material";
-import { ThemeProvider } from "@mui/material";
+import { ThemeProvider as MuiThemeProvider } from "@mui/material";
 import { SessionProvider } from "next-auth/react";
 import { Provider } from "react-redux";
 
 import LanguageBootstrap from "@/helpers/LanguageBootstrap";
 import store from "@/store";
-import { ThemeProvider as CheckoutThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeProvider as AppThemeProvider, useThemeMode } from "@/contexts/ThemeContext";
 
 import {
   AdminLayout,
@@ -23,8 +23,9 @@ import {
 } from "@/Containers";
 import HomeLayout from "@/Containers/Home";
 
-import { homeTheme } from "@/styles/homeTheme";
-import { theme } from "@/styles/theme";
+import { homeTheme, homeThemeDark } from "@/styles/homeTheme";
+import { theme, themeDark } from "@/styles/theme";
+import { lightTheme, darkTheme } from "@/styles/theme";
 
 // -----------------------------
 // Types
@@ -47,12 +48,13 @@ type AppPropsWithLayout = AppProps & {
 };
 
 // -----------------------------
-// App Component
+// Inner App (has access to theme context)
 // -----------------------------
 
-export default function App({ Component, pageProps }: AppPropsWithLayout) {
+function AppInner({ Component, pageProps }: AppPropsWithLayout) {
   const router = useRouter();
   const pathname = router.pathname;
+  const { isDark } = useThemeMode();
 
   const [pageName, setPageName] = useState<string>("");
   const [pageDescription, setPageDescription] = useState<string>("");
@@ -109,15 +111,25 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
     setPageHeaderSx,
   };
 
+  // Pick the right MUI theme based on layout + dark mode
+  const activeTheme = useMemo(() => {
+    switch (resolvedLayout) {
+      case "home":
+        return isDark ? homeThemeDark : homeTheme;
+      case "pay":
+        return isDark ? darkTheme : lightTheme;
+      default:
+        return isDark ? themeDark : theme;
+    }
+  }, [resolvedLayout, isDark]);
+
   const renderWithLayout = () => {
     switch (resolvedLayout) {
       case "home":
         return (
-          <ThemeProvider theme={homeTheme}>
-            <HomeLayout>
-              <Component {...pageProps} />
-            </HomeLayout>
-          </ThemeProvider>
+          <HomeLayout>
+            <Component {...pageProps} />
+          </HomeLayout>
         );
 
       case "login":
@@ -136,11 +148,9 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
 
       case "pay":
         return (
-          <CheckoutThemeProvider>
-            <PaymentLayout pageName={pageName} pageDescription={pageDescription}>
-              <Component {...pageProps} {...pageSetterProps} />
-            </PaymentLayout>
-          </CheckoutThemeProvider>
+          <PaymentLayout pageName={pageName} pageDescription={pageDescription}>
+            <Component {...pageProps} {...pageSetterProps} />
+          </PaymentLayout>
         );
 
       case "admin":
@@ -169,10 +179,24 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
   };
 
   return (
+    <MuiThemeProvider theme={activeTheme}>
+      {renderWithLayout()}
+    </MuiThemeProvider>
+  );
+}
+
+// -----------------------------
+// App Component
+// -----------------------------
+
+export default function App(props: AppPropsWithLayout) {
+  return (
     <Provider store={store}>
       <LanguageBootstrap />
-      <SessionProvider session={pageProps.session}>
-        <ThemeProvider theme={theme}>{renderWithLayout()}</ThemeProvider>
+      <SessionProvider session={props.pageProps.session}>
+        <AppThemeProvider>
+          <AppInner {...props} />
+        </AppThemeProvider>
       </SessionProvider>
     </Provider>
   );

@@ -1,5 +1,6 @@
 import DynopayLogo from "@/assets/Images/auth/dynopay-logo.svg";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
+import ThemeToggle from "@/Components/UI/ThemeToggle";
 import useIsMobile from "@/hooks/useIsMobile";
 import { Button } from "@mui/material";
 import Image from "next/image";
@@ -209,6 +210,8 @@ const HomeHeader = memo(function HomeHeader() {
               </DesktopLanguageWrapper>
             )}
 
+            <ThemeToggle size="small" />
+
             <StyledSignInButton
               disableRipple
               onClick={() => void router.push("/auth/login")}
@@ -259,6 +262,7 @@ const HomeHeader = memo(function HomeHeader() {
 
             <MobileLanguageWrapper>
               <LanguageSwitcher showBig={true} />
+              <ThemeToggle size="small" sx={{ ml: 1 }} />
             </MobileLanguageWrapper>
           </MobileNavContent>
         </MobileDrawer>

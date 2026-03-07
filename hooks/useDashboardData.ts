@@ -20,12 +20,22 @@ export const useDashboardData = () => {
     (state: any) => state.companyReducer?.selectedCompanyId
   );
 
+  const companyList = useSelector(
+    (state: any) => state.companyReducer?.companyList
+  );
+
+  // Only fetch dashboard data once a company is selected (or if user has no companies)
+  // This prevents the flash where aggregate data shows briefly before company-specific data
+  const hasCompanies = companyList && companyList.length > 0;
+  const shouldFetch = !hasCompanies || selectedCompanyId != null;
+
   useEffect(() => {
+    if (!shouldFetch) return;
     const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
     dispatch(DashboardAction(DASHBOARD_FETCH, payload));
     dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, payload));
     dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, payload));
-  }, [dispatch, selectedCompanyId]);
+  }, [dispatch, selectedCompanyId, shouldFetch]);
 
   const fetchChartData = useCallback(
     (period: string, startDate?: string, endDate?: string) => {
@@ -37,11 +47,12 @@ export const useDashboardData = () => {
   );
 
   const refreshDashboard = useCallback(() => {
+    if (!shouldFetch) return;
     const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
     dispatch(DashboardAction(DASHBOARD_FETCH, payload));
     dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, payload));
     dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, payload));
-  }, [dispatch, selectedCompanyId]);
+  }, [dispatch, selectedCompanyId, shouldFetch]);
 
   return {
     stats: dashboardState.stats,

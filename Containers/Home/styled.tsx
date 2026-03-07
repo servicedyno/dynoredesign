@@ -1,12 +1,13 @@
-import { theme } from "@/styles/theme";
 import { Box, styled } from "@mui/material";
 
 // HomeLayout
-export const MainBox = styled(Box)(() => ({
+export const MainBox = styled(Box)(({ theme }) => ({
   minHeight: "100vh",
   display: "flex",
   flexDirection: "column",
-  bgcolor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.default,
+  color: theme.palette.text.primary,
+  transition: "background-color 0.3s ease, color 0.3s ease",
 }));
 
 export const MainSection = styled(Box)(() => ({

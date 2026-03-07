@@ -607,3 +607,339 @@ export const darkTheme = createTheme({
   },
   components: getCheckoutComponentStyles(true),
 });
+
+
+// ─── Dark variant of the MAIN app theme (dashboard, etc.) ───────────
+export const themeDark = createTheme({
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 900,
+      lg: 1200,
+      xl: 1600,
+    },
+  },
+  palette: {
+    mode: "dark",
+    common: {
+      black: "#12131C",
+      white: "#fff",
+    },
+    success: {
+      main: "#1B3A26",
+      dark: "#47B464",
+      light: "#1B3A26",
+    },
+    error: {
+      main: "#E8484A",
+    },
+    border: {
+      main: "#2A2D42",
+      focus: "#6A6D80",
+      success: "#1C993D",
+      error: "#E8484A",
+    },
+    primary: {
+      main: "#6A7BFF",
+      dark: "#FFFFFF",
+      light: "#1A1F3D",
+      contrastText: "#fff",
+    },
+    secondary: {
+      main: "#141625",
+      dark: "#2A2D42",
+      light: "#1A1D30",
+      contrastText: "#3A3D52",
+    },
+    text: {
+      primary: "#E8E8EC",
+      secondary: "#A0A1A5",
+      disabled: "#606060",
+    },
+    background: {
+      default: "#0B0D17",
+      paper: "#141625",
+    },
+  },
+  typography: {
+    fontFamily: "'Urbanist', sans-serif",
+    fontWeightLight: 300,
+    fontWeightRegular: 500,
+    fontWeightMedium: 600,
+    fontWeightBold: 700,
+    h1: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 700,
+      fontSize: "48px",
+      lineHeight: 1.15,
+      letterSpacing: "-0.02em",
+    },
+    h2: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 700,
+      fontSize: "40px",
+      lineHeight: 1.2,
+      letterSpacing: "-0.02em",
+    },
+    h3: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 700,
+      fontSize: "32px",
+      lineHeight: 1.25,
+      letterSpacing: "-0.015em",
+    },
+    h4: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 600,
+      fontSize: "28px",
+      lineHeight: 1.3,
+    },
+    h5: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 600,
+      fontSize: "22px",
+      lineHeight: 1.35,
+    },
+    h6: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 600,
+      fontSize: "18px",
+      lineHeight: 1.4,
+    },
+    subtitle1: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 500,
+      fontSize: "16px",
+      lineHeight: 1.5,
+    },
+    subtitle2: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 600,
+      fontSize: "14px",
+      lineHeight: 1.45,
+    },
+    body1: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 400,
+      fontSize: "16px",
+      lineHeight: 1.6,
+    },
+    body2: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 400,
+      fontSize: "14px",
+      lineHeight: 1.6,
+    },
+    button: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 600,
+      fontSize: "16px",
+      lineHeight: 1.2,
+      textTransform: "none",
+    },
+    caption: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 500,
+      fontSize: "12px",
+      lineHeight: 1.4,
+    },
+    overline: {
+      fontFamily: "'Urbanist', sans-serif",
+      fontWeight: 700,
+      fontSize: "11px",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+    },
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          lineHeight: 1,
+        },
+      },
+      variants: [
+        {
+          props: { variant: "contained" },
+          style: {
+            padding: "12px 24px",
+          },
+        },
+        {
+          props: { variant: "rounded" },
+          style: {
+            border: "1px solid",
+            color: "#fff",
+            padding: "12px 30px",
+            background: "#6A7BFF",
+            fontWeight: 400,
+            borderRadius: "50px",
+            textTransform: "none",
+            cursor: "pointer",
+            "&:hover": {
+              color: "#6A7BFF",
+              background: "#1a1a2e",
+            },
+            "&.Mui-disabled": {
+              background: "#6A7BFF88",
+              color: "#fff",
+              pointerEvents: "auto",
+              cursor: "not-allowed",
+            },
+            "&.MuiButton-roundedSuccess": {
+              background: "#2e7d32",
+              "&:hover": {
+                color: "#2e7d32",
+                background: "#1a1a2e",
+              },
+            },
+            "&.MuiButton-roundedError": {
+              background: "#d32f2f",
+              "&:hover": {
+                color: "#d32f2f",
+                background: "#1a1a2e",
+              },
+            },
+            "&.MuiButton-roundedSecondary": {
+              background: "#2a2a4a",
+              "&:hover": {
+                color: "#fff",
+                background: "#1a1a2e",
+              },
+            },
+            "&.MuiButton-roundedWhite": {
+              background: "#2a2a4a",
+              color: "#fff",
+              "&:hover": {
+                color: "#12131C",
+                background: "#fff",
+              },
+            },
+          },
+        },
+        {
+          props: { variant: "pills" },
+          style: {
+            border: "1px solid",
+            padding: "10px 30px",
+            color: "#6A7BFF",
+            fontWeight: 600,
+            borderRadius: "15px",
+            fontSize: "16px",
+            "&:hover": {
+              color: "#fff",
+              background: "#6A7BFF",
+            },
+          },
+        },
+        {
+          props: { variant: "bluepill" },
+          style: {
+            border: "1px solid",
+            padding: "10px 30px",
+            color: "#fff",
+            background: "#6A7BFF",
+            fontWeight: 600,
+            borderRadius: "15px",
+            fontSize: "16px",
+            "&:hover": {
+              color: "#6A7BFF",
+              background: "#1a1a2e",
+            },
+            "&.Mui-disabled": {
+              background: "#6A7BFF99",
+              color: "#fff",
+            },
+          },
+        },
+      ],
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          "&.Mui-disabled": {
+            cursor: "not-allowed",
+            pointerEvents: "auto",
+          },
+        },
+      },
+    },
+    MuiInputBase: {
+      styleOverrides: {
+        root: {
+          borderRadius: "20px",
+        },
+      },
+    },
+    MuiSelect: {
+      defaultProps: {
+        MenuProps: {
+          PaperProps: {
+            sx: {
+              maxHeight: "270px",
+            },
+          },
+        },
+      },
+      styleOverrides: {
+        outlined: {
+          color: "#6A7BFF",
+          padding: "10px 15px",
+          borderRadius: "20px",
+          border: "1px solid ",
+        },
+      },
+    },
+    MuiToolbar: {
+      styleOverrides: {
+        root: {
+          minHeight: `${toolbarHeight}px !important`,
+          alignItems: "center",
+        },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          fontSize: "30px",
+          fontWeight: 600,
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          "& .MuiOutlinedInput-root": {
+            background: "#1a1a2e",
+          },
+          borderRadius: "20px",
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          "& .MuiChip-label": {
+            paddingLeft: "4px",
+            paddingRight: "8px",
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: "none",
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: "#141625",
+        },
+      },
+    },
+  },
+});
