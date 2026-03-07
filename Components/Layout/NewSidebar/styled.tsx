@@ -2,7 +2,7 @@ import { styled } from "@mui/material";
 
 export const SidebarWrapper = styled("aside")(({ theme }) => ({
   height: "100%",
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   display: "flex",
   flexDirection: "column",
   justifyContent: "space-between",
@@ -17,7 +17,7 @@ export const Menu = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "4px",
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   borderRadius: "12px",
 }));
 
@@ -75,7 +75,9 @@ export const IconBox = styled("div", {
     "& img": {
       filter: active
         ? "brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(240deg) brightness(101%) contrast(150%)"
-        : "brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)",
+        : theme.palette.mode === "dark"
+          ? "brightness(0) saturate(100%) invert(80%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(90%)"
+          : "brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)",
     },
   }),
 );
@@ -98,7 +100,7 @@ export const HelpSupportBtn = styled("button")(({ theme }) => ({
   maxHeight: "40px",
   borderRadius: "6px",
   cursor: "pointer",
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.border.main}`,
   fontWeight: 500,
   color: theme.palette.text.secondary,
@@ -166,7 +168,7 @@ export const ReferralCardContentValue = styled("span")(({ theme }) => ({
   borderRadius: "7px",
   padding: "11px",
   border: `1px dashed ${theme.palette.border.main}`,
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   fontSize: "15px",
   fontWeight: 500,
   fontFamily: "UrbanistMedium",
@@ -190,7 +192,7 @@ export const CopyButton = styled("button")(({ theme }) => ({
   padding: "6px",
   borderRadius: "7px",
   border: `1px solid ${theme.palette.primary.main}`,
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   cursor: "pointer",
   transition: "all 0.2s ease",
   "&:hover": {

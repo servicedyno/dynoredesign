@@ -25,7 +25,7 @@ export const CurrencyTrigger = muiStyled(Box, {
   border: "1px solid",
   borderColor: error ? theme.palette.error.main : theme.palette.border.main,
   cursor: "pointer",
-  background: error ? theme.palette.error.main : theme.palette.common.white,
+  background: error ? theme.palette.error.main : theme.palette.background.paper,
   color: theme.palette.text.primary,
   width: fullWidth ? "100%" : "auto",
   height: isMobile ? "32px" : "40px",

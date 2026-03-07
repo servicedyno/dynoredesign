@@ -91,7 +91,7 @@ const AdminHeader = ({ pageName, pageDescription, component }: AdminHeaderProps)
           zIndex: 999,
           width: { lg: `calc(100vw - ${drawerWidth}px)`, xs: "100vw" },
           boxShadow: "none",
-          background: theme.palette.common.white,
+          background: theme.palette.background.paper,
           color: theme.palette.primary.main,
           borderBottom: "1px solid #EAEAEA",
         }}

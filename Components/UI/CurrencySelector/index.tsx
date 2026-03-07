@@ -211,7 +211,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
               border: `1px solid ${borderColor}`,
               borderTop: "none",
               maxHeight: "200px",
-              backgroundColor: theme.palette.common.white,
+              backgroundColor: theme.palette.background.paper,
               boxShadow: "0px 4px 16px 0px rgba(47, 47, 101, 0.15)",
             },
           }}

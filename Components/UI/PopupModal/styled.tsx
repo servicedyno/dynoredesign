@@ -21,7 +21,7 @@ export const ModalContainer = styled(Dialog, {
     padding: `${theme.spacing(2)}`,
     margin: 0,
     maxWidth: "80vw",
-    background: customProps?.transparent ? "transparent" : "#fff",
+    background: customProps?.transparent ? "transparent" : theme.palette.background.paper,
     top: "50%",
     transform: "translateY(-50%)",
     maxHeight: "95%",

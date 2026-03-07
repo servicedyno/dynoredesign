@@ -9,10 +9,9 @@ import PopupModal from "@/Components/UI/PopupModal";
 import useIsMobile from "@/hooks/useIsMobile";
 import { TOAST_SHOW } from "@/Redux/Actions/ToastAction";
 import { verifyOtp } from "@/Redux/Sagas/WalletSaga";
-import { theme } from "@/styles/theme";
 import { rootReducer } from "@/utils/types";
 import { Address, AddWalletModalProps } from "@/utils/types/wallet";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
 import Image from "next/image";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -35,6 +34,7 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
   companyId: propCompanyId,
 }) => {
   const dispatch = useDispatch();
+  const muiTheme = useTheme();
   const userState = useSelector((state: rootReducer) => state.userReducer);
   const companyState = useSelector((state: rootReducer) => state.companyReducer);
   const companyId = propCompanyId || companyState.selectedCompanyId || companyState.companyList?.[0]?.company_id;
@@ -334,13 +334,13 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
         }
         bodyPadding={
           isMobile
-            ? theme.spacing(1.5, 2, 2, 2)
-            : theme.spacing(1.5, 3.75, 3.75, 3.75)
+            ? muiTheme.spacing(1.5, 2, 2, 2)
+            : muiTheme.spacing(1.5, 3.75, 3.75, 3.75)
         }
         headerPadding={
           isMobile
-            ? theme.spacing(2, 2, 0, 2)
-            : theme.spacing(3.75, 3.75, 0, 3.75)
+            ? muiTheme.spacing(2, 2, 0, 2)
+            : muiTheme.spacing(3.75, 3.75, 0, 3.75)
         }
         headerActionLayout="inline"
       >
@@ -375,7 +375,7 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
             error={!!errors.cryptocurrency}
             helperText={errors.cryptocurrency}
             sxIconChip={{
-              [theme.breakpoints.down("sm")]: {
+              [muiTheme.breakpoints.down("sm")]: {
                 height: "26px",
                 padding: "4px 6px",
                 "& img": {
@@ -460,7 +460,7 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
             disabled={isSubmitting}
             sx={{
               flex: 1,
-              [theme.breakpoints.down("sm")]: {
+              [muiTheme.breakpoints.down("sm")]: {
                 height: "32px",
                 fontSize: "13px",
               },
@@ -473,7 +473,7 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
             disabled={popupLoading || isSubmitting}
             sx={{
               flex: 1,
-              [theme.breakpoints.down("sm")]: {
+              [muiTheme.breakpoints.down("sm")]: {
                 height: "32px",
                 fontSize: "13px",
               },

@@ -16,6 +16,7 @@ const OnboardingFlow: React.FC = () => {
   const [phase, setPhase] = useState<OnboardingPhase>("loading");
   const initialCheckDone = useRef(false);
   const [fetchStarted, setFetchStarted] = useState(false);
+  const [dataLoadedOnce, setDataLoadedOnce] = useState(false);
 
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer,
@@ -38,10 +39,20 @@ const OnboardingFlow: React.FC = () => {
     setFetchStarted(true);
   }, [dispatch]);
 
+  // Track when loading transitions from true to false (data actually loaded)
+  useEffect(() => {
+    if (fetchStarted && !isLoading) {
+      // Small delay to ensure Redux state is fully settled
+      const timer = setTimeout(() => setDataLoadedOnce(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [fetchStarted, isLoading]);
+
   // Determine initial phase once data loads
   useEffect(() => {
     if (initialCheckDone.current) return;
     if (!fetchStarted) return; // Wait until we've dispatched fetches
+    if (!dataLoadedOnce) return; // Wait for data to actually arrive
     if (isLoading) return; // Wait for loading to finish
 
     // Data has loaded at least once
@@ -55,7 +66,17 @@ const OnboardingFlow: React.FC = () => {
       // Returning user — everything set up, skip onboarding
       setPhase("done");
     }
-  }, [isLoading, hasCompany, hasWallet, fetchStarted]);
+  }, [isLoading, hasCompany, hasWallet, fetchStarted, dataLoadedOnce]);
+
+  // Re-evaluate phase if wallet data updates AFTER initial check 
+  // (e.g., late-arriving API response)
+  useEffect(() => {
+    if (!initialCheckDone.current) return;
+    if (phase === "wallet" && hasWallet) {
+      // Wallet data arrived late — skip to done
+      setPhase("done");
+    }
+  }, [hasWallet, phase]);
 
   // Called when company creation succeeds
   const handleCompanyCreated = useCallback(() => {

@@ -6,7 +6,7 @@ export const CustomAppBar = styled(AppBar)(({ theme }) => ({
   zIndex: 999,
   width: `calc(100vw - ${drawerWidth}px)`,
   boxShadow: "none",
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   color: theme.palette.primary.main,
   borderBottom: "1px solid #EAEAEA",
   [theme.breakpoints.down("sm")]: {

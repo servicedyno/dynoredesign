@@ -1,4 +1,3 @@
-import { theme } from "@/styles/theme";
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
@@ -9,18 +8,18 @@ export const ModalHeader = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(0.5),
 }));
 
-export const ModalHeaderContent = styled(Box)({
+export const ModalHeaderContent = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(0.5),
-});
+}));
 
 export const ModalSubtitle = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(1),
 }));
 
 export const WarningContainer = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.primary.light,
+  backgroundColor: theme.palette.mode === "dark" ? "rgba(106, 123, 255, 0.1)" : theme.palette.primary.light,
   padding: theme.spacing(1),
   borderRadius: "7px",
   border: `1px solid ${theme.palette.border.main}`,
@@ -41,7 +40,7 @@ export const WarningIconContainer = styled(Box)({
   marginTop: "2px",
 });
 
-export const WarningContent = styled(Box)({
+export const WarningContent = styled(Box)(({ theme }) => ({
   flex: 1,
   "& > p": {
     maxWidth: "300px",
@@ -49,12 +48,13 @@ export const WarningContent = styled(Box)({
     fontWeight: 500,
     fontFamily: "UrbanistMedium",
     lineHeight: "15px",
+    color: theme.palette.text.primary,
     [theme.breakpoints.down("md")]: {
       fontSize: "10px",
       lineHeight: "12px",
     },
   },
-});
+}));
 
 export const ModalActions = styled(Box)(({ theme }) => ({
   display: "flex",

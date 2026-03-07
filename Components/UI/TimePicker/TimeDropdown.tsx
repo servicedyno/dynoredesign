@@ -160,7 +160,7 @@ export default function TimeDropdown({
             border: `1px solid ${theme.palette.border.main}`,
             borderRadius: "6px",
             padding: "7px 9px",
-            backgroundColor: theme.palette.common.white,
+            backgroundColor: theme.palette.background.paper,
             zIndex: 1000,
             display: "flex",
             flexDirection: "column",
@@ -195,7 +195,7 @@ export default function TimeDropdown({
                   backgroundColor:
                     value === option
                       ? theme.palette.primary.main
-                      : theme.palette.common.white,
+                      : theme.palette.background.paper,
                   borderRadius: "100%",
                   display: "flex",
                   alignItems: "center",
