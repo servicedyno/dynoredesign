@@ -4,6 +4,9 @@ import { captureError } from "./errorMonitoringService";
 import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService";
 import { baseEmailTemplate, getCurrencySymbol, infoBox, dataRow, statusBadge, p, otpBlock } from "../utils/emailTemplate";
 
+/** Dynamic base URL for all email CTA links — uses FRONTEND_URL env var */
+const FRONTEND_BASE_URL = (process.env.FRONTEND_URL || 'https://dynopay.com').replace(/\/$/, '');
+
 /**
  * Dynopay Unified Email Service
  * Single source of truth for all email notifications
@@ -104,7 +107,7 @@ export const sendWelcomeEmail = async (
     `)}
     ${p(`If you have any questions, our support team is here to help.`)}`;
 
-    const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Get Started", "https://dynopay.com/dashboard");
+    const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Get Started", `${FRONTEND_BASE_URL}/dashboard`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`Welcome email sent to ${email}`);
   } catch (e) {
@@ -201,7 +204,7 @@ export const sendPasswordChangedEmail = async (
     `, '#22c55e')}
     ${p(`<strong>Security Notice:</strong> If you didn't make this change, please contact our support team immediately to secure your account.`, `color: #991b1b;`)}`;
 
-    const html = dynoPayEmailTemplate("Password Updated", content, true, "View Account Settings", "https://dynopay.com/dashboard/settings");
+    const html = dynoPayEmailTemplate("Password Updated", content, true, "View Account Settings", `${FRONTEND_BASE_URL}/dashboard/settings`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`Password changed email sent to ${email}`);
   } catch (e) {
@@ -238,7 +241,7 @@ export const sendUserProfileUpdatedEmail = async (
     `, '#22c55e')}
     ${p(`<strong>Security Notice:</strong> If you didn't make these changes, please reset your password immediately and contact our support team.`, `color: #991b1b;`)}`;
 
-    const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", "https://dynopay.com/dashboard/profile");
+    const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", `${FRONTEND_BASE_URL}/dashboard/profile`);
     await mailTransporter({ to: email, name, subject, body: html });
 
     if (oldEmail && oldEmail !== email) {
@@ -252,7 +255,7 @@ export const sendUserProfileUpdatedEmail = async (
         </table>
       `, '#ef4444')}`;
 
-      const oldEmailHtml = dynoPayEmailTemplate("Email Address Changed", oldEmailContent, true, "Contact Support", "https://dynopay.com/support");
+      const oldEmailHtml = dynoPayEmailTemplate("Email Address Changed", oldEmailContent, true, "Contact Support", `${FRONTEND_BASE_URL}/support`);
       await mailTransporter({ to: oldEmail, name, subject: "Your Dynopay Email Address Has Been Changed", body: oldEmailHtml });
       apiLogger.info(`[ProfileUpdate] Email change notification sent to old email: ${oldEmail}`);
     }
@@ -293,7 +296,7 @@ export const sendSecurityAlertEmail = async (
     ${p(`<strong>Was this you?</strong><br />If you recognize this activity, you can ignore this message.`)}
     ${p(`<strong>Didn't perform this action?</strong><br />Please secure your account immediately by:<br />1. Changing your password<br />2. Reviewing your recent activity<br />3. Contacting our support team`)}`;
 
-    const html = dynoPayEmailTemplate("Security Alert", content, true, "Secure My Account", "https://dynopay.com/dashboard/security");
+    const html = dynoPayEmailTemplate("Security Alert", content, true, "Secure My Account", `${FRONTEND_BASE_URL}/dashboard/security`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`Security alert email sent to ${email}`);
   } catch (e) {
@@ -360,7 +363,7 @@ export const sendNewDeviceLoginEmail = async (
     ${p(`<strong>Was this you?</strong><br />If you recognize this login, you can safely ignore this message.`)}
     ${p(`<strong>Didn't log in?</strong><br />Please change your password immediately and review your recent account activity.`)}`;
 
-    const html = dynoPayEmailTemplate("New Login Detected", content, true, "Secure My Account", "https://dynopay.com/dashboard/settings");
+    const html = dynoPayEmailTemplate("New Login Detected", content, true, "Secure My Account", `${FRONTEND_BASE_URL}/dashboard/settings`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`[Email] New device login alert sent to ${email} from ${locationDisplay} (${ipAddress})`);
   } catch (e) {
@@ -394,7 +397,7 @@ export const sendFailedLoginAttemptsEmail = async (
     ${p(`<strong>Was this you?</strong><br />If you forgot your password, you can reset it using the button below.`)}
     ${p(`<strong>Wasn't you?</strong><br />Someone may be trying to access your account. We recommend changing your password immediately. Your account is still secure - we blocked these login attempts.`)}`;
 
-    const html = dynoPayEmailTemplate("Security Alert", content, true, "Reset Password", "https://dynopay.com/forgot-password");
+    const html = dynoPayEmailTemplate("Security Alert", content, true, "Reset Password", `${FRONTEND_BASE_URL}/forgot-password`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`[Email] Failed login attempts alert sent to ${email} - ${attemptCount} attempts from ${ipAddress}`);
   } catch (e) {
@@ -424,7 +427,7 @@ export const sendCompanyProfileCreatedEmail = async (
       <p style="margin: 0; font-size: 14px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Your wallet is where we'll send the crypto payments you receive. It's quick and secure.</p>
     `)}`;
 
-    const html = dynoPayEmailTemplate("Profile Complete", content, true, "Add Wallet", "https://dynopay.com/dashboard/wallets");
+    const html = dynoPayEmailTemplate("Profile Complete", content, true, "Add Wallet", `${FRONTEND_BASE_URL}/dashboard/wallets`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`Company profile created email sent to ${email}`);
   } catch (e) {
@@ -455,7 +458,7 @@ export const sendCompanyContactWelcomeEmail = async (
     `)}
     ${p(`If you have any questions about this registration, please contact our support team or reach out to ${accountHolderName}.`)}`;
 
-    const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Learn More", "https://dynopay.com");
+    const html = dynoPayEmailTemplate("Welcome to Dynopay", content, true, "Learn More", `${FRONTEND_BASE_URL}`);
     await mailTransporter({ to: companyContactEmail, name: companyName, subject, body: html });
     apiLogger.info(`Company contact welcome email sent to ${companyContactEmail}`);
   } catch (e) {
@@ -487,7 +490,7 @@ export const sendCompanyProfileUpdatedEmail = async (
     `, '#22c55e')}
     ${p(`If you didn't make these changes, please contact our support team immediately.`)}`;
 
-    const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", "https://dynopay.com/dashboard/company");
+    const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", `${FRONTEND_BASE_URL}/dashboard/company`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`Company profile updated email sent to ${email}`);
   } catch (e) {
@@ -552,7 +555,7 @@ export const sendWalletVerifiedEmail = async (
     `, '#22c55e')}
     ${p(`All payments you receive will be automatically forwarded to this wallet. You're all set to start accepting crypto payments.`)}`;
 
-    const html = dynoPayEmailTemplate("Wallet Active", content, true, "View Dashboard", "https://dynopay.com/dashboard");
+    const html = dynoPayEmailTemplate("Wallet Active", content, true, "View Dashboard", `${FRONTEND_BASE_URL}/dashboard`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`Wallet verified email sent to ${email}`);
   } catch (e) {
@@ -619,7 +622,7 @@ export const sendWalletDeletedEmail = async (
     ${p(`Payments will no longer be forwarded to this wallet.`)}
     ${p(`<strong>Didn't do this?</strong><br />If you didn't remove this wallet, please secure your account immediately and contact support.`)}`;
 
-    const html = dynoPayEmailTemplate("Wallet Removed", content, true, "Manage Wallets", "https://dynopay.com/dashboard/wallets");
+    const html = dynoPayEmailTemplate("Wallet Removed", content, true, "Manage Wallets", `${FRONTEND_BASE_URL}/dashboard/wallets`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`[Email] Wallet deleted notification sent to ${email} for ${network}`);
   } catch (e) {
@@ -645,7 +648,7 @@ export const sendAddWalletReminderEmail = async (
     `)}
     ${p(`Add your wallet now and start accepting crypto payments today.`)}`;
 
-    const html = dynoPayEmailTemplate("Add Your Wallet", content, true, "Add Wallet Now", "https://dynopay.com/dashboard/wallets");
+    const html = dynoPayEmailTemplate("Add Your Wallet", content, true, "Add Wallet Now", `${FRONTEND_BASE_URL}/dashboard/wallets`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`Add wallet reminder email sent to ${email}`);
   } catch (e) {
@@ -687,7 +690,7 @@ export const sendPaymentReceivedEmail = async (
     `, '#22c55e')}
     ${p(`The funds have been forwarded to your payout wallet. You can view the full transaction details in your dashboard.`)}`;
 
-    const html = dynoPayEmailTemplate("Payment Received", content, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
+    const html = dynoPayEmailTemplate("Payment Received", content, true, "View Transaction", `${FRONTEND_BASE_URL}/dashboard/transactions`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`Payment received email sent to ${email}`);
   } catch (e) {
@@ -985,7 +988,7 @@ export const sendPaymentFailedEmail = async (
       `)}
       ${reason === 'underpaid' ? p(`The customer has been notified. You may need to issue a partial refund or request the remaining amount.`) : ''}`;
 
-      const merchantHtml = dynoPayEmailTemplate("Payment Alert", merchantContent, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
+      const merchantHtml = dynoPayEmailTemplate("Payment Alert", merchantContent, true, "View Transaction", `${FRONTEND_BASE_URL}/dashboard/transactions`);
       await mailTransporter({ to: merchantEmail, name: merchantDisplayName, subject: merchantSubject, body: merchantHtml });
       apiLogger.info(`[Email] Payment failed notification sent to merchant ${merchantEmail} - reason: ${reason}`);
     }
@@ -1101,7 +1104,7 @@ export const sendLargeTransactionAlertEmail = async (
     ${p(`This payment has been automatically processed and forwarded to your wallet.`)}
     ${p(`For large transactions, we recommend:<br />1. Verify the transaction in your dashboard<br />2. Confirm product/service delivery to customer<br />3. Keep records for accounting purposes`)}`;
 
-    const html = dynoPayEmailTemplate("Large Payment Received", content, true, "View Transaction", "https://dynopay.com/dashboard/transactions");
+    const html = dynoPayEmailTemplate("Large Payment Received", content, true, "View Transaction", `${FRONTEND_BASE_URL}/dashboard/transactions`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`[Email] Large transaction alert sent to ${email} - ${amount} ${currency}`);
   } catch (e) {
@@ -1972,7 +1975,7 @@ export const sendKYCRequiredEmail = async (
     `)}
     ${p(`Complete your verification now to keep accepting payments without interruption.`)}`;
 
-    const html = dynoPayEmailTemplate("Verification Required", content, true, "Start Verification", "https://dynopay.com/dashboard/kyc");
+    const html = dynoPayEmailTemplate("Verification Required", content, true, "Start Verification", `${FRONTEND_BASE_URL}/dashboard/kyc`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`KYC required email sent to ${email}`);
   } catch (e) {
@@ -1992,7 +1995,7 @@ export const sendKYCApprovedEmail = async (email: string, name: string) => {
     `, '#22c55e')}
     ${p(`You can now accept payments without limits and access all Dynopay features. Keep growing your business with Dynopay!`)}`;
 
-    const html = dynoPayEmailTemplate("Verification Approved", content, true, "View Dashboard", "https://dynopay.com/dashboard");
+    const html = dynoPayEmailTemplate("Verification Approved", content, true, "View Dashboard", `${FRONTEND_BASE_URL}/dashboard`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`KYC approved email sent to ${email}`);
   } catch (e) {
@@ -2013,7 +2016,7 @@ export const sendKYCRejectedEmail = async (email: string, name: string, rejectio
     ${p(`1. Use clear, high-quality images<br />2. All information is visible<br />3. Name matches your Dynopay account`)}
     ${p(`If you need help, our support team is here for you.`)}`;
 
-    const html = dynoPayEmailTemplate("Verification Unsuccessful", content, true, "Resubmit Documents", "https://dynopay.com/dashboard/kyc");
+    const html = dynoPayEmailTemplate("Verification Unsuccessful", content, true, "Resubmit Documents", `${FRONTEND_BASE_URL}/dashboard/kyc`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`KYC rejected email sent to ${email}`);
   } catch (e) {
@@ -2056,7 +2059,7 @@ export const sendKYCResubmissionRequiredEmail = async (email: string, name: stri
     ${p(`This is a common request. To continue, please:`)}
     ${p(`1. Ensure your documents are clear and all text is readable<br />2. Make sure the name matches your Dynopay account<br />3. Use documents that are not expired`)}`;
 
-    const html = dynoPayEmailTemplate("Resubmission Required", content, true, "Resubmit Documents", "https://dynopay.com/dashboard/kyc");
+    const html = dynoPayEmailTemplate("Resubmission Required", content, true, "Resubmit Documents", `${FRONTEND_BASE_URL}/dashboard/kyc`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`KYC resubmission required email sent to ${email}`);
   } catch (e) {
@@ -2099,7 +2102,7 @@ export const sendWeeklySummaryEmail = async (
     `)}
     ${p(`Keep up the great work! Log in to your dashboard for detailed analytics and insights.`)}`;
 
-    const html = dynoPayEmailTemplate("Your Weekly Summary", content, true, "View Full Analytics", "https://dynopay.com/dashboard/analytics");
+    const html = dynoPayEmailTemplate("Your Weekly Summary", content, true, "View Full Analytics", `${FRONTEND_BASE_URL}/dashboard/analytics`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`Weekly summary email sent to ${email}`);
   } catch (e) {
@@ -2175,7 +2178,7 @@ export const sendApiKeyCreatedEmail = async (
     ${keyType === 'production' ? p(`<strong>Important:</strong> This is a production key. Keep it secure and never share it publicly.`, `color: #991b1b;`) : ''}
     ${p(`<strong>Didn't do this?</strong><br />If you didn't ${action === 'created' ? 'create' : 'regenerate'} this API key, please secure your account immediately.`)}`;
 
-    const html = dynoPayEmailTemplate("API Key Update", content, true, "View API Keys", "https://dynopay.com/dashboard/api-keys");
+    const html = dynoPayEmailTemplate("API Key Update", content, true, "View API Keys", `${FRONTEND_BASE_URL}/dashboard/api-keys`);
     await mailTransporter({ to: email, name, subject, body: html });
     apiLogger.info(`[Email] API key ${action} notification sent to ${email} for ${keyType} environment`);
   } catch (e) {
@@ -2217,7 +2220,7 @@ export const sendSubscriptionCreatedEmail = async (
       </table>
     `, '#22c55e')}`;
 
-    const merchantHtml = dynoPayEmailTemplate("New Subscription", merchantContent, true, "View Subscriptions", "https://dynopay.com/dashboard/subscriptions");
+    const merchantHtml = dynoPayEmailTemplate("New Subscription", merchantContent, true, "View Subscriptions", `${FRONTEND_BASE_URL}/dashboard/subscriptions`);
     await mailTransporter({ to: merchantEmail, name: merchantName, subject: merchantSubject, body: merchantHtml });
     apiLogger.info(`[Email] Subscription created notifications sent for ${planName}`);
   } catch (e) {
@@ -2260,7 +2263,7 @@ export const sendSubscriptionCancelledEmail = async (
       </table>
     `, '#f59e0b')}`;
 
-    const merchantHtml = dynoPayEmailTemplate("Subscription Cancelled", merchantContent, true, "View Subscriptions", "https://dynopay.com/dashboard/subscriptions");
+    const merchantHtml = dynoPayEmailTemplate("Subscription Cancelled", merchantContent, true, "View Subscriptions", `${FRONTEND_BASE_URL}/dashboard/subscriptions`);
     await mailTransporter({ to: merchantEmail, name: merchantName, subject: merchantSubject, body: merchantHtml });
     apiLogger.info(`[Email] Subscription cancelled notifications sent for ${planName}`);
   } catch (e) {
@@ -2288,7 +2291,7 @@ export const sendSubscriptionPaymentFailedEmail = async (
     ${p(`To keep your subscription active, please:<br />1. Update your payment method<br />2. Ensure sufficient funds are available<br />3. Contact your bank if the issue persists`)}
     ${p(`Your subscription may be cancelled if payment is not received.`, `color: #991b1b;`)}`;
 
-    const customerHtml = dynoPayEmailTemplate("Payment Failed", customerContent, true, "Update Payment", "https://dynopay.com/dashboard/subscriptions");
+    const customerHtml = dynoPayEmailTemplate("Payment Failed", customerContent, true, "Update Payment", `${FRONTEND_BASE_URL}/dashboard/subscriptions`);
     await mailTransporter({ to: customerEmail, name: displayName, subject: customerSubject, body: customerHtml });
 
     const merchantSubject = `Subscription payment failed - ${displayName}`;
@@ -2305,7 +2308,7 @@ export const sendSubscriptionPaymentFailedEmail = async (
     `, '#f59e0b')}
     ${p(`The customer has been notified to update their payment method.`)}`;
 
-    const merchantHtml = dynoPayEmailTemplate("Subscription Payment Failed", merchantContent, true, "View Subscription", "https://dynopay.com/dashboard/subscriptions");
+    const merchantHtml = dynoPayEmailTemplate("Subscription Payment Failed", merchantContent, true, "View Subscription", `${FRONTEND_BASE_URL}/dashboard/subscriptions`);
     await mailTransporter({ to: merchantEmail, name: merchantName, subject: merchantSubject, body: merchantHtml });
     apiLogger.info(`[Email] Subscription payment failed notifications sent for ${planName}`);
   } catch (e) {

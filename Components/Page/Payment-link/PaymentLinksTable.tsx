@@ -144,9 +144,7 @@ const PaymentLinksTable = ({
     blockchainFees: "",
     linkId: "",
   });
-  const [paymentLink, setPaymentLink] = useState<string>(
-    "https://pay.dynopay.com/9vpej",
-  );
+  const [paymentLink, setPaymentLink] = useState<string>("");
   const [deleteModel, setDeleteModel] = useState<boolean>(false);
   const [deleteId, setDeletId] = useState<string>("");
 

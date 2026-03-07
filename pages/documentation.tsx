@@ -93,7 +93,7 @@ const ENDPOINTS: Endpoint[] = [
   "success": true,
   "message": "Link Generated!",
   "data": {
-    "redirect_url": "https://dynopay.com/pay?d=abc123...",
+    "redirect_url": "${process.env.NEXT_PUBLIC_BASE_URL || ''}pay?d=abc123...",
     "fee_payer": "company",
     "available_currencies": ["BTC", "ETH", "USDT"],
     "webhook_url": "configured"
@@ -172,7 +172,7 @@ const ENDPOINTS: Endpoint[] = [
   "success": true,
   "message": "Link Generated!",
   "data": {
-    "redirect_url": "https://dynopay.com/pay?d=xyz789...",
+    "redirect_url": "${process.env.NEXT_PUBLIC_BASE_URL || ''}pay?d=xyz789...",
     "fee_payer": "company",
     "available_currencies": ["BTC", "ETH", "USDT", "LTC"]
   }

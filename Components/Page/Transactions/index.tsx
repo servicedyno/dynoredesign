@@ -113,9 +113,9 @@ const TransactionPage = () => {
           : `$${Number(item.base_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         dateTime: formatDateTime(item.createdAt),
         status:
-          item.status === "success" || item.status === "successful"
+          item.status === "success" || item.status === "successful" || item.status === "Completed" || item.status === "completed" || item.status === "confirmed"
             ? "done"
-            : item.status === "failed"
+            : item.status === "failed" || item.status === "expired" || item.status === "Expired"
               ? "failed"
               : "pending",
         fees: (item as any).fees || (item as any).fee || "0",

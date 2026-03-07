@@ -23,6 +23,8 @@ import { useSelector } from "react-redux";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import NotificationsOffIcon from "@mui/icons-material/NotificationsOff";
+import TransactionDetailsModal from "@/Components/Page/Transactions/TransactionDetailsModal";
+import { ExtendedTransaction } from "@/utils/types/transaction";
 
 const NotificationItem: React.FC<NotificationItemProps> = ({
   title,
@@ -151,6 +153,53 @@ const NotificationPage = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(true);
   const [markingAllRead, setMarkingAllRead] = useState(false);
+
+  // Transaction detail modal state
+  const [selectedTransaction, setSelectedTransaction] = useState<ExtendedTransaction | null>(null);
+  const [txModalOpen, setTxModalOpen] = useState(false);
+
+  const isTransactionNotification = (type: string) => {
+    return type.includes("payment") || type.includes("transaction") || type.includes("received") || type.includes("confirmed") || type.includes("partial");
+  };
+
+  const handleNotificationClick = async (notif: any) => {
+    // Mark as read
+    if (!notif.is_read) {
+      markOneAsRead(notif.notification_id);
+    }
+
+    // If it's a transaction-related notification, try to open transaction modal
+    if (isTransactionNotification(notif.type)) {
+      const txRef = notif.meta?.transaction_reference || notif.meta?.tx_ref || notif.meta?.transaction_id;
+      const txAmount = notif.meta?.amount || notif.meta?.base_amount;
+      const txCurrency = notif.meta?.currency || notif.meta?.base_currency || notif.meta?.crypto;
+      const txStatus = notif.meta?.status;
+
+      const mappedStatus: "done" | "pending" | "failed" =
+        txStatus === "success" || txStatus === "successful" || txStatus === "confirmed" || txStatus === "Completed" || txStatus === "completed"
+          ? "done"
+          : txStatus === "failed" || txStatus === "expired"
+            ? "failed"
+            : "pending";
+
+      // Build transaction from notification meta or notification itself
+      const transaction: ExtendedTransaction = {
+        id: txRef || notif.notification_id?.toString() || "",
+        crypto: txCurrency || "",
+        amount: txAmount ? `${txAmount} ${txCurrency || ""}` : "",
+        usdValue: notif.meta?.usd_value ? `$${Number(notif.meta.usd_value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "",
+        dateTime: new Date(notif.created_at).toLocaleString(),
+        status: mappedStatus,
+        fees: notif.meta?.fees || "0",
+        confirmations: notif.meta?.confirmations || "",
+        incomingTransactionId: notif.meta?.incoming_tx_hash || notif.meta?.txid || "",
+        outgoingTransactionId: notif.meta?.outgoing_tx_hash || "",
+      };
+
+      setSelectedTransaction(transaction);
+      setTxModalOpen(true);
+    }
+  };
 
   useEffect(() => {
     const params: Record<string, any> = {};
@@ -288,7 +337,7 @@ const NotificationPage = () => {
                 <Box
                   key={notif.notification_id}
                   data-testid={`notification-item-${notif.notification_id}`}
-                  onClick={() => !notif.is_read && markOneAsRead(notif.notification_id)}
+                  onClick={() => handleNotificationClick(notif)}
                   sx={{
                     display: "flex",
                     gap: 2,
@@ -296,7 +345,7 @@ const NotificationPage = () => {
                     borderRadius: "12px",
                     border: `1px solid ${theme.palette.border.main}`,
                     backgroundColor: notif.is_read ? theme.palette.common.white : "#F0F7FF",
-                    cursor: notif.is_read ? "default" : "pointer",
+                    cursor: isTransactionNotification(notif.type) || !notif.is_read ? "pointer" : "default",
                     transition: "all 0.15s ease",
                     "&:hover": { borderColor: theme.palette.primary.main },
                   }}
@@ -695,6 +744,11 @@ const NotificationPage = () => {
         open={openToast}
         message={toastMessage}
         severity={toastSeverity}
+      />
+      <TransactionDetailsModal
+        open={txModalOpen}
+        onClose={() => { setTxModalOpen(false); setSelectedTransaction(null); }}
+        transaction={selectedTransaction}
       />
     </Box>
   );

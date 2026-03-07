@@ -1,0 +1,23 @@
+{
+  "title": "Allgemeine Geschäftsbedingungen",
+  "lastUpdated": "Zuletzt aktualisiert",
+  "introduction": "Einführung",
+  "introductionText": "Willkommen bei DynoPay. Diese Allgemeinen Geschäftsbedingungen regeln Ihre Nutzung unserer Dienste.",
+  "acceptance": "Annahme der Bedingungen",
+  "acceptanceText": "Durch den Zugriff auf oder die Nutzung unserer Dienste stimmen Sie diesen Bedingungen zu.",
+  "services": "Unsere Dienste",
+  "servicesText": "DynoPay bietet Kryptowährungs-Zahlungsabwicklungsdienste an, die es Unternehmen ermöglichen, Krypto-Zahlungen zu akzeptieren.",
+  "userResponsibilities": "Benutzerpflichten",
+  "userResponsibilitiesText": "Sie sind dafür verantwortlich, die Sicherheit Ihres Kontos zu gewährleisten und alle geltenden Gesetze einzuhalten.",
+  "fees": "Gebühren",
+  "feesText": "Wir erheben Gebühren für unsere Dienste wie auf unserer Preisseite beschrieben. Gebühren können sich mit Vorankündigung ändern.",
+  "liability": "Haftungsbeschränkung",
+  "liabilityText": "DynoPay haftet nicht für indirekte, zufällige oder Folgeschäden, die sich aus Ihrer Nutzung unserer Dienste ergeben.",
+  "termination": "Kündigung",
+  "terminationText": "Wir behalten uns das Recht vor, Ihr Konto zu kündigen oder zu sperren, wenn Sie gegen diese Bedingungen verstoßen.",
+  "governingLaw": "Anwendbares Recht",
+  "governingLawText": "Diese Bedingungen unterliegen den Gesetzen der Gerichtsbarkeit, in der DynoPay tätig ist.",
+  "contact": "Kontakt",
+  "contactText": "Wenn Sie Fragen zu diesen Bedingungen haben, kontaktieren Sie uns bitte.",
+  "backToHome": "Zurück zur Startseite"
+}

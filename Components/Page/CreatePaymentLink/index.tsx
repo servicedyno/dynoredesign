@@ -87,6 +87,20 @@ const CreatePaymentLinkPage = ({
   const [saveChangeModalOpen, setSaveChangeModalOpen] =
     useState<boolean>(false);
   const [paymentLink, setPaymentLink] = useState("");
+  const prevPaymentLinksLengthRef = useRef(paymentLinkState?.paymentLinks?.length || 0);
+
+  // Watch for newly created payment link from backend response
+  useEffect(() => {
+    const currentLinks = paymentLinkState?.paymentLinks || [];
+    const currentLength = currentLinks.length;
+    if (currentLength > prevPaymentLinksLengthRef.current && successModalOpen) {
+      const newestLink = currentLinks[0];
+      if (newestLink?.payment_link) {
+        setPaymentLink(newestLink.payment_link);
+      }
+    }
+    prevPaymentLinksLengthRef.current = currentLength;
+  }, [paymentLinkState?.paymentLinks, successModalOpen]);
   const currencyTriggerRef = useRef<HTMLButtonElement | null>(null);
   const currencyAnchorEl = useRef<HTMLButtonElement | null>(null);
   const [includeTax, setIncludeTax] = useState<boolean>(
@@ -334,10 +348,7 @@ const CreatePaymentLinkPage = ({
         dispatch(PaymentLinkAction(PAYLINK_CREATE, apiPayload));
       }
 
-      const generatedLink = `https://pay.dynopay.com/${Math.random()
-        .toString(36)
-        .substring(7)}`;
-      setPaymentLink(generatedLink);
+      // Payment link URL will be set from Redux state when backend responds
       setSuccessModalOpen(true);
     } else if (activeTab === 1) {
       const apiPayload = {
@@ -352,10 +363,7 @@ const CreatePaymentLinkPage = ({
 
       dispatch(PaymentLinkAction(PAYLINK_CREATE, apiPayload));
 
-      const generatedLink = `https://pay.dynopay.com/${Math.random()
-        .toString(36)
-        .substring(7)}`;
-      setPaymentLink(generatedLink);
+      // Payment link URL will be set from Redux state when backend responds
       setSuccessModalOpen(true);
     }
   };
