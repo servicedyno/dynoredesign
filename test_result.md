@@ -741,3 +741,30 @@ backend:
 - **Fixed**: `useWalletData` now waits for `companyFetched && selectedCompanyId` before fetching
 - This prevents the initial "all wallets" fetch when `selectedCompanyId` is null during page load
 - Verified: TestCompany3 shows only BTC + LTC; Nomadly1 shows all 15 wallets — no cross-company contamination
+
+
+## Changes Made - Session 9 (Production 3-Domain URL Audit & Fixes)
+
+### Production URL Plan
+- `https://dynopay.com` → Frontend (FRONTEND_URL)
+- `https://checkout.dynopay.com` → Checkout (CHECKOUT_URL)
+- `https://api.dynopay.com` → Backend API (SERVER_URL)
+
+### 1. Referral Link Bug Fix
+- **Bug**: `referralController.ts:94` used `SERVER_URL` for signup link → would produce `https://api.dynopay.com/signup?ref=...`
+- **Fix**: Changed to `FRONTEND_URL || SERVER_URL` → now produces `https://dynopay.com/signup?ref=...`
+
+### 2. CORS Auto-Configuration
+- **Before**: `server.ts` defaulted to `origin: '*'` unless `CORS_ALLOWED_ORIGINS` was manually set
+- **After**: CORS auto-builds allowed origins from `FRONTEND_URL` + `CHECKOUT_URL` env vars
+- Falls back to `*` only if neither is set (backward compat)
+- `credentials: true` enabled when specific origins are configured
+- Verified: pod URL origin → allowed ✅, localhost:3000 → allowed ✅, random origin → blocked ✅
+
+### 3. CORS_ALLOWED_ORIGINS Added to .env
+- Added commented-out production value: `CORS_ALLOWED_ORIGINS=https://dynopay.com,https://checkout.dynopay.com`
+- For production, uncomment to explicitly lock down (overrides auto-build)
+
+### 4. Production Deployment Notes
+- Both `dynopay.com` and `checkout.dynopay.com` must route to the same Next.js instance (same codebase serves both `/dashboard` and `/pay` routes)
+- Frontend `NEXT_PUBLIC_BASE_URL` must be `https://api.dynopay.com/` on production (API calls from both domains hit the same backend)

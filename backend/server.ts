@@ -115,13 +115,16 @@ const port = process.env.PORT || 3300;
 // Trust proxy — required behind K8s/Nginx so req.ip returns real client IP (critical for rate limiters)
 app.set('trust proxy', 1);
 
-// CORS Configuration — env-configurable, defaults to permissive for merchant API compatibility
-const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
-  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : null; // null = allow all (backward compat for merchant API integrations)
+// CORS Configuration — builds allowed origins from env vars
+// Priority: CORS_ALLOWED_ORIGINS explicit list > auto-build from FRONTEND_URL + CHECKOUT_URL > allow all
+const allowedOrigins: string[] | null = process.env.CORS_ALLOWED_ORIGINS
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+  : [process.env.FRONTEND_URL, process.env.CHECKOUT_URL].filter(Boolean).length > 0
+    ? [process.env.FRONTEND_URL, process.env.CHECKOUT_URL, 'http://localhost:3000'].filter(Boolean) as string[]
+    : null; // null = allow all (backward compat for merchant API integrations)
 app.use(cors({
-  origin: allowedOrigins || '*',
-  credentials: !!allowedOrigins, // Only allow credentials when origins are restricted
+  origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : '*',
+  credentials: !!(allowedOrigins && allowedOrigins.length > 0),
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-Requested-With', 'Accept', 'Origin', 'X-Request-ID', 'x-csrf-token']
 }));

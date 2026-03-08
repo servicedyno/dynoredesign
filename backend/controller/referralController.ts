@@ -91,7 +91,7 @@ export const getMyReferralCode = async (_req: Request, res: Response) => {
       message: "Referral code retrieved successfully",
       data: {
         referral_code: referralCode,
-        referral_link: `${process.env.SERVER_URL}/signup?ref=${referralCode}`,
+        referral_link: `${process.env.FRONTEND_URL || process.env.SERVER_URL}/signup?ref=${referralCode}`,
         stats,
         user: {
           name: user.dataValues.name,
