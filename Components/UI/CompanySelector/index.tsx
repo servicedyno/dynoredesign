@@ -1,6 +1,6 @@
 import EditIcon from "@/assets/Icons/edit-icon.svg";
 import BusinessCenterIcon from "@mui/icons-material/BusinessCenter";
-import { Box, Divider, Typography, useTheme } from "@mui/material";
+import { Box, Divider, Snackbar, Typography, useTheme } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axiosBaseApi from "@/axiosConfig";
 import {
@@ -55,6 +55,7 @@ export default function CompanySelector() {
 
   // Add Company Flow states
   const [addCompanyPhase, setAddCompanyPhase] = useState<"idle" | "company" | "wallet" | "celebration">("idle");
+  const [switchToast, setSwitchToast] = useState<string | null>(null);
 
   const handleAddCompanyClick = useCallback(() => {
     setAddCompanyPhase("company");
@@ -138,8 +139,12 @@ export default function CompanySelector() {
   const handleClose = () => setAnchorEl(null);
 
   const handleCompanySwitch = (companyId: number) => {
+    const companyName = companies.find((c) => c.company_id === companyId)?.company_name || "";
     dispatch(selectCompany(companyId));
     handleClose();
+    // Show switch toast indicator
+    setSwitchToast(companyName);
+    setTimeout(() => setSwitchToast(null), 2500);
     // Persist last company to backend (fire-and-forget)
     axiosBaseApi.put("api/user/last-company", { company_id: companyId }).catch(() => {});
     // Re-fetch all company-scoped data for the new company
@@ -382,6 +387,26 @@ export default function CompanySelector() {
       <CelebrationOverlay
         open={addCompanyPhase === "celebration"}
         onDismiss={handleCelebrationDismiss}
+      />
+      {/* Company switch toast indicator */}
+      <Snackbar
+        open={!!switchToast}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        message={
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <BusinessCenterIcon sx={{ fontSize: 18 }} />
+            <span>Switched to <strong>{switchToast}</strong></span>
+          </Box>
+        }
+        ContentProps={{
+          sx: {
+            borderRadius: "10px",
+            fontFamily: "UrbanistMedium",
+            fontSize: "14px",
+            minWidth: "auto",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+          },
+        }}
       />
     </Box>
   );

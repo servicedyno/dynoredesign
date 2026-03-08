@@ -1,6 +1,7 @@
 import DashboardLeftSection from "@/Components/Page/Dashboard/DashboardLeftSection";
 import DashboardRightSection from "@/Components/Page/Dashboard/DashboardRightSection";
 import CustomButton from "@/Components/UI/Buttons";
+import MobileReferralBanner from "@/Components/UI/MobileReferralBanner";
 import OnboardingFlow from "@/Components/UI/OnboardingFlow";
 import useIsMobile from "@/hooks/useIsMobile";
 import { pageProps, rootReducer } from "@/utils/types";
@@ -81,6 +82,7 @@ export default function Home({
 
       <main>
         <OnboardingFlow />
+        {isMobile && <MobileReferralBanner />}
         <Grid container spacing={2.5}>
           <Grid item xs={12} xl={8}>
             <DashboardLeftSection />

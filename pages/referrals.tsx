@@ -284,6 +284,133 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
           )}
         </Box>
 
+        {/* How It Works - Reward Explanation */}
+        <Box
+          data-testid="referral-how-it-works"
+          sx={{
+            mb: 2.5,
+            p: isMobile ? 2 : 3,
+            borderRadius: "14px",
+            border: `1px solid ${theme.palette.border.main}`,
+            bgcolor: theme.palette.background.paper,
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: isMobile ? "15px" : "17px",
+              fontFamily: "UrbanistSemibold",
+              fontWeight: 600,
+              color: theme.palette.text.primary,
+              mb: 2,
+            }}
+          >
+            How It Works
+          </Typography>
+
+          {/* 3-step flow */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: isMobile ? "column" : "row",
+              gap: isMobile ? 1.5 : 2,
+              mb: 2.5,
+            }}
+          >
+            {[
+              { step: "1", title: "Share Your Code", desc: "Send your referral code or link to friends and colleagues" },
+              { step: "2", title: "They Sign Up", desc: "Your friend creates an account using your code" },
+              { step: "3", title: "You Both Earn", desc: "Both of you get fee discounts automatically applied" },
+            ].map((item) => (
+              <Box
+                key={item.step}
+                sx={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: isMobile ? "row" : "column",
+                  alignItems: isMobile ? "center" : "flex-start",
+                  gap: isMobile ? 1.5 : 1,
+                  p: isMobile ? 1.5 : 2,
+                  borderRadius: "10px",
+                  bgcolor: theme.palette.secondary.main,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: isMobile ? 32 : 36,
+                    height: isMobile ? 32 : 36,
+                    borderRadius: "50%",
+                    bgcolor: `${theme.palette.primary.main}14`,
+                    color: theme.palette.primary.main,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "UrbanistSemibold",
+                    fontWeight: 700,
+                    fontSize: isMobile ? "13px" : "15px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {item.step}
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: isMobile ? "13px" : "14px", fontFamily: "UrbanistSemibold", fontWeight: 600, color: theme.palette.text.primary, lineHeight: 1.3 }}>
+                    {item.title}
+                  </Typography>
+                  <Typography sx={{ fontSize: isMobile ? "11px" : "12px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary, lineHeight: 1.4, mt: 0.25 }}>
+                    {item.desc}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+
+          {/* Reward cards */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+              gap: isMobile ? 1.5 : 2,
+            }}
+          >
+            <Box
+              sx={{
+                p: isMobile ? 2 : 2.5,
+                borderRadius: "10px",
+                border: `1px solid ${theme.palette.primary.main}30`,
+                bgcolor: `${theme.palette.primary.main}08`,
+              }}
+            >
+              <Typography sx={{ fontSize: "12px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary, mb: 0.5, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                You Get (Referrer)
+              </Typography>
+              <Typography sx={{ fontSize: isMobile ? "22px" : "26px", fontFamily: "UrbanistSemibold", fontWeight: 700, color: theme.palette.primary.main, lineHeight: 1.2 }}>
+                10% Off Fees
+              </Typography>
+              <Typography sx={{ fontSize: "13px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary, mt: 0.5 }}>
+                for 30 days per referral
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                p: isMobile ? 2 : 2.5,
+                borderRadius: "10px",
+                border: `1px solid ${theme.palette.border.success}30`,
+                bgcolor: `${theme.palette.border.success}08`,
+              }}
+            >
+              <Typography sx={{ fontSize: "12px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary, mb: 0.5, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                They Get (New User)
+              </Typography>
+              <Typography sx={{ fontSize: isMobile ? "22px" : "26px", fontFamily: "UrbanistSemibold", fontWeight: 700, color: theme.palette.border.success, lineHeight: 1.2 }}>
+                50% Off Fees
+              </Typography>
+              <Typography sx={{ fontSize: "13px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary, mt: 0.5 }}>
+                for 90 days when they sign up
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+
         {/* Stats Grid */}
         <Box
           sx={{

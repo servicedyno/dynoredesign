@@ -204,6 +204,234 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
 
   const isDataEmpty = currentTransactions.length === 0;
 
+  // Mobile card layout for transactions
+  const renderMobileCards = () => (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, px: 2 }}>
+      {isDataEmpty ? (
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 4 }}>
+          <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary }}>
+            {t("transactionsNotAvailable", { ns: "common" })}
+          </Typography>
+        </Box>
+      ) : (
+        currentTransactions.map((transaction) => (
+          <Box
+            key={transaction.id}
+            onClick={() => handleRowClick(transaction)}
+            sx={{
+              p: 2,
+              borderRadius: "12px",
+              border: `1px solid ${theme.palette.border.main}`,
+              bgcolor: theme.palette.background.paper,
+              cursor: "pointer",
+              transition: "background 0.15s",
+              "&:active": { bgcolor: theme.palette.secondary.main },
+            }}
+          >
+            {/* Top row: Crypto + Status */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.25 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Image
+                  src={getCryptoIcon(transaction.crypto)}
+                  alt={transaction.crypto}
+                  width={24}
+                  height={24}
+                  draggable={false}
+                />
+                <Typography sx={{ fontSize: "15px", fontFamily: "UrbanistSemibold", fontWeight: 600, color: theme.palette.text.primary }}>
+                  {transaction.crypto}
+                </Typography>
+              </Box>
+              <StatusBadge status={transaction.status}>
+                <StatusIconWrapper status={transaction.status}>
+                  {getStatusIcon(transaction.status)}
+                </StatusIconWrapper>
+                <StatusText status={transaction.status}>
+                  {tTransactions(transaction.status)}
+                </StatusText>
+              </StatusBadge>
+            </Box>
+            {/* Middle row: Amount + USD */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", mb: 0.75 }}>
+              <Typography sx={{ fontSize: "16px", fontFamily: "UrbanistSemibold", fontWeight: 700, color: theme.palette.text.primary }}>
+                {formatAmount(transaction.amount)}
+              </Typography>
+              <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistMedium", fontWeight: 500, color: theme.palette.primary.main }}>
+                {formatUsd(transaction.usdValue)}
+              </Typography>
+            </Box>
+            {/* Bottom row: ID + Date */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Typography sx={{ fontSize: "11px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary, maxWidth: "50%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {transaction.id}
+              </Typography>
+              <Typography sx={{ fontSize: "11px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary }}>
+                {transaction.dateTime}
+              </Typography>
+            </Box>
+          </Box>
+        ))
+      )}
+    </Box>
+  );
+
+  // Desktop table layout
+  const renderDesktopTable = () => (
+    <Box
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflowX: "auto",
+        overflowY: "hidden",
+        scrollbarWidth: "none",
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          minWidth: "max-content",
+          height: "100%",
+        }}
+      >
+        {/* Header Section */}
+        <Box sx={{ display: "flex", height: 56 }}>
+          <TransactionsTableHeader>
+            {HeaderData.map((item) => (
+              <TransactionsTableHeaderItem key={item.key}>
+                <Image
+                  src={item.icon}
+                  alt={item.label}
+                  style={{
+                    filter: `brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)`,
+                  }}
+                  draggable={false}
+                />
+                <span>{item.label}</span>
+              </TransactionsTableHeaderItem>
+            ))}
+          </TransactionsTableHeader>
+        </Box>
+
+        {/* Body Section */}
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overflowX: "hidden",
+            backgroundColor: theme.palette.common.white,
+          }}
+        >
+          <TransactionsTableBody>
+            {isDataEmpty ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                  mt: 3,
+                }}
+              >
+                {t("transactionsNotAvailable", { ns: "common" })}
+              </Box>
+            ) : (
+              currentTransactions.map((transaction) => (
+                <TransactionsTableRow
+                  key={transaction.id}
+                  onClick={() => handleRowClick(transaction)}
+                  sx={{
+                    paddingY: "10px !important",
+                    cursor: "pointer",
+                  }}
+                >
+                  <TransactionsTableCell>
+                    {transaction.id}
+                  </TransactionsTableCell>
+
+                  <TransactionsTableCell>
+                    <CryptoIconChip sx={{ width: "fit-content" }}>
+                      <Image
+                        src={getCryptoIcon(transaction.crypto)}
+                        alt={transaction.crypto}
+                        draggable={false}
+                      />
+                      <Typography
+                        component="span"
+                        sx={{ color: theme.palette.text.secondary }}
+                      >
+                        {transaction.crypto}
+                      </Typography>
+                    </CryptoIconChip>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: "3px",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Image
+                        src={SwapHorizIcon}
+                        alt="swap horiz"
+                        width={15}
+                        height={15}
+                        draggable={false}
+                        style={{
+                          filter:
+                            "brightness(0) saturate(100%) invert(41%) sepia(2%) saturate(168%) hue-rotate(201deg) brightness(95%) contrast(88%)",
+                        }}
+                      />
+                      <ArrowOutwardIcon
+                        sx={{
+                          fontSize: 16,
+                          transform: "rotate(45deg)",
+                          color: theme.palette.text.secondary,
+                          lineHeight: "100%",
+                        }}
+                      />
+                      <Text
+                        sx={{
+                          fontSize: "13px",
+                          color: theme.palette.text.secondary,
+                        }}
+                      >
+                        USDT
+                      </Text>
+                    </Box>
+                  </TransactionsTableCell>
+
+                  <TransactionsTableCell>
+                    {formatAmount(transaction.amount)}
+                  </TransactionsTableCell>
+
+                  <TransactionsTableCell>
+                    {formatUsd(transaction.usdValue)}
+                  </TransactionsTableCell>
+
+                  <TransactionsTableCell>
+                    {transaction.dateTime}
+                  </TransactionsTableCell>
+
+                  <TransactionsTableCell>
+                    <StatusBadge status={transaction.status}>
+                      <StatusIconWrapper status={transaction.status}>
+                        {getStatusIcon(transaction.status)}
+                      </StatusIconWrapper>
+                      <StatusText status={transaction.status}>
+                        {tTransactions(transaction.status)}
+                      </StatusText>
+                    </StatusBadge>
+                  </TransactionsTableCell>
+                </TransactionsTableRow>
+              ))
+            )}
+          </TransactionsTableBody>
+        </Box>
+      </Box>
+    </Box>
+  );
+
   return (
     <Box
       sx={{
@@ -212,162 +440,10 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
         flex: 1,
         minHeight: 0,
         maxHeight: "fit-content",
-        p: { xs: "0px 0px 0px 16px", sm: "0px 16px", md: "0px" },
+        p: isMobile ? 0 : "0px",
       }}
     >
-      <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          overflowX: "auto",
-          overflowY: "hidden",
-          scrollbarWidth: "none",
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            minWidth: "max-content",
-            height: "100%",
-          }}
-        >
-          {/* Header Section */}
-          <Box sx={{ display: "flex", height: isMobile ? 44 : 56 }}>
-            <TransactionsTableHeader>
-              {HeaderData.map((item) => (
-                <TransactionsTableHeaderItem key={item.key}>
-                  <Image
-                    src={item.icon}
-                    alt={item.label}
-                    style={{
-                      filter: `brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)`,
-                    }}
-                    draggable={false}
-                  />
-                  <span>{item.label}</span>
-                </TransactionsTableHeaderItem>
-              ))}
-            </TransactionsTableHeader>
-          </Box>
-
-          {/* Body Section */}
-          <Box
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: "auto",
-              overflowX: "hidden",
-              backgroundColor: theme.palette.common.white,
-            }}
-          >
-            <TransactionsTableBody>
-              {isDataEmpty ? (
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: "100%",
-                    mt: 3,
-                  }}
-                >
-                  {t("transactionsNotAvailable", { ns: "common" })}
-                </Box>
-              ) : (
-                currentTransactions.map((transaction) => (
-                  <TransactionsTableRow
-                    key={transaction.id}
-                    onClick={() => handleRowClick(transaction)}
-                    sx={{
-                      paddingY: isMobile ? "9px !important" : "10px !important",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <TransactionsTableCell>
-                      {transaction.id}
-                    </TransactionsTableCell>
-
-                    <TransactionsTableCell>
-                      <CryptoIconChip sx={{ width: "fit-content" }}>
-                        <Image
-                          src={getCryptoIcon(transaction.crypto)}
-                          alt={transaction.crypto}
-                          draggable={false}
-                        />
-                        <Typography
-                          component="span"
-                          sx={{ color: theme.palette.text.secondary }}
-                        >
-                          {transaction.crypto}
-                        </Typography>
-                      </CryptoIconChip>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          gap: "3px",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Image
-                          src={SwapHorizIcon}
-                          alt="swap horiz"
-                          width={15}
-                          height={15}
-                          draggable={false}
-                          style={{
-                            filter:
-                              "brightness(0) saturate(100%) invert(41%) sepia(2%) saturate(168%) hue-rotate(201deg) brightness(95%) contrast(88%)",
-                          }}
-                        />
-                        <ArrowOutwardIcon
-                          sx={{
-                            fontSize: isMobile ? 14 : 16,
-                            transform: "rotate(45deg)",
-                            color: theme.palette.text.secondary,
-                            lineHeight: "100%",
-                          }}
-                        />
-                        <Text
-                          sx={{
-                            fontSize: isMobile ? "10px" : "13px",
-                            color: theme.palette.text.secondary,
-                          }}
-                        >
-                          USDT
-                        </Text>
-                      </Box>
-                    </TransactionsTableCell>
-
-                    <TransactionsTableCell>
-                      {formatAmount(transaction.amount)}
-                    </TransactionsTableCell>
-
-                    <TransactionsTableCell>
-                      {formatUsd(transaction.usdValue)}
-                    </TransactionsTableCell>
-
-                    <TransactionsTableCell>
-                      {transaction.dateTime}
-                    </TransactionsTableCell>
-
-                    <TransactionsTableCell>
-                      <StatusBadge status={transaction.status}>
-                        <StatusIconWrapper status={transaction.status}>
-                          {getStatusIcon(transaction.status)}
-                        </StatusIconWrapper>
-                        <StatusText status={transaction.status}>
-                          {tTransactions(transaction.status)}
-                        </StatusText>
-                      </StatusBadge>
-                    </TransactionsTableCell>
-                  </TransactionsTableRow>
-                ))
-              )}
-            </TransactionsTableBody>
-          </Box>
-        </Box>
-      </Box>
+      {isMobile ? renderMobileCards() : renderDesktopTable()}
 
       {/* Footer Section */}
       <Box

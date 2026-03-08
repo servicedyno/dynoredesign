@@ -111,9 +111,15 @@ const MobileNavigationBar = () => {
     },
   ];
 
-  // Second row items (3 items) - shown when expanded
+  // Second row items (expanded) - shown when expanded
   const secondRowItems = [
     { label: t("language"), icon: "language", path: null, id: "language" },
+    {
+      label: t("referrals") || "Referrals",
+      icon: "referrals",
+      path: "/referrals",
+      id: "referrals",
+    },
     {
       label: t("payLinks"),
       icon: "payment-links",
@@ -219,6 +225,7 @@ const MobileNavigationBar = () => {
                   "api",
                   "notifications",
                   "payment-links",
+                  "referrals",
                 ];
                 const useSidebarIcon = supportedIcons.includes(item.icon);
                 return (
@@ -335,6 +342,7 @@ const MobileNavigationBar = () => {
           onSelect={(code: string) => {
             i18n.changeLanguage(code);
             localStorage.setItem("lang", code);
+            localStorage.setItem("lang_manual", "true");
           }}
           onClose={() => setOpenLang(false)}
         />
