@@ -351,6 +351,7 @@ export default function CompanySelector() {
       <CreateCompanyModal
         open={addCompanyPhase === "company"}
         onSuccess={handleCompanyCreated}
+        onClose={() => setAddCompanyPhase("idle")}
       />
       <AddWalletModal
         open={addCompanyPhase === "wallet"}

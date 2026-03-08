@@ -7,10 +7,12 @@ import { rootReducer } from "@/utils/types";
 import {
   BusinessRounded,
   CloudUploadRounded,
+  CloseRounded,
 } from "@mui/icons-material";
 import {
   Box,
   Dialog,
+  IconButton,
   Slide,
   Typography,
   useTheme,
@@ -31,11 +33,13 @@ const Transition = React.forwardRef(function Transition(
 interface CreateCompanyModalProps {
   open: boolean;
   onSuccess: () => void;
+  onClose?: () => void;
 }
 
 const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
   open,
   onSuccess,
+  onClose,
 }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
@@ -115,17 +119,40 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
       TransitionComponent={Transition}
       maxWidth="sm"
       fullWidth
-      disableEscapeKeyDown
+      onClose={onClose}
       PaperProps={{
         sx: {
           borderRadius: "16px",
-          overflow: "hidden",
+          overflow: "visible",
           maxWidth: isMobile ? "95vw" : "520px",
+          maxHeight: "90vh",
           mx: "auto",
+          display: "flex",
+          flexDirection: "column",
         },
       }}
       data-testid="create-company-modal"
     >
+      {/* Close Button */}
+      {onClose && (
+        <IconButton
+          onClick={onClose}
+          aria-label="Close"
+          sx={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            zIndex: 1,
+            color: theme.palette.text.secondary,
+            "&:hover": {
+              backgroundColor: theme.palette.action.hover,
+            },
+          }}
+          data-testid="close-company-modal-btn"
+        >
+          <CloseRounded sx={{ fontSize: 22 }} />
+        </IconButton>
+      )}
       {/* Step Indicator */}
       <Box
         sx={{
@@ -197,6 +224,8 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
           display: "flex",
           flexDirection: "column",
           gap: "14px",
+          overflowY: "auto",
+          flexGrow: 1,
         }}
       >
         <InputField
@@ -386,6 +415,10 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
           px: isMobile ? 2.5 : 3.5,
           pb: isMobile ? 2.5 : 3,
           pt: 0.5,
+          display: "flex",
+          flexDirection: "column",
+          gap: 1,
+          flexShrink: 0,
         }}
       >
         <CustomButton
@@ -397,6 +430,17 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
           disabled={submitting}
           onClick={handleSubmit}
         />
+        {onClose && (
+          <CustomButton
+            data-testid="cancel-company-btn"
+            label="Cancel"
+            variant="secondary"
+            size={isMobile ? "small" : "medium"}
+            fullWidth
+            disabled={submitting}
+            onClick={onClose}
+          />
+        )}
       </Box>
     </Dialog>
   );
