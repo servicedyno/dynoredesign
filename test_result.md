@@ -12,10 +12,10 @@ DynoPay is a full-stack crypto payment gateway.
 - ✅ MongoDB: Running
 
 ## Pod URL Setup
-- **Pod URL**: `https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
-- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL=https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com/` (trailing slash for axios `api/` concatenation)
-- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
-- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
+- **Pod URL**: `https://a66486cb-0448-4012-a735-bd80faf9db6f.preview.emergentagent.com`
+- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL=https://a66486cb-0448-4012-a735-bd80faf9db6f.preview.emergentagent.com/` (trailing slash for axios `api/` concatenation)
+- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://a66486cb-0448-4012-a735-bd80faf9db6f.preview.emergentagent.com`
+- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://a66486cb-0448-4012-a735-bd80faf9db6f.preview.emergentagent.com`
 
 ## Backend Testing Status
 
@@ -401,7 +401,7 @@ backend:
         comment: "Test POST /api/pay/createPaymentLink with minimal payload: {amount:10, currency:'USD', company_id:3, expire:'No', fee_payer:'company'}"
       - working: true
         agent: "testing"
-        comment: "✅ PASSED: Minimal fields test successful. API returns 200 status with valid payment_link URL containing correct pod URL (https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com). Response includes all expected fields: link_id, transaction_id, base_amount=10, base_currency=USD, fee_payer=company, description=null."
+        comment: "✅ PASSED: Minimal fields test successful. API returns 200 status with valid payment_link URL containing correct pod URL (https://pod-checkout-flow.preview.emergentagent.com). Response includes all expected fields: link_id, transaction_id, base_amount=10, base_currency=USD, fee_payer=company, description=null."
 
   - task: "Create Payment Link - With Description"
     implemented: true
@@ -625,9 +625,9 @@ backend:
 
 ### 1. Pod URL Setup
 - Updated all env files to current pod URL `e01e01ce-e03b-4beb-9b2c-25d0be50b954`
-- `/app/.env.local`: `NEXT_PUBLIC_BASE_URL=https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com/`
-- `/app/frontend/.env`: `REACT_APP_BACKEND_URL=https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
-- `/app/backend/.env`: `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
+- `/app/.env.local`: `NEXT_PUBLIC_BASE_URL=https://pod-checkout-flow.preview.emergentagent.com/`
+- `/app/frontend/.env`: `REACT_APP_BACKEND_URL=https://pod-checkout-flow.preview.emergentagent.com`
+- `/app/backend/.env`: `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://pod-checkout-flow.preview.emergentagent.com`
 
 ### 2. Dashboard Stats Flash Fix (658 → 675)
 - **Root cause**: `useDashboardData` fired immediately on mount with no company_id because `companyList=[]` and `loading=false` (initial state), before `OnboardingFlow` triggered the company fetch. This returned aggregate data (658 txns) which then got replaced by company-scoped data (675 txns).
