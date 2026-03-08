@@ -813,3 +813,11 @@ backend:
 - **PDF Download Fix**: `downloadInvoicePDF` recalculates amounts from transaction if stored `unit_price` is 0
 - **Logo Path Fix**: Made logo path resolution more robust with multiple fallback paths
 - **Crypto Amount Fix**: `total_crypto` now uses actual `txData.crypto_amount` instead of fiat total
+
+
+### 8. Mobile Responsiveness Fixes
+- **Theme Toggle on Mobile**: Added dark/light mode toggle to mobile header (was hidden inside `display: {xs: "none"}` block)
+- **Wallet Setup Warning**: Made "Complete wallet setup" banner conditional using `walletWarning` from `useWalletData()` hook - no longer shows when user has active wallets
+- **Favicon Fixed**: Replaced default `favicon.ico` with DynoPay logo (converted from PNG), added multi-size favicons (16x16, 32x32)
+- **Page Title**: Changed "BozzWallet" → "DynoPay - Dashboard" on dashboard page, "DynoPay - Company" on company page
+- **Stat Cards**: Confirmed Total Transactions, Total Volume visible on mobile (Grid xs=12 full width)

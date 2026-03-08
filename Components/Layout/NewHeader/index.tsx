@@ -108,6 +108,10 @@ const NewHeader = () => {
         <CompanySelector />
 
         <RightSection>
+          {/* Mobile theme toggle - visible only on mobile */}
+          <Box sx={{ display: { xs: "flex", lg: "none" } }}>
+            <ThemeToggle size="small" />
+          </Box>
           <Box sx={{ display: { xs: "none", lg: "flex" }, gap: "20px" }}>
             <Box sx={{ order: { lg: 2, xl: 1 } }}>
               <LanguageSwitcher />

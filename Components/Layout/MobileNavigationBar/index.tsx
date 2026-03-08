@@ -38,6 +38,8 @@ import {
   SecondRow,
 } from "./styled";
 
+import { useWalletData } from "@/hooks/useWalletData";
+
 const MobileNavigationBar = () => {
   const router = useRouter();
   const theme = useTheme();
@@ -47,6 +49,7 @@ const MobileNavigationBar = () => {
   const navBarRef = useRef<HTMLDivElement>(null);
   const [kycRequired, setKycRequired] = useState(false);
   const [kycLoading, setKycLoading] = useState(false);
+  const { walletWarning } = useWalletData();
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -323,16 +326,18 @@ const MobileNavigationBar = () => {
             </ExpandedContent>
           )}
 
-          <ExpandedContent isExpanding={isExpanded}>
-            <Link href="/wallet" onClick={() => setIsExpanded(false)}>
-              <AlertBanner>
-                <ErrorIcon
-                  sx={{ color: theme.palette.error.main, fontSize: "20px" }}
-                />
-                <AlertText>{t("walletSetUpWarnnigTitle")}</AlertText>
-              </AlertBanner>
-            </Link>
-          </ExpandedContent>
+          {walletWarning && (
+            <ExpandedContent isExpanding={isExpanded}>
+              <Link href="/wallet" onClick={() => setIsExpanded(false)}>
+                <AlertBanner>
+                  <ErrorIcon
+                    sx={{ color: theme.palette.error.main, fontSize: "20px" }}
+                  />
+                  <AlertText>{t("walletSetUpWarnnigTitle")}</AlertText>
+                </AlertBanner>
+              </Link>
+            </ExpandedContent>
+          )}
         </NavigationBar>
 
         <LanguageSwitcherModal
