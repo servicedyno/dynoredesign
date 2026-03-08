@@ -285,7 +285,7 @@ const getTransactionInvoice = async (
     if (!invoice) {
       // Try to generate invoice if it doesn't exist and transaction is completed
       const txData = transaction.dataValues;
-      if (txData.status === "done" && txData.company_id) {
+      if ((txData.status === "done" || txData.status === "successful") && txData.company_id) {
         const generatedInvoice = await autoGenerateInvoice(
           parseInt(id),
           txData.company_id

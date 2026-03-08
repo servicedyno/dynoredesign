@@ -161,42 +161,40 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
   const handleDownloadInvoice = async () => {
     if (!transaction) return;
     try {
-      const res = await axiosBaseApi.get(
-        `/transactions/${transaction.id}/invoice`,
+      // Step 1: Get invoice data (JSON) to get invoice_id
+      const jsonRes = await axiosBaseApi.get(
+        `/transactions/${transaction.id}/invoice`
+      );
+
+      const invoiceData = jsonRes?.data?.data;
+      if (!invoiceData?.invoice_id) {
+        console.error("No invoice found for this transaction");
+        return;
+      }
+
+      // Step 2: Download PDF using the invoice_id
+      const pdfRes = await axiosBaseApi.get(
+        `/invoices/${invoiceData.invoice_id}/pdf`,
         { responseType: "blob" }
       );
-      // If we get a blob (PDF), download it
-      if (res.data instanceof Blob && res.data.size > 0) {
-        const url = window.URL.createObjectURL(res.data);
+
+      if (pdfRes.data && pdfRes.data.size > 0) {
+        const url = window.URL.createObjectURL(
+          new Blob([pdfRes.data], { type: "application/pdf" })
+        );
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute("download", `invoice-${transaction.id}.pdf`);
+        link.setAttribute(
+          "download",
+          `invoice-${invoiceData.invoice_number || invoiceData.invoice_id}.pdf`
+        );
         document.body.appendChild(link);
         link.click();
         link.remove();
         window.URL.revokeObjectURL(url);
-      } else {
-        // Fallback: try JSON response for the invoice data
-        const jsonRes = await axiosBaseApi.get(
-          `/transactions/${transaction.id}/invoice`
-        );
-        if (jsonRes?.data?.data?.invoice_id) {
-          const invId = jsonRes.data.data.invoice_id;
-          const pdfRes = await axiosBaseApi.get(`/invoices/${invId}/pdf`, {
-            responseType: "blob",
-          });
-          const url = window.URL.createObjectURL(new Blob([pdfRes.data]));
-          const link = document.createElement("a");
-          link.href = url;
-          link.setAttribute("download", `invoice-${invId}.pdf`);
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(url);
-        }
       }
     } catch (err) {
-      console.error("Invoice not available for this transaction");
+      console.error("Invoice not available for this transaction", err);
     }
   };
 
@@ -565,7 +563,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
                 },
               }}
             />
-            {transaction?.status === "done" && (
+            {(transaction?.status === "done" || transaction?.status === "successful") && (
               <CustomButton
                 label="Invoice"
                 startIcon={<DownloadRounded sx={{ fontSize: 16 }} />}

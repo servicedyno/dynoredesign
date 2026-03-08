@@ -1,4 +1,6 @@
 import PDFDocument from "pdfkit";
+import path from "path";
+import fs from "fs";
 
 interface InvoiceData {
   invoice_number: string;
@@ -52,9 +54,10 @@ export const generateInvoicePDF = (invoiceData: InvoiceData): PDFKit.PDFDocument
   const currencySymbol = getCurrencySymbol(displayCurrency);
 
   // Helper function to format currency
-  const formatCurrency = (amount: number, currency: string = displayCurrency): string => {
+  const formatCurrency = (amount: number | string, currency: string = displayCurrency): string => {
     const symbol = getCurrencySymbol(currency);
-    return `${symbol}${amount.toFixed(2)} ${currency}`;
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
+    return `${symbol}${numAmount.toFixed(2)} ${currency}`;
   };
 
   // Helper function to format date
@@ -66,9 +69,21 @@ export const generateInvoicePDF = (invoiceData: InvoiceData): PDFKit.PDFDocument
     });
   };
 
-  // --- Header ---
+  // --- Add DynoPay Logo ---
+  const logoPath = path.join(__dirname, "../assets/dynopay-logo.png");
+  let logoY = 50;
+  if (fs.existsSync(logoPath)) {
+    try {
+      doc.image(logoPath, 50, 50, { width: 120, height: 40 });
+      logoY = 95; // Adjust starting position after logo
+    } catch (err) {
+      console.error("Error adding logo to PDF:", err);
+    }
+  }
+
+  // --- Header (INVOICE - right aligned) ---
   doc
-    .fontSize(20)
+    .fontSize(24)
     .font("Helvetica-Bold")
     .text("INVOICE", 50, 50, { align: "right" })
     .fontSize(10)
@@ -78,158 +93,225 @@ export const generateInvoicePDF = (invoiceData: InvoiceData): PDFKit.PDFDocument
       align: "right",
     });
 
-  // --- Provider (From) ---
+  // --- Provider (From) with full DynoPay branding ---
+  const providerStartY = logoY + 20;
   doc
     .fontSize(12)
     .font("Helvetica-Bold")
-    .text("From:", 50, 140)
+    .text("From:", 50, providerStartY)
     .fontSize(10)
+    .font("Helvetica-Bold")
+    .text("Dynotech Innovations, LDA", 50, providerStartY + 20)
+    .fontSize(9)
     .font("Helvetica")
-    .text(invoiceData.provider_name, 50, 160)
-    .text(invoiceData.provider_address.replace(/\n/g, ", "), 50, 175, {
-      width: 250,
-    })
-    .text(`VAT ID: ${invoiceData.provider_vat_id}`, 50, 205);
+    .text("Rua Luís de Camões 1017, 7° Dt°", 50, providerStartY + 35)
+    .text("Montijo 2870-154", 50, providerStartY + 48)
+    .text("Portugal", 50, providerStartY + 61)
+    .text("VAT ID: PT518713130", 50, providerStartY + 74)
+    .font("Helvetica-Bold")
+    .fillColor("#1976D2")
+    .text("Dynopay.com", 50, providerStartY + 87)
+    .fillColor("#000000");
 
   // --- Customer (Bill To) ---
   doc
     .fontSize(12)
     .font("Helvetica-Bold")
-    .text("Bill To:", 320, 140)
+    .fillColor("#000000")
+    .text("Bill To:", 320, providerStartY)
     .fontSize(10)
     .font("Helvetica")
-    .text(invoiceData.customer_name, 320, 160)
-    .text(invoiceData.customer_address.replace(/\n/g, ", "), 320, 175, {
-      width: 230,
-    });
+    .text(invoiceData.customer_name, 320, providerStartY + 20);
 
+  // Parse and display customer address properly
+  const customerAddressLines = invoiceData.customer_address.split("\n").filter(Boolean);
+  let customerAddressY = providerStartY + 35;
+  customerAddressLines.forEach((line, index) => {
+    doc.fontSize(9).text(line.trim(), 320, customerAddressY + (index * 13), { width: 230 });
+  });
+
+  // Add Tax ID if provided
   if (invoiceData.customer_tax_id) {
-    doc.text(`Tax ID: ${invoiceData.customer_tax_id}`, 320, 205);
+    const taxIdY = providerStartY + 35 + (customerAddressLines.length * 13) + 5;
+    doc.fontSize(9).text(`Tax ID: ${invoiceData.customer_tax_id}`, 320, taxIdY);
   }
 
-  // --- Line ---
+  // --- Separator Line ---
+  const lineY = providerStartY + 120;
   doc
-    .moveTo(50, 250)
-    .lineTo(550, 250)
-    .stroke();
+    .strokeColor("#CCCCCC")
+    .moveTo(50, lineY)
+    .lineTo(550, lineY)
+    .stroke()
+    .strokeColor("#000000");
 
   // --- Table Header ---
-  const tableTop = 270;
+  const tableTop = lineY + 20;
   doc
     .fontSize(10)
     .font("Helvetica-Bold")
+    .fillColor("#000000")
     .text("Description", 50, tableTop)
     .text("Qty", 300, tableTop, { width: 50, align: "right" })
     .text("Price", 360, tableTop, { width: 80, align: "right" })
-    .text("Amount", 450, tableTop, { width: 100, align: "right" });
+    .text("Amount", 460, tableTop, { width: 90, align: "right" });
 
-  // --- Table Line ---
+  // --- Table Header Line ---
   doc
+    .strokeColor("#CCCCCC")
     .moveTo(50, tableTop + 15)
     .lineTo(550, tableTop + 15)
-    .stroke();
+    .stroke()
+    .strokeColor("#000000");
 
   // --- Line Items ---
-  let yPosition = tableTop + 25;
+  let yPosition = tableTop + 30;
+  const numUnitPrice = typeof invoiceData.unit_price === 'string' ? parseFloat(invoiceData.unit_price) || 0 : invoiceData.unit_price;
+  const numQuantity = typeof invoiceData.quantity === 'string' ? parseInt(invoiceData.quantity) || 1 : invoiceData.quantity;
   doc
     .fontSize(9)
     .font("Helvetica")
+    .fillColor("#333333")
     .text(invoiceData.description, 50, yPosition, { width: 240 })
-    .text(invoiceData.quantity.toString(), 300, yPosition, {
+    .fillColor("#000000")
+    .text(numQuantity.toString(), 300, yPosition, {
       width: 50,
       align: "right",
     })
-    .text(formatCurrency(invoiceData.unit_price), 360, yPosition, {
+    .text(formatCurrency(numUnitPrice), 360, yPosition, {
       width: 80,
       align: "right",
     })
     .text(
-      formatCurrency(invoiceData.unit_price * invoiceData.quantity),
-      450,
+      formatCurrency(numUnitPrice * numQuantity),
+      460,
       yPosition,
-      { width: 100, align: "right" }
+      { width: 90, align: "right" }
     );
 
-  yPosition += 25;
+  yPosition += 30;
 
-  // --- Processing Fee (Combined - no internal breakdown) ---
-  doc.fontSize(8).font("Helvetica-Oblique");
+  // --- Processing Fee Row (Transaction Fee) ---
+  const numTxFeePercent = typeof invoiceData.transaction_fee_percent === 'string' ? parseFloat(invoiceData.transaction_fee_percent) || 0 : invoiceData.transaction_fee_percent;
+  const numFixedFee = typeof invoiceData.fixed_fee === 'string' ? parseFloat(invoiceData.fixed_fee) || 0 : invoiceData.fixed_fee;
+  if (numTxFeePercent > 0 || numFixedFee > 0) {
+    const txFeeAmount = numTxFeePercent > 0 
+      ? (numUnitPrice * numTxFeePercent) / 100 
+      : 0;
+    const totalTransactionFee = numFixedFee + txFeeAmount;
+    
+    doc
+      .fontSize(9)
+      .font("Helvetica")
+      .fillColor("#666666")
+      .text(`Transaction Fee (${numTxFeePercent}%)`, 50, yPosition, { width: 240 })
+      .fillColor("#000000")
+      .text(
+        formatCurrency(totalTransactionFee),
+        460,
+        yPosition,
+        { width: 90, align: "right" }
+      );
+    yPosition += 20;
+  }
 
-  // Calculate total processing fee (fixed + transaction % + buffer %)
-  const txFeeAmount = invoiceData.transaction_fee_percent > 0 
-    ? (invoiceData.unit_price * invoiceData.transaction_fee_percent) / 100 
-    : 0;
-  const bufferAmount = invoiceData.blockchain_buffer_percent > 0 
-    ? (invoiceData.unit_price * invoiceData.blockchain_buffer_percent) / 100 
-    : 0;
-  const totalProcessingFee = (invoiceData.fixed_fee || 0) + txFeeAmount + bufferAmount;
-
-  if (totalProcessingFee > 0) {
-    doc.text(`Processing Fee`, 50, yPosition, { width: 240 }).text(
-      formatCurrency(totalProcessingFee),
-      450,
-      yPosition,
-      { width: 100, align: "right" }
-    );
-    yPosition += 15;
+  // --- Blockchain Buffer Row ---
+  const numBlockchainBuffer = typeof invoiceData.blockchain_buffer_percent === 'string' ? parseFloat(invoiceData.blockchain_buffer_percent) || 0 : invoiceData.blockchain_buffer_percent;
+  if (numBlockchainBuffer > 0) {
+    const bufferAmount = (numUnitPrice * numBlockchainBuffer) / 100;
+    doc
+      .fontSize(9)
+      .font("Helvetica")
+      .fillColor("#666666")
+      .text(`Blockchain Buffer (${numBlockchainBuffer}%)`, 50, yPosition, { width: 240 })
+      .fillColor("#000000")
+      .text(
+        formatCurrency(bufferAmount),
+        460,
+        yPosition,
+        { width: 90, align: "right" }
+      );
+    yPosition += 20;
   }
 
   // --- Subtotal ---
-  yPosition += 10;
-  const subtotal = displayAmount - invoiceData.vat_amount;
+  yPosition += 15;
+  const numDisplayAmount = typeof displayAmount === 'string' ? parseFloat(displayAmount) || 0 : displayAmount;
+  const numVatAmount = typeof invoiceData.vat_amount === 'string' ? parseFloat(invoiceData.vat_amount) || 0 : invoiceData.vat_amount;
+  const subtotal = numDisplayAmount - numVatAmount;
   doc
+    .strokeColor("#CCCCCC")
+    .moveTo(360, yPosition)
+    .lineTo(550, yPosition)
+    .stroke()
+    .strokeColor("#000000");
+  
+  yPosition += 10;
+  doc
+    .fontSize(10)
     .font("Helvetica")
-    .text("Subtotal:", 360, yPosition, { width: 80, align: "right" })
-    .text(formatCurrency(subtotal), 450, yPosition, {
-      width: 100,
+    .fillColor("#000000")
+    .text("Subtotal:", 360, yPosition, { width: 90, align: "right" })
+    .text(formatCurrency(subtotal), 460, yPosition, {
+      width: 90,
       align: "right",
     });
 
   // --- VAT ---
-  if (invoiceData.vat_amount > 0) {
+  if (numVatAmount > 0) {
     yPosition += 20;
+    const numVatRate = typeof invoiceData.vat_rate === 'string' ? parseFloat(invoiceData.vat_rate) || 0 : invoiceData.vat_rate;
     doc
-      .text(`VAT (${invoiceData.vat_rate}%):`, 360, yPosition, {
-        width: 80,
+      .fontSize(10)
+      .text(`VAT (${numVatRate}%):`, 360, yPosition, {
+        width: 90,
         align: "right",
       })
-      .text(formatCurrency(invoiceData.vat_amount), 450, yPosition, {
-        width: 100,
+      .text(formatCurrency(numVatAmount), 460, yPosition, {
+        width: 90,
         align: "right",
       });
   }
 
   // --- Total Line ---
-  yPosition += 15;
+  yPosition += 20;
   doc
+    .strokeColor("#000000")
+    .lineWidth(2)
     .moveTo(360, yPosition)
     .lineTo(550, yPosition)
-    .stroke();
+    .stroke()
+    .lineWidth(1)
+    .strokeColor("#000000");
 
-  // --- Total ---
-  yPosition += 10;
+  // --- Total (Amount Due) ---
+  yPosition += 12;
   doc
     .fontSize(12)
     .font("Helvetica-Bold")
-    .text("Total:", 360, yPosition, { width: 80, align: "right" })
-    .text(formatCurrency(displayAmount), 450, yPosition, {
-      width: 100,
+    .fillColor("#000000")
+    .text("Total Amount:", 360, yPosition, { width: 90, align: "right" })
+    .text(formatCurrency(numDisplayAmount), 460, yPosition, {
+      width: 90,
       align: "right",
     });
 
-  // --- Crypto Amount ---
+  // --- Crypto Equivalent ---
   if (invoiceData.total_crypto && invoiceData.crypto_currency) {
-    yPosition += 20;
+    yPosition += 22;
+    const numTotalCrypto = typeof invoiceData.total_crypto === 'string' ? parseFloat(invoiceData.total_crypto) || 0 : invoiceData.total_crypto;
     doc
       .fontSize(9)
       .font("Helvetica")
-      .text("Crypto Equivalent:", 360, yPosition, { width: 80, align: "right" })
+      .fillColor("#666666")
+      .text("Crypto Equivalent:", 360, yPosition, { width: 90, align: "right" })
       .text(
-        `${invoiceData.total_crypto.toFixed(8)} ${invoiceData.crypto_currency}`,
-        450,
+        `${numTotalCrypto.toFixed(8)} ${invoiceData.crypto_currency}`,
+        460,
         yPosition,
-        { width: 100, align: "right" }
-      );
+        { width: 90, align: "right" }
+      )
+      .fillColor("#000000");
   }
 
   // --- Payment Terms ---
@@ -241,25 +323,35 @@ export const generateInvoicePDF = (invoiceData: InvoiceData): PDFKit.PDFDocument
   }
 
   doc
-    .fontSize(10)
+    .fontSize(11)
     .font("Helvetica-Bold")
+    .fillColor("#000000")
     .text("Payment Terms:", 50, yPosition)
     .fontSize(9)
     .font("Helvetica")
-    .text(invoiceData.payment_terms, 50, yPosition + 15, { width: 500 });
+    .fillColor("#333333")
+    .text(invoiceData.payment_terms, 50, yPosition + 18, { width: 500 })
+    .fillColor("#000000");
 
   // --- Footer ---
+  const footerY = 730;
   doc
     .fontSize(8)
-    .font("Helvetica-Oblique")
+    .font("Helvetica")
+    .fillColor("#999999")
     .text(
-      `Transaction ID: ${invoiceData.transaction_id}`,
+      `Transaction Reference: ${invoiceData.transaction_id}`,
       50,
-      750,
+      footerY,
       { align: "center" }
     )
-    .text("Thank you for your business!", 50, 765, { align: "center" })
-    .text("Generated by Dynopay - dynopay.com", 50, 780, { align: "center" });
+    .fontSize(9)
+    .fillColor("#333333")
+    .text("Thank you for your business!", 50, footerY + 20, { align: "center" })
+    .fontSize(8)
+    .fillColor("#1976D2")
+    .text("Powered by DynoPay - dynopay.com", 50, footerY + 35, { align: "center" })
+    .fillColor("#000000");
 
   // Finalize PDF
   doc.end();
