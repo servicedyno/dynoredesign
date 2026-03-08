@@ -1,5 +1,6 @@
 import useIsMobile from "@/hooks/useIsMobile";
 import { FC, memo } from "react";
+import FeeSection from "./FeeSection";
 import FeaturesSection from "./Features";
 import GoLiveSection from "./GoLive";
 import HeroSection from "./Hero";
@@ -33,6 +34,10 @@ const HomePage: FC<HomePageProps> = () => {
 
       <HomeFullWidthContainer>
         <WhyChooseDynopaySection />
+      </HomeFullWidthContainer>
+
+      <HomeFullWidthContainer>
+        <FeeSection />
       </HomeFullWidthContainer>
 
       <HomeContainer>

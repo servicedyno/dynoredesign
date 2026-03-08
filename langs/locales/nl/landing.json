@@ -44,5 +44,6 @@
   "useCase2Title": "Freelancers",
   "useCase2Description": "Freelancers ontvangen internationale betalingen direct in crypto",
   "useCase3Title": "SaaS-platformen",
-  "useCase3Description": "Softwarebedrijven bieden crypto-abonnementsbetalingen aan"
+  "useCase3Description": "Softwarebedrijven bieden crypto-abonnementsbetalingen aan",
+  "headerFees": "Kosten"
 }

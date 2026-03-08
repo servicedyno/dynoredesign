@@ -44,5 +44,6 @@
   "useCase2Title": "Freelancer",
   "useCase2Description": "Freelancer erhalten internationale Zahlungen sofort in Krypto",
   "useCase3Title": "SaaS-Plattformen",
-  "useCase3Description": "Software-Unternehmen bieten Krypto-Abonnementzahlungen an"
+  "useCase3Description": "Software-Unternehmen bieten Krypto-Abonnementzahlungen an",
+  "headerFees": "Gebühren"
 }

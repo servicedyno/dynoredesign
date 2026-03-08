@@ -76,6 +76,7 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
       "/aml-policy",
       "/system-status",
       "/documentation",
+      "/fees",
     ]);
 
     if (homePaths.has(pathname)) return "home";
