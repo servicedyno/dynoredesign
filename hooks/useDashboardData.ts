@@ -65,7 +65,7 @@ export const useDashboardData = () => {
     chartData: dashboardState.chartData,
     feeTiers: dashboardState.feeTiers,
     recentTransactions: dashboardState.recentTransactions,
-    loading: dashboardState.loading,
+    loading: dashboardState.loading || !companiesFetched,
     chartLoading: dashboardState.chartLoading,
     fetchChartData,
     refreshDashboard,
