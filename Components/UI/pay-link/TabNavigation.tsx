@@ -13,7 +13,7 @@ const TabNavigation: React.FC<TabNavigationProps> = React.memo(
             <p>{tPaymentLink("paymentSettings")}</p>
           </TabItem>
           <TabItem onClick={() => onChange(1)} active={activeTab === 1}>
-            <p>{tPaymentLink("postPaymentSettings")}</p>
+            <p>{tPaymentLink("postPaymentSettings")} <span style={{ fontWeight: 400, opacity: 0.6, fontSize: "0.85em" }}>({tPaymentLink("optional") || "Optional"})</span></p>
           </TabItem>
         </TabContainer>
       </Box>

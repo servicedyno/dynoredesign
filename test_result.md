@@ -366,3 +366,29 @@ agent_communication:
 - **Root cause**: `useDashboardData` fired immediately on mount with no company_id because `companyList=[]` and `loading=false` (initial state), before `OnboardingFlow` triggered the company fetch. This returned aggregate data (658 txns) which then got replaced by company-scoped data (675 txns).
 - **Fix**: Added `fetched: boolean` flag to `companyReducer` (starts `false`, set `true` on `COMPANY_FETCH` or `COMPANY_API_ERROR`). Updated `useDashboardData` to gate ALL fetches (`shouldFetch`, `fetchChartData`, `refreshDashboard`) behind `companiesFetched === true`, so dashboard only fetches after company list is resolved.
 - Files changed: `utils/types.ts`, `Redux/Reducers/companyReducer.ts`, `hooks/useDashboardData.ts`
+
+
+## Changes Made - Session 6 (Create Payment Link UX Fix)
+
+### 1. "Create Payment Link" Button on Tab 0
+- **Before**: Tab 0 had a "Continue" button that confused users into thinking they must navigate to Tab 1 (Post-Payment Settings) first
+- **After**: Tab 0 now shows "Create Payment Link" button directly — users can create payment links without touching post-payment settings
+- File: `Components/UI/pay-link/ActionButtons.tsx` — changed label from `tPaymentLink("continue")` to `tPaymentLink("createPaymentLink")`
+
+### 2. Description Marked as Optional
+- Added "(Optional)" text next to the Description label
+- File: `Components/UI/pay-link/DescriptionSection.tsx`
+
+### 3. Post-Payment Settings Tab Marked as Optional
+- Tab 2 label changed from "2. Post-Payment Settings" to "2. Post-Payment Settings (Optional)"
+- File: `Components/UI/pay-link/TabNavigation.tsx`
+
+### 4. Unified Create Handler
+- Merged `handleCreatePaymentLink` logic so both Tab 0 and Tab 1 use the same validation and payload
+- Tab 1 create now includes all Tab 0 fields (name, expire, fee_payer, accepted_currencies)
+- If validation fails while on Tab 1, auto-switches to Tab 0 to show errors
+- File: `Components/Page/CreatePaymentLink/index.tsx`
+
+### 5. Consistent Button Label on Tab 1
+- Tab 1's create button also now says "Create Payment Link" (was "Create Payment")
+- File: `Components/UI/pay-link/PostPaymentSettings.tsx`

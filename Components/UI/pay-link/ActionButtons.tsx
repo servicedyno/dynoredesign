@@ -33,7 +33,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       )}
       {!disabled && (
         <CustomButton
-          label={tPaymentLink(hasPaymentLinkData ? "saveChanges" : "continue")}
+          label={tPaymentLink(hasPaymentLinkData ? "saveChanges" : "createPaymentLink")}
           variant="primary"
           size="medium"
           fullWidth={true}

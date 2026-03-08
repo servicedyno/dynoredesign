@@ -127,7 +127,7 @@ const PostPaymentSettings: React.FC<PostPaymentSettingsProps> = ({
       {showCreateButton && onCreate && (
         <Box>
           <CustomButton
-            label={tPaymentLink("createPayment")}
+            label={tPaymentLink("createPaymentLink")}
             variant="primary"
             size="medium"
             fullWidth={true}

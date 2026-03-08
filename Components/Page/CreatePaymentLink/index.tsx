@@ -318,68 +318,55 @@ const CreatePaymentLinkPage = ({
   }, [paymentSettings.value, paymentSettings.currency, dispatch]);
 
   const handleCreatePaymentLink = () => {
-    if (activeTab === 0) {
-      setPaymentSettingsTouched({
-        value: true,
-        currency: true,
-        description: true,
-      });
+    // Always validate payment settings from Tab 0 regardless of active tab
+    setPaymentSettingsTouched({
+      value: true,
+      currency: true,
+      description: true,
+    });
 
-      if (!validatePaymentSettings()) {
-        return;
+    if (!validatePaymentSettings()) {
+      // If validation fails and we're on Tab 1, switch back to Tab 0 to show errors
+      if (activeTab === 1) {
+        setActiveTab(0);
       }
-
-      // Build API payload with backend-compatible field names
-      const apiPayload: any = {
-        amount: parseFloat(paymentSettings.value),
-        currency: paymentSettings.currency,
-        description: paymentSettings.description,
-        name: paymentSettings.clientName,
-        expire: paymentSettings.expire === "no" ? "No" : paymentSettings.expire,
-        fee_payer: paymentSettings.blockchainFees,
-        accepted_currencies: paymentSettings.acceptedCryptoCurrency,
-        redirect_url: postPaymentSettings.redirectUrl,
-        webhook_url: postPaymentSettings.webhookUrl,
-        callback_url: postPaymentSettings.callbackUrl,
-        apply_tax: includeTax,
-        company_id: selectedCompanyId,
-      };
-
-      if (customerEmail.trim()) {
-        apiPayload.customer_email = customerEmail.trim();
-      }
-
-      // Dispatch to Redux saga which calls the API
-      if (hasPaymentLinkData) {
-        dispatch(
-          PaymentLinkAction(PAYLINK_UPDATE, {
-            id: (paymentLinkData as PaymentLink).link_id,
-            ...apiPayload,
-          })
-        );
-      } else {
-        dispatch(PaymentLinkAction(PAYLINK_CREATE, apiPayload));
-      }
-
-      // Payment link URL will be set from Redux state when backend responds
-      setSuccessModalOpen(true);
-    } else if (activeTab === 1) {
-      const apiPayload = {
-        amount: parseFloat(paymentSettings.value) || 0,
-        currency: paymentSettings.currency,
-        description: paymentSettings.description,
-        redirect_url: postPaymentSettings.redirectUrl,
-        webhook_url: postPaymentSettings.webhookUrl,
-        callback_url: postPaymentSettings.callbackUrl,
-        apply_tax: includeTax,
-        company_id: selectedCompanyId,
-      };
-
-      dispatch(PaymentLinkAction(PAYLINK_CREATE, apiPayload));
-
-      // Payment link URL will be set from Redux state when backend responds
-      setSuccessModalOpen(true);
+      return;
     }
+
+    // Build API payload with backend-compatible field names
+    const apiPayload: any = {
+      amount: parseFloat(paymentSettings.value),
+      currency: paymentSettings.currency,
+      description: paymentSettings.description,
+      name: paymentSettings.clientName,
+      expire: paymentSettings.expire === "no" ? "No" : paymentSettings.expire,
+      fee_payer: paymentSettings.blockchainFees,
+      accepted_currencies: paymentSettings.acceptedCryptoCurrency,
+      redirect_url: postPaymentSettings.redirectUrl,
+      webhook_url: postPaymentSettings.webhookUrl,
+      callback_url: postPaymentSettings.callbackUrl,
+      apply_tax: includeTax,
+      company_id: selectedCompanyId,
+    };
+
+    if (customerEmail.trim()) {
+      apiPayload.customer_email = customerEmail.trim();
+    }
+
+    // Dispatch to Redux saga which calls the API
+    if (hasPaymentLinkData) {
+      dispatch(
+        PaymentLinkAction(PAYLINK_UPDATE, {
+          id: (paymentLinkData as PaymentLink).link_id,
+          ...apiPayload,
+        })
+      );
+    } else {
+      dispatch(PaymentLinkAction(PAYLINK_CREATE, apiPayload));
+    }
+
+    // Payment link URL will be set from Redux state when backend responds
+    setSuccessModalOpen(true);
   };
 
   const handleCloseSuccessModal = () => {
