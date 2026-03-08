@@ -207,9 +207,15 @@ export default function CompanySelector() {
             }}
           />
           <TriggerText sx={{ color: theme.palette.primary.main }}>
-            {windowWidth < 600
-              ? truncateByWords(selected?.company_name ?? "-", count)
-              : (selected?.company_name ?? "-")}
+            {selected?.company_name
+              ? (windowWidth < 600
+                ? truncateByWords(selected.company_name, count)
+                : selected.company_name)
+              : companies.length > 0
+                ? (windowWidth < 600
+                  ? truncateByWords(companies[0].company_name, count)
+                  : companies[0].company_name)
+                : ""}
           </TriggerText>
         </Box>
 
@@ -263,7 +269,7 @@ export default function CompanySelector() {
                 }}
               />
               <TriggerText sx={{ color: theme.palette.primary.main }}>
-                {selected?.company_name ?? "-"}
+                {selected?.company_name || (companies.length > 0 ? companies[0].company_name : "Company")}
               </TriggerText>
             </Box>
 

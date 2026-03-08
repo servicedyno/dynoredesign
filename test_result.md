@@ -261,3 +261,27 @@ agent_communication:
   - "Add Another" button → resets form for adding more wallets
   - "Done" button → triggers celebration overlay
 - Both OnboardingFlow and CompanySelector flows are consistent
+
+## Changes Made - Session 4 (Full UI/UX Audit & Improvements)
+
+### 1. Pay Links Mobile Card Layout
+- Replaced horizontal scroll table with card-based layout on mobile
+- Each card shows: description, status badge, USD value, crypto value, date, times used, and action buttons (copy/view/edit)
+- Desktop table layout fully preserved
+
+### 2. Company Selector "-" Bug Fix
+- Fixed company name showing "-" when selected company hasn't loaded yet
+- Falls back to first company in list, then empty string instead of "-"
+
+### 3. Empty States Enhancement
+- **Invoices page**: Added illustration icon, clear heading, and helpful explanation text
+- **Dashboard**: Added "Welcome to DynoPay! 🚀" banner for new users (0 transactions) with CTA to create first payment link
+
+### 4. Profile Avatar Initials Fix
+- Fixed initials text color to white (#fff) on solid blue (#2563EB) background for high contrast
+- Added safety for single-name users (falls back to email initial)
+
+### 5. Landing Page Social Proof Section
+- Added "Trusted by Businesses Worldwide" stats section below hero
+- Shows: 10K+ Transactions, 500+ Merchants, 15+ Cryptocurrencies, 99.9% Uptime
+- Responsive 2x2 grid on mobile, 4-column on desktop

@@ -403,6 +403,40 @@ const DashboardLeftSection = () => {
 
   return (
     <Box>
+      {/* Getting Started Banner - shows when user has zero transactions */}
+      {totalTransactions === 0 && !loading && (
+        <Box
+          sx={{
+            mb: 2.5,
+            mx: { xs: 2, md: 0 },
+            p: isMobile ? 2.5 : 3,
+            borderRadius: "14px",
+            border: `1px solid ${theme.palette.primary.main}20`,
+            bgcolor: `${theme.palette.primary.main}06`,
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "flex-start" : "center",
+            justifyContent: "space-between",
+            gap: 2,
+          }}
+        >
+          <Box>
+            <Typography sx={{ fontSize: isMobile ? "16px" : "18px", fontFamily: "UrbanistSemibold", fontWeight: 600, color: theme.palette.text.primary, mb: 0.5 }}>
+              Welcome to DynoPay! 🚀
+            </Typography>
+            <Typography sx={{ fontSize: isMobile ? "13px" : "14px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary, lineHeight: 1.5 }}>
+              Start accepting crypto payments in minutes. Create your first payment link and share it with your customers.
+            </Typography>
+          </Box>
+          <CustomButton
+            label="Create Payment Link"
+            variant="primary"
+            size={isMobile ? "small" : "medium"}
+            onClick={() => router.push("/create-pay-link")}
+            sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
+          />
+        </Box>
+      )}
       {/* Stat Cards */}
       <Box
         ref={statCardsContainerRef}

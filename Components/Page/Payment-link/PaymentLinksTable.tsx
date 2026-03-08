@@ -260,9 +260,96 @@ const PaymentLinksTable = ({
           flex: 1,
           minHeight: 0,
           maxHeight: "fit-content",
-          p: { xs: "0px 0px 0px 16px", sm: "0px 16px", md: "0px" },
+          p: isMobile ? 0 : "0px",
         }}
       >
+        {/* MOBILE: Card layout */}
+        {isMobile ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1, px: 2 }}>
+            {paginatedData.length === 0 ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary }}>
+                  {tCommon("noDataAvailable")}
+                </Typography>
+              </Box>
+            ) : (
+              paginatedData.map((row, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    p: 2,
+                    borderRadius: "12px",
+                    border: `1px solid ${(theme.palette as any).border?.main ?? "#E9ECF2"}`,
+                    bgcolor: theme.palette.background.paper,
+                  }}
+                >
+                  {/* Top: Description + Status */}
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.25 }}>
+                    <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistSemibold", fontWeight: 600, color: theme.palette.text.primary, flex: 1, mr: 1, lineHeight: 1.3 }}>
+                      {row.description || "Payment Link"}
+                    </Typography>
+                    <StatusChip status={row.status}>
+                      {row.status === "active" ? (
+                        <Image src={TrueIcon} alt="Active" width={12} height={12} draggable={false} />
+                      ) : row.status === "expired" ? (
+                        <Image src={FalseIcon} alt="Expired" width={12} height={12} draggable={false} />
+                      ) : row.status === "paid" ? (
+                        <Image src={TrueIcon} alt="Paid" width={12} height={12} draggable={false} style={{ filter: "brightness(0) saturate(100%) invert(29%) sepia(88%) saturate(2646%) hue-rotate(189deg) brightness(95%) contrast(101%)" }} />
+                      ) : (
+                        <HourGlassIcon fill={"#F57C00"} size={12} />
+                      )}
+                      {row.status === "active" ? "Active" : row.status === "expired" ? "Expired" : row.status === "paid" ? "Paid" : "Pending"}
+                    </StatusChip>
+                  </Box>
+                  {/* Middle: USD + Crypto */}
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", mb: 1 }}>
+                    <Typography sx={{ fontSize: "16px", fontFamily: "UrbanistSemibold", fontWeight: 700, color: theme.palette.text.primary }}>
+                      {row.usdValue}
+                    </Typography>
+                    {row.cryptoValue && (
+                      <Typography sx={{ fontSize: "13px", fontFamily: "UrbanistMedium", color: theme.palette.primary.main }}>
+                        {row.cryptoValue}
+                      </Typography>
+                    )}
+                  </Box>
+                  {/* Bottom: Date + Actions */}
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography sx={{ fontSize: "11px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary }}>
+                      {formatUtcToDisplay(row.createdAt)}
+                      {row.timesUsed > 0 ? ` · Used ${row.timesUsed}x` : ""}
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: "6px" }}>
+                      {row.status !== "expired" && (
+                        <CopyButton onClick={() => handleCopy(row.id)} sx={{ width: 28, height: 28, minWidth: 28, p: "5px" }}>
+                          <Image src={CopyIcon} alt="Copy" width={12} height={12} draggable={false} />
+                        </CopyButton>
+                      )}
+                      <CopyButton
+                        onClick={() => {
+                          row.status === "paid" || row.status === "expired"
+                            ? router.push(`/pay-links/${row?.id}`)
+                            : handleViewModelOpen(row);
+                        }}
+                        sx={{ width: 28, height: 28, minWidth: 28, p: "5px", borderColor: theme.palette.text.primary }}
+                      >
+                        <Image src={EyeIcon} alt="View" width={12} height={12} draggable={false} />
+                      </CopyButton>
+                      {row.status !== "expired" && row.status !== "paid" && (
+                        <CopyButton
+                          onClick={() => router.push(`/pay-links/${row?.id}`)}
+                          sx={{ width: 28, height: 28, minWidth: 28, p: "5px", borderColor: theme.palette.text.primary }}
+                        >
+                          <Image src={EditIcon} alt="Edit" width={12} height={12} draggable={false} style={{ filter: "brightness(0) saturate(100%) invert(0%)" }} />
+                        </CopyButton>
+                      )}
+                    </Box>
+                  </Box>
+                </Box>
+              ))
+            )}
+          </Box>
+        ) : (
+        /* DESKTOP: Table layout */
         <TransactionsTableContainer>
           <TransactionsTableScrollWrapper>
             <Table>
@@ -591,6 +678,7 @@ const PaymentLinksTable = ({
             </Box>
           </TableFooter>
         </TransactionsTableContainer>
+        )}
       </Box>
 
       <Toast

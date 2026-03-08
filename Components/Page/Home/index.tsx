@@ -3,6 +3,7 @@ import { FC, memo } from "react";
 import FeaturesSection from "./Features";
 import GoLiveSection from "./GoLive";
 import HeroSection from "./Hero";
+import SocialProofSection from "./SocialProof";
 import UseCaseSection from "./UseCase";
 import WhyChooseDynopaySection from "./WhyChooseDynoPay";
 import { HomeContainer, HomeFullWidthContainer, HomeWrapper } from "./styled";
@@ -17,6 +18,10 @@ const HomePage: FC<HomePageProps> = () => {
       <HomeContainer>
         <HeroSection />
       </HomeContainer>
+
+      <HomeFullWidthContainer>
+        <SocialProofSection />
+      </HomeFullWidthContainer>
 
       <HomeFullWidthContainer>
         <GoLiveSection />

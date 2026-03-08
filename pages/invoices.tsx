@@ -441,18 +441,45 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
                             <TableCell
                               colSpan={isMobile ? 5 : 6}
                               align="center"
-                              sx={{ py: 4 }}
+                              sx={{ py: 6, border: "none" }}
                             >
-                              <Typography
-                                sx={{
-                                  fontFamily: "UrbanistMedium",
-                                  color: muiTheme.palette.text.secondary,
-                                  fontSize: 14,
-                                }}
-                              >
-                                No invoices yet. Invoices are auto-generated
-                                when transactions complete.
-                              </Typography>
+                              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1.5 }}>
+                                <Box
+                                  sx={{
+                                    width: 56,
+                                    height: 56,
+                                    borderRadius: "50%",
+                                    bgcolor: `${muiTheme.palette.primary.main}10`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    mb: 0.5,
+                                  }}
+                                >
+                                  <Typography sx={{ fontSize: 28 }}>📄</Typography>
+                                </Box>
+                                <Typography
+                                  sx={{
+                                    fontFamily: "UrbanistSemibold",
+                                    fontWeight: 600,
+                                    color: muiTheme.palette.text.primary,
+                                    fontSize: isMobile ? 15 : 16,
+                                  }}
+                                >
+                                  No invoices yet
+                                </Typography>
+                                <Typography
+                                  sx={{
+                                    fontFamily: "UrbanistMedium",
+                                    color: muiTheme.palette.text.secondary,
+                                    fontSize: isMobile ? 12 : 13,
+                                    maxWidth: 340,
+                                    lineHeight: 1.5,
+                                  }}
+                                >
+                                  Invoices are automatically generated when your customers complete payments. Create a payment link to get started!
+                                </Typography>
+                              </Box>
                             </TableCell>
                           </TableRow>
                         )

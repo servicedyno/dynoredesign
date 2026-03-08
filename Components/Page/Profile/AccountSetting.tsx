@@ -46,10 +46,10 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
   });
 
   useEffect(() => {
-    const name = tokenData.name.split(" ");
+    const nameParts = (tokenData.name || "").trim().split(" ").filter(Boolean);
     setInitialUser({
-      firstName: name[0],
-      lastName: name[1],
+      firstName: nameParts[0] || tokenData.email?.charAt(0)?.toUpperCase() || "",
+      lastName: nameParts[1] || "",
       email: tokenData.email,
       mobile: tokenData.mobile,
     });
@@ -151,7 +151,7 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
             backgroundColor:
               userPhoto && !imageError
                 ? "transparent"
-                : theme.palette.primary.light,
+                : "#2563EB",
           }}
         >
           {userPhoto && !imageError ? (
@@ -166,15 +166,15 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
           ) : (
             <Typography
               sx={{
-                fontSize: isMobile ? "20px" : "24px",
-                fontWeight: 600,
-                color: theme.palette.primary.main,
-                backgroundColor: theme.palette.primary.light,
-                fontFamily: "UrbanistMedium",
+                fontSize: isMobile ? "24px" : "28px",
+                fontWeight: 700,
+                color: "#fff",
+                fontFamily: "UrbanistSemibold",
                 textTransform: "uppercase",
+                lineHeight: 1,
               }}
             >
-              {getInitials(initialUser.firstName, initialUser.lastName)}
+              {getInitials(initialUser.firstName, initialUser.lastName) || "?"}
             </Typography>
           )}
         </Box>
