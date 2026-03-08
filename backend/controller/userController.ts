@@ -62,11 +62,14 @@ const registerUser = async (req: express.Request, res: express.Response) => {
 
       // Generate unique referral code for new user
       const generateReferralCode = () => {
-        const prefix = "DYNO";
-        const year = new Date().getFullYear();
-        const userPart = (name || 'USER').substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
-        const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
-        return `${prefix}${year}${userPart}${randomPart}`;
+        // Short 8-char format: DYNO + 6 alphanumeric chars (e.g., DYNO-A3X9K2)
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
+        let code = '';
+        const bytes = crypto.randomBytes(6);
+        for (let i = 0; i < 6; i++) {
+          code += chars[bytes[i] % chars.length];
+        }
+        return `DYNO-${code}`;
       };
 
       const userReferralCode = generateReferralCode();
@@ -2365,6 +2368,36 @@ const resendVerification = async (req: express.Request, res: express.Response) =
   }
 };
 
+/**
+ * Update last selected company for the user (for session persistence across logins)
+ * PUT /api/user/last-company
+ * Body: { company_id: number }
+ */
+const updateLastCompany = async (req: express.Request, res: express.Response) => {
+  try {
+    const userId = (res.locals.user as any)?.user_id;
+    if (!userId) return errorResponseHelper(res, 401, "Unauthorized");
+
+    const { company_id } = req.body;
+    if (!company_id) return errorResponseHelper(res, 400, "company_id is required");
+
+    // Verify this company belongs to the user
+    const company = await companyModel.findOne({
+      where: { company_id, user_id: userId },
+    });
+    if (!company) return errorResponseHelper(res, 404, "Company not found or not owned by user");
+
+    await userModel.update(
+      { last_company_id: company_id },
+      { where: { user_id: userId } }
+    );
+
+    successResponseHelper(res, 200, "Last company updated", { last_company_id: company_id });
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
 export default {
   registerUser,
   registerPhoneStep1,
@@ -2392,4 +2425,5 @@ export default {
   getOnboardingStatus,
   verifyEmail,
   resendVerification,
+  updateLastCompany,
 };

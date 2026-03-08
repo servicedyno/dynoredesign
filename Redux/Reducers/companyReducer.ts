@@ -11,6 +11,27 @@ import {
   COMPANY_SELECT,
 } from "../Actions/CompanyAction";
 
+// Helper: get last company id from localStorage
+function getLastCompanyId(): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const val = localStorage.getItem("last_company_id");
+    return val ? parseInt(val, 10) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Helper: save last company id to localStorage
+function saveLastCompanyId(companyId: number | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (companyId != null) {
+      localStorage.setItem("last_company_id", String(companyId));
+    }
+  } catch {}
+}
+
 const companyInitialState: ICompanyReducer = {
   companyList: [],
   loading: false,
@@ -62,14 +83,29 @@ const companyReducer = (state = companyInitialState, action: ReducerAction) => {
         companyList: tempArray,
       };
 
-    case COMPANY_FETCH:
+    case COMPANY_FETCH: {
+      // Resolve which company to select:
+      // 1. Already selected in Redux → keep it
+      // 2. last_company_id from localStorage (persisted from prior session) → use if valid
+      // 3. First company in list → fallback
+      const lastSaved = getLastCompanyId();
+      const validIds = (payload || []).map((c: any) => c.company_id);
+      let selected = state.selectedCompanyId;
+      if (!selected || !validIds.includes(selected)) {
+        if (lastSaved && validIds.includes(lastSaved)) {
+          selected = lastSaved;
+        } else {
+          selected = validIds.length > 0 ? validIds[0] : null;
+        }
+      }
+      if (selected) saveLastCompanyId(selected);
       return {
         ...state,
         loading: false,
         companyList: payload,
-        // Auto-select first company if none selected
-        selectedCompanyId: state.selectedCompanyId || (payload.length > 0 ? payload[0].company_id : null),
+        selectedCompanyId: selected,
       };
+    }
 
     case COMPANY_DELETE:
       const tempList = state.companyList.filter(
@@ -84,6 +120,7 @@ const companyReducer = (state = companyInitialState, action: ReducerAction) => {
       };
 
     case COMPANY_SELECT:
+      saveLastCompanyId(payload);
       return {
         ...state,
         selectedCompanyId: payload,

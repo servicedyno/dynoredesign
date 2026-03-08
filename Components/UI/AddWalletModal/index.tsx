@@ -64,6 +64,8 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
   const [otpError, setOtpError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [closeCryptoDropdown, setCloseCryptoDropdown] = useState(false);
+  const [walletsAdded, setWalletsAdded] = useState(0); // Track how many wallets added in this session
+  const [showSuccessChoice, setShowSuccessChoice] = useState(false); // Show add-more/done choice
 
   // Chains that use destination tags (XRP Ledger)
   const TAG_BASED_CHAINS = ["XRP", "RLUSD"];
@@ -197,8 +199,7 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
         setErrors({});
         setPopupLoading(false);
         setIsSubmitting(false);
-        // Notify parent that wallet was added — OnboardingFlow transitions to celebration
-        onWalletAdded?.();
+        setWalletsAdded((prev) => prev + 1);
         dispatch({
           type: TOAST_SHOW,
           payload: {
@@ -206,6 +207,10 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
             severity: "success",
           },
         });
+        // Show success choice: Add Another or Done (only if onWalletAdded is provided, i.e. onboarding context)
+        if (onWalletAdded) {
+          setShowSuccessChoice(true);
+        }
       } else {
         setOtpError(response?.message || "Invalid OTP. Please try again.");
         dispatch({
@@ -284,6 +289,8 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
     setOtpModalOpen(false);
     setAddress(null);
     setIsSubmitting(false);
+    setShowSuccessChoice(false);
+    setWalletsAdded(0);
     onClose();
   };
 
@@ -320,6 +327,67 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
           {headerExtra}
         </Box>
       )}
+
+      {/* Success choice: Add Another or Done */}
+      {showSuccessChoice ? (
+        <Box sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
+          px: isMobile ? 2 : 3.75,
+          py: isMobile ? 3 : 4,
+          textAlign: "center",
+        }}>
+          <Box sx={{
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            backgroundColor: muiTheme.palette.success?.light || "#e8f5e9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            mb: 1,
+          }}>
+            <Typography sx={{ fontSize: 28 }}>✓</Typography>
+          </Box>
+          <Typography sx={{
+            fontSize: isMobile ? 16 : 18,
+            fontWeight: 600,
+            fontFamily: "UrbanistSemiBold",
+          }}>
+            {walletsAdded === 1 ? "Wallet Added Successfully!" : `${walletsAdded} Wallets Added!`}
+          </Typography>
+          <Typography sx={{
+            fontSize: isMobile ? 13 : 14,
+            color: muiTheme.palette.text.secondary,
+            fontFamily: "UrbanistMedium",
+          }}>
+            Would you like to add another wallet for a different cryptocurrency?
+          </Typography>
+          <Box sx={{ display: "flex", gap: 2, mt: 1, width: "100%" }}>
+            <CustomButton
+              label="Done"
+              variant="outlined"
+              onClick={() => {
+                setShowSuccessChoice(false);
+                setWalletsAdded(0);
+                onWalletAdded?.();
+              }}
+              sx={{ flex: 1 }}
+            />
+            <CustomButton
+              label="Add Another"
+              variant="primary"
+              onClick={() => {
+                setShowSuccessChoice(false);
+                // Form is already reset, just show it again
+              }}
+              sx={{ flex: 1 }}
+            />
+          </Box>
+        </Box>
+      ) : (
       <PanelCard
         title={tWallet("addWalletTitle")}
         showHeaderBorder={false}
@@ -481,6 +549,7 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
           />
         </Box>
       </PanelCard>
+      )}
     </PopupModal>
 
     <OtpDialog

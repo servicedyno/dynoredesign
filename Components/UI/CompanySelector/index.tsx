@@ -2,6 +2,7 @@ import EditIcon from "@/assets/Icons/edit-icon.svg";
 import BusinessCenterIcon from "@mui/icons-material/BusinessCenter";
 import { Box, Divider, Typography, useTheme } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import axiosBaseApi from "@/axiosConfig";
 import {
   CompanyItem,
   ItemLeft,
@@ -62,6 +63,8 @@ export default function CompanySelector() {
   const handleCompanyCreated = useCallback(() => {
     dispatch(CompanyAction(COMPANY_FETCH));
     dispatch(WalletAction(WALLET_FETCH));
+    // Auto-select the newest company (last in the list after fetch completes)
+    // This is handled via a separate effect below
     setAddCompanyPhase("wallet");
   }, [dispatch]);
 
@@ -117,6 +120,18 @@ export default function CompanySelector() {
     }
   }, [active, companies, dispatch]);
 
+  // After company list updates during "wallet" phase, select the newest company
+  useEffect(() => {
+    if (addCompanyPhase === "wallet" && companies.length > 0) {
+      const newestCompany = companies[companies.length - 1];
+      if (newestCompany && newestCompany.company_id !== active) {
+        dispatch(selectCompany(newestCompany.company_id));
+        // Persist to backend
+        axiosBaseApi.put("api/user/last-company", { company_id: newestCompany.company_id }).catch(() => {});
+      }
+    }
+  }, [addCompanyPhase, companies, active, dispatch]);
+
   const selected = companies.find((c) => c.company_id === active);
 
   const handleOpen = (e: any) => setAnchorEl(e.currentTarget);
@@ -125,6 +140,8 @@ export default function CompanySelector() {
   const handleCompanySwitch = (companyId: number) => {
     dispatch(selectCompany(companyId));
     handleClose();
+    // Persist last company to backend (fire-and-forget)
+    axiosBaseApi.put("api/user/last-company", { company_id: companyId }).catch(() => {});
     // Re-fetch all company-scoped data for the new company
     const companyPayload = { company_id: companyId };
     dispatch(DashboardAction(DASHBOARD_FETCH, companyPayload));

@@ -6,14 +6,77 @@ const isServer = typeof window === "undefined";
 const SUPPORTED_LANGUAGES = ["en", "pt", "fr", "es", "de", "nl"];
 const DEFAULT_LANGUAGE = "en";
 
-// Resolve initial language: saved preference > browser locale > default
+// Timezone → language mapping for fallback detection
+const TIMEZONE_TO_LANG = {
+  "America/Sao_Paulo": "pt", "America/Fortaleza": "pt", "America/Recife": "pt",
+  "America/Bahia": "pt", "America/Belem": "pt", "America/Manaus": "pt",
+  "Europe/Lisbon": "pt",
+  "Europe/Madrid": "es", "America/Mexico_City": "es", "America/Bogota": "es",
+  "America/Lima": "es", "America/Santiago": "es", "America/Argentina/Buenos_Aires": "es",
+  "America/Caracas": "es", "America/Guatemala": "es", "America/Guayaquil": "es",
+  "Europe/Paris": "fr", "Africa/Dakar": "fr", "Africa/Abidjan": "fr",
+  "Africa/Douala": "fr", "America/Port-au-Prince": "fr",
+  "Europe/Berlin": "de", "Europe/Vienna": "de", "Europe/Zurich": "de",
+  "Europe/Amsterdam": "nl", "Europe/Brussels": "nl",
+};
+
+/**
+ * Detect language from browser locale and timezone (synchronous fallback)
+ */
+function detectFromBrowser() {
+  try {
+    // Try navigator.language first
+    const browserLang = (navigator.language || "").split("-")[0];
+    if (SUPPORTED_LANGUAGES.includes(browserLang)) return browserLang;
+
+    // Try timezone
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && TIMEZONE_TO_LANG[tz]) return TIMEZONE_TO_LANG[tz];
+  } catch {}
+  return DEFAULT_LANGUAGE;
+}
+
+// Resolve initial language: saved preference > browser/timezone > default
 function getInitialLanguage() {
   if (isServer) return DEFAULT_LANGUAGE;
   try {
     const saved = localStorage.getItem("lang");
     if (saved && SUPPORTED_LANGUAGES.includes(saved)) return saved;
   } catch {}
-  return DEFAULT_LANGUAGE;
+  // No saved language — use browser/timezone detection as synchronous baseline
+  return detectFromBrowser();
+}
+
+/**
+ * Async IP-based geolocation detection (runs after init, upgrades language if no manual choice yet)
+ */
+async function detectAndApplyGeoLocale() {
+  if (isServer) return;
+  try {
+    // Only auto-detect if user never manually changed language
+    const userChoseManually = localStorage.getItem("lang_manual") === "true";
+    if (userChoseManually) return;
+
+    const resp = await fetch("http://ip-api.com/json/?fields=status,countryCode", {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.status !== "success") return;
+
+    // Import the mapping utility
+    const { getLocaleFromCountry } = await import("./utils/geoLocale");
+    const detectedLang = getLocaleFromCountry(data.countryCode);
+
+    if (detectedLang && SUPPORTED_LANGUAGES.includes(detectedLang) && detectedLang !== i18n.language) {
+      i18n.changeLanguage(detectedLang);
+      localStorage.setItem("lang", detectedLang);
+      console.log("[i18n] IP-based language detected →", detectedLang, `(${data.countryCode})`);
+    }
+  } catch (err) {
+    // Silently ignore — sync detection already handled it
+    console.log("[i18n] IP geo-detection skipped:", err?.message || err);
+  }
 }
 
 const instance = i18n.use(LanguageDetector).use(initReactI18next);
@@ -180,6 +243,15 @@ if (!isServer) {
       localStorage.setItem("lang", lng);
     } catch {}
   });
+
+  // Run async IP-based detection after hydration (only if no saved preference)
+  const hasSavedLang = (() => {
+    try { return !!localStorage.getItem("lang"); } catch { return false; }
+  })();
+  if (!hasSavedLang) {
+    // Delay slightly so app renders first, then upgrade language if IP says differently
+    setTimeout(() => detectAndApplyGeoLocale(), 500);
+  }
 }
 
 export default i18n;

@@ -134,6 +134,12 @@ const userModel = sequelize.define(
       allowNull: true,
       comment: "Last known login IP address for new device detection",
     },
+    // Last selected company for session persistence
+    last_company_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "Last company the user was working with, restored on next login",
+    },
   },
   {
     tableName: "tbl_user",

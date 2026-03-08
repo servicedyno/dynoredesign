@@ -42,6 +42,10 @@ const userReducer = (state = userInitialState, action: ReducerAction) => {
       if (payload.refreshToken) {
         localStorage.setItem("refreshToken", payload.refreshToken);
       }
+      // Persist last company from backend to localStorage for cross-session persistence
+      if (payload.last_company_id) {
+        localStorage.setItem("last_company_id", String(payload.last_company_id));
+      }
       return {
         ...state,
         email: payload.email,

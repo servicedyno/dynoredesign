@@ -162,6 +162,7 @@ export const ReferralCardContentValueContainer = styled("div")(({ theme }) => ({
   alignItems: "center",
   justifyContent: "space-between",
   gap: "8px",
+  minWidth: 0, // Allow flex children to shrink below content size
 }));
 
 export const ReferralCardContentValue = styled("span")(({ theme }) => ({
@@ -176,6 +177,10 @@ export const ReferralCardContentValue = styled("span")(({ theme }) => ({
   flex: 1,
   lineHeight: 1.2,
   maxHeight: "40px",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  minWidth: 0, // Enable text-overflow in flex child
   [theme.breakpoints.down("md")]: {
     fontSize: "13px",
     padding: "8px 10px",
@@ -195,6 +200,7 @@ export const CopyButton = styled("button")(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   cursor: "pointer",
   transition: "all 0.2s ease",
+  flexShrink: 0, // Never let the copy button shrink
   "&:hover": {
     backgroundColor: theme.palette.primary.light,
   },

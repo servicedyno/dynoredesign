@@ -17,6 +17,88 @@ DynoPay is a full-stack crypto payment gateway.
 - **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com`
 - **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com`
 
+## Backend Testing Status
+
+backend:
+  - task: "Login API with specified credentials"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/userController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "New feature to test - Login API with credentials nomadly@moxx.co/Katiekendra123@"
+      - working: true
+        agent: "testing"
+        comment: "✅ Login API working correctly. Returns referral_code: DYNO-G468QA (11 chars), last_company_id: 3, and valid access token"
+
+  - task: "Last Company Endpoint - PUT /api/user/last-company"
+    implemented: true  
+    working: true
+    file: "/app/backend/controller/userController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "New feature to test - Last company persistence endpoint with Bearer auth"
+      - working: true
+        agent: "testing"
+        comment: "✅ Last company endpoint working correctly. Accepts company_id: 3, returns 404 for invalid company_id (999), returns 400 for missing company_id"
+
+  - task: "Company Fetch - GET /api/company/getCompany"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/companyController.ts" 
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "New feature to test - Company list retrieval with Bearer auth"
+      - working: true
+        agent: "testing"
+        comment: "✅ Company fetch endpoint working correctly. Returns list of 1 company with proper Bearer token authentication"
+
+frontend:
+  - task: "UI Integration Testing"
+    implemented: false
+    working: "NA"
+    file: "N/A"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Frontend testing not required per system limitations"
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.1"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Login API with specified credentials"
+    - "Last Company Endpoint - PUT /api/user/last-company" 
+    - "Company Fetch - GET /api/company/getCompany"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "testing"
+    message: "Starting backend API testing for new referral code, last company persistence, and company fetch features"
+  - agent: "testing"
+    message: "✅ ALL BACKEND TESTS PASSED (7/7 - 100% success rate). Key findings: 1) Login API working with referral_code DYNO-G468QA (11 chars, correct format), 2) last_company_id field present (value: 3), 3) Last company endpoint properly validates company ownership and returns appropriate errors, 4) Company fetch returns 1 company with Bearer auth. All three endpoints from review request are functional."
+
 ### Pod URL Migration & Checkout Fix (Current Session)
 - Updated all env files to current pod URL `6f7f3775-d165-4bd6-8635-d660e9c3ab44`
 - Installed frontend dependencies (`yarn install` at `/app/`)
@@ -141,3 +223,41 @@ DynoPay is a full-stack crypto payment gateway.
 - User should test the dark mode toggle persistence (switch on landing → verify on login/dashboard)
 - User should test the Add Company flow from the company selector dropdown
 - User should verify the total value no longer flashes between different amounts
+
+## Changes Made - Session 3 (Referral Code, Copy Icon, Language Detection, Company Persistence)
+
+### 1. Shorter Referral Code
+- **Before**: `DYNO2026NOMC92496B9` (19 chars)
+- **After**: `DYNO-G468QA` (11 chars, format: `DYNO-XXXXXX` using unambiguous alphanumeric)
+- Updated generation in `backend/controller/userController.ts`
+- Migration script in `backend/server.ts` auto-shortens all existing long codes on startup
+- 45 existing codes migrated successfully
+
+### 2. Copy Icon Overflow Fix
+- Added `flex-shrink: 0` to `CopyButton` styled component (never shrinks)
+- Added `overflow: hidden`, `text-overflow: ellipsis`, `white-space: nowrap`, `minWidth: 0` to `ReferralCardContentValue`
+- Added `minWidth: 0` to `ReferralCardContentValueContainer`
+- Copy icon now always fully visible on all screen sizes
+
+### 3. Auto Language Detection by IP + Timezone
+- Updated `i18n.js` with timezone→language mapping (sync fallback)
+- On first visit (no `lang` in localStorage): detects via `navigator.language` and timezone
+- Async IP geolocation via `ip-api.com` upgrades language after initial render
+- Manual language choice via switcher sets `lang_manual=true` flag → prevents auto-override
+- Persists language choice across sessions via localStorage
+
+### 4. Last Company Persistence Across Logins
+- Added `last_company_id` column to `tbl_user` model
+- New endpoint: `PUT /api/user/last-company` with ownership validation
+- Login response now includes `last_company_id`
+- Frontend: `userReducer` saves `last_company_id` to localStorage on login
+- Frontend: `companyReducer` restores from localStorage on `COMPANY_FETCH`
+- `CompanySelector.handleCompanySwitch` fires API call to persist selection
+- `selectCompany` Redux action saves to localStorage immediately
+
+### 5. Add Company + Wallet Flow
+- After creating a new company, the newest company is auto-selected
+- AddWalletModal now shows a "success choice" screen after adding a wallet:
+  - "Add Another" button → resets form for adding more wallets
+  - "Done" button → triggers celebration overlay
+- Both OnboardingFlow and CompanySelector flows are consistent

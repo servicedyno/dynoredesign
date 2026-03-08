@@ -46,6 +46,9 @@ userRouter.put("/phone", authMiddleware, userController.changePhone);
 userRouter.delete("/email", authMiddleware, userController.removeEmail);
 userRouter.delete("/phone", authMiddleware, userController.removePhone);
 
+// Last company persistence (requires auth)
+userRouter.put("/last-company", authMiddleware, userController.updateLastCompany);
+
 userRouter.put(
   "/updateUser",
   authMiddleware,

@@ -834,6 +834,38 @@ const startServer = async () => {
     await userModel.sync(syncOptions);
     log('User model synced with referral columns.', 'info');
     
+    // One-time migration: shorten old long referral codes (DYNO2026XXXYYY → DYNO-XXXXXX)
+    try {
+      const crypto = await import('crypto');
+      const usersWithLongCodes = await userModel.findAll({
+        where: sequelize.literal("LENGTH(referral_code) > 12"),
+      });
+      if (usersWithLongCodes.length > 0) {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        for (const user of usersWithLongCodes) {
+          let newCode: string;
+          let isUnique = false;
+          while (!isUnique) {
+            let code = '';
+            const bytes = crypto.randomBytes(6);
+            for (let i = 0; i < 6; i++) {
+              code += chars[bytes[i] % chars.length];
+            }
+            newCode = `DYNO-${code}`;
+            const existing = await userModel.findOne({ where: { referral_code: newCode } });
+            if (!existing) isUnique = true;
+          }
+          await userModel.update(
+            { referral_code: newCode! },
+            { where: { user_id: (user as any).dataValues.user_id } }
+          );
+        }
+        log(`Migrated ${usersWithLongCodes.length} referral codes to short format.`, 'info');
+      }
+    } catch (migErr: any) {
+      log(`Referral code migration skipped: ${migErr.message}`, 'info');
+    }
+    
     // Sync stablecoin conversion model
     await stablecoinConversionModel.sync(syncOptions);
     log('Stablecoin conversion table synced.', 'info');

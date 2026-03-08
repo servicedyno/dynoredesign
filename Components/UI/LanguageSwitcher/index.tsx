@@ -98,6 +98,7 @@ function LanguageSwitcher({ showBig = false }: Props) {
       i18n.changeLanguage(lng);
       try {
         localStorage.setItem("lang", lng);
+        localStorage.setItem("lang_manual", "true"); // Mark as manual choice — prevents IP auto-override
       } catch {}
       close();
     },
