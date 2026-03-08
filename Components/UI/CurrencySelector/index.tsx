@@ -23,11 +23,22 @@ import unitedStatesFlag from "@/assets/Images/Icons/flags/united-states-flag.png
 import euroFlag from "@/assets/Images/Icons/flags/euro-flag.png";
 import nigerianFlag from "@/assets/Images/Icons/flags/nigerian-flag.png";
 
-// Currency data - you can add more flags as needed
+// Currency data - all supported base currencies (matching backend SUPPORTED_BASE_CURRENCIES)
 const currencies = [
-  { code: "USD", label: "USD", flag: unitedStatesFlag },
-  { code: "EUR", label: "EUR", flag: euroFlag },
-  { code: "NGN", label: "NGN", flag: nigerianFlag },
+  { code: "USD", label: "USD", flag: unitedStatesFlag, emoji: null },
+  { code: "EUR", label: "EUR", flag: euroFlag, emoji: null },
+  { code: "GBP", label: "GBP", flag: null, emoji: "🇬🇧" },
+  { code: "AUD", label: "AUD", flag: null, emoji: "🇦🇺" },
+  { code: "CAD", label: "CAD", flag: null, emoji: "🇨🇦" },
+  { code: "INR", label: "INR", flag: null, emoji: "🇮🇳" },
+  { code: "NGN", label: "NGN", flag: nigerianFlag, emoji: null },
+  { code: "VND", label: "VND", flag: null, emoji: "🇻🇳" },
+  { code: "PKR", label: "PKR", flag: null, emoji: "🇵🇰" },
+  { code: "BRL", label: "BRL", flag: null, emoji: "🇧🇷" },
+  { code: "ARS", label: "ARS", flag: null, emoji: "🇦🇷" },
+  { code: "PHP", label: "PHP", flag: null, emoji: "🇵🇭" },
+  { code: "SGD", label: "SGD", flag: null, emoji: "🇸🇬" },
+  { code: "AED", label: "AED", flag: null, emoji: "🇦🇪" },
 ];
 
 export interface CurrencySelectorProps {
@@ -166,12 +177,16 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
               flex: 1,
             }}
           >
-            <CurrencyFlag
-              src={selectedCurrency.flag.src}
-              alt={selectedCurrency.code}
-              width={isMobile ? 10 : 16}
-              height={isMobile ? 10 : 16}
-            />
+            {selectedCurrency.flag ? (
+              <CurrencyFlag
+                src={selectedCurrency.flag.src}
+                alt={selectedCurrency.code}
+                width={isMobile ? 10 : 16}
+                height={isMobile ? 10 : 16}
+              />
+            ) : (
+              <span style={{ fontSize: isMobile ? "12px" : "16px", lineHeight: 1 }}>{selectedCurrency.emoji}</span>
+            )}
             <CurrencyText isMobile={isMobile}>
               {selectedCurrency.code}
             </CurrencyText>
@@ -210,7 +225,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
               width: triggerRef.current?.offsetWidth || "auto",
               border: `1px solid ${borderColor}`,
               borderTop: "none",
-              maxHeight: "200px",
+              maxHeight: "280px",
               backgroundColor: theme.palette.background.paper,
               boxShadow: "0px 4px 16px 0px rgba(47, 47, 101, 0.15)",
             },
@@ -244,12 +259,16 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                 }}
               >
                 <ListItemIcon sx={{ minWidth: "fit-content" }}>
-                  <CurrencyFlag
-                    src={currency.flag.src}
-                    alt={currency.code}
-                    width={16}
-                    height={16}
-                  />
+                  {currency.flag ? (
+                    <CurrencyFlag
+                      src={currency.flag.src}
+                      alt={currency.code}
+                      width={16}
+                      height={16}
+                    />
+                  ) : (
+                    <span style={{ fontSize: "16px", lineHeight: 1 }}>{currency.emoji}</span>
+                  )}
                 </ListItemIcon>
                 <ListItemText
                   primary={currency.code}

@@ -568,15 +568,8 @@ const CreatePaymentLinkPage = ({
       (a, b) => a.fullOrder - b.fullOrder,
     );
 
-    if (!hasPaymentLinkData) {
-      setCryptoItems(
-        fullSorted
-          .filter((item) => item.shortOrder <= 9)
-          .sort((a, b) => a.shortOrder - b.shortOrder),
-      );
-    } else {
-      setCryptoItems(fullSorted);
-    }
+    // Always show all supported crypto currencies
+    setCryptoItems(fullSorted);
   }, [ALL_CRYPTO_ITEMS, hasPaymentLinkData, showAllCoins]);
 
   const isLarge = useMediaQuery("(min-width:1000px)");

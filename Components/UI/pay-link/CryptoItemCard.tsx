@@ -7,6 +7,11 @@ import { useRouter } from "next/router";
 import React from "react";
 import { Text } from "../../Page/CreatePaymentLink/styled";
 
+const STABLECOIN_LABELS = [
+  "USDT-TRC20", "USDT-ERC20", "USDC-ERC20",
+  "USDT-POLYGON", "RLUSD", "RLUSD-ERC20",
+];
+
 const CryptoItemCard: React.FC<CryptoItemCardProps> = React.memo(
   ({
     item,
@@ -152,9 +157,11 @@ const CryptoItemCard: React.FC<CryptoItemCardProps> = React.memo(
             </Box>
           </Box>
 
-          <Text sx={{ fontSize: "12px", color: "#676B7E" }}>
-            {tPaymentLink("stable")}
-          </Text>
+          {STABLECOIN_LABELS.includes(item.label) && (
+            <Text sx={{ fontSize: "12px", color: "#676B7E" }}>
+              {tPaymentLink("stable")}
+            </Text>
+          )}
 
           <Box
             sx={{

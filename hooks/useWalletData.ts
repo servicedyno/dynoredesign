@@ -81,6 +81,11 @@ const WALLET_NAMES: Record<WalletType, string> = {
   "RLUSD-ERC20": "RLUSD-ERC20",
 };
 
+/* Dashboard display currencies - only show these 5 on dashboard Active Wallets */
+const DASHBOARD_DISPLAY_CURRENCIES: readonly string[] = [
+  "BTC", "LTC", "ETH", "USDT-TRC20", "USDT-ERC20",
+];
+
 export const ALLCRYPTOCURRENCIES: readonly Cryptocurrency[] = [
   { code: "BTC", name: "Bitcoin", icon: BitcoinIcon },
   { code: "ETH", name: "Ethereum", icon: EthereumIcon },
@@ -195,7 +200,9 @@ export const useWalletData = () => {
 
   const activeWalletsData = useMemo(() => {
     return ALLCRYPTOCURRENCIES.filter((crypto) => {
-      return !cryptocurrencies.some((c) => c.code === crypto.code);
+      // Only show the 5 dashboard display currencies that are active (have wallets)
+      return DASHBOARD_DISPLAY_CURRENCIES.includes(crypto.code) &&
+        !cryptocurrencies.some((c) => c.code === crypto.code);
     });
   }, [cryptocurrencies]);
 
