@@ -768,3 +768,24 @@ backend:
 ### 4. Production Deployment Notes
 - Both `dynopay.com` and `checkout.dynopay.com` must route to the same Next.js instance (same codebase serves both `/dashboard` and `/pay` routes)
 - Frontend `NEXT_PUBLIC_BASE_URL` must be `https://api.dynopay.com/` on production (API calls from both domains hit the same backend)
+
+
+## Changes Made - Session 10 (Pod URL Setup & Dependencies)
+
+### 1. Pod URL Configured
+- Set all env files to current stable pod URL `pod-endpoint-sync.preview.emergentagent.com`
+- `/app/.env.local`: `NEXT_PUBLIC_BASE_URL=https://pod-endpoint-sync.preview.emergentagent.com/`
+- `/app/frontend/.env`: `REACT_APP_BACKEND_URL=https://pod-endpoint-sync.preview.emergentagent.com`
+- `/app/backend/.env`: `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://pod-endpoint-sync.preview.emergentagent.com`
+
+### 2. Dependencies Installed
+- Ran `yarn install` at `/app/` (Next.js frontend dependencies)
+- Ran `yarn install` at `/app/backend/` (Node.js backend dependencies)
+- Ran `pip install -r /app/backend/requirements.txt` (Python proxy dependencies)
+
+### 3. Services Verified
+- Frontend: ✅ Running (Next.js on port 3000)
+- Backend: ✅ Running (Node.js on port 3300, Python proxy on port 8001)
+- MongoDB: ✅ Running
+- Landing page loads correctly with all content
+- Backend API responds to requests
