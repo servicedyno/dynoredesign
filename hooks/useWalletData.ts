@@ -200,9 +200,8 @@ export const useWalletData = () => {
 
   const activeWalletsData = useMemo(() => {
     return ALLCRYPTOCURRENCIES.filter((crypto) => {
-      // Only show the 5 dashboard display currencies that are active (have wallets)
-      return DASHBOARD_DISPLAY_CURRENCIES.includes(crypto.code) &&
-        !cryptocurrencies.some((c) => c.code === crypto.code);
+      // Show all active wallets (those that have been configured with addresses)
+      return !cryptocurrencies.some((c) => c.code === crypto.code);
     });
   }, [cryptocurrencies]);
 

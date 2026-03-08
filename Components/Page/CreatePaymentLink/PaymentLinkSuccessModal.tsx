@@ -209,12 +209,14 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
                   value={getBlockchainFeesText()}
                 />
 
-                <PaymentDetailRow
-                  icon={NoteIcon.src}
-                  alt="description"
-                  label={tPaymentLink("description")}
-                  value={paymentSettings.description || tPaymentLink("nA")}
-                />
+                {paymentSettings.description && (
+                  <PaymentDetailRow
+                    icon={NoteIcon.src}
+                    alt="description"
+                    label={tPaymentLink("description")}
+                    value={paymentSettings.description}
+                  />
+                )}
 
                 <PaymentDetailRow
                   icon={TransactionIcon.src}

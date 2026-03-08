@@ -563,3 +563,55 @@ backend:
 ### 5. Consistent Button Label on Tab 1
 - Tab 1's create button also now says "Create Payment Link" (was "Create Payment")
 - File: `Components/UI/pay-link/PostPaymentSettings.tsx`
+
+
+## Changes Made - Session 7 (Comprehensive UX Audit + Fixes)
+
+### 1. Currency Default Fix (Critical)
+- **Bug**: CurrencySelector showed "USD" visually but state was "" → button disabled even with value filled
+- **Fix**: Initialized `paymentSettings.currency` to "USD" for new links
+- File: `Components/Page/CreatePaymentLink/index.tsx`
+
+### 2. Crypto Selection Enforcement
+- **Before**: Warning "At least 1 currency must be selected" shown but not enforced
+- **After**: Button disabled if no crypto selected; toast error on submit attempt
+- Files: `Components/UI/pay-link/ActionButtons.tsx`, `Components/Page/CreatePaymentLink/index.tsx`
+
+### 3. Tab 1 Create Button Disabled State
+- Post-Payment tab "Create Payment Link" button now disabled if Tab 0 isn't valid
+- Added `createDisabled` prop to PostPaymentSettings
+- Files: `Components/UI/pay-link/PostPaymentSettings.tsx`, `utils/types/create-pay-link.ts`
+
+### 4. Success Modal Description Hidden When Empty
+- Description row no longer shows "N/A" — row completely hidden when no description
+- File: `Components/Page/CreatePaymentLink/PaymentLinkSuccessModal.tsx`
+
+### 5. Dashboard Active Wallets Count (15 instead of 5)
+- **Bug**: `DASHBOARD_DISPLAY_CURRENCIES` limited count to 5 hardcoded currencies
+- **Fix**: Removed filter — now shows ALL wallets with configured addresses
+- File: `hooks/useWalletData.ts`
+
+### 6. Checkout Page Direct Navigation Fix
+- **Bug**: `paymentAuth` HOC redirected `/pay?d=...` to homepage (checked Redux state before data loaded)
+- **Fix**: HOC now allows pages with `d` query param to load; adds 500ms delay before redirect
+- File: `Components/Page/Common/HOC/paymentAuth.tsx`
+
+### 7. English Locale Fixes
+- "Taxas Blockchain" → "Blockchain Fees" (Portuguese text in English locale)
+- "Paid by the Client" → "Paid by the Company"
+- File: `langs/locales/en/createPaymentLinkScreen.json`
+
+### 8. Payment Links List - Crypto Value Column Fix
+- **Bug**: "Crypto Value" column showed fiat amounts as fallback (e.g., "45 USD")
+- **Fix**: Only shows actual `crypto_currencies` value; empty when none
+- File: `Components/Page/Payment-link/index.tsx`
+
+### 9. Form Reset After Success
+- Create Payment Link form now resets all fields after closing success modal
+- File: `Components/Page/CreatePaymentLink/index.tsx`
+
+### Checkout Integration Verified
+- Checkout page (`/pay?d=...`) correctly receives all create payment link data:
+  - Description, amount, currency, fee_payer, redirect_url, tax settings
+  - Merchant info, invoice number, accepted cryptocurrencies
+  - Direct navigation to checkout links works without redirect

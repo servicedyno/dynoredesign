@@ -51,9 +51,7 @@ const PaymentLinksPage = ({
           : "0",
       cryptoValue: link.crypto_currencies
         ? String(link.crypto_currencies)
-        : link.base_amount && link.base_currency
-          ? `${link.base_amount} ${link.base_currency}`
-          : undefined,
+        : "",
       createdAt: link.created || link.created_at || link.createdAt || "",
       expiresAt: link.expires || link.expires_at || link.expiresAt || "",
       status: link.status || "pending",

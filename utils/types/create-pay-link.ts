@@ -111,6 +111,7 @@ export interface PostPaymentSettingsProps {
   showHelpers?: boolean;
   showCreateButton?: boolean;
   onCreate?: () => void;
+  createDisabled?: boolean;
 }
 
 export interface TabNavigationProps {

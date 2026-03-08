@@ -333,6 +333,18 @@ const CreatePaymentLinkPage = ({
       return;
     }
 
+    // Enforce at least 1 cryptocurrency selected
+    if (!paymentSettings.acceptedCryptoCurrency || paymentSettings.acceptedCryptoCurrency.length === 0) {
+      dispatch({
+        type: "TOAST_SHOW",
+        payload: { message: "Please select at least 1 cryptocurrency", severity: "error" },
+      });
+      if (activeTab === 1) {
+        setActiveTab(0);
+      }
+      return;
+    }
+
     // Build API payload with backend-compatible field names
     const apiPayload: any = {
       amount: parseFloat(paymentSettings.value),
@@ -902,6 +914,13 @@ const CreatePaymentLinkPage = ({
               showHelpers={true}
               showCreateButton={true}
               onCreate={handleCreatePaymentLink}
+              createDisabled={
+                !paymentSettings.value ||
+                paymentSettings.value.trim() === "" ||
+                !paymentSettings.currency ||
+                !paymentSettings.acceptedCryptoCurrency ||
+                paymentSettings.acceptedCryptoCurrency.length === 0
+              }
             />
           </TabContentContainer>
         )}

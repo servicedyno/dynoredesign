@@ -16,6 +16,7 @@ const PostPaymentSettings: React.FC<PostPaymentSettingsProps> = ({
   showHelpers = false,
   showCreateButton = false,
   onCreate,
+  createDisabled = false,
 }) => {
   const currentLang = i18n.language;
   return (
@@ -132,6 +133,7 @@ const PostPaymentSettings: React.FC<PostPaymentSettingsProps> = ({
             size="medium"
             fullWidth={true}
             onClick={onCreate}
+            disabled={createDisabled}
             sx={{
               [theme.breakpoints.down("md")]: {
                 height: "32px",

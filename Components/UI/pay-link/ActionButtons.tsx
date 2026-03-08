@@ -44,7 +44,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             Boolean(paymentSettingsErrors.description) ||
             !paymentSettings.value ||
             paymentSettings.value.trim() === "" ||
-            !paymentSettings.currency
+            !paymentSettings.currency ||
+            !paymentSettings.acceptedCryptoCurrency ||
+            paymentSettings.acceptedCryptoCurrency.length === 0
           }
           sx={{
             [theme.breakpoints.down("md")]: {
