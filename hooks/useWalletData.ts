@@ -196,14 +196,25 @@ export const useWalletData = () => {
     );
   }, [walletData]);
 
+  // Track whether wallets have been fetched at least once
+  const hasFetched = useRef(false);
+
   useEffect(() => {
     if (walletLoading) {
       setWalletWarning(false);
       return;
     }
-    // Only show warning if user has NO wallet addresses configured at all
-    setWalletWarning(walletData.length === 0);
-  }, [walletLoading, walletData]);
+    // Mark as fetched when loading transitions to false
+    if (!walletLoading && (Array.isArray(walletState?.walletList))) {
+      hasFetched.current = true;
+    }
+    // Only show warning after first successful fetch
+    if (hasFetched.current) {
+      setWalletWarning(walletData.length === 0);
+    } else {
+      setWalletWarning(false);
+    }
+  }, [walletLoading, walletData, walletState?.walletList]);
 
   const activeWalletsData = useMemo(() => {
     return ALLCRYPTOCURRENCIES.filter((crypto) => {

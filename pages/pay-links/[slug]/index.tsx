@@ -1,10 +1,9 @@
 import CreatePaymentLinkPage from "@/Components/Page/CreatePaymentLink";
 import { Text } from "@/Components/Page/CreatePaymentLink/styled";
 import useIsMobile from "@/hooks/useIsMobile";
-import { theme } from "@/styles/theme";
 import { PaymentLink } from "@/utils/types/paymentLink";
 import { ExpandLess } from "@mui/icons-material";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress, useTheme } from "@mui/material";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +14,7 @@ export default function EditPaymentLink() {
   const { slug } = router.query;
   const isMobile = useIsMobile();
   const { t } = useTranslation("createPaymentLinkScreen");
+  const muiTheme = useTheme();
   const [paymentLinkData, setPaymentLinkData] = useState<PaymentLink | {}>({});
   const [loading, setLoading] = useState(true);
 
@@ -32,6 +32,18 @@ export default function EditPaymentLink() {
         const response = await axiosBaseApi.get(`/pay/links/${slug}`);
         const d = response?.data?.data;
         if (d) {
+          // Handle accepted_currencies - could be array or comma-separated string
+          let cryptoCurrencies: string[] = [];
+          if (Array.isArray(d.accepted_currencies)) {
+            cryptoCurrencies = d.accepted_currencies.map((c: string) =>
+              c.toLowerCase().replace(/-/g, "_")
+            );
+          } else if (typeof d.accepted_currencies === "string" && d.accepted_currencies) {
+            cryptoCurrencies = d.accepted_currencies
+              .split(",")
+              .map((c: string) => c.trim().toLowerCase().replace(/-/g, "_"));
+          }
+
           setPaymentLinkData({
             link_id: String(d.link_id),
             amount: d.base_amount ?? 0,
@@ -40,10 +52,10 @@ export default function EditPaymentLink() {
             status: (d.status ?? "pending").toLowerCase() as any,
             clientName: d.email ?? "",
             expire: d.expires_at ? "yes" : "no",
-            blockchainFees: d.fee_payer === "company" ? "merchant" : "customer",
-            acceptedCryptoCurrency: d.accepted_currencies
-              ? d.accepted_currencies.split(",").map((c: string) => c.trim())
-              : ["BTC", "ETH", "LTC", "DOGE", "USDT"],
+            blockchainFees: d.fee_payer === "company" ? "company" : "customer",
+            acceptedCryptoCurrency: cryptoCurrencies.length
+              ? cryptoCurrencies
+              : ["btc", "eth", "ltc", "doge", "usdt_trc20"],
             payment_url: d.payment_link ?? "",
             redirect_url: d.redirect_url ?? "",
             webhook_url: d.webhook_url ?? "",
@@ -95,8 +107,8 @@ export default function EditPaymentLink() {
         sx={{
           display: "flex",
           gap: "10px",
-          border: `1px solid ${theme.palette.border.main}`,
-          backgroundColor: theme.palette.common.white,
+          border: `1px solid ${(muiTheme.palette as any).border?.main ?? "#E9ECF2"}`,
+          backgroundColor: muiTheme.palette.background.paper,
           borderRadius: "8px",
           padding: "10px 14px",
           height: "36px",
@@ -106,16 +118,16 @@ export default function EditPaymentLink() {
         }}
       >
         <ExpandLess
-          sx={{ fontSize: "large", rotate: "270deg", color: "#032C33" }}
+          sx={{ fontSize: "large", rotate: "270deg", color: muiTheme.palette.text.primary }}
         />
-        <Text sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
+        <Text sx={{ fontSize: "13px", color: muiTheme.palette.text.secondary }}>
           {t("backToPaymentLinks")}
         </Text>
       </Box>
       <Text
         sx={{
           fontSize: isMobile ? "22px" : "30px",
-          color: theme.palette.text.primary,
+          color: muiTheme.palette.text.primary,
         }}
       >
         {"status" in paymentLinkData &&

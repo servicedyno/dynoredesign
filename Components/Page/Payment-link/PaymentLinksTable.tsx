@@ -73,6 +73,7 @@ const headerIconMap: Record<string, any> = {
 const Header = React.memo(({ label }: { label: string }) => {
   const { t } = useTranslation("paymentLinks");
   const isMobile = useIsMobile("md");
+  const headerTheme = useTheme();
   return (
     <Box
       sx={{
@@ -103,7 +104,7 @@ const Header = React.memo(({ label }: { label: string }) => {
           fontFamily: "UrbanistMedium",
           lineHeight: 1.2,
           letterSpacing: 0,
-          color: "#242428",
+          color: headerTheme.palette.text.primary,
           whiteSpace: "nowrap",
         }}
       >
@@ -342,6 +343,17 @@ const PaymentLinksTable = ({
                           <Image src={EditIcon} alt="Edit" width={12} height={12} draggable={false} style={{ filter: "brightness(0) saturate(100%) invert(0%)" }} />
                         </CopyButton>
                       )}
+                      {row.status !== "expired" && row.status !== "paid" && row.status !== "active" && (
+                        <CopyButton
+                          onClick={() => {
+                            setDeleteModel(true);
+                            setDeletId(row.id);
+                          }}
+                          sx={{ width: 28, height: 28, minWidth: 28, p: "5px", borderColor: theme.palette.error.main }}
+                        >
+                          <Image src={TrashIcon} alt="Delete" width={12} height={12} draggable={false} style={{ filter: "brightness(0) saturate(100%) invert(27%) sepia(86%) saturate(5000%) hue-rotate(355deg) brightness(97%) contrast(120%)" }} />
+                        </CopyButton>
+                      )}
                     </Box>
                   </Box>
                 </Box>
@@ -358,10 +370,10 @@ const PaymentLinksTable = ({
                   position: "sticky",
                   top: 0,
                   zIndex: 2,
-                  backgroundColor: "#E5EDFF",
+                  backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#E5EDFF",
                 }}
               >
-                <TableRow sx={{ backgroundColor: "#E5EDFF" }}>
+                <TableRow sx={{ backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#E5EDFF" }}>
                   <TableCell>
                     <Header label="linkIdHeader" />
                   </TableCell>
@@ -601,7 +613,7 @@ const PaymentLinksTable = ({
                   height: "36px",
                   padding: "0px 12px",
                   "&:disabled": {
-                    backgroundColor: theme.palette.common.white,
+                    backgroundColor: theme.palette.background.paper,
                     color: theme.palette.text.primary,
                     border: `1px solid ${(theme.palette as any).border?.main ?? "#E9ECF2"}`,
                     cursor: "not-allowed",
@@ -634,7 +646,7 @@ const PaymentLinksTable = ({
                   height: "36px",
                   padding: "0px 12px",
                   "&:disabled": {
-                    backgroundColor: theme.palette.common.white,
+                    backgroundColor: theme.palette.background.paper,
                     color: theme.palette.text.primary,
                     border: `1px solid ${(theme.palette as any).border?.main ?? "#E9ECF2"}`,
                     cursor: "not-allowed",

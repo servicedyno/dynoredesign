@@ -5,9 +5,8 @@ import PaymentIcon from "@/assets/Icons/payment-icon.svg";
 import RoundedStackIcon from "@/assets/Icons/roundedStck-icon.svg";
 import InputField from "@/Components/UI/AuthLayout/InputFields";
 import CustomRadio from "@/Components/UI/RadioGroup";
-import { theme } from "@/styles/theme";
 import { PaymentSettingsBasicProps } from "@/utils/types/create-pay-link";
-import { Box, FormControl, FormControlLabel, RadioGroup } from "@mui/material";
+import { Box, FormControl, FormControlLabel, RadioGroup, useTheme } from "@mui/material";
 import Image from "next/image";
 import React, { useState } from "react";
 import { PaymentSettingsLabel } from "../../Page/CreatePaymentLink/styled";
@@ -28,6 +27,7 @@ const PaymentSettingsBasic: React.FC<PaymentSettingsBasicProps> = ({
   handleExpireSelect,
   handleBlockchainFeesChange,
 }) => {
+  const theme = useTheme();
   const [expirationDate, setExpirationDate] = useState<Date>(
     new Date(Date.now()),
   );

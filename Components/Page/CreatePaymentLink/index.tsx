@@ -1,5 +1,5 @@
 import PanelCard from "@/Components/UI/PanelCard";
-import { Box, Typography, useMediaQuery } from "@mui/material";
+import { Box, Typography, useMediaQuery, useTheme } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -23,7 +23,6 @@ import XRPIcon from "@/assets/cryptocurrency/XRP-icon.svg";
 
 import useIsMobile from "@/hooks/useIsMobile";
 import i18n from "@/i18n";
-import { theme } from "@/styles/theme";
 import { PaymentLink } from "@/utils/types/paymentLink";
 
 import {
@@ -55,6 +54,7 @@ const CreatePaymentLinkPage = ({
   disabled,
 }: CreatePaymentLinkPageProps) => {
   const isMobile = useIsMobile("md");
+  const theme = useTheme();
   const dispatch = useDispatch();
   const { t } = useTranslation("createPaymentLinkScreen");
   const paymentLinkState = useSelector((state: any) => state.paymentLinkReducer);
@@ -194,6 +194,34 @@ const CreatePaymentLinkPage = ({
       ? (paymentLinkData as PaymentLink).webhook_url
       : "",
   });
+
+  // Sync form state when paymentLinkData changes (handles async data loading)
+  useEffect(() => {
+    if (Object.keys(paymentLinkData).length === 0) return;
+    const data = paymentLinkData as PaymentLink;
+    setPaymentSettings((prev) => ({
+      ...prev,
+      value: data.amount ? data.amount.toString() : prev.value,
+      currency: data.currency || prev.currency,
+      clientName: data.clientName || prev.clientName,
+      expire: data.expire || prev.expire,
+      description: data.description || prev.description,
+      blockchainFees: data.blockchainFees || prev.blockchainFees,
+      linkId: data.link_id || prev.linkId,
+      acceptedCryptoCurrency: data.acceptedCryptoCurrency?.length
+        ? data.acceptedCryptoCurrency
+        : prev.acceptedCryptoCurrency,
+    }));
+    setBlockchainFees(data.blockchainFees || "company");
+    setPostPaymentSettings({
+      callbackUrl: data.payment_url || "",
+      redirectUrl: data.redirect_url || "",
+      webhookUrl: data.webhook_url || "",
+    });
+    if (data.acceptedCryptoCurrency?.length) {
+      setShowAllCoins(true);
+    }
+  }, [paymentLinkData]);
 
   const handleTabChange = (tab: number) => {
     setActiveTab(tab);

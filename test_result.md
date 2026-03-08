@@ -821,3 +821,28 @@ backend:
 - **Favicon Fixed**: Replaced default `favicon.ico` with DynoPay logo (converted from PNG), added multi-size favicons (16x16, 32x32)
 - **Page Title**: Changed "BozzWallet" → "DynoPay - Dashboard" on dashboard page, "DynoPay - Company" on company page
 - **Stat Cards**: Confirmed Total Transactions, Total Volume visible on mobile (Grid xs=12 full width)
+
+
+### 9. Payment Links - Edit Prefill Fix (Critical Bug)
+**Root Cause**: `accepted_currencies.split(",")` crashed because the API returns an ARRAY, not a string. This caused the entire `try` block in `[slug]/index.tsx` to fail, so `paymentLinkData` was never set and all fields remained empty.
+- Fixed `accepted_currencies` handling to support both array and string formats
+- Fixed `blockchainFees` mapping: "company" → "company" (was incorrectly mapping to "merchant")
+- Added `useEffect` sync in `CreatePaymentLinkPage` to handle async data loading
+- Added currency format normalization (USDT-TRC20 → usdt_trc20)
+
+### 10. Mobile Optimization for iOS/Android
+- Added `viewport-fit=cover` meta tag for iOS safe area support
+- Added iOS-specific CSS: `-webkit-tap-highlight-color`, `-webkit-text-size-adjust`, font smoothing
+- Added `env(safe-area-inset-bottom)` padding to mobile navigation bar
+- Added `font-size: 16px` rule for inputs on mobile to prevent iOS auto-zoom
+- Added delete action to mobile payment link cards (was desktop-only)
+
+### 11. Wallet Warning Fix (Desktop + Mobile)
+- Added `useRef` flag `hasFetched` to only show wallet warning AFTER first successful fetch
+- Prevents false warning flash during initial Redux state (`loading: false`, `walletList: []`)
+
+### 12. Dark Mode Fixes (Payment Links)
+- `PaymentLinksTable`: Fixed hardcoded `#242428` header color, `#E5EDFF` table header bg, `common.white` pagination buttons
+- `PaymentSettingsBasic`: Replaced static theme import with dynamic `useTheme()`
+- `[slug]/index.tsx`: Replaced static theme with dynamic `useTheme()` for back button, text colors
+- `CreatePaymentLinkPage`: Replaced static theme import with dynamic `useTheme()`
