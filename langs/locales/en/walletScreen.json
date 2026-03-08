@@ -32,8 +32,8 @@
   "emailVerificationSubtitle": "We've sent a verification code to your email.",
   "walletWarnnigTitle": "wallet setup",
   "walletSetUpWarnnigTitle": "Complete wallet setup",
-  "walletSetUpWarnnigSubtitle": "Please add all eight crypto wallet addresses. Some features will remain unavailable until all wallets are added.",
-  "walletSetUpWarnnigSubtitleBold": "all eight crypto wallet addresses",
+  "walletSetUpWarnnigSubtitle": "Add at least one crypto wallet address to start receiving payments. You can create payment links using any wallet you've added.",
+  "walletSetUpWarnnigSubtitleBold": "at least one crypto wallet address",
   "XRPTag": "XRP Tag (optional)",
   "XRPTagPlaceholder": "Enter the XRP Tag",
   "XRPTagWarning": "Memo tag is required if your exchange or wallet has one or you will lose your funds"

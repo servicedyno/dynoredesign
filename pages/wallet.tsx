@@ -232,7 +232,7 @@ const WalletPage = ({
       <Box
         sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
       >
-        <Wallet />
+        <Wallet onAddWallet={() => setOpenCreate(true)} />
         <AddWalletModal
           open={openCreate}
           currentCryptocurrency={currentCryptocurrency}

@@ -428,13 +428,6 @@ const DashboardLeftSection = () => {
               Start accepting crypto payments in minutes. Create your first payment link and share it with your customers.
             </Typography>
           </Box>
-          <CustomButton
-            label="Create Payment Link"
-            variant="primary"
-            size={isMobile ? "small" : "medium"}
-            onClick={() => router.push("/create-pay-link")}
-            sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
-          />
         </Box>
       )}
       {/* Stat Cards */}

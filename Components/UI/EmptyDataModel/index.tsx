@@ -17,9 +17,10 @@ type PageName = "transactions" | "wallet" | "apiKey" | "payment-links";
 
 interface EmptyDataModelProps {
     pageName: PageName;
+    onAddWallet?: () => void;
 }
 
-const EmptyDataModel = ({ pageName }: EmptyDataModelProps) => {
+const EmptyDataModel = ({ pageName, onAddWallet }: EmptyDataModelProps) => {
     const isMobile = useIsMobile("md");
     const router = useRouter();
     const { t } = useTranslation("common");
@@ -49,7 +50,7 @@ const EmptyDataModel = ({ pageName }: EmptyDataModelProps) => {
             description: t("EmptyWalletDescription"),
             icon: wallet,
             buttonLabel: t("addWallet"),
-            buttonClick: () => setOpenCreate(true),
+            buttonClick: onAddWallet || (() => setOpenCreate(true)),
         },
         apiKey: {
             title: t("EmptyApiKeyTitle"),

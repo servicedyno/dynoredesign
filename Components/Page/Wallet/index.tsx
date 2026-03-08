@@ -33,7 +33,7 @@ import {
   WalletLabel,
 } from "./styled";
 
-const Wallet = () => {
+const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
   const isMobile = useIsMobile("md");
   const dispatch = useDispatch();
   const { t } = useTranslation("walletScreen");
@@ -110,7 +110,7 @@ const Wallet = () => {
   if (walletData.length === 0 && !walletLoading) {
     return (
       <>
-        <EmptyDataModel pageName="wallet" />
+        <EmptyDataModel pageName="wallet" onAddWallet={onAddWallet} />
       </>
     );
   }
