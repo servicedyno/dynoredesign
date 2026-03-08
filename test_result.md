@@ -12,13 +12,13 @@ DynoPay is a full-stack crypto payment gateway.
 - ✅ MongoDB: Running
 
 ## Pod URL Setup
-- **Pod URL**: `https://d1212cb6-41cd-45ac-bf4d-c2e43e1fe47b.preview.emergentagent.com`
-- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL` set to pod URL with trailing slash
-- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL` set to pod URL
-- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to pod URL
+- **Pod URL**: `https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com`
+- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL=https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com/` (trailing slash for axios `api/` concatenation)
+- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com`
+- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com`
 
 ### Pod URL Migration & Checkout Fix (Current Session)
-- Updated all env files from old `pod-pay.preview.emergentagent.com` to current pod URL
+- Updated all env files to current pod URL `6f7f3775-d165-4bd6-8635-d660e9c3ab44`
 - Installed frontend dependencies (`yarn install` at `/app/`)
 - Installed backend Node.js dependencies (`yarn install` at `/app/backend/`)
 - Fixed Next.js/SWC version mismatch (downgraded next to 14.2.33 to match ARM64 SWC binary)
