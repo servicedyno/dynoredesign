@@ -89,12 +89,16 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
     if (mediaFile) formData.append("image", mediaFile);
 
     dispatch(CompanyAction(COMPANY_INSERT, formData));
+    submittedRef.current = true;
   };
 
   // Watch for successful company creation
   const prevLoading = useRef(false);
+  const submittedRef = useRef(false);
   React.useEffect(() => {
-    if (prevLoading.current && !companyState.loading) {
+    // Only trigger success if the modal is actually open AND the user submitted
+    if (open && submittedRef.current && prevLoading.current && !companyState.loading) {
+      submittedRef.current = false;
       if (companyState.companyList?.length > 0) {
         setSubmitting(false);
         onSuccess();
@@ -103,7 +107,7 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
       }
     }
     prevLoading.current = companyState.loading;
-  }, [companyState.loading, companyState.companyList, onSuccess]);
+  }, [companyState.loading, companyState.companyList, onSuccess, open]);
 
   return (
     <Dialog
