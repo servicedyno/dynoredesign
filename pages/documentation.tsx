@@ -361,7 +361,7 @@ const ENDPOINTS: Endpoint[] = [
       "Register a new customer under your company. Returns a bearer token for subsequent authenticated requests. If the customer already exists (same email + company), returns their existing token.",
     auth: "api-key",
     headers: [
-      { name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" },
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
       { name: "Content-Type", value: "application/json", description: "" },
     ],
     body: [
@@ -392,7 +392,7 @@ const ENDPOINTS: Endpoint[] = [
       "Create a hosted checkout session. Returns a redirect URL where your customer selects their crypto and completes payment. Best for web integrations — similar to Stripe Checkout.",
     auth: "api-key-bearer",
     headers: [
-      { name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" },
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
       { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
       { name: "Content-Type", value: "application/json", description: "" },
     ],
@@ -433,7 +433,7 @@ const ENDPOINTS: Endpoint[] = [
       "Create a direct crypto payment that returns a QR code and wallet address. Use this for in-app payment flows where you handle the UI — the customer sends crypto directly to the provided address.",
     auth: "api-key-bearer",
     headers: [
-      { name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" },
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
       { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
       { name: "Content-Type", value: "application/json", description: "" },
     ],
@@ -477,7 +477,7 @@ const ENDPOINTS: Endpoint[] = [
     description: "Add funds to a customer's wallet via a hosted checkout. Returns a redirect URL for the customer to complete the deposit.",
     auth: "api-key-bearer",
     headers: [
-      { name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" },
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
       { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
       { name: "Content-Type", value: "application/json", description: "" },
     ],
@@ -509,7 +509,7 @@ const ENDPOINTS: Endpoint[] = [
     description: "Debit a specified amount from a customer's wallet balance. Creates a debit transaction record.",
     auth: "api-key-bearer",
     headers: [
-      { name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" },
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
       { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
       { name: "Content-Type", value: "application/json", description: "" },
     ],
@@ -534,7 +534,7 @@ const ENDPOINTS: Endpoint[] = [
     description: "Retrieve the current wallet balance for a customer.",
     auth: "api-key-bearer",
     headers: [
-      { name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" },
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
       { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
     ],
     responseExample: `{
@@ -551,7 +551,7 @@ const ENDPOINTS: Endpoint[] = [
     description: "Get paginated transaction history for a customer, including auto-conversion details.",
     auth: "api-key-bearer",
     headers: [
-      { name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" },
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
       { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
     ],
     queryParams: [
@@ -578,7 +578,7 @@ const ENDPOINTS: Endpoint[] = [
     description: "Retrieve full details for a single transaction by its ID.",
     auth: "api-key-bearer",
     headers: [
-      { name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" },
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
       { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
     ],
     pathParams: [{ name: "id", type: "string", description: "The transaction ID" }],
@@ -602,7 +602,7 @@ const ENDPOINTS: Endpoint[] = [
     description: "Verify a crypto payment by its blockchain deposit address. Use this to poll payment status.",
     auth: "api-key-bearer",
     headers: [
-      { name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" },
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
       { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
     ],
     pathParams: [{ name: "address", type: "string", description: "The deposit address from cryptoPayment response" }],
@@ -618,7 +618,7 @@ const ENDPOINTS: Endpoint[] = [
     title: "Get Supported Currencies",
     description: "Get the list of cryptocurrencies configured for your merchant account.",
     auth: "api-key",
-    headers: [{ name: "x-api-key", value: "your_api_key", description: "Your DynoPay API key" }],
+    headers: [{ name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" }],
     responseExample: `{
   "success": true,
   "data": {
@@ -801,8 +801,8 @@ const DocumentationPage = () => {
   return (
     <>
       <Head>
-        <title>API Documentation | DynoPay</title>
-        <meta name="description" content="Integrate crypto payments into your application with the DynoPay API." />
+        <title>API Documentation | Dynopay</title>
+        <meta name="description" content="Integrate crypto payments into your application with the Dynopay API." />
       </Head>
 
       <PageWrapper>
@@ -812,7 +812,7 @@ const DocumentationPage = () => {
             <HomeSectionTitle
               type="large"
               badgeText="Developer Documentation"
-              title="DynoPay API Reference"
+              title="Dynopay API Reference"
               highlightText="API Reference"
               subtitle="Everything you need to accept crypto payments, manage customer wallets, and track transactions programmatically."
             />
@@ -877,7 +877,7 @@ const DocumentationPage = () => {
                   Overview
                 </Typography>
                 <Typography sx={{ fontSize: 15, fontFamily: "OutfitRegular", color: "text.secondary", lineHeight: 1.8, mb: 3 }}>
-                  DynoPay provides a simple API to accept cryptocurrency payments, manage customer wallets, and track transactions. Payments are instantly forwarded to your configured wallet with transparent fees.
+                  Dynopay provides a simple API to accept cryptocurrency payments, manage customer wallets, and track transactions. Payments are instantly forwarded to your configured wallet with transparent fees.
                 </Typography>
                 <InfoBox>
                   <Typography sx={{ fontSize: 14, fontFamily: "OutfitMedium", color: "text.primary", mb: 1 }}>Quick Integration</Typography>
@@ -893,11 +893,11 @@ const DocumentationPage = () => {
                   Getting Started
                 </Typography>
                 <Typography sx={{ fontSize: 15, fontFamily: "OutfitRegular", color: "text.secondary", lineHeight: 1.8, mb: 3 }}>
-                  Integrate DynoPay in three simple steps:
+                  Integrate Dynopay in three simple steps:
                 </Typography>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 4 }}>
                   {[
-                    { step: "1", title: "Get your API Key", desc: 'Go to your DynoPay dashboard → API section → "Create New Key". You\'ll receive an API key for authenticating requests.' },
+                    { step: "1", title: "Get your API Key", desc: 'Go to your Dynopay dashboard → API section → "Create New Key". You\'ll receive an API key for authenticating requests.' },
                     { step: "2", title: "Create a Customer", desc: "Use the Create Customer endpoint to register your users. You'll get back a bearer token for that customer." },
                     { step: "3", title: "Create a Payment", desc: "Use the Checkout Payment or Direct Crypto Payment endpoint. The customer pays in crypto, funds forward instantly to your wallet." },
                   ].map((s) => (
@@ -934,7 +934,7 @@ curl -X POST https://api.dynopay.com/api/user/createPayment \\
                   Authentication
                 </Typography>
                 <Typography sx={{ fontSize: 15, fontFamily: "OutfitRegular", color: "text.secondary", lineHeight: 1.8, mb: 3 }}>
-                  DynoPay uses two levels of authentication depending on the endpoint:
+                  Dynopay uses two levels of authentication depending on the endpoint:
                 </Typography>
                 <Grid container spacing={2.5} sx={{ mb: 3 }}>
                   <Grid item xs={12} md={6}>
@@ -1018,7 +1018,7 @@ curl -X POST https://api.dynopay.com/api/user/createPayment \\
                   Ready to get started?
                 </Typography>
                 <Typography sx={{ fontSize: 15, fontFamily: "OutfitRegular", color: "text.secondary", mb: 3 }}>
-                  Join merchants worldwide accepting crypto with DynoPay
+                  Join merchants worldwide accepting crypto with Dynopay
                 </Typography>
                 <Box sx={{ display: "flex", gap: 2, justifyContent: "center", flexWrap: "wrap" }}>
                   <HomeButton variant="primary" label="Get your API Key" navigateTo="/auth/register" />
