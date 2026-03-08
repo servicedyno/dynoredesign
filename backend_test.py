@@ -113,7 +113,7 @@ class DynoPayAPITester:
 
 def main():
     # Use the correct pod URL from frontend/.env
-    BASE_URL = "https://pod-integration-hub-1.preview.emergentagent.com"
+    BASE_URL = "https://pod-endpoint-sync.preview.emergentagent.com"
     
     # Login credentials from review request
     EMAIL = "nomadly@moxx.co" 
