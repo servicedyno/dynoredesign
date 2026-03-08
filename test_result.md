@@ -12,10 +12,10 @@ DynoPay is a full-stack crypto payment gateway.
 - ✅ MongoDB: Running
 
 ## Pod URL Setup
-- **Pod URL**: `https://af096462-238d-41f5-b860-a9f2dbc9d0f4.preview.emergentagent.com`
-- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL=https://af096462-238d-41f5-b860-a9f2dbc9d0f4.preview.emergentagent.com/` (trailing slash for axios `api/` concatenation)
-- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://af096462-238d-41f5-b860-a9f2dbc9d0f4.preview.emergentagent.com`
-- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://af096462-238d-41f5-b860-a9f2dbc9d0f4.preview.emergentagent.com`
+- **Pod URL**: `https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
+- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL=https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com/` (trailing slash for axios `api/` concatenation)
+- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
+- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
 
 ## Backend Testing Status
 
@@ -357,10 +357,10 @@ agent_communication:
 ## Changes Made - Session 5 (Pod URL + Dashboard Stats Flash Fix)
 
 ### 1. Pod URL Setup
-- Updated all env files to current pod URL `af096462-238d-41f5-b860-a9f2dbc9d0f4`
-- Created `/app/.env.local` with `NEXT_PUBLIC_BASE_URL`
-- Updated `/app/frontend/.env` with `REACT_APP_BACKEND_URL`
-- Updated `/app/backend/.env` with `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL`
+- Updated all env files to current pod URL `e01e01ce-e03b-4beb-9b2c-25d0be50b954`
+- `/app/.env.local`: `NEXT_PUBLIC_BASE_URL=https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com/`
+- `/app/frontend/.env`: `REACT_APP_BACKEND_URL=https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
+- `/app/backend/.env`: `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com`
 
 ### 2. Dashboard Stats Flash Fix (658 → 675)
 - **Root cause**: `useDashboardData` fired immediately on mount with no company_id because `companyList=[]` and `loading=false` (initial state), before `OnboardingFlow` triggered the company fetch. This returned aggregate data (658 txns) which then got replaced by company-scoped data (675 txns).

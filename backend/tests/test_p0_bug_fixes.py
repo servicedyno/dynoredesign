@@ -17,7 +17,7 @@ import os
 import re
 import subprocess
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://pod-url-setup-1.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://unified-deployment.preview.emergentagent.com').rstrip('/')
 
 
 class TestBackendHealth:

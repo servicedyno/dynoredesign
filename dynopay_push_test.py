@@ -31,7 +31,7 @@ import os
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://pod-url-setup-1.preview.emergentagent.com"
+BACKEND_URL = "https://unified-deployment.preview.emergentagent.com"
 
 class DynoPayPushTester:
     def __init__(self):
