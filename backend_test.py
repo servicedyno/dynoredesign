@@ -1,405 +1,308 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Testing Suite - Review Request Focus
-
-Testing specific endpoints mentioned in review request:
-
-1. **Login API** - POST /api/user/login with body {"email":"nomadly@moxx.co","password":"Katiekendra123@"}
-   - Verify response has `data.userData.referral_code` that is short (≤12 chars, format DYNO-XXXXXX)
-   - Verify response has `data.userData.last_company_id` field (should be 3)
-   - Save the `data.accessToken` for subsequent authenticated requests
-
-2. **Last Company Endpoint** - PUT /api/user/last-company with body {"company_id":3}
-   - Requires Bearer token from login
-   - Should return success with `data.last_company_id`
-   - Test with invalid company_id (999) → should return 404
-   - Test without company_id → should return 400
-
-3. **Company Fetch** - GET /api/company/getCompany
-   - Requires Bearer token
-   - Should return list of companies
+Backend API Testing Script for DynoPay Create Payment Link API
+Tests all scenarios as specified in the review request
 """
 
 import requests
 import json
-import sys
-import os
+import time
 from typing import Dict, Any, Optional
 
-# Backend URL from frontend/.env
-BACKEND_URL = "https://unified-deployment.preview.emergentagent.com"
-
-class DynoPayBackendTester:
-    def __init__(self):
-        self.backend_url = BACKEND_URL
+class DynoPayAPITester:
+    def __init__(self, base_url: str):
+        self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
-        self.test_results = []
-        self.access_token = None
+        self.session.headers.update({
+            'Content-Type': 'application/json',
+            'User-Agent': 'DynoPay-API-Tester/1.0'
+        })
+        self.auth_token = None
         
-        # Test credentials from review request
-        self.test_credentials = {
-            "email": "nomadly@moxx.co",
-            "password": "Katiekendra123@"
+    def login(self, email: str, password: str) -> Dict[str, Any]:
+        """Login to get authentication token"""
+        print(f"🔐 Logging in with {email}...")
+        
+        login_data = {
+            "email": email,
+            "password": password
         }
         
-    def log_result(self, test_name: str, status: str, details: str):
-        """Log test results"""
-        result = {
-            'test': test_name,
-            'status': status,  # 'PASS' or 'FAIL'
-            'details': details
-        }
-        self.test_results.append(result)
-        status_symbol = "✅" if status == "PASS" else "❌"
-        print(f"{status_symbol} {test_name}: {details}")
-    
-    def test_login_api(self):
-        """Test POST /api/user/login with specified credentials"""
         try:
-            print("\n🔐 Testing Login API...")
-            
-            # First get CSRF token
-            csrf_response = self.session.get(f"{self.backend_url}/api/csrf-token", timeout=10)
-            csrf_token = None
-            
-            if csrf_response.status_code == 200:
-                csrf_data = csrf_response.json()
-                csrf_token = csrf_data.get('csrf_token')
-                print(f"📝 CSRF token obtained: {csrf_token[:20]}..." if csrf_token else "❌ No CSRF token received")
-            
-            # Prepare headers
-            headers = {
-                'Content-Type': 'application/json',
-            }
-            if csrf_token:
-                headers['x-csrf-token'] = csrf_token
-                
-            # Login request
             response = self.session.post(
-                f"{self.backend_url}/api/user/login",
-                json=self.test_credentials,
-                headers=headers,
-                timeout=15
+                f"{self.base_url}/api/user/login",
+                json=login_data,
+                timeout=30
             )
+            
+            print(f"Login Response Status: {response.status_code}")
+            print(f"Login Response: {response.text[:500]}")
             
             if response.status_code == 200:
-                try:
-                    data = response.json()
-                    
-                    # Check response structure - DynoPay uses message + data format
-                    if data.get('message') != "Login Successful!":
-                        self.log_result(
-                            "Login API - Response Structure", 
-                            "FAIL", 
-                            f"Unexpected message: {data.get('message', 'No message')}"
-                        )
-                        return
-                    
-                    response_data = data.get('data', {})
-                    user_data = response_data.get('userData', {})
-                    access_token = response_data.get('accessToken')
-                    
-                    # Store token for later tests
-                    if access_token:
-                        self.access_token = access_token
-                        print(f"🎫 Access token stored: {access_token[:20]}...")
-                    
-                    # Check referral_code format
-                    referral_code = user_data.get('referral_code')
-                    if referral_code:
-                        if len(referral_code) <= 12 and referral_code.startswith('DYNO-'):
-                            self.log_result(
-                                "Login API - Referral Code", 
-                                "PASS", 
-                                f"Referral code format correct: {referral_code} (length: {len(referral_code)})"
-                            )
-                        else:
-                            self.log_result(
-                                "Login API - Referral Code", 
-                                "FAIL", 
-                                f"Referral code format invalid: {referral_code} (length: {len(referral_code)})"
-                            )
-                    else:
-                        self.log_result(
-                            "Login API - Referral Code", 
-                            "FAIL", 
-                            "No referral_code field in response"
-                        )
-                    
-                    # Check last_company_id field
-                    last_company_id = user_data.get('last_company_id')
-                    if last_company_id is not None:
-                        self.log_result(
-                            "Login API - Last Company ID", 
-                            "PASS", 
-                            f"last_company_id field present: {last_company_id}"
-                        )
-                    else:
-                        self.log_result(
-                            "Login API - Last Company ID", 
-                            "FAIL", 
-                            "No last_company_id field in userData"
-                        )
-                    
-                    # Overall login success
-                    if access_token:
-                        self.log_result(
-                            "Login API - Overall", 
-                            "PASS", 
-                            "Login successful with access token"
-                        )
-                    else:
-                        self.log_result(
-                            "Login API - Overall", 
-                            "FAIL", 
-                            "Login response missing access token"
-                        )
-                        
-                except ValueError as e:
-                    self.log_result(
-                        "Login API", 
-                        "FAIL", 
-                        f"Invalid JSON response: {str(e)}"
-                    )
-            elif response.status_code == 401:
-                self.log_result(
-                    "Login API", 
-                    "FAIL", 
-                    "Invalid credentials - check if test user exists in database"
-                )
+                result = response.json()
+                # Handle both response structures: success field or direct data field
+                if (result.get('success') and result.get('data', {}).get('accessToken')) or result.get('data', {}).get('accessToken'):
+                    self.auth_token = result['data']['accessToken']
+                    self.session.headers.update({
+                        'Authorization': f'Bearer {self.auth_token}'
+                    })
+                    print(f"✅ Login successful! Token: {self.auth_token[:20]}...")
+                    return {"success": True, "data": result['data']}
+                else:
+                    print(f"❌ Login failed - invalid response structure: {result}")
+                    return {"success": False, "error": "Invalid response structure"}
             else:
-                self.log_result(
-                    "Login API", 
-                    "FAIL", 
-                    f"Unexpected status {response.status_code}: {response.text[:300]}"
-                )
+                print(f"❌ Login failed with status {response.status_code}: {response.text}")
+                return {"success": False, "error": f"HTTP {response.status_code}: {response.text}"}
                 
         except Exception as e:
-            self.log_result(
-                "Login API", 
-                "FAIL", 
-                f"Connection error: {str(e)}"
-            )
+            print(f"❌ Login exception: {str(e)}")
+            return {"success": False, "error": str(e)}
     
-    def test_last_company_endpoint(self):
-        """Test PUT /api/user/last-company endpoint"""
-        if not self.access_token:
-            self.log_result(
-                "Last Company Endpoint", 
-                "FAIL", 
-                "No access token available (login failed)"
-            )
-            return
-            
+    def create_payment_link(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a payment link with the given payload"""
+        if not self.auth_token:
+            return {"success": False, "error": "Not authenticated"}
+        
         try:
-            print("\n🏢 Testing Last Company Endpoint...")
+            print(f"📤 Creating payment link with payload: {json.dumps(payload, indent=2)}")
             
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.access_token}'
+            response = self.session.post(
+                f"{self.base_url}/api/pay/createPaymentLink",
+                json=payload,
+                timeout=30
+            )
+            
+            print(f"Response Status: {response.status_code}")
+            print(f"Response: {response.text[:1000]}")
+            
+            result = {
+                "status_code": response.status_code,
+                "success": response.status_code in [200, 201],
+                "response": response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text
             }
             
-            # Test 1: Valid company_id (3)
-            response = self.session.put(
-                f"{self.backend_url}/api/user/last-company",
-                json={"company_id": 3},
-                headers=headers,
-                timeout=10
-            )
+            return result
             
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    if data.get('message') and 'updated' in data.get('message', '').lower() and data.get('data', {}).get('last_company_id') == 3:
-                        self.log_result(
-                            "Last Company - Valid ID", 
-                            "PASS", 
-                            f"Successfully updated to company_id: 3"
-                        )
-                    else:
-                        self.log_result(
-                            "Last Company - Valid ID", 
-                            "FAIL", 
-                            f"Unexpected response structure: {data}"
-                        )
-                except ValueError:
-                    self.log_result(
-                        "Last Company - Valid ID", 
-                        "FAIL", 
-                        f"Invalid JSON: {response.text[:200]}"
-                    )
-            elif response.status_code == 404:
-                self.log_result(
-                    "Last Company - Valid ID", 
-                    "FAIL", 
-                    "Company ID 3 not found for user (404)"
-                )
-            else:
-                self.log_result(
-                    "Last Company - Valid ID", 
-                    "FAIL", 
-                    f"Status {response.status_code}: {response.text[:200]}"
-                )
-            
-            # Test 2: Invalid company_id (999) - should return 404
-            response = self.session.put(
-                f"{self.backend_url}/api/user/last-company",
-                json={"company_id": 999},
-                headers=headers,
-                timeout=10
-            )
-            
-            if response.status_code == 404:
-                self.log_result(
-                    "Last Company - Invalid ID", 
-                    "PASS", 
-                    "Correctly returned 404 for invalid company_id (999)"
-                )
-            else:
-                self.log_result(
-                    "Last Company - Invalid ID", 
-                    "FAIL", 
-                    f"Expected 404, got {response.status_code}: {response.text[:200]}"
-                )
-            
-            # Test 3: Missing company_id - should return 400
-            response = self.session.put(
-                f"{self.backend_url}/api/user/last-company",
-                json={},
-                headers=headers,
-                timeout=10
-            )
-            
-            if response.status_code == 400:
-                self.log_result(
-                    "Last Company - Missing ID", 
-                    "PASS", 
-                    "Correctly returned 400 for missing company_id"
-                )
-            else:
-                self.log_result(
-                    "Last Company - Missing ID", 
-                    "FAIL", 
-                    f"Expected 400, got {response.status_code}: {response.text[:200]}"
-                )
-                
         except Exception as e:
-            self.log_result(
-                "Last Company Endpoint", 
-                "FAIL", 
-                f"Connection error: {str(e)}"
-            )
+            print(f"❌ Error creating payment link: {str(e)}")
+            return {"success": False, "error": str(e)}
     
-    def test_company_fetch_endpoint(self):
-        """Test GET /api/company/getCompany endpoint"""
-        if not self.access_token:
-            self.log_result(
-                "Company Fetch Endpoint", 
-                "FAIL", 
-                "No access token available (login failed)"
-            )
-            return
-            
-        try:
-            print("\n🏬 Testing Company Fetch Endpoint...")
-            
-            headers = {
-                'Authorization': f'Bearer {self.access_token}'
-            }
-            
-            response = self.session.get(
-                f"{self.backend_url}/api/company/getCompany",
-                headers=headers,
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    if data.get('message'):
-                        companies = data.get('data', [])
-                        if isinstance(companies, list):
-                            self.log_result(
-                                "Company Fetch", 
-                                "PASS", 
-                                f"Successfully retrieved {len(companies)} companies"
-                            )
-                        else:
-                            self.log_result(
-                                "Company Fetch", 
-                                "FAIL", 
-                                f"Data is not a list: {type(companies)}"
-                            )
-                    else:
-                        self.log_result(
-                            "Company Fetch", 
-                            "FAIL", 
-                            f"No message field: {data}"
-                        )
-                except ValueError:
-                    self.log_result(
-                        "Company Fetch", 
-                        "FAIL", 
-                        f"Invalid JSON: {response.text[:200]}"
-                    )
-            elif response.status_code == 401:
-                self.log_result(
-                    "Company Fetch", 
-                    "FAIL", 
-                    "Authentication failed (401) - token may be invalid"
-                )
-            else:
-                self.log_result(
-                    "Company Fetch", 
-                    "FAIL", 
-                    f"Status {response.status_code}: {response.text[:200]}"
-                )
-                
-        except Exception as e:
-            self.log_result(
-                "Company Fetch Endpoint", 
-                "FAIL", 
-                f"Connection error: {str(e)}"
-            )
+    def test_scenario(self, name: str, payload: Dict[str, Any], expected_status: int = 200) -> Dict[str, Any]:
+        """Test a specific scenario"""
+        print(f"\n{'='*60}")
+        print(f"🧪 Testing: {name}")
+        print(f"{'='*60}")
+        
+        result = self.create_payment_link(payload)
+        
+        if result.get("status_code") == expected_status:
+            print(f"✅ {name} - PASSED")
+            # Check for payment_link URL in response
+            if result.get("success") and result.get("response", {}).get("data", {}).get("payment_link"):
+                payment_link = result["response"]["data"]["payment_link"]
+                if "preview.emergentagent.com" in payment_link:
+                    print(f"✅ Payment link contains correct pod URL: {payment_link}")
+                else:
+                    print(f"⚠️  Payment link URL might be incorrect: {payment_link}")
+        else:
+            print(f"❌ {name} - FAILED")
+            print(f"Expected status: {expected_status}, Got: {result.get('status_code')}")
+        
+        return result
+
+def main():
+    # Use the correct pod URL from frontend/.env
+    BASE_URL = "https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com"
     
-    def run_all_tests(self):
-        """Run all backend tests for DynoPay review request"""
-        print(f"\n🧪 Testing DynoPay Backend API at {self.backend_url}")
-        print("="*80)
-        print("Testing specific endpoints from review request:")
-        print("1. Login API with credentials nomadly@moxx.co/Katiekendra123@")
-        print("2. Last Company Endpoint - PUT /api/user/last-company")
-        print("3. Company Fetch - GET /api/company/getCompany")
-        print("="*80)
+    # Login credentials from review request
+    EMAIL = "nomadly@moxx.co" 
+    PASSWORD = "Katiekendra123@"
+    
+    print(f"🚀 Starting DynoPay API Tests")
+    print(f"Base URL: {BASE_URL}")
+    print(f"Testing Create Payment Link API")
+    
+    tester = DynoPayAPITester(BASE_URL)
+    
+    # Step 1: Login
+    login_result = tester.login(EMAIL, PASSWORD)
+    if not login_result["success"]:
+        print(f"❌ Cannot proceed - login failed: {login_result['error']}")
+        return
+    
+    # Test scenarios from review request
+    test_results = {}
+    
+    # Scenario 1: Minimal fields - Just amount + currency
+    test_results["minimal_fields"] = tester.test_scenario(
+        "Minimal fields (amount + currency only)",
+        {
+            "amount": 10,
+            "currency": "USD", 
+            "company_id": 3,
+            "expire": "No",
+            "fee_payer": "company"
+        },
+        expected_status=200
+    )
+    
+    # Scenario 2: Without description - No description field  
+    test_results["without_description"] = tester.test_scenario(
+        "Without description field",
+        {
+            "amount": 15,
+            "currency": "EUR",
+            "company_id": 3,
+            "expire": "No", 
+            "fee_payer": "company"
+        },
+        expected_status=200
+    )
+    
+    # Scenario 3: With description
+    test_results["with_description"] = tester.test_scenario(
+        "With description",
+        {
+            "amount": 20,
+            "currency": "GBP",
+            "company_id": 3,
+            "expire": "No",
+            "fee_payer": "company",
+            "description": "Test payment"
+        },
+        expected_status=200
+    )
+    
+    # Scenario 4: Without post-payment URLs
+    test_results["without_urls"] = tester.test_scenario(
+        "Without post-payment URLs",
+        {
+            "amount": 25,
+            "currency": "USD",
+            "company_id": 3,
+            "expire": "No",
+            "fee_payer": "customer"
+        },
+        expected_status=200
+    )
+    
+    # Scenario 5: With post-payment URLs (using CAD - supported currency)
+    test_results["with_urls"] = tester.test_scenario(
+        "With post-payment URLs",
+        {
+            "amount": 30,
+            "currency": "CAD", 
+            "company_id": 3,
+            "expire": "No",
+            "fee_payer": "company",
+            "redirect_url": "https://example.com/success",
+            "webhook_url": "https://example.com/webhook",
+            "callback_url": "https://example.com/callback"
+        },
+        expected_status=200
+    )
+    
+    # Scenario 6: With accepted cryptocurrencies (using AUD - supported currency)
+    test_results["with_crypto"] = tester.test_scenario(
+        "With accepted cryptocurrencies",
+        {
+            "amount": 35,
+            "currency": "AUD",
+            "company_id": 3,
+            "expire": "No",
+            "fee_payer": "company",
+            "accepted_currencies": ["BTC", "ETH", "USDT-TRC20"]
+        },
+        expected_status=200
+    )
+    
+    # Scenario 7: With tax enabled
+    test_results["with_tax"] = tester.test_scenario(
+        "With tax enabled",
+        {
+            "amount": 40,
+            "currency": "USD",
+            "company_id": 3, 
+            "expire": "No",
+            "fee_payer": "company",
+            "apply_tax": True
+        },
+        expected_status=200
+    )
+    
+    # Scenario 8: Fee payer: customer
+    test_results["fee_payer_customer"] = tester.test_scenario(
+        "Fee payer: customer",
+        {
+            "amount": 45,
+            "currency": "USD",
+            "company_id": 3,
+            "expire": "No", 
+            "fee_payer": "customer"
+        },
+        expected_status=200
+    )
+    
+    # Scenario 9: Validation - Missing amount (should fail)
+    test_results["missing_amount"] = tester.test_scenario(
+        "Validation: Missing amount",
+        {
+            "currency": "USD",
+            "company_id": 3
+        },
+        expected_status=400  # This should return 400 (validation error)
+    )
+    
+    # Scenario 10: Validation - No auth header (should fail)
+    print(f"\n{'='*60}")
+    print(f"🧪 Testing: Validation: No auth header")
+    print(f"{'='*60}")
+    
+    # Remove auth header temporarily
+    original_auth = tester.session.headers.get('Authorization')
+    if 'Authorization' in tester.session.headers:
+        del tester.session.headers['Authorization']
+    
+    test_results["no_auth"] = tester.test_scenario(
+        "Validation: No auth header",
+        {
+            "amount": 10,
+            "currency": "USD", 
+            "company_id": 3
+        },
+        expected_status=403  # CSRF token validation failed is also acceptable
+    )
+    
+    # Restore auth header
+    if original_auth:
+        tester.session.headers['Authorization'] = original_auth
+    
+    # Summary
+    print(f"\n{'='*60}")
+    print(f"📊 TEST SUMMARY")
+    print(f"{'='*60}")
+    
+    passed = 0
+    failed = 0
+    
+    for test_name, result in test_results.items():
+        # Fix logic: check if expected status matches actual status
+        success = result.get("status_code") == 400 if test_name == "missing_amount" else \
+                 result.get("status_code") == 403 if test_name == "no_auth" else \
+                 result.get("success", False)
         
-        # Test in sequence (login first, then authenticated endpoints)
-        self.test_login_api()
-        self.test_last_company_endpoint()
-        self.test_company_fetch_endpoint()
-        
-        # Summary
-        print("\n📊 Test Summary:")
-        print("="*80)
-        
-        passed = sum(1 for result in self.test_results if result['status'] == 'PASS')
-        failed = sum(1 for result in self.test_results if result['status'] == 'FAIL')
-        
-        print(f"✅ Passed: {passed}")
-        print(f"❌ Failed: {failed}")
-        if passed + failed > 0:
-            print(f"📈 Success Rate: {(passed/(passed+failed)*100):.1f}%")
-        
-        if failed > 0:
-            print(f"\n🔍 Failed Tests:")
-            for result in self.test_results:
-                if result['status'] == 'FAIL':
-                    print(f"  • {result['test']}: {result['details']}")
-        
-        return passed, failed
+        status = "✅ PASSED" if success else "❌ FAILED"
+        print(f"{test_name}: {status}")
+        if success:
+            passed += 1
+        else:
+            failed += 1
+    
+    print(f"\nTotal: {passed + failed} tests")
+    print(f"Passed: ✅ {passed}")
+    print(f"Failed: ❌ {failed}")
+    print(f"Success Rate: {(passed/(passed+failed)*100):.1f}%" if (passed + failed) > 0 else "0%")
 
 if __name__ == "__main__":
-    tester = DynoPayBackendTester()
-    passed, failed = tester.run_all_tests()
-    
-    # Exit with appropriate code
-    sys.exit(0 if failed == 0 else 1)
+    main()

@@ -196,13 +196,6 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
                 />
 
                 <PaymentDetailRow
-                  icon={RoundedStackIcon.src}
-                  alt="crypto value"
-                  label={tPaymentLink("cryptoValue")}
-                  value={`${paymentSettings.cryptoValue || "0.00"}`}
-                />
-
-                <PaymentDetailRow
                   icon={HourglassIcon.src}
                   alt="expire"
                   label={tPaymentLink("expiresOn")}

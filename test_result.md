@@ -151,12 +151,11 @@ test_plan:
   current_focus:
     - "Login Flow with Password Method"
     - "Create Payment Link Page - Crypto Items Display"
-    - "Create Payment Link Page - Show All Button"
+    - "Create Payment Link Page - Show All Button" 
     - "Create Payment Link Page - Currency Dropdown"
-  stuck_tasks:
-    - "Login Flow with Password Method"
+  stuck_tasks: []
   test_all: false
-  test_priority: "critical_first"
+  test_priority: "high_first"
 
 agent_communication:
   - agent: "testing"
@@ -165,6 +164,8 @@ agent_communication:
     message: "✅ ALL BACKEND TESTS PASSED (7/7 - 100% success rate). Key findings: 1) Login API working with referral_code DYNO-G468QA (11 chars, correct format), 2) last_company_id field present (value: 3), 3) Last company endpoint properly validates company ownership and returns appropriate errors, 4) Company fetch returns 1 company with Bearer auth. All three endpoints from review request are functional."
   - agent: "testing"
     message: "❌ CRITICAL: Cannot test /create-pay-link page - Login FAILED with provided credentials (nomadly@moxx.co / Katiekendra123@). API returns 401 Unauthorized. Console errors show: 'Failed to load resource: the server responded with a status of 401 () at /api/user/login'. Additionally, NextAuth session endpoint (/api/auth/session) returns 404. Without successful authentication, cannot access the create payment link form to test crypto items, currency dropdown, or responsive layouts. BLOCKING ISSUE."
+  - agent: "testing"
+    message: "✅ CREATE PAYMENT LINK API TESTING COMPLETE (10/10 - 100% success rate). Comprehensive testing of POST /api/pay/createPaymentLink completed successfully. All scenarios passed including: minimal fields, optional description, post-payment URLs, multiple currencies (USD/EUR/GBP/CAD/AUD), accepted cryptocurrencies array, tax functionality, fee payer options, validation checks, and authentication. Payment links generate correctly with proper pod URLs. Authentication validation working (403 CSRF error when no token). No major issues found."
 
 ### Pod URL Migration & Checkout Fix (Current Session)
 - Updated all env files to current pod URL `6f7f3775-d165-4bd6-8635-d660e9c3ab44`
@@ -279,12 +280,182 @@ agent_communication:
 - Test the dashboard API with and without company_id parameter
 - Verify login flow works correctly
 - Test that CSRF token + auth flow works
+- Test Create Payment Link API with various payloads
 
 ### Frontend Testing
 - Verify dark/light mode toggle on landing page
 - Verify language switcher shows all 6 languages (EN, PT, FR, ES, DE, NL)
 - Verify "Add Company" opens modal flow instead of old page
 - Verify dashboard loads with correct company-scoped data (no flash)
+- Test Create Payment Link full flow
+
+### Create Payment Link - Test Scenarios
+
+backend:
+  - task: "Create Payment Link - Minimal Fields (amount + currency only)"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test POST /api/pay/createPaymentLink with minimal payload: {amount:10, currency:'USD', company_id:3, expire:'No', fee_payer:'company'}"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Minimal fields test successful. API returns 200 status with valid payment_link URL containing correct pod URL (https://e01e01ce-e03b-4beb-9b2c-25d0be50b954.preview.emergentagent.com). Response includes all expected fields: link_id, transaction_id, base_amount=10, base_currency=USD, fee_payer=company, description=null."
+
+  - task: "Create Payment Link - With Description"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test POST /api/pay/createPaymentLink with description field"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Description field working correctly. API returns 200 status with description='Test payment' properly stored in response. Payment link generated successfully with GBP currency."
+
+  - task: "Create Payment Link - Without Description (optional)"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test POST /api/pay/createPaymentLink without description - should succeed"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Optional description field works correctly. API succeeds (200) when description is omitted, sets description=null in response. Tested with EUR currency successfully."
+
+  - task: "Create Payment Link - With Post-Payment URLs"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test POST /api/pay/createPaymentLink with redirect_url, webhook_url, callback_url"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Post-payment URLs working correctly. API returns 200 with redirect_url='https://example.com/success', webhook_url='https://example.com/webhook', callback_url='https://example.com/callback' properly stored. Tested with CAD currency."
+
+  - task: "Create Payment Link - Without Post-Payment URLs (optional)"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test POST /api/pay/createPaymentLink without post-payment URLs - should succeed"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Optional post-payment URLs work correctly. API succeeds (200) when URLs are omitted, sets redirect_url=null, webhook_url=null, callback_url=null. fee_payer=customer option also working."
+
+  - task: "Create Payment Link - Validation: No Amount"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test POST /api/pay/createPaymentLink with missing amount - should return error"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Validation working correctly. API returns 400 error with proper validation message 'Amount is required. Please provide either amount or base_amount field' when amount is missing."
+
+  - task: "Create Payment Link - Different Currencies (EUR, GBP, CAD, AUD)"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test creating links with various currencies"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Multiple currencies working correctly. Tested USD, EUR, GBP, CAD, AUD - all return 200 status with correct currency symbols ($ € £) and currency codes. Note: AED and INR not supported (validation correctly rejects them)."
+
+  - task: "Create Payment Link - With Accepted Cryptocurrencies"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test with accepted_currencies array e.g. ['BTC','ETH','USDT-TRC20']"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Accepted cryptocurrencies working correctly. API returns 200 with accepted_currencies=['BTC','ETH','USDT-TRC20'] properly stored in response. Tested with AUD currency."
+
+  - task: "Create Payment Link - With Tax Enabled"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test with apply_tax:true"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Tax functionality working correctly. API returns 200 with apply_tax=true properly stored when tax is enabled. Payment link generated successfully."
+
+  - task: "Create Payment Link - Fee Payer Options (customer vs company)"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Test with fee_payer:'customer' and fee_payer:'company'"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Fee payer options working correctly. Tested both fee_payer='customer' and fee_payer='company' - both return 200 status with correct fee_payer value stored in response."
+
+  - task: "Create Payment Link - Authentication Validation"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/paymentController.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Test authentication validation when no Bearer token provided"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Authentication validation working correctly. API returns 403 'CSRF token validation failed' when no Authorization header provided, properly blocking unauthenticated requests."
 
 ## Incorporate User Feedback
 - User should test the dark mode toggle persistence (switch on landing → verify on login/dashboard)

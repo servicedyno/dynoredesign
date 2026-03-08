@@ -148,7 +148,7 @@ const CreatePaymentLinkPage = ({
     cryptoValue: "",
     currency: hasPaymentLinkData
       ? (paymentLinkData as PaymentLink).currency
-      : "",
+      : "USD",
     clientName: hasPaymentLinkData
       ? (paymentLinkData as PaymentLink).clientName
       : "",
@@ -371,6 +371,26 @@ const CreatePaymentLinkPage = ({
 
   const handleCloseSuccessModal = () => {
     setSuccessModalOpen(false);
+    // Reset form for new creation
+    if (!hasPaymentLinkData) {
+      setPaymentSettings({
+        value: "",
+        cryptoValue: "",
+        currency: "USD",
+        clientName: "",
+        expire: "no",
+        description: "",
+        blockchainFees: "company",
+        linkId: "",
+        acceptedCryptoCurrency: [],
+      });
+      setPaymentSettingsErrors({ value: "", currency: "", description: "" });
+      setPaymentSettingsTouched({ value: false, currency: false, description: false });
+      setPostPaymentSettings({ callbackUrl: "", redirectUrl: "", webhookUrl: "" });
+      setCustomerEmail("");
+      setIncludeTax(false);
+      setPaymentLink("");
+    }
   };
 
   const handleCopyLink = () => {
