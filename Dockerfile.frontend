@@ -1,0 +1,69 @@
+##############################################
+# Stage 1: Dependencies
+##############################################
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+# Copy package manifests
+COPY package.json yarn.lock* ./
+
+# Install dependencies
+RUN yarn install --frozen-lockfile || yarn install
+
+##############################################
+# Stage 2: Builder — build Next.js
+##############################################
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json yarn.lock* next.config.mjs tsconfig.json ./
+COPY i18n.js axiosConfig.ts axiosAdmin.ts ./
+
+# Copy all frontend source directories
+COPY pages/ ./pages/
+COPY Components/ ./Components/
+COPY styles/ ./styles/
+COPY Containers/ ./Containers/
+COPY contexts/ ./contexts/
+COPY hooks/ ./hooks/
+COPY langs/ ./langs/
+COPY utils/ ./utils/
+COPY assets/ ./assets/
+COPY public/ ./public/
+COPY constants/ ./constants/
+
+# NEXT_PUBLIC_* vars must be set at BUILD time
+# These are inlined into the JavaScript bundle by Next.js
+ARG NEXT_PUBLIC_BASE_URL=https://api.dynopay.com/
+ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
+
+# Build Next.js (produces .next/ with standalone output)
+RUN yarn build
+
+##############################################
+# Stage 3: Runner — lean production image
+##############################################
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN apk add --no-cache curl
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+
+# Copy standalone output (includes node_modules and server.js)
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:3000/ || exit 1
+
+CMD ["node", "server.js"]
