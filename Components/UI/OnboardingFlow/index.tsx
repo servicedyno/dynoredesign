@@ -24,10 +24,8 @@ const OnboardingFlow: React.FC = () => {
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
 
   const hasCompany = companyState.companyList?.length > 0;
-  // A wallet is "set up" only if it has an actual address configured
-  const hasWallet = walletState.walletList?.some(
-    (w: any) => w.wallet_address != null && w.wallet_address !== ''
-  ) || false;
+  // User has wallets if any wallet entries exist (address may be added later)
+  const hasWallet = (walletState.walletList?.length ?? 0) > 0;
   const isLoading = companyState.loading || walletState.loading;
 
   // Fetch data on mount and mark fetch as started
@@ -110,11 +108,8 @@ const OnboardingFlow: React.FC = () => {
       <AddWalletModal
         open={phase === "wallet"}
         onClose={() => {
-          // If user closes the wallet modal but hasn't created one yet,
-          // let them proceed to dashboard (they can add later)
-          if (!hasWallet) {
-            setPhase("done");
-          }
+          // Always allow user to dismiss the wallet modal
+          setPhase("done");
         }}
         onWalletAdded={handleWalletAdded}
         headerExtra={<StepIndicator currentStep={2} totalSteps={2} />}
