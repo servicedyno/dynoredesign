@@ -555,8 +555,8 @@ const processSingleCurrency = async (
     // This ensures the wallet page still loads even if rate providers are down
     apiLogger.warn(`[currencyConvert] ⚠️ Using fallback rate 0 for ${source}→${currentCurrency} (providers unavailable)`);
     return {
-      amount: "0.00",
-      rate: "0",
+      amount: 0,
+      transferRate: 0,
       currency: currentCurrency,
     };
   }

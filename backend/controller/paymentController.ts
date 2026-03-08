@@ -4446,7 +4446,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           try {
             const hashUpdate: Record<string, string | null> = {};
             // Incoming = the blockchain TX where customer sent payment
-            if (allTxIds) hashUpdate.incoming_tx_hash = allTxIds;
+            const incomingTxHash = transactionId || tempAddressData?.txId || null;
+            if (incomingTxHash) hashUpdate.incoming_tx_hash = incomingTxHash;
             // Outgoing = the blockchain TX where we forwarded to merchant wallet
             if (outgoingMerchantTxHash) hashUpdate.outgoing_tx_hash = outgoingMerchantTxHash;
             if (Object.keys(hashUpdate).length > 0) {
@@ -4454,7 +4455,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
                 where: { id: txRecordIdForHashes },
                 transaction,
               });
-              cronLogger.info(`[cryptoVerification] Updated TX hashes for ${txRecordIdForHashes}: incoming=${allTxIds || 'N/A'}, outgoing=${outgoingMerchantTxHash || 'N/A'}`);
+              cronLogger.info(`[cryptoVerification] Updated TX hashes for ${txRecordIdForHashes}: incoming=${incomingTxHash || 'N/A'}, outgoing=${outgoingMerchantTxHash || 'N/A'}`);
             }
           } catch (hashErr: unknown) {
             cronLogger.warn(`[cryptoVerification] Failed to update TX hashes: ${hashErr instanceof Error ? hashErr.message : String(hashErr)}`);
