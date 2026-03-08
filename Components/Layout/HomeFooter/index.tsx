@@ -37,10 +37,10 @@ interface RouteItemType {
 }
 
 const SOCIALS: readonly SocialItemType[] = [
-  { label: "X", icon: X, link: "#" },
-  { label: "Instagram", icon: Instagram, link: "#" },
-  { label: "LinkedIn", icon: LinkedIn, link: "#" },
-  { label: "Facebook", icon: Facebook, link: "#" },
+  { label: "X", icon: X, link: "https://x.com/Dynopaycom" },
+  { label: "Instagram", icon: Instagram, link: "https://www.instagram.com/dynopay" },
+  { label: "LinkedIn", icon: LinkedIn, link: "https://www.linkedin.com/company/dynopay/" },
+  { label: "Facebook", icon: Facebook, link: "https://www.facebook.com/dynopay" },
 ] as const;
 
 const ROUTES: readonly RouteItemType[] = [
