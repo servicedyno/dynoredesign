@@ -24,10 +24,15 @@ export const useDashboardData = () => {
     (state: any) => state.companyReducer?.companyList
   );
 
-  // Only fetch dashboard data once a company is selected (or if user has no companies)
-  // This prevents the flash where aggregate data shows briefly before company-specific data
+  const companiesFetched = useSelector(
+    (state: any) => state.companyReducer?.fetched ?? false
+  );
+
+  // Only fetch dashboard data once companies have been fetched AND a company is selected
+  // (or if user truly has no companies after fetch completes).
+  // This prevents the flash where aggregate data shows briefly before company-specific data.
   const hasCompanies = companyList && companyList.length > 0;
-  const shouldFetch = !hasCompanies || selectedCompanyId != null;
+  const shouldFetch = companiesFetched && (!hasCompanies || selectedCompanyId != null);
 
   useEffect(() => {
     if (!shouldFetch) return;
@@ -39,11 +44,12 @@ export const useDashboardData = () => {
 
   const fetchChartData = useCallback(
     (period: string, startDate?: string, endDate?: string) => {
+      if (!companiesFetched) return;
       dispatch(
         DashboardAction(DASHBOARD_CHART_FETCH, { period, startDate, endDate, company_id: selectedCompanyId })
       );
     },
-    [dispatch, selectedCompanyId]
+    [dispatch, selectedCompanyId, companiesFetched]
   );
 
   const refreshDashboard = useCallback(() => {

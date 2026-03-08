@@ -34,6 +34,7 @@ export interface userReducer {
 export interface companyReducer {
   companyList: ICompany[];
   loading: boolean;
+  fetched: boolean;
   taxValidation?: any;
   selectedCompanyId: number | null;
 }

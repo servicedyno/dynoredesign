@@ -285,3 +285,17 @@ agent_communication:
 - Added "Trusted by Businesses Worldwide" stats section below hero
 - Shows: 10K+ Transactions, 500+ Merchants, 15+ Cryptocurrencies, 99.9% Uptime
 - Responsive 2x2 grid on mobile, 4-column on desktop
+
+
+## Changes Made - Session 5 (Pod URL + Dashboard Stats Flash Fix)
+
+### 1. Pod URL Setup
+- Updated all env files to current pod URL `af096462-238d-41f5-b860-a9f2dbc9d0f4`
+- Created `/app/.env.local` with `NEXT_PUBLIC_BASE_URL`
+- Updated `/app/frontend/.env` with `REACT_APP_BACKEND_URL`
+- Updated `/app/backend/.env` with `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL`
+
+### 2. Dashboard Stats Flash Fix (658 → 675)
+- **Root cause**: `useDashboardData` fired immediately on mount with no company_id because `companyList=[]` and `loading=false` (initial state), before `OnboardingFlow` triggered the company fetch. This returned aggregate data (658 txns) which then got replaced by company-scoped data (675 txns).
+- **Fix**: Added `fetched: boolean` flag to `companyReducer` (starts `false`, set `true` on `COMPANY_FETCH` or `COMPANY_API_ERROR`). Updated `useDashboardData` to gate ALL fetches (`shouldFetch`, `fetchChartData`, `refreshDashboard`) behind `companiesFetched === true`, so dashboard only fetches after company list is resolved.
+- Files changed: `utils/types.ts`, `Redux/Reducers/companyReducer.ts`, `hooks/useDashboardData.ts`

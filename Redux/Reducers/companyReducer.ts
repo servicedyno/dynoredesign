@@ -35,6 +35,7 @@ function saveLastCompanyId(companyId: number | null) {
 const companyInitialState: ICompanyReducer = {
   companyList: [],
   loading: false,
+  fetched: false,
   taxValidation: null,
   selectedCompanyId: null,
 };
@@ -102,6 +103,7 @@ const companyReducer = (state = companyInitialState, action: ReducerAction) => {
       return {
         ...state,
         loading: false,
+        fetched: true,
         companyList: payload,
         selectedCompanyId: selected,
       };
@@ -130,6 +132,7 @@ const companyReducer = (state = companyInitialState, action: ReducerAction) => {
       return {
         ...state,
         loading: false,
+        fetched: true,
       };
 
     case COMPANY_VALIDATE_TAX:
