@@ -12,10 +12,10 @@ DynoPay is a full-stack crypto payment gateway.
 - ✅ MongoDB: Running
 
 ## Pod URL Setup
-- **Pod URL**: `https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com`
-- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL=https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com/` (trailing slash for axios `api/` concatenation)
-- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com`
-- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://6f7f3775-d165-4bd6-8635-d660e9c3ab44.preview.emergentagent.com`
+- **Pod URL**: `https://pod-url-setup-1.preview.emergentagent.com`
+- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL=https://pod-url-setup-1.preview.emergentagent.com/` (trailing slash for axios `api/` concatenation)
+- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://pod-url-setup-1.preview.emergentagent.com`
+- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://pod-url-setup-1.preview.emergentagent.com`
 
 ## Backend Testing Status
 
