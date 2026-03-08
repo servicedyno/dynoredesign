@@ -70,9 +70,23 @@ export const generateInvoicePDF = (invoiceData: InvoiceData): PDFKit.PDFDocument
   };
 
   // --- Add DynoPay Logo ---
-  const logoPath = path.join(__dirname, "../assets/dynopay-logo.png");
+  // Try multiple possible logo locations
+  const possibleLogoPaths = [
+    path.join(__dirname, "../assets/dynopay-logo.png"),
+    path.join(__dirname, "../../assets/dynopay-logo.png"),
+    path.resolve("/app/backend/assets/dynopay-logo.png"),
+  ];
+  
+  let logoPath = "";
+  for (const p of possibleLogoPaths) {
+    if (fs.existsSync(p)) {
+      logoPath = p;
+      break;
+    }
+  }
+  
   let logoY = 50;
-  if (fs.existsSync(logoPath)) {
+  if (logoPath) {
     try {
       doc.image(logoPath, 50, 50, { width: 120, height: 40 });
       logoY = 95; // Adjust starting position after logo

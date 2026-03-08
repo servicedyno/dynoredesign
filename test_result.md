@@ -789,3 +789,27 @@ backend:
 - MongoDB: ✅ Running
 - Landing page loads correctly with all content
 - Backend API responds to requests
+
+
+### 4. Dark Mode Fixes (Dashboard)
+- **Premium Tier Card**: Replaced static `theme` import with dynamic `muiTheme` from `useTheme()` in `DashboardRightSection.tsx` - "Upgrade to Premium Tier" and "Lower fees (0.5%) and priority support" text now visible
+- **Background Image Opacity**: Reduced mountain-wave background image to 15% opacity in dark mode so text is readable
+- **PanelCard HeaderTitle**: Fixed hardcoded `#242428` color → `theme.palette.text.primary` in `PanelCard/styled.tsx`
+- **PanelCard HeaderContent**: Converted from static theme to dynamic callback
+- **Success Badge Colors**: Fixed Current Tier badge to use dynamic theme colors
+- **Crown Icon Container**: Fixed border and background to use dynamic theme
+
+### 5. Username Visibility Fix (Header)
+- **UserMenu/styled.tsx**: Changed `UserTrigger` background from `theme.palette.common.white` (always white) to `theme.palette.background.paper` (theme-aware)
+- Added subtle border in dark mode for visual separation
+- "Nomadly" username now clearly visible in both light and dark modes
+
+### 6. Favicon Fix
+- Added DynoPay logo as favicon (`/public/dynopay-favicon.png`)
+- Added `<link rel="icon">` and `<link rel="apple-touch-icon">` in `_document.tsx`
+
+### 7. Invoice Fixes
+- **Amount Fix**: `autoGenerateInvoice` now falls back to `usd_value` when `base_amount` is 0/null
+- **PDF Download Fix**: `downloadInvoicePDF` recalculates amounts from transaction if stored `unit_price` is 0
+- **Logo Path Fix**: Made logo path resolution more robust with multiple fallback paths
+- **Crypto Amount Fix**: `total_crypto` now uses actual `txData.crypto_amount` instead of fiat total

@@ -1,4 +1,3 @@
-import { theme } from "@/styles/theme";
 import { Box, Card, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
@@ -25,7 +24,7 @@ export const CardHeader = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const HeaderContent = styled(Box)({
+export const HeaderContent = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "10px",
@@ -33,19 +32,19 @@ export const HeaderContent = styled(Box)({
   [theme.breakpoints.down("md")]: {
     gap: "6px",
   },
-});
+}));
 
-export const HeaderTitle = styled(Typography)({
+export const HeaderTitle = styled(Typography)(({ theme }) => ({
   fontSize: "20px",
   fontWeight: 500,
   lineHeight: "1.2",
   letterSpacing: 0,
   fontFamily: "UrbanistMedium",
-  color: "#242428",
+  color: theme.palette.text.primary,
   [theme.breakpoints.down("md")]: {
     fontSize: "15px",
   },
-});
+}));
 
 export const HeaderIcon = styled(Box)(({ theme }) => ({
   display: "flex",

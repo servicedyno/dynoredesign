@@ -12,7 +12,7 @@ import FeeTierProgress from "./FeeTierProgress";
 import { formatNumberWithComma, getCurrencySymbol } from "@/helpers";
 import useIsMobile from "@/hooks/useIsMobile";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { theme } from "@/styles/theme";
+// Using muiTheme from useTheme() for dark mode support
 
 import CheckCircleIcon from "@/assets/Icons/correct-icon.png";
 import CurrencyIcon from "@/assets/Icons/dollar-sign-icon.svg";
@@ -60,11 +60,11 @@ const DashboardRightSection = () => {
         title={tDashboard("feeTierProgress")}
         subTitle={tDashboard("yourProgressTowardsTheNextFeeTier")}
         showHeaderBorder={false}
-        headerPadding={theme.spacing(2.5, 2.5, 0, 2.5)}
+        headerPadding={muiTheme.spacing(2.5, 2.5, 0, 2.5)}
         bodyPadding={
           isMobile
-            ? theme.spacing("12px", 2, 2, 2)
-            : theme.spacing("22px", 2.5, 2.5, 2.5)
+            ? muiTheme.spacing("12px", 2, 2, 2)
+            : muiTheme.spacing("22px", 2.5, 2.5, 2.5)
         }
         headerActionLayout="inline"
         headerSx={{ alignItems: "start" }}
@@ -74,11 +74,11 @@ const DashboardRightSection = () => {
               position: "absolute",
               right: "12px",
               top: "12px",
-              backgroundColor: "#E9ECF2",
+              backgroundColor: muiTheme.palette.mode === "dark" ? "rgba(255,255,255,0.12)" : "#E9ECF2",
               p: "8px",
               width: isMobile ? 32 : 40,
               height: isMobile ? 32 : 40,
-              "&:hover": { backgroundColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.12)" : "#E9ECF2" },
+              "&:hover": { backgroundColor: muiTheme.palette.mode === "dark" ? "rgba(255,255,255,0.2)" : "#D9DCE2" },
             }}
           >
             <Image
@@ -177,8 +177,8 @@ const DashboardRightSection = () => {
               px: 1.5,
               py: isMobile ? "8px" : "11px",
               borderRadius: "100px",
-              background: theme.palette.success.main,
-              border: `1px solid ${theme.palette.success.light}`,
+              background: muiTheme.palette.success.main,
+              border: `1px solid ${muiTheme.palette.success.light}`,
             }}
           >
             <Typography
@@ -186,7 +186,7 @@ const DashboardRightSection = () => {
               sx={{
                 fontSize: isMobile ? 13 : 15,
                 fontWeight: 500,
-                color: theme.palette.success.dark,
+                color: muiTheme.palette.success.dark,
                 fontFamily: "UrbanistMedium",
                 lineHeight: 1.2,
                 letterSpacing: "0",
@@ -221,6 +221,7 @@ const DashboardRightSection = () => {
                 left: "-10px",
                 zIndex: -1,
                 maxWidth: 310,
+                opacity: muiTheme.palette.mode === "dark" ? 0.15 : 1,
               }}
             >
               <Image
@@ -243,6 +244,7 @@ const DashboardRightSection = () => {
                     lineHeight: "1.2",
                     letterSpacing: "0",
                     wordBreak: "break-all",
+                    color: muiTheme.palette.text.primary,
                   }}
                 >
                   {tDashboard("upgradeToPremiumTier")}
@@ -252,7 +254,7 @@ const DashboardRightSection = () => {
                   sx={{
                     fontSize: isMobile ? 10 : 13,
                     fontWeight: 500,
-                    color: theme.palette.text.secondary,
+                    color: muiTheme.palette.text.secondary,
                     fontFamily: "UrbanistMedium",
                     mt: isMobile ? 0.75 : 1.2,
                     lineHeight: "1.2",
@@ -268,9 +270,9 @@ const DashboardRightSection = () => {
                 sx={{
                   width: isMobile ? 32 : 49,
                   height: isMobile ? 32 : 49,
-                  border: `1px solid ${theme.palette.border.main}`,
+                  border: `1px solid ${muiTheme.palette.border.main}`,
                   borderRadius: "50%",
-                  background: theme.palette.background.paper,
+                  background: muiTheme.palette.background.paper,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

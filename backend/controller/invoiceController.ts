@@ -112,7 +112,13 @@ export const autoGenerateInvoice = async (
       .join("\n");
 
     // Calculate fees using centralized fee configuration
-    const baseAmount = parseFloat(txData.base_amount || 0);
+    // Use base_amount as primary, fall back to usd_value if base_amount is 0/null
+    let baseAmount = parseFloat(txData.base_amount || 0);
+    if (baseAmount === 0 || isNaN(baseAmount)) {
+      baseAmount = parseFloat(txData.usd_value || 0);
+      apiLogger.info(`[Invoice] base_amount was 0, using usd_value: ${baseAmount}`);
+    }
+    const baseCurrency = txData.base_currency || 'USD';
     const transactionFeePercent = getTransactionFeePercent();
     const feeTiers = getFeeTiers();
 
@@ -205,8 +211,8 @@ export const autoGenerateInvoice = async (
       transaction_fee_percent: transactionFeePercent,
       blockchain_buffer_percent: 0,
       total_usd: totalAmount,
-      total_crypto: totalAmount,
-      crypto_currency: preferredCurrency,
+      total_crypto: parseFloat(txData.crypto_amount || 0) || totalAmount,
+      crypto_currency: txData.crypto_currency || preferredCurrency,
       payment_terms: "Payment due upon receipt",
       invoice_date: new Date(),
     };
@@ -502,7 +508,38 @@ const downloadInvoicePDF = async (
     }
 
     // Generate PDF
-    const pdfStream = generateInvoicePDF(invoiceData);
+    // If unit_price is 0, try to recalculate from the transaction
+    let pdfData = { ...invoiceData };
+    const storedUnitPrice = parseFloat(invoiceData.unit_price || 0);
+    if (storedUnitPrice === 0 || isNaN(storedUnitPrice)) {
+      try {
+        const transaction = await userTransactionModel.findOne({
+          where: { transaction_id: invoiceData.transaction_id },
+        });
+        if (transaction) {
+          const txData = transaction.dataValues;
+          let recalcAmount = parseFloat(txData.base_amount || 0);
+          if (recalcAmount === 0 || isNaN(recalcAmount)) {
+            recalcAmount = parseFloat(txData.usd_value || 0);
+          }
+          if (recalcAmount > 0) {
+            pdfData.unit_price = recalcAmount;
+            pdfData.total_usd = recalcAmount + parseFloat(pdfData.fixed_fee || 0) + parseFloat(pdfData.vat_amount || 0);
+            // Also set crypto info from transaction if missing
+            if (parseFloat(pdfData.total_crypto || 0) === 0 && txData.crypto_amount) {
+              pdfData.total_crypto = parseFloat(txData.crypto_amount);
+            }
+            if (!pdfData.crypto_currency && txData.crypto_currency) {
+              pdfData.crypto_currency = txData.crypto_currency;
+            }
+            apiLogger.info(`[Invoice PDF] Recalculated amounts for invoice ${invoiceData.invoice_number}: unit_price=${recalcAmount}`);
+          }
+        }
+      } catch (recalcErr) {
+        apiLogger.warn(`[Invoice PDF] Could not recalculate amounts: ${recalcErr}`);
+      }
+    }
+    const pdfStream = generateInvoicePDF(pdfData);
 
     // Set response headers for PDF download
     res.setHeader("Content-Type", "application/pdf");

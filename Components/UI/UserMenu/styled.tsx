@@ -4,16 +4,18 @@ export const UserTrigger = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: 10,
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   padding: "6px 14px",
   borderRadius: 14,
   cursor: "pointer",
   transition: "0.2s ease",
+  border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.divider : "transparent"}`,
 
   [theme.breakpoints.down("md")]: {
     padding: "0px",
     gap: "8px",
     border: "none",
+    background: "transparent",
   },
 }));
 
